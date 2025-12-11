@@ -1,0 +1,527 @@
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import { Search, X } from 'lucide-react';
+import { useClickOutside } from '../../../hooks/useClickOutside';
+import { useGetTenantUsers } from '../../../hooks/useApi';
+
+interface UserOption {
+  id: string;
+  name: string;
+  email?: string;
+  avatarUrl?: string;
+}
+
+interface UserConfig {
+  allowMultiple?: boolean;
+  defaultUser?: string;
+  defaultValue?: string;
+  [key: string]: any;
+}
+
+interface UserProps {
+  value: string | string[] | null; // Support single user ID or array of user IDs
+  onChange: (value: string | string[] | null) => void;
+  config?: UserConfig;
+  placeholder?: string;
+  disabled?: boolean;
+  isBorder?: boolean;
+}
+
+export const User: React.FC<UserProps> = ({
+  value,
+  onChange,
+  config = {},
+  placeholder = 'Select user...',
+  disabled = false,
+  isBorder = false
+}) => {
+  const { allowMultiple = false, defaultUser, defaultValue } = config;
+
+  // Initialize with value, then defaultValue, then defaultUser, then null
+  const getInitialValue = () => {
+    if (value !== null && value !== undefined) {
+      return value;
+    }
+    if (defaultValue && defaultValue.trim()) {
+      return defaultValue;
+    }
+    if (defaultUser && defaultUser.trim()) {
+      return defaultUser;
+    }
+    return null;
+  };
+
+  // Helper to check if value is array
+  const isArrayValue = (val: any): val is string[] => Array.isArray(val);
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dropdownPosition, setDropdownPosition] = useState<'below' | 'above'>('below');
+  const [calculatedPosition, setCalculatedPosition] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
+  const [selectedValue, setSelectedValue] = useState<string | string[] | null>(getInitialValue());
+
+  // Helper to get selected user IDs as array (memoized)
+  const selectedUserIds = useMemo((): string[] => {
+    if (!selectedValue) return [];
+    if (isArrayValue(selectedValue)) return selectedValue;
+    return [selectedValue];
+  }, [selectedValue]);
+  const [focusedUserIndex, setFocusedUserIndex] = useState<number>(-1);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const usersListRef = useRef<HTMLDivElement>(null);
+
+  // Fetch all tenant users
+  const { data: tenantUsers = [], isLoading: loading, error } = useGetTenantUsers();
+
+  // Calculate dropdown position for portal rendering
+  const calculateDropdownPosition = useCallback(() => {
+    const trigger = buttonRef.current;
+    if (!trigger) return null;
+
+    const rect = trigger.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    const dropdownMinHeight = 200;
+    const dropdownWidth = rect.width; // Use button width
+
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    // Determine if we should open above or below
+    let position: 'below' | 'above' = 'below';
+    if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
+      position = 'above';
+    }
+    setDropdownPosition(position);
+
+    // Calculate left position (align to left edge of trigger)
+    let left = rect.left;
+    if (left < 10) {
+      left = 10; // 10px margin from left edge
+    }
+    if (left + dropdownWidth > viewportWidth - 10) {
+      left = viewportWidth - dropdownWidth - 10; // 10px margin from right edge
+    }
+
+    // Calculate top/bottom position
+    if (position === 'below') {
+      return {
+        top: rect.bottom + 8,
+        left,
+        width: dropdownWidth
+      };
+    } else {
+      return {
+        bottom: viewportHeight - rect.top + 8,
+        left,
+        width: dropdownWidth
+      };
+    }
+  }, []);
+
+  // Update position when dropdown opens
+  useEffect(() => {
+    if (isOpen) {
+      const position = calculateDropdownPosition();
+      setCalculatedPosition(position);
+    } else {
+      setCalculatedPosition(null);
+    }
+  }, [isOpen, calculateDropdownPosition]);
+
+  useClickOutside({
+    isOpen,
+    onClose: () => {
+      setIsOpen(false);
+      setSearchTerm('');
+      setFocusedUserIndex(-1);
+    },
+    excludeRefs: [buttonRef, userDropdownRef, dropdownRef, searchRef]
+  });
+
+  // Update selected value when value or defaultValue changes
+  // Handle both array format and comma-separated string format (for allowMultiple)
+  useEffect(() => {
+    let processedValue: string | string[] | null = null;
+
+    if (value !== null && value !== undefined) {
+      // If allowMultiple is true, value might be a comma-separated string that needs parsing
+      if (allowMultiple && typeof value === 'string' && value.trim()) {
+        // Split by comma and filter out empty values
+        const parsed = value.split(',').map(id => id.trim()).filter(id => id.length > 0);
+        processedValue = parsed.length > 0 ? parsed : null;
+      } else {
+        processedValue = value;
+      }
+    } else if (defaultValue && defaultValue.trim()) {
+      // Handle defaultValue similarly
+      if (allowMultiple && typeof defaultValue === 'string' && defaultValue.trim()) {
+        const parsed = defaultValue.split(',').map(id => id.trim()).filter(id => id.length > 0);
+        processedValue = parsed.length > 0 ? parsed : null;
+      } else {
+        processedValue = defaultValue;
+      }
+    } else if (defaultUser && defaultUser.trim()) {
+      processedValue = defaultUser;
+    }
+
+    setSelectedValue(processedValue);
+  }, [value, defaultValue, defaultUser, allowMultiple]);
+
+  // Transform ALL tenant users to UserOption format (for displaying selected users, including deactivated)
+  const allUsers: UserOption[] = useMemo(() => {
+    return (tenantUsers as any[]).map((user: any) => {
+      const displayName = user.display_name ||
+        `${user.first_name || ''} ${user.last_name || ''}`.trim() ||
+        user.email ||
+        'Unknown User';
+
+      return {
+        id: user.id,
+        name: displayName,
+        email: user.email || undefined,
+        avatarUrl: user.avatar || undefined
+      };
+    });
+  }, [tenantUsers]);
+
+  // Transform only ACTIVE tenant users to UserOption format (for dropdown selection)
+  const activeUsers: UserOption[] = useMemo(() => {
+    return (tenantUsers as any[])
+      .filter((user: any) => {
+        // Only include active users (status === 'active' && email_verified === true)
+        return user.status?.toLowerCase() === 'active' && user.email_verified === true;
+      })
+      .map((user: any) => {
+        const displayName = user.display_name ||
+          `${user.first_name || ''} ${user.last_name || ''}`.trim() ||
+          user.email ||
+          'Unknown User';
+
+        return {
+          id: user.id,
+          name: displayName,
+          email: user.email || undefined,
+          avatarUrl: user.avatar || undefined
+        };
+      });
+  }, [tenantUsers]);
+
+  // Filter active users based on search term (for dropdown)
+  const filteredUsers = useMemo(() => {
+    if (!searchTerm.trim()) return activeUsers;
+    const lowerSearch = searchTerm.toLowerCase();
+    return activeUsers.filter(user =>
+      user.name.toLowerCase().includes(lowerSearch) ||
+      user.id.toLowerCase().includes(lowerSearch)
+    );
+  }, [activeUsers, searchTerm]);
+
+  const handleSelect = useCallback((user: UserOption) => {
+    if (allowMultiple) {
+      setSelectedValue(prev => {
+        const currentSelected = prev ? (isArrayValue(prev) ? prev : [prev]) : [];
+        const newSelected = currentSelected.includes(user.id)
+          ? currentSelected.filter(id => id !== user.id)
+          : [...currentSelected, user.id];
+        // Ensure we always pass an array for multiple selection
+        const finalValue = newSelected.length > 0 ? newSelected : null;
+        onChange(finalValue);
+        return finalValue;
+      });
+    } else {
+      // For single selection, toggle: if already selected, deselect; otherwise select
+      const isCurrentlySelected = selectedUserIds.includes(user.id);
+      if (isCurrentlySelected) {
+        setSelectedValue(null);
+        onChange(null);
+      } else {
+        setSelectedValue(user.id);
+        onChange(user.id);
+      }
+      setIsOpen(false);
+      setSearchTerm('');
+      setFocusedUserIndex(-1);
+    }
+  }, [allowMultiple, onChange, selectedUserIds]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+        setSearchTerm('');
+        setFocusedUserIndex(-1);
+      } else if (e.key === 'Enter' && focusedUserIndex >= 0 && filteredUsers[focusedUserIndex]) {
+        e.preventDefault();
+        handleSelect(filteredUsers[focusedUserIndex]);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setFocusedUserIndex(prev =>
+          prev < filteredUsers.length - 1 ? prev + 1 : prev
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setFocusedUserIndex(prev => prev > 0 ? prev - 1 : -1);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, focusedUserIndex, filteredUsers, handleSelect]);
+
+  // Scroll focused user into view
+  useEffect(() => {
+    if (focusedUserIndex >= 0 && usersListRef.current) {
+      const userElement = usersListRef.current.children[focusedUserIndex] as HTMLElement;
+      if (userElement) {
+        userElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }, [focusedUserIndex]);
+
+  // Helper to get user initials
+  const getUserInitials = (name: string): string => {
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const handleRemoveUser = useCallback((userId: string) => {
+    if (allowMultiple) {
+      setSelectedValue(prev => {
+        const currentSelected = prev ? (isArrayValue(prev) ? prev : [prev]) : [];
+        const newSelected = currentSelected.filter(id => id !== userId);
+        const finalValue = newSelected.length > 0 ? newSelected : null;
+        onChange(finalValue);
+        return finalValue;
+      });
+    }
+  }, [allowMultiple, onChange]);
+
+  // Memoize selected users from ALL users (so deactivated users can still be displayed)
+  const selectedUsers = useMemo(() => {
+    return allUsers.filter(user => selectedUserIds.includes(user.id));
+  }, [allUsers, selectedUserIds]);
+
+  return (
+    <div className={`w-full relative ${isBorder ? "field-component-border" : ""}`} ref={userDropdownRef}>
+      <button
+        ref={buttonRef}
+        type="button"
+        className={`w-full field-component ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900 cursor-pointer'}`}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled || loading}
+      >
+        {selectedUsers.length > 0 ? (
+          <div className="flex items-center gap-1 min-w-0">
+            <div className="flex items-center gap-1 overflow-hidden">
+              {selectedUsers.slice(0, 3).map(user => (
+                <span key={user.id} className="inline-flex items-center gap-1 bg-gray-100 text-[var(--color-text-primary)] px-2 py-1 rounded-full text-xs whitespace-nowrap flex-shrink-0 border">
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.name} className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] font-semibold flex-shrink-0">
+                      {getUserInitials(user.name)}
+                    </div>
+                  )}
+                  <span className="truncate">{user.name}</span>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleRemoveUser(user.id);
+                      }
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (allowMultiple) {
+                        handleRemoveUser(user.id);
+                      } else {
+                        setSelectedValue(null);
+                        onChange(null);
+                      }
+                    }}
+                    className="ml-1 hover:bg-gray-300 rounded-full p-0.5 flex-shrink-0"
+                  >
+                    <X className="w-3 h-3" />
+                  </div>
+                </span>
+              ))}
+              {selectedUsers.length > 3 && (
+                <span className="inline-flex items-center bg-[var(--color-bg-brand-primary)] text-black px-2 py-1 rounded-full text-xs whitespace-nowrap flex-shrink-0 border">
+                  +{selectedUsers.length - 3}
+                </span>
+              )}
+            </div>
+            {allowMultiple && (
+              <span className="text-gray-500 text-xs flex-shrink-0 ml-1">
+                ({selectedUsers.length})
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="text-sm text-gray-500">{loading ? 'Loading users...' : placeholder}</span>
+        )}
+      </button>
+      {/* User Dropdown Portal */}
+      {isOpen && calculatedPosition && createPortal(
+        <div
+          ref={dropdownRef}
+          className="fixed z-[9999] border bg-card rounded-lg shadow-xl max-h-64 w-80 overflow-hidden flex flex-col"
+          style={{
+            ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
+            ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),
+            left: `${calculatedPosition.left}px`,
+            width: `${calculatedPosition.width}px`
+          }}
+        >
+          {/* Header with Search */}
+          <div className="p-2 border-b bg-gray-50 flex-shrink-0">
+            {/* Clear Selection Button (when users are selected) */}
+            {selectedUsers.length > 0 && (
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs text-gray-600">
+                  {selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''} selected
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedValue(null);
+                    onChange(null);
+                    if (!allowMultiple) {
+                      setIsOpen(false);
+                    }
+                  }}
+                  className="text-xs text-red-600 hover:text-red-800 hover:underline"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <input
+                ref={searchRef}
+                type="text"
+                placeholder="Select user..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setFocusedUserIndex(-1);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setFocusedUserIndex(0);
+                  }
+                }}
+                aria-label="Search users"
+                className="w-full pl-8 pr-8 py-1.5 text-sm text-[var(--color-text-primary)] border rounded-lg focus:border outline-none focus:border-[--color-brand-600] bg-background"
+              />
+              {searchTerm && (
+                <button
+                  type='button'
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Users List */}
+          <div
+            ref={usersListRef}
+            role="listbox"
+            aria-label="Available users"
+            className="flex-1 overflow-y-auto min-h-0"
+          >
+            {loading ? (
+              <div className="p-3 text-center text-sm text-gray-500" role="status" aria-live="polite">
+                Loading users...
+              </div>
+            ) : error ? (
+              <div className="p-3 text-center text-sm text-red-500" role="status" aria-live="polite">
+                {String(error)}
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="p-3 text-center text-sm text-gray-500 font-bold" role="status" aria-live="polite">
+                {searchTerm ? 'No users found' : 'No users available'}
+              </div>
+            ) : (
+              <>
+                {filteredUsers.length > 100 && (
+                  <div className="p-2 text-center text-xs text-gray-400 border-b">
+                    Showing first 100 of {filteredUsers.length} users. Refine your search.
+                  </div>
+                )}
+                {filteredUsers.slice(0, 100).map((user, index) => {
+                  const isSelected = selectedUserIds.includes(user.id);
+                  const isFocused = index === focusedUserIndex;
+
+                  return (
+                    <div
+                      key={user.id}
+                      role="option"
+                      aria-selected={isSelected}
+                      tabIndex={-1}
+                      className={`px-3 py-2 border-b hover:bg-gray-50 cursor-pointer bg-card transition-colors ${isSelected ? 'bg-blue-50 border-l-2 border-l-green-500' : ''
+                        } ${isFocused ? 'bg-[var(--color-bg-brand-secondary)] text-black' : ''
+                        }`}
+                      onClick={() => {
+                        setFocusedUserIndex(index);
+                        handleSelect(user);
+                      }}
+                      onMouseEnter={() => setFocusedUserIndex(index)}
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {user.avatarUrl ? (
+                          <img
+                            src={user.avatarUrl}
+                            alt={user.name}
+                            className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] font-semibold flex-shrink-0">
+                            {getUserInitials(user.name)}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-gray-900 truncate font-medium">
+                            {user.name}
+                          </div>
+                          {user.email && (
+                            <div className="text-xs text-gray-500 truncate">
+                              {user.email}
+                            </div>
+                          )}
+                        </div>
+                        {isSelected && (
+                          <div className="flex-shrink-0 w-1.5 h-1.5 bg-[var(--color-bg-brand-primary)] rounded-full"></div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+};

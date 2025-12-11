@@ -1,0 +1,89 @@
+{
+  "plugins": {
+    "builtin": [
+      {
+        "id": "navigation",
+        "path": "./plugins/NavigationPlugin",
+        "enabled": true,
+        "config": {
+          "menuPosition": "top",
+          "showIcons": true,
+          "theme": "auto",
+          "maxItems": 10
+        }
+      },
+      {
+        "id": "workspace-plugin",
+        "path": "./plugins/WorkspacePlugin",
+        "enabled": true,
+        "config": {}
+      },
+      {
+        "id": "dashboard-widgets",
+        "path": "./plugins/DashboardWidgetsPlugin",
+        "enabled": false,
+        "config": {
+          "gridColumns": 3,
+          "autoRefresh": true,
+          "refreshInterval": 30,
+          "enableAnimations": true
+        }
+      },
+      {
+        "id": "grid-view-plugin",
+        "name": "Grid View Plugin",
+        "enabled": true,
+        "path": "./plugins/GridViewPlugin"
+      },
+      {
+        "id": "calendar-view-plugin",
+        "name": "Calendar View Plugin",
+        "enabled": true,
+        "path": "./plugins/CalendarViewPlugin"
+      },
+      {
+        "id": "form-view-plugin",
+        "name": "Form View Plugin",
+        "enabled": true,
+        "path": "./plugins/FormViewPlugin"
+      },
+      {
+        "id": "kanban-view-plugin",
+        "name": "Kanban View Plugin",
+        "enabled": true,
+        "path": "./plugins/KanbanViewPlugin"
+      },
+      {
+        "id": "gallery-view-plugin",
+        "name": "Gallery View Plugin",
+        "enabled": true,
+        "path": "./plugins/GalleryViewPlugin"
+      },
+      {
+        "id": "gantt-chart-view-plugin",
+        "name": "Gantt Chart View Plugin",
+        "enabled": true,
+        "path": "./plugins/GanttChartViewPlugin"
+      }
+    ],
+    "external": [
+      {
+        "id": "charts-plugin",
+        "manifestUrl": "https://example.com/plugins/charts-plugin/manifest.json",
+        "enabled": false,
+        "config": {
+          "chartLibrary": "recharts",
+          "animationDuration": 750,
+          "defaultChartType": "line",
+          "showDataLabels": false
+        }
+      }
+    ]
+  },
+  "settings": {
+    "autoLoadPlugins": true,
+    "allowExternalPlugins": true,
+    "pluginTimeout": 10000,
+    "developmentMode": false
+  }
+}

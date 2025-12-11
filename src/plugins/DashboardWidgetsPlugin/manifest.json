@@ -1,0 +1,41 @@
+{
+  "id": "dashboard-widgets",
+  "name": "Dashboard Widgets",
+  "version": "2.1.0",
+  "description": "Provides a collection of dashboard widgets and management",
+  "author": "Dashboard Team",
+  "frameworkVersion": "^1.0.0",
+  "dependencies": {
+    "navigation": "^1.0.0"
+  },
+  "configSchema": {
+    "gridColumns": {
+      "type": "number",
+      "title": "Grid Columns",
+      "description": "Number of columns in the dashboard grid",
+      "minimum": 1,
+      "maximum": 12,
+      "default": 3
+    },
+    "autoRefresh": {
+      "type": "boolean",
+      "title": "Auto Refresh",
+      "description": "Automatically refresh widget data",
+      "default": true
+    },
+    "refreshInterval": {
+      "type": "number",
+      "title": "Refresh Interval (seconds)",
+      "description": "How often to refresh data in seconds",
+      "minimum": 5,
+      "maximum": 3600,
+      "default": 30
+    },
+    "enableAnimations": {
+      "type": "boolean",
+      "title": "Enable Animations",
+      "description": "Enable widget animations and transitions",
+      "default": true
+    }
+  }
+}
