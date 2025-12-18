@@ -1,0 +1,90 @@
+{
+    "id": "workspace-plugin",
+    "name": "Workspace Plugin",
+    "version": "1.0.0",
+    "description": "Provides the workspace sidebar and flyout as pluggable extensions.",
+    "dependencies": {
+      "navigation": "^1.0.0"
+    },
+    "configSchema": {
+      "sidebarPosition": {
+        "type": "string",
+        "title": "Sidebar Position",
+        "enum": ["left", "right"],
+        "default": "left",
+        "description": "Position of the sidebar and navigation menu."
+      },
+      "showSidebar": {
+        "type": "boolean",
+        "title": "Show Sidebar",
+        "default": true,
+        "description": "Toggle the sidebar visibility."
+      },
+      "sidebarWidth": {
+        "type": "number",
+        "title": "Sidebar Width",
+        "default": 56,
+        "minimum": 40,
+        "maximum": 200,
+        "description": "Width of the sidebar in pixels."
+      },
+      "sidebarBgColor": {
+        "type": "string",
+        "title": "Sidebar Background Color",
+        "default": "#333",
+        "description": "Background color of the sidebar."
+      },
+      "sidebarBorderColor": {
+        "type": "string",
+        "title": "Sidebar Border Color",
+        "default": "#e0e0e0",
+        "description": "Border color of the sidebar."
+      },
+      "sidebarShadow": {
+        "type": "boolean",
+        "title": "Sidebar Shadow",
+        "default": false,
+        "description": "Enable shadow for the sidebar."
+      },
+      "flyoutMode": {
+        "type": "string",
+        "title": "Flyout Menu Mode",
+        "enum": ["layout", "floating"],
+        "default": "layout",
+        "description": "Choose how the flyout menu behaves: layout mode pushes content aside, floating mode overlays content."
+      },
+      "sidebarLogoUrl": {
+        "type": "string",
+        "title": "Sidebar Logo URL",
+        "default": "",
+        "description": "URL for an image/logo to display at the top of the sidebar. Overrides logo text if set."
+      },
+      "sidebarItemSpacing": {
+        "type": "number",
+        "title": "Sidebar Item Spacing",
+        "default": 8,
+        "minimum": 0,
+        "maximum": 32,
+        "description": "Spacing (in px) between sidebar items."
+      },
+      "sidebarFontSize": {
+        "type": "string",
+        "title": "Sidebar Font Size",
+        "enum": ["xs", "sm", "base", "lg", "xl"],
+        "default": "sm",
+        "description": "Font size for sidebar items."
+      },
+      "showUserAvatar": {
+        "type": "boolean",
+        "title": "Show User Avatar",
+        "default": true,
+        "description": "Show or hide the user avatar at the bottom."
+      },
+      "sidebarLogoText": {
+        "type": "string",
+        "title": "Sidebar Logo Text",
+        "default": "N",
+        "description": "Text to display as the sidebar logo."
+      }
+    }
+  }

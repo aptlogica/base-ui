@@ -1,0 +1,615 @@
+import React, { useMemo } from 'react';
+import { Calendar, Plus, Layers, ZoomIn, ZoomOut } from 'lucide-react';
+import type { TableResponse } from '../types/api.types';
+import { GanttFieldConfiguration } from './GanttFieldSelector';
+import { FilterPopover } from '../../../components/shared/table/FilterPopover';
+import { SortPopover } from '../../../components/shared/table/SortPopover';
+import { FieldsPopover } from '../../../components/shared/table/FieldsPopover';
+import CreateRecordModal from '../../../components/modals/CreateRecordModal';
+import EditRecordModal from '../../../components/modals/EditRecordModal';
+import DeleteConfirmModal from '../../../components/modals/DeleteConfirmModal';
+// Custom hooks
+import { useGanttTaskProcessing } from '../hooks/useGanttTaskProcessing';
+import { useGanttViewConfig } from '../hooks/useGanttViewConfig';
+import { useGanttModals } from '../hooks/useGanttModals';
+import { useGanttTimeline } from '../hooks/useGanttTimeline';
+import { useGanttFieldConfig } from '../hooks/useGanttFieldConfig';
+import type { GanttTask } from '../hooks/useGanttData';
+
+interface GanttChartProps {
+  tableData?: TableResponse;
+  onRefresh: () => void;
+  actions?: {
+    addRow: any;
+    insertRowData: any;
+    deleteRecord: any;
+    updateField: any;
+    updateView: any;
+    moveTask: (taskId: string, newStartDate: Date, newEndDate: Date) => Promise<void>;
+    createTask: (taskData: Partial<GanttTask>) => Promise<string>;
+    deleteTask: (taskId: string) => Promise<void>;
+    updateTaskProgress: (taskId: string, progress: number) => Promise<void>;
+    updateViewConfig: (viewId: string, updates: any) => Promise<void>;
+  };
+}
+
+export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, actions }) => {
+  // Process data into Gantt-ready format
+  const processedData = useGanttTaskProcessing({ tableData });
+
+  // View configuration hook (includes filtering and sorting)
+  const {
+    filters,
+    sorts,
+    localFieldConfig,
+    visibleColumns,
+    filteredTasks,
+    sortedTasksForSidebar,
+    handleRealTimeFilter,
+    handleAddFilter,
+    handleRemoveFilter,
+    handleUpdateFilter,
+    handleSortChange,
+    handleFieldToggle,
+    handleFieldOrderChange,
+  } = useGanttViewConfig({
+    view: processedData.currentView,
+    columns: processedData.columns,
+    updateView: actions?.updateView,
+    tasks: processedData.tasks,
+  });
+
+  // Timeline hook
+  const {
+    timelineStart,
+    timelineEnd,
+    dayWidth,
+    timelineDays,
+    showTooltip,
+    tooltipPosition,
+    tooltipTask,
+    tooltipRef,
+    tooltipLines,
+    getTaskPosition,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    handleTaskMouseEnter,
+    handleTaskMouseLeave,
+    getTooltipClasses,
+    getTooltipArrowClasses,
+  } = useGanttTimeline({ 
+    filteredTasks,
+    columns: processedData.columns,
+  });
+
+  // Modals hook
+  const {
+    modalState,
+    deleteConfirmModalOpen,
+    taskToDelete,
+    handleCreateRecord,
+    handleEditTask,
+    handleDeleteTask,
+    handleCloseCreateModal,
+    handleCloseEditModal,
+    handleCloseDeleteModal,
+    handleCreateSuccess,
+    handleEditSuccess,
+    handleDeleteRecord,
+    handleConfirmDelete,
+    handleDuplicateRecord,
+    getCreateInitialValues,
+    getEditInitialValues,
+  } = useGanttModals({
+    tasks: processedData.tasks,
+    tableData,
+    actions,
+    onRefresh,
+    columns: processedData.columns,
+    rawRecords: tableData?.data?.records || [],
+    startDateField: processedData.startDateField,
+    endDateField: processedData.endDateField,
+    titleField: processedData.titleField,
+    progressField: processedData.progressField,
+  });
+
+  // Field configuration handlers
+  const {
+    handleStartDateFieldChange,
+    handleEndDateFieldChange,
+    handleProgressFieldChange,
+    handleCompletionFieldChange,
+  } = useGanttFieldConfig({
+    currentView: processedData.currentView,
+    updateView: actions?.updateView,
+    onRefresh,
+    startDateField: processedData.startDateField,
+    endDateField: processedData.endDateField,
+    progressField: processedData.progressField,
+    completionField: processedData.completionField,
+  });
+
+  // Memoize column mappings to prevent recreation on every render
+  const fieldsPopoverColumns = useMemo(() => {
+    return processedData.columns.map(col => ({
+      key: col.id,
+      id: col.id,
+      title: col.title,
+      type: col.uidt,
+      system: col.system || false
+    }));
+  }, [processedData.columns]);
+
+  const filterPopoverColumns = useMemo(() => {
+    return processedData.columns.map((col: any) => ({
+      key: col.column_name,
+      column_name: col.column_name,
+      title: col.title,
+      type: col.uidt,
+      uidt: col.uidt,
+      id: col.id,
+      config: col.config || col.meta || {}, // Include config for SingleSelect/MultiSelect options
+      options: col.options || col.config?.options || col.meta?.options, // Include options directly
+      meta: col.meta, // Include meta as fallback
+      hidden: col.hidden,
+      isHidden: col.isHidden,
+      system: col.system
+    }));
+  }, [processedData.columns]);
+
+  const sortPopoverColumns = useMemo(() => {
+    return processedData.columns.map(col => ({
+      key: col.column_name,
+      column_name: col.column_name,
+      title: col.title,
+      type: col.uidt
+    }));
+  }, [processedData.columns]);
+
+  return (
+    <div className="h-full flex flex-col bg-gray-50">
+      {/* Header */}
+      <div className="bg-card border-b px-4 py-3">
+        {/* Desktop Layout - Hidden on mobile */}
+        <div className="hidden md:flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <GanttFieldConfiguration
+              columns={processedData.columns}
+              startDateField={processedData.startDateField}
+              endDateField={processedData.endDateField}
+              progressField={processedData.progressField}
+              completionField={processedData.completionField}
+              onStartDateFieldChange={handleStartDateFieldChange}
+              onEndDateFieldChange={handleEndDateFieldChange}
+              onProgressFieldChange={handleProgressFieldChange}
+              onCompletionFieldChange={handleCompletionFieldChange}
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <FieldsPopover
+              columns={fieldsPopoverColumns}
+              fieldConfig={localFieldConfig}
+              onFieldToggle={handleFieldToggle}
+              tableId={String(tableData?.data?.model?.id || '')}
+              label="Fields"
+              iconComponent={Layers}
+            />
+            <FilterPopover
+              columns={filterPopoverColumns}
+              filters={filters}
+              onAddFilter={handleAddFilter}
+              onRemoveFilter={handleRemoveFilter}
+              onUpdateFilter={handleUpdateFilter}
+              onRealTimeFilter={handleRealTimeFilter}
+            />
+            <button
+              onClick={handleCreateRecord}
+              className="px-6 py-2 flex gap-2 items-center rounded-lg btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus className="w-4 h-4" />
+              New Record
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Layout - Shown on mobile */}
+        <div className="flex md:hidden flex-col gap-3">
+          {/* Top row: Title and create button */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={handleCreateRecord}
+              className="px-6 py-2 rounded-lg btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus className="w-4 h-4" />
+              New Record
+            </button>
+          </div>
+
+          {/* Second row: Field configuration */}
+          <div className="flex items-center justify-center">
+            <GanttFieldConfiguration
+              columns={processedData.columns}
+              startDateField={processedData.startDateField}
+              endDateField={processedData.endDateField}
+              progressField={processedData.progressField}
+              completionField={processedData.completionField}
+              onStartDateFieldChange={handleStartDateFieldChange}
+              onEndDateFieldChange={handleEndDateFieldChange}
+              onProgressFieldChange={handleProgressFieldChange}
+              onCompletionFieldChange={handleCompletionFieldChange}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Task List - Modernized Design */}
+        <div className="w-80 bg-[var(--color-selected-bg)] border-r flex flex-col shadow-sm">
+          {/* Header */}
+          <div className="px-4 py-2 border-b bg-card flex items-center justify-between sticky top-0 z-10">
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-gray-900 text-sm">Tasks</h2>
+              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                {filteredTasks.length}
+              </span>
+            </div>
+            <SortPopover
+              columns={sortPopoverColumns}
+              sorts={sorts}
+              onChange={handleSortChange}
+            />
+          </div>
+
+          {/* Task List */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            {sortedTasksForSidebar.map((task) => {
+              const duration = Math.ceil((task.endDate.getTime() - task.startDate.getTime()) / (1000 * 60 * 60 * 24));
+              const isOverdue = task.status === 'overdue';
+              const isCompleted = task.status === 'completed';
+              
+              return (
+                <div
+                  key={task.id}
+                  className="bg-card border rounded-lg hover:border-gray-300 hover:shadow-md cursor-pointer group transition-all duration-200 relative overflow-hidden"
+                  onClick={() => handleEditTask(task)}
+                >
+                  {/* Color accent bar */}
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-tl-lg rounded-bl-lg"
+                    style={{ backgroundColor: task.color }}
+                  />
+                  
+                  <div className="pl-4 pr-3 py-3.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        {/* Task Title */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-gray-900 text-sm truncate flex-1">
+                            {task.name}
+                          </h3>
+                          {/* Status Badges */}
+                          {isOverdue && (
+                            <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-semibold rounded-full flex-shrink-0">
+                              OVERDUE
+                            </span>
+                          )}
+                          {isCompleted && (
+                            <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-semibold rounded-full flex-shrink-0">
+                              DONE
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Date Range */}
+                        <div className="flex items-center gap-1.5 mb-2 text-xs text-gray-600">
+                          <Calendar className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                          <span className="font-medium">
+                            {task.startDate.toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric'
+                            })} - {task.endDate.toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </div>
+
+                        {/* Duration and Progress */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <span className="font-medium">{duration}</span>
+                            <span>days</span>
+                          </div>
+                          
+                          {task.progress > 0 && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-300"
+                                  style={{
+                                    width: `${Math.min(100, Math.max(0, task.progress))}%`,
+                                    backgroundColor: task.progress >= 100 ? '#10b981' : task.color
+                                  }}
+                                />
+                              </div>
+                              <span className="text-xs font-semibold text-gray-600 min-w-[2.5rem]">
+                                {task.progress}%
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Delete Button */}
+                      <button
+                        className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md flex-shrink-0 ml-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTask(task);
+                        }}
+                        title="Delete Record"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {sortedTasksForSidebar.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                  <Calendar className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-sm font-medium text-gray-600 mb-1">No tasks found</p>
+                <p className="text-xs text-gray-500">Try adjusting your filters</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Gantt Chart Area - Single unified scrollable container */}
+        <div className="flex-1 overflow-auto">
+          {/* Timeline Header */}
+          <div className="bg-card sticky top-0 z-10">
+            <div className="flex">
+              <div className="flex-1">
+                <div className="flex" style={{ width: timelineDays.length * dayWidth }}>
+                  {timelineDays.map((day, index) => {
+                    const isWeekend = day.getDay() === 0 || day.getDay() === 6; // Sunday or Saturday
+                    return (
+                      <div
+                        key={index}
+                        className={`border-r bg-card border-b p-2 text-center ${isWeekend ? 'bg-gray-50' : ''}`}
+                        style={{ width: dayWidth }}
+                      >
+                        <div className={`text-xs ${isWeekend ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {day.toLocaleDateString('en-US', { weekday: 'short' })}
+                        </div>
+                        <div className={`text-sm font-medium ${isWeekend ? 'text-gray-400' : ''}`}>
+                          {day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Chart Area - Same container as timeline */}
+          <div className="relative" style={{ height: Math.max(filteredTasks.length * 60 + 20, 100) }}>
+            {/* SVG for Dependencies */}
+            <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
+              <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                  refX="9" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
+                </marker>
+              </defs>
+              {filteredTasks.map((task, index) => {
+                const position = getTaskPosition(task);
+                const rowTop = index * 60 + 10;
+
+                // Simple dependency: connect consecutive tasks
+                const nextTask = filteredTasks[index + 1];
+                if (nextTask && task.endDate <= nextTask.startDate) {
+                  const nextPosition = getTaskPosition(nextTask);
+                  const nextRowTop = (index + 1) * 60 + 10;
+
+                  return (
+                    <line
+                      key={`dependency-${task.id}`}
+                      x1={position.left + position.width}
+                      y1={rowTop + 20}
+                      x2={nextPosition.left}
+                      y2={nextRowTop + 20}
+                      stroke="#666"
+                      strokeWidth="2"
+                      markerEnd="url(#arrowhead)"
+                    />
+                  );
+                }
+                return null;
+              })}
+            </svg>
+
+            {filteredTasks.map((task, index) => {
+              const position = getTaskPosition(task);
+              const rowTop = index * 60 + 10;
+              const isMilestone = position.width < 5; // Very short tasks are milestones
+              const progress = Math.min(Math.max(task.progress || 0, 0), 100); // Clamp between 0-100
+              const isOverdue = task.status === 'overdue';
+              const isCompleted = task.status === 'completed';
+              
+              return (
+                <div
+                  key={task.id}
+                  className={`absolute group transition-all duration-200 cursor-pointer ${
+                    isMilestone ? 'w-0 h-0' : 'bg-background border rounded-lg'
+                  }`}
+                  style={{
+                    left: position.left,
+                    top: rowTop,
+                    width: isMilestone ? 0 : position.width,
+                    height: isMilestone ? 0 : 40,
+                  }}
+                  onClick={() => handleEditTask(task)}
+                  onMouseEnter={() => handleTaskMouseEnter(task)}
+                  onMouseLeave={handleTaskMouseLeave}
+                >
+                  {/* Color accent bar - matching sidebar design */}
+                  {!isMilestone && (
+                    <div
+                      className="absolute left-0 top-0 bottom-0 w-1 rounded-tl-lg rounded-bl-lg"
+                      style={{ backgroundColor: task.color }}
+                    />
+                  )}
+
+                  {/* Milestone Diamond - Simple styling */}
+                  {/* {isMilestone && (
+                    <div
+                      className="absolute transform rotate-45 border-2 border-gray-300 shadow-md"
+                      style={{
+                        left: -10,
+                        top: -10,
+                        width: 20,
+                        height: 20,
+                        backgroundColor: task.color,
+                      }}
+                    />
+                  )} */}
+
+                  {/* Task Content - Matching sidebar style */}
+                  {!isMilestone && (
+                    <div className="relative pl-4 pr-3 py-2.5 h-full flex items-center bg-card border-l-4 rounded-tr-lg rounded-br-lg" style={{ borderColor: task.color }}>
+                      <div className="flex items-center justify-between gap-2 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 text-sm truncate">
+                            {task.name}
+                          </h3>
+                          {/* Status Badges */}
+                          {isOverdue && (
+                            <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-semibold rounded-full flex-shrink-0">
+                              OVERDUE
+                            </span>
+                          )}
+                          {isCompleted && (
+                            <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-semibold rounded-full flex-shrink-0">
+                              DONE
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Progress indicator - compact version */}
+                        {task.progress > 0 && (
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-300"
+                                style={{
+                                  width: `${Math.min(100, Math.max(0, task.progress))}%`,
+                                  backgroundColor: task.progress >= 100 ? '#10b981' : task.color
+                                }}
+                              />
+                            </div>
+                            <span className="text-xs font-semibold text-gray-600 min-w-[2rem]">
+                              {task.progress}%
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tooltip */}
+                  {showTooltip && tooltipTask?.id === task.id && tooltipLines.length > 0 && (
+                    <div ref={tooltipRef} className={getTooltipClasses()}>
+                      <div className="space-y-1">
+                        {tooltipLines.map((line, idx) => (
+                          <div key={idx} className={idx === 0 ? 'font-semibold text-primary text-sm' : 'text-secondary text-xs'}>
+                            {line}
+                          </div>
+                        ))}
+                      </div>
+                      {/* Tooltip Arrow */}
+                      <div className={getTooltipArrowClasses()}></div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="bg-card border-t px-4 py-2">
+        <div className="flex items-center justify-between text-sm text-gray-500">
+          <div className="flex items-center gap-4">
+            <span>Zoom: {dayWidth}px/day</span>
+            <span>Timeline: {timelineDays.length} days</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={zoomOut} className="p-1 hover:bg-gray-100 rounded">
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <button onClick={resetZoom} className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">
+              Reset
+            </button>
+            <button onClick={zoomIn} className="p-1 hover:bg-gray-100 rounded">
+              <ZoomIn className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      {modalState.create.isOpen && (
+        <CreateRecordModal
+          isOpen={modalState.create.isOpen}
+          onClose={handleCloseCreateModal}
+          table={{ id: tableData?.data?.model?.id, title: tableData?.data?.model?.title || 'Gantt Chart' } as any}
+          fields={processedData.columns}
+          title="New record"
+          submitLabel="Save record"
+          initialValues={getCreateInitialValues()}
+          onSuccess={handleCreateSuccess}
+        />
+      )}
+
+      {modalState.edit.isOpen && modalState.edit.selectedTask && (
+        <EditRecordModal
+          isOpen={modalState.edit.isOpen}
+          onClose={handleCloseEditModal}
+          table={{ id: tableData?.data?.model?.id, title: tableData?.data?.model?.title || 'Gantt Chart' } as any}
+          fields={processedData.columns}
+          recordId={String(modalState.edit.selectedTask?.id || '')}
+          title="Edit record"
+          submitLabel="Update record"
+          onSuccess={handleEditSuccess}
+          onDelete={handleDeleteRecord}
+          onDuplicate={handleDuplicateRecord}
+          initialValues={getEditInitialValues()}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmModalOpen && taskToDelete && (
+        <DeleteConfirmModal
+          isOpen={deleteConfirmModalOpen}
+          onClose={handleCloseDeleteModal}
+          onConfirm={handleConfirmDelete}
+          message={`Are you sure you want to delete the record "${taskToDelete?.name || ''}"? This action cannot be undone.`}
+          title="Delete Record"
+        />
+      )}
+    </div>
+  );
+};
