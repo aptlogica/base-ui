@@ -1,8 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, Suspense, lazy } from 'react';
 import { FormPreview } from './FormPreview';
 import { RightPanel } from './RightPanel';
 import { useToast } from '../../../../components/common/Toast';
-import { NewColumnModal } from '../../../../components/modals/NewColumnModal';
+// LAZY LOAD: NewColumnModal is huge (3862 lines) - only load when needed
+const NewColumnModal = lazy(() => 
+  import('../../../../components/modals/NewColumnModal').then(m => ({ default: m.NewColumnModal }))
+);
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
 import { normalizeFieldType } from '../../../../utils/fieldType';
 import { parseApiColumnMeta } from '../../../../components/shared/table/tableUtils';
@@ -12,6 +15,7 @@ import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../..
 import { useAllViews } from '../../../../hooks/useApi';
 import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldConfirmModal';
 import { isFormulaField } from '../../../../utils/fieldUtils';
+import { Loader } from '../../../../components/ui/Loader';
 // Custom hooks
 import { useFormDataState } from '../../hooks/useFormDataState';
 import { useFormModals } from '../../hooks/useFormModals';
@@ -574,7 +578,7 @@ const handleConfirmUpdateField = async () => {
             {/* Sidebar Toggle Button */}
             <button
               onClick={toggleSidebar}
-              className="p-2 border rounded-lg hover:bg-[var(--color-bg-brand-primary)] outline-none hover:text-black transition-all duration-200 hover:scale-105"
+              className="p-2 border rounded-xl hover:bg-[var(--color-bg-brand-primary)] outline-none hover:text-black transition-all duration-200 hover:scale-105"
               title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
             >
               {sidebarOpen ? (
@@ -643,15 +647,23 @@ const handleConfirmUpdateField = async () => {
         <div className="fixed inset-0 z-50 bg-modal-backdrop" onClick={handleCloseNewColumnModal} />
       )}
       {isNewColumnModalOpen && modalPosition && (
-        <div className="fixed z-50" style={{ top: modalPosition.top, left: modalPosition.left }}>
-          <NewColumnModal
-            isOpen={isNewColumnModalOpen}
-            onClose={handleCloseNewColumnModal}
-            onSave={handleCreateNewField}
-            isAddNewField={true}
-            fields={formFields}
-          />
-        </div>
+        <Suspense fallback={
+          <div className="fixed z-50" style={{ top: modalPosition.top, left: modalPosition.left }}>
+            <div className="bg-background border border-border rounded-xl shadow-lg p-8 min-w-[400px]">
+              <Loader size={8} />
+            </div>
+          </div>
+        }>
+          <div className="fixed z-50" style={{ top: modalPosition.top, left: modalPosition.left }}>
+            <NewColumnModal
+              isOpen={isNewColumnModalOpen}
+              onClose={handleCloseNewColumnModal}
+              onSave={handleCreateNewField}
+              isAddNewField={true}
+              fields={formFields}
+            />
+          </div>
+        </Suspense>
       )}
 
       {/* Delete Confirmation Modal */}
@@ -671,20 +683,28 @@ const handleConfirmUpdateField = async () => {
             className="fixed inset-0 z-50 bg-modal-backdrop"
             onClick={handleCloseEditModal}
           />
-          <div
-            className="fixed z-50"
-          >
-            <NewColumnModal
-              isOpen={editModalOpen}
-              onClose={handleCloseEditModal}
-              onSave={handleEditModalSave}
-              initialValues={editColumn}
-              fields={formFields}
-              isAddNewColumn={false}
-              isAddNewField={true}
-              currentTableId={tableId}
-            />
-          </div>
+          <Suspense fallback={
+            <div className="fixed z-50">
+              <div className="bg-background border border-border rounded-xl shadow-lg p-8 min-w-[400px]">
+                <Loader size={8} />
+              </div>
+            </div>
+          }>
+            <div
+              className="fixed z-50"
+            >
+              <NewColumnModal
+                isOpen={editModalOpen}
+                onClose={handleCloseEditModal}
+                onSave={handleEditModalSave}
+                initialValues={editColumn}
+                fields={formFields}
+                isAddNewColumn={false}
+                isAddNewField={true}
+                currentTableId={tableId}
+              />
+            </div>
+          </Suspense>
         </>
       )}
 

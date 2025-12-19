@@ -212,12 +212,12 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
 
   const getMenuClasses = () => {
     if (portaled) {
-      return `fixed z-[9999] min-w-[210px] p-2 space-y-1 bg-card border border-border rounded-lg shadow-lg`;
+      return `fixed z-[9999] min-w-[210px] p-2 space-y-1 bg-card border border-border rounded-xl shadow-lg`;
     }
     
     const horizontalClass = position.horizontal === 'right' ? 'right-0' : 'left-0';
     const verticalClass = position.vertical === 'up' ? 'bottom-full mb-2' : 'top-full mt-2';
-    return `absolute z-50 min-w-[210px] p-2 space-y-1 bg-card border border-border rounded-lg shadow-lg ${horizontalClass} ${verticalClass}`;
+    return `absolute z-50 min-w-[210px] p-2 space-y-1 bg-card border border-border rounded-xl shadow-lg ${horizontalClass} ${verticalClass}`;
   };
 
   const renderMenu = () => (
@@ -232,7 +232,7 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
       {items.map((item, idx) => (
         <button
           key={item.label}
-          className={`w-full flex items-center gap-2 px-4 py-2 text-xs text-left text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] ${item.label.toLowerCase().includes('delete') && "hover:bg-red-400 hover:text-black"} transition-colors duration-200 ${item.danger
+          className={`w-full flex items-center gap-2 px-4 py-2 text-xs text-left text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] ${item.label.toLowerCase().includes('delete') && "hover:bg-red-400 hover:text-black"} transition-colors duration-200 ${item.danger
               ? 'text-destructive hover:text-[var(--color-error-500)]'
               : 'text-tertiary'
             } ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -257,7 +257,7 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
       <button
         ref={buttonRef}
         type="button"
-        className="flex items-center justify-center p-1.5 rounded-lg hover:bg-gray-300  focus:outline-none transition-colors duration-200"
+        className="flex items-center justify-center p-1.5 rounded-xl hover:bg-gray-300  focus:outline-none transition-colors duration-200"
         onClick={() => setOpen(v => !v)}
         aria-haspopup="menu"
         aria-expanded={open}

@@ -17,7 +17,7 @@ export const AdminBillingTab: React.FC<AdminBillingTabProps> = ({ workspaceId })
   ];
   return (
     <div className="space-y-6">
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-primary mb-4">Billing Information</h2>
         <div className="grid grid-cols-2 gap-6">
           <div>
@@ -40,10 +40,10 @@ export const AdminBillingTab: React.FC<AdminBillingTabProps> = ({ workspaceId })
         </div>
       </div>
 
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-primary mb-4">Payment Methods</h2>
         <div className="space-y-4">
-          <div className="border border-gray-300 rounded-lg p-4 flex items-center justify-between">
+          <div className="border border-gray-300 rounded-xl p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-100 rounded flex items-center justify-center">💳</div>
               <div>
@@ -59,7 +59,7 @@ export const AdminBillingTab: React.FC<AdminBillingTabProps> = ({ workspaceId })
         </div>
       </div>
 
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-primary mb-4">Invoices</h2>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -81,7 +81,7 @@ export const AdminBillingTab: React.FC<AdminBillingTabProps> = ({ workspaceId })
         </div>
       </div>
 
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-primary mb-4">Tax Settings</h2>
         <div className="space-y-4">
           <div>

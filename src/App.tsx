@@ -203,9 +203,18 @@ const TableViewRouteWrapper: React.FC = () => {
   }
 
   // Centralized table fetch so only one plugin renders and we can determine view type
-  const { data: response, isLoading, error, refetch } = useTable(tableId, { pageNumber: 1, pageLimit: 30 });
+  // PAGINATION DISABLED - Uncomment below to re-enable pagination (30 records per page)
+  // const { data: response, isLoading, error, refetch } = useTable(tableId, { pageNumber: 1, pageLimit: 30 });
+  // PERFORMANCE: Use cached data immediately if available (placeholderData handles this)
+  const { data: response, isLoading, error, refetch, isFetching } = useTable(tableId); // No pagination - fetches all records
 
-  if (isLoading) {
+  // Only show loader on initial load (no cached data)
+  // If we have cached data, show it immediately even if refetching
+  // This provides instant navigation between views when data is cached
+  const hasCachedData = response?.data;
+  const isInitialLoad = isLoading && !hasCachedData;
+
+  if (isInitialLoad) {
     return (
       <div className="h-full flex items-center justify-center">
         <Loader />

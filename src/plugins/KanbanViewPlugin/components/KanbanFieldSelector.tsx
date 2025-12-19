@@ -52,7 +52,7 @@ export const KanbanFieldConfiguration: React.FC<KanbanFieldConfigurationProps> =
       <button
         ref={triggerRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 bg-[var(--color-bg-brand-primary)] text-black hover:bg-[var(--color-bg-brand-primary)] hover:text-black font-semibold rounded-lg transition-colors"
+        className="flex items-center gap-2 px-3 py-2 bg-[var(--color-bg-brand-primary)] text-black hover:bg-[var(--color-bg-brand-primary)] hover:text-black font-semibold rounded-xl transition-colors"
         aria-haspopup="true"
         aria-expanded={isOpen}
       >
@@ -63,7 +63,7 @@ export const KanbanFieldConfiguration: React.FC<KanbanFieldConfigurationProps> =
       {isOpen && position && createPortal(
         <div
           ref={panelRef}
-          className="p-4 bg-card border rounded-lg shadow-lg z-50 min-w-[320px] max-w-[400px]"
+          className="p-4 bg-card border rounded-xl shadow-lg z-50 min-w-[320px] max-w-[400px]"
           style={{ position: 'fixed', top: position.top, left: position.left }}
         >
           <h3 className="text-sm font-semibold text-primary mb-4">Configure Kanban Fields</h3>

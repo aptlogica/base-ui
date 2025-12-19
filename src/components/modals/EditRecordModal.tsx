@@ -193,7 +193,6 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
         .filter(f => {
           // Skip attachment fields - they handle their own API calls
           if (f.type === 'attachment' || f.uidt === 'attachment') {
-            console.log('Skipping attachment field from normal insertRowData:', f.id);
             return false;
           }
           return !valuesEqual(f, originalData[f.id], rowData[f.id]);
@@ -328,14 +327,14 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                 >
                   {/* Duplicate functionality disabled for now */}
                   {/* <button
-                    className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors text-sm"
+                    className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors text-sm"
                     onClick={() => { onDuplicate?.(recordId); setMenuOpen(false); }}
                   >
                     <Copy className="w-4 h-4" /> Duplicate record
                   </button>
                   <div className="border-t my-1" /> */}
                   <button
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-lg hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
                     onClick={(e) => { 
                       e.preventDefault();
                       e.stopPropagation();

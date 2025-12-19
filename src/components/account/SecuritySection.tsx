@@ -4,6 +4,7 @@ import { useUserProfile, useChangePassword } from '../../hooks/useApi';
 import { useToast } from '../common/Toast';
 import { Loader2, Shield, CheckCircle, AlertTriangle, Eye, EyeOff, Info, HelpCircle } from 'lucide-react';
 import { getUserActivity, type LoginSession } from '../../service/activityService';
+import { validatePasswordStrength } from '../../utils/validation';
 
 export const SecuritySection: React.FC = () => {
   const { user: authUser } = useAuth();
@@ -42,29 +43,10 @@ export const SecuritySection: React.FC = () => {
   const isVerified = userProfile?.email_verified || false;
   const isActive = userProfile?.status === 'active';
 
-  // Password strength validation function
-  const validatePasswordStrength = (password: string) => {
-    const hasLength = password.length >= 8;
-    const hasLetter = /[a-zA-Z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    const strength = [
-      hasLength,
-      hasLetter,
-      hasNumber,
-      hasSymbol
-    ].filter(Boolean).length;
-
-    return {
-      isValid: strength === 4,
-      strength: strength,
-      hasLength,
-      hasLetter,
-      hasNumber,
-      hasSymbol
-    };
-  };
+  // Get user data for password validation
+  const userFirstName = userProfile?.first_name || authUser?.first_name || '';
+  const userLastName = userProfile?.last_name || authUser?.last_name || '';
+  const userEmail = userProfile?.email || authUser?.email || '';
 
   // Password handling functions
   const handlePasswordChange = (field: string, value: string) => {
@@ -80,9 +62,9 @@ export const SecuritySection: React.FC = () => {
 
     // Real-time validation for new password
     if (field === 'newPassword') {
-      const validation = validatePasswordStrength(value);
+      const validation = validatePasswordStrength(value, userFirstName, userLastName, userEmail);
       if (value && !validation.isValid) {
-        setNewPasswordError("Password doesn't meet requirements");
+        setNewPasswordError(validation.errorMessage || "Password doesn't meet requirements");
       } else {
         setNewPasswordError(null);
       }
@@ -116,9 +98,14 @@ export const SecuritySection: React.FC = () => {
       return;
     }
 
-    const passwordValidation = validatePasswordStrength(passwordData.newPassword);
+    const passwordValidation = validatePasswordStrength(
+      passwordData.newPassword,
+      userFirstName,
+      userLastName,
+      userEmail
+    );
     if (!passwordValidation.isValid) {
-      setNewPasswordError("Password doesn't meet requirements");
+      setNewPasswordError(passwordValidation.errorMessage || "Password doesn't meet requirements");
       return;
     }
 
@@ -235,7 +222,7 @@ export const SecuritySection: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Change Password Section */}
-      <div className="bg-card rounded-lg border p-8">
+      <div className="bg-card rounded-xl border p-8">
         <h3 className="text-xl font-semibold text-primary mb-6">Change Password</h3>
 
         <div className="space-y-6">
@@ -294,9 +281,14 @@ export const SecuritySection: React.FC = () => {
                     if (!passwordData.newPassword.trim()) {
                       setNewPasswordError('New password is required');
                     } else {
-                      const validation = validatePasswordStrength(passwordData.newPassword);
+                      const validation = validatePasswordStrength(
+                        passwordData.newPassword,
+                        userFirstName,
+                        userLastName,
+                        userEmail
+                      );
                       if (!validation.isValid) {
-                        setNewPasswordError("Password doesn't meet requirements");
+                        setNewPasswordError(validation.errorMessage || "Password doesn't meet requirements");
                       } else {
                         setNewPasswordError(null);
                       }
@@ -321,34 +313,64 @@ export const SecuritySection: React.FC = () => {
                   </button>
                   <div className="relative group">
                     <HelpCircle className={`w-4 h-4 ${newPasswordError ? "text-red-400" : "text-gray-400"} cursor-help`} />
-                    <div className="invisible group-hover:visible group-focus-within:visible absolute left-0 mt-1 w-72 bg-card border rounded-lg shadow-lg p-4 text-sm z-50">
-                      <h4 className="font-medium mb-2">Password Requirements:</h4>
+                    <div className="invisible group-hover:visible group-focus-within:visible absolute left-0 mt-1 w-72 bg-card border rounded-xl shadow-lg p-4 text-sm z-50">
+                      <h4 className="font-medium mb-2 text-primary">Password Requirements:</h4>
                       <ul className="space-y-1">
-                        <li className={`flex items-center ${validatePasswordStrength(passwordData.newPassword).hasLength ? 'text-green-600' : 'text-gray-500'}`}>
-                          • Minimum 8 characters
-                        </li>
-                        <li className={`flex items-center ${validatePasswordStrength(passwordData.newPassword).hasLetter ? 'text-green-600' : 'text-gray-500'}`}>
-                          • At least one letter
-                        </li>
-                        <li className={`flex items-center ${validatePasswordStrength(passwordData.newPassword).hasNumber ? 'text-green-600' : 'text-gray-500'}`}>
-                          • At least one number
-                        </li>
-                        <li className={`flex items-center ${validatePasswordStrength(passwordData.newPassword).hasSymbol ? 'text-green-600' : 'text-gray-500'}`}>
-                          • At least one symbol
-                        </li>
+                        {(() => {
+                          const validation = validatePasswordStrength(
+                            passwordData.newPassword,
+                            userFirstName,
+                            userLastName,
+                            userEmail
+                          );
+                          const hasPassword = passwordData.newPassword && passwordData.newPassword.trim().length > 0;
+                          return (
+                            <>
+                              <li className={`flex items-center ${validation.hasLength ? 'text-green-600' : 'text-red-500'}`}>
+                                • Minimum 8 characters
+                              </li>
+                              <li className={`flex items-center ${validation.hasUpper ? 'text-green-600' : 'text-red-500'}`}>
+                                • At least one uppercase letter
+                              </li>
+                              <li className={`flex items-center ${validation.hasLower ? 'text-green-600' : 'text-red-500'}`}>
+                                • At least one lowercase letter
+                              </li>
+                              <li className={`flex items-center ${validation.hasNumber ? 'text-green-600' : 'text-red-500'}`}>
+                                • At least one number
+                              </li>
+                              <li className={`flex items-center ${validation.hasSymbol ? 'text-green-600' : 'text-red-500'}`}>
+                                • At least one symbol
+                              </li>
+                              <li className={`flex items-center ${hasPassword && validation.containsNameAndEmail ? 'text-green-600' : 'text-red-500'}`}>
+                                • Should not contain your name or email
+                              </li>
+                              <li className={`flex items-center ${hasPassword && validation.containsCommon ? 'text-green-600' : 'text-red-500'}`}>
+                                • Password Should not contain common words
+                              </li>
+                            </>
+                          );
+                        })()}
                       </ul>
                     </div>
                   </div>
                 </div>
               </div>
-              {passwordData.newPassword && (
-                <div className="mt-2 px-1.5 flex gap-1">
-                  <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validatePasswordStrength(passwordData.newPassword).strength >= 1 ? 'bg-red-500' : 'bg-gray-200'}`}></div>
-                  <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validatePasswordStrength(passwordData.newPassword).strength >= 2 ? 'bg-yellow-500' : 'bg-gray-200'}`}></div>
-                  <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validatePasswordStrength(passwordData.newPassword).strength >= 3 ? 'bg-yellow-500' : 'bg-gray-200'}`}></div>
-                  <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validatePasswordStrength(passwordData.newPassword).strength === 4 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
-                </div>
-              )}
+              {passwordData.newPassword && (() => {
+                const validation = validatePasswordStrength(
+                  passwordData.newPassword,
+                  userFirstName,
+                  userLastName,
+                  userEmail
+                );
+                return (
+                  <div className="mt-2 px-1.5 flex gap-1">
+                    <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validation.strength >= 1 ? 'bg-red-500' : 'bg-gray-200'}`}></div>
+                    <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validation.strength >= 3 ? 'bg-yellow-500' : 'bg-gray-200'}`}></div>
+                    <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validation.strength >= 5 ? 'bg-yellow-500' : 'bg-gray-200'}`}></div>
+                    <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validation.strength === 7 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+                  </div>
+                );
+              })()}
               {newPasswordError && <div className="mt-1.5 text-red-500 text-sm">{newPasswordError}</div>}
             </div>
 
@@ -401,7 +423,7 @@ export const SecuritySection: React.FC = () => {
               !passwordData.newPassword ||
               !passwordData.confirmPassword ||
               passwordData.newPassword !== passwordData.confirmPassword ||
-              !validatePasswordStrength(passwordData.newPassword).isValid ||
+              !validatePasswordStrength(passwordData.newPassword, userFirstName, userLastName, userEmail).isValid ||
               currentPasswordError !== null ||
               newPasswordError !== null ||
               confirmPasswordError !== null
@@ -416,11 +438,11 @@ export const SecuritySection: React.FC = () => {
       </div>
 
       {/* Account Status */}
-      {/* <div className="bg-card rounded-lg border border-gray-200 p-8">
+      {/* <div className="bg-card rounded-xl border border-gray-200 p-8">
         <h2 className="text-2xl font-semibold text-primary mb-8">Account Status</h2>
         
         <div className="space-y-6">
-          <div className="flex items-center justify-between py-4 px-6 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between py-4 px-6 bg-gray-50 rounded-xl">
             <div className="flex items-center gap-4">
               <div className="flex-shrink-0">
                 {isVerified ? (
@@ -445,7 +467,7 @@ export const SecuritySection: React.FC = () => {
             </span>
           </div>
           
-          <div className="flex items-center justify-between py-4 px-6 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between py-4 px-6 bg-gray-50 rounded-xl">
             <div className="flex items-center gap-4">
               <div className="flex-shrink-0">
                 {isActive ? (
@@ -471,7 +493,7 @@ export const SecuritySection: React.FC = () => {
           </div>
 
           {userProfile && (
-            <div className="flex items-center justify-between py-4 px-6 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between py-4 px-6 bg-gray-50 rounded-xl">
               <div className="flex items-center gap-4">
                 <div className="flex-shrink-0">
                   <Shield className="h-6 w-6 text-blue-600" />
@@ -492,7 +514,7 @@ export const SecuritySection: React.FC = () => {
           </div> */}
 
       {/* Two-Factor Authentication */}
-      {/* <div className="bg-card rounded-lg border border-gray-200 p-8">
+      {/* <div className="bg-card rounded-xl border border-gray-200 p-8">
         <h3 className="text-xl font-semibold text-primary mb-6">Two-Factor Authentication</h3>
         
         <div className="space-y-6">
@@ -509,7 +531,7 @@ export const SecuritySection: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
             <div className="flex items-start">
               <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
               <div>
@@ -523,7 +545,7 @@ export const SecuritySection: React.FC = () => {
           
           <button 
             onClick={handleSetup2FA}
-            className="flex items-center gap-2 px-6 py-3 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+            className="flex items-center gap-2 px-6 py-3 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-medium transition-colors"
           >
             <Shield className="w-5 h-5" />
             Set Up 2FA
@@ -532,7 +554,7 @@ export const SecuritySection: React.FC = () => {
       </div> */}
 
       {/* Login Activity */}
-      <div className="bg-card rounded-lg border border-gray-200 p-8">
+      <div className="bg-card rounded-xl border border-gray-200 p-8">
         <h3 className="text-xl font-semibold text-primary mb-6">Recent Login Activity</h3>
 
         {sessionsLoading ? (
@@ -543,7 +565,7 @@ export const SecuritySection: React.FC = () => {
           <div className="space-y-4">
             {/* Current/Most Recent Session */}
             {currentSession ? (
-              <div className="flex items-center justify-between py-4 px-6 bg-card border border-green-200 rounded-lg">
+              <div className="flex items-center justify-between py-4 px-6 bg-card border border-green-200 rounded-xl">
                 <div className="flex items-center gap-4">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   <div className="flex-1">
@@ -568,7 +590,7 @@ export const SecuritySection: React.FC = () => {
                 <span className="text-sm text-green-600 font-medium">Active now</span>
               </div>
             ) : (
-              <div className="flex items-center justify-between py-4 px-6 bg-gray-50 border rounded-lg">
+              <div className="flex items-center justify-between py-4 px-6 bg-gray-50 border rounded-xl">
                 <div className="flex items-center gap-4">
                   <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
                   <div>
@@ -590,7 +612,7 @@ export const SecuritySection: React.FC = () => {
             {pastSessions.length > 0 && (
               <>
                 {pastSessions.map((session, index) => (
-                  <div key={`${session.login_at}-${index}`} className="flex items-center justify-between py-3 px-6 bg-gray-50 border rounded-lg">
+                  <div key={`${session.login_at}-${index}`} className="flex items-center justify-between py-3 px-6 bg-gray-50 border rounded-xl">
                     <div className="flex items-center gap-4">
                       <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
                       <div className="flex-1">

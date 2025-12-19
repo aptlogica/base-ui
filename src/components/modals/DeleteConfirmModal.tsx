@@ -14,7 +14,7 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({ isOpen, title, 
 
   return (
     <div className="bg-modal-backdrop">
-      <div className="bg-modal rounded-lg shadow-lg p-6 relative !max-w-md">
+      <div className="bg-modal rounded-xl shadow-lg p-6 relative !max-w-md">
         <div className="flex items-center gap-2 mb-4 flex-shrink-0">
           <Table2 size={20} color="#e11d48" />
           <span className="text-lg font-semibold text-primary">{title}</span>

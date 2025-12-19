@@ -31,7 +31,7 @@ export function DropdownTrigger({
   dropdownPosition = 'below',
 }: DropdownTriggerProps) {
   const baseClasses = `
-    relative w-full px-3 py-2.5 text-left bg-white border rounded-lg shadow-sm
+    relative w-full px-3 py-2.5 text-left bg-white border rounded-xl shadow-sm
     cursor-pointer transition-all duration-200 ease-in-out
     focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
   `;

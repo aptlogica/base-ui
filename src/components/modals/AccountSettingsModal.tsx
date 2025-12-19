@@ -31,7 +31,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
       onKeyDown={handleKeyDown}
     >
       <div
-        className="bg-card rounded-lg border shadow-xl w-full max-w-5xl h-[90vh] max-h-[900px] flex flex-col overflow-hidden"
+        className="bg-card rounded-xl border shadow-xl w-full max-w-5xl h-[90vh] max-h-[900px] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -42,7 +42,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
             aria-label="Close modal"
           >
             <X size={20} className="text-[var(--color-text-primary)]" />

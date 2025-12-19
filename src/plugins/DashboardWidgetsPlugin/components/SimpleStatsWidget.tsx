@@ -20,7 +20,7 @@ export const SimpleStatsWidget: React.FC = () => {
   }) => (
     <div className="bg-card rounded-xl p-6 shadow-sm border">
       <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-lg bg-${color}-50`}>
+        <div className={`p-3 rounded-xl bg-${color}-50`}>
           <Icon className={`w-6 h-6 text-${color}-600`} />
         </div>
       </div>
@@ -52,7 +52,7 @@ export const SimpleStatsWidget: React.FC = () => {
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="bg-card rounded-xl p-6 shadow-sm border animate-pulse">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-lg bg-gray-200 w-12 h-12"></div>
+              <div className="p-3 rounded-xl bg-gray-200 w-12 h-12"></div>
             </div>
             <div>
               <div className="h-8 bg-gray-200 rounded mb-2"></div>

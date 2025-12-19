@@ -289,7 +289,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between mb-4 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 icon-primary rounded-lg flex items-center justify-center`}>
+            <div className={`w-10 h-10 icon-primary rounded-xl flex items-center justify-center`}>
               <IconComponent size={20} className="icon-primary" />
             </div>
             <div>
@@ -301,7 +301,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
           >
             <X size={16} className="text-[var(--text-color-tertiary)]" />
           </button>
@@ -330,7 +330,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
                 <span className="relative inline-block group">
                   <HelpCircle className={`w-4 h-4 ${validationError ? 'text-red-500' : (name.trim().length === 0 || name.trim().length >= 3) ? 'text-green-600' : 'text-gray-400'
                     } cursor-help`} />
-                  <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-card border rounded-lg shadow-lg p-3 text-sm z-50">
+                  <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                     <h4 className="mb-2 text-primary">View name info:</h4>
                     <ul className="space-y-1 text-gray-600">
                       <li>• Optional - leave empty for auto-generated name</li>
@@ -428,9 +428,9 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
           />
 
           {/* View Type Info */}
-          <div className="bg-[var(--color-utility-bg)] rounded-lg p-3">
+          <div className="bg-[var(--color-utility-bg)] rounded-xl p-3">
             <div className="flex items-center gap-2 mb-2">
-              <IconComponent size={24} className='icon-primary p-1.5 rounded-lg bg-primary/10' />
+              <IconComponent size={24} className='icon-primary p-1.5 rounded-xl bg-primary/10' />
               <span className="text-sm font-medium text-primary">
                 {viewType.charAt(0).toUpperCase() + viewType.slice(1)} View
               </span>
@@ -451,7 +451,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
+              className="px-4 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
             >
               Cancel
             </button>
@@ -470,7 +470,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
                     startDateField === endDateField
                   ) : !selectedField)))
               }
-              className="px-6 py-2 rounded-lg btn-primary text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-2 rounded-xl btn-primary text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>

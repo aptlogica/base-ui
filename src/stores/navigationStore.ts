@@ -287,29 +287,22 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
             // Navigate to first view
             get().navigateToView(targetWorkspaceId, baseId, (targetTable as any).id, (targetView as any).id);
             navigate(`/base/${baseId}/table/${(targetTable as any).id}/${(targetView as any).id}`);
-            // console.log('✅ Navigated to first table/view:', { baseId, tableId: (targetTable as any).id, viewId: (targetView as any).id });
           } else {
             // Navigate to first table with grid view
             get().navigateToTable(targetWorkspaceId, baseId, (targetTable as any).id);
             navigate(`/base/${baseId}/table/${(targetTable as any).id}/grid`);
-            // console.log('✅ Navigated to first table (grid view):', { baseId, tableId: (targetTable as any).id });
           }
           return true;
         } else if (targetWorkspaceId) {
           // Navigate to base only
           get().navigateToBase(targetWorkspaceId, baseId);
           navigate(`/base/${baseId}`);
-          // console.log('✅ Navigated to base (no tables):', baseId);
           return true;
         }
-
-        // console.log('⚠️ Could not find base or workspace for:', baseId);
         return false;
       },
 
       navigateToFirstBase: (workspaceId: string, workspaceData: any, navigate: (path: string) => void): boolean => {
-        console.log('🎯 Navigating to first base in workspace:', workspaceId);
-        
         // Try to get workspace bases from the API hook data structure
         let bases = null;
         
@@ -330,7 +323,6 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
         if (bases && Array.isArray(bases) && (bases as any[]).length > 0) {
           const firstBase = bases[0] as any;
           if (firstBase && firstBase.id) {
-            console.log('🎯 Found first base:', firstBase.name || 'Unnamed');
             
             // Navigate to the first base and try to find first table/view
             if (firstBase.tables && Array.isArray(firstBase.tables) && firstBase.tables.length > 0) {
@@ -341,24 +333,19 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
                   if (firstView && firstView.id) {
                     get().navigateToView(workspaceId, firstBase.id, firstTable.id, firstView.id);
                     navigate(`/base/${firstBase.id}/table/${firstTable.id}/${firstView.id}`);
-                    console.log('✅ Navigated to first base/table/view');
                   }
                 } else {
                   get().navigateToTable(workspaceId, firstBase.id, firstTable.id);
                   navigate(`/base/${firstBase.id}/table/${firstTable.id}/grid`);
-                  console.log('✅ Navigated to first base/table with grid view');
                 }
               }
             } else {
               get().navigateToBase(workspaceId, firstBase.id);
               navigate(`/base/${firstBase.id}`);
-              console.log('✅ Navigated to first base (no tables)');
             }
             return true;
           }
         }
-
-        console.log('⚠️ No bases found in workspace:', workspaceId);
         return false;
       },
 

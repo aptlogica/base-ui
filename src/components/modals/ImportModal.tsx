@@ -69,7 +69,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importMutation = useImportTable();
   const toast = useToast();
@@ -100,14 +100,14 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
   const validateFile = (file: File): string | null => {
     // Check file size
-    if (file.size > config.maxSize) {
-      return `File size exceeds ${formatFileSize(config.maxSize)}. Please select a smaller file.`;
-    }
+    // if (file.size > config.maxSize) {
+    //   return `File size exceeds ${formatFileSize(config.maxSize)}. Please select a smaller file.`;
+    // }
 
     // Check file extension
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
     const acceptedExtensions = config.accept.split(',').map(ext => ext.trim().toLowerCase());
-    
+
     if (!acceptedExtensions.some(ext => fileExtension === ext)) {
       return `Invalid file type. Please select a ${config.label} file (${config.accept}).`;
     }
@@ -125,7 +125,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
     setError(null);
     setSelectedFile(file);
-    
+
     // Auto-generate title from filename if title is empty
     if (!title.trim()) {
       const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
@@ -215,9 +215,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
       // Set to 100% on completion
       setUploadProgress(100);
-      
+
       toast.success(`${config.label} file imported successfully`);
-      
+
       // Small delay to show 100% progress before closing
       setTimeout(() => {
         onClose();
@@ -254,7 +254,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 icon-primary rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center">
               <Upload size={20} className="icon-primary" />
             </div>
             <div>
@@ -264,7 +264,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
             aria-label="Close"
           >
             <X size={16} className="text-[var(--text-color-tertiary)]" />
@@ -279,11 +279,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               Select File <span className="text-red-500">*</span>
             </label>
             <div
-              className={`border border-dashed rounded-lg p-6 text-center transition-colors ${
-                isDragOver
+              className={`border border-dashed rounded-xl p-6 text-center transition-colors ${isDragOver
                   ? 'border-[var(--color-bg-brand-primary)] bg-[var(--color-bg-brand-primary)]/10'
                   : 'border-gray-300 hover:border-gray-400'
-              } ${selectedFile ? 'bg-green-50 border-green-300' : ''}`}
+                } ${selectedFile ? 'bg-green-50 border-green-300' : ''}`}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -319,7 +318,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 <div className="flex flex-col items-center gap-2">
                   <Upload size={32} className="text-gray-400" />
                   <div className="text-sm text-primary">
-                   Drop your document here or <span className="hover:underline cursor-pointer text-[var(--color-bg-brand-primary)]">browse files</span>
+                    Drop your document here or <span className="hover:underline cursor-pointer text-[var(--color-bg-brand-primary)]">browse files</span>
                   </div>
                   <div className="text-xs text-secondary">
                     {config.label} file (max {formatFileSize(config.maxSize)})
@@ -339,7 +338,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter table title"
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-1 focus:ring-[var(--color-bg-brand-primary)] text-primary bg-background"
+              className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-bg-brand-primary)] text-primary bg-background"
             />
           </div>
 
@@ -353,13 +352,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Enter table description"
               rows={3}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-1 focus:ring-[var(--color-bg-brand-primary)] text-primary bg-background resize-none"
+              className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-bg-brand-primary)] text-primary bg-background resize-none"
             />
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
               {error}
             </div>
           )}
@@ -391,7 +390,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             type="button"
             onClick={onClose}
             disabled={importMutation.isPending || isSubmitting}
-            className="px-4 py-2 rounded-lg border hover:bg-gray-50 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
+            className="px-4 py-2 rounded-xl border hover:bg-gray-50 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
           >
             Cancel
           </button>

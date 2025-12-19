@@ -232,7 +232,7 @@ export const Attachment: React.FC<AttachmentProps> = ({
     return (
       <div className={`relative flex items-center px-2 pr-20 ${isBorder ? "field-component-border" : ""}`}>
         {/* Thumbnails row - Show only first 3 images */}
-        <div className="flex items-center gap-1 min-h-[32px] overflow-hidden flex-wrap">
+        <div className="flex items-center gap-1 min-h-8 overflow-hidden flex-wrap">
           {attachmentArray?.slice(0, 3).map((file, idx) => {
             const isImage = file.mime_type?.startsWith('image/');
             const isPdf = file.mime_type?.startsWith('application/pdf');
@@ -370,13 +370,6 @@ export const Attachment: React.FC<AttachmentProps> = ({
               const percent = Math.round(
                 (progressEvent.loaded * 100) / progressEvent.total
               );
-              console.log(`Upload progress: ${percent}%`);
-
-              // You can add UI updates here, for example:
-              // - Update a progress bar
-              // - Show percentage in UI
-              // - Update loading states
-              // - Send progress to parent components
             }
           });
         } else {

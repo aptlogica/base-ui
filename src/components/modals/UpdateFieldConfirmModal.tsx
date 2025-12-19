@@ -14,7 +14,7 @@ const UpdateFieldConfirmModal: React.FC<UpdateFieldConfirmModalProps> = ({ isOpe
 
   return (
     <div className="bg-modal-backdrop">
-      <div className="bg-modal rounded-lg shadow-lg p-6 w-full !max-w-md relative">
+      <div className="bg-modal rounded-xl shadow-lg p-6 w-full !max-w-md relative">
         <div className="flex items-center gap-2 mb-4 flex-shrink-0">
           <TriangleAlert size={20} color="var(--color-warning-400)" />
           <span className="text-lg font-semibold text-[var(--text-color-tertiary-heading)]">{title}</span>

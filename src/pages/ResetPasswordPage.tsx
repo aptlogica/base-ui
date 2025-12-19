@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
-import { ArrowLeft, Lock, Eye, EyeOff, CheckCircle, Info } from "lucide-react";
+import { ArrowLeft, Lock, Eye, EyeOff, CheckCircle, Info, HelpCircle } from "lucide-react";
 import { resetPassword } from "../service/clientService";
+import { validatePasswordStrength } from "../utils/validation";
 
 const ResetPasswordPage: React.FC = () => {
   const { token: tokenParam } = useParams<{ token: string }>();
@@ -28,13 +29,6 @@ const ResetPasswordPage: React.FC = () => {
     }
   }, [token, navigate]);
 
-  const validatePassword = (password: string) => {
-    if (password.length < 6) {
-      return "Password must be at least 6 characters long";
-    }
-    return null;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -51,9 +45,10 @@ const ResetPasswordPage: React.FC = () => {
       return;
     }
 
-    const passwordValidationError = validatePassword(formData.password);
-    if (passwordValidationError) {
-      setPasswordError(passwordValidationError);
+    // Use validatePasswordStrength (no user data available for reset password)
+    const passwordValidation = validatePasswordStrength(formData.password, '', '', '');
+    if (!passwordValidation.isValid) {
+      setPasswordError(passwordValidation.errorMessage || "Password doesn't meet requirements");
       return;
     }
 
@@ -136,11 +131,15 @@ const ResetPasswordPage: React.FC = () => {
                   if (error) setError("");
                 }}
                 onBlur={() => {
-                  if (!formData.password.trim()) setPasswordError("This field is required");
-                  else {
-                    const validationError = validatePassword(formData.password);
-                    if (validationError) setPasswordError(validationError);
-                    else setPasswordError(null);
+                  if (!formData.password.trim()) {
+                    setPasswordError("This field is required");
+                  } else {
+                    const validation = validatePasswordStrength(formData.password, '', '', '');
+                    if (!validation.isValid) {
+                      setPasswordError(validation.errorMessage || "Password doesn't meet requirements");
+                    } else {
+                      setPasswordError(null);
+                    }
                   }
                 }}
                 placeholder="Enter your new password"
@@ -160,13 +159,56 @@ const ResetPasswordPage: React.FC = () => {
                     <Eye className="w-4 h-4" />
                   )}
                 </button>
+                <div className="relative group">
+                  <HelpCircle className={`w-4 h-4 ${passwordError ? "text-red-400" : "text-gray-400"} cursor-help`} />
+                  <div className="invisible group-hover:visible group-focus-within:visible absolute left-0 mt-1 w-72 bg-card border rounded-xl shadow-lg p-4 text-sm z-50">
+                    <h4 className="font-medium mb-2 text-primary">Password Requirements:</h4>
+                    <ul className="space-y-1">
+                      {(() => {
+                        const validation = validatePasswordStrength(formData.password, '', '', '');
+                        const hasPassword = formData.password && formData.password.trim().length > 0;
+                        return (
+                          <>
+                            <li className={`flex items-center ${validation.hasLength ? 'text-green-600' : 'text-red-500'}`}>
+                              • Minimum 8 characters
+                            </li>
+                            <li className={`flex items-center ${validation.hasUpper ? 'text-green-600' : 'text-red-500'}`}>
+                              • At least one uppercase letter
+                            </li>
+                            <li className={`flex items-center ${validation.hasLower ? 'text-green-600' : 'text-red-500'}`}>
+                              • At least one lowercase letter
+                            </li>
+                            <li className={`flex items-center ${validation.hasNumber ? 'text-green-600' : 'text-red-500'}`}>
+                              • At least one number
+                            </li>
+                            <li className={`flex items-center ${validation.hasSymbol ? 'text-green-600' : 'text-red-500'}`}>
+                              • At least one symbol
+                            </li>
+                            <li className={`flex items-center ${hasPassword && validation.containsNameAndEmail ? 'text-green-600' : 'text-red-500'}`}>
+                              • Should not contain your name or email
+                            </li>
+                            <li className={`flex items-center ${hasPassword && validation.containsCommon ? 'text-green-600' : 'text-red-500'}`}>
+                              • Password Should not contain common words
+                            </li>
+                          </>
+                        );
+                      })()}
+                    </ul>
+                  </div>
+                </div>
               </div>
             </div>
-            {passwordError && (
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                <Info className="w-4 h-4 text-red-400" />
-              </div>
-            )}
+            {formData.password && (() => {
+              const validation = validatePasswordStrength(formData.password, '', '', '');
+              return (
+                <div className="mt-2 px-1.5 flex gap-1">
+                  <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validation.strength >= 1 ? 'bg-red-500' : 'bg-gray-200'}`}></div>
+                  <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validation.strength >= 3 ? 'bg-yellow-500' : 'bg-gray-200'}`}></div>
+                  <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validation.strength >= 5 ? 'bg-yellow-500' : 'bg-gray-200'}`}></div>
+                  <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validation.strength === 7 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+                </div>
+              );
+            })()}
             {passwordError && <div className="mt-1.5 text-red-500 text-sm">{passwordError}</div>}
           </div>
 
@@ -222,8 +264,16 @@ const ResetPasswordPage: React.FC = () => {
 
           <button
             type="submit"
-            disabled={isLoading}
-            className="w-full btn-primary py-2 px-4 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={
+              isLoading ||
+              !formData.password.trim() ||
+              !formData.confirmPassword.trim() ||
+              formData.password !== formData.confirmPassword ||
+              !validatePasswordStrength(formData.password, '', '', '').isValid ||
+              !!passwordError ||
+              !!confirmPasswordError
+            }
+            className="w-full btn-primary py-2 px-4 rounded-xl font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? "Resetting..." : "Reset Password"}
           </button>

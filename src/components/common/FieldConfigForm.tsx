@@ -563,7 +563,7 @@ export const FieldConfigForm: React.FC<FieldConfigFormProps> = ({
         <div>
           <label className="block text-sm font-medium text-[var(--color-gray-700)] mb-2">Description</label>
           <textarea
-            className="w-full px-3 py-2 border border-[var(--color-gray-300)] rounded-lg text-sm outline-none field-component-focus resize-none"
+            className="w-full px-3 py-2 border border-[var(--color-gray-300)] rounded-xl text-sm outline-none field-component-focus resize-none"
             placeholder="Enter field description..."
             value={description}
             onChange={onDescriptionChange}

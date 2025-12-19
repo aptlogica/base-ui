@@ -287,7 +287,7 @@ const WorkspacePage: React.FC = () => {
                 }
               />
             ) : (
-              <div className="flex flex-col items-center justify-center py-16 border border-dashed border-gray-200 rounded-lg bg-gray-50">
+              <div className="flex flex-col items-center justify-center py-16 border border-dashed rounded-xl bg-gray-50">
                 <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
                   <Users className="w-8 h-8 text-gray-400" />
                 </div>

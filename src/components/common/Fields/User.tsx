@@ -377,7 +377,7 @@ export const User: React.FC<UserProps> = ({
       {isOpen && calculatedPosition && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] border bg-card rounded-lg shadow-xl max-h-64 w-80 overflow-hidden flex flex-col"
+          className="fixed z-[9999] border bg-card rounded-xl shadow-xl max-h-64 w-80 overflow-hidden flex flex-col"
           style={{
             ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
             ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),
@@ -428,7 +428,7 @@ export const User: React.FC<UserProps> = ({
                   }
                 }}
                 aria-label="Search users"
-                className="w-full pl-8 pr-8 py-1.5 text-sm text-[var(--color-text-primary)] border rounded-lg focus:border outline-none focus:border-[--color-brand-600] bg-background"
+                className="w-full pl-8 pr-8 py-1.5 text-sm text-[var(--color-text-primary)] border rounded-xl focus:border outline-none focus:border-[--color-brand-600] bg-background"
               />
               {searchTerm && (
                 <button

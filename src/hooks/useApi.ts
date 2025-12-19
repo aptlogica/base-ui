@@ -163,11 +163,16 @@ export const useAddRow = () => {
   return useMutation({
     mutationFn: ({ model_id }: { model_id: string }) => addRow(model_id),
     onSuccess: (_, { model_id }) => {
-      // Ensure both record lists and table metadata are refreshed.
-      // Some components fetch records directly (['tables', modelId, 'records'])
-      // while others fetch the whole table object (['tables', modelId]).
-      queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id) });
-      queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)] });
+      // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
+      // This ensures UI updates instantly after adding a row, regardless of cache age
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.views(model_id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
@@ -355,11 +360,14 @@ export const useTable = (tableId: string, options?: any) => {
     queryKey: ['tables', tableId],
     queryFn: () => getTableByIdService(tableId, options),
     enabled: !!tableId && isTenantSchemaAvailable(),
-    staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // Increased from 2 to 5 minutes - faster navigation between views
+    gcTime: 15 * 60 * 1000, // Increased from 10 to 15 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
+    // Show cached data immediately while refetching (for background updates)
+    // This ensures instant UI when navigating between views if data is cached
+    placeholderData: (previousData) => previousData,
   });
 };
 
@@ -787,6 +795,64 @@ export const useUpdateViewAppearance = () => {
 };
 
 /**
+ * Optimized hook for updating view meta only (cardOrder, appearance, etc.)
+ * Uses optimistic cache updates and minimal invalidation for performance.
+ * 
+ * This should be used for meta-only updates (like Kanban cardOrder) to avoid triggering
+ * unnecessary refetches of all tables, bases, and workspaces.
+ */
+export const useUpdateViewMeta = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ viewId, meta, currentMeta }: { viewId: string; meta: any; currentMeta?: any }) => {
+      // Merge meta into existing meta (from parameter or cache)
+      const existingMeta = currentMeta || (queryClient.getQueryData(['view', String(viewId)]) as any)?.meta || {};
+      const newMeta = {
+        ...existingMeta,
+        ...meta
+      };
+      return updateViewService(viewId, { meta: newMeta });
+    },
+    onMutate: async ({ viewId, meta }) => {
+      // Cancel outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['view', String(viewId)] });
+
+      // Snapshot previous value for rollback
+      const previousView = queryClient.getQueryData(['view', String(viewId)]);
+
+      // Optimistically update the view cache
+      queryClient.setQueryData(['view', String(viewId)], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          meta: {
+            ...old.meta,
+            ...meta
+          }
+        };
+      });
+
+      return { previousView };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousView) {
+        queryClient.setQueryData(['view', String(variables.viewId)], context.previousView);
+      }
+    },
+    onSuccess: (_, { viewId }) => {
+      // Only invalidate the specific view query to ensure consistency
+      // No need to invalidate all views, tables, bases, or workspaces for meta changes
+      queryClient.invalidateQueries({ 
+        queryKey: ['view', String(viewId)],
+        refetchType: 'none' // Don't refetch, we already updated optimistically
+      });
+    },
+  });
+};
+
+/**
  * Hook for updating view structure (title, description, type, fieldConfig, etc.)
  * This triggers full invalidation as structural changes affect multiple components.
  */
@@ -851,10 +917,16 @@ export const useInsertRowData = () => {
     mutationFn: ({ model_id, column_id, row_id, value }: { model_id: string; column_id: string; row_id: number; value: any }) =>
       insertRowDataService({ model_id, column_id, row_id, value }),
     onSuccess: (_, vars) => {
-      // Invalidate both the records list and the full table object so callers
-      // that read the whole table (useTable -> ['tables', modelId]) get fresh data.
-      queryClient.invalidateQueries({ queryKey: queryKeys.records(vars.model_id) });
-      queryClient.invalidateQueries({ queryKey: ['tables', String(vars.model_id)] });
+      // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
+      // This ensures UI updates instantly after cell edits, regardless of cache age
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.records(vars.model_id),
+        refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['tables', String(vars.model_id)],
+        refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
@@ -868,9 +940,16 @@ export const useDeleteRecord = () => {
     mutationFn: ({ model_id, row_id }: { model_id: string; row_id: number }) =>
       deleteRowService({ model_id, row_id }),
     onSuccess: (_, { model_id }) => {
-      // Make sure both records and the cached table object are refreshed
-      queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id) });
-      queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)] });
+      // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
+      // This ensures UI updates instantly after record deletion, regardless of cache age
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });

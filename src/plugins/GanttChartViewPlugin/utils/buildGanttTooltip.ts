@@ -51,7 +51,8 @@ function cleanRichTextContent(content: string): string {
 }
 
 function formatValue(col: Column, raw: any, formatTime: (t: string) => string): string | null {
-  if (!isTruthy(raw)) return null;
+  // If value is null/undefined/empty, show hyphen instead of hiding the field
+  if (!isTruthy(raw)) return '-';
   const t = String(col?.type || col?.uidt || '').toLowerCase();
   
   try {
@@ -87,10 +88,12 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
     if (t === 'number' || col?.uidt === 'Number') {
       const num = Number(raw);
       if (!Number.isNaN(num)) return num.toLocaleString('en-US');
+      return '-';
     }
     if (t === 'decimal' || col?.uidt === 'Decimal') {
       const num = Number(raw);
       if (!Number.isNaN(num)) return num.toFixed(2);
+      return '-';
     }
     if (t === 'rating' || col?.uidt === 'Rating') {
       return String(raw);
@@ -139,15 +142,16 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
     if (typeof raw === 'object') {
       const name = (raw as any)?.name || (raw as any)?.label || (raw as any)?.title;
       if (name) return String(name);
-      // Don't show [object Object]
-      return null;
+      // Don't show [object Object] – show hyphen instead
+      return '-';
     }
     
     // Truncate very long strings
     const str = String(raw);
     return str.length > 50 ? str.substring(0, 50) + '...' : str;
   } catch {
-    return null;
+    // On any formatting error, show hyphen
+    return '-';
   }
 }
 
@@ -176,8 +180,9 @@ export function buildGanttTooltipLines(args: {
   
   lines.push(titleLine.join(' • '));
 
-  // Collect all essential fields from rawData
-  const essentialFields: Array<{value: string, priority: number}> = [];
+  // Collect all visible, non-empty fields from rawData
+  // We use "priority" only for ordering (essential types first), not for exclusion
+  const visibleFields: Array<{ value: string; priority: number }> = [];
   
   if (task.rawData && typeof task.rawData === 'object') {
     (columns || []).forEach(col => {
@@ -196,15 +201,15 @@ export function buildGanttTooltipLines(args: {
       // Skip title, id, and system fields
       if (key.toLowerCase() === 'title' || key.toLowerCase() === 'id' || col?.system) return;
       
-      // Get value from rawData
+      // Get value from rawData (use rawData[key] only – same mapping as filtering)
       const raw = task.rawData[key];
       const formatted = formatValue(col, raw, options.formatTime);
       
       if (formatted) {
         const colType = String(col?.type || col?.uidt || '').toLowerCase();
-        let priority = 10; // Default low priority
+        let priority = 20; // Default medium/low priority
         
-        // Show the most important field types first
+        // Essential types get higher priority (lower number = earlier)
         if (colType === 'currency' || col?.uidt === 'Currency') priority = 1;
         else if (colType === 'percent' || col?.uidt === 'Percent') priority = 2;
         else if (colType === 'email' || col?.uidt === 'Email') priority = 3;
@@ -214,25 +219,22 @@ export function buildGanttTooltipLines(args: {
         else if (colType === 'decimal' || col?.uidt === 'Decimal') priority = 7;
         else if (colType === 'rating' || col?.uidt === 'Rating') priority = 8;
         else if (colType === 'boolean' || col?.uidt === 'Checkbox') priority = 9;
-        // Skip dates, long text, and other verbose fields by not giving them priority < 10
-        
-        if (priority < 10) {
-          essentialFields.push({
-            value: formatted,
-            priority
-          });
-        }
+        // Other types (dates, short text, etc.) keep default priority
+
+        visibleFields.push({
+          value: formatted,
+          priority,
+        });
       }
     });
   }
 
   // Create horizontal bullet-separated lines (like NocoDB)
-  const sortedFields = essentialFields.sort((a, b) => a.priority - b.priority);
+  const sortedFields = visibleFields.sort((a, b) => a.priority - b.priority);
   
-  // Group fields into lines (up to 3-4 fields per line max, show first 5 fields total)
+  // Group fields into lines (up to 3-4 fields per line, no max-field cap)
   const fieldsPerLine = 3;
-  const maxFields = 5;
-  for (let i = 0; i < Math.min(sortedFields.length, maxFields); i += fieldsPerLine) {
+  for (let i = 0; i < sortedFields.length; i += fieldsPerLine) {
     const lineFields = sortedFields.slice(i, i + fieldsPerLine);
     const lineValues = lineFields.map(({value}) => value).join(' • ');
     if (lineValues) {

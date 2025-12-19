@@ -25,7 +25,6 @@ export const loadPlugins = async (manifestUrls: string[]): Promise<Plugin[]> => 
       // Assuming plugin.js is in the same directory as manifest.json
       const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
       const pluginUrl = `${baseUrl}plugin.js`;
-      // console.log('pluginUrl:', pluginUrl)
       const plugin = await loadPlugin(pluginUrl);
       return plugin;
     } catch (error) {

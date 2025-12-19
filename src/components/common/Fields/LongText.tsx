@@ -539,7 +539,7 @@ export const LongText: React.FC<LongTextProps> = ({
         <button
           type="button"
           onClick={openModal}
-          className="mx-2 w-8 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors z-0"
+          className="mx-2 w-8 h-7 text-gray-400 flex items-center justify-center rounded-xl border shadow-xs hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors z-0"
           tabIndex={-1}
           disabled={disabled}
         >
@@ -571,7 +571,7 @@ export const LongText: React.FC<LongTextProps> = ({
               <AlignLeft className="w-8 h-8 rounded icon-primary p-1 mr-2" />
               <span className="text-lg font-medium text-muted-foreground">Long Text</span>
               {richText && (
-                <div className="flex items-center gap-1 ml-4 px-2 py-1 bg-gray-100 rounded-lg">
+                <div className="flex items-center gap-1 ml-4 px-2 py-1 bg-gray-100 rounded-xl">
                   <button
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); execCommand('bold', null, e); }}
@@ -759,7 +759,7 @@ export const LongText: React.FC<LongTextProps> = ({
           {/* Popup */}
           <div
             ref={linkPopupRef}
-            className="fixed z-[10000] bg-white border border-gray-200 rounded-lg shadow-xl p-3 min-w-[280px] max-w-[400px]"
+            className="fixed z-[10000] bg-white border border-gray-200 rounded-xl shadow-xl p-3 min-w-[280px] max-w-[400px]"
             style={{
               top: `${linkPopupPosition.top}px`,
               left: `${linkPopupPosition.left}px`

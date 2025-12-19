@@ -217,7 +217,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Members Table */}
-      <div className="bg-card rounded-lg border overflow-hidden">
+      <div className="bg-card rounded-xl border overflow-hidden">
         {/* Header with Search and Actions */}
         {(showSearch || editorSeats !== undefined || headerActions) && (
           <div className="p-3">
@@ -378,7 +378,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                               if (el) actionButtonRefs.current[member.id] = el;
                             }}
                             onClick={() => setOpenActionsMenu(openActionsMenu === member.id ? null : member.id)}
-                            className="p-1.5 rounded-lg hover:bg-[var(--color-hover-bg)] transition-colors"
+                            className="p-1.5 rounded-xl hover:bg-[var(--color-hover-bg)] transition-colors"
                           >
                             <MoreVertical className="w-5 h-5 icons-bg" />
                           </button>
@@ -402,7 +402,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
         return createPortal(
           <div
             ref={actionsMenuRef}
-            className="fixed bg-card border shadow-sm rounded-lg z-50 min-w-[200px] p-1.5"
+            className="fixed bg-card border shadow-sm rounded-xl z-50 min-w-[200px] p-1.5"
             style={{
               top: `${menuPosition.top}px`,
               left: `${menuPosition.left - 20}px`
@@ -411,7 +411,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
             {/* {onCopyUserId && (
               <button
                 onClick={() => handleCopyUserId(member.userId)}
-                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left text-primary rounded-lg"
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left text-primary rounded-xl"
               >
                 <Copy className="w-4 h-4" />
                 <span>USER ID: {member.userId}</span>
@@ -420,7 +420,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
             {onEditMember && (
               <button
                 onClick={() => handleEditMember(openActionsMenu)}
-                className={`w-full flex items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-gray-50 ${!onCopyUserId ? 'rounded-lg' : ''} rounded-lg`}
+                className={`w-full flex items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-gray-50 ${!onCopyUserId ? 'rounded-xl' : ''} rounded-xl`}
               >
                 <Edit className="w-4 h-4" />
                 Edit member
@@ -429,7 +429,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
             {onRemoveMember && (
               <button
                 onClick={() => handleRemoveMember(openActionsMenu)}
-                className={`w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 ${!onCopyUserId ? 'rounded-lg' : ''} rounded-lg`}
+                className={`w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 ${!onCopyUserId ? 'rounded-xl' : ''} rounded-xl`}
               >
                 <Trash2 className="w-4 h-4" />
                 Remove member

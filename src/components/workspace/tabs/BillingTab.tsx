@@ -5,46 +5,14 @@ interface BillingTabProps {
 }
 
 export const BillingTab: React.FC<BillingTabProps> = ({ workspaceId }) => {
-  // const [timeLeft, setTimeLeft] = useState({
-  //   days: 14,
-  //   hours: 8,
-  //   minutes: 16,
-  //   seconds: 1
-  // });
-
-  // Countdown timer effect
-  // useEffect(() => {
-  //   const timer = setInterval(() => {
-  //     setTimeLeft(prev => {
-  //       if (prev.seconds > 0) {
-  //         return { ...prev, seconds: prev.seconds - 1 };
-  //       } else if (prev.minutes > 0) {
-  //         return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-  //       } else if (prev.hours > 0) {
-  //         return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
-  //       } else if (prev.days > 0) {
-  //         return { ...prev, days: prev.days - 1, hours: 23, minutes: 59, seconds: 59 };
-  //       }
-  //       return prev;
-  //     });
-  //   }, 1000);
-
-  //   return () => clearInterval(timer);
-  // }, []);
-
-  const handleUpgrade = () => {
-    // TODO: Implement upgrade logic
-    console.log('Upgrade workspace clicked');
-  };
-
   return (
     <div className="space-y-6">
 
       {/* Current Plan */}
-      <div className="bg-[var(--color-card)] rounded-lg border border-primary p-6">
+      <div className="bg-[var(--color-card)] rounded-xl border border-primary p-6">
         <h2 className="text-lg font-medium text-primary mb-4">Current Plan</h2>
         
-        <div className="bg-[var(--color-utility-bg)] rounded-lg p-4">
+        <div className="bg-[var(--color-utility-bg)] rounded-xl p-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-medium text-primary">Free Plan</h3>
@@ -74,7 +42,7 @@ export const BillingTab: React.FC<BillingTabProps> = ({ workspaceId }) => {
       </div>
 
       {/* Billing History */}
-      <div className="bg-[var(--color-card)] rounded-lg border border-primary p-6">
+      <div className="bg-[var(--color-card)] rounded-xl border border-primary p-6">
         <h2 className="text-lg font-medium text-primary mb-4">Billing History</h2>
         
         <div className="text-center py-8 text-secondary">

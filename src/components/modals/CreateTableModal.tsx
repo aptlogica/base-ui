@@ -98,7 +98,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 icon-primary rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center">
               <Table2 size={20} className="icon-primary" />
             </div>
             <div>
@@ -108,7 +108,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
           >
             <X size={16} className="text-[var(--text-color-tertiary)]" />
           </button>
@@ -136,7 +136,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
                 <span className="relative inline-block group">
                   <HelpCircle className={`w-4 h-4 ${validationError ? 'text-red-500' : name.trim().length >= 3 ? 'text-green-600' : 'text-gray-400'
                     } cursor-help`} />
-                  <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-card border rounded-lg shadow-lg p-3 text-sm z-50">
+                  <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                     <h4 className="mb-2 text-primary">Table name requirements:</h4>
                     <ul className="space-y-1">
                       <li className={`flex items-center ${name.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
@@ -171,14 +171,14 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-lg border hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
+              className="px-4 py-2 rounded-xl border hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !name.trim() || name.trim().length < 3}
-              className="flex items-center gap-2 px-6 py-2 rounded-lg btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <>

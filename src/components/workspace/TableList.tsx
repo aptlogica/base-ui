@@ -147,7 +147,7 @@ const TableList: React.FC<TableListProps> = ({ baseId }) => {
   if (!tables || tables.length === 0) return <div className="p-8 text-gray-400">No tables found in this base.</div>;
 
   return (
-    <div className="bg-card rounded-lg shadow border mt-2">
+    <div className="bg-card rounded-xl shadow border mt-2">
       <div className="mb-4">
         {/* Header */}
         <div className="grid rounded-tl-lg rounded-tr-lg grid-cols-12 px-6 py-3 border-b text-xs text-gray-700 font-semibold hover:text-gray-900">
@@ -245,7 +245,7 @@ const TableList: React.FC<TableListProps> = ({ baseId }) => {
                       return (
                         <div
                           key={view.id}
-                          className="grid grid-cols-12 items-center px-6 py-2 ml-7 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                          className="grid grid-cols-12 items-center px-6 py-2 ml-7 rounded-xl hover:bg-gray-100 transition cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(`/base/${baseId}/table/${table.id}/${view.id}`);

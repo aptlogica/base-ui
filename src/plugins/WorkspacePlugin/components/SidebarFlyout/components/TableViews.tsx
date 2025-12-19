@@ -135,7 +135,7 @@ export const TableViews: React.FC<TableViewsProps> = ({
         return (
           <div
             key={view.id}
-            className={`sidebar-flyout-view flex items-center gap-3 py-2 pr-3 pl-7 mt-1 first:mt-0 hover:bg-[var(--color-gray-100)] rounded-lg ${isViewActive(table.base_id, table.id, view.id) ? 'bg-blue-25 ' : ''} relative group`}
+            className={`sidebar-flyout-view flex items-center gap-3 py-2 pr-3 pl-7 mt-1 first:mt-0 hover:bg-[var(--color-gray-100)] rounded-xl ${isViewActive(table.base_id, table.id, view.id) ? 'bg-blue-25 ' : ''} relative group`}
           >
             {/* View icon and name - click to navigate */}
             <div

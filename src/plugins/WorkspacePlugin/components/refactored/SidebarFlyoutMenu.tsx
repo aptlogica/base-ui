@@ -1,12 +1,13 @@
-import React, { useRef, useEffect, useMemo, useState } from 'react';
+import React, { useRef, useEffect, useMemo, useState, Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom';
 import * as LucideIcons from 'lucide-react';
 import { Pin } from 'lucide-react';
 import { getStoredAccessToken } from '../../../../service/clientService';
 import { useToast } from '../../../../components/common/Toast';
 
-import { CreateTableModal } from '../../../../components/modals/CreateTableModal';
-import { CreateViewModal } from '../../../../components/modals/CreateViewModal';
+const CreateTableModal = lazy(() => 
+  import('../../../../components/modals/CreateTableModal').then(m => ({ default: m.CreateTableModal }))
+);
 import { CreateBaseModal } from '../../../../components/modals/CreateBaseModal';
 import TableOptionsMenu from '../../../../components/tables/TableOptionsMenu';
 
@@ -33,7 +34,6 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const toast = useToast();
-  // Use the centralized business logic hook
   const {
     // Data
     currentWorkspace,
@@ -202,11 +202,6 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
   // Check if we're in layout mode (no onClose function means layout mode)
   const isLayoutMode = !onClose;
 
-  useEffect(() => {
-    // Debug: log raw access token
-    const token = getStoredAccessToken();
-    console.log(token);
-  }, []);
   // Click outside handler for flyout in floating mode
   useEffect(() => {
     if (!isLayoutMode) {
@@ -246,7 +241,7 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
       <div className="sidebar-flyout-header flex items-center justify-between sticky top-0 z-10">
         <div className="flyout-title flex items-center gap-2 relative">
           <div
-            className="bases-dropdown-trigger h-8 px-2 py-0 cursor-pointer flex items-center gap-2 hover:bg-[var(--color-gray-200)] rounded-lg p-0 transition-all duration-200"
+            className="bases-dropdown-trigger h-8 px-2 py-0 cursor-pointer flex items-center gap-2 hover:bg-[var(--color-gray-200)] rounded-xl p-0 transition-all duration-200"
             onClick={() => setBasesDropdownOpen(!basesDropdownOpen)}
           >
             <span 
@@ -337,7 +332,7 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
             return (
               <div key={table.id}>
                 <div
-                  className={`flex items-center gap-3 py-1.5 pl-2 pr-3 mb-1 hover:bg-[var(--color-gray-100)] rounded-lg ${isTableActive(table.base_id, table.id) ? 'bg-background' : ''
+                  className={`flex items-center gap-3 py-1.5 pl-2 pr-3 mb-1 hover:bg-[var(--color-gray-100)] rounded-xl ${isTableActive(table.base_id, table.id) ? 'bg-background' : ''
                     } relative hover:shadow-xs transition-all ease-in duration-200`}
                 >
                   {/* Table icon */}
@@ -511,44 +506,50 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
       )}
 
       {showCreateTableBaseId && ReactDOM.createPortal(
-        <CreateTableModal
-          isOpen={!!showCreateTableBaseId}
-          onClose={() => setShowCreateTableBaseId(null)}
-          baseId={showCreateTableBaseId}
-          existingTables={baseTables?.data || []}
-          onCreate={async ({ name, description }) => {
-            try {
-              // Get the count of existing tables to set order_index
-              const existingTables = baseTables?.data || [];
-              const order_index = existingTables.length;
-
-              const newTable = await createTableMutation.mutateAsync({
-                base_id: showCreateTableBaseId,
-                workspace_id: selectedWorkspaceId || effectiveSelectedWorkspace?.id || '',
-                title: name,
-                description: description || '',
-                order_index
-              });
-
-              // Persist navigation and navigate to the newly created table
+        <Suspense fallback={
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]">
+            <Loader />
+          </div>
+        }>
+          <CreateTableModal
+            isOpen={!!showCreateTableBaseId}
+            onClose={() => setShowCreateTableBaseId(null)}
+            baseId={showCreateTableBaseId}
+            existingTables={baseTables?.data || []}
+            onCreate={async ({ name, description }) => {
               try {
-                const workspaceId = selectedWorkspaceId || effectiveSelectedWorkspace?.id || '';
-                if (workspaceId && showCreateTableBaseId && newTable?.data?.id) {
-                  // navigateAndPersist(workspaceId, showCreateTableBaseId, newTable.data.id, user?.id); // Removed as navigateAndPersist is not in business logic
-                  // Use the provided navigation function to update URL
-                  navigateToTable(workspaceId, showCreateTableBaseId, newTable.data.id);
-                }
-              } catch (navErr) {
-                console.warn('Navigation after table create failed', navErr);
-              }
+                // Get the count of existing tables to set order_index
+                const existingTables = baseTables?.data || [];
+                const order_index = existingTables.length;
 
-              setShowCreateTableBaseId(null);
-            } catch (err) {
-              console.error('Failed to create table:', err);
-              toast.error('Failed to create table. Please try again.', { title: 'Error' });
-            }
-          }}
-        />,
+                const newTable = await createTableMutation.mutateAsync({
+                  base_id: showCreateTableBaseId,
+                  workspace_id: selectedWorkspaceId || effectiveSelectedWorkspace?.id || '',
+                  title: name,
+                  description: description || '',
+                  order_index
+                });
+
+                // Persist navigation and navigate to the newly created table
+                try {
+                  const workspaceId = selectedWorkspaceId || effectiveSelectedWorkspace?.id || '';
+                  if (workspaceId && showCreateTableBaseId && newTable?.data?.id) {
+                    // navigateAndPersist(workspaceId, showCreateTableBaseId, newTable.data.id, user?.id); // Removed as navigateAndPersist is not in business logic
+                    // Use the provided navigation function to update URL
+                    navigateToTable(workspaceId, showCreateTableBaseId, newTable.data.id);
+                  }
+                } catch (navErr) {
+                  console.warn('Navigation after table create failed', navErr);
+                }
+
+                setShowCreateTableBaseId(null);
+              } catch (err) {
+                console.error('Failed to create table:', err);
+                toast.error('Failed to create table. Please try again.', { title: 'Error' });
+              }
+            }}
+          />
+        </Suspense>,
         document.body
       )}
 

@@ -171,7 +171,6 @@ const DashboardWidgetsPlugin: Plugin = {
   },
 
   activate: async () => {
-    // console.log('Dashboard Widgets plugin activated');
     const dashboardService = window.pluginServices?.dashboard;
     if (dashboardService) {
       dashboardService.startAutoRefresh();
@@ -179,7 +178,6 @@ const DashboardWidgetsPlugin: Plugin = {
   },
 
   deactivate: async () => {
-    // console.log('Dashboard Widgets plugin deactivated');
     const dashboardService = window.pluginServices?.dashboard;
     if (dashboardService) {
       dashboardService.stopAutoRefresh();

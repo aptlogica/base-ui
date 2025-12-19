@@ -330,7 +330,7 @@ export function AdvancedDropdown<T extends string | number>({
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          className={`absolute z-40 w-full bg-background border rounded-lg shadow-lg transition-all duration-200 ${dropdownPosition === 'above'
+          className={`absolute z-40 w-full bg-background border rounded-xl shadow-lg transition-all duration-200 ${dropdownPosition === 'above'
             ? 'bottom-full mb-1'
             : 'top-full mt-1'
             }`}
@@ -423,7 +423,7 @@ const DropdownTrigger = React.forwardRef<HTMLButtonElement, {
 }, ref) => {
 
   const baseClasses = `
-    relative w-full px-3 py-2.5 text-left bg-background border rounded-lg shadow-xs text-primary
+    relative w-full px-3 py-2.5 text-left bg-background border rounded-xl shadow-xs text-primary
     cursor-pointer transition-all duration-200 ease-in-out
     focus:outline-none focus:border-[--color-brand-600]
     flex items-center justify-between
@@ -555,7 +555,7 @@ function DropdownOptionItem<T>({
 
   return (
     <li
-      className={`${baseClasses} ${stateClasses} rounded-lg`}
+      className={`${baseClasses} ${stateClasses} rounded-xl`}
       onClick={option.disabled ? undefined : onClick}
       role="option"
       aria-selected={isSelected}

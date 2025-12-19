@@ -57,7 +57,7 @@ const CellTypeModal = ({ onClose, onSubmit }) => {
       <div className="fixed inset-0 z-40 bg-black opacity-40"></div>
       <div className="fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full overflow-y-auto overflow-x-hidden md:inset-0 h-[calc(100%-1rem)] max-h-full">
         <div className="relative p-4 w-full max-w-md max-h-full">
-          <div className="relative bg-white rounded-lg shadow-sm">
+          <div className="relative bg-white rounded-xl shadow-sm">
             <div className="flex items-center justify-between p-4 md:p-5 border-b rounded-t border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
                 New Field
@@ -65,7 +65,7 @@ const CellTypeModal = ({ onClose, onSubmit }) => {
               <button
                 type="button"
                 onClick={onClose}
-                className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center"
+                className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-xl text-sm w-8 h-8 ms-auto inline-flex justify-center items-center"
               >
                 <Icons.X />
               </button>
@@ -79,7 +79,7 @@ const CellTypeModal = ({ onClose, onSubmit }) => {
                     id="name"
                     value={fieldName}
                     onChange={e => setFieldName(e.target.value)}
-                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
+                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
                     placeholder="Field Name (optional)"
                   />
                 </div>
@@ -89,12 +89,12 @@ const CellTypeModal = ({ onClose, onSubmit }) => {
                     placeholder="Search Field Type"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    className="mb-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
+                    className="mb-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
                     onFocus={() => setDropdownOpen(true)}
                   />
                   <div className="relative" ref={dropdownRef}>
                     <div
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg px-3 py-2 cursor-pointer flex items-center justify-between"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl px-3 py-2 cursor-pointer flex items-center justify-between"
                       onClick={() => setDropdownOpen((open) => !open)}
                     >
                       <span>
@@ -105,7 +105,7 @@ const CellTypeModal = ({ onClose, onSubmit }) => {
                       </svg>
                     </div>
                     {dropdownOpen && (
-                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-auto">
+                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-xl shadow-lg max-h-48 overflow-auto">
                         {filteredTypes.length === 0 && (
                           <div className="px-4 py-2 text-gray-500">No types found</div>
                         )}
@@ -132,7 +132,7 @@ const CellTypeModal = ({ onClose, onSubmit }) => {
               </div>
               <button
                 type="submit"
-                className="text-white inline-flex items-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
+                className="text-white inline-flex items-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-xl text-sm px-5 py-2.5 text-center"
               >
                 Save Field
               </button>

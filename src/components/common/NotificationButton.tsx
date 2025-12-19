@@ -85,7 +85,7 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({
     <div className="relative" ref={popoverRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-lg bg-card icons-bg hover:bg-[var(--color-gray-100)]  hover:text-[var(--color-alpha-black)] transition-colors focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-2"
+        className="relative p-2 rounded-xl bg-card icons-bg hover:bg-[var(--color-gray-100)]  hover:text-[var(--color-alpha-black)] transition-colors focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-2"
         aria-label="Notifications"
       >
         <Bell className="w-5 h-5 text-muted-foreground transition-transform duration-200 hover:scale-110" />
@@ -97,7 +97,7 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute left-14 bottom-0 mb-0 w-80 bg-background border rounded-lg shadow-lg z-50 max-h-96 overflow-hidden">
+        <div className="absolute left-14 bottom-0 mb-0 w-80 bg-background border rounded-xl shadow-lg z-50 max-h-96 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border">
             <h3 className="text-sm font-semibold text-foreground">Notifications</h3>

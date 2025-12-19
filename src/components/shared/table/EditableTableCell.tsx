@@ -135,7 +135,6 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
         if (match?.label) return match.label;
       }
       const fallback = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      // console.log('zone----->', fallback)
       return fallback;
     } catch {
       return undefined;

@@ -566,12 +566,12 @@ export const DateField: React.FC<DateProps> = ({
   };
 
   const renderCalendar = () => (
-    <div className="p-2 bg-background rounded-lg">
+    <div className="p-2 bg-background rounded-xl">
       <div className="flex items-center justify-between mb-4">
         <div className="flex w-full items-center justify-between">
           <button
             type="button"
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
             onClick={() => setCalendarMonth(new Date(year, month - 1, 1))}
           >
             <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
@@ -599,7 +599,7 @@ export const DateField: React.FC<DateProps> = ({
                     <button
                       type="button"
                       onClick={goPrevMonthYear}
-                      className="h-8 w-8 grid place-items-center rounded-lg hover:bg-gray-100 transition-colors"
+                      className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100 transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
                     </button>
@@ -609,7 +609,7 @@ export const DateField: React.FC<DateProps> = ({
                     <button
                       type="button"
                       onClick={goNextMonthYear}
-                      className="h-8 w-8 grid place-items-center rounded-lg hover:bg-gray-100 transition-colors"
+                      className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100 transition-colors"
                     >
                       <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
                     </button>
@@ -620,7 +620,7 @@ export const DateField: React.FC<DateProps> = ({
                       <button
                         key={index}
                         className={[
-                          "w-full py-2 rounded-lg text-sm text-center transition-colors",
+                          "w-full py-2 rounded-xl text-sm text-center transition-colors",
                           "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black",
                           index === month
                             ? "bg-[var(--color-bg-brand-secondary)] text-black font-semibold"
@@ -661,7 +661,7 @@ export const DateField: React.FC<DateProps> = ({
                     <button
                       type="button"
                       onClick={goPrev}
-                      className="h-8 w-8 grid place-items-center rounded-lg hover:bg-gray-100"
+                      className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100"
                     >
                       <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
                     </button>
@@ -671,7 +671,7 @@ export const DateField: React.FC<DateProps> = ({
                     <button
                       type="button"
                       onClick={goNext}
-                      className="h-8 w-8 grid place-items-center rounded-lg hover:bg-gray-100"
+                      className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100"
                     >
                       <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
                     </button>
@@ -706,7 +706,7 @@ export const DateField: React.FC<DateProps> = ({
 
           <button
             type="button"
-            className="p-2 rounded-lg hover:bg-gray-100 text-[var(--color-text-brand-tertiary)] transition-colors"
+            className="p-2 rounded-xl hover:bg-gray-100 text-[var(--color-text-brand-tertiary)] transition-colors"
             onClick={() => setCalendarMonth(new Date(year, month + 1, 1))}
           >
             <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
@@ -743,7 +743,7 @@ export const DateField: React.FC<DateProps> = ({
         <div className="flex justify-center mt-4 pt-3 border-t">
           <button
             type="button"
-            className="px-4 py-2 rounded-lg bg-[var(--color-bg-brand-primary)] text-black hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
+            className="px-4 py-2 rounded-xl bg-[var(--color-bg-brand-primary)] text-black hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
             onClick={() => handleDateSelect(todayISO)}
           >
             Today
@@ -807,7 +807,7 @@ export const DateField: React.FC<DateProps> = ({
       {isOpen && calculatedPosition && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] border rounded-lg shadow-lg w-80 animate-fade-in bg-background"
+          className="fixed z-[9999] border rounded-xl shadow-lg w-80 animate-fade-in bg-background"
           style={{
             ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
             ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),

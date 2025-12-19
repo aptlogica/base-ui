@@ -103,14 +103,14 @@ const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
                                     return (
                                         <div key={workspace.id} className='flex flex-col'>
                                             <div
-                                                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-all duration-200 hover:bg-[var(--color-hover-bg)] ${isSelected
+                                                className={`w-full text-left px-3 py-2 text-sm rounded-xl transition-all duration-200 hover:bg-[var(--color-hover-bg)] ${isSelected
                                                     ? 'bg-[var(--color-selected-bg)] text-primary border'
                                                     : 'text-primary'
                                                     }`}
                                                 onClick={() => handleWorkspaceClick(workspace)}
                                             >
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
+                                                    <div className="w-8 h-8 bg-red-600 rounded-xl flex items-center justify-center">
                                                         <span className="text-white font-bold text-sm">
                                                             {(
                                                                 workspace.title?.charAt(0) ||
@@ -126,7 +126,7 @@ const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
                                                         </div>
                                                         {/* {isSelected && (
                                                         <button
-                                                            className="p-2 rounded-lg hover:bg-[var(--color-bg-brand-primary)] text-tertiary"
+                                                            className="p-2 rounded-xl hover:bg-[var(--color-bg-brand-primary)] text-tertiary"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 navigate(`/workspace/${workspace.id}/settings`);
@@ -158,13 +158,13 @@ const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
                         {canCreateWorkspace() && (
                             <div className="border-t pt-3 px-2 pb-2 bg-card sticky bottom-0">
                                 <button
-                                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-lg transition-all duration-200 font-medium flex items-center gap-3"
+                                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-xl transition-all duration-200 font-medium flex items-center gap-3"
                                     onClick={() => {
                                         onCreateWorkspace();
                                         onClose();
                                     }}
                                 >
-                                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                    <div className="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center">
                                         <Plus className="w-4 h-4 text-black" />
                                     </div>
                                     Create New Workspace

@@ -221,7 +221,7 @@ export const BillingDetailsWidget: React.FC = () => {
       <div className="pt-4 border-t border-border">
         <button
           onClick={handleUpgrade}
-          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
         >
           <LucideIcons.ArrowUp className="w-4 h-4" />
           Upgrade Plan

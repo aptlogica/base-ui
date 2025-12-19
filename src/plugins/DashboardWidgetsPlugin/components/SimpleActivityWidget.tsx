@@ -145,7 +145,7 @@ export const SimpleActivityWidget: React.FC = () => {
             const color = getActivityColor(activity.type);
             
             return (
-              <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
+              <div key={index} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50">
                 <div className={`p-1.5 rounded-md bg-${color}-100`}>
                   <Icon className={`w-4 h-4 text-${color}-600`} />
                 </div>

@@ -19,7 +19,9 @@ export const useWorkspaceDataService = (workspaceId?: string, baseId?: string, t
   const workspaceBasesQuery = useWorkspaceBases(workspaceId || '');
   const baseByIdQuery = useBaseById(baseId || '');
   const baseTablesQuery = useBaseTables(baseId || '');
-  const tableByIdQuery = useTable(tableId, {pageNumber:1, pageLimit: 30});
+  // PAGINATION DISABLED - Uncomment below to re-enable pagination (30 records per page)
+  // const tableByIdQuery = useTable(tableId || '', {pageNumber:1, pageLimit: 30});
+  const tableByIdQuery = useTable(tableId || ''); // No pagination - fetches all records
   const tableViewsQuery = useTableViews(tableId || '');
   const viewByIdQuery = useViewById(viewId || '');
 

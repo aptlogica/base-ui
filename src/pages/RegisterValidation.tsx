@@ -298,7 +298,7 @@ const OtpValidation: React.FC<OtpValidationProps> = ({
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="bg-card p-8 rounded-lg shadow-md w-full max-w-xl text-center">
+      <div className="bg-card p-8 rounded-xl shadow-md w-full max-w-xl text-center">
         <h2 className="text-xl font-bold text-gray-800 mb-2">
           {fromLogin ? 'Email Verification Required' : 'OTP Verification'}
         </h2>
@@ -328,7 +328,7 @@ const OtpValidation: React.FC<OtpValidationProps> = ({
                 inputsRef.current[index] = el;
               }}
               disabled={isVerifying}
-              className={`w-12 h-12 border rounded-lg max-h text-center text-xl font-semibold text-[var(--color-text-primary)] bg-[--color-alpha-white] focus:border-[var(--color-bg-brand-primary)] transition-colors focus:outline-none ${isVerifying ? 'opacity-50 cursor-not-allowed' : ''
+              className={`w-12 h-12 border rounded-xl max-h text-center text-xl font-semibold text-[var(--color-text-primary)] bg-[--color-alpha-white] focus:border-[var(--color-bg-brand-primary)] transition-colors focus:outline-none ${isVerifying ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
             />
           ))}

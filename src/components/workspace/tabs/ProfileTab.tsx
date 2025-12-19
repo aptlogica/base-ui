@@ -25,18 +25,18 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({ workspaceId }) => {
   return (
     <div className="space-y-6">
       {/* Profile Information Card */}
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-gray-200 p-6">
         <h2 className="text-xl font-medium text-primary mb-4">Profile Information</h2>
         
         <div className="flex items-start space-x-4">
           {/* User Avatar */}
           <div className="flex-shrink-0">
-            <div className="w-16 h-16 bg-purple-600 rounded-lg flex items-center justify-center">
+            <div className="w-16 h-16 bg-purple-600 rounded-xl flex items-center justify-center">
               {userAvatar ? (
                 <img 
                   src={userAvatar} 
                   alt="Profile" 
-                  className="w-16 h-16 rounded-lg object-cover"
+                  className="w-16 h-16 rounded-xl object-cover"
                 />
               ) : (
                 <span className="text-white font-semibold text-xl">
@@ -90,7 +90,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({ workspaceId }) => {
       </div>
 
       {/* Account Settings */}
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-gray-200 p-6">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Account Settings</h2>
         
         <div className="space-y-4">

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { MAIN_CARDS } from '../../config/workspaceConfig';
 import { CreateTableModal } from '../modals/CreateTableModal';
 import { ImportDataModal } from '../modals/ImportDataModal';
 import { ImportModal } from '../modals/ImportModal';
+import { Loader } from '../ui/Loader';
 import { useNavigate, useParams } from 'react-router-dom';
 // removed default field creation dependency
 import useWorkspaceData from '../../hooks/useWorkspaceData';
@@ -159,7 +160,7 @@ const MainCardGrid: React.FC<MainCardGridProps> = ({ baseId, workspaceId }) => {
       {filteredCards.map(card => (
         <div
           key={card.title}
-          className="rounded-lg shadow-sm bg-card border px-6 py-5 flex flex-col items-start cursor-pointer hover:shadow-md transition-all duration-200"
+          className="rounded-xl shadow-sm bg-card border px-6 py-5 flex flex-col items-start cursor-pointer hover:shadow-md transition-all duration-200"
           onClick={() => {
             if (card.action === 'Create Table') setShowCreateTable(true);
             if (card.action === 'Import') setShowImportData(true);
@@ -172,20 +173,33 @@ const MainCardGrid: React.FC<MainCardGridProps> = ({ baseId, workspaceId }) => {
           <div className="text-gray-600 text-sm leading-relaxed">{card.desc}</div>
         </div>
       ))}
-      <CreateTableModal
-        isOpen={showCreateTable}
-        onClose={() => setShowCreateTable(false)}
-        onCreate={handleCreateTable}
-        baseId={resolvedBaseId || ''}
-        existingTables={_raw?.baseTablesQuery?.data || []}
-      />
+      {showCreateTable && (
+        <Suspense fallback={
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]">
+            <Loader />
+          </div>
+        }>
+          <CreateTableModal
+            isOpen={showCreateTable}
+            onClose={() => setShowCreateTable(false)}
+            onCreate={handleCreateTable}
+            baseId={resolvedBaseId || ''}
+            existingTables={_raw?.baseTablesQuery?.data || []}
+          />
+        </Suspense>
+      )}
       <ImportDataModal
         isOpen={showImportData}
         onClose={() => setShowImportData(false)}
         onSelectImportType={handleImportTypeSelect}
       />
       {selectedImportType && resolvedBaseId && resolvedWorkspaceId && (
-        <ImportModal
+        <Suspense fallback={
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]">
+            <Loader />
+          </div>
+        }>
+          <ImportModal
           isOpen={showImportModal}
           onClose={() => {
             setShowImportModal(false);
@@ -197,6 +211,7 @@ const MainCardGrid: React.FC<MainCardGridProps> = ({ baseId, workspaceId }) => {
           workspaceId={resolvedWorkspaceId}
           existingTables={_raw?.baseTablesQuery?.data || []}
         />
+        </Suspense>
       )}
     </div>
   );

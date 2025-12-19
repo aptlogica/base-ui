@@ -178,7 +178,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = ({ workspaceId, workspa
   return (
     <div className="space-y-0">
       {/* Workspace Selector + Information Card */}
-      <div className="bg-card rounded-lg border shadow-sm p-4 mb-4">
+      <div className="bg-card rounded-xl border shadow-sm p-4 mb-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-semibold text-primary mb-3">Select Workspace</h3>
@@ -239,7 +239,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = ({ workspaceId, workspa
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Left Column: Bases List */}
             <div className="lg:col-span-1">
-              <div className="bg-card rounded-lg border shadow-sm p-4 h-full">
+              <div className="bg-card rounded-xl border shadow-sm p-4 h-full">
                 <h3 className="text-lg font-semibold text-primary mb-4">Bases</h3>
                 {workspaceBasesQuery.isLoading ? (
                   <div className="text-center py-8">
@@ -247,11 +247,11 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = ({ workspaceId, workspa
                     <p className="text-sm text-secondary">Loading bases...</p>
                   </div>
                 ) : workspaceBasesQuery.error ? (
-                  <div className="text-center py-8 border border-dashed border-red-200 rounded-lg bg-red-50">
+                  <div className="text-center py-8 border border-dashed border-red-200 rounded-xl bg-red-50">
                     <p className="text-sm text-red-600 font-medium">Failed to load bases</p>
                   </div>
                 ) : bases.length === 0 ? (
-                  <div className="text-center py-8 border border-dashed rounded-lg bg-alpha-white">
+                  <div className="text-center py-8 border border-dashed rounded-xl bg-alpha-white">
                     <p className="text-sm text-secondary">No bases found</p>
                   </div>
                 ) : (
@@ -259,7 +259,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = ({ workspaceId, workspa
                     {bases.map((base: any) => (
                       <div
                         key={base.id}
-                        className="p-3 border rounded-lg hover:bg-alpha-white hover:border-primary/30 transition-all"
+                        className="p-3 border rounded-xl hover:bg-alpha-white hover:border-primary/30 transition-all"
                       >
                         <div className="font-medium text-primary text-sm truncate">
                           {base.title || 'Untitled Base'}
@@ -276,7 +276,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = ({ workspaceId, workspa
 
             {/* Right Column: Members */}
             <div className="lg:col-span-2">
-              <div className="bg-card rounded-lg border shadow-sm p-4">
+              <div className="bg-card rounded-xl border shadow-sm p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-primary">Members</h3>
                   {canAssignUsers() && (
@@ -296,7 +296,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = ({ workspaceId, workspa
                     <p className="text-primary font-medium">Loading members...</p>
                   </div>
                 ) : workspaceMembersQuery.error ? (
-                  <div className="text-center py-12 border border-dashed border-red-200 rounded-lg bg-red-50">
+                  <div className="text-center py-12 border border-dashed border-red-200 rounded-xl bg-red-50">
                     <p className="text-red-600 font-medium">Failed to load members</p>
                     <p className="text-sm text-red-500 mt-1">
                       {workspaceMembersQuery.error instanceof Error
@@ -305,7 +305,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = ({ workspaceId, workspa
                     </p>
                   </div>
                 ) : members.length === 0 ? (
-                  <div className="text-center py-12 border border-dashed rounded-lg bg-alpha-white">
+                  <div className="text-center py-12 border border-dashed rounded-xl bg-alpha-white">
                     <p className="text-primary font-medium">No members found</p>
                     <p className="text-sm text-secondary mt-1">Assign users to this workspace to see them here</p>
                   </div>

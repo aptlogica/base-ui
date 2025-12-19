@@ -217,7 +217,6 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             if (attachmentPromises.length > 0) {
                 try {
                     await Promise.all(attachmentPromises);
-                    console.log(`Successfully uploaded ${attachmentPromises.length} attachment fields`);
                 } catch (error) {
                     console.error('Some attachment uploads failed:', error);
                     // Don't block form submission if attachment uploads fail

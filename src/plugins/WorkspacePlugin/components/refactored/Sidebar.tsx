@@ -79,7 +79,7 @@ const SidebarRefactored: React.FC = () => {
       <div className="sidebar-logo truncate flex items-center justify-center relative">
         <div
           ref={logoButtonRef}
-          className="cursor-pointer flex items-center gap-2 rounded-lg p-2 transition-all duration-200"
+          className="cursor-pointer flex items-center gap-2 rounded-xl p-2 transition-all duration-200"
           onClick={(e) => {
             e.stopPropagation();
             setWorkspaceDropdownOpen(!workspaceDropdownOpen);
@@ -88,7 +88,7 @@ const SidebarRefactored: React.FC = () => {
           {sidebarLogoUrl ? (
             <img src={sidebarLogoUrl} alt="Logo" className="w-8 h-8 object-contain" />
           ) : (
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-sm">
               {sidebarLogoText}
             </div>
           )}

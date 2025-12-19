@@ -7,29 +7,29 @@ interface PlanPricingTabProps {
 export const PlanPricingTab: React.FC<PlanPricingTabProps> = ({ workspaceId }) => {
   return (
     <div className="space-y-6">
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-primary mb-4">Current Plan</h2>
         <div className="grid grid-cols-3 gap-4">
-          <div className="p-4 border border-gray-200 rounded-lg">
+          <div className="p-4 border border-gray-200 rounded-xl">
             <p className="text-sm text-secondary mb-2">Plan Name</p>
             <p className="text-xl font-semibold text-primary">Professional</p>
           </div>
-          <div className="p-4 border border-gray-200 rounded-lg">
+          <div className="p-4 border border-gray-200 rounded-xl">
             <p className="text-sm text-secondary mb-2">Monthly Cost</p>
             <p className="text-xl font-semibold text-primary">$99</p>
           </div>
-          <div className="p-4 border border-gray-200 rounded-lg">
+          <div className="p-4 border border-gray-200 rounded-xl">
             <p className="text-sm text-secondary mb-2">Renewal Date</p>
             <p className="text-xl font-semibold text-primary">Dec 17, 2025</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-primary mb-4">Available Plans</h2>
         <div className="grid grid-cols-3 gap-6">
           {/* Starter Plan */}
-          <div className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition">
+          <div className="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition">
             <h3 className="text-lg font-semibold text-primary mb-2">Starter</h3>
             <p className="text-2xl font-bold text-primary mb-4">$29<span className="text-sm text-secondary">/month</span></p>
             <ul className="space-y-2 mb-6">
@@ -44,7 +44,7 @@ export const PlanPricingTab: React.FC<PlanPricingTabProps> = ({ workspaceId }) =
           </div>
 
           {/* Professional Plan (Current) */}
-          <div className="border border-blue-500 rounded-lg p-6 shadow-lg relative">
+          <div className="border border-blue-500 rounded-xl p-6 shadow-lg relative">
             <div className="absolute top-3 right-3 bg-blue-600 text-white text-xs px-3 py-1 rounded-full">Current</div>
             <h3 className="text-lg font-semibold text-primary mb-2">Professional</h3>
             <p className="text-2xl font-bold text-primary mb-4">$99<span className="text-sm text-secondary">/month</span></p>
@@ -61,7 +61,7 @@ export const PlanPricingTab: React.FC<PlanPricingTabProps> = ({ workspaceId }) =
           </div>
 
           {/* Enterprise Plan */}
-          <div className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition">
+          <div className="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition">
             <h3 className="text-lg font-semibold text-primary mb-2">Enterprise</h3>
             <p className="text-2xl font-bold text-primary mb-4">Custom<span className="text-sm text-secondary">/month</span></p>
             <ul className="space-y-2 mb-6">
@@ -78,7 +78,7 @@ export const PlanPricingTab: React.FC<PlanPricingTabProps> = ({ workspaceId }) =
         </div>
       </div>
 
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-primary mb-4">Usage & Limits</h2>
         <div className="space-y-4">
           <div>
@@ -111,7 +111,7 @@ export const PlanPricingTab: React.FC<PlanPricingTabProps> = ({ workspaceId }) =
         </div>
       </div>
 
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-primary mb-4">Billing Actions</h2>
         <div className="flex gap-3">
           <button className="px-4 py-2 border border-gray-300 text-primary rounded-md hover:bg-gray-50 transition">

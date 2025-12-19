@@ -120,3 +120,33 @@ export function convertDateFormat(date: string, fromFormat: string, toFormat: st
       return isoDate;
   }
 }
+
+/**
+ * Formats a number to a compact, human-readable string
+ * Examples: 8778 -> "8.8K", 1234567 -> "1.2M", 500 -> "500"
+ */
+export function formatCompactNumber(num: number): string {
+  if (num < 1000) {
+    return num.toString();
+  }
+  
+  if (num < 1000000) {
+    // Thousands: 8778 -> 8.8K
+    const thousands = num / 1000;
+    // Round to 1 decimal place, but show as integer if it's a whole number
+    const rounded = Math.round(thousands * 10) / 10;
+    return rounded % 1 === 0 ? `${rounded}K` : `${rounded.toFixed(1)}K`;
+  }
+  
+  if (num < 1000000000) {
+    // Millions: 1234567 -> 1.2M
+    const millions = num / 1000000;
+    const rounded = Math.round(millions * 10) / 10;
+    return rounded % 1 === 0 ? `${rounded}M` : `${rounded.toFixed(1)}M`;
+  }
+  
+  // Billions: 1234567890 -> 1.2B
+  const billions = num / 1000000000;
+  const rounded = Math.round(billions * 10) / 10;
+  return rounded % 1 === 0 ? `${rounded}B` : `${rounded.toFixed(1)}B`;
+}

@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import { Plus, Image as ImageIcon } from 'lucide-react';
 import { GalleryItem, useGalleryData } from '../hooks/useGalleryData';
 import { GalleryHeader } from './GalleryHeader';
@@ -11,6 +11,9 @@ import { buildComparator } from '../../../utils/sortUtils';
 import { buildInitialValuesForEdit } from '../../../utils/initialValues';
 import { useRemoveAttachments } from '../../../hooks/useApi';
 import { fieldsToExcludeInFilter } from '../../../types/constants';
+import { useFrontendPagination } from '../../../hooks/useFrontendPagination';
+import { formatCompactNumber } from '../../../utils/helpers';
+import { Loader } from '../../../components/ui/Loader';
 // Custom hooks
 import { useGalleryViewConfig } from '../hooks/useGalleryViewConfig';
 import { useGalleryModals } from '../hooks/useGalleryModals';
@@ -213,6 +216,48 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     return processedItems;
   }, [galleryData.galleryItems, filters, draftFilter, sorts, galleryData.columns, searchTerm, selectedSearchField]);
 
+  // FRONTEND PAGINATION: Paginate filtered and sorted items
+  // This allows rendering only a portion of items initially for better performance
+  const {
+    allLoadedData: paginatedItems,
+    loadNextPage,
+    hasMore,
+    totalItems,
+  } = useFrontendPagination({
+    data: filteredAndSortedItems,
+    pageSize: 30, // Same as GridView and Kanban
+    initialPage: 1,
+  });
+
+  // Loading state for "Load more" button
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // Handle loading more with loading state
+  const handleLoadMore = useCallback(() => {
+    setIsLoadingMore(true);
+    loadNextPage();
+    // Brief loading state for better UX (since loadNextPage is synchronous)
+    setTimeout(() => setIsLoadingMore(false), 300);
+  }, [loadNextPage]);
+
+  // Infinite scroll: Load more when scrolling near bottom
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || !hasMore || isLoadingMore) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // Load more when user is within 200px of bottom
+      if (scrollHeight - scrollTop - clientHeight < 200) {
+        handleLoadMore();
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [hasMore, isLoadingMore, handleLoadMore]);
+
   const getEditInitialValues = useCallback(() => {
     if (!selectedRecord) return {};
     let initialValues = typeof buildInitialValuesForEdit === 'function'
@@ -252,7 +297,9 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     <div className="h-full flex flex-col bg-background">
       {/* Header */}
       <GalleryHeader
-        itemCount={filteredAndSortedItems.length}
+        itemCount={totalItems}
+        loadedCount={paginatedItems.length}
+        hasMore={hasMore}
         onAddRecord={handleCreateRecord}
         attachmentField={galleryData.attachmentField}
         attachmentFields={galleryData.attachmentFields}
@@ -276,8 +323,11 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
       />
 
       {/* Gallery Grid */}
-      <div className="flex-1 overflow-auto p-6 bg-background">
-        {filteredAndSortedItems.length === 0 ? (
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-auto p-6 bg-background"
+      >
+        {totalItems === 0 ? (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
               <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -285,7 +335,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
               <p className="text-gray-500 mb-4">Start by adding some records with attachments</p>
               <button
                 onClick={handleCreateRecord}
-                className="px-4 py-2 btn-primary rounded-lg flex items-center gap-2 mx-auto"
+                className="px-4 py-2 btn-primary rounded-xl flex items-center gap-2 mx-auto"
               >
                 <Plus className="w-4 h-4" />
                 Add Record
@@ -293,16 +343,35 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {filteredAndSortedItems.map((item) => (
-              <MemoizedGalleryCard
-                key={item.id}
-                item={item}
-                onEdit={() => handleEditRecord(item.rawData)}
-                visibleColumns={visibleColumns}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {paginatedItems.map((item) => (
+                <MemoizedGalleryCard
+                  key={item.id}
+                  item={item}
+                  onEdit={() => handleEditRecord(item.rawData)}
+                  visibleColumns={visibleColumns}
+                />
+              ))}
+            </div>
+            
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="flex justify-center py-6">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="px-6 py-2.5 text-sm font-medium rounded-xl btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isLoadingMore ? (
+                    <Loader size={4} />
+                  ) : (
+                    <span>Load more ({formatCompactNumber(totalItems - paginatedItems.length)} remaining)</span>
+                  )}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

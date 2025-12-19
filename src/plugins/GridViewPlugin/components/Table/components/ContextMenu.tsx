@@ -110,14 +110,14 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   return (
     <div ref={menuRef} style={style} className="select-none border p-2 space-y-1 animate-fade-in">
       <button 
-        className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-lg opacity-50 cursor-not-allowed transition-colors" 
+        className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl opacity-50 cursor-not-allowed transition-colors" 
         disabled
         title="Coming soon"
       >
         <ChevronUp className="w-4 h-4" /> Insert above
       </button>
       <button 
-        className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-lg opacity-50 cursor-not-allowed transition-colors" 
+        className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl opacity-50 cursor-not-allowed transition-colors" 
         disabled
         title="Coming soon"
       >
@@ -125,14 +125,14 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       </button>
       <div className="border-t my-1" />
       <button 
-        className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-lg opacity-50 cursor-not-allowed transition-colors" 
+        className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl opacity-50 cursor-not-allowed transition-colors" 
         disabled
         title="Coming soon"
       >
         <Copy className="w-4 h-4" /> Duplicate row
       </button>
       <div className="border-t my-1" />
-      <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-lg hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors" onClick={onDelete}>
+      <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors" onClick={onDelete}>
         <Trash2 className="w-4 h-4" /> Delete record
       </button>
     </div>

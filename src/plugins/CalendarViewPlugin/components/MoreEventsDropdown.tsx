@@ -1,8 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { CalendarEvent } from '../hooks/useCalendarData';
 import EventChip from './EventChip';
 import type { GridColumn } from '../../GridViewPlugin/types/grid.types';
+import { useFrontendPagination } from '../../../hooks/useFrontendPagination';
+import { formatCompactNumber } from '../../../utils/helpers';
+import { Loader } from '../../../components/ui/Loader';
 
 interface MoreEventsDropdownProps {
   events: CalendarEvent[];
@@ -21,8 +24,47 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // FRONTEND PAGINATION: Paginate events for better performance
+  const {
+    allLoadedData: paginatedEvents,
+    loadNextPage,
+    hasMore,
+    totalItems,
+  } = useFrontendPagination({
+    data: events,
+    pageSize: 30, // Same as other views
+    initialPage: 1,
+  });
+
+  // Handle loading more with loading state
+  const handleLoadMore = useCallback(() => {
+    setIsLoadingMore(true);
+    loadNextPage();
+    // Brief loading state for better UX
+    setTimeout(() => setIsLoadingMore(false), 300);
+  }, [loadNextPage]);
+
+  // Infinite scroll: Load more when scrolling near bottom
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || !hasMore || isLoadingMore || !isOpen) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // Load more when user is within 100px of bottom (smaller threshold for popup)
+      if (scrollHeight - scrollTop - clientHeight < 100) {
+        handleLoadMore();
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [hasMore, isLoadingMore, isOpen, handleLoadMore]);
 
   useEffect(() => {
     if (isOpen && triggerRef.current) {
@@ -34,7 +76,10 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         const dropdownWidth = 288; // w-72 = 288px
-        const estimatedHeight = Math.min(events.length * 80 + 80, 400); // Increased for EventChip height
+        // Estimate height based on paginated events (initial load) + header + load more button
+        const estimatedItemHeight = 80;
+        const initialItems = Math.min(paginatedEvents.length, 30);
+        const estimatedHeight = Math.min(initialItems * estimatedItemHeight + 120, 400); // Header + padding + load more button
         
         // Try to position below the trigger, aligned to its right edge (since "+N" is on the right)
         let top = rect.bottom + 8;
@@ -68,7 +113,7 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
     } else {
       setPosition(null);
     }
-  }, [isOpen, events.length]);
+  }, [isOpen, paginatedEvents.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -97,7 +142,7 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
     <>
       <div
         ref={triggerRef}
-        className="cursor-pointer hover:bg-gray-100 w-fit bg-card border rounded-lg px-1 py-0.5 transition-colors"
+        className="cursor-pointer hover:bg-gray-100 w-fit bg-card border rounded-xl px-1 py-0.5 transition-colors"
         onClick={(e) => {
           e.stopPropagation();
           setIsOpen(!isOpen);
@@ -109,20 +154,29 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
       {isOpen && position && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] bg-white border border-gray-200 rounded-lg shadow-lg w-72"
+          className="fixed z-[9999] border rounded-xl shadow-lg w-72 flex flex-col"
           style={{
             top: `${position.top}px`,
             left: `${position.left}px`,
-            maxHeight: '300px',
-            overflowY: events.length > 5 ? 'auto' : 'visible'
+            maxHeight: '400px',
           }}
         >
-          <div className="p-3">
-            <div className="text-sm font-medium text-gray-900 mb-2">
-              {events.length} more {events.length === 1 ? 'event' : 'events'}
+          <div className="p-3 border-b bg-card rounded-t-xl rounded-tr-xl flex-shrink-0">
+            <div className="text-sm font-medium text-gray-900">
+              {formatCompactNumber(totalItems)} more {totalItems === 1 ? 'event' : 'events'}
+              {hasMore && (
+                <span className="ml-1 text-xs text-gray-500 font-normal">
+                  ({formatCompactNumber(paginatedEvents.length)} loaded)
+                </span>
+              )}
             </div>
+          </div>
+          <div 
+            ref={scrollContainerRef}
+            className="flex-1 overflow-y-auto p-3"
+          >
             <div className="space-y-2">
-              {events.map((event, index) => (
+              {paginatedEvents.map((event, index) => (
                 <EventChip
                   key={event.id || index}
                   event={event}
@@ -132,6 +186,23 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
                 />
               ))}
             </div>
+            
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="flex justify-center py-3 mt-2">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="px-4 py-2 text-xs font-medium rounded-xl btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isLoadingMore ? (
+                    <Loader size={4} />
+                  ) : (
+                    <span>Load more ({formatCompactNumber(totalItems - paginatedEvents.length)} remaining)</span>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>,
         document.body

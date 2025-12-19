@@ -113,7 +113,7 @@ export const BaseSettingsTab: React.FC<BaseSettingsTabProps> = ({ baseId }) => {
   return (
     <div className="space-y-0">
       {/* Base Information Card - Always visible */}
-      <div className="bg-card rounded-lg border p-6 mb-4">
+      <div className="bg-card rounded-xl border p-6 mb-4">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Base Information</h2>
 
         {/* <div className='space-y-2 mb-4'>
@@ -173,10 +173,10 @@ export const BaseSettingsTab: React.FC<BaseSettingsTabProps> = ({ baseId }) => {
 
       {/* Danger Zone Card - Only show for admin and full_access users */}
       {canDeleteBase() && (
-        <div className="bg-card rounded-lg border p-6">
+        <div className="bg-card rounded-xl border p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Danger Zone</h2>
           
-          <div className="flex items-center justify-between p-4 bg-error rounded-lg border border-destructive">
+          <div className="flex items-center justify-between p-4 bg-error rounded-xl border border-destructive">
             <div className="flex-1">
               <h3 className="text-sm font-medium text-tertiary">Delete this base and all its contents.</h3>
               <p className="text-sm text-secondary mt-1">

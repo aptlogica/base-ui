@@ -90,7 +90,7 @@ const MembersTab: React.FC<MembersTabProps> = ({ workspaceId }) => {
       />
 
       {/* Current Usage Section */}
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-gray-200 p-6">
         <h4 className="text-lg font-medium text-gray-900 mb-4">Current Usage</h4>
         
         <div className="space-y-4">

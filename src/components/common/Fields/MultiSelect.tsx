@@ -249,7 +249,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
         {isOpen && calculatedPosition && createPortal(
           <div
             ref={dropdownRef}
-            className="fixed z-[9999] p-1.5 space-y-1.5 border bg-background rounded-lg shadow-lg max-h-56 overflow-y-auto"
+            className="fixed z-[9999] p-1.5 space-y-1.5 border bg-background rounded-xl shadow-lg max-h-56 overflow-y-auto"
             style={{
               ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
               ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),
@@ -271,7 +271,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                     key={`${label}-${index}`}
                     onClick={() => !isDisabled && handleToggleOption(label)}
                     disabled={disabled}
-                    className={`w-full text-left text-sm rounded-lg flex items-center justify-between ${isDisabled
+                    className={`w-full text-left text-sm rounded-xl flex items-center justify-between ${isDisabled
                       ? 'text-gray-400 cursor-not-allowed'
                       : 'cursor-pointer'
                       } ${isSelected ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}

@@ -130,7 +130,7 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
             }
             dropdownRef.current = node;
           }}
-          className="fixed w-48 bg-[var(--color-alpha-white)] border border-gray-200 rounded-lg shadow-lg z-[9999] p-2"
+          className="fixed w-48 bg-[var(--color-alpha-white)] border border-gray-200 rounded-xl shadow-lg z-[9999] p-2"
           style={{
             top: `${dropdownPosition.top}px`,
             left: `${dropdownPosition.left}px`
@@ -153,7 +153,7 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
           {/* Edit field */}
           <button
             onClick={handleEdit}
-            className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
             title="Edit field"
           >
             <Pencil className="w-4 h-4" />
@@ -163,7 +163,7 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
           {/* Duplicate field */}
           {onDuplicate && (
             <button
-            className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-lg opacity-50 cursor-not-allowed transition-colors" 
+            className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl opacity-50 cursor-not-allowed transition-colors" 
             disabled
             title="Coming soon"
             >
@@ -178,7 +178,7 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
           {/* Delete field */}
           <button
             onClick={handleDelete}
-            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-lg hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
             title="Delete field"
           >
             <Trash2 className="w-4 h-4" />

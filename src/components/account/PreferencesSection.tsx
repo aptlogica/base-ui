@@ -10,7 +10,7 @@ export const PreferencesSection: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Notification Preferences */}
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-gray-200 p-6">
         <h2 className="text-xl font-medium text-primary mb-6">Notification Preferences</h2>
         
         <div className="space-y-4">
@@ -57,7 +57,7 @@ export const PreferencesSection: React.FC = () => {
       </div>
 
       {/* Display Preferences */}
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-gray-200 p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Display Preferences</h3>
         
         <div className="space-y-4">
@@ -112,7 +112,7 @@ export const PreferencesSection: React.FC = () => {
       </div>
 
       {/* Privacy Preferences */}
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-gray-200 p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Privacy Preferences</h3>
         
         <div className="space-y-4">

@@ -1,4 +1,4 @@
-import React from 'react';
+    import React from 'react';
 import * as LucideIcons from 'lucide-react';
 import { formatDate } from '../../../utils/dateUtils';
 
@@ -83,7 +83,7 @@ export const TableListWidget: React.FC = () => {
       {allTables.length > 0 ? (
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {allTables.map((table) => (
-            <div key={table.id} className="p-4 rounded-lg border hover:bg-gray-50 transition-colors">
+            <div key={table.id} className="p-4 rounded-xl border hover:bg-gray-50 transition-colors">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h4 className="font-medium text-primary mb-1">{table.name}</h4>

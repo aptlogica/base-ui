@@ -212,7 +212,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
           <button
             onClick={onClose}
             disabled={isPending}
-            className={`px-4 py-2 rounded-lg border hover:bg-gray-50 transition-all ${isPending ? 'btn-disabled' : ''}`}
+            className={`px-4 py-2 rounded-xl border hover:bg-gray-50 transition-all ${isPending ? 'btn-disabled' : ''}`}
           >
             Cancel
           </button>

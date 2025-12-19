@@ -255,7 +255,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
         >
           <div className="flex items-center justify-between mb-6 flex-shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 icon-primary rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center">
                 <UserPlus className="w-4 h-4" />
               </div>
               <div>
@@ -269,7 +269,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
               aria-label="Close"
             >
               <X size={16} className="text-[var(--text-color-tertiary)]" />
@@ -303,7 +303,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
       >
         <div className="flex items-center justify-between mb-6 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 icon-primary rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center">
               {editMode ? <Edit className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
             </div>
             <div>
@@ -317,7 +317,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
             aria-label="Close"
           >
             <X size={16} className="text-[var(--text-color-tertiary)]" />
@@ -338,7 +338,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
             {editMode ? (
               <div>
                 <label className="block text-xs font-medium text-secondary mb-1.5">User</label>
-                <div className="px-3 py-2 bg-gray-50 border rounded-lg text-sm text-primary">
+                <div className="px-3 py-2 bg-gray-50 border rounded-xl text-sm text-primary">
                   {(() => {
                     const user = tenantUsers.find((u: any) => u.id === memberToEdit);
                     return user?.display_name || user?.email || memberToEdit || 'Unknown User';
@@ -380,7 +380,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
 
             {/* Bases selection only for Limited Access */}
             {(selectedUserIds.length > 0 || editMode) && accessLevel === 'limited_access' && (
-              <div className="bg-primary/5 border border-primary/20 rounded-lg p-5 flex flex-col min-h-0">
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 flex flex-col min-h-0">
                 <div className="mb-4 flex-shrink-0">
                   <h4 className="font-semibold text-primary mb-1">Available Bases</h4>
                   <p className="text-sm text-secondary">Select which bases this user can access</p>
@@ -390,7 +390,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
                     {bases.map((base: any) => (
                       <label
                         key={base.id}
-                        className="flex items-center gap-3 p-3 border rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black hover:border-primary/30 transition-all cursor-pointer group"
+                        className="flex items-center gap-3 p-3 border rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black hover:border-primary/30 transition-all cursor-pointer group"
                       >
                         <input
                           type="checkbox"
@@ -431,7 +431,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
             type="button"
             onClick={onClose}
             disabled={assignUserToWorkspaceMutation.isPending}
-            className="px-4 py-2 rounded-lg border hover:bg-gray-50 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
+            className="px-4 py-2 rounded-xl border hover:bg-gray-50 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
           >
             Cancel
           </button>

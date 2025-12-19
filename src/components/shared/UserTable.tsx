@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { MoreVertical, Search, ArrowUpDown, Info, UserX, UserCheck, Trash2 } from 'lucide-react';
 import { useUserRole } from '../../hooks/useUserRole';
 import { UserAccessDetailsModal } from '../modals/UserAccessDetailsModal';
+import { formatCompactNumber } from '../../utils/helpers';
 
 export interface TenantUser {
   id: string;
@@ -263,7 +264,7 @@ export const UserTable: React.FC<UserTableProps> = ({
 
   if (users.length === 0) {
     return (
-      <div className="bg-card rounded-lg border p-8">
+      <div className="bg-card rounded-xl border p-8">
         <div className="text-center">
           <p className="text-gray-600 mb-2">No users found</p>
           <p className="text-sm text-gray-500 mb-4">Add new users to get started</p>
@@ -278,7 +279,7 @@ export const UserTable: React.FC<UserTableProps> = ({
   }
 
   return (
-    <div className="bg-card rounded-lg border overflow-hidden">
+    <div className="bg-card rounded-xl border overflow-hidden">
       {/* Search Bar with Actions */}
       {showSearch && (
         <div className="p-4 border-b">
@@ -440,10 +441,10 @@ export const UserTable: React.FC<UserTableProps> = ({
       {openActionMenu && menuPosition && ReactDOM.createPortal(
         <div
           ref={menuRef}
-          className="fixed w-56 bg-card border rounded-lg shadow-lg z-50 p-1.5"
+          className="fixed w-60 bg-card border rounded-xl shadow-lg z-50 p-1.5"
           style={{
             top: `${menuPosition.top}px`,
-            left: `${menuPosition.left + 40}px`,
+            left: `${menuPosition.left}px`,
           }}
         >
           {/* View Access Details */}
@@ -456,7 +457,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                   setAccessDetailsUserId(openActionMenu);
                   setOpenActionMenu(null);
                 }}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2"
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl flex items-center gap-2"
               >
                 <Info className="w-4 h-4" />
                 View Access Details
@@ -477,7 +478,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                     onDeactivateUser(openActionMenu);
                     setOpenActionMenu(null);
                   }}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2"
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl flex items-center gap-2"
                 >
                   <UserX className="w-4 h-4" />
                   Deactivate User
@@ -490,7 +491,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                     onActivateUser(openActionMenu);
                     setOpenActionMenu(null);
                   }}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2"
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl flex items-center gap-2"
                 >
                   <UserCheck className="w-4 h-4" />
                   Activate User
@@ -519,7 +520,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                 onRemoveUser(openActionMenu);
                 setOpenActionMenu(null);
               }}
-              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2"
+              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2"
             >
               <Trash2 className="w-4 h-4" />
               Remove User
@@ -532,7 +533,7 @@ export const UserTable: React.FC<UserTableProps> = ({
       {/* Footer Info */}
       <div className="px-6 py-4 bg-gray-50 border-t">
         <p className="text-xs text-gray-500">
-          Showing <span className="font-medium">{filteredUsers.length}</span> of <span className="font-medium">{users.length}</span> users
+          Showing <span className="font-medium">{formatCompactNumber(filteredUsers.length)}</span> of <span className="font-medium">{formatCompactNumber(users.length)}</span> users
         </p>
       </div>
 

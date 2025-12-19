@@ -234,7 +234,7 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
         {isOpen && calculatedPosition && createPortal(
           <div
             ref={dropdownRef}
-            className="fixed z-[9999] p-1.5 space-y-1.5 border bg-background rounded-lg shadow-lg max-h-48 overflow-y-auto"
+            className="fixed z-[9999] p-1.5 space-y-1.5 border bg-background rounded-xl shadow-lg max-h-48 overflow-y-auto"
             style={{
               ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
               ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),
@@ -251,7 +251,7 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
                 <button
                   key={`${label}-${index}`}
                   onClick={() => handleSelect(label)}
-                  className={`w-full text-left text-sm rounded-lg focus:bg-[var(--color-bg-brand-secondary)] transition-colors flex items-center justify-between`}
+                  className={`w-full text-left text-sm rounded-xl focus:bg-[var(--color-bg-brand-secondary)] transition-colors flex items-center justify-between`}
                 >
                   <div
                     className={`inline-flex justify-between items-center w-full p-1 px-2 rounded-full text-xs min-w-0 ${opt.color ? '' : getOptionColor(label, index)}`}

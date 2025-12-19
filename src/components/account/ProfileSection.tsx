@@ -325,7 +325,7 @@ export const ProfileSection: React.FC = () => {
             <button
               onClick={handleCancel}
               disabled={isSaving}
-              className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50 transition-colors"
             >
               Cancel
             </button>
@@ -408,7 +408,7 @@ export const ProfileSection: React.FC = () => {
                   placeholder="Enter first name"
                 />
               ) : (
-                <div className="px-4 py-3 bg-gray-50 border rounded-lg text-gray-900 font-medium">
+                <div className="px-4 py-3 bg-gray-50 border rounded-xl text-gray-900 font-medium">
                   {userProfile.first_name || 'Not set'}
                 </div>
               )}
@@ -427,7 +427,7 @@ export const ProfileSection: React.FC = () => {
                   placeholder="Enter last name"
                 />
               ) : (
-                <div className="px-4 py-3 bg-gray-50 border rounded-lg text-gray-900 font-medium">
+                <div className="px-4 py-3 bg-gray-50 border rounded-xl text-gray-900 font-medium">
                   {userProfile.last_name || 'Not set'}
                 </div>
               )}
@@ -447,7 +447,7 @@ export const ProfileSection: React.FC = () => {
                 placeholder="Enter display name"
               />
             ) : (
-              <div className="px-4 py-3 bg-gray-50 border rounded-lg text-gray-900 font-medium">
+              <div className="px-4 py-3 bg-gray-50 border rounded-xl text-gray-900 font-medium">
                 {userProfile.display_name || 'Not set'}
               </div>
             )}
@@ -457,7 +457,7 @@ export const ProfileSection: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Email Address
             </label>
-            <div className="px-4 py-3 bg-gray-50 border rounded-lg text-gray-900 font-medium flex items-center justify-between gap-2">
+            <div className="px-4 py-3 bg-gray-50 border rounded-xl text-gray-900 font-medium flex items-center justify-between gap-2">
               {userProfile.email}
               {userProfile.email_verified && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
@@ -485,7 +485,7 @@ export const ProfileSection: React.FC = () => {
                 className=""
               />
             ) : (
-              <div className="px-4 py-3 bg-gray-50 border rounded-lg text-gray-900 font-medium">
+              <div className="px-4 py-3 bg-gray-50 border rounded-xl text-gray-900 font-medium">
                 {userProfile.country || 'Not set'}
               </div>
             )}
@@ -507,7 +507,7 @@ export const ProfileSection: React.FC = () => {
                 className=""
               />
             ) : (
-              <div className="px-4 py-3 bg-gray-50 border rounded-lg text-gray-900 font-medium">
+              <div className="px-4 py-3 bg-gray-50 border rounded-xl text-gray-900 font-medium">
                 {userProfile.timezone || 'Not set'}
               </div>
             )}
@@ -541,7 +541,7 @@ export const ProfileSection: React.FC = () => {
                 {dobError && <div className="mt-1.5 text-red-500 text-sm">{dobError}</div>}
               </>
             ) : (
-              <div className="px-4 py-3 bg-gray-50 border rounded-lg text-gray-900 font-medium">
+              <div className="px-4 py-3 bg-gray-50 border rounded-xl text-gray-900 font-medium">
                 {userProfile.dob || 'Not set'}
               </div>
             )}

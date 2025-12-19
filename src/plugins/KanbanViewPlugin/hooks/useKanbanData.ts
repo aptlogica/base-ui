@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useTable, useAddRow, useDeleteRecord, useInsertRowData, useUpdateField, useUpdateView } from '../../../hooks/useApi';
+import { useTable, useAddRow, useDeleteRecord, useInsertRowData, useUpdateField, useUpdateView, useUpdateViewMeta } from '../../../hooks/useApi';
 import type { TableData } from '../types/api.types';
 import type { GridColumn } from '../../GridViewPlugin/types/grid.types';
 import { fieldsToFilter } from '../../../types/constants';
@@ -24,6 +24,7 @@ export interface UseKanbanDataReturn {
   deleteRecord: ReturnType<typeof useDeleteRecord>;
   updateField: ReturnType<typeof useUpdateField>;
   updateView: ReturnType<typeof useUpdateView>;
+  updateViewMeta: ReturnType<typeof useUpdateViewMeta>;
 
   // Kanban-specific business operations
   moveCard: (cardId: string, targetStackId: string) => Promise<void>;
@@ -55,6 +56,7 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
   const deleteRecord = useDeleteRecord();
   const updateField = useUpdateField();
   const updateView = useUpdateView();
+  const updateViewMeta = useUpdateViewMeta(); // Optimized hook for meta-only updates (cardOrder, etc.)
 
   // Business logic operations (simplified to work with tableData)
   const moveCard = async (cardId: string, targetStackId: string): Promise<void> => {
@@ -70,7 +72,6 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
       await Promise.all(tableData.columns.map(async (field: any) => {
         // Skip attachment fields - they handle their own API calls
         if (field.type === 'attachment' || field.uidt === 'attachment') {
-          console.log('Skipping attachment field from initial values:', field.id);
           return;
         }
 
@@ -164,14 +165,13 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
     
     const currentView = viewsMap.get(String(viewIdToUpdate));
     const currentMeta = currentView?.meta ?? currentView?.config ?? {};
-    await updateView.mutateAsync({
+    // Use updateViewMeta for meta-only updates (doesn't invalidate table queries)
+    await updateViewMeta.mutateAsync({
       viewId: viewIdToUpdate,
-      view: {
-        meta: {
-          ...currentMeta,
-          view_target_field: col.id
-        }
-      }
+      meta: {
+        view_target_field: col.id
+      },
+      currentMeta: currentMeta as any
     });
   };
 
@@ -224,6 +224,7 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
     deleteRecord,
     updateField,
     updateView,
+    updateViewMeta,
     moveCard,
     createCard,
     duplicateCard,

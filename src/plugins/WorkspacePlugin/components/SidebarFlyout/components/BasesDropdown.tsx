@@ -77,14 +77,14 @@ export const BasesDropdown: React.FC<BasesDropdownProps> = ({
             return bases.map((base: any) => (
               <button
                 key={base.id}
-                className={`w-full text-left px-2 py-2 text-sm rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-all duration-200 ${selectedBase?.id === base.id
+                className={`w-full text-left px-2 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-all duration-200 ${selectedBase?.id === base.id
                   ? 'bg-[var(--color-gray-50)] text-tertiary border'
                   : 'text-tertiary'
                   }`}
                 onClick={() => onSelectBase(base)}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 bg-gray-100 border rounded-lg flex items-center justify-center">
+                  <div className="w-6 h-6 bg-gray-100 border rounded-xl flex items-center justify-center">
                     <svg className="w-3 h-3 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
                     </svg>
@@ -107,7 +107,7 @@ export const BasesDropdown: React.FC<BasesDropdownProps> = ({
         {canCreateBase() && (
           <div className="border-t border-border mt-1 pt-1">
             <button
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-lg transition-all duration-200 font-medium flex items-center gap-3"
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-xl transition-all duration-200 font-medium flex items-center gap-3"
 
               onClick={onCreateBase}
             >

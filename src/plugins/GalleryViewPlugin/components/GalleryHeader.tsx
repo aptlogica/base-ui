@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Plus, Filter, Eye, SortAsc, MoreVertical } from 'lucide-react';
+import { Plus, Filter, List } from 'lucide-react';
 import { FilterPopover } from '../../../components/shared/table/FilterPopover';
 import { FieldsPopover } from '../../../components/shared/table/FieldsPopover';
 import { SortPopover } from '../../../components/shared/table/SortPopover';
@@ -8,9 +8,12 @@ import { BaseColumn } from '../../../types/column.types';
 import { SortItem } from '../../../utils/sortUtils';
 import { fieldsToExcludeInFilter } from '../../../types/constants';
 import { GalleryFieldConfiguration } from './GalleryFieldSelector';
+import { formatCompactNumber } from '../../../utils/helpers';
 
 interface GalleryHeaderProps {
   itemCount: number;
+  loadedCount?: number;
+  hasMore?: boolean;
   onAddRecord: () => void;
   attachmentField?: BaseColumn;
   attachmentFields: BaseColumn[];
@@ -37,6 +40,8 @@ interface GalleryHeaderProps {
 
 export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
   itemCount,
+  loadedCount,
+  hasMore,
   onAddRecord,
   attachmentField,
   attachmentFields,
@@ -70,7 +75,7 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
   }, [columns]);
 
   return (
-    <div className="bg-background border-b px-4 py-3">
+    <div className="bg-background border-b px-4 py-2">
       {/* Desktop Layout - Hidden on mobile */}
       <div className="hidden md:flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -87,7 +92,7 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
             onFieldToggle={onFieldToggle}
             tableId={tableId}
             label="Fields"
-            iconComponent={Eye}
+            iconComponent={List}
           />
           <FilterPopover
             columns={sortableColumns}
@@ -115,7 +120,7 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
           {/* Add Record Button */}
           <button
             onClick={onAddRecord}
-            className="px-6 py-2 rounded-lg btn-primary text-[var(--color-text-primary)] font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-6 py-2 rounded-xl btn-primary text-[var(--color-text-primary)] font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Add Record
@@ -130,7 +135,8 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold text-primary">Gallery View</h2>
             <div className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
-              {itemCount}
+              {formatCompactNumber(itemCount)}
+              {hasMore && loadedCount !== undefined && ` (${formatCompactNumber(loadedCount)} loaded)`}
             </div>
           </div>
         </div>

@@ -52,11 +52,8 @@ export const URL: React.FC<URLProps> = ({
     setLocalValue(displayValue);
   }, [value, defaultValue]);
 
-  // console.log('value----->', value);
-  
 
   const validateURL = (url: string) => {
-    console.log('url----->', url);
     if (!url.trim()) return true;
     const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
     return urlPattern.test(url);
@@ -171,7 +168,7 @@ export const URL: React.FC<URLProps> = ({
             </div>
           )} */}
           {!error && localValue && showIcon && (
-            <div className="absolute text-gray-400 right-1 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg border shadow-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-all z-0">
+            <div className="absolute text-gray-400 right-1 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-xl border shadow-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-all z-0">
               <ExternalLink
                 className="w-4 h-4 cursor-pointer"
                 onClick={handleURLClick}

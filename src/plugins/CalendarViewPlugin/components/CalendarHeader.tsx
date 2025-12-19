@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, Calendar, Download, Search, PanelRightClose, Plus, Settings, Palette, List, Filter, MoreVertical, SortAsc, SortDesc, Layers } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Calendar, Download, Search, PanelRightClose, Plus, Settings, Palette, List, Filter, MoreVertical, SortAsc, SortDesc } from "lucide-react";
 import { FilterPopover } from '../../../components/shared/table/FilterPopover';
 import { FieldsPopover } from '../../../components/shared/table/FieldsPopover';
 import { GridColumn } from '../../GridViewPlugin/types/grid.types';
@@ -25,6 +25,7 @@ interface CalendarHeaderProps {
   onFieldToggle: (fieldId: string) => void;
   onAddFilter: (filter: { column: string; operator: string; value: string }) => void;
   onRemoveFilter: (index: number) => void;
+  onUpdateFilter?: (index: number, updates: Partial<{ column: string; operator: string; value: string }>) => void;
   onRealTimeFilter?: (filter: { column: string; operator: string; value: string } | null) => void;
   onGroupByChange: (column: GridColumn | undefined) => void;
   tableId: string;
@@ -49,24 +50,25 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onFieldToggle,
   onAddFilter,
   onRemoveFilter,
+  onUpdateFilter,
   onRealTimeFilter,
   onGroupByChange,
   tableId,
   events = [],
 }) => {
   // Handler to update a filter at a specific index
-  // Since we only have onAddFilter and onRemoveFilter, we remove the old one and add the updated one
+  // Use the provided onUpdateFilter if available, otherwise fall back to remove+add workaround
   const handleUpdateFilter = useCallback((index: number, updates: Partial<{ column: string; operator: string; value: string }>) => {
-    if (index < 0 || index >= filters.length) return;
-
-    // Create the updated filter
-    const updatedFilter = { ...filters[index], ...updates };
-
-    // Remove the old filter and add the updated one
-    // Note: This will move the filter to the end, but it's the best we can do with available props
-    onRemoveFilter(index);
-    onAddFilter(updatedFilter);
-  }, [filters, onAddFilter, onRemoveFilter]);
+    if (onUpdateFilter) {
+      onUpdateFilter(index, updates);
+    } else {
+      // Fallback: remove and re-add (legacy behavior)
+      if (index < 0 || index >= filters.length) return;
+      const updatedFilter = { ...filters[index], ...updates };
+      onRemoveFilter(index);
+      onAddFilter(updatedFilter);
+    }
+  }, [filters, onAddFilter, onRemoveFilter, onUpdateFilter]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
   const [showViewDropdown, setShowViewDropdown] = useState(false);
@@ -263,7 +265,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       const weeks = getWeeksForMonth(currentDate);
       return (
         <div
-          className="absolute top-full left-0 mt-1 w-80 bg-card border rounded-lg shadow-lg z-50"
+          className="absolute top-full left-0 mt-1 w-80 bg-card border rounded-xl shadow-lg z-50"
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
         >
@@ -299,7 +301,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                     e.stopPropagation();
                     selectWeek(week.start);
                   }}
-                  className={`w-full p-2 text-left text-sm rounded-lg mb-1 transition-colors ${isCurrentWeek
+                  className={`w-full p-2 text-left text-sm rounded-xl mb-1 transition-colors ${isCurrentWeek
                     ? 'bg-[var(--color-bg-brand-primary)] text-black font-semibold'
                     : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
                     }`}
@@ -329,7 +331,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
       return (
         <div
-          className="absolute top-full left-0 mt-1 w-80 bg-card border rounded-lg shadow-lg z-50"
+          className="absolute top-full left-0 mt-1 w-80 bg-card border rounded-xl shadow-lg z-50"
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
         >
@@ -412,7 +414,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
       return (
         <div
-          className="absolute top-full left-0 mt-1 w-64 bg-card border rounded-lg shadow-lg z-50"
+          className="absolute top-full left-0 mt-1 w-64 bg-card border rounded-xl shadow-lg z-50"
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
         >
@@ -450,9 +452,9 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                     onDateChange(newDate);
                     setShowDatePicker(false);
                   }}
-                  className={`p-2 text-sm font-medium rounded-lg transition-colors ${year === currentYear
+                  className={`p-2 text-sm font-medium rounded-xl transition-colors ${year === currentYear
                     ? 'bg-[var(--color-bg-brand-primary)] text-black'
-                    : 'text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
+                    : 'text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
                     }`}
                 >
                   {year}
@@ -466,7 +468,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       // Month picker for month and day views
       return (
         <div
-          className="absolute top-full left-0 mt-1 w-64 bg-card border border-gray-200 rounded-lg shadow-lg z-50"
+          className="absolute top-full left-0 mt-1 w-64 bg-card border border-gray-200 rounded-xl shadow-lg z-50"
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
         >
@@ -501,7 +503,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                     e.stopPropagation();
                     selectMonth(index);
                   }}
-                  className={`p-2 text-sm font-medium rounded-lg transition-colors ${index === currentDate.getMonth()
+                  className={`p-2 text-sm font-medium rounded-xl transition-colors ${index === currentDate.getMonth()
                     ? 'bg-[var(--color-bg-brand-primary)] text-black'
                     : 'text-gray-700 hover:bg-gray-100'
                     }`}
@@ -518,7 +520,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
   return (
     <div className="bg-card border-b border-gray-200" ref={headerContainerRef}>
-      <div className="p-4">
+      <div className="px-4 py-2">
         {/* Desktop Layout - Hidden on mobile */}
         <div className="hidden md:flex items-center justify-between">
           {/* Left Section - Date Navigation */}
@@ -527,7 +529,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <div className="relative">
               <button
                 onClick={() => setShowDatePicker(!showDatePicker)}
-                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-900 bg-card border rounded-lg hover:bg-gray-50 focus:outline-none"
+                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-900 bg-card border rounded-xl hover:bg-gray-50 focus:outline-none"
               >
                 <span>{getCurrentDisplayText()}</span>
                 <ChevronDown className="w-4 h-4" />
@@ -548,7 +550,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             {/* Today Button */}
             <button
               onClick={goToToday}
-              className="px-3 py-2 text-sm font-medium text-gray-700 bg-card border rounded-lg hover:bg-gray-50 focus:outline-none"
+              className="px-3 py-2 text-sm font-medium text-gray-700 bg-card border rounded-xl hover:bg-gray-50 focus:outline-none"
             >
               Today
             </button>
@@ -562,7 +564,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                   else if (currentView === 'year') navigateYear('prev');
                   else navigateMonth('prev');
                 }}
-                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-xl"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -573,14 +575,14 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                   else if (currentView === 'year') navigateYear('next');
                   else navigateMonth('next');
                 }}
-                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-xl"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
             {/* More Options */}
-            <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
+            <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-xl">
               {/* <MoreVertical className="w-4 h-4" /> */}
             </button>
           </div>
@@ -590,14 +592,14 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <div className="relative" ref={viewDropdownRef}>
               <button
                 onClick={() => setShowViewDropdown(!showViewDropdown)}
-                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-900 bg-card border rounded-lg hover:bg-gray-50 focus:outline-none"
+                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-900 bg-card border rounded-xl hover:bg-gray-50 focus:outline-none"
               >
                 <span>{views.find(v => v.key === currentView)?.label || 'Month'}</span>
                 <ChevronDown className="w-4 h-4" />
               </button>
               {showViewDropdown && (
                 <div
-                  className="absolute top-full left-0 mt-1 space-y-1 p-1.5 w-32 bg-card border rounded-lg shadow-lg z-50"
+                  className="absolute top-full left-0 mt-1 space-y-1 p-1.5 w-32 bg-card border rounded-xl shadow-lg z-50"
                   onClick={(e) => e.stopPropagation()}
                   onMouseDown={(e) => e.stopPropagation()}
                 >
@@ -609,7 +611,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                         onViewChange(view.key);
                         setShowViewDropdown(false);
                       }}
-                      className={`w-full text-left px-4 py-2 text-sm font-medium rounded-lg transition-colors ${currentView === view.key
+                      className={`w-full text-left px-4 py-2 text-sm font-medium rounded-xl transition-colors ${currentView === view.key
                         ? 'bg-[var(--color-bg-brand-primary)] text-black'
                         : 'text-gray-600 hover:bg-gray-100'
                         }`}
@@ -628,12 +630,12 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               )}
             </div>
           ) : (
-            <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1" ref={viewTabsRef}>
+            <div className="flex items-center space-x-1 bg-gray-100 rounded-xl p-1" ref={viewTabsRef}>
               {views.map((view) => (
                 <button
                   key={view.key}
                   onClick={() => onViewChange(view.key)}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${currentView === view.key
+                  className={`px-4 py-2 text-sm font-medium rounded-xl transition-colors ${currentView === view.key
                     ? 'bg-card var(--color-bg-brand-primary) shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                     }`}
@@ -660,7 +662,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               onFieldToggle={onFieldToggle}
               tableId={tableId}
               label="Fields"
-              iconComponent={Layers}
+              iconComponent={List}
             />
 
             {/* Filter Popover */}
@@ -692,7 +694,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             {/* Create Record */}
             {/* <button 
           onClick={onCreateRecord}
-          className="px-6 py-2 rounded-lg btn-primary text-[var(--color-text-primary)] font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="px-6 py-2 rounded-xl btn-primary text-[var(--color-text-primary)] font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <Plus className="w-3 h-3" />
           <span>Add Record</span>
@@ -739,7 +741,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             {/* Create Record */}
             <button
               onClick={onCreateRecord}
-              className="px-4 py-2 rounded-lg btn-primary text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 rounded-xl btn-primary text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Plus className="w-3 h-3" />
               <span>Create</span>
@@ -748,7 +750,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
           {/* Second row: View tabs and navigation */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+            <div className="flex items-center space-x-1 bg-gray-100 rounded-xl p-1">
               {views.map((view) => (
                 <button
                   key={view.key}

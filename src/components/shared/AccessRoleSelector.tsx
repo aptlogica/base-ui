@@ -139,7 +139,7 @@ export const AccessRoleSelector: React.FC<AccessRoleSelectorProps> = ({
           type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
-          className={`w-full flex items-center justify-between px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${
+          className={`w-full flex items-center justify-between px-4 py-2 border rounded-xl text-sm font-medium transition-colors ${
             currentRole.color
           } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
         >
@@ -155,7 +155,7 @@ export const AccessRoleSelector: React.FC<AccessRoleSelectorProps> = ({
       {isOpen && !disabled && dropdownPosition && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-hidden"
+          className="fixed bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-hidden"
           style={{
             ...(dropdownPosition.top !== undefined && { top: `${dropdownPosition.top}px` }),
             ...(dropdownPosition.bottom !== undefined && { bottom: `${dropdownPosition.bottom}px` }),
@@ -172,7 +172,7 @@ export const AccessRoleSelector: React.FC<AccessRoleSelectorProps> = ({
                 placeholder="Search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
                 autoFocus
               />
             </div>

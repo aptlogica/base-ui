@@ -119,7 +119,7 @@ export const CreateViewPopover: React.FC<CreateViewPopoverProps> = ({
   return ReactDOM.createPortal(
     <div
       ref={popoverRef}
-      className="fixed z-50 bg-card border border-border rounded-lg shadow-lg p-2 min-w-[150px] overflow-hidden"
+      className="fixed z-50 bg-card border border-border rounded-xl shadow-lg p-2 min-w-[150px] overflow-hidden"
       style={{
         top: `${position.top}px`,
         left: `${position.left}px`,
@@ -141,7 +141,7 @@ export const CreateViewPopover: React.FC<CreateViewPopoverProps> = ({
           return (
             <button
               key={viewType.type}
-              className="w-full px-2 py-1.5 flex items-center gap-2 text-left text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors duration-200"
+              className="w-full px-2 py-1.5 flex items-center gap-2 text-left text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors duration-200"
               onClick={() => {
                 onOpenModal(viewType.type);
                 onClose();

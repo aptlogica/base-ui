@@ -248,7 +248,7 @@ const DayView: React.FC<DayViewProps> = ({
                 <div className="pt-4">
                   <button
                     onClick={() => onDateClick(currentDate)}
-                    className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors"
+                    className="w-full p-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors"
                   >
                     <div className="flex items-center justify-center space-x-2">
                       <Plus className="w-4 h-4" />

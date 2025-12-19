@@ -78,26 +78,3 @@ export const PRECISION_OPTIONS = [
     { label: "Call Phone", value: "phone" },
     { label: "Custom Action", value: "custom" }
   ];
-
-  // defined link text options
-  export const LINK_TEXT_OPTIONS = [
-    { label: "Show URL", value: "url" },
-    { label: "Custom text", value: "custom" },
-    { label: "Show domain only", value: "domain" }
-  ];
-
-  // defined source table options
-  export const SOURCE_TABLE_OPTIONS = [
-    { label: "Select a table", value: "" },
-    { label: "Users", value: "users" },
-    { label: "Products", value: "products" },
-    { label: "Orders", value: "orders" }
-  ];
-
-  // defined display field options
-  export const DISPLAY_FIELD_OPTIONS = [
-    { label: "Select display field", value: "" },
-    { label: "Name", value: "name" },
-    { label: "Title", value: "title" },
-    { label: "ID", value: "id" }
-  ];

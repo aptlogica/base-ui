@@ -596,7 +596,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    // console.log('changing values----->', newValue)
     setInputValue(newValue);
 
     // Don't save immediately - only update display
@@ -636,7 +635,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
       const parts = raw.split(' ');
       if (parts.length === 1) {
         const datePartOnly = parts[0];
-        console.log('datePartOnly----->', datePartOnly);
 
         let dateOnlyValid = false;
         switch (dateFormat) {
@@ -697,7 +695,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
       setIsEditing(true);
       // Set input value to current display value
       const displayValue = `${displayDate} ${displayTime}`;
-      console.log('displayDate----->', displayDate);
       setInputValue(displayValue);
       e.stopPropagation();
     }
@@ -718,7 +715,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
     // Get timezone - use config timezone or fallback to browser timezone
     const tz = config?.timeZoneLabel || config?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
     const newValue = zonedToUtcISO(selected, normalizedTime, tz);
-    console.log('newValue----->', newValue)
     setError(validate(selected, normalizedTime));
     onChange(newValue);
   };
@@ -752,7 +748,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
       if (period === 'AM' && hour === 12) hour = 0;
       timeValue = `${pad(hour)}:${minutes}`;
     }
-    console.log('timeValue---->', timeValue)
     let newDate = displayOriginalDate;
     if (!newDate) {
       // Set to today in correct format
@@ -760,7 +755,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
       newDate = formatDate(todayISO, dateFormat);
       setDate(newDate);
     }
-    console.log('newDate----->', newDate)
     const isoDate = parseDate(newDate, dateFormat);
     timeValue = toHHmm(timeValue, hourFormat, timeFormat);
     setTime(timeValue);
@@ -768,7 +762,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
     // Get timezone - use config timezone or fallback to browser timezone
     const tz = config?.timeZoneLabel || config?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
     const newValue = zonedToUtcISO(isoDate, timeValue, tz);
-    console.log('newValue----->', newValue)
     setError(validate(isoDate, timeValue));
     onChange(newValue);
   };
@@ -867,13 +860,13 @@ export const DateTime: React.FC<DateTimeProps> = ({
       weeks.push(week);
     }
     return (
-      <div className="p-2 bg-background rounded-lg">
+      <div className="p-2 bg-background rounded-xl">
         {/* Header with navigation and quick actions */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex w-full items-center justify-between">
             <button
               type="button"
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
               onClick={() => setCalendarMonth(new Date(year, month - 1, 1))}
             >
               <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
@@ -900,7 +893,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                       <button
                         type="button"
                         onClick={goPrevMonthYear}
-                        className="h-8 w-8 grid place-items-center rounded-lg hover:bg-gray-100 transition-colors"
+                        className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100 transition-colors"
                       >
                         <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
                       </button>
@@ -910,7 +903,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                       <button
                         type="button"
                         onClick={goNextMonthYear}
-                        className="h-8 w-8 grid place-items-center rounded-lg hover:bg-gray-100 transition-colors"
+                        className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100 transition-colors"
                       >
                         <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
                       </button>
@@ -921,7 +914,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                         <button
                           key={index}
                           className={[
-                            "w-full py-2 rounded-lg text-sm text-center transition-colors",
+                            "w-full py-2 rounded-xl text-sm text-center transition-colors",
                             "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black",
                             index === month
                               ? "bg-[var(--color-bg-brand-secondary)] text-black font-semibold"
@@ -960,7 +953,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                       <button
                         type="button"
                         onClick={goPrev}
-                        className="h-8 w-8 grid place-items-center rounded-lg hover:bg-gray-100"
+                        className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100"
                       >
                         <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
                       </button>
@@ -970,7 +963,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                       <button
                         type="button"
                         onClick={goNext}
-                        className="h-8 w-8 grid place-items-center rounded-lg hover:bg-gray-100"
+                        className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100"
                       >
                         <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
                       </button>
@@ -1004,7 +997,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
             </div>
 
             <button
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
               onClick={() => setCalendarMonth(new Date(year, month + 1, 1))}
             >
               <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
@@ -1038,7 +1031,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
         {/* Footer with Today button */}
         <div className="flex justify-center mt-4 pt-3 border-t border-gray-100">
           <button
-            className="px-4 py-2 rounded-lg bg-[var(--color-bg-brand-primary)] text-black hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
+            className="px-4 py-2 rounded-xl bg-[var(--color-bg-brand-primary)] text-black hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
             onClick={() => handleDateSelect(todayISO)}
           >
             Today
@@ -1125,7 +1118,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
           {dateOpen && dateCalculatedPosition && createPortal(
             <div
               ref={dateDropdownRef}
-              className="fixed z-[9999] border rounded-lg shadow-lg w-80 animate-fade-in bg-background"
+              className="fixed z-[9999] border rounded-xl shadow-lg w-80 animate-fade-in bg-background"
               style={{
                 ...(dateCalculatedPosition.top !== undefined && { top: `${dateCalculatedPosition.top}px` }),
                 ...(dateCalculatedPosition.bottom !== undefined && { bottom: `${dateCalculatedPosition.bottom}px` }),
@@ -1158,7 +1151,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
           {timeOpen && timeCalculatedPosition && createPortal(
             <div
               ref={timeDropdownRef}
-              className="fixed z-[9999] border bg-background rounded-lg shadow-lg w-36 animate-fade-in"
+              className="fixed z-[9999] border bg-background rounded-xl shadow-lg w-36 animate-fade-in"
               style={{
                 ...(timeCalculatedPosition.top !== undefined && { top: `${timeCalculatedPosition.top}px` }),
                 ...(timeCalculatedPosition.bottom !== undefined && { bottom: `${timeCalculatedPosition.bottom}px` }),
@@ -1173,7 +1166,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                     <button
                       key={option}
                       type="button"
-                      className={`w-full px-4 py-2 text-sm text-[var(--color-text-primary)] rounded-lg text-left 
+                      className={`w-full px-4 py-2 text-sm text-[var(--color-text-primary)] rounded-xl text-left 
               hover:bg-[var(--color-bg-brand-primary)] hover:text-black 
               focus:bg-[var(--color-bg-brand-secondary)] transition-colors 
               ${displayTime === option ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}

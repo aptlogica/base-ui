@@ -99,10 +99,10 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
 
   const rounded = {
     none: 'rounded-none',
-    md: 'rounded-lg',
-    lg: 'rounded-lg',
+    md: 'rounded-xl',
+    lg: 'rounded-xl',
     xl: 'rounded-xl'
-  }[appearance.rounded as string] || 'rounded-lg';
+  }[appearance.rounded as string] || 'rounded-xl';
 
   const titleAlign = appearance.align === 'center' ? 'text-center' : 'text-left';
 
@@ -136,7 +136,7 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
         {/* Header with banner only */}
         {!appearance.hideBanner && appearance.bannerUrl && (
           <div className="mb-8">
-            <img src={String(appearance.bannerUrl)} alt="Banner" className="w-full h-48 object-cover rounded-lg" />
+            <img src={String(appearance.bannerUrl)} alt="Banner" className="w-full h-48 object-cover rounded-xl" />
           </div>
         )}
 
@@ -298,7 +298,7 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
             <div className="pt-6 flex gap-2">
               <button
                 type="submit"
-                className="flex-1 rounded-lg py-3 px-4 font-medium text-white transition-colors"
+                className="flex-1 rounded-xl py-3 px-4 font-medium text-white transition-colors"
                 style={{
                   backgroundColor: appearance.primaryColor || '#2563eb',
                   borderColor: appearance.primaryColor || '#2563eb'
@@ -308,7 +308,7 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
               </button>
               <button
                 type="button"
-                className="flex-1 btn-tertiary rounded-lg py-3 px-4 font-medium"
+                className="flex-1 btn-tertiary rounded-xl py-3 px-4 font-medium"
                 onClick={onClear}
               >
                 Clear

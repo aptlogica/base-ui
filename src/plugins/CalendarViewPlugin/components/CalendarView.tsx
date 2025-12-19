@@ -275,6 +275,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     handleRealTimeFilter,
     handleAddFilter,
     handleRemoveFilter,
+    handleUpdateFilter,
     handleSortChange,
     handleFieldToggle,
     handleFieldOrderChange,
@@ -460,6 +461,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         onFieldToggle={handleFieldToggle}
         onAddFilter={handleAddFilter}
         onRemoveFilter={handleRemoveFilter}
+        onUpdateFilter={handleUpdateFilter}
         onRealTimeFilter={handleRealTimeFilter}
         onGroupByChange={handleGroupByChange}
         tableId={uiTableId}
@@ -519,7 +521,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
         {/* Right Sidebar - Events List */}
         {!sidebarCollapsed && (
-          <div className="w-80 border-l border-gray-200 flex flex-col bg-card">
+          <div className="w-80 border-l flex flex-col bg-card">
               <EventsSidebar
               events={sortedEvents}
               onEventClick={handleOpenEditModal}

@@ -138,7 +138,6 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({
               active={isActive}
               onClick={() => {
                 closeFlyoutIfOpen();
-                console.log('🛡️ Administrator clicked, navigating to:', administratorPath);
                 navigate(administratorPath);
               }}
               label={item.title}
@@ -155,7 +154,6 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({
               active={false}
               onClick={() => {
                 closeFlyoutIfOpen();
-                console.log('Search functionality not implemented yet');
               }}
               label={item.title}
             />

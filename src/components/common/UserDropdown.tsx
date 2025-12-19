@@ -157,7 +157,7 @@ const UserDropdown: React.FC = () => {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute bottom-full left-0 mb-2 w-64 bg-sidebar border border-gray-200 rounded-lg shadow-lg z-50">
+        <div className="absolute bottom-full left-0 mb-2 w-64 bg-sidebar border border-gray-200 rounded-xl shadow-lg z-50">
           {/* User Info Section */}
           <div className="px-4 py-3 border-b border-[var(--color-border-disabled_subtle)]">
             <div className="flex items-center gap-3">

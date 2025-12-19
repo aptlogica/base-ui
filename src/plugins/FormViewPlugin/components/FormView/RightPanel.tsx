@@ -77,7 +77,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       </div>
 
       <div className="p-4 border-b flex-shrink-0 bg-sidebar">
-        <div className="flex space-x-1 bg-[var(--color-gray-100)] rounded-lg p-1">
+        <div className="flex space-x-1 bg-[var(--color-gray-100)] rounded-xl p-1">
           <button
             onClick={() => setActiveTab('fields')}
             className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${

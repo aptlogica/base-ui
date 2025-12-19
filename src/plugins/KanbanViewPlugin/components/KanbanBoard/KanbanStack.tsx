@@ -4,6 +4,9 @@ import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal
 import { KanbanStack as Stack, Row } from './types';
 import { BaseColumn } from '../../../../types/column.types';
 import KanbanCard from './KanbanCard';
+import { formatCompactNumber } from '../../../../utils/helpers';
+// FRONTEND PAGINATION: Using frontend pagination for per-stack card pagination
+import { useFrontendPagination } from '../../../../hooks/useFrontendPagination';
 
 // Type alias for compatibility
 type Column = BaseColumn;
@@ -61,6 +64,28 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
   const isUncategorized = stack.id === 'Uncategorized';
   const [dropIndicatorPosition, setDropIndicatorPosition] = useState<number | null>(null);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
+
+  // Calculate visible cards and pagination BEFORE handleDrop callback (which uses these)
+  // NOTE: stack.cards already contains only cards for THIS specific stack (filtered per stack in KanbanBoard)
+  const totalCards = stack.cards.length;
+  const visibleCards = stack.cards.filter(card => !card._meta.deleted_at);
+
+  // FRONTEND PAGINATION: Paginate cards per stack (only when not collapsed)
+  // This allows rendering only a portion of cards initially for better performance
+  const {
+    allLoadedData: paginatedCards,
+    loadNextPage,
+    hasMore,
+    currentPage,
+    totalPages,
+  } = useFrontendPagination({
+    data: visibleCards,
+    pageSize: 30, // Same as GridView
+    initialPage: 1,
+  });
+
+  // Only use pagination when stack is expanded (not collapsed)
+  const cardsToRender = stack.isCollapsed ? visibleCards : paginatedCards;
 
   // Memoize highlight handlers
   const addHighlight = useCallback(() => {
@@ -176,12 +201,26 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     const sourceIndex = parseInt(e.dataTransfer.getData('sourceIndex') || '0', 10);
 
     if (cardId && onCardMove) {
-      // Use the dropIndicatorPosition that was already calculated and shown to the user
-      // This ensures the drop happens exactly where the indicator showed
-      // If null, it means append to end (same as stack.cards.length)
-      let targetPosition = dropIndicatorPosition !== null 
-        ? dropIndicatorPosition 
-        : stack.cards.length;
+      // FRONTEND PAGINATION: Map drop position from paginated cards to full array
+      // dropIndicatorPosition is relative to cardsToRender (paginated), but we need position in visibleCards (full)
+      let targetPosition: number;
+      if (dropIndicatorPosition === null) {
+        // Append to end
+        targetPosition = visibleCards.length;
+      } else if (stack.isCollapsed) {
+        // If collapsed, use position directly (no pagination)
+        targetPosition = dropIndicatorPosition;
+      } else {
+        // Since paginatedCards is a prefix of visibleCards (slice from 0 to currentPage * pageSize),
+        // positions in paginatedCards directly correspond to positions in visibleCards for loaded cards
+        // If dropping at or before the last loaded card, use the position directly
+        if (dropIndicatorPosition < paginatedCards.length) {
+          targetPosition = dropIndicatorPosition;
+        } else {
+          // Dropping after the last loaded card - append to end of full array
+          targetPosition = visibleCards.length;
+        }
+      }
 
       // Adjust position if moving within same stack
       if (sourceStackId === stack.id) {
@@ -211,7 +250,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
       setDropIndicatorPosition(null);
       setDraggedCardId(null);
     }
-  }, [onCardMove, removeHighlight, stack.cards.length, stack.id, dropIndicatorPosition]);
+  }, [onCardMove, removeHighlight, visibleCards, paginatedCards, stack.isCollapsed, stack.id, dropIndicatorPosition]);
 
   const handleContainerDrop = useCallback((e: React.DragEvent) => {
     handleDrop(e);
@@ -364,14 +403,11 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     return () => window.removeEventListener('kanban-menu-open', onOtherMenuOpen as EventListener);
   }, []);
 
-  const totalCards = stack.cards.length;
-  const visibleCards = stack.cards.filter(card => !card._meta.deleted_at);
-
   return (
     <div
       ref={containerRef}
       data-stack-id={stack.id}
-      className={`kanban-stack bg-[var(--color-bg-secondary-subtle)] rounded-lg w-full md:w-96 transition-all duration-200 ${stack.isCollapsed ? 'self-start' : ''} border border-primary relative overflow-hidden ${!stack.isCollapsed ? 'pb-12' : ''}`}
+      className={`kanban-stack bg-[var(--color-bg-secondary-subtle)] rounded-xl w-full md:w-96 transition-all duration-200 ${stack.isCollapsed ? 'self-start' : ''} border border-primary relative overflow-hidden ${!stack.isCollapsed ? 'pb-12' : ''}`}
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -415,7 +451,8 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
           {/* Record count - hide when editing to avoid overlap with input */}
           {!isEditing && (
             <span className="text-xs text-gray-500 font-medium">
-              {visibleCards.length} card{visibleCards.length !== 1 ? 's' : ''}
+              {formatCompactNumber(visibleCards.length)} card{visibleCards.length !== 1 ? 's' : ''}
+              {!stack.isCollapsed && hasMore && ` (${formatCompactNumber(paginatedCards.length)} loaded)`}
             </span>
           )}
           
@@ -445,7 +482,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
               className="select-none border p-2 space-y-1 animate-fade-in"
             >
               <button
-                className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors text-sm"
+                className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors text-sm"
                 onClick={handleCollapseClick}
               >
                 {stack.isCollapsed ? (
@@ -457,7 +494,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
               {!isUncategorized && (
                 <>
                   <button
-                    className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors text-sm"
+                    className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors text-sm"
                     onClick={handleStackEditClick}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -467,7 +504,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
                   </button>
                   <div className="border-t my-1" />
                   <button
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-lg hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
                     onClick={handleDeleteStackClick}
                   >
                     <Trash2 className="w-4 h-4" /> Delete stack
@@ -481,7 +518,17 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
 
       {/* Stack Content */}
       {!stack.isCollapsed && (
-        <div className='p-4 max-h-[90%] overflow-y-auto'>
+        <div 
+          className='p-4 max-h-[90%] overflow-y-auto'
+          onScroll={(e) => {
+            // FRONTEND PAGINATION: Infinite scroll - load more when near bottom
+            const target = e.currentTarget;
+            const scrollBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+            if (scrollBottom < 200 && hasMore && !stack.isCollapsed) {
+              loadNextPage();
+            }
+          }}
+        >
           {/* Empty State */}
           {stack.cards.length === 0 ? (
             <div className="text-center py-6 text-gray-500">
@@ -492,7 +539,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
             <>
               {/* Cards */}
               <div ref={cardsContainerRef} className="space-y-2 min-h-[80px] mb-2">
-                {stack.cards.map((card, index) => {
+                {cardsToRender.map((card, index) => {
                   const isDraggedCard = draggedCardId === card._meta.id;
                   
                   return (
@@ -527,7 +574,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
                   );
                 })}
                 {/* Drop indicator at the end */}
-                {dropIndicatorPosition === stack.cards.length && (
+                {dropIndicatorPosition === cardsToRender.length && (
                   <div className="h-1 bg-[var(--color-brand-600)] rounded-full -my-1 z-50 opacity-80" 
                     style={{ 
                       boxShadow: '0 0 12px rgba(59, 130, 246, 0.8)',
@@ -537,6 +584,18 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
                   />
                 )}
               </div>
+              
+              {/* FRONTEND PAGINATION: Load more button (alternative to infinite scroll) */}
+              {hasMore && (
+                <div className="flex justify-center mt-2 mb-2">
+                  <button
+                    onClick={loadNextPage}
+                    className="px-4 py-2 text-xs font-medium text-primary-brand hover:text-hover-primary-dark bg-[var(--color-bg-secondary-subtle)] hover:bg-[var(--color-bg-brand-primary)] rounded-xl transition-colors"
+                  >
+                    Load more ({formatCompactNumber(visibleCards.length - paginatedCards.length)} remaining)
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>

@@ -1,3 +1,4 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
 import { GroupPopover } from '../../../../components/shared/table/GroupPopover';
 import { SortPopover } from '../../../../components/shared/table/SortPopover';
 import { NewColumnModalPortal } from './modals/NewColumnModalPortal';
@@ -10,23 +11,23 @@ import { ContextMenu } from './components/ContextMenu';
 import { VirtualizedTableBody } from './components/VirtualizedTableBody';
 import { Search } from '../../../../components/shared/table/Search';
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
-import type { FieldType as FieldTypeUnion } from '../../../../types/interfaces/field.interface';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
-import { Plus, Layers, Lock } from 'lucide-react';
+import { Plus, List, Lock } from 'lucide-react';
 import { useToast } from '../../../../components/common/Toast';
 import { sortRowsByDataKey } from '../../../../utils/sortUtils';
 import { applyFilters } from '../../../../utils/filterUtils';
-import { NewColumnModal } from '../../../../components/modals/NewColumnModal';
+import { formatCompactNumber } from '../../../../utils/helpers';
+const NewColumnModal = lazy(() => 
+  import('../../../../components/modals/NewColumnModal').then(m => ({ default: m.NewColumnModal }))
+);
 import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldConfirmModal';
 import { useAllViews } from '../../../../hooks/useApi';
 import { getFieldTypeIconComponent } from '../../../../types/fieldTypes';
 import { ColumnDropdown } from './components/ColumnDropdown';
 import { Loader } from '../../../../components/ui/Loader';
-// Custom hooks
 import { useTableViewConfig, type GroupByItem } from '../../hooks/useTableViewConfig';
 import type { SearchField } from '../../../../hooks/useSearch';
-import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
+import { useFrontendPagination } from '../../../../hooks/useFrontendPagination';
 import { useCellEditing } from '../../hooks/useCellEditing';
 import { useColumnManagement } from '../../hooks/useColumnManagement';
 import { useTableModals } from '../../hooks/useTableModals';
@@ -149,17 +150,18 @@ export const Table: React.FC<TableProps> = ({
     });
   }, [columns]);
 
-  // Infinite scroll hook
-  const { allRecords, setAllRecords, isLoadingMore, fetchMoreRecords, preservePagesOnNextUpdate } = useInfiniteScroll({
-    tableId: tableData?.model?.id,
-    initialRecords: tableData?.records || [],
-  });
+  // PAGINATION DISABLED - Infinite scroll hook commented out
+  // Uncomment below to re-enable pagination with infinite scroll
+  // const { allRecords, setAllRecords, isLoadingMore, fetchMoreRecords, preservePagesOnNextUpdate } = useInfiniteScroll({
+  //   tableId: tableData?.model?.id,
+  //   initialRecords: tableData?.records || [],
+  // });
 
   // Transform API records to UI-ready format
-  const data = useMemo(() => {
-    if (!allRecords || !Array.isArray(allRecords)) return [];
-
-    return allRecords.map((record: any): TableData => {
+  // FRONTEND PAGINATION: Get ALL records from backend (no pagination params)
+  const allRecords = useMemo(() => {
+    if (!tableData?.records || !Array.isArray(tableData.records)) return [];
+    return tableData.records.map((record: any): TableData => {
       const meta = {
         id: String(record.id ?? ''),
         created_at: String(record.created_at ?? ''),
@@ -178,7 +180,7 @@ export const Table: React.FC<TableProps> = ({
 
       return { id: meta.id, _meta: meta, data: dataObj } as TableData;
     });
-  }, [allRecords]);
+  }, [tableData?.records]); // Full dataset from backend
 
   // Global click handler to remove active cell when clicking outside table rows
   useEffect(() => {
@@ -297,15 +299,6 @@ export const Table: React.FC<TableProps> = ({
     setViewConfigState,
   });
 
-  // Cell editing hook (must be after data is defined)
-  const { handleCellChange } = useCellEditing({
-    data,
-    columns,
-    tableId,
-    insertRowDataMutation: actions?.insertRowData,
-    onRecordsUpdate: setAllRecords,
-  });
-
   // TanStack Query hooks - Mutations provided by data layer hook
   const deleteRecordMutation = actions?.deleteRecord;
   const addRowMutation = actions?.addRow;
@@ -333,10 +326,11 @@ export const Table: React.FC<TableProps> = ({
     return visibleColumns.map(c => ({ key: c.key, type: String(c.type) }));
   }, [visibleColumns]);
 
-  // Apply search, filters and sorts to the dataset for rendering
-  // Optimized: Only depends on specific viewConfigState properties, not the whole object
+  // FRONTEND PAGINATION: Apply filters/search to FULL dataset first
+  // This ensures filters/search work on entire dataset, not just loaded page
   const filteredAndSortedData = useMemo(() => {
-    let result = [...data];
+    // Start with ALL records (full dataset from backend)
+    let result = [...allRecords];
 
     // Apply search filtering
     if (searchTerm.trim() && selectedSearchField && selectedSearchField.key) {
@@ -366,7 +360,7 @@ export const Table: React.FC<TableProps> = ({
 
     return result;
   }, [
-    data,
+    allRecords, // Changed from data to allRecords - full dataset
     viewConfigState.filters, // Specific property instead of whole object
     viewConfigState.sorts,   // Specific property instead of whole object
     searchTerm,
@@ -422,6 +416,32 @@ export const Table: React.FC<TableProps> = ({
     return groupRows(filteredAndSortedData, viewConfigState.groupBy);
   }, [filteredAndSortedData, viewConfigState.groupBy]);
 
+  // FRONTEND PAGINATION: Paginate the filtered/sorted data
+  // This allows filters/search to work on full dataset, but only render a portion
+  // Must be before useCellEditing so paginatedData is available
+  const {
+    allLoadedData: paginatedData,
+    loadNextPage,
+    hasMore,
+    currentPage,
+    totalPages,
+  } = useFrontendPagination({
+    data: filteredAndSortedData,
+    pageSize: 30,
+    initialPage: 1,
+  });
+
+  // Cell editing hook (must be after paginatedData is defined)
+  // FRONTEND PAGINATION: Use paginatedData for cell editing (what's currently displayed)
+  const { handleCellChange } = useCellEditing({
+    data: paginatedData,
+    columns,
+    tableId,
+    insertRowDataMutation: actions?.insertRowData,
+    // No need for onRecordsUpdate - data comes from filteredAndSortedData via pagination
+    onRecordsUpdate: () => {},
+  });
+
   // Measure table body container height
   useEffect(() => {
     const element = tableRef.current;
@@ -451,7 +471,7 @@ export const Table: React.FC<TableProps> = ({
       resizeObserver.disconnect();
       window.removeEventListener('resize', updateHeight);
     };
-  }, [filteredAndSortedData.length, columnWidths.length]); // Only track length, not full arrays
+  }, [paginatedData.length, columnWidths.length]); // Track paginated data length
 
   // Scroll handler removed - virtualization handles infinite scrolling via onScroll callback
 
@@ -471,7 +491,7 @@ export const Table: React.FC<TableProps> = ({
   // Select or clear all rows currently visible in the filtered set
   const handleSelectAll = useCallback((selected: boolean) => {
     if (selected) {
-      setSelectedRows(new Set(filteredAndSortedData.map(row => (row._meta && typeof row._meta.id === 'string') ? row._meta.id : '').filter(Boolean)));
+      setSelectedRows(new Set(paginatedData.map(row => (row._meta && typeof row._meta.id === 'string') ? row._meta.id : '').filter(Boolean)));
     } else {
       setSelectedRows(new Set());
     }
@@ -482,42 +502,44 @@ export const Table: React.FC<TableProps> = ({
     try {
       if (!addRowMutation) return;
       
+      // PAGINATION DISABLED - preservePagesOnNextUpdate commented out
       // Mark that we should preserve pages 2+ on next update (smart merge)
       // This prevents losing loaded pages when refetching after adding a row
-      preservePagesOnNextUpdate();
+      // preservePagesOnNextUpdate();
       
       const result = await addRowMutation.mutateAsync({ model_id: tableId });
       
       // Get the new row ID from the response
       const newRowId = result?.id || result?.data?.id || result?.data?.data?.id || result?.data?.record?.id;
       
+      // PAGINATION DISABLED - Optimistic update commented out (not needed without pagination)
       // Optimistically add the new row to allRecords immediately
       // This ensures it appears even if it's beyond page 1
-      if (newRowId) {
-        const newRow = {
-          id: newRowId,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          last_modified_time: new Date().toISOString(),
-          // Initialize empty values for all columns
-          ...columns.reduce((acc, col) => {
-            const colKey = col.column_name || col.key || col.id;
-            if (colKey) {
-              acc[colKey] = null;
-            }
-            return acc;
-          }, {} as any)
-        };
-        
-        setAllRecords(prev => {
-          // Check if row already exists (from refetch)
-          const exists = prev.some(r => {
-            const id = r?.id || r?._meta?.id;
-            return String(id) === String(newRowId);
-          });
-          return exists ? prev : [...prev, newRow];
-        });
-      }
+      // if (newRowId) {
+      //   const newRow = {
+      //     id: newRowId,
+      //     created_at: new Date().toISOString(),
+      //     updated_at: new Date().toISOString(),
+      //     last_modified_time: new Date().toISOString(),
+      //     // Initialize empty values for all columns
+      //     ...columns.reduce((acc, col) => {
+      //       const colKey = col.column_name || col.key || col.id;
+      //       if (colKey) {
+      //         acc[colKey] = null;
+      //       }
+      //       return acc;
+      //     }, {} as any)
+      //   };
+      //   
+      //   setAllRecords(prev => {
+      //     // Check if row already exists (from refetch)
+      //     const exists = prev.some(r => {
+      //       const id = r?.id || r?._meta?.id;
+      //       return String(id) === String(newRowId);
+      //     });
+      //     return exists ? prev : [...prev, newRow];
+      //   });
+      // }
       
       // Notify user of success
       try {
@@ -532,7 +554,7 @@ export const Table: React.FC<TableProps> = ({
       console.error('Failed to add row', err);
       toast.error('Failed to add row', { title: 'Error', duration: 3500 });
     }
-  }, [addRowMutation, tableId, toast, onRefresh, preservePagesOnNextUpdate, setAllRecords, columns]);
+  }, [addRowMutation, tableId, toast, onRefresh, columns]); // PAGINATION DISABLED - Removed preservePagesOnNextUpdate and setAllRecords from deps
 
   // Delete a row by id (memoized to prevent recreation)
   const handleDelete = useCallback(async (rowId: string) => {
@@ -616,7 +638,7 @@ export const Table: React.FC<TableProps> = ({
     <div ref={tableContainerRef} className="w-full h-[calc(100vh-43px)] bg-background flex flex-col relative" >
       {/* Fixed Header - Toolbar */}
       <div className="sticky top-0 z-30 bg-muted border-b border-border/50" onClick={() => setActiveCell(null)}>
-        <div className="flex items-center bg-background gap-2 px-4 py-3">
+        <div className="flex items-center bg-background gap-2 px-4 py-2">
           {/* Desktop Layout - Hidden on mobile */}
           <div className="hidden md:flex items-center justify-between w-full">
             <div className='flex items-center gap-2'>
@@ -627,7 +649,7 @@ export const Table: React.FC<TableProps> = ({
                 onEnsureAllFieldsRegistered={handleEnsureAllFieldsRegistered}
                 tableId={String(tableId || '')}
                 label="Fields"
-                iconComponent={Layers}
+                iconComponent={List}
               />
               <FilterPopover
                 columns={columns}
@@ -696,7 +718,7 @@ export const Table: React.FC<TableProps> = ({
                 >
                   <input
                     type="checkbox"
-                    className="hidden group-hover:inline-block w-4 h-4 text-primary rounded-lg focus:ring-primary checkbox-primary-brand"
+                    className="hidden group-hover:inline-block w-4 h-4 text-primary rounded-xl focus:ring-primary checkbox-primary-brand"
                     checked={selectedRows.size === filteredAndSortedData.length && filteredAndSortedData.length > 0}
                     onChange={(e) => handleSelectAll(e.target.checked)}
                   />
@@ -804,7 +826,7 @@ export const Table: React.FC<TableProps> = ({
 
                 return (
                   <VirtualizedTableBody
-                    data={filteredAndSortedData}
+                    data={paginatedData}
                     columns={visibleColumns}
                     columnWidths={columnWidths}
                     selectedRows={selectedRows}
@@ -825,24 +847,25 @@ export const Table: React.FC<TableProps> = ({
                     outerRef={tableRef}
                     allColumns={columns}
                     onScroll={(scrollTop) => {
-                      // Handle infinite scrolling
+                      // FRONTEND PAGINATION: Load next page when scrolling near bottom
                       // Calculate total content height based on flattened items
                       // For simplicity, estimate: (group headers + rows) * 40px
                       const estimatedItemCount = groupedData
                         ? groupedData.reduce((sum, g) => sum + 1 + (expandedGroups.has(`${g.groupColumn}-${g.groupValue}-0`) ? g.rows.length : 0), 0)
-                        : filteredAndSortedData.length;
+                        : paginatedData.length;
                       const totalContentHeight = estimatedItemCount * 40;
                       const scrollThreshold = totalContentHeight - tableBodyHeight - 100;
-                      if (scrollTop >= scrollThreshold) {
-                        fetchMoreRecords();
+                      
+                      // Load next page when near bottom and more pages available
+                      if (scrollTop >= scrollThreshold && hasMore) {
+                        loadNextPage();
                       }
                     }}
                   />
                 );
               })()}
 
-              {/* Loading row for infinite scrolling */}
-              {/* Add row button row */}
+              {/* FRONTEND PAGINATION: Add row button with optional loading indicator */}
               <div className="relative w-full" style={{ height: '40px' }}>
                 <div className="flex-shrink-0 w-[48px] h-10 border-r border-b border-border/30 flex items-center justify-center bg-[var(--color-hover-bg)]" style={{ height: '40px', position: 'sticky', left: 0, zIndex: 2, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)' }}>
                   <button className="p-1 rounded hover:bg-muted/50 transition-colors" title="Add row" onClick={() => { setActiveCell(null); addNewRow(); }}>
@@ -850,9 +873,11 @@ export const Table: React.FC<TableProps> = ({
                   </button>
                 </div>
 
-                {isLoadingMore && (
-                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 px-3 py-1 whitespace-nowrap z-10">
+                {/* Optional: Show subtle indicator when more data available */}
+                {hasMore && (
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 px-3 py-1 whitespace-nowrap z-10 opacity-50">
                     <Loader size={4} />
+                    {/* <span className="text-xs text-gray-500">Scroll for more...</span> */}
                   </div>
                 )}
               </div>
@@ -862,7 +887,7 @@ export const Table: React.FC<TableProps> = ({
       </div>
 
       {/* Fixed Footer */}
-      <div className="sticky bottom-0 z-30 bg-card border-t border-border flex items-center px-4 h-12">
+      <div className="sticky bottom-0 z-30 bg-card border-t flex items-center px-4 h-12">
         <button
           onClick={() => { setActiveCell(null); addNewRow(); }}
           className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded btn-primary text-primary-brand bg-[var(--color-brand-300)] text-[var(--color-brand-600)] hover:text-[var(--color-brand-900)] hover:bg-[var(--color-brand-600)] transition-colors duration-200"
@@ -874,7 +899,7 @@ export const Table: React.FC<TableProps> = ({
         <div className="ml-auto flex items-center gap-3 text-sm">
           {/* Virtualization is always enabled - indicator removed to reduce UI clutter */}
           <div className="text-muted-foreground">
-            {filteredAndSortedData.length} rows • {selectedRows.size} selected
+            {formatCompactNumber(filteredAndSortedData.length)} rows{hasMore && ` (${formatCompactNumber(paginatedData.length)} loaded)`} • {formatCompactNumber(selectedRows.size)} selected
           </div>
         </div>
       </div>
@@ -912,10 +937,10 @@ export const Table: React.FC<TableProps> = ({
           />
           <div
             style={{ position: 'fixed', left: colMenu.x, top: colMenu.y, zIndex: 1000 }}
-            className="bg-background border p-1 space-y-1 rounded-lg shadow-lg w-48"
+            className="bg-background border p-1 space-y-1 rounded-xl shadow-lg w-48"
           >
             <button
-              className="w-full text-left px-4 py-2 text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+              className="w-full text-left px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
               onClick={(e) => {
                 handleEditColumn(visibleColumns[colMenu.colIndex!], colMenu.colIndex!, { target: e.currentTarget });
                 handleCloseColMenu();
@@ -923,7 +948,7 @@ export const Table: React.FC<TableProps> = ({
             >
               Edit column
             </button>
-            <button className="w-full text-left px-4 py-2 text-red-600 rounded-lg hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors" onClick={() => { handleDeleteColumn(visibleColumns[colMenu.colIndex!].id!); handleCloseColMenu(); }}>Delete column</button>
+            <button className="w-full text-left px-4 py-2 text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors" onClick={() => { handleDeleteColumn(visibleColumns[colMenu.colIndex!].id!); handleCloseColMenu(); }}>Delete column</button>
           </div>
         </>
       )}
@@ -937,16 +962,22 @@ export const Table: React.FC<TableProps> = ({
             setEditColumnIndex(null);
           }} />
           <div ref={editModalRef} className="fixed z-50" style={{ top: editModalPosition.top, left: editModalPosition.left }}>
-            <NewColumnModal
-              isOpen={editModalOpen}
-              onClose={() => { setEditModalOpen(false); setEditColumn(null); setEditColumnIndex(null); }}
-              onSave={handleSaveEditColumn}
-              initialValues={editColumn}
-              fields={columns}
-              isAddNewColumn={false}
-              isAddNewField={true}
-              currentTableId={tableId}
-            />
+            <Suspense fallback={
+              <div className="bg-background border rounded-xl shadow-lg p-8 min-w-[400px]">
+                <Loader size={8} />
+              </div>
+            }>
+              <NewColumnModal
+                isOpen={editModalOpen}
+                onClose={() => { setEditModalOpen(false); setEditColumn(null); setEditColumnIndex(null); }}
+                onSave={handleSaveEditColumn}
+                initialValues={editColumn}
+                fields={columns}
+                isAddNewColumn={false}
+                isAddNewField={true}
+                currentTableId={tableId}
+              />
+            </Suspense>
           </div>
         </>,
         document.body

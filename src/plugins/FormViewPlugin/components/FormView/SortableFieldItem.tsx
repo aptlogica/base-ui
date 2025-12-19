@@ -45,7 +45,7 @@ export const SortableFieldItem: React.FC<SortableFieldItemProps> = ({
       onDragOver={e => { e.preventDefault(); onDragOver(); }}
       onDrop={e => { e.preventDefault(); onDrop(); }}
       onDragEnd={e => { e.stopPropagation(); onDragEnd(); }}
-      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all
+      className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all
         ${isSelected ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : 'border-border hover:border-border/60 hover:bg-muted/50'}
         ${isDragging ? 'opacity-50 border-dashed border-2 border-primary' : ''}
         ${isDragOver ? 'bg-muted/50' : ''}

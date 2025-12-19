@@ -210,7 +210,7 @@ export const Time: React.FC<TimeProps> = ({
         {isOpen && calculatedPosition && createPortal(
           <div
             ref={dropdownRef}
-            className="fixed z-[9999] border bg-background rounded-lg shadow-lg max-h-80 animate-fade-in flex flex-col"
+            className="fixed z-[9999] border bg-background rounded-xl shadow-lg max-h-80 animate-fade-in flex flex-col"
             style={{
               ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
               ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),
@@ -224,7 +224,7 @@ export const Time: React.FC<TimeProps> = ({
                 <button
                   key={option}
                   type="button"
-                  className={`w-full px-4 py-2 text-md text-left text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors ${displayValue === option ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
+                  className={`w-full px-4 py-2 text-md text-left text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors ${displayValue === option ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
                   onClick={() => handleSelect(option)}
                 >
                   {option}
@@ -235,7 +235,7 @@ export const Time: React.FC<TimeProps> = ({
             <div className="border-t border-gray-100 px-2 py-2 flex justify-center bg-background flex-shrink-0 rounded-bl-lg rounded-br-lg">
               <button
                 type="button"
-                className="px-4 py-2 rounded-lg bg-[var(--color-bg-brand-primary)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
+                className="px-4 py-2 rounded-xl bg-[var(--color-bg-brand-primary)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
                 onClick={handleNow}
               >
                 Now

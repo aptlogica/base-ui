@@ -86,14 +86,14 @@ export const FieldsList: React.FC<FieldsListProps> = ({
             placeholder="Search fields..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg text-sm bg-background border outline-none focus:ring-1 focus:ring-[var(--ring-color-brand)] text-[var(--text-color-primary)] placeholder:text-[var(--text-color-placeholder)] transition-colors"
+            className="w-full pl-10 pr-4 py-2 rounded-xl text-sm bg-background border outline-none focus:ring-1 focus:ring-[var(--ring-color-brand)] text-[var(--text-color-primary)] placeholder:text-[var(--text-color-placeholder)] transition-colors"
           />
         </div>
       </div>
 
       {/* Select All Fields - Separate scrollable section */}
       <div className="px-4 pb-2 flex-shrink-0">
-        <div className="rounded-lg p-3 bg-muted/50">
+        <div className="rounded-xl p-3 bg-muted/50">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">Selected fields {selectedCount}/{totalCount}</span>
             <label className="inline-flex items-center gap-2 cursor-pointer">

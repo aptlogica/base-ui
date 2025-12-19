@@ -99,7 +99,7 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
   return (
     <div className="space-y-6">
       {/* Card 1: Admin Details */}
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-primary mb-4">Admin Information</h2>
         <div className="space-y-4">
           <div>
@@ -151,7 +151,7 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
 
       {/* Card 2: Admin Information Table */}
       {/* {tenantData && (
-        <div className="bg-card border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-card border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-primary">Admin Information</h2>
             <p className="text-sm text-secondary mt-1">View admin details and subscription information</p>
@@ -210,7 +210,7 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
       )} */}
 
       {/* Card 3: Admin Admin Details Table */}
-      <div className="bg-card border border-gray-200 rounded-lg overflow-hidden">
+      <div className="bg-card border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-primary">Admin Information</h2>
           <p className="text-sm text-secondary mt-1">View and manage admin administrators</p>
