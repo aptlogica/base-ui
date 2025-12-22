@@ -101,8 +101,8 @@ const RegistrationForm: React.FC = () => {
       // Clear OAuth sessionStorage
       clearOAuthSession();
 
-      // Navigate to workspace
-      navigate('/workspace', { replace: true });
+      // Navigate to homepage
+      navigate('/homepage', { replace: true });
     } catch (err: any) {
       setErrors(err?.message || 'Failed to complete OAuth registration');
       throw err;

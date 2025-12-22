@@ -80,8 +80,8 @@ export const BaseSettingsTab: React.FC<BaseSettingsTabProps> = ({ baseId }) => {
       // Use the navigation handler to properly clean up localStorage and navigate
       handleBaseDeletion(baseId);
 
-      // Navigate to workspace or dashboard since we can't easily find other bases without additional queries
-      navigate('/workspace');
+      // Navigate to homepage since we can't easily find other bases without additional queries
+      navigate('/homepage');
 
     } catch (err) {
       console.error('Failed to delete base:', err);

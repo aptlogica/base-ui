@@ -1,6 +1,6 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Settings } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useNavigationStore } from '../../../stores/navigationStore';
 import { useNavigation } from '../../../hooks/useNavigation';
 import { CreateWorkspaceModal } from '../../../components/modals/CreateWorkspaceModal';
@@ -41,10 +41,13 @@ const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
     onCloseCreateWorkspace,
     logoButtonRef,
 }) => {
-    const navigate = useNavigate();
-    const { selectedWorkspaceId, selectedBaseId } = useNavigationStore();
+    const location = useLocation();
+    const { selectedWorkspaceId, setWorkspace } = useNavigationStore();
     const { navigateToWorkspace } = useNavigation();
     const { canCreateWorkspace } = useWorkspaceAccess();
+    
+    // Check if we're on the homepage
+    const isHomepage = location.pathname === '/homepage' || location.pathname === '/workspace';
 
     // Ref for dropdown
     const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -73,7 +76,15 @@ const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
     const handleWorkspaceClick = (workspace: any) => {
         // Set the selected workspace
         onWorkspaceSelect(workspace);
-        navigateToWorkspace(workspace.id);
+        
+        // If on homepage, just update the workspace in store without navigating
+        if (isHomepage) {
+            setWorkspace(workspace.id);
+        } else {
+            // Otherwise, navigate to the workspace
+            navigateToWorkspace(workspace.id);
+        }
+        
         onClose();
 
         // Dispatch custom event for sidebar to handle base auto-selection
@@ -87,64 +98,75 @@ const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
             {/* Workspace Dropdown */}
             <div
                 ref={dropdownRef}
-                className={`fixed top-7 left-3.5 mt-4 w-80 bg-card border rounded-md shadow-xl z-50 overflow-hidden transition-all duration-300 ease-in-out flex flex-col ${isOpen
+                data-workspace-dropdown
+                className={`fixed top-0 left-3.5 w-80 bg-card border rounded-xl shadow-lg z-50 overflow-hidden transition-all duration-300 ease-in-out flex flex-col ${isOpen
                     ? 'opacity-100 max-h-96 scale-100'
                     : 'opacity-0 max-h-0 scale-95 pointer-events-none'
                     }`}
             >
-                <div className="p-0">
-                    <div className="flex flex-col h-full">
-                        {/* Workspaces Section - scrollable */}
-                        <div className="text-xs text-[var(--color-text-primary)] mb-0.5 px-3 py-2 uppercase tracking-wide">Workspaces</div>
-                        <div className="space-y-1 overflow-y-auto flex-1 max-h-[200px] px-2 pb-1">
+                <div className="flex flex-col h-full">
+                    {/* Workspaces Header */}
+                    <div className="px-4 py-2 flex-shrink-0">
+                        <div className="text-xs font-semibold text-primary tracking-wide">Workspaces</div>
+                    </div>
+                    
+                    {/* Workspaces Section - scrollable */}
+                    <div className="overflow-y-auto flex-1 max-h-48 space-y-1 p-2">
                             {workspaceData && Array.isArray(workspaceData) && workspaceData.length > 0 ? (
-                                workspaceData.map((workspace: any) => {
+                                workspaceData.map((workspace: any, index: number) => {
                                     const isSelected = (selectedWorkspace?.id || selectedWorkspaceId) === workspace.id;
+                                    const initials = (
+                                        workspace.title?.charAt(0) ||
+                                        workspace.name?.charAt(0) ||
+                                        workspace.slug?.charAt(0) ||
+                                        'U'
+                                    ).toUpperCase();
+                                    
+                                    // Color mapping for workspace icons
+                                    const colors = [
+                                        'bg-purple-400', // Design Workspace
+                                        'bg-red-400',   // Testing Workspace
+                                        'bg-orange-400', // Development Workspace
+                                        'bg-blue-400',
+                                        'bg-green-400',
+                                    ];
+                                    const iconColor = colors[index % colors.length];
+                                    
                                     return (
-                                        <div key={workspace.id} className='flex flex-col'>
-                                            <div
-                                                className={`w-full text-left px-3 py-2 text-sm rounded-xl transition-all duration-200 hover:bg-[var(--color-hover-bg)] ${isSelected
-                                                    ? 'bg-[var(--color-selected-bg)] text-primary border'
-                                                    : 'text-primary'
-                                                    }`}
-                                                onClick={() => handleWorkspaceClick(workspace)}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 bg-red-600 rounded-xl flex items-center justify-center">
-                                                        <span className="text-white font-bold text-sm">
-                                                            {(
-                                                                workspace.title?.charAt(0) ||
-                                                                workspace.name?.charAt(0) ||
-                                                                workspace.slug?.charAt(0) ||
-                                                                'U'
-                                                            ).toUpperCase()}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                                                        <div className="font-medium text-[var(--color-text-primary)] cursor-pointer truncate" style={{ maxWidth: '200px' }}>
-                                                            {workspace.title || workspace.name || workspace.slug || 'Untitled Workspace'}
-                                                        </div>
-                                                        {/* {isSelected && (
-                                                        <button
-                                                            className="p-2 rounded-xl hover:bg-[var(--color-bg-brand-primary)] text-tertiary"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                navigate(`/workspace/${workspace.id}/settings`);
-                                                                onClose();
-                                                            }}
-                                                            title="Workspace Settings"
-                                                        >
-                                                            <Settings className="w-4 h-4" />
-                                                        </button>
-                                                    )} */}
-                                                    </div>
+                                        <div
+                                            key={workspace.id}
+                                            className={`w-full rounded-xl text-left px-3 py-1 text-sm transition-all duration-200 cursor-pointer ${
+                                                isSelected
+                                                    ? 'bg-[var(--color-bg-brand-primary)] text-black '
+                                                    : 'hover:bg-[var(--color-bg-brand-primary)] hover:text-black '
+                                            }`}
+                                            onClick={() => handleWorkspaceClick(workspace)}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                {/* Workspace Icon */}
+                                                <div className={`w-8 h-8 ${iconColor} rounded-full flex items-center justify-center flex-shrink-0`}>
+                                                    <span className="text-white text-center font-bold text-sm">
+                                                        {initials}
+                                                    </span>
+                                                </div>
+                                                
+                                                {/* Workspace Name */}
+                                                <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                                                    <span className="font-medium text-primary truncate">
+                                                        {workspace.title || workspace.name || workspace.slug || 'Untitled Workspace'}
+                                                    </span>
+                                                    
+                                                    {/* Status Indicator - only for selected */}
+                                                    {isSelected && (
+                                                        <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
                                     );
                                 })
                             ) : (
-                                <div className="px-3 py-4 text-center text-gray-500 text-xs">
+                                <div className="px-4 py-8 text-center text-muted-foreground text-sm">
                                     {workspaceData === null ? (
                                         <div>Loading workspaces...</div>
                                     ) : (
@@ -152,25 +174,30 @@ const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
                                     )}
                                 </div>
                             )}
-                        </div>
+                    </div>
 
-                        {/* Create Workspace Button pinned to bottom - only show for admin users */}
-                        {canCreateWorkspace() && (
-                            <div className="border-t pt-3 px-2 pb-2 bg-card sticky bottom-0">
-                                <button
-                                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-xl transition-all duration-200 font-medium flex items-center gap-3"
-                                    onClick={() => {
-                                        onCreateWorkspace();
-                                        onClose();
-                                    }}
-                                >
-                                    <div className="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center">
-                                        <Plus className="w-4 h-4 text-black" />
-                                    </div>
-                                    Create New Workspace
-                                </button>
+                    {/* Separator */}
+                    {workspaceData && workspaceData.length > 0 && (
+                        <div className="border-t flex-shrink-0"></div>
+                    )}
+
+                    {/* Create Workspace Button - always visible at bottom */}
+                    <div className="p-3 flex-shrink-0">
+                        <button
+                            className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-muted/30 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => {
+                                if (canCreateWorkspace()) {
+                                    onCreateWorkspace();
+                                    onClose();
+                                }
+                            }}
+                            disabled={!canCreateWorkspace()}
+                        >
+                            <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
+                                <Plus className="w-4 h-4 text-primary" />
                             </div>
-                        )}
+                            <span>Create Workspace</span>
+                        </button>
                     </div>
                 </div>
             </div>

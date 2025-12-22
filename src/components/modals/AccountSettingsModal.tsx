@@ -1,8 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { X, UserPen } from 'lucide-react';
 import { AccountSettings } from '../account/AccountSettings';
-import { useNavigation } from '../../hooks/useNavigation';
 
 interface AccountSettingsModalProps {
   isOpen: boolean;
@@ -13,9 +12,6 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { selectedWorkspaceId } = useNavigation();
-  const workspaceId = selectedWorkspaceId || 'default';
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose();
@@ -34,11 +30,17 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
         className="bg-card rounded-xl border shadow-xl w-full max-w-5xl h-[90vh] max-h-[900px] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
-        <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <div>
-            <h2 className="text-xl font-semibold text-primary">Profile Settings</h2>
-            <p className="text-sm text-secondary mt-1">Manage your personal profile & security settings</p>
+        {/* Modal Header - Fixed */}
+        <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b">
+          <div className="flex items-center gap-4">
+            {/* Profile Icon with Pencil */}
+              <div className="w-12 h-12 rounded-full bg-[var(--color-brand-100)] flex items-center justify-center">
+                <UserPen className="w-5 h-5 text-green-600" />
+              </div>
+            <div>
+              <h2 className="text-xl font-semibold text-primary">Profile Settings</h2>
+              <p className="text-sm text-secondary mt-1">Manage your personal profile & security settings</p>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -49,9 +51,9 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Content - AccountSettings */}
-        <div className="flex-1 overflow-hidden">
-          <AccountSettings workspaceId={workspaceId} />
+        {/* Modal Content - AccountSettings with scrollable body */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <AccountSettings />
         </div>
       </div>
     </div>,

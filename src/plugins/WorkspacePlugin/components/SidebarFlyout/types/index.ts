@@ -6,15 +6,6 @@ export interface SidebarFlyoutMenuProps {
   onWorkspaceUpdate?: (updatedWorkspace: any) => void;
 }
 
-export interface BasesDropdownProps {
-  workspaceBases: any;
-  basesLoading: boolean;
-  selectedBase: any;
-  currentWorkspace: any;
-  onSelectBase: (base: any) => void;
-  onCreateBase: () => void;
-}
-
 export interface CreateViewPopoverProps {
   anchorRef: React.RefObject<HTMLElement>;
   onOpenModal: (type: string) => void;

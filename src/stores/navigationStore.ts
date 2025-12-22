@@ -25,7 +25,6 @@ interface NavigationState {
   // UI state for sidebar - replaces local useState calls
   expandedBases: string[];
   expandedTables: string[];
-  basesDropdownOpen: boolean;
   
   // Navigation actions
   setWorkspace: (id: string | null) => void;
@@ -60,7 +59,6 @@ interface NavigationState {
   // UI state actions
   toggleBaseExpansion: (baseId: string) => void;
   toggleTableExpansion: (tableId: string) => void;
-  setBasesDropdownOpen: (open: boolean) => void;
   
   // Utility actions
   reset: () => void;
@@ -75,7 +73,6 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
   selectedViewId: null,
   expandedBases: [],
   expandedTables: [],
-  basesDropdownOpen: false,
 
   // Basic setters
   setWorkspace: (id) => set({ selectedWorkspaceId: id }),
@@ -92,7 +89,6 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
           selectedViewId: null,
           expandedBases: [],
           expandedTables: [],
-          basesDropdownOpen: false,
         });
       },
 
@@ -103,7 +99,6 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
           selectedTableId: null,
           selectedViewId: null,
           expandedTables: [],
-          basesDropdownOpen: false,
           // Add base to expanded bases if not already expanded
           expandedBases: get().expandedBases.includes(baseId) 
             ? get().expandedBases 
@@ -117,7 +112,6 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
           selectedBaseId: baseId,
           selectedTableId: tableId,
           selectedViewId: null,
-          basesDropdownOpen: false,
           // Ensure base and table are expanded
           expandedBases: get().expandedBases.includes(baseId) 
             ? get().expandedBases 
@@ -150,7 +144,6 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
           selectedBaseId: baseId,
           selectedTableId: tableId,
           selectedViewId: viewId,
-          basesDropdownOpen: false,
           // Ensure base and table are expanded
           expandedBases: get().expandedBases.includes(baseId) 
             ? get().expandedBases 
@@ -174,8 +167,6 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
           : [...state.expandedTables, tableId]
       })),
 
-      setBasesDropdownOpen: (open) => set({ basesDropdownOpen: open }),
-
       // Utility functions
       reset: () => set({
         selectedWorkspaceId: null,
@@ -184,7 +175,6 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
         selectedViewId: null,
         expandedBases: [],
         expandedTables: [],
-        basesDropdownOpen: false,
       }),
 
       // User-specific persistence methods
@@ -230,7 +220,6 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
           selectedViewId: null,
           expandedBases: [],
           expandedTables: [],
-          basesDropdownOpen: false,
         });
       },
 

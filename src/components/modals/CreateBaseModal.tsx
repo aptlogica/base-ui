@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, X, HelpCircle } from 'lucide-react';
+import { Plus, X, HelpCircle, CloudUpload } from 'lucide-react';
 import { MultiLineText } from '../common/Fields/MultiLineText';
 import { validateBaseName } from '../../utils/nameValidation';
 
@@ -22,6 +22,8 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
 }) => {
   const [name, setName] = useState(defaultName);
   const [description, setDescription] = useState('');
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [validationError, setValidationError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,11 +32,68 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
     if (isOpen) {
       setName(defaultName);
       setDescription('');
+      setImage(null);
+      setImagePreview(null);
       setError('');
       setValidationError('');
       setIsSubmitting(false);
     }
   }, [isOpen, defaultName]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        setError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
+        return;
+      }
+      
+      // Validate dimensions (max 800x400)
+      const img = new Image();
+      img.onload = () => {
+        if (img.width > 800 || img.height > 400) {
+          setError('Image dimensions must be max 800 x 400px');
+          return;
+        }
+        setImage(file);
+        setImagePreview(URL.createObjectURL(file));
+        setError('');
+      };
+      img.src = URL.createObjectURL(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const validTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
+      if (validTypes.includes(file.type)) {
+        const img = new Image();
+        img.onload = () => {
+          if (img.width <= 800 && img.height <= 400) {
+            setImage(file);
+            setImagePreview(URL.createObjectURL(file));
+            setError('');
+          } else {
+            setError('Image dimensions must be max 800 x 400px');
+          }
+        };
+        img.src = URL.createObjectURL(file);
+      } else {
+        setError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
+      }
+    }
+  };
 
   // Validate name on change
   useEffect(() => {
@@ -99,8 +158,8 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center">
-              <Database size={20} className="icon-primary" />
+            <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
+              <Plus size={20} className="text-green-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-primary">Create Base</h2>
@@ -170,20 +229,73 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
             isBorder={true}
           />
 
+          {/* Image Upload Section */}
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
+              Image
+            </label>
+            <div
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              className="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+              onClick={() => document.getElementById('image-upload')?.click()}
+            >
+              <input
+                type="file"
+                id="image-upload"
+                accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+              {imagePreview ? (
+                <div className="relative">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="max-w-full max-h-48 mx-auto rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setImage(null);
+                      setImagePreview(null);
+                      const input = document.getElementById('image-upload') as HTMLInputElement;
+                      if (input) input.value = '';
+                    }}
+                    className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <CloudUpload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-sm text-gray-600 mb-1">
+                    <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    SVG, PNG, JPG or GIF (max. 800 x 400px)
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+
           {/* Action Buttons */}
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl border hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
+              className="px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !name.trim() || name.trim().length < 3}
-              className="flex items-center gap-2 px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-6 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {isSubmitting ? (
                 <>

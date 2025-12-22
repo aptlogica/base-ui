@@ -70,10 +70,8 @@ export const useWorkspaceBusinessLogic = () => {
     selectedViewId,
     expandedBases,
     expandedTables,
-    basesDropdownOpen,
     toggleBaseExpansion,
     toggleTableExpansion,
-    setBasesDropdownOpen,
     setWorkspace,
     setBase,
     setTable,
@@ -162,7 +160,7 @@ export const useWorkspaceBusinessLogic = () => {
           
         }
       } else {
-        navigate(`/workspace/${workspaceData.id}`);
+        navigate(`/homepage`);
       }
 
       onSuccess?.(workspaceData);
@@ -451,10 +449,8 @@ export const useWorkspaceBusinessLogic = () => {
     selectedViewId,
     expandedBases,
     expandedTables,
-    basesDropdownOpen,
     toggleBaseExpansion,
     toggleTableExpansion,
-    setBasesDropdownOpen,
     setWorkspace,
     setBase,
     setTable,

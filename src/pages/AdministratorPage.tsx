@@ -1,29 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { SettingsTabs } from '../components/workspace/tabs/SettingsTabs';
 import { TenantSettingsTab } from '../components/workspace/tabs/TenantSettingsTab';
 import { UserSettingsTab } from '../components/workspace/tabs/UserSettingsTab';
-import { WorkspaceSettingsTab } from '../components/workspace/tabs/WorkspaceSettingsTab';
-import { AdminBillingTab } from '../components/workspace/tabs/AdminBillingTab';
-import { PlanPricingTab } from '../components/workspace/tabs/PlanPricingTab';
-import { useWorkspaceData } from '../hooks/useWorkspaceData';
-import { DangerZoneTab } from '../components/workspace/tabs/DangerZoneTab';
 import { WorkspaceTab } from '../components/workspace/tabs/WorkspaceTab';
 import { useWorkspaceAccess } from '../hooks/useWorkspaceAccess';
 
 const AdministratorPage: React.FC = () => {
   const { workspaceId } = useParams<{ workspaceId: string }>();
-  const { canAccessAllSettingsTabs, accessLevel } = useWorkspaceAccess(workspaceId);
+  const { canAccessAllSettingsTabs } = useWorkspaceAccess(workspaceId);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Fetch workspace data
-  const { workspaces } = useWorkspaceData();
 
   // Filter tabs based on access level
   const allTabs = [
-    { key: 'tenant', label: 'Settings', icon: 'Settings' },
-    { key: 'user', label: 'Users', icon: 'Users' },
-    { key: 'workspace', label: 'Workspaces', icon: 'Database' },
+    { key: 'settings', label: 'Organization Information', icon: 'Settings' },
+    { key: 'users', label: 'Users', icon: 'Users' },
+    { key: 'workspaces', label: 'Workspaces', icon: 'Database' },
   ];
 
   const tabs = canAccessAllSettingsTabs()
@@ -83,20 +76,14 @@ const AdministratorPage: React.FC = () => {
     );
   }
 
-  const currentWorkspace = workspaces?.find((ws: any) => ws.id === workspaceId);
-
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'tenant':
+      case 'settings':
         return <TenantSettingsTab workspaceId={workspaceId} />;
-      case 'user':
+      case 'users':
         return <UserSettingsTab workspaceId={workspaceId} />;
-      case 'workspace':
+      case 'workspaces':
         return <WorkspaceTab workspaceId={workspaceId} />;
-      // case 'billing':
-      //   return <AdminBillingTab workspaceId={workspaceId} />;
-      // case 'plan':
-      //   return <PlanPricingTab workspaceId={workspaceId} />;
       // case 'danger-zone':
       //   return <DangerZoneTab workspaceId={workspaceId} workspaceTitle={currentWorkspace?.title || ''} />;
       default:
@@ -106,16 +93,6 @@ const AdministratorPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Fixed Header */}
-      {/* <div className="flex-shrink-0 bg-alpha-white border-b px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-primary">Administrator</h1>
-            <p className="text-sm text-secondary mt-1">Manage tenant, user, and workspace settings</p>
-          </div>
-        </div>
-      </div> */}
-
       {/* Fixed Tabs */}
       <div className="flex-shrink-0 bg-alpha-white border-b px-6">
         <SettingsTabs

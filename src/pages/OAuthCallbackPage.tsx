@@ -27,9 +27,9 @@ const OAuthCallbackPage: React.FC = () => {
     const alreadyProcessed = sessionStorage.getItem(callbackKey);
     
     if (processedRef.current || alreadyProcessed === 'true') {
-      // Already processed - redirect to workspace to avoid staying on callback page
+      // Already processed - redirect to homepage to avoid staying on callback page
       if (alreadyProcessed === 'true') {
-        navigate('/workspace', { replace: true });
+        navigate('/homepage', { replace: true });
       }
       return;
     }
@@ -121,8 +121,8 @@ const OAuthCallbackPage: React.FC = () => {
             sessionStorage.removeItem(callbackKey);
           }, 5000);
 
-          // Navigate to workspace using React Router
-          navigate('/workspace', { replace: true });
+          // Navigate to homepage using React Router
+          navigate('/homepage', { replace: true });
         }
       } catch (err: any) {
         setError(err?.message || 'OAuth callback failed');

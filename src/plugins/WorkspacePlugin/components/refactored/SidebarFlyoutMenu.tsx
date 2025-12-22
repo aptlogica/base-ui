@@ -1,18 +1,17 @@
 import React, { useRef, useEffect, useMemo, useState, Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom';
-import * as LucideIcons from 'lucide-react';
+import { ChevronDown, Sheet, Plus } from 'lucide-react';
 import { Pin } from 'lucide-react';
 import { getStoredAccessToken } from '../../../../service/clientService';
 import { useToast } from '../../../../components/common/Toast';
 
-const CreateTableModal = lazy(() => 
+const CreateTableModal = lazy(() =>
   import('../../../../components/modals/CreateTableModal').then(m => ({ default: m.CreateTableModal }))
 );
 import { CreateBaseModal } from '../../../../components/modals/CreateBaseModal';
 import TableOptionsMenu from '../../../../components/tables/TableOptionsMenu';
 
 import { SidebarFlyoutMenuProps } from '../SidebarFlyout/types';
-import { BasesDropdown } from '../SidebarFlyout/components';
 import { TableViewsWithData } from '../SidebarFlyout/components/TableViewsWithData';
 import { CreateViewModalWrapper } from '../SidebarFlyout/components/CreateViewModalWrapper';
 import { useWorkspaceBusinessLogic } from '../../data/workspaceBusinessLogic';
@@ -48,7 +47,6 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
     selectedWorkspaceId,
     selectedBaseId,
     expandedTables,
-    basesDropdownOpen,
     showCreateBaseWorkspaceId, setShowCreateBaseWorkspaceId,
     showCreateTableBaseId, setShowCreateTableBaseId,
     showCreateViewModal, setShowCreateViewModal,
@@ -57,7 +55,6 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
     popoverRef, setPopoverRef,
     // Actions
     toggleTableExpansion,
-    setBasesDropdownOpen,
     setBase,
     navigateToBase,
     navigateToTable,
@@ -106,7 +103,7 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
 
     const tableIds = new Set(baseTables.data.map((item: any) => item.model.id));
     const currentPinnedIds = Object.keys(pinnedTablesRef.current);
-    
+
     // Only proceed if there are pinned tables to check
     if (currentPinnedIds.length === 0) return;
 
@@ -139,7 +136,7 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
   // Handle pin toggle
   const handlePinToggle = async (tableId: string, newStatus: boolean) => {
     if (!selectedBase) return;
-    
+
     const newPinnedTables = { ...pinnedTables, [tableId]: newStatus };
     setPinnedTables(newPinnedTables);
 
@@ -166,7 +163,7 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
   // Sort tables to show pinned first - memoized for performance
   const sortedTables = useMemo(() => {
     if (!baseTables?.data) return [];
-    
+
     return [...baseTables.data].sort((a, b) => {
       const aPinned = pinnedTables[a.model.id] || false;
       const bPinned = pinnedTables[b.model.id] || false;
@@ -182,22 +179,7 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
 
   }, [selectedWorkspaceId, currentWorkspace, workspaceBases, basesLoading]);
 
-  // Click outside handler for bases dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (basesDropdownOpen) {
-        const target = event.target as Node;
-        const dropdown = document.querySelector('.bases-dropdown');
-        const trigger = document.querySelector('.bases-dropdown-trigger');
-        if (dropdown && !dropdown.contains(target) && trigger && !trigger.contains(target)) {
-          setBasesDropdownOpen(false);
-        }
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [basesDropdownOpen, setBasesDropdownOpen]);
+  // Bases dropdown removed - no longer needed
 
   // Check if we're in layout mode (no onClose function means layout mode)
   const isLayoutMode = !onClose;
@@ -237,58 +219,8 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
 
   const renderFlyoutContent = () => (
     <>
-      {/* Fixed Header - Non-scrollable */}
-      <div className="sidebar-flyout-header flex items-center justify-between sticky top-0 z-10">
-        <div className="flyout-title flex items-center gap-2 relative">
-          <div
-            className="bases-dropdown-trigger h-8 px-2 py-0 cursor-pointer flex items-center gap-2 hover:bg-[var(--color-gray-200)] rounded-xl p-0 transition-all duration-200"
-            onClick={() => setBasesDropdownOpen(!basesDropdownOpen)}
-          >
-            <span 
-              title={selectedBase?.title}
-              className="font-semibold text-tertiary truncate max-w-[120px]"
-            >
-              {selectedBase ? selectedBase.title : 'Bases'}
-            </span>
-            <LucideIcons.ChevronDown
-              className={`w-4 h-4 text-tertiary transition-transform duration-200 ${basesDropdownOpen ? 'rotate-180' : ''
-                }`}
-            />
-          </div>
-        </div>
-
-        {canCreateTable() && (
-          <button
-            className="flex items-center gap-1 btn-primary p-2 rounded transition"
-            // className="flex items-center gap-1 text-secondary text-xs hover:text-[var(--color-gray-800)] hover:bg-[var(--color-gray-100)] p-2 rounded-md transition"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (selectedBase?.id) {
-                setShowCreateTableBaseId(selectedBase.id);
-              } else {
-                console.warn('No base selected. Cannot open Create Table modal.');
-              }
-            }}
-            title={selectedBase ? "Create Table" : "Select a base to create a table"}
-            disabled={!selectedBase}
-          >
-            <LucideIcons.Plus size={12} /> Create Table
-          </button>
-        )}
-
-        {!isLayoutMode && (
-          <button
-            onClick={() => onClose?.()}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors duration-200"
-            title="Close"
-          >
-            <LucideIcons.X size={16} />
-          </button>
-        )}
-      </div>
-
       {/* Scrollable Content */}
-      <div className="flyout-content sb-flyout-inner p-2 flex-1 overflow-y-auto min-h-0">
+      <div className="flyout-content sb-flyout-inner p-3 flex-1 overflow-y-auto min-h-0">
         {/* Tables Section */}
         {(() => {
           // Check if we have a current workspace
@@ -315,9 +247,9 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
               //   Loading tables...
               // </div>
               <Loader
-               text="Loading tables..." 
-               textPosition="bottom"
-               />
+                text="Loading tables..."
+                textPosition="bottom"
+              />
             );
           }
           if (sortedTables.length === 0) {
@@ -335,6 +267,19 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
                   className={`flex items-center gap-3 py-1.5 pl-2 pr-3 mb-1 hover:bg-[var(--color-gray-100)] rounded-xl ${isTableActive(table.base_id, table.id) ? 'bg-background' : ''
                     } relative hover:shadow-xs transition-all ease-in duration-200`}
                 >
+                  {/* Expand/collapse chevron */}
+                  <span
+                    className="cursor-pointer"
+                    onClick={e => {
+                      e.stopPropagation();
+                      toggleTableExpansion(table.id);
+                    }}
+                  >
+                    <ChevronDown
+                      size={12}
+                      className={`text-[var(--color-gray-500)] ${expandedTables.includes(table.id) ? '' : 'rotate-[-90deg]'}`}
+                    />
+                  </span>
                   {/* Table icon */}
                   <span
                     className="cursor-pointer h-5 w-5"
@@ -343,7 +288,7 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
                       toggleTableExpansion(table.id);
                     }}
                   >
-                    <LucideIcons.Sheet size={15} color="#2563eb" />
+                    <Sheet size={15} color="#2563eb" />
                   </span>
 
                   {/* Table name - navigate only */}
@@ -399,20 +344,6 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
                       }}
                       portaled={true}
                     />
-
-                    {/* Expand/collapse chevron */}
-                    <span
-                      className="cursor-pointer"
-                      onClick={e => {
-                        e.stopPropagation();
-                        toggleTableExpansion(table.id);
-                      }}
-                    >
-                      <LucideIcons.ChevronDown
-                        size={12}
-                        className={`text-[var(--color-gray-500)] ${expandedTables.includes(table.id) ? '' : 'rotate-[-90deg]'}`}
-                      />
-                    </span>
                   </div>
                 </div>
 
@@ -442,9 +373,23 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
 
       {/* Fixed Footer - Non-scrollable */}
       <div className="sidebar-flyout-footer flex flex-col items-start gap-2 p-2 border-t bg-card">
-        <div className="text-[var(--color-text-primary)] font-semibold mb-2">
-          Total tables: {baseTables?.data?.length || 0}
-        </div>
+        {canCreateTable() && (
+          <button
+            className="w-full flex items-center justify-center gap-2 btn-primary p-2.5 rounded transition"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (selectedBase?.id) {
+                setShowCreateTableBaseId(selectedBase.id);
+              } else {
+                console.warn('No base selected. Cannot open Create Table modal.');
+              }
+            }}
+            title={selectedBase ? "Create Table" : "Select a base to create a table"}
+            disabled={!selectedBase}
+          >
+            <Plus size={16} /> Create Table
+          </button>
+        )}
       </div>
     </>
   );
@@ -555,15 +500,15 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
 
       {showCreateViewModal && (() => {
         const tableId = showCreateViewModal.tableId;
-        
+
         // Find the table to get its fields
         const tables = baseTables?.data || [];
-        const tableEntry = tables.find((t: any) => 
+        const tableEntry = tables.find((t: any) =>
           (t?.model?.id === tableId) || (t?.id === tableId)
         );
         // Prefer columns if present; fallback to fields if API provides that shape
         const fields = tableEntry?.columns || tableEntry?.fields || tableEntry?.model?.columns || [];
-        
+
         return ReactDOM.createPortal(
           <CreateViewModalWrapper
             tableId={tableId}
@@ -616,25 +561,7 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
         );
       })()}
 
-      {/* Bases Dropdown - Portal to document.body */}
-      {basesDropdownOpen && ReactDOM.createPortal(
-        <BasesDropdown
-          workspaceBases={workspaceBases} // Use workspaceBases from API query
-          basesLoading={basesLoading} // Use bases-specific loading state
-          selectedBase={selectedBase}
-          currentWorkspace={currentWorkspace}
-          onSelectBase={(base) => {
-            setBase(base.id);
-            navigateToBase(selectedWorkspaceId || effectiveSelectedWorkspace?.id || '', base.id);
-            setBasesDropdownOpen(false);
-          }}
-          onCreateBase={() => {
-            setShowCreateBaseWorkspaceId(currentWorkspace.id);
-            setBasesDropdownOpen(false);
-          }}
-        />,
-        document.body
-      )}
+      {/* Bases Dropdown removed - no longer needed */}
     </>
   );
 };

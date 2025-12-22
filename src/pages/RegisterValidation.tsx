@@ -243,9 +243,9 @@ const OtpValidation: React.FC<OtpValidationProps> = ({
           // Update AuthContext with user info
           await login(userInfo);
 
-          // Navigate to workspace - NavigationResolver will resolve and navigate to saved view BEFORE workspace renders
+          // Navigate to homepage - NavigationResolver will resolve and navigate to saved view BEFORE homepage renders
           // If no saved view, NavigationResolver will auto-select first workspace/base/table/view
-          navigate('/workspace', { replace: true });
+          navigate('/homepage', { replace: true });
         } else {
           setError("Failed to process authentication. Please try again.");
           setInitOtp(Array(length).fill(""));

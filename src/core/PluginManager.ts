@@ -53,6 +53,11 @@ export class PluginManagerImpl implements PluginManager {
       order: { type: 'number', default: 1000 }
     });
     
+    this.extensionPoints.set('page:homepage', {
+      description: 'Homepage content area',
+      order: { type: 'number', default: 100 }
+    });
+
     this.extensionPoints.set('page:dashboard', {
       description: 'Dashboard page content area',
       order: { type: 'number', default: 100 }

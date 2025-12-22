@@ -23,7 +23,7 @@ const WorkspaceSettingsPage: React.FC = () => {
 
   // Redirect if user doesn't have access (not full_access)
   if (!canAccessSettings() || accessLevel !== 'full_access') {
-    return <Navigate to="/workspace" replace />;
+    return <Navigate to="/homepage" replace />;
   }
 
   const workspacesQuery = useWorkspaces();

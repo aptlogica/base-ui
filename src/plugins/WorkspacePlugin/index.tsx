@@ -1,10 +1,14 @@
-import React from 'react';
 import { Plugin, PluginManifest, PluginAPI } from '../../core/types';
-import Sidebar from './components/refactored/Sidebar';
-import SidebarFlyoutMenu from './components/refactored/SidebarFlyoutMenu';
 import Breadcrumb from '../../components/common/Breadcrumb';
+import HeaderLogo from '../../components/common/HeaderLogo';
+import HeaderWorkspaceDropdown from '../../components/common/HeaderWorkspaceDropdown';
+import WorkspaceSettingsButton from '../../components/common/WorkspaceSettingsButton';
+import AdministratorSettingsButton from '../../components/common/AdministratorSettingsButton';
+import NotificationButton from '../../components/common/NotificationButton';
+import HeaderMembers from '../../components/common/HeaderMembers';
+import UserDropdown from '../../components/common/UserDropdown';
 import manifest from './manifest.json';
-import WorkspacePage from '../../pages/WorkspacePage';
+import HomePage from '../../pages/HomePage';
 import ProjectsPage from '../../pages/ProjectsPage';
 import NotFoundPage from '../../pages/NotFoundPage';
 
@@ -34,32 +38,64 @@ const WorkspacePlugin: Plugin = {
   },
   initialize: async (api: PluginAPI, config: any) => {
     (window as any).__workspaceConfig = config;
-    api.registerExtension('layout:sidebar', {
-      id: 'global-sidebar',
+    
+    // No sidebar - we use flyout menu instead
+    
+    // Register header-left components
+    api.registerExtension('layout:header-left', {
+      id: 'header-logo',
       order: 1,
-      render: () => <Sidebar />,
+      render: () => <HeaderLogo logoUrl={config.sidebarLogoUrl} />
     });
     
-    // Register breadcrumb component in header
     api.registerExtension('layout:header-left', {
-      id: 'app-title',
-      order: 1,
-      render: () => (
-        <span className="text-md font-bold text-primary">
-          {config.sidebarLogoText || ''}
-        </span>
-      )
+      id: 'header-workspace-dropdown',
+      order: 2,
+      render: () => <HeaderWorkspaceDropdown />
     });
+    
     api.registerExtension('layout:header-left', {
-      id: 'app-breadcrumb',
-      order: 1,
+      id: 'header-breadcrumb',
+      order: 3,
       render: () => <Breadcrumb />
     });
-    // Register default pages as pluggable extensions
-    api.registerExtension('page:workspace', {
-      id: 'default-workspace-page',
+    
+    // Register header-right components
+    api.registerExtension('layout:header', {
+      id: 'header-members',
+      order: 0.5,
+      render: () => <HeaderMembers />
+    });
+    
+    api.registerExtension('layout:header', {
+      id: 'header-settings',
       order: 1,
-      render: () => <WorkspacePage />
+      render: () => <WorkspaceSettingsButton />
+    });
+    
+    api.registerExtension('layout:header', {
+      id: 'header-administrator-settings',
+      order: 1.5,
+      render: () => <AdministratorSettingsButton />
+    });
+    
+    api.registerExtension('layout:header', {
+      id: 'header-notifications',
+      order: 2,
+      render: () => <NotificationButton />
+    });
+    
+    api.registerExtension('layout:header', {
+      id: 'header-user-dropdown',
+      order: 3,
+      render: () => <UserDropdown />
+    });
+    
+    // Register default pages as pluggable extensions
+    api.registerExtension('page:homepage', {
+      id: 'default-homepage-page',
+      order: 1,
+      render: () => <HomePage />
     });
     api.registerExtension('page:projects', {
       id: 'default-projects-page',

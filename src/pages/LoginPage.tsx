@@ -43,8 +43,8 @@ const LogIn: React.FC = () => {
       // Clear OAuth sessionStorage
       clearOAuthSession();
 
-      // Navigate to workspace
-      navigate('/workspace', { replace: true });
+      // Navigate to homepage
+      navigate('/homepage', { replace: true });
     } catch (err: any) {
       setError(err?.message || 'Failed to complete OAuth login');
       throw err;
@@ -143,9 +143,9 @@ const LogIn: React.FC = () => {
 
       await login(userInfo);
 
-      // Navigate to workspace - NavigationResolver will resolve and navigate to saved view BEFORE workspace renders
+      // Navigate to homepage - NavigationResolver will resolve and navigate to saved view BEFORE homepage renders
       // If no saved view, NavigationResolver will auto-select first workspace/base/table/view
-      navigate('/workspace', { replace: true });
+      navigate('/homepage', { replace: true });
     } catch (err: any) {
       setError(err?.message || "Login failed");
     }
@@ -174,50 +174,24 @@ const LogIn: React.FC = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 min-h-screen">
+    <div className="grid grid-cols-1 md:grid-cols-2 h-screen overflow-hidden">
       {/* Left Panel */}
-      <div className="bg-blue-600 text-white flex items-center justify-center p-8 md:p-16">
-        <div className="max-w-md space-y-6">
-          <h1 className="text-4xl lg:text-5xl font-bold">{formText.login.subtitle}</h1>
-          <p className="text-base lg:text-lg text-blue-100">{formText.login.description}</p>
-          <div className="flex items-center gap-4">
-            <div className="flex -space-x-2">
-              <img className="w-10 h-10 rounded-full border-2 border-white" src="https://randomuser.me/api/portraits/men/1.jpg" alt="User 1" />
-              <img className="w-10 h-10 rounded-full border-2 border-white" src="https://randomuser.me/api/portraits/women/2.jpg" alt="User 2" />
-              <img className="w-10 h-10 rounded-full border-2 border-white" src="https://randomuser.me/api/portraits/men/3.jpg" alt="User 3" />
-            </div>
-            <span className="text-white text-sm">Trusted by <strong>10,000+</strong> developers worldwide</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Panel */}
       <div className="bg-card text-tertiary flex items-center justify-center p-8 md:p-12">
         <div className="w-full max-w-md space-y-6">
+          {/* Logo and Brand Name */}
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center flex-shrink-0 shadow-sm border">
+              <img 
+                src="/assets/logo.png" 
+                alt="Sereni Base Logo" 
+                className="w-full h-full object-contain rounded-lg"
+              />
+            </div>
+            <span className="text-xl font-semibold text-gray-900">Sereni Base</span>
+          </div>
+          
           <h2 className="text-3xl font-bold text-foreground text-left">Welcome back</h2>
-          <div className="flex space-x-4">
-            <button
-              onClick={() => handleOAuthLogin('google')}
-              disabled={isOAuthLoading.google || isOAuthLoading.github}
-              className="w-1/2 flex items-center justify-center border rounded-xl text-[var(--color-text-primary)] py-2 transition hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg className="w-5 h-5 mr-2" viewBox="-3 0 262 262" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid" fill="#000000"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M255.878 133.451c0-10.734-.871-18.567-2.756-26.69H130.55v48.448h71.947c-1.45 12.04-9.283 30.172-26.69 42.356l-.244 1.622 38.755 30.023 2.685.268c24.659-22.774 38.875-56.282 38.875-96.027" fill="#4285F4"></path><path d="M130.55 261.1c35.248 0 64.839-11.605 86.453-31.622l-41.196-31.913c-11.024 7.688-25.82 13.055-45.257 13.055-34.523 0-63.824-22.773-74.269-54.25l-1.531.13-40.298 31.187-.527 1.465C35.393 231.798 79.49 261.1 130.55 261.1" fill="#34A853"></path><path d="M56.281 156.37c-2.756-8.123-4.351-16.827-4.351-25.82 0-8.994 1.595-17.697 4.206-25.82l-.073-1.73L15.26 71.312l-1.335.635C5.077 89.644 0 109.517 0 130.55s5.077 40.905 13.925 58.602l42.356-32.782" fill="#FBBC05"></path><path d="M130.55 50.479c24.514 0 41.05 10.589 50.479 19.438l36.844-35.974C195.245 12.91 165.798 0 130.55 0 79.49 0 35.393 29.301 13.925 71.947l42.211 32.783c10.59-31.477 39.891-54.251 74.414-54.251" fill="#EB4335"></path></g></svg>
-              {isOAuthLoading.google ? 'Connecting...' : formText.login.google}
-            </button>
-            <button
-              onClick={() => handleOAuthLogin('github')}
-              disabled={isOAuthLoading.google || isOAuthLoading.github}
-              className="w-1/2 flex items-center justify-center border rounded-xl text-[var(--color-text-primary)] py-2 transition hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="none"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path fill="#161514" fillRule="evenodd" d="M8 1C4.133 1 1 4.13 1 7.993c0 3.09 2.006 5.71 4.787 6.635.35.064.478-.152.478-.337 0-.166-.006-.606-.01-1.19-1.947.423-2.357-.937-2.357-.937-.319-.808-.778-1.023-.778-1.023-.635-.434.048-.425.048-.425.703.05 1.073.72 1.073.72.624 1.07 1.638.76 2.037.582.063-.452.244-.76.444-.935-1.554-.176-3.188-.776-3.188-3.456 0-.763.273-1.388.72-1.876-.072-.177-.312-.888.07-1.85 0 0 .586-.189 1.924.716A6.711 6.711 0 018 4.381c.595.003 1.194.08 1.753.236 1.336-.905 1.923-.717 1.923-.717.382.963.142 1.674.07 1.85.448.49.72 1.114.72 1.877 0 2.686-1.638 3.278-3.197 3.45.251.216.475.643.475 1.296 0 .934-.009 1.688-.009 1.918 0 .187.127.404.482.336A6.996 6.996 0 0015 7.993 6.997 6.997 0 008 1z" clipRule="evenodd"></path></g></svg>
-              {isOAuthLoading.github ? 'Connecting...' : formText.login.github}
-            </button>
-          </div>
-          <div className="flex items-center space-x-2 text-muted-foreground">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-sm">{formText.login.or}</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
+          <p className="text-base lg:text-lg text-white/90 leading-relaxed drop-shadow-md">{formText.login.description2}</p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
               <label className="field-component-label">Email
@@ -304,6 +278,34 @@ const LogIn: React.FC = () => {
           <div className="text-sm text-center text-[var(--color-text-primary-brand)]">
             {formText.login.signupPrompt}{' '}
             <Link to="/register" className="text-primary-brand hover:underline">{formText.login.signupLink}</Link>
+          </div>
+        </div>
+      </div>
+
+
+      {/* Right Panel */}
+      <div className="relative overflow-hidden h-full bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url(/assets/login-bg.png)' }}>
+        <div className="absolute inset-0 bg-black/5"></div>
+        
+        {/* Content Container - Text and Image */}
+        <div className="relative z-10 flex flex-col h-full pt-12 md:pt-16 lg:pt-20 overflow-hidden">
+          {/* Promotional Text - Top Left, Consistent Alignment */}
+          <div className="pl-8 md:pl-12 lg:pl-16 pr-8 md:pr-12 lg:pr-16 mb-8 md:mb-12">
+            <div className="space-y-4 text-left max-w-xl">
+              <h1 className="text-3xl lg:text-5xl xl:text-6xl font-bold text-gray-900 leading-tight">{formText.login.subtitle}</h1>
+              <p className="text-base lg:text-lg text-gray-700 leading-relaxed">{formText.login.description3}</p>
+            </div>
+          </div>
+
+          {/* Calendar View Image - Below Text, Same Left Alignment, Extending Outside (Right Only) - Can be cropped */}
+          <div className="pl-8 md:pl-12 lg:pl-16 pr-0 flex-1 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden w-[calc(100%-2rem+5%)] sm:w-[calc(100%-3rem+8%)] md:w-[calc(100%-3rem+12%)] lg:w-[calc(100%-4rem+20%)] xl:w-[calc(100%-4rem+30%)] 2xl:w-[calc(100%-4rem+40%)] max-w-4xl">
+              <img
+                src="/assets/CalendarVIewImage.png"
+                alt="Calendar View Preview"
+                className="w-full h-auto object-contain"
+              />
+            </div>
           </div>
         </div>
       </div>

@@ -17,7 +17,7 @@
       "showSidebar": {
         "type": "boolean",
         "title": "Show Sidebar",
-        "default": true,
+        "default": false,
         "description": "Toggle the sidebar visibility."
       },
       "sidebarWidth": {

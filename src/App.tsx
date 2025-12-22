@@ -35,6 +35,7 @@ import AdministratorPage from './pages/AdministratorPage';
 import WorkspaceSettingsPage from './pages/WorkspaceSettingsPage';
 import {useNavigationStore} from './stores/navigationStore';
 import { useClientHeaders } from './hooks/useClientHeaders';
+import { RouteContextProvider } from './contexts/RouteContext';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -71,17 +72,16 @@ interface ImportMeta {
 }
 
 const Layout = () => {
-  const { saving, logout } = useAuth();
-  const { flyoutOpen, flyoutMode, flyoutWidth, setFlyoutMode, isTransitioning, selectedWorkspace } = usePluginStore();
-  const navigate = useNavigate();
+  const { saving } = useAuth();
+  const { flyoutOpen, flyoutMode, flyoutWidth, setFlyoutMode, selectedWorkspace, openFlyout, closeFlyout, currentPlugin } = usePluginStore();
+  const location = useLocation();
   
   // Update client headers when workspace/base changes
   useClientHeaders();
 
-  // Track sidebar position, width, and visibility from workspace config
+  // Track sidebar position and width from workspace config (for flyout menu)
   const [sidebarPosition, setSidebarPosition] = useState('left');
   const [sidebarWidth, setSidebarWidth] = useState(56);
-  const [showSidebar, setShowSidebar] = useState(true);
 
   // Force layout mode only (disable floating mode entirely)
   useEffect(() => {
@@ -96,51 +96,41 @@ const Layout = () => {
       return {
         position: config.sidebarPosition || 'left',
         width: config.sidebarWidth || 50,
-        show: config.showSidebar !== false,
       };
     };
     const updateSidebar = () => {
-      const { position, width, show } = getSidebarConfig();
+      const { position, width } = getSidebarConfig();
       setSidebarPosition(position);
       setSidebarWidth(width);
-      setShowSidebar(show);
     };
     updateSidebar();
     window.addEventListener('workspace-config-changed', updateSidebar);
     return () => window.removeEventListener('workspace-config-changed', updateSidebar);
   }, []);
 
-  // Layout: sidebar on left or right, with dynamic width and visibility
+  // Auto-open flyout menu when on base/table/view routes
+  useEffect(() => {
+    const isBaseRoute = location.pathname.startsWith('/base/');
+    
+    if (isBaseRoute) {
+      // Auto-open flyout menu for workspace navigation
+      if (!flyoutOpen || currentPlugin !== 'workspace-flyout-menu') {
+        openFlyout('workspace-flyout-menu');
+      }
+    } else {
+      // Close flyout on homepage and other routes
+      if (flyoutOpen && currentPlugin === 'workspace-flyout-menu') {
+        closeFlyout();
+      }
+    }
+  }, [location.pathname, flyoutOpen, currentPlugin, openFlyout, closeFlyout]);
+
+  // Layout: header on top, then sidebar on left and view on right
   return (
-    <div className="min-h-screen w-screen h-screen flex bg-background">
-      {showSidebar && sidebarPosition === 'left' && (
-        <>
-          <aside
-            style={{ width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
-            className="sidebar-flyout-bg border-r flex-shrink-0 shadow-sm"
-          >
-            <ExtensionPoint id="layout:sidebar" />
-          </aside>
-
-          {/* Layout-Integrated Flyout Menu - Left Side */}
-          {flyoutMode === 'layout' && flyoutOpen && (
-            <aside
-              style={{ width: flyoutWidth, minWidth: flyoutWidth, maxWidth: flyoutWidth }}
-              className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner"
-            >
-              <SidebarFlyoutMenu
-                sidebarPosition={sidebarPosition}
-                sidebarWidth={sidebarWidth}
-                selectedWorkspace={selectedWorkspace}
-              />
-            </aside>
-          )}
-        </>
-      )}
-
-      <div className="flex-1 flex flex-col min-h-0 overflow-auto">
-        {/* header */}
-        <header className="flex items-center justify-between bg-card border-b border-primary shadow-sm">
+    <RouteContextProvider>
+      <div className="min-h-screen w-screen h-screen flex flex-col bg-background">
+        {/* Header - full width at top */}
+        <header className="flex items-center justify-between bg-card px-6 py-2 border-b shadow-sm flex-shrink-0">
           <div className="flex items-center gap-2">
             <ExtensionPoint id="layout:header-left" />
           </div>
@@ -155,41 +145,49 @@ const Layout = () => {
             {/* <SettingsButton /> */}
           </div>
         </header>
-        {/* main content */}
-        <main className="flex-1 p-0 overflow-y-auto bg-main text-text">
+
+      {/* Below header: Sidebar on left, View on right */}
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        {/* Layout-Integrated Flyout Menu - Left Side */}
+        {sidebarPosition === 'left' && flyoutMode === 'layout' && flyoutOpen && (
+          <aside
+            style={{ width: flyoutWidth, minWidth: flyoutWidth, maxWidth: flyoutWidth }}
+            className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner overflow-y-auto"
+          >
+            <SidebarFlyoutMenu
+              sidebarPosition={sidebarPosition}
+              sidebarWidth={sidebarWidth}
+              selectedWorkspace={selectedWorkspace}
+            />
+          </aside>
+        )}
+
+        {/* Main content area */}
+        <main className="flex-1 p-0 overflow-y-auto bg-main text-text min-w-0">
           <Outlet />
         </main>
-        {/* overlays */}
-        <ExtensionPoint id="layout:overlay" />
+
+        {/* Layout-Integrated Flyout Menu - Right Side */}
+        {sidebarPosition === 'right' && flyoutMode === 'layout' && flyoutOpen && (
+          <aside
+            style={{ width: flyoutWidth, minWidth: flyoutWidth, maxWidth: flyoutWidth }}
+            className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner overflow-y-auto"
+          >
+            <SidebarFlyoutMenu
+              sidebarPosition={sidebarPosition}
+              sidebarWidth={sidebarWidth}
+              selectedWorkspace={selectedWorkspace}
+            />
+          </aside>
+        )}
       </div>
 
-      {showSidebar && sidebarPosition === 'right' && (
-        <>
-          {/* Layout-Integrated Flyout Menu - Right Side */}
-          {flyoutMode === 'layout' && flyoutOpen && (
-            <aside
-              style={{ width: flyoutWidth, minWidth: flyoutWidth, maxWidth: flyoutWidth }}
-              className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner"
-            >
-              <SidebarFlyoutMenu
-                sidebarPosition={sidebarPosition}
-                sidebarWidth={sidebarWidth}
-                selectedWorkspace={selectedWorkspace}
-              />
-            </aside>
-          )}
-
-          <aside
-            style={{ width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
-            className="sidebar-flyout-bg border-l flex-shrink-0 order-last shadow-sm"
-          >
-            <ExtensionPoint id="layout:sidebar" />
-          </aside>
-        </>
-      )}
+      {/* Overlays */}
+      <ExtensionPoint id="layout:overlay" />
 
       {/* Floating mode disabled intentionally */}
-    </div>
+      </div>
+    </RouteContextProvider>
   );
 };
 
@@ -297,8 +295,8 @@ const AppRoutes = ({ loading }: { loading: boolean }) => {
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       <Route path="/auth/callback" element={<OAuthCallbackPage />} />
       <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
-        <Route path="/" element={<Navigate to="/workspace" replace />} />
-        <Route path="/workspace" element={<ExtensionPoint id="page:workspace" />} />
+        <Route path="/" element={<Navigate to="/homepage" replace />} />
+        <Route path="/homepage" element={<ExtensionPoint id="page:homepage" />} />
         {/* <Route path="/dashboard" element={<ExtensionPoint id="page:dashboard" />} /> */}
         <Route path="/projects" element={<ExtensionPoint id="page:projects" />} />
         <Route path="/workspace/:workspaceId/settings" element={<SettingsPageRoute />} />
@@ -322,8 +320,8 @@ const AppRoutes = ({ loading }: { loading: boolean }) => {
         />
         {/* Add pluggable table view route with baseId (guarded) */}
         <Route path="/base/:baseId/table/:tableId/:viewId" element={<TableGuard><TableViewRouteWrapper /></TableGuard>} />
-        {/* Add workspace route for a specific base (guarded) */}
-        <Route path="/base/:baseId" element={<BaseGuard><ExtensionPoint id="page:workspace" /></BaseGuard>} />
+        {/* Base route redirects to homepage - base details are now on homepage */}
+        <Route path="/base/:baseId" element={<BaseGuard><Navigate to="/homepage" replace /></BaseGuard>} />
         {/* (Legacy) Old table view route for backward compatibility (guarded) */}
         <Route path="/table/:tableId/:viewId" element={<TableGuard><TableViewRouteWrapper /></TableGuard>} />
         {/* Administrator page */}

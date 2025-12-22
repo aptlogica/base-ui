@@ -11,7 +11,7 @@ export const AccessLevelRoute: React.FC<{ children: React.ReactNode }> = ({ chil
   const { canAccessSettings } = useWorkspaceAccess(workspaceId);
 
   if (!canAccessSettings()) {
-    return <Navigate to="/workspace" replace />;
+    return <Navigate to="/homepage" replace />;
   }
 
   return <>{children}</>;

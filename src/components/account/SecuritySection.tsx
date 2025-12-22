@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { useUserProfile, useChangePassword } from '../../hooks/useApi';
 import { useToast } from '../common/Toast';
-import { Loader2, Shield, CheckCircle, AlertTriangle, Eye, EyeOff, Info, HelpCircle } from 'lucide-react';
+import { Loader2, Eye, EyeOff, HelpCircle, Monitor, Globe, Clock } from 'lucide-react';
 import { getUserActivity, type LoginSession } from '../../service/activityService';
 import { validatePasswordStrength } from '../../utils/validation';
+import { useFooterButtons } from './AccountSettings';
 
 export const SecuritySection: React.FC = () => {
   const { user: authUser } = useAuth();
@@ -38,10 +39,11 @@ export const SecuritySection: React.FC = () => {
 
   // API hooks
   const changePasswordMutation = useChangePassword(userId || '');
+  
+  // Footer buttons context
+  const { registerFooter, clearFooter, currentSection } = useFooterButtons();
 
   const userProfile = profileResponse?.data;
-  const isVerified = userProfile?.email_verified || false;
-  const isActive = userProfile?.status === 'active';
 
   // Get user data for password validation
   const userFirstName = userProfile?.first_name || authUser?.first_name || '';
@@ -80,7 +82,7 @@ export const SecuritySection: React.FC = () => {
     }
   };
 
-  const handleUpdatePassword = async () => {
+  const handleUpdatePassword = useCallback(async () => {
     // Reset errors
     setCurrentPasswordError(null);
     setNewPasswordError(null);
@@ -143,7 +145,7 @@ export const SecuritySection: React.FC = () => {
     } finally {
       setIsUpdatingPassword(false);
     }
-  };
+  }, [passwordData, userFirstName, userLastName, userEmail, changePasswordMutation, toast]);
 
   // Load login sessions from activity_data
   useEffect(() => {
@@ -192,9 +194,70 @@ export const SecuritySection: React.FC = () => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const handleSetup2FA = () => {
-    alert('2FA setup functionality will be implemented soon');
-  };
+  // Check if form is valid for password update
+  const isPasswordFormValid = useMemo(() => {
+    return (
+      passwordData.currentPassword &&
+      passwordData.newPassword &&
+      passwordData.confirmPassword &&
+      passwordData.newPassword === passwordData.confirmPassword &&
+      validatePasswordStrength(passwordData.newPassword, userFirstName, userLastName, userEmail).isValid &&
+      currentPasswordError === null &&
+      newPasswordError === null &&
+      confirmPasswordError === null
+    );
+  }, [passwordData, userFirstName, userLastName, userEmail, currentPasswordError, newPasswordError, confirmPasswordError]);
+
+  // Register footer buttons with cleanup
+  useEffect(() => {
+    // Only register if this is still the active section
+    if (currentSection !== 'security') {
+      return;
+    }
+
+    const footerContent = (
+      <div className="flex items-center justify-end gap-3 w-full">
+        <button
+          onClick={() => {
+            setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+            setCurrentPasswordError(null);
+            setNewPasswordError(null);
+            setConfirmPasswordError(null);
+          }}
+          disabled={isUpdatingPassword || changePasswordMutation.isPending}
+          className="flex items-center gap-2 px-6 py-2.5 text-sm border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleUpdatePassword}
+          disabled={
+            isUpdatingPassword ||
+            changePasswordMutation.isPending ||
+            !isPasswordFormValid
+          }
+          className={`flex items-center gap-2 px-6 py-2.5 text-sm rounded-xl transition-colors ${
+            isPasswordFormValid && !isUpdatingPassword && !changePasswordMutation.isPending
+              ? 'btn-primary text-white'
+              : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          {(isUpdatingPassword || changePasswordMutation.isPending) && (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          )}
+          {(isUpdatingPassword || changePasswordMutation.isPending) ? 'Updating Password...' : 'Update Password'}
+        </button>
+      </div>
+    );
+    registerFooter(footerContent, 'security');
+    
+    // Cleanup: clear footer when component unmounts or section changes
+    return () => {
+      if (currentSection === 'security') {
+        clearFooter();
+      }
+    };
+  }, [isUpdatingPassword, changePasswordMutation.isPending, isPasswordFormValid, registerFooter, clearFooter, handleUpdatePassword, currentSection]);
 
   // Loading state
   if (isLoading) {
@@ -220,17 +283,18 @@ export const SecuritySection: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* Change Password Section */}
-      <div className="bg-card rounded-xl border p-8">
+      <div className="border-b pb-6">
         <h3 className="text-xl font-semibold text-primary mb-6">Change Password</h3>
 
         <div className="space-y-6">
+          {/* Current Password */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Current Password
             </label>
-            <div className={`flex items-center justify-between field-component field-component-focus field-component-border ${currentPasswordError ? "border-destructive bg-red-50" : ""}`}>
+            <div className={`relative flex items-center ${currentPasswordError ? "border-red-500" : "border-gray-300"}`}>
               <input
                 type={showCurrentPassword ? "text" : "password"}
                 value={passwordData.currentPassword}
@@ -242,15 +306,13 @@ export const SecuritySection: React.FC = () => {
                     setCurrentPasswordError(null);
                   }
                 }}
-                className="w-full border-none outline-none"
+                className={`w-full px-4 py-3 pr-20 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-white ${currentPasswordError ? "border-red-500 bg-red-50" : ""}`}
                 placeholder="Enter your current password"
                 autoComplete="off"
                 data-form-type="other"
               />
-              <div className="z-50 flex items-center gap-2">
-                {currentPasswordError && (
-                  <Info className="w-4 h-4 text-red-400" />
-                )}
+              <div className="absolute right-3 flex items-center gap-2">
+                <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
@@ -267,12 +329,13 @@ export const SecuritySection: React.FC = () => {
             {currentPasswordError && <div className="mt-1.5 text-red-500 text-sm">{currentPasswordError}</div>}
           </div>
 
+          {/* New Password and Confirm Password Side by Side */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 New Password
               </label>
-              <div className={`flex items-center justify-between field-component field-component-border focus-within:border focus-within:border-[--color-brand-600] ${newPasswordError ? "border-destructive bg-red-50" : ""}`}>
+              <div className={`relative flex items-center ${newPasswordError ? "border-red-500" : "border-gray-300"}`}>
                 <input
                   type={showNewPassword ? "text" : "password"}
                   value={passwordData.newPassword}
@@ -294,23 +357,11 @@ export const SecuritySection: React.FC = () => {
                       }
                     }
                   }}
-                  className="bg-transparent w-full border-none outline-none"
+                  className={`w-full px-4 py-3 pr-20 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-white ${newPasswordError ? "border-red-500 bg-red-50" : ""}`}
                   placeholder="Enter new password"
                   autoComplete="new-password"
                 />
-                <div className=" z-50 flex items-center gap-2">
-                  <button
-                    type="button"
-                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}
-                    onClick={() => setShowNewPassword(prev => !prev)}
-                    className="text-gray-500 hover:text-gray-700 focus:outline-none"
-                  >
-                    {showNewPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
+                <div className="absolute right-3 flex items-center gap-2">
                   <div className="relative group">
                     <HelpCircle className={`w-4 h-4 ${newPasswordError ? "text-red-400" : "text-gray-400"} cursor-help`} />
                     <div className="invisible group-hover:visible group-focus-within:visible absolute left-0 mt-1 w-72 bg-card border rounded-xl shadow-lg p-4 text-sm z-50">
@@ -353,24 +404,20 @@ export const SecuritySection: React.FC = () => {
                       </ul>
                     </div>
                   </div>
+                  <button
+                    type="button"
+                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowNewPassword(prev => !prev)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               </div>
-              {passwordData.newPassword && (() => {
-                const validation = validatePasswordStrength(
-                  passwordData.newPassword,
-                  userFirstName,
-                  userLastName,
-                  userEmail
-                );
-                return (
-                  <div className="mt-2 px-1.5 flex gap-1">
-                    <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validation.strength >= 1 ? 'bg-red-500' : 'bg-gray-200'}`}></div>
-                    <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validation.strength >= 3 ? 'bg-yellow-500' : 'bg-gray-200'}`}></div>
-                    <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validation.strength >= 5 ? 'bg-yellow-500' : 'bg-gray-200'}`}></div>
-                    <div className={`h-0.5 flex-1 rounded transition-colors duration-200 ${validation.strength === 7 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
-                  </div>
-                );
-              })()}
               {newPasswordError && <div className="mt-1.5 text-red-500 text-sm">{newPasswordError}</div>}
             </div>
 
@@ -378,7 +425,7 @@ export const SecuritySection: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Confirm New Password
               </label>
-              <div className={`flex items-center justify-between field-component field-component-border focus-within:border focus-within:border-[--color-brand-600] ${confirmPasswordError ? "border-destructive bg-red-50" : ""}`}>
+              <div className={`relative flex items-center ${confirmPasswordError ? "border-red-500" : "border-gray-300"}`}>
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   value={passwordData.confirmPassword}
@@ -392,11 +439,11 @@ export const SecuritySection: React.FC = () => {
                       setConfirmPasswordError(null);
                     }
                   }}
-                  className="bg-transparent w-full border-none outline-none"
+                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-white ${confirmPasswordError ? "border-red-500 bg-red-50" : ""}`}
                   placeholder="Confirm new password"
                   autoComplete="new-password"
                 />
-                <div className="z-50 flex items-center gap-2">
+                <div className="absolute right-3">
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -413,148 +460,11 @@ export const SecuritySection: React.FC = () => {
               {confirmPasswordError && <div className="mt-1.5 text-red-500 text-sm">{confirmPasswordError}</div>}
             </div>
           </div>
-
-          <button
-            onClick={handleUpdatePassword}
-            disabled={
-              isUpdatingPassword ||
-              changePasswordMutation.isPending ||
-              !passwordData.currentPassword ||
-              !passwordData.newPassword ||
-              !passwordData.confirmPassword ||
-              passwordData.newPassword !== passwordData.confirmPassword ||
-              !validatePasswordStrength(passwordData.newPassword, userFirstName, userLastName, userEmail).isValid ||
-              currentPasswordError !== null ||
-              newPasswordError !== null ||
-              confirmPasswordError !== null
-            }
-            className="flex items-center gap-2 px-6 py-3 btn-primary font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {(isUpdatingPassword || changePasswordMutation.isPending) &&
-              <Loader2 className="w-5 h-5 animate-spin" />}
-            {(isUpdatingPassword || changePasswordMutation.isPending) ? 'Updating Password...' : 'Update Password'}
-          </button>
         </div>
       </div>
 
-      {/* Account Status */}
-      {/* <div className="bg-card rounded-xl border border-gray-200 p-8">
-        <h2 className="text-2xl font-semibold text-primary mb-8">Account Status</h2>
-        
-        <div className="space-y-6">
-          <div className="flex items-center justify-between py-4 px-6 bg-gray-50 rounded-xl">
-            <div className="flex items-center gap-4">
-              <div className="flex-shrink-0">
-                {isVerified ? (
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                ) : (
-                  <AlertTriangle className="h-6 w-6 text-red-600" />
-                )}
-              </div>
-          <div>
-                <span className="text-lg font-medium text-gray-900">Email Verification</span>
-                <p className="text-sm text-gray-500">
-                  {isVerified ? 'Your email address is verified' : 'Please verify your email address'}
-                </p>
-              </div>
-            </div>
-            <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
-              isVerified 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-red-100 text-red-800'
-            }`}>
-              {isVerified ? 'Verified' : 'Not Verified'}
-            </span>
-          </div>
-          
-          <div className="flex items-center justify-between py-4 px-6 bg-gray-50 rounded-xl">
-            <div className="flex items-center gap-4">
-              <div className="flex-shrink-0">
-                {isActive ? (
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                ) : (
-                  <AlertTriangle className="h-6 w-6 text-yellow-600" />
-                )}
-              </div>
-              <div>
-                <span className="text-lg font-medium text-gray-900">Account Status</span>
-                <p className="text-sm text-gray-500">
-                  {isActive ? 'Your account is active and ready to use' : 'Your account is currently inactive'}
-                </p>
-              </div>
-            </div>
-            <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
-              isActive 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-yellow-100 text-yellow-800'
-            }`}>
-              {isActive ? 'Active' : 'Inactive'}
-            </span>
-          </div>
-
-          {userProfile && (
-            <div className="flex items-center justify-between py-4 px-6 bg-gray-50 rounded-xl">
-              <div className="flex items-center gap-4">
-                <div className="flex-shrink-0">
-                  <Shield className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <span className="text-lg font-medium text-gray-900">Auth Provider</span>
-                  <p className="text-sm text-gray-500">
-                    {userProfile.auth_provider === 'email' ? 'Email and password authentication' : 'Third-party authentication'}
-                  </p>
-                </div>
-              </div>
-              <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                {userProfile.auth_provider}
-              </span>
-            </div>
-          )}
-            </div>
-          </div> */}
-
-      {/* Two-Factor Authentication */}
-      {/* <div className="bg-card rounded-xl border border-gray-200 p-8">
-        <h3 className="text-xl font-semibold text-primary mb-6">Two-Factor Authentication</h3>
-        
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-              <div>
-              <h4 className="text-lg font-medium text-gray-900">Enable 2FA</h4>
-                <p className="text-sm text-gray-500 mt-1">Add an extra layer of security to your account</p>
-              </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-600">Disabled</span>
-              <button className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-1 focus:ring-blue-500 focus:ring-offset-2 bg-gray-200">
-                <span className="translate-x-0 inline-block h-5 w-5 transform rounded-full bg-card shadow ring-0 transition duration-200 ease-in-out"></span>
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-            <div className="flex items-start">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
-              <div>
-                <p className="text-sm text-yellow-800 font-medium">2FA is currently disabled</p>
-                <p className="text-sm text-yellow-700 mt-1">
-                  Enable two-factor authentication to secure your account with an additional verification step.
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <button 
-            onClick={handleSetup2FA}
-            className="flex items-center gap-2 px-6 py-3 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-medium transition-colors"
-          >
-            <Shield className="w-5 h-5" />
-            Set Up 2FA
-          </button>
-        </div>
-      </div> */}
-
-      {/* Login Activity */}
-      <div className="bg-card rounded-xl border border-gray-200 p-8">
+      {/* Recent Login Activity */}
+      <div>
         <h3 className="text-xl font-semibold text-primary mb-6">Recent Login Activity</h3>
 
         {sessionsLoading ? (
@@ -562,83 +472,103 @@ export const SecuritySection: React.FC = () => {
             <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
           </div>
         ) : (
-          <div className="space-y-4">
-            {/* Current/Most Recent Session */}
-            {currentSession ? (
-              <div className="flex items-center justify-between py-4 px-6 bg-card border border-green-200 rounded-xl">
-                <div className="flex items-center gap-4">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">Current session</p>
-                    <p className="text-xs text-gray-600">
-                      {currentSession.browser}{currentSession.browser_version ? ` ${currentSession.browser_version}` : ''} on {currentSession.os}
-                      {currentSession.device_type && ` • ${currentSession.device_type.charAt(0).toUpperCase() + currentSession.device_type.slice(1)}`}
-                    </p>
-                    <div className="flex items-center gap-3 mt-1">
-                      <p className="text-xs text-gray-500">
-                        {formatDate(currentSession.login_at)}
-                      </p>
+          <div className="space-y-0">
+            {/* Timeline with Current Session and Past Sessions */}
+            {loginSessions.length > 0 ? (
+              <div className="relative">
+                {/* Current/Most Recent Session */}
+                {currentSession && (
+                  <div className="relative flex items-center pb-4">
+                    {/* Timeline indicator */}
+                    <div className="flex flex-col items-center mr-4 flex-shrink-0">
+                      <div className="w-3 h-3 bg-[var(--color-brand-600)] rounded-full z-10"></div>
+                      {pastSessions.length > 0 && (
+                        <div className="w-0.5 h-full bg-gray-300 mt-2" style={{ borderStyle: 'dotted' }}></div>
+                      )}
+                    </div>
+                    
+                    {/* Session content - Single line with all info */}
+                    <div className="flex-1 flex items-center gap-2 flex-wrap">
+                      {/* Browser Icon - Simple browser window representation */}
+                      <div className={`w-4 h-4 border-2 rounded-sm ${'border-[var(--color-brand-600)]'}`}>
+                        <div className={`w-full h-1 border-b-2 ${'border-[var(--color-brand-600)]'} mt-0.5`}></div>
+                      </div>
+                      
+                      {/* Browser/OS Text */}
+                      <span className="text-sm font-medium text-[var(--color-brand-600)]">
+                        {currentSession.browser}{currentSession.browser_version ? ` ${currentSession.browser_version}` : ''} on {currentSession.os}
+                      </span>
+                      
+                      {/* Desktop Icon */}
+                      <Monitor className="w-4 h-4 text-[var(--color-brand-600)]" />
+                      
+                      {/* Desktop Text */}
+                      <span className="text-sm text-[var(--color-brand-600)]">Desktop</span>
+                      
+                      {/* Clock Icon */}
+                      <Clock className="w-4 h-4 text-[var(--color-brand-600)]" />
+                      
+                      {/* Time Text */}
+                      <span className="text-sm text-[var(--color-brand-600)]">{formatDate(currentSession.login_at)}</span>
+                      
+                      {/* Globe Icon and Location */}
                       {currentSession.timezone && (
                         <>
-                          <span className="text-xs text-gray-400">•</span>
-                          <p className="text-xs text-gray-500">{currentSession.timezone}</p>
+                          <Globe className="w-4 h-4 text-[var(--color-brand-600)]" />
+                          <span className="text-sm text-[var(--color-brand-600)]">{currentSession.timezone}</span>
                         </>
                       )}
                     </div>
                   </div>
-                </div>
-                <span className="text-sm text-green-600 font-medium">Active now</span>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between py-4 px-6 bg-gray-50 border rounded-xl">
-                <div className="flex items-center gap-4">
-                  <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Current session</p>
-                    <p className="text-xs text-gray-500">
-                      {navigator.userAgent.includes('Chrome') ? 'Chrome' :
-                        navigator.userAgent.includes('Firefox') ? 'Firefox' :
-                          navigator.userAgent.includes('Safari') ? 'Safari' : 'Browser'} on {navigator.platform.includes('Win') ? 'Windows' :
-                            navigator.platform.includes('Mac') ? 'macOS' :
-                              navigator.platform.includes('Linux') ? 'Linux' : 'Device'}
-                    </p>
-                  </div>
-                </div>
-                <span className="text-sm text-gray-600 font-medium">Active now</span>
-              </div>
-            )}
+                )}
 
-            {/* Past Sessions */}
-            {pastSessions.length > 0 && (
-              <>
+                {/* Past Sessions */}
                 {pastSessions.map((session, index) => (
-                  <div key={`${session.login_at}-${index}`} className="flex items-center justify-between py-3 px-6 bg-gray-50 border rounded-xl">
-                    <div className="flex items-center gap-4">
-                      <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">
-                          {session.browser}{session.browser_version ? ` ${session.browser_version}` : ''} on {session.os}
-                          {session.device_type && ` • ${session.device_type.charAt(0).toUpperCase() + session.device_type.slice(1)}`}
-                        </p>
-                        <div className="flex items-center gap-3 mt-0.5">
-                          <p className="text-xs text-gray-500">
-                            {formatDate(session.login_at)}
-                          </p>
-                          {session.timezone && (
-                            <>
-                              <span className="text-xs text-gray-400">•</span>
-                              <p className="text-xs text-gray-500">{session.timezone}</p>
-                            </>
-                          )}
-                        </div>
+                  <div key={`${session.login_at}-${index}`} className="relative flex items-center pb-4">
+                    {/* Timeline indicator */}
+                    <div className="flex flex-col items-center mr-4 flex-shrink-0">
+                      <div className="w-3 h-3 bg-gray-300 rounded-full z-10"></div>
+                      {index < pastSessions.length - 1 && (
+                        <div className="w-0.5 h-full bg-gray-300 mt-2" style={{ borderStyle: 'dotted' }}></div>
+                      )}
+                    </div>
+                    
+                    {/* Session content - Single line with all info */}
+                    <div className="flex-1 flex items-center gap-2 flex-wrap">
+                      {/* Browser Icon - Simple browser window representation */}
+                      <div className="w-4 h-4 border-2 border-gray-400 rounded-sm">
+                        <div className="w-full h-1 border-b-2 border-gray-400 mt-0.5"></div>
                       </div>
+                      
+                      {/* Browser/OS Text */}
+                      <span className="text-sm font-medium text-gray-600">
+                        {session.browser}{session.browser_version ? ` ${session.browser_version}` : ''} on {session.os}
+                      </span>
+                      
+                      {/* Desktop Icon */}
+                      <Monitor className="w-4 h-4 text-gray-400" />
+                      
+                      {/* Desktop Text */}
+                      <span className="text-sm text-gray-600">Desktop</span>
+                      
+                      {/* Clock Icon */}
+                      <Clock className="w-4 h-4 text-gray-400" />
+                      
+                      {/* Time Text */}
+                      <span className="text-sm text-gray-600">{formatDate(session.login_at)}</span>
+                      
+                      {/* Globe Icon and Location */}
+                      {session.timezone && (
+                        <>
+                          <Globe className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm text-gray-600">{session.timezone}</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
-              </>
-            )}
-
-            {loginSessions.length === 0 && (
+              </div>
+            ) : (
               <p className="text-sm text-gray-500 text-center py-4">No previous login sessions found</p>
             )}
           </div>
