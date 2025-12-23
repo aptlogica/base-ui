@@ -444,45 +444,48 @@ const HomePage: React.FC = () => {
             {/* Dropdown Menu */}
             {isSortDropdownOpen && (
               <div className="absolute right-0 top-full mt-2 w-44 bg-card border rounded-xl shadow-lg z-50 overflow-hidden">
-                <div className="p-1">
+                <div className="p-2">
                   <button
                     onClick={() => {
                       setSortOption('recent');
                       setIsSortDropdownOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-2.5 text-sm rounded-xl transition-all duration-150 ${
-                      sortOption === 'recent'
-                        ? 'bg-muted/30 text-primary font-medium'
-                        : 'text-primary hover:bg-muted/10'
-                    }`}
+                    className="w-full rounded-lg text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
                   >
-                    Recent
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-primary">Recent</span>
+                      {sortOption === 'recent' && (
+                        <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                      )}
+                    </div>
                   </button>
                   <button
                     onClick={() => {
                       setSortOption('a-z');
                       setIsSortDropdownOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-2.5 text-sm rounded-xl transition-all duration-150 ${
-                      sortOption === 'a-z'
-                        ? 'bg-muted/30 text-primary font-medium'
-                        : 'text-primary hover:bg-muted/10'
-                    }`}
+                    className="w-full rounded-lg text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
                   >
-                    A-Z
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-primary">A-Z</span>
+                      {sortOption === 'a-z' && (
+                        <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                      )}
+                    </div>
                   </button>
                   <button
                     onClick={() => {
                       setSortOption('z-a');
                       setIsSortDropdownOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-2.5 text-sm rounded-xl transition-all duration-150 ${
-                      sortOption === 'z-a'
-                        ? 'bg-muted/30 text-primary font-medium'
-                        : 'text-primary hover:bg-muted/10'
-                    }`}
+                    className="w-full rounded-lg text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
                   >
-                    Z-A
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-primary">Z-A</span>
+                      {sortOption === 'z-a' && (
+                        <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                      )}
+                    </div>
                   </button>
                 </div>
               </div>
@@ -519,7 +522,7 @@ const HomePage: React.FC = () => {
                 {/* Top Section: Icon, Title, Description, Menu */}
                 <div className="flex items-start gap-3 border-b p-5">
                   {/* Icon on left */}
-                  <div className={`w-12 h-12 rounded-xl ${icon.color} flex items-center justify-center text-white font-semibold text-base flex-shrink-0 shadow-sm`}>
+                  <div className={`w-12 h-12 border rounded-xl ${icon.color} flex items-center justify-center text-white font-semibold text-base flex-shrink-0 shadow-sm`}>
                     {icon.letter}
                   </div>
                   
@@ -620,6 +623,7 @@ const HomePage: React.FC = () => {
             name: b.title || b.name || '',
           }))}
           currentItemId={editingBase.id}
+          initialImage={editingBase.image || editingBase.logo || editingBase.meta?.image || null}
         />
       )}
 

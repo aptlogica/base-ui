@@ -1,7 +1,6 @@
 import React, { useState, createContext, useContext, useCallback, useRef, useEffect } from 'react';
 import { ProfileSection } from './ProfileSection';
 import { SecuritySection } from './SecuritySection';
-import { PreferencesSection } from './PreferencesSection';
 
 interface FooterButtonContextType {
   registerFooter: (buttons: React.ReactNode, sectionId?: string) => void;
@@ -38,7 +37,6 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
   const sections = [
     { key: 'profile', label: 'Profile', icon: 'User' },
     { key: 'security', label: 'Security', icon: 'Shield' },
-    // { key: 'preferences', label: 'Preferences', icon: 'Settings' },
   ];
 
   // Update ref when section changes
@@ -82,8 +80,6 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
         return <ProfileSection key="profile" />;
       case 'security':
         return <SecuritySection key="security" />;
-      case 'preferences':
-        return <PreferencesSection key="preferences" />;
       default:
         return <ProfileSection key="profile-default" />;
     }

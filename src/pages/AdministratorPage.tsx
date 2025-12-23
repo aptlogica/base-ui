@@ -21,13 +21,13 @@ const AdministratorPage: React.FC = () => {
 
   const tabs = canAccessAllSettingsTabs()
     ? allTabs
-    : allTabs.filter(tab => tab.key === 'workspace');
+    : allTabs.filter(tab => tab.key === 'workspaces');
 
   // Get valid tab keys (memoized)
   const validTabKeys = useMemo(() => tabs.map(tab => tab.key), [tabs]);
 
   // Set default tab based on access level
-  const defaultTab = canAccessAllSettingsTabs() ? 'tenant' : 'workspace';
+  const defaultTab = canAccessAllSettingsTabs() ? 'settings' : 'workspaces';
 
   // Get tab from URL query parameter, default based on access level
   const tabFromUrl = searchParams.get('tab');
@@ -56,10 +56,10 @@ const AdministratorPage: React.FC = () => {
 
   // Update active tab if access level changes (and current tab becomes invalid)
   useEffect(() => {
-    if (!canAccessAllSettingsTabs() && activeTab !== 'workspace') {
+    if (!canAccessAllSettingsTabs() && activeTab !== 'workspaces') {
       setSearchParams(prev => {
         const newParams = new URLSearchParams(prev);
-        newParams.delete('tab'); // Remove tab param to use default 'workspace'
+        newParams.delete('tab'); // Remove tab param to use default 'workspaces'
         return newParams;
       }, { replace: true });
     }

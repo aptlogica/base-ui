@@ -1,6 +1,6 @@
 import React from 'react';
-import { CreateViewModal } from '../../../../../components/modals/CreateViewModal';
-import { useTableViews } from '../../../../../hooks/useApi';
+import { CreateViewModal } from '../../../../components/modals/CreateViewModal';
+import { useTableViews } from '../../../../hooks/useApi';
 
 interface CreateViewModalWrapperProps {
   tableId: string;

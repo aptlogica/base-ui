@@ -17,7 +17,7 @@ interface WorkspaceTabProps {
   workspaceDescription?: string;
 }
 
-export const WorkspaceTab: React.FC<WorkspaceTabProps> = ({ workspaceId, workspaceTitle = 'My Workspace', workspaceDescription = '' }) => {
+export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = React.useState<string>('');
   const [editWorkspaceName, setEditWorkspaceName] = React.useState('');
   const [editDescription, setEditDescription] = React.useState('');

@@ -1,4 +1,4 @@
-export interface SidebarFlyoutMenuProps {
+export interface SidebarProps {
   onClose?: () => void;
   sidebarPosition?: 'left' | 'right';
   sidebarWidth?: number;
@@ -30,3 +30,4 @@ export interface CreateViewButtonProps {
   onOpenModal: (type: string) => void;
   setPopoverRef: (ref: HTMLDivElement | null) => void;
 }
+

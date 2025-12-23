@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useNavigationStore } from '../../stores/navigationStore';
-import { useWorkspaceDataService } from '../../plugins/WorkspacePlugin/data/workspaceDataService';
+import { useWorkspaceDataService } from '../../hooks/workspace/useWorkspaceDataService';
 import { ChevronRight, ChevronDown, Database, Sheet, Plus } from 'lucide-react';
 import { useWorkspaceBases, useBaseTables, useTableViews, useUpdateBase, useDeleteBase, useCreateBase, useCreateTable } from '../../hooks/useApi';
 import { getViewIconInfo } from '../../types/viewTypes';
@@ -164,7 +164,7 @@ const Breadcrumb: React.FC = () => {
 
   // Route-based visibility check
   const isRouteVisible = useComponentVisibility(COMPONENT_IDS.BREADCRUMB);
-  
+
   if (!isRouteVisible) {
     return null;
   }
@@ -182,11 +182,29 @@ const Breadcrumb: React.FC = () => {
     // Add base
     if (pathParts[0] === 'base' && pathParts[1] && currentBase) {
       const baseName = currentBase.title || currentBase.name || 'Base';
+      const baseImage = currentBase.image || currentBase.logo || currentBase.meta?.image;
+      const baseIcon = getBaseIcon(currentBase, 0);
+
+      // Use image if available, otherwise use initial with colored background
+      const baseIconElement = baseImage ? (
+        <div className="w-5 h-5 rounded-lg overflow-hidden flex-shrink-0">
+          <img
+            src={baseImage}
+            alt={baseName}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ) : (
+        <div className={`w-6 h-6 ${baseIcon.color} rounded-lg flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}>
+          {baseIcon.letter}
+        </div>
+      );
+
       items.push({
         type: 'base',
         id: currentBase.id,
         label: baseName,
-        icon: <Database size={14} className="text-blue-600" />,
+        icon: baseIconElement,
         path: `/base/${currentBase.id}`
       });
     }
@@ -387,14 +405,13 @@ const Breadcrumb: React.FC = () => {
   // Get dropdown items for each level
   const getBaseDropdownItems = (): DropdownItem[] => {
     const bases = workspaceBasesQuery.data?.data || [];
-    console.log('Base dropdown items:', bases.length, bases);
     return bases.map((base: any, index: number) => {
       const icon = getBaseIcon(base, index);
       return {
         id: base.id,
         label: base.title || base.name || 'Base',
         icon: (
-          <div className={`w-8 h-8 ${icon.color} rounded-lg flex items-center justify-center text-white font-semibold text-sm flex-shrink-0`}>
+          <div className={`w-6 h-6 ${icon.color} rounded-md flex items-center justify-center text-white font-semibold text-sm flex-shrink-0`}>
             {icon.letter}
           </div>
         ),
@@ -415,7 +432,6 @@ const Breadcrumb: React.FC = () => {
 
   const getTableDropdownItems = (): DropdownItem[] => {
     const tables = baseTablesQuery.data?.data || [];
-    console.log('Table dropdown items:', tables.length, tables);
     return tables.map((item: any) => {
       const table = item.model || item;
       const tableId = table.id;
@@ -441,7 +457,6 @@ const Breadcrumb: React.FC = () => {
 
   const getViewDropdownItems = (): DropdownItem[] => {
     const views = tableViewsQuery.data?.data || [];
-    console.log('View dropdown items:', views.length, views);
     return views.map((view: any) => {
       const viewType = view.type || 'grid';
       const viewIconInfo = getViewIconInfo(viewType);
@@ -450,9 +465,7 @@ const Breadcrumb: React.FC = () => {
         id: view.id,
         label: view.title || view.name || 'View',
         icon: (
-          <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
-            <ViewIcon size={16} className="text-white" />
-          </div>
+          <ViewIcon size={16} style={{ color: viewIconInfo.color }} />
         ),
         onClick: () => {
           setOpenDropdown(null);
@@ -470,15 +483,12 @@ const Breadcrumb: React.FC = () => {
 
   const handleSegmentClick = (e: React.MouseEvent, type: 'base' | 'table' | 'view') => {
     e.stopPropagation();
-    console.log('Segment clicked:', type, 'Current open:', openDropdown);
-
     if (openDropdown === type) {
       setOpenDropdown(null);
       setDropdownPosition(null);
     } else {
       ignoreNextClickRef.current = true;
       setOpenDropdown(type);
-      console.log('Setting dropdown to:', type);
     }
   };
 
@@ -488,6 +498,9 @@ const Breadcrumb: React.FC = () => {
 
   return (
     <nav className="flex items-center space-x-1 text-sm overflow-hidden" aria-label="Breadcrumb">
+      <div className="py-2">
+        <ChevronRight className="w-fit h-6 text-gray-300" />
+      </div>
       {breadcrumbItems.map((item, index) => {
         const isLast = index === breadcrumbItems.length - 1;
         const isDropdownOpen = openDropdown === item.type;
@@ -512,8 +525,8 @@ const Breadcrumb: React.FC = () => {
               >
                 {item.icon}
                 <span className={`font-medium truncate max-w-[150px] ${isLast
-                    ? 'text-[var(--color-text-primary)]'
-                    : 'text-gray-700 group-hover:text-[var(--color-text-primary)]'
+                  ? 'text-[var(--color-text-primary)]'
+                  : 'text-gray-700 group-hover:text-[var(--color-text-primary)]'
                   }`} title={item.label}>
                   {item.label}
                 </span>
@@ -543,15 +556,12 @@ const Breadcrumb: React.FC = () => {
                     </div>
 
                     {/* Scrollable List */}
-                    <div className="overflow-y-auto flex-1 max-h-48 space-y-1 p-2">
+                    <div className="overflow-y-auto flex-1 max-h-48 p-2">
                       {dropdownItems.length > 0 ? (
                         dropdownItems.map((dropdownItem) => (
                           <div
                             key={dropdownItem.id}
-                            className={`w-full rounded-xl text-left px-3 py-1 text-sm transition-all duration-200 cursor-pointer group ${dropdownItem.isActive
-                                ? 'bg-[var(--color-bg-brand-primary)] hover:text-black'
-                                : 'hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
-                              }`}
+                            className="w-full rounded-lg text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
                             onClick={(e) => {
                               e.stopPropagation();
                               dropdownItem.onClick();
@@ -563,7 +573,7 @@ const Breadcrumb: React.FC = () => {
 
                               {/* Label */}
                               <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                                <span className="font-medium text-primary truncate">
+                                <span className="font-semibold text-primary truncate">
                                   {dropdownItem.label}
                                 </span>
 
@@ -585,7 +595,6 @@ const Breadcrumb: React.FC = () => {
                                         // Prevent the click-outside handler from closing the dropdown
                                         e.stopPropagation();
                                       }}
-                                      className="opacity-0 group-hover:opacity-100 transition-opacity"
                                     >
                                       <BaseMenu
                                         base={dropdownItem.base}
@@ -619,7 +628,7 @@ const Breadcrumb: React.FC = () => {
                     {((item.type === 'base' && canCreateBase()) ||
                       (item.type === 'table' && canCreateTable()) ||
                       (item.type === 'view' && canCreateView())) && (
-                        <div className="p-3 flex-shrink-0">
+                        <div className="p-2 flex-shrink-0">
                           <button
                             className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-muted/30 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={(e) => {
@@ -676,6 +685,7 @@ const Breadcrumb: React.FC = () => {
             name: b.title || b.name || '',
           }))}
           currentItemId={editingBase.id}
+          initialImage={editingBase.image || editingBase.logo || editingBase.meta?.image || null}
         />
       )}
 

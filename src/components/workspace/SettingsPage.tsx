@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SettingsTabs } from './tabs/SettingsTabs';
-import { BillingTab } from './tabs/BillingTab';
 import MembersTab from './tabs/MembersTab';
 import { DangerZoneTab } from './tabs/DangerZoneTab';
 import { WorkspaceTab } from './tabs/WorkspaceTab';
@@ -31,7 +30,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ workspaceId }) => {
 
   const tabs = [
     { key: 'workspace', label: 'Workspace', icon: 'Building' },
-    { key: 'billing', label: 'Billing', icon: 'CreditCard' },
     { key: 'members', label: 'Members', icon: 'Users', upcoming: true },
     { key: 'danger-zone', label: 'Danger Zone', icon: 'Trash' }
   ];
@@ -71,8 +69,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ workspaceId }) => {
     switch (activeTab) {
       case 'workspace':
         return <WorkspaceTab workspaceId={workspaceId} workspaceTitle={workspaceTitle} workspaceDescription={workspaceDescription} />;
-      case 'billing':
-        return <BillingTab workspaceId={workspaceId} />;
       case 'members':
         return <MembersTab workspaceId={workspaceId} />;
       case 'danger-zone':

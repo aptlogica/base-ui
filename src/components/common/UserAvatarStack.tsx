@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface User {
   id: string;
@@ -12,8 +12,9 @@ interface UserAvatarStackProps {
   maxVisible?: number; // Default: 3
   size?: 'sm' | 'md' | 'lg'; // Avatar size
   showCount?: boolean; // Show "+N" badge if more users
-  onClick?: () => void; // Optional click handler (e.g., to open modal)
+  onClick?: () => void; // Optional click handler (e.g., to open modal) - if provided, dropdown won't show
   className?: string;
+  showDropdown?: boolean; // Enable dropdown functionality (default: true if no onClick)
 }
 
 export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({
@@ -22,8 +23,13 @@ export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({
   size = 'md',
   showCount = true,
   onClick,
-  className = ''
+  className = '',
+  showDropdown = true,
 }) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
   // Size mappings
   const sizeClasses = {
     sm: 'w-8 h-8 text-xs',
@@ -55,46 +61,135 @@ export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({
     return colors[hash % colors.length];
   };
   
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+    
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDropdownOpen]);
+  
+  // Position dropdown
+  useEffect(() => {
+    if (!isDropdownOpen || !containerRef.current || !dropdownRef.current) return;
+    
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const dropdown = dropdownRef.current;
+    
+    // Position dropdown below the stack, aligned to the right
+    dropdown.style.top = `${containerRect.bottom + 8}px`;
+    dropdown.style.left = `${containerRect.right - 210}px`; // 288px is dropdown width (w-72 = 18rem = 288px)
+  }, [isDropdownOpen]);
+  
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else if (showDropdown && users.length > 0) {
+      setIsDropdownOpen(!isDropdownOpen);
+    }
+  };
+  
   if (users.length === 0) return null;
   
+  const shouldShowDropdown = showDropdown && !onClick;
+  
   return (
-    <div 
-      className={`flex items-center ${onClick ? 'cursor-pointer' : ''} ${className}`}
-      onClick={onClick}
-    >
-      <div className="flex -space-x-2">
-        {visibleUsers.map((user, index) => (
-          <div
-            key={user.id}
-            className={`${sizeClasses[size]} rounded-full border-2 border-white flex items-center justify-center flex-shrink-0 relative`}
-            style={{ zIndex: maxVisible - index }}
-            title={user.name}
-          >
-            {user.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              <div className={`w-full h-full ${getAvatarColor(user.id)} rounded-full flex items-center justify-center text-white font-semibold`}>
-                {getInitials(user.name)}
-              </div>
-            )}
-          </div>
-        ))}
-        
-        {remainingCount > 0 && showCount && (
-          <div
-            className={`${sizeClasses[size]} rounded-full border-2 border-white bg-gray-200 flex items-center justify-center flex-shrink-0 text-gray-700 font-medium`}
-            title={`${remainingCount} more ${remainingCount === 1 ? 'member' : 'members'}`}
-            style={{ zIndex: 0 }}
-          >
-            +{remainingCount}
-          </div>
-        )}
+    <>
+      <div 
+        ref={containerRef}
+        className={`flex items-center ${shouldShowDropdown || onClick ? 'cursor-pointer' : ''} ${className}`}
+        onClick={handleClick}
+      >
+        <div className="flex -space-x-2">
+          {visibleUsers.map((user, index) => (
+            <div
+              key={user.id}
+              className={`${sizeClasses[size]} rounded-full border-2 flex items-center justify-center flex-shrink-0 relative`}
+              style={{ zIndex: maxVisible - index }}
+              title={user.name}
+            >
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-full h-full rounded-full object-cover"
+                />
+              ) : (
+                <div className={`w-full h-full ${getAvatarColor(user.id)} rounded-full flex items-center justify-center text-white font-semibold`}>
+                  {getInitials(user.name)}
+                </div>
+              )}
+            </div>
+          ))}
+          
+          {remainingCount > 0 && showCount && (
+            <div
+              className={`${sizeClasses[size]} rounded-full border-2 bg-gray-200 flex items-center justify-center flex-shrink-0 text-gray-700 font-medium`}
+              title={`${remainingCount} more ${remainingCount === 1 ? 'member' : 'members'}`}
+              style={{ zIndex: 0 }}
+            >
+              +{remainingCount}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+      
+      {/* Dropdown */}
+      {shouldShowDropdown && isDropdownOpen && (
+        <div
+          ref={dropdownRef}
+          className="fixed z-50 w-72 bg-card border rounded-xl shadow-lg overflow-hidden"
+          style={{ maxHeight: '400px' }}
+        >
+            <div className="p-3 text-xs font-semibold text-gray-500 tracking-wide">
+              Members ({users.length})
+            </div>
+            <div className="max-h-80 p-2 pt-0 overflow-y-auto">
+              {users.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <div className={`${sizeClasses[size]} rounded-full border-2 flex items-center justify-center flex-shrink-0`}>
+                    {user.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt={user.name}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className={`w-full h-full ${getAvatarColor(user.id)} rounded-full flex items-center justify-center text-white font-semibold`}>
+                        {getInitials(user.name)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900 truncate">
+                      {user.name}
+                    </div>
+                    {user.email && (
+                      <div className="text-xs text-gray-500 truncate">
+                        {user.email}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+        </div>
+      )}
+    </>
   );
 };
 

@@ -28,12 +28,12 @@ import SettingsPageRoute from './pages/SettingsPage';
 import { usePluginStore } from './stores/pluginStore';
 import { ExtensionPoint } from './core/ExtensionPoint';
 import { ToastProvider } from './components/common/Toast';
-import SidebarFlyoutMenu from './plugins/WorkspacePlugin/components/refactored/SidebarFlyoutMenu';
+import Sidebar from './components/layout/sidebar/Sidebar';
 import { Loader } from './components/ui/Loader';
 import { useQueryClient } from '@tanstack/react-query';
 import AdministratorPage from './pages/AdministratorPage';
 import WorkspaceSettingsPage from './pages/WorkspaceSettingsPage';
-import {useNavigationStore} from './stores/navigationStore';
+import { useNavigationStore } from './stores/navigationStore';
 import { useClientHeaders } from './hooks/useClientHeaders';
 import { RouteContextProvider } from './contexts/RouteContext';
 
@@ -75,7 +75,7 @@ const Layout = () => {
   const { saving } = useAuth();
   const { flyoutOpen, flyoutMode, flyoutWidth, setFlyoutMode, selectedWorkspace, openFlyout, closeFlyout, currentPlugin } = usePluginStore();
   const location = useLocation();
-  
+
   // Update client headers when workspace/base changes
   useClientHeaders();
 
@@ -111,7 +111,7 @@ const Layout = () => {
   // Auto-open flyout menu when on base/table/view routes
   useEffect(() => {
     const isBaseRoute = location.pathname.startsWith('/base/');
-    
+
     if (isBaseRoute) {
       // Auto-open flyout menu for workspace navigation
       if (!flyoutOpen || currentPlugin !== 'workspace-flyout-menu') {
@@ -146,46 +146,46 @@ const Layout = () => {
           </div>
         </header>
 
-      {/* Below header: Sidebar on left, View on right */}
-      <div className="flex-1 flex min-h-0 overflow-hidden">
-        {/* Layout-Integrated Flyout Menu - Left Side */}
-        {sidebarPosition === 'left' && flyoutMode === 'layout' && flyoutOpen && (
-          <aside
-            style={{ width: flyoutWidth, minWidth: flyoutWidth, maxWidth: flyoutWidth }}
-            className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner overflow-y-auto"
-          >
-            <SidebarFlyoutMenu
-              sidebarPosition={sidebarPosition}
-              sidebarWidth={sidebarWidth}
-              selectedWorkspace={selectedWorkspace}
-            />
-          </aside>
-        )}
+        {/* Below header: Sidebar on left, View on right */}
+        <div className="flex-1 flex min-h-0 overflow-hidden">
+          {/* Layout-Integrated Flyout Menu - Left Side */}
+          {sidebarPosition === 'left' && flyoutMode === 'layout' && flyoutOpen && (
+            <aside
+              style={{ width: flyoutWidth, minWidth: flyoutWidth, maxWidth: flyoutWidth }}
+              className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner overflow-y-auto"
+            >
+              <Sidebar
+                sidebarPosition={sidebarPosition}
+                sidebarWidth={sidebarWidth}
+                selectedWorkspace={selectedWorkspace}
+              />
+            </aside>
+          )}
 
-        {/* Main content area */}
-        <main className="flex-1 p-0 overflow-y-auto bg-main text-text min-w-0">
-          <Outlet />
-        </main>
+          {/* Main content area */}
+          <main className="flex-1 p-0 overflow-y-auto bg-main text-text min-w-0">
+            <Outlet />
+          </main>
 
-        {/* Layout-Integrated Flyout Menu - Right Side */}
-        {sidebarPosition === 'right' && flyoutMode === 'layout' && flyoutOpen && (
-          <aside
-            style={{ width: flyoutWidth, minWidth: flyoutWidth, maxWidth: flyoutWidth }}
-            className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner overflow-y-auto"
-          >
-            <SidebarFlyoutMenu
-              sidebarPosition={sidebarPosition}
-              sidebarWidth={sidebarWidth}
-              selectedWorkspace={selectedWorkspace}
-            />
-          </aside>
-        )}
-      </div>
+          {/* Layout-Integrated Flyout Menu - Right Side */}
+          {sidebarPosition === 'right' && flyoutMode === 'layout' && flyoutOpen && (
+            <aside
+              style={{ width: flyoutWidth, minWidth: flyoutWidth, maxWidth: flyoutWidth }}
+              className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner overflow-y-auto"
+            >
+              <Sidebar
+                sidebarPosition={sidebarPosition}
+                sidebarWidth={sidebarWidth}
+                selectedWorkspace={selectedWorkspace}
+              />
+            </aside>
+          )}
+        </div>
 
-      {/* Overlays */}
-      <ExtensionPoint id="layout:overlay" />
+        {/* Overlays */}
+        <ExtensionPoint id="layout:overlay" />
 
-      {/* Floating mode disabled intentionally */}
+        {/* Floating mode disabled intentionally */}
       </div>
     </RouteContextProvider>
   );
@@ -300,23 +300,23 @@ const AppRoutes = ({ loading }: { loading: boolean }) => {
         {/* <Route path="/dashboard" element={<ExtensionPoint id="page:dashboard" />} /> */}
         <Route path="/projects" element={<ExtensionPoint id="page:projects" />} />
         <Route path="/workspace/:workspaceId/settings" element={<SettingsPageRoute />} />
-        <Route 
-          path="/workspace/:workspaceId/administrator" 
+        <Route
+          path="/workspace/:workspaceId/administrator"
           element={
             <PrivateRoute>
               <AccessLevelRoute>
                 <AdministratorPage />
               </AccessLevelRoute>
             </PrivateRoute>
-          } 
+          }
         />
-        <Route 
-          path="/workspace/:workspaceId/workspace-settings" 
+        <Route
+          path="/workspace/:workspaceId/workspace-settings"
           element={
             <PrivateRoute>
               <WorkspaceSettingsPage />
             </PrivateRoute>
-          } 
+          }
         />
         {/* Add pluggable table view route with baseId (guarded) */}
         <Route path="/base/:baseId/table/:tableId/:viewId" element={<TableGuard><TableViewRouteWrapper /></TableGuard>} />
@@ -325,15 +325,15 @@ const AppRoutes = ({ loading }: { loading: boolean }) => {
         {/* (Legacy) Old table view route for backward compatibility (guarded) */}
         <Route path="/table/:tableId/:viewId" element={<TableGuard><TableViewRouteWrapper /></TableGuard>} />
         {/* Administrator page */}
-        <Route 
-          path="/administrator" 
+        <Route
+          path="/administrator"
           element={
             <RoleBasedRoute requiredRoles={['Admin']}>
               <PrivateRoute>
                 <AdministratorPage />
               </PrivateRoute>
             </RoleBasedRoute>
-          } 
+          }
         />
         {/* Fallback: Use pluggable 404 page for unmatched routes */}
         <Route path="*" element={<ExtensionPoint id="page:notfound" />} />
@@ -455,14 +455,14 @@ export default App;
 const WorkspacesGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const qc = useQueryClient();
-  
+
   // Public routes that don't need workspace data
   const publicRoutes = ['/login', '/register', '/registervalidation', '/forgot-password', '/reset-password', '/auth/callback'];
   const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
-  
+
   // Only fetch workspaces if not on a public route
   const { isLoading, error } = useWorkspaces();
-  
+
   // Handle 401/403 errors by forcing logout
   React.useEffect(() => {
     if (error && !isPublicRoute) {
@@ -530,7 +530,7 @@ const TableGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   if (tablesLoading || tableLoading) {
     return (
       <div className="w-full h-[30vh] flex items-center justify-center">
-       <Loader size={10}/>
+        <Loader size={10} />
       </div>
     );
   }

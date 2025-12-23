@@ -1,7 +1,7 @@
-import { usePluginStore } from '../../../stores/pluginStore';
-import { useNavigationStore } from '../../../stores/navigationStore';
-import { useAuth } from '../../../auth/AuthContext';
-import { useCurrentUser } from '../../../auth/useCurrentUser';
+import { usePluginStore } from '../../stores/pluginStore';
+import { useNavigationStore } from '../../stores/navigationStore';
+import { useAuth } from '../../auth/AuthContext';
+import { useCurrentUser } from '../../auth/useCurrentUser';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 

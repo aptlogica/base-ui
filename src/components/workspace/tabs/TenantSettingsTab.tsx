@@ -233,63 +233,6 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
               isBorder={true}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-primary mb-2">Company Logo</label>
-            <div className="flex items-start gap-4">
-              {/* Logo Preview */}
-              <div className="flex-shrink-0">
-                {logoPreview ? (
-                  <div className="w-24 h-24 border rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center">
-                    <img
-                      src={logoPreview}
-                      alt="Company logo"
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-24 h-24 border rounded-xl bg-blue-100 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-blue-600">
-                      {tenantName.charAt(0).toUpperCase() || 'O'}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Upload Area */}
-              <div className="flex-1">
-                <div
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-xl p-6 cursor-pointer transition-colors ${isDragging
-                      ? 'border-[var(--color-brand-600)] bg-[var(--color-brand-50)]'
-                      : 'hover:border-gray-400 bg-gray-50'
-                    }`}
-                >
-                  <div className="flex flex-col items-center justify-center text-center">
-                    <CloudUpload className="w-8 h-8 text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-700 mb-1">
-                      Click to upload or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      SVG, PNG, JPG or GIF (max. 800 x 400px)
-                    </p>
-                  </div>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
-                  onChange={handleFileInputChange}
-                  className="hidden"
-                />
-                {isUploadingLogo && (
-                  <p className="text-xs text-gray-500 mt-2">Uploading...</p>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
         <div className="w-full mt-6 flex justify-end items-center gap-3">
           <button

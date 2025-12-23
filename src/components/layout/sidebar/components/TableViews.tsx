@@ -1,11 +1,11 @@
 import React from 'react';
-import { VIEW_ICONS } from '../../../../../types/viewTypes';
-import ViewOptionsMenu from '../../../../../components/views/ViewOptionsMenu';
+import { VIEW_ICONS } from '../../../../types/viewTypes';
+import ViewOptionsMenu from '../../../../components/views/ViewOptionsMenu';
 import { CreateViewButton } from './CreateViewButton';
 import { TableViewsProps } from '../types';
-import { useUpdateTable } from '../../../../../hooks/useApi';
+import { useUpdateTable } from '../../../../hooks/useApi';
 import { Pin } from 'lucide-react';
-import { useWorkspaceAccess } from '../../../../../hooks/useWorkspaceAccess';
+import { useWorkspaceAccess } from '../../../../hooks/useWorkspaceAccess';
 
 interface PinnedViews {
   [viewId: string]: boolean;
@@ -205,3 +205,4 @@ export const TableViews: React.FC<TableViewsProps> = ({
     </div>
   );
 };
+

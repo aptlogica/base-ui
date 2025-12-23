@@ -7,8 +7,8 @@ import {
   useCreateField, useUpdateField, useDeleteColumn,
   useCreateView, useUpdateView, useDeleteView,
   useAddRow, useInsertRowData, useDeleteRecord
-} from '../../../hooks/useApi';
-import { isTenantSchemaAvailable } from '../../../service/clientService';
+} from '../../hooks/useApi';
+import { isTenantSchemaAvailable } from '../../service/clientService';
 
 export const useWorkspaceDataService = (workspaceId?: string, baseId?: string, tableId?: string, viewId?: string) => {
   const tenantReady = isTenantSchemaAvailable();

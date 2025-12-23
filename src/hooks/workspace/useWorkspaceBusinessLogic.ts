@@ -1,9 +1,9 @@
-import { useWorkspaceDataService } from './workspaceDataService';
-import { useWorkspaceStateManager } from './workspaceStateManager';
+import { useWorkspaceDataService } from './useWorkspaceDataService';
+import { useWorkspaceStateManager } from './useWorkspaceStateManager';
 import { useMemo, useEffect, useCallback, useState } from 'react';
-import { useToast } from '../../../components/common/Toast';
-import { useNavigation } from '../../../hooks/useNavigation';
-import { useNavigationActions } from '../../../hooks/useNavigationActions';
+import { useToast } from '../../components/common/Toast';
+import { useNavigation } from '../../hooks/useNavigation';
+import { useNavigationActions } from '../../hooks/useNavigationActions';
 
 /**
  * Centralized business logic for workspace operations

@@ -192,16 +192,17 @@ const UserDropdown: React.FC = () => {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-56 bg-card border p-2 space-y-1 py rounded-lg shadow-lg z-50">
+        <div className="absolute right-0 top-full mt-2 w-56 bg-card border space-y-1 py rounded-xl shadow-lg z-50">
           {/* Profile */}
+          <div className="p-2">
           <button
             onClick={() => {
               setIsAccountModalOpen(true);
               setIsOpen(false);
             }}
-            className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors duration-200 rounded-lg"
+            className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors duration-200 rounded-xl"
           >
-            <UserPen className="w-5 h-5 text-muted-foreground" />
+            <UserPen className="w-5 h-5 text-gray-400" />
             <span className="text-sm text-primary">Profile</span>
           </button>
 
@@ -209,15 +210,15 @@ const UserDropdown: React.FC = () => {
           <button
             onClick={toggleTheme}
             disabled={isAnimating}
-            className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors rounded-lg duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${isAnimating ? 'theme-toggle-animation' : ''}`}
+            className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors rounded-xl duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${isAnimating ? 'theme-toggle-animation' : ''}`}
             title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             aria-pressed={isDark}
           >
             {isDark ? (
-              <Sun className="w-5 h-5 text-muted-foreground transition-transform duration-200" />
+              <Sun className="w-5 h-5 text-gray-400 transition-transform duration-200" />
             ) : (
-              <Moon className="w-5 h-5 text-muted-foreground transition-transform duration-200" />
+              <Moon className="w-5 h-5 text-gray-400 transition-transform duration-200" />
             )}
             <span className="text-sm text-primary">
               {isDark ? 'Light Mode' : 'Dark Mode'}
@@ -225,17 +226,18 @@ const UserDropdown: React.FC = () => {
           </button>
 
           {/* Separator */}
-          <div className="border-t"></div>
+          <div className="border-t my-1.5"></div>
 
           {/* Sign Out */}
           <button
             onClick={handleLogout}
             disabled={saving}
-            className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors rounded-lg duration-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-b-lg"
+            className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors rounded-xl duration-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-b-xl"
           >
-            <LogOut className="w-5 h-5 text-muted-foreground" />
+            <LogOut className="w-5 h-5 text-gray-400" />
             <span className="text-sm text-primary">Sign out</span>
           </button>
+        </div>
         </div>
       )}
 

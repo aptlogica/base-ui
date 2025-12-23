@@ -12,7 +12,7 @@ const HeaderMembers: React.FC = () => {
   const { selectedBaseId, selectedWorkspaceId } = useNavigationStore();
   const baseMembersQuery = useBaseMembers(selectedBaseId || '');
   const { canAssignUsers } = useWorkspaceAccess(selectedWorkspaceId || '');
-  
+
   // Route-based visibility check
   const isRouteVisible = useComponentVisibility(COMPONENT_IDS.HEADER_MEMBERS);
 
@@ -20,7 +20,7 @@ const HeaderMembers: React.FC = () => {
   // Handle both { data: [...] } and direct array responses
   const members = useMemo(() => {
     if (!baseMembersQuery.data) return [];
-    
+
     // Try different data structures
     let data: any[] = [];
     if (Array.isArray(baseMembersQuery.data)) {
@@ -30,7 +30,7 @@ const HeaderMembers: React.FC = () => {
     } else if (baseMembersQuery.data?.members && Array.isArray(baseMembersQuery.data.members)) {
       data = baseMembersQuery.data.members;
     }
-    
+
     return data.map((m: any) => ({
       id: m.user_id || m.id || m.user?.id,
       name: m.display_name || m.name || m.user?.display_name || m.user?.name || m.email || m.user?.email || 'Unknown',
@@ -70,16 +70,16 @@ const HeaderMembers: React.FC = () => {
       <div className="flex items-center gap-3">
         <button
           onClick={() => setShowAddMemberModal(true)}
-          className="px-4 py-2 rounded-xl btn-primary text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="p-2.5 rounded-xl btn-primary text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <UserPlus className="w-4 h-4" />
-          Add Member
+          {/* Add Member */}
         </button>
+        <div className="h-6 w-px bg-gray-300"></div>
         <UserAvatarStack
           users={members}
           maxVisible={3}
           size="md"
-          onClick={() => setShowAddMemberModal(true)}
         />
       </div>
 

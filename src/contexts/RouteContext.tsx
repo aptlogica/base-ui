@@ -24,7 +24,6 @@ export const COMPONENT_IDS = {
   WORKSPACE_DROPDOWN: 'workspace-dropdown',
   BREADCRUMB: 'breadcrumb',
   ADMINISTRATOR_SETTINGS_BUTTON: 'administrator-settings-button',
-  NOTIFICATIONS: 'notifications',
   USER_DROPDOWN: 'user-dropdown',
 } as const;
 
@@ -66,15 +65,15 @@ const VISIBILITY_RULES: Record<RouteType, {
   },
   settings: {
     visible: [],
-    hidden: ['header-members', 'workspace-settings-button', 'workspace-dropdown', 'breadcrumb'],
+    hidden: ['header-members', 'workspace-settings-button', 'workspace-dropdown', 'breadcrumb', 'administrator-settings-button'],
   },
   administrator: {
     visible: [],
-    hidden: ['header-members', 'workspace-settings-button', 'workspace-dropdown', 'breadcrumb'],
+    hidden: ['header-members', 'workspace-settings-button', 'workspace-dropdown', 'breadcrumb', 'administrator-settings-button'],
   },
   view: {
-    visible: ['header-members', 'breadcrumb', 'workspace-dropdown', 'administrator-settings-button'],
-    hidden: ['workspace-settings-button'],
+    visible: ['header-members', 'breadcrumb'],
+    hidden: ['workspace-settings-button', 'workspace-dropdown', 'administrator-settings-button'],
   },
   projects: {
     visible: ['workspace-dropdown'],

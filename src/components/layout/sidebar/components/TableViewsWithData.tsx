@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTableViews } from '../../../../../hooks/useApi';
+import { useTableViews } from '../../../../hooks/useApi';
 import { TableViews } from './TableViews';
 import { TableViewsProps } from '../types';
 

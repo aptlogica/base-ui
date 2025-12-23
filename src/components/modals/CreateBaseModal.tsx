@@ -10,20 +10,24 @@ interface CreateBaseModalProps {
   workspaceId: string;
   defaultName?: string;
   existingBases?: any[];
+  isUpdate?: boolean;
+  initialImage?: string | null;
 }
 
 export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
   isOpen,
   onClose,
   onCreate,
-  workspaceId,
+  workspaceId: _workspaceId,
   defaultName = '',
   existingBases = [],
+  isUpdate = false,
+  initialImage = null,
 }) => {
   const [name, setName] = useState(defaultName);
   const [description, setDescription] = useState('');
-  const [image, setImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [_image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initialImage);
   const [error, setError] = useState('');
   const [validationError, setValidationError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,12 +37,12 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
       setName(defaultName);
       setDescription('');
       setImage(null);
-      setImagePreview(null);
+      setImagePreview(initialImage);
       setError('');
       setValidationError('');
       setIsSubmitting(false);
     }
-  }, [isOpen, defaultName]);
+  }, [isOpen, defaultName, initialImage]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -162,8 +166,8 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
               <Plus size={20} className="text-green-600" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-primary">Create Base</h2>
-              <p className="text-sm text-secondary">Add a new base to your workspace</p>
+              <h2 className="text-xl font-semibold text-primary">{isUpdate ? 'Update Base' : 'Create Base'}</h2>
+              <p className="text-sm text-secondary">{isUpdate ? 'Update base details' : 'Add a new base to your workspace'}</p>
             </div>
           </div>
           <button
@@ -234,26 +238,17 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
             <label className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
               Image
             </label>
-            <div
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              className="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
-              onClick={() => document.getElementById('image-upload')?.click()}
-            >
-              <input
-                type="file"
-                id="image-upload"
-                accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
-                onChange={handleImageChange}
-                className="hidden"
-              />
-              {imagePreview ? (
-                <div className="relative">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="max-w-full max-h-48 mx-auto rounded-lg"
-                  />
+            {imagePreview ? (
+              <div className="flex gap-4">
+                {/* Image Preview - Left Side */}
+                <div className="relative flex-shrink-0">
+                  <div className="w-32 h-32 bg-green-100 rounded-xl flex items-center justify-center overflow-hidden">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={(e) => {
@@ -263,13 +258,26 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                       const input = document.getElementById('image-upload') as HTMLInputElement;
                       if (input) input.value = '';
                     }}
-                    className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
                   >
                     <X size={12} />
                   </button>
                 </div>
-              ) : (
-                <>
+                
+                {/* Upload Area - Right Side */}
+                <div
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  className="flex-1 relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                  onClick={() => document.getElementById('image-upload')?.click()}
+                >
+                  <input
+                    type="file"
+                    id="image-upload"
+                    accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
                   <CloudUpload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                   <p className="text-sm text-gray-600 mb-1">
                     <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
@@ -277,9 +285,31 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                   <p className="text-xs text-gray-500">
                     SVG, PNG, JPG or GIF (max. 800 x 400px)
                   </p>
-                </>
-              )}
-            </div>
+                </div>
+              </div>
+            ) : (
+              <div
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                className="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                onClick={() => document.getElementById('image-upload')?.click()}
+              >
+                <input
+                  type="file"
+                  id="image-upload"
+                  accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <CloudUpload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-sm text-gray-600 mb-1">
+                  <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
+                </p>
+                <p className="text-xs text-gray-500">
+                  SVG, PNG, JPG or GIF (max. 800 x 400px)
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}
@@ -300,10 +330,10 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"></div>
-                  Creating...
+                  {isUpdate ? 'Updating...' : 'Creating...'}
                 </>
               ) : (
-                'Create Base'
+                isUpdate ? 'Update' : 'Create Base'
               )}
             </button>
           </div>

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { VIEW_TYPES, VIEW_ICONS } from '../../../../../types/viewTypes';
+import { VIEW_TYPES, VIEW_ICONS } from '../../../../types/viewTypes';
 import { CreateViewPopoverProps } from '../types';
 import { PlusIcon } from 'lucide-react';
 
@@ -158,5 +158,4 @@ export const CreateViewPopover: React.FC<CreateViewPopoverProps> = ({
     document.body
   );
 };
-
 

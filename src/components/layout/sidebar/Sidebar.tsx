@@ -2,29 +2,28 @@ import React, { useRef, useEffect, useMemo, useState, Suspense, lazy } from 'rea
 import ReactDOM from 'react-dom';
 import { ChevronDown, Sheet, Plus } from 'lucide-react';
 import { Pin } from 'lucide-react';
-import { getStoredAccessToken } from '../../../../service/clientService';
-import { useToast } from '../../../../components/common/Toast';
+import { useToast } from '../../common/Toast';
 
 const CreateTableModal = lazy(() =>
-  import('../../../../components/modals/CreateTableModal').then(m => ({ default: m.CreateTableModal }))
+  import('../../modals/CreateTableModal').then(m => ({ default: m.CreateTableModal }))
 );
-import { CreateBaseModal } from '../../../../components/modals/CreateBaseModal';
-import TableOptionsMenu from '../../../../components/tables/TableOptionsMenu';
+import { CreateBaseModal } from '../../modals/CreateBaseModal';
+import TableOptionsMenu from '../../tables/TableOptionsMenu';
 
-import { SidebarFlyoutMenuProps } from '../SidebarFlyout/types';
-import { TableViewsWithData } from '../SidebarFlyout/components/TableViewsWithData';
-import { CreateViewModalWrapper } from '../SidebarFlyout/components/CreateViewModalWrapper';
-import { useWorkspaceBusinessLogic } from '../../data/workspaceBusinessLogic';
-import { Loader } from '../../../../components/ui/Loader';
-import { SidebarSkeleton } from '../../../../components/common/Skeleton/SidebarSkeleton';
-import { useWorkspaceAccess } from '../../../../hooks/useWorkspaceAccess';
-import { useUpdateBase } from '../../../../hooks/useApi';
+import { SidebarProps } from './types';
+import { TableViewsWithData } from './components/TableViewsWithData';
+import { CreateViewModalWrapper } from './components/CreateViewModalWrapper';
+import { useWorkspaceBusinessLogic } from '../../../hooks/workspace/useWorkspaceBusinessLogic';
+import { Loader } from '../../ui/Loader';
+import { SidebarSkeleton } from '../../common/Skeleton/SidebarSkeleton';
+import { useWorkspaceAccess } from '../../../hooks/useWorkspaceAccess';
+import { useUpdateBase } from '../../../hooks/useApi';
 
 interface PinnedTables {
   [tableId: string]: boolean;
 }
 
-const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
+const Sidebar: React.FC<SidebarProps> = ({
   onClose,
   sidebarPosition = 'left',
   sidebarWidth = 56,
@@ -174,13 +173,6 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
     });
   }, [baseTables?.data, pinnedTables]);
 
-  // Debug logging for bases loading
-  useEffect(() => {
-
-  }, [selectedWorkspaceId, currentWorkspace, workspaceBases, basesLoading]);
-
-  // Bases dropdown removed - no longer needed
-
   // Check if we're in layout mode (no onClose function means layout mode)
   const isLayoutMode = !onClose;
 
@@ -243,9 +235,6 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
 
           if (loading) { // Use global loading from business logic
             return (
-              // <div className="text-secondary text-sm px-4 py-2 text-center">
-              //   Loading tables...
-              // </div>
               <Loader
                 text="Loading tables..."
                 textPosition="bottom"
@@ -479,7 +468,6 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
                 try {
                   const workspaceId = selectedWorkspaceId || effectiveSelectedWorkspace?.id || '';
                   if (workspaceId && showCreateTableBaseId && newTable?.data?.id) {
-                    // navigateAndPersist(workspaceId, showCreateTableBaseId, newTable.data.id, user?.id); // Removed as navigateAndPersist is not in business logic
                     // Use the provided navigation function to update URL
                     navigateToTable(workspaceId, showCreateTableBaseId, newTable.data.id);
                   }
@@ -560,10 +548,9 @@ const SidebarFlyoutMenuRefactored: React.FC<SidebarFlyoutMenuProps> = ({
           document.body
         );
       })()}
-
-      {/* Bases Dropdown removed - no longer needed */}
     </>
   );
 };
 
-export default SidebarFlyoutMenuRefactored;
+export default Sidebar;
+
