@@ -464,7 +464,7 @@ export const SecuritySection: React.FC = () => {
       </div>
 
       {/* Recent Login Activity */}
-      <div>
+              <div>
         <h3 className="text-xl font-semibold text-primary mb-6">Recent Login Activity</h3>
 
         {sessionsLoading ? (
@@ -476,7 +476,7 @@ export const SecuritySection: React.FC = () => {
             {/* Timeline with Current Session and Past Sessions */}
             {loginSessions.length > 0 ? (
               <div className="relative">
-                {/* Current/Most Recent Session */}
+            {/* Current/Most Recent Session */}
                 {currentSession && (
                   <div className="relative flex items-center pb-4">
                     {/* Timeline indicator */}
@@ -496,7 +496,7 @@ export const SecuritySection: React.FC = () => {
                       
                       {/* Browser/OS Text */}
                       <span className="text-sm font-medium text-[var(--color-brand-600)]">
-                        {currentSession.browser}{currentSession.browser_version ? ` ${currentSession.browser_version}` : ''} on {currentSession.os}
+                      {currentSession.browser}{currentSession.browser_version ? ` ${currentSession.browser_version}` : ''} on {currentSession.os}
                       </span>
                       
                       {/* Desktop Icon */}
@@ -519,10 +519,10 @@ export const SecuritySection: React.FC = () => {
                         </>
                       )}
                     </div>
-                  </div>
-                )}
+              </div>
+            )}
 
-                {/* Past Sessions */}
+            {/* Past Sessions */}
                 {pastSessions.map((session, index) => (
                   <div key={`${session.login_at}-${index}`} className="relative flex items-center pb-4">
                     {/* Timeline indicator */}
@@ -530,8 +530,8 @@ export const SecuritySection: React.FC = () => {
                       <div className="w-3 h-3 bg-gray-300 rounded-full z-10"></div>
                       {index < pastSessions.length - 1 && (
                         <div className="w-0.5 h-full bg-gray-300 mt-2" style={{ borderStyle: 'dotted' }}></div>
-                      )}
-                    </div>
+                          )}
+                        </div>
                     
                     {/* Session content - Single line with all info */}
                     <div className="flex-1 flex items-center gap-2 flex-wrap">

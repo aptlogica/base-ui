@@ -68,8 +68,8 @@ const VISIBILITY_RULES: Record<RouteType, {
     hidden: ['header-members', 'workspace-settings-button', 'workspace-dropdown', 'breadcrumb', 'administrator-settings-button'],
   },
   administrator: {
-    visible: [],
-    hidden: ['header-members', 'workspace-settings-button', 'workspace-dropdown', 'breadcrumb', 'administrator-settings-button'],
+    visible: ['workspace-settings-button'],
+    hidden: ['header-members', 'workspace-dropdown', 'breadcrumb', 'administrator-settings-button'],
   },
   view: {
     visible: ['header-members', 'breadcrumb'],

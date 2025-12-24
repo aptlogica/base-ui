@@ -434,7 +434,6 @@ const HomePage: React.FC = () => {
                   : 'border hover:border-gray-400'
               }`}
             >
-              <Clock className="w-4 h-4 text-muted-foreground" />
               <span className="font-medium text-primary">
                 {sortOption === 'recent' ? 'Recents' : sortOption === 'a-z' ? 'A-Z' : 'Z-A'}
               </span>
@@ -450,10 +449,10 @@ const HomePage: React.FC = () => {
                       setSortOption('recent');
                       setIsSortDropdownOpen(false);
                     }}
-                    className="w-full rounded-lg text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
+                    className="w-full rounded-xl text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-primary">Recent</span>
+                      <span className="text-primary">Recent</span>
                       {sortOption === 'recent' && (
                         <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
                       )}
@@ -464,10 +463,10 @@ const HomePage: React.FC = () => {
                       setSortOption('a-z');
                       setIsSortDropdownOpen(false);
                     }}
-                    className="w-full rounded-lg text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
+                    className="w-full rounded-xl text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-primary">A-Z</span>
+                      <span className="text-primary">A-Z</span>
                       {sortOption === 'a-z' && (
                         <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
                       )}
@@ -478,10 +477,10 @@ const HomePage: React.FC = () => {
                       setSortOption('z-a');
                       setIsSortDropdownOpen(false);
                     }}
-                    className="w-full rounded-lg text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
+                    className="w-full rounded-xl text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-primary">Z-A</span>
+                      <span className="text-primary">Z-A</span>
                       {sortOption === 'z-a' && (
                         <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
                       )}

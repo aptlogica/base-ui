@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { Crown, MoreVertical, ArrowUpDown, Copy, Trash2, Search, Shield, Edit } from 'lucide-react';
+import ReactDOM from 'react-dom';
+import { MoreVertical, ChevronsUpDown, Search, Edit, Trash2, Filter, Loader2 } from 'lucide-react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { AccessRoleSelector, AccessRole, RoleConfig } from './AccessRoleSelector';
+import { useUserAccessDetails } from '../../hooks/useApi';
 
 export interface Member {
   id: string;
@@ -13,6 +14,8 @@ export interface Member {
   dateJoined: string;
   avatar?: string;
   access_level?: string; // Raw access_level from API
+  last_active_at?: string;
+  last_login_at?: string;
 }
 
 interface MembersTableProps {
@@ -36,30 +39,208 @@ const getInitials = (name: string): string => {
   return name.substring(0, 2).toUpperCase();
 };
 
-const getAvatarColor = (name: string): string => {
+const getAvatarColor = (userId: string): string => {
   const colors = [
-    'bg-orange-500',
-    'bg-purple-500',
     'bg-blue-500',
     'bg-green-500',
+    'bg-purple-500',
     'bg-pink-500',
+    'bg-yellow-500',
+    'bg-red-500',
     'bg-indigo-500',
-    'bg-teal-500',
-    'bg-yellow-500'
+    'bg-cyan-500'
   ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
+  const hash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return colors[hash % colors.length];
 };
 
-const formatAccessLevel = (accessLevel: string): string => {
-  // Convert "full_access" to "Full Access", "limited_access" to "Limited Access", etc.
-  return accessLevel
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+const formatCreatedTime = (createdTime?: string) => {
+  if (!createdTime) return '-';
+
+  try {
+    const date = new Date(createdTime);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch {
+    return '-';
+  }
+};
+
+const formatLastActive = (lastActiveAt?: string, lastLoginAt?: string) => {
+  const dateStr = lastActiveAt || lastLoginAt;
+  if (!dateStr || dateStr === '0001-01-01T00:00:00Z') {
+    return '-';
+  }
+
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+
+    return date.toLocaleDateString();
+  } catch {
+    return '-';
+  }
+};
+
+// Role calculation utility
+const getOverallRoles = (member: Member): string[] => {
+  const roles: string[] = [];
+
+  if (member.access_level === 'full_access') {
+    roles.push('Co-owner');
+  } else if (member.access_level === 'limited_access') {
+    roles.push('Workspace Maintainer');
+  }
+
+  // Fallback to role if no access_level
+  if (roles.length === 0) {
+    if (member.role === 'owner') {
+      roles.push('Owner');
+    } else if (member.role === 'editor') {
+      roles.push('Workspace Member');
+    } else {
+      roles.push('Workspace Read Only');
+    }
+  }
+
+  return [...new Set(roles)]; // Remove duplicates
+};
+
+// Role pill styling
+const getRolePillStyle = (role: string) => {
+  const roleLower = role.toLowerCase();
+  if (roleLower.includes('owner')) {
+    return 'bg-green-100 text-green-700 border border-green-200';
+  } else if (roleLower.includes('co-owner')) {
+    return 'bg-green-50 text-green-600 border border-green-200';
+  } else if (roleLower.includes('workspace maintainer')) {
+    return 'bg-purple-100 text-purple-700 border border-purple-200';
+  } else if (roleLower.includes('workspace read only')) {
+    return 'bg-orange-100 text-orange-700 border border-orange-200';
+  } else if (roleLower.includes('base member')) {
+    return 'bg-red-100 text-red-700 border border-red-200';
+  } else if (roleLower.includes('base read only')) {
+    return 'bg-gray-100 text-gray-700 border border-gray-200';
+  }
+  return 'bg-gray-100 text-gray-700 border border-gray-200';
+};
+
+// Infer base role from workspace access level (TEMPORARY)
+const inferBaseRole = (workspaceAccessLevel: string): string => {
+  // TEMPORARY: Infer base role from workspace access level
+  // TODO: Replace when API provides actual base roles
+  if (workspaceAccessLevel === 'full_access') {
+    return 'Base Member';
+  }
+  return 'Base Read Only';
+};
+
+// Expandable Row Component for Access Details
+const AccessDetailsRow: React.FC<{
+  userId: string;
+  colSpan: number;
+}> = ({ userId, colSpan }) => {
+  const { data: accessDetails, isLoading, error } = useUserAccessDetails(userId);
+
+  if (isLoading) {
+    return (
+      <tr>
+        <td colSpan={colSpan} className="px-6 py-8 bg-gray-50">
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+            <span className="text-sm text-gray-500">Loading access details...</span>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  if (error) {
+    return (
+      <tr>
+        <td colSpan={colSpan} className="px-6 py-8 bg-gray-50">
+          <div className="text-center">
+            <p className="text-sm text-red-600">Failed to load access details</p>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  if (!accessDetails?.workspaces || accessDetails.workspaces.length === 0) {
+    return (
+      <tr>
+        <td colSpan={colSpan} className="px-6 py-8 bg-gray-50">
+          <div className="text-center">
+            <p className="text-sm text-gray-500">No workspace access</p>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr>
+      <td colSpan={colSpan} className="px-6 py-4 bg-gray-50">
+        <div className="border rounded-lg overflow-hidden bg-background">
+          <table className="w-full">
+            <thead className="bg-gray-100 border-b">
+              <tr>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700">Workspace(s) Access</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700">Base(s) Access</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700">Role</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {accessDetails.workspaces.map((ws: { id: string; title: string; access_level: string; bases?: Array<{ id: string; title: string }> }) => {
+                const baseCount = ws.bases?.length || 0;
+                if (baseCount === 0) {
+                  return (
+                    <tr key={ws.id} className="bg-background">
+                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">{ws.title}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500">-</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getRolePillStyle(inferBaseRole(ws.access_level))}`}>
+                          {inferBaseRole(ws.access_level)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                }
+                return ws.bases?.map((base: { id: string; title: string }, baseIndex: number) => (
+                  <tr key={`${ws.id}-${base.id}`} className="bg-background">
+                    {baseIndex === 0 && (
+                      <td rowSpan={baseCount} className="px-4 py-3 text-sm text-gray-900 font-medium align-top border-r border-gray-200">
+                        {ws.title}
+                      </td>
+                    )}
+                    <td className="px-4 py-3 text-sm text-gray-700">{base.title}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getRolePillStyle(inferBaseRole(ws.access_level))}`}>
+                        {inferBaseRole(ws.access_level)}
+                      </span>
+                    </td>
+                  </tr>
+                ));
+              })}
+            </tbody>
+          </table>
+        </div>
+      </td>
+    </tr>
+  );
 };
 
 export const MembersTable: React.FC<MembersTableProps> = ({
@@ -76,13 +257,20 @@ export const MembersTable: React.FC<MembersTableProps> = ({
 }) => {
  
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortColumn, setSortColumn] = useState<'name' | 'role' | 'date' | null>(null);
+  const [sortColumn, setSortColumn] = useState<'name' | 'role' | 'date' | 'lastActive' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [openActionsMenu, setOpenActionsMenu] = useState<string | null>(null);
   const [memberRoleDropdowns, setMemberRoleDropdowns] = useState<Record<string, AccessRole>>({});
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [expandedMembers, setExpandedMembers] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState<string | null>(null);
+  const [isRoleFilterOpen, setIsRoleFilterOpen] = useState(false);
+  const itemsPerPage = 10;
   const actionsMenuRef = useRef<HTMLDivElement>(null);
   const actionButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
+  const roleFilterRef = useRef<HTMLDivElement>(null);
+  const roleFilterButtonRef = useRef<HTMLButtonElement>(null);
 
   // Filter members based on search
   const filteredMembers = useMemo(() => {
@@ -90,6 +278,14 @@ export const MembersTable: React.FC<MembersTableProps> = ({
       member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       member.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    // Filter by role
+    if (selectedRoleFilter) {
+      filtered = filtered.filter(member => {
+        const roles = getOverallRoles(member);
+        return roles.some(role => role.toLowerCase() === selectedRoleFilter.toLowerCase());
+      });
+    }
 
     // Sort members
     if (sortColumn) {
@@ -101,12 +297,16 @@ export const MembersTable: React.FC<MembersTableProps> = ({
             bVal = b.name.toLowerCase();
             break;
           case 'role':
-            aVal = a.role;
-            bVal = b.role;
+            aVal = a.access_level || a.role;
+            bVal = b.access_level || b.role;
             break;
           case 'date':
-            aVal = parseInt(a.dateJoined) || 0;
-            bVal = parseInt(b.dateJoined) || 0;
+            aVal = a.dateJoined ? new Date(a.dateJoined).getTime() : 0;
+            bVal = b.dateJoined ? new Date(b.dateJoined).getTime() : 0;
+            break;
+          case 'lastActive':
+            aVal = (a.last_active_at || a.last_login_at) ? new Date(a.last_active_at || a.last_login_at || '').getTime() : 0;
+            bVal = (b.last_active_at || b.last_login_at) ? new Date(b.last_active_at || b.last_login_at || '').getTime() : 0;
             break;
           default:
             return 0;
@@ -119,15 +319,35 @@ export const MembersTable: React.FC<MembersTableProps> = ({
     }
 
     return filtered;
-  }, [members, searchQuery, sortColumn, sortDirection]);
+  }, [members, searchQuery, selectedRoleFilter, sortColumn, sortDirection]);
 
-  const handleSort = (column: 'name' | 'role' | 'date') => {
+  // Pagination
+  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
+  const paginatedMembers = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return filteredMembers.slice(start, end);
+  }, [filteredMembers, currentPage]);
+
+  const handleSort = (column: 'name' | 'role' | 'date' | 'lastActive') => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortColumn(column);
       setSortDirection('asc');
     }
+  };
+
+  const handleExpand = (memberId: string) => {
+    setExpandedMembers(prev => {
+      const next = new Set(prev);
+      if (next.has(memberId)) {
+        next.delete(memberId);
+      } else {
+        next.add(memberId);
+      }
+      return next;
+    });
   };
 
   const handleRoleChange = (memberId: string, newRole: AccessRole) => {
@@ -167,32 +387,25 @@ export const MembersTable: React.FC<MembersTableProps> = ({
       const scrollX = window.scrollX;
       const scrollY = window.scrollY;
 
-      // Get menu width (estimate or actual if rendered)
-      const menuWidth = actionsMenuRef.current?.offsetWidth || 200; // min-w-[200px]
+      const menuWidth = actionsMenuRef.current?.offsetWidth || 192;
 
-      // Calculate left position - align to right edge of button
       let left = rect.right + scrollX - menuWidth;
-
-      // Adjust if menu would go off-screen
       const margin = 10;
       if (left < margin) {
-        left = rect.left + scrollX; // Fallback to left edge
+        left = rect.left + scrollX;
       } else if (left + menuWidth > viewportWidth - margin) {
         left = viewportWidth - menuWidth - margin;
       }
 
-      // Calculate top position
       let top = rect.bottom + scrollY + 4;
       const spaceBelow = viewportHeight - rect.bottom;
       const spaceAbove = rect.top;
       const estimatedHeight = actionsMenuRef.current?.offsetHeight || 100;
 
-      // If not enough space below, open above
       if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
         top = rect.top + scrollY - estimatedHeight - 4;
       }
 
-      // Adjust vertical position for viewport boundaries
       if (top < scrollY + margin) {
         top = scrollY + margin;
       } else if (top + estimatedHeight > scrollY + viewportHeight - margin) {
@@ -214,177 +427,253 @@ export const MembersTable: React.FC<MembersTableProps> = ({
     excludeRefs: [actionsMenuRef]
   });
 
+  // Close role filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isRoleFilterOpen && roleFilterRef.current && !roleFilterRef.current.contains(event.target as Node) &&
+          roleFilterButtonRef.current && !roleFilterButtonRef.current.contains(event.target as Node)) {
+        setIsRoleFilterOpen(false);
+      }
+    };
+
+    if (isRoleFilterOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isRoleFilterOpen]);
+
+  // Available roles for filtering
+  const availableRoles = ['Owner', 'Co-owner', 'Workspace Maintainer', 'Workspace Read Only', 'Base Member', 'Base Read Only'];
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedRoleFilter, searchQuery]);
+
   return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Members Table */}
-      <div className="bg-card rounded-xl border overflow-hidden">
-        {/* Header with Search and Actions */}
-        {(showSearch || editorSeats !== undefined || headerActions) && (
-          <div className="p-3">
-            <div className="flex items-center justify-between gap-3">
-              {/* Search Bar */}
-              {showSearch && (
-                <div className="relative min-w-96">
-                  <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+    <div className="bg-card rounded-xl border overflow-hidden">
+      {/* Header */}
+      <div className="p-4 border-b">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold text-primary">Workspace Members</h2>
+          <div className="flex items-center gap-3">
+            {showSearch && (
+              <>
+                <div className="relative w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search members"
+                    placeholder="Search"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full text-xs pl-9 pr-4 py-2 h-11 border flex items-center rounded-[var(--radius-lg)] text-[var(--color-text-primary)] focus:border-[--color-brand-600] placeholder:text-[var(--color-text-placeholder)] bg-[--color-alpha-white] truncate overflow-ellipsis whitespace-nowrap outline-none cursor-pointer transition-all duration-200"
+                    className="w-full text-xs pl-9 pr-4 py-2 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-background outline-none transition-all"
                   />
                 </div>
-              )}
+                <div className="relative" ref={roleFilterRef}>
+                  <button
+                    ref={roleFilterButtonRef}
+                    onClick={() => setIsRoleFilterOpen(!isRoleFilterOpen)}
+                    className={`px-4 py-2 text-sm border rounded-lg flex items-center gap-2 transition-colors ${
+                      selectedRoleFilter
+                        ? 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100'
+                        : 'border text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Filter className="w-4 h-4" />
+                    Filter
+                    {selectedRoleFilter && (
+                      <span className="ml-1 px-1.5 py-0.5 bg-blue-200 text-blue-800 rounded text-xs">
+                        {selectedRoleFilter}
+                      </span>
+                    )}
+                  </button>
 
-              <div className="flex items-center gap-4">
-                {/* Editor Seats */}
-                {editorSeats !== undefined && (
-                  <div className="flex items-center gap-2 text-sm text-gray-700">
-                    <Crown className="w-4 h-4 text-yellow-500" />
-                    <span className="font-medium">{editorSeats} Editor seats</span>
-                  </div>
-                )}
-
-                {/* Header Actions (e.g., Add Member button) */}
-                {headerActions && (
-                  <div className="flex-shrink-0">
-                    {headerActions}
-                  </div>
-                )}
-              </div>
-            </div>
+                  {/* Role Filter Dropdown */}
+                  {isRoleFilterOpen && (
+                    <div className="absolute top-full right-0 mt-2 w-64 bg-card border rounded-lg shadow-lg z-[9999] max-h-64 overflow-y-auto">
+                      <div className="p-2">
+                        <button
+                          onClick={() => {
+                            setSelectedRoleFilter(null);
+                            setIsRoleFilterOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors ${
+                            !selectedRoleFilter ? 'bg-gray-100 font-medium' : ''
+                          }`}
+                        >
+                          All Roles
+                        </button>
+                        {availableRoles.map((role) => (
+                          <button
+                            key={role}
+                            onClick={() => {
+                              setSelectedRoleFilter(role);
+                              setIsRoleFilterOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors ${
+                              selectedRoleFilter === role ? 'bg-gray-100 font-medium' : ''
+                            }`}
+                          >
+                            {role}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+            {headerActions}
           </div>
-        )}
+        </div>
+      </div>
 
-        {/* Members Table */}
-        <div className="bg-white border-t border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto max-h-[calc(100vh-300px)] overflow-y-auto">
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+            <thead className="bg-gray-50 border-b sticky top-0 z-10">
               <tr>
-                {/* Members Column */}
                 <th className="px-6 py-3 text-left">
                   <button
                     onClick={() => handleSort('name')}
                     className="flex items-center gap-2 text-xs text-gray-700 font-semibold hover:text-gray-900"
                   >
-                    Members
-                    <ArrowUpDown className="w-3 h-3" />
+                    User
+                    <ChevronsUpDown className="w-3 h-3" />
                   </button>
                 </th>
-
-                {/* Access Column */}
                 <th className="px-6 py-3 text-left">
                   <button
                     onClick={() => handleSort('role')}
                     className="flex items-center gap-2 text-xs text-gray-700 font-semibold hover:text-gray-900"
                   >
-                    Access
-                    <ArrowUpDown className="w-3 h-3" />
+                    Role
+                    <ChevronsUpDown className="w-3 h-3" />
                   </button>
                 </th>
-
-                {/* Date Joined Column */}
                 <th className="px-6 py-3 text-left">
                   <button
                     onClick={() => handleSort('date')}
                     className="flex items-center gap-2 text-xs text-gray-700 font-semibold hover:text-gray-900"
                   >
-                    Date Joined
-                    <ArrowUpDown className="w-3 h-3" />
+                    Joined Date
+                    <ChevronsUpDown className="w-3 h-3" />
                   </button>
                 </th>
-
-                {/* Actions Column */}
-                <th className="px-6 py-3 text-right">
-                  <span className="text-xs text-gray-700 font-semibold hover:text-gray-900">Actions</span>
+                <th className="px-6 py-3 text-left">
+                  <button
+                    onClick={() => handleSort('lastActive')}
+                    className="flex items-center gap-2 text-xs text-gray-700 font-semibold hover:text-gray-900"
+                  >
+                    Last Active
+                    <ChevronsUpDown className="w-3 h-3" />
+                  </button>
                 </th>
+                {(onRemoveMember || onEditMember) && (
+                  <th className="px-6 py-3 text-left">
+                    <span className="text-xs text-gray-700 font-semibold">Actions</span>
+                  </th>
+                )}
               </tr>
             </thead>
-            <tbody className="bg-background divide-y divide-gray-200">
-              {filteredMembers.length === 0 ? (
+            <tbody className="divide-y divide-gray-200">
+              {paginatedMembers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={4 + (onRemoveMember || onEditMember ? 1 : 0)} className="px-6 py-12 text-center text-gray-500">
                     No members found
                   </td>
                 </tr>
               ) : (
-                filteredMembers.map((member) => {
+                paginatedMembers.map((member) => {
+                  const avatarColor = getAvatarColor(member.userId);
                   const initials = getInitials(member.name);
-                  const avatarColor = getAvatarColor(member.name);
-                  const currentRole = memberRoleDropdowns[member.id] || member.role;
+                  const isExpanded = expandedMembers.has(member.id);
+                  const roles = getOverallRoles(member);
 
                   return (
-                    <tr key={member.id} className="bg-card hover:bg-[var(--color-hover-bg)] transition-colors">
-                      {/* Member Info */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          {member.avatar ? (
-                            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                              <img
-                                src={member.avatar}
-                                alt={member.name}
-                                className="w-full h-full object-cover"
-                              />
+                    <React.Fragment key={member.id}>
+                      <tr className="bg-card hover:bg-gray-50 transition-colors">
+                        {/* User Info */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            {member.avatar ? (
+                              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                                <img
+                                  src={member.avatar}
+                                  alt={member.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className={`w-10 h-10 ${avatarColor} rounded-full flex items-center justify-center text-white text-sm font-semibold`}>
+                                {initials}
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                              <p className="text-xs text-gray-500">{member.email}</p>
                             </div>
-                          ) : (
-                            <div className={`w-10 h-10 rounded-full ${avatarColor} flex items-center justify-center text-white font-semibold text-sm`}>
-                              {initials}
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-gray-900 truncate">{member.name}</span>
-                              {member.role === 'owner' && <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />}
-                            </div>
-                            <div className="text-sm text-gray-500 truncate">{member.email}</div>
                           </div>
+                        </td>
+
+                      {/* Role */}
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex flex-wrap gap-1.5">
+                            {roles.map((role, idx) => (
+                              <span
+                                key={idx}
+                                className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getRolePillStyle(role)}`}
+                              >
+                                {role}
+                              </span>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => handleExpand(member.id)}
+                            className="text-xs text-primary hover:underline self-start"
+                          >
+                            {isExpanded ? 'Collapse ↑' : 'View in detail ↓'}
+                          </button>
                         </div>
                       </td>
 
-                      {/* Access/Role */}
+                      {/* Joined Date */}
                       <td className="px-6 py-4">
-                        {member.access_level ? (
-                          // Display formatted access_level from API
-                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border bg-purple-100 text-purple-700 border-purple-200">
-                            <Shield className="w-3 h-3" />
-                            {formatAccessLevel(member.access_level)}
-                          </div>
-                        ) : onRoleChange ? (
-                          <AccessRoleSelector
-                            value={currentRole}
-                            onChange={(newRole) => handleRoleChange(member.id, newRole)}
-                            roleConfig={roleConfig}
-                            className="w-auto"
-                          />
-                        ) : (
-                          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border ${roleConfig[member.role].color}`}>
-                            {React.createElement(roleConfig[member.role].icon, { className: 'w-3 h-3' })}
-                            {roleConfig[member.role].label}
-                          </div>
-                        )}
+                        <p className="text-sm text-gray-600">{formatCreatedTime(member.dateJoined)}</p>
                       </td>
 
-                      {/* Date Joined */}
+                      {/* Last Active */}
                       <td className="px-6 py-4">
-                        <span className="text-sm text-gray-600">{member.dateJoined}</span>
+                        <p className="text-sm text-gray-600">{formatLastActive(member.last_active_at, member.last_login_at)}</p>
                       </td>
 
                       {/* Actions */}
-                      <td className="px-6 py-4 text-right">
-                        <div className="relative inline-block">
+                      {(onRemoveMember || onEditMember) && (
+                        <td className="px-6 py-4">
                           <button
                             ref={(el) => {
                               if (el) actionButtonRefs.current[member.id] = el;
                             }}
                             onClick={() => setOpenActionsMenu(openActionsMenu === member.id ? null : member.id)}
-                            className="p-1.5 rounded-xl hover:bg-[var(--color-hover-bg)] transition-colors"
+                            className="p-1 rounded hover:bg-gray-200 transition-colors"
+                            aria-label="More actions"
                           >
-                            <MoreVertical className="w-5 h-5 icons-bg" />
+                            <MoreVertical className="w-4 h-4 text-gray-600" />
                           </button>
-                        </div>
-                      </td>
+                        </td>
+                      )}
                     </tr>
+
+                      {/* Expanded Access Details Row */}
+                      {isExpanded && (
+                        <AccessDetailsRow
+                          userId={member.userId}
+                          colSpan={4 + (onRemoveMember || onEditMember ? 1 : 0)}
+                        />
+                      )}
+                    </React.Fragment>
                   );
                 })
               )}
@@ -392,54 +681,72 @@ export const MembersTable: React.FC<MembersTableProps> = ({
           </table>
         </div>
       </div>
-      </div>
+
+      {/* Footer with Pagination */}
+      {totalPages > 1 && (
+        <div className="px-6 py-4 bg-gray-50 border-t flex items-center justify-center">
+          <div className="flex items-center gap-2">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+              if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1 text-sm rounded-lg ${currentPage === page
+                      ? 'bg-gray-200 text-gray-900'
+                      : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                  >
+                    {page}
+                  </button>
+                );
+              } else if (page === currentPage - 2 || page === currentPage + 2) {
+                return <span key={page} className="px-2 text-sm text-gray-500">...</span>;
+              }
+              return null;
+            })}
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 text-sm border rounded-lg text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Actions Menu Portal */}
-      {openActionsMenu && menuPosition && (() => {
-        const member = filteredMembers.find(m => m.id === openActionsMenu);
-        if (!member) return null;
-
-        return createPortal(
-          <div
-            ref={actionsMenuRef}
-            className="fixed bg-card border shadow-sm rounded-xl z-50 min-w-[200px] p-1.5"
-            style={{
-              top: `${menuPosition.top}px`,
-              left: `${menuPosition.left - 20}px`
-            }}
-          >
-            {/* {onCopyUserId && (
-              <button
-                onClick={() => handleCopyUserId(member.userId)}
-                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left text-primary rounded-xl"
-              >
-                <Copy className="w-4 h-4" />
-                <span>USER ID: {member.userId}</span>
-              </button>
-            )} */}
-            {onEditMember && (
-              <button
-                onClick={() => handleEditMember(openActionsMenu)}
-                className={`w-full flex items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-gray-50 ${!onCopyUserId ? 'rounded-xl' : ''} rounded-xl`}
-              >
-                <Edit className="w-4 h-4" />
-                Edit member
-              </button>
-            )}
-            {onRemoveMember && (
-              <button
-                onClick={() => handleRemoveMember(openActionsMenu)}
-                className={`w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 ${!onCopyUserId ? 'rounded-xl' : ''} rounded-xl`}
-              >
-                <Trash2 className="w-4 h-4" />
-                Remove member
-              </button>
-            )}
-          </div>,
-          document.body
-        );
-      })()}
+      {openActionsMenu && menuPosition && ReactDOM.createPortal(
+        <div
+          ref={actionsMenuRef}
+          className="fixed w-60 bg-card border rounded-xl shadow-lg z-50 p-1.5"
+          style={{
+            top: `${menuPosition.top}px`,
+            left: `${menuPosition.left}px`,
+          }}
+        >
+          {onEditMember && (
+            <button
+              onClick={() => handleEditMember(openActionsMenu)}
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl flex items-center gap-2"
+            >
+              <Edit className="w-4 h-4" />
+              Edit Details
+            </button>
+          )}
+          {onRemoveMember && (
+            <button
+              onClick={() => handleRemoveMember(openActionsMenu)}
+              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Remove Member
+            </button>
+          )}
+        </div>,
+        document.body
+      )}
     </div>
   );
 };
-

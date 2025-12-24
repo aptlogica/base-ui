@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { useWorkspaceDataService } from '../../hooks/workspace/useWorkspaceDataService';
 import { ChevronRight, ChevronDown, Database, Sheet, Plus } from 'lucide-react';
-import { useWorkspaceBases, useBaseTables, useTableViews, useUpdateBase, useDeleteBase, useCreateBase, useCreateTable } from '../../hooks/useApi';
+import { useWorkspaceBases, useBaseTables, useTableViews, useUpdateBase, useDeleteBase, useCreateBase /*, useCreateTable */ } from '../../hooks/useApi';
 import { getViewIconInfo } from '../../types/viewTypes';
 import { useNavigateToBaseFirstView } from '../../hooks/useNavigateToBaseFirstView';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
@@ -12,7 +12,7 @@ import { BaseMenu } from './BaseMenu';
 import { EditItemModal } from '../modals/EditItemModal';
 import { AssignUserToWorkspaceModal } from '../modals/AssignUserToWorkspaceModal';
 import { CreateBaseModal } from '../modals/CreateBaseModal';
-import { CreateTableModal } from '../modals/CreateTableModal';
+// import { CreateTableModal } from '../modals/CreateTableModal'; // COMMENTED OUT: Create table functionality
 import { useNavigationActions } from '../../hooks/useNavigationActions';
 import { useToast } from './Toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -42,11 +42,11 @@ const Breadcrumb: React.FC = () => {
   const toast = useToast();
   const { selectedWorkspaceId, selectedBaseId, selectedTableId, selectedViewId } = useNavigationStore();
   const { navigateToFirstView } = useNavigateToBaseFirstView();
-  const { canCreateBase, canCreateTable, canCreateView, canUpdateBase, canDeleteBase, canAssignUsers } = useWorkspaceAccess(selectedWorkspaceId || undefined);
+  const { canCreateBase, /* canCreateTable, canCreateView, */ canUpdateBase, canDeleteBase, canAssignUsers } = useWorkspaceAccess(selectedWorkspaceId || undefined);
   const updateBaseMutation = useUpdateBase();
   const deleteBaseMutation = useDeleteBase();
   const createBaseMutation = useCreateBase();
-  const createTableMutation = useCreateTable();
+  // const createTableMutation = useCreateTable(); // COMMENTED OUT: Create table functionality
   const { handleBaseDeletion } = useNavigationActions();
 
   // State for base actions
@@ -59,7 +59,7 @@ const Breadcrumb: React.FC = () => {
 
   // State for create modals
   const [showCreateBase, setShowCreateBase] = useState(false);
-  const [showCreateTable, setShowCreateTable] = useState(false);
+  // const [showCreateTable, setShowCreateTable] = useState(false); // COMMENTED OUT: Create table functionality
 
   // Get data for breadcrumb items
   const { baseByIdQuery, tableByIdQuery, viewByIdQuery } = useWorkspaceDataService(
@@ -365,42 +365,43 @@ const Breadcrumb: React.FC = () => {
     }
   };
 
-  const handleCreateTable = async ({ name, description }: { name: string; description: string }) => {
-    if (!selectedWorkspaceId || !selectedBaseId) {
-      toast.error('Please select a workspace and base first');
-      return;
-    }
+  // COMMENTED OUT: Create Table functionality
+  // const handleCreateTable = async ({ name, description }: { name: string; description: string }) => {
+  //   if (!selectedWorkspaceId || !selectedBaseId) {
+  //     toast.error('Please select a workspace and base first');
+  //     return;
+  //   }
 
-    try {
-      // Get the count of existing tables to set order_index
-      const existingTables = baseTablesQuery.data?.data || [];
-      const order_index = existingTables.length;
+  //   try {
+  //     // Get the count of existing tables to set order_index
+  //     const existingTables = baseTablesQuery.data?.data || [];
+  //     const order_index = existingTables.length;
 
-      const newTable = await createTableMutation.mutateAsync({
-        base_id: selectedBaseId,
-        workspace_id: selectedWorkspaceId,
-        title: name,
-        description: description || '',
-        order_index
-      });
+  //     const newTable = await createTableMutation.mutateAsync({
+  //       base_id: selectedBaseId,
+  //       workspace_id: selectedWorkspaceId,
+  //       title: name,
+  //       description: description || '',
+  //       order_index
+  //     });
 
-      // Invalidate queries to refresh the tables list
-      queryClient.invalidateQueries({ queryKey: ['bases', selectedBaseId, 'tables'] });
-      queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
+  //     // Invalidate queries to refresh the tables list
+  //     queryClient.invalidateQueries({ queryKey: ['bases', selectedBaseId, 'tables'] });
+  //     queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
 
-      toast.success('Table created successfully');
-      setShowCreateTable(false);
+  //     toast.success('Table created successfully');
+  //     setShowCreateTable(false);
 
-      // Navigate to the newly created table
-      if (newTable?.data?.id) {
-        const { navigateToTable } = useNavigationStore.getState();
-        navigateToTable(selectedWorkspaceId, selectedBaseId, newTable.data.id);
-        navigate(`/base/${selectedBaseId}/table/${newTable.data.id}/grid`);
-      }
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to create table. Please try again.');
-    }
-  };
+  //     // Navigate to the newly created table
+  //     if (newTable?.data?.id) {
+  //       const { navigateToTable } = useNavigationStore.getState();
+  //       navigateToTable(selectedWorkspaceId, selectedBaseId, newTable.data.id);
+  //       navigate(`/base/${selectedBaseId}/table/${newTable.data.id}/grid`);
+  //     }
+  //   } catch (err: any) {
+  //     toast.error(err?.message || 'Failed to create table. Please try again.');
+  //   }
+  // };
 
   // Get dropdown items for each level
   const getBaseDropdownItems = (): DropdownItem[] => {
@@ -625,7 +626,8 @@ const Breadcrumb: React.FC = () => {
                     )}
 
                     {/* Create Button - always visible at bottom if user has permission */}
-                    {((item.type === 'base' && canCreateBase()) ||
+                    {/* COMMENTED OUT: Create Table and Create View functionality */}
+                    {/* {((item.type === 'base' && canCreateBase()) ||
                       (item.type === 'table' && canCreateTable()) ||
                       (item.type === 'view' && canCreateView())) && (
                         <div className="p-2 flex-shrink-0">
@@ -658,7 +660,31 @@ const Breadcrumb: React.FC = () => {
                             </span>
                           </button>
                         </div>
-                      )}
+                      )} */}
+                    {/* Only show Create Base button */}
+                    {item.type === 'base' && canCreateBase() && (
+                      <div className="p-2 flex-shrink-0">
+                        <button
+                          className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-muted/30 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={(e) => {
+                            e.stopPropagation();
+
+                            // Close dropdown first
+                            setOpenDropdown(null);
+                            setDropdownPosition(null);
+                            ignoreNextClickRef.current = true;
+
+                            // Open create base modal
+                            setShowCreateBase(true);
+                          }}
+                        >
+                          <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
+                            <Plus className="w-4 h-4 text-primary" />
+                          </div>
+                          <span>Create New Base</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>,
                 document.body
@@ -774,8 +800,8 @@ const Breadcrumb: React.FC = () => {
         />
       )}
 
-      {/* Create Table Modal */}
-      {showCreateTable && selectedBaseId && (
+      {/* COMMENTED OUT: Create Table Modal */}
+      {/* {showCreateTable && selectedBaseId && (
         <CreateTableModal
           isOpen={showCreateTable}
           onClose={() => setShowCreateTable(false)}
@@ -783,7 +809,7 @@ const Breadcrumb: React.FC = () => {
           baseId={selectedBaseId}
           existingTables={(baseTablesQuery.data?.data || [])}
         />
-      )}
+      )} */}
     </nav>
   );
 };

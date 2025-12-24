@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { MoreVertical, Search, ArrowUpDown, Info, UserX, UserCheck, Trash2 } from 'lucide-react';
+import { MoreVertical, Search, ChevronsUpDown, UserX, UserCheck, Trash2, Filter, Edit, Loader2 } from 'lucide-react';
 import { useUserRole } from '../../hooks/useUserRole';
 import { UserAccessDetailsModal } from '../modals/UserAccessDetailsModal';
-import { formatCompactNumber } from '../../utils/helpers';
+import { useUserAccessDetails } from '../../hooks/useApi';
 
 export interface TenantUser {
   id: string;
@@ -17,8 +17,32 @@ export interface TenantUser {
   timezone: string;
   locale: string;
   last_login_at?: string;
+  last_active_at?: string;
   created_at?: string;
   created_time?: string;
+  roles: string; // "Admin" or "User"
+  activity_data?: {
+    last_workspace_id?: string;
+    last_base_id?: string;
+    login_sessions?: Array<{
+      browser: string;
+      timezone: string;
+      language: string;
+    }>;
+  };
+}
+
+interface UserAccessDetailsResponse {
+  workspaces: Array<{
+    id: string;
+    title: string;
+    access_level: string;
+    bases: Array<{
+      id: string;
+      title: string;
+      // TODO: Add role field when API provides it
+    }>;
+  }>;
 }
 
 interface UserTableProps {
@@ -49,6 +73,7 @@ const getStatusBadge = (status: string, emailVerified: boolean) => {
       return { text: status || 'Active', color: 'bg-blue-100 text-blue-700' };
   }
 };
+
 const getTimezoneName = (timezone: string) => {
   if (!timezone || timezone.trim() === '') {
     return '-';
@@ -71,13 +96,14 @@ const formatCreatedTime = (createdTime?: string) => {
   }
 };
 
-const formatLastActive = (lastActiveAt?: string) => {
-  if (!lastActiveAt || lastActiveAt === '0001-01-01T00:00:00Z') {
+const formatLastActive = (lastActiveAt?: string, lastLoginAt?: string) => {
+  const dateStr = lastActiveAt || lastLoginAt;
+  if (!dateStr || dateStr === '0001-01-01T00:00:00Z') {
     return '-';
   }
 
   try {
-    const date = new Date(lastActiveAt);
+    const date = new Date(dateStr);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
@@ -117,6 +143,190 @@ const getAvatarColor = (userId: string) => {
   return colors[hash % colors.length];
 };
 
+// Language mapping utility
+const localeToLanguage: Record<string, string> = {
+  'en': 'English',
+  'ja': 'Japanese',
+  'es': 'Spanish',
+  'fr': 'French',
+  'de': 'German',
+  'zh': 'Chinese',
+  'en-IN': 'English',
+  'en-US': 'English',
+  'en-GB': 'English',
+};
+
+const getLanguageDisplay = (locale: string): string => {
+  if (!locale) return '-';
+  return localeToLanguage[locale] || locale || '-';
+};
+
+// Role calculation utility
+const getOverallRoles = (user: TenantUser, accessDetails?: UserAccessDetailsResponse): string[] => {
+  const roles: string[] = [];
+
+  // Tenant-level role
+  if (user.roles === 'Admin') {
+    roles.push('Owner');
+  }
+
+  // Workspace/base roles (from access details if available)
+  if (accessDetails?.workspaces) {
+    accessDetails.workspaces.forEach(ws => {
+      if (ws.access_level === 'full_access') {
+        // Check if already has Owner role, if not add Co-owner
+        if (!roles.includes('Owner')) {
+          roles.push('Co-owner');
+        }
+      } else if (ws.access_level === 'limited_access') {
+        roles.push('Workspace Maintainer');
+      }
+
+      // Base roles - TEMPORARY: infer from workspace access_level
+      // TODO: Replace when API provides base-level roles
+      if (ws.bases && ws.bases.length > 0) {
+        if (ws.access_level === 'full_access') {
+          roles.push('Base Member');
+        } else {
+          roles.push('Base Read Only');
+        }
+      }
+    });
+  }
+
+  // Fallback: if no roles found, use tenant role
+  if (roles.length === 0) {
+    roles.push(user.roles === 'Admin' ? 'Owner' : 'User');
+  }
+
+  return [...new Set(roles)]; // Remove duplicates
+};
+
+// Role pill styling
+const getRolePillStyle = (role: string) => {
+  const roleLower = role.toLowerCase();
+  if (roleLower.includes('owner')) {
+    return 'bg-green-100 text-green-700 border border-green-200';
+  } else if (roleLower.includes('co-owner')) {
+    return 'bg-green-50 text-green-600 border border-green-200';
+  } else if (roleLower.includes('workspace maintainer')) {
+    return 'bg-purple-100 text-purple-700 border border-purple-200';
+  } else if (roleLower.includes('workspace read only')) {
+    return 'bg-orange-100 text-orange-700 border border-orange-200';
+  } else if (roleLower.includes('base member')) {
+    return 'bg-red-100 text-red-700 border border-red-200';
+  } else if (roleLower.includes('base read only')) {
+    return 'bg-gray-100 text-gray-700 border border-gray-200';
+  }
+  return 'bg-gray-100 text-gray-700 border border-gray-200';
+};
+
+// Infer base role from workspace access level (TEMPORARY)
+const inferBaseRole = (workspaceAccessLevel: string): string => {
+  // TEMPORARY: Infer base role from workspace access level
+  // TODO: Replace when API provides actual base roles
+  if (workspaceAccessLevel === 'full_access') {
+    return 'Base Member';
+  }
+  return 'Base Read Only';
+};
+
+// Expandable Row Component for Access Details
+const AccessDetailsRow: React.FC<{
+  userId: string;
+  colSpan: number;
+}> = ({ userId, colSpan }) => {
+  const { data: accessDetails, isLoading, error } = useUserAccessDetails(userId);
+
+  if (isLoading) {
+    return (
+      <tr>
+        <td colSpan={colSpan} className="px-6 py-8 bg-gray-50">
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+            <span className="text-sm text-gray-500">Loading access details...</span>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  if (error) {
+    return (
+      <tr>
+        <td colSpan={colSpan} className="px-6 py-8 bg-gray-50">
+          <div className="text-center">
+            <p className="text-sm text-red-600">Failed to load access details</p>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  if (!accessDetails?.workspaces || accessDetails.workspaces.length === 0) {
+    return (
+      <tr>
+        <td colSpan={colSpan} className="px-6 py-8 bg-gray-50">
+          <div className="text-center">
+            <p className="text-sm text-gray-500">No workspace access</p>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr>
+      <td colSpan={colSpan} className="px-6 py-4 bg-gray-50">
+        <div className="border rounded-lg overflow-hidden bg-background">
+          <table className="w-full">
+            <thead className="bg-gray-100 border-b">
+              <tr>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700">Workspace(s) Access</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700">Base(s) Access</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700">Role</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {accessDetails.workspaces.map((ws: { id: string; title: string; access_level: string; bases?: Array<{ id: string; title: string }> }) => {
+                const baseCount = ws.bases?.length || 0;
+                if (baseCount === 0) {
+                  return (
+                    <tr key={ws.id} className="bg-background">
+                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">{ws.title}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500">-</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getRolePillStyle(inferBaseRole(ws.access_level))}`}>
+                          {inferBaseRole(ws.access_level)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                }
+                return ws.bases?.map((base: { id: string; title: string }, baseIndex: number) => (
+                  <tr key={`${ws.id}-${base.id}`} className="bg-background">
+                    {baseIndex === 0 && (
+                      <td rowSpan={baseCount} className="px-4 py-3 text-sm text-gray-900 font-medium align-top border-r border-gray-200">
+                        {ws.title}
+                      </td>
+                    )}
+                    <td className="px-4 py-3 text-sm text-gray-700">{base.title}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getRolePillStyle(inferBaseRole(ws.access_level))}`}>
+                        {inferBaseRole(ws.access_level)}
+                      </span>
+                    </td>
+                  </tr>
+                ));
+              })}
+            </tbody>
+          </table>
+        </div>
+      </td>
+    </tr>
+  );
+};
+
 export const UserTable: React.FC<UserTableProps> = ({
   users,
   onRemoveUser,
@@ -128,13 +338,20 @@ export const UserTable: React.FC<UserTableProps> = ({
 }) => {
   const { isAdmin } = useUserRole();
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortColumn, setSortColumn] = useState<'name' | 'status' | 'lastActive' | 'timezone' | 'createdTime' | null>(null);
+  const [sortColumn, setSortColumn] = useState<'name' | 'role' | 'status' | 'joinedDate' | 'lastActive' | 'language' | 'timezone' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [accessDetailsUserId, setAccessDetailsUserId] = useState<string | null>(null);
+  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState<string | null>(null);
+  const [isRoleFilterOpen, setIsRoleFilterOpen] = useState(false);
+  const itemsPerPage = 10;
   const actionButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
   const menuRef = useRef<HTMLDivElement>(null);
+  const roleFilterRef = useRef<HTMLDivElement>(null);
+  const roleFilterButtonRef = useRef<HTMLButtonElement>(null);
 
   const filteredUsers = useMemo(() => {
     let filtered = users;
@@ -150,6 +367,14 @@ export const UserTable: React.FC<UserTableProps> = ({
       );
     }
 
+    // Filter by role
+    if (selectedRoleFilter) {
+      filtered = filtered.filter(user => {
+        const roles = getOverallRoles(user);
+        return roles.some(role => role.toLowerCase() === selectedRoleFilter.toLowerCase());
+      });
+    }
+
     // Sort users
     if (sortColumn) {
       filtered = [...filtered].sort((a, b) => {
@@ -159,21 +384,30 @@ export const UserTable: React.FC<UserTableProps> = ({
             aVal = (a.display_name || `${a.first_name} ${a.last_name}`).toLowerCase();
             bVal = (b.display_name || `${b.first_name} ${b.last_name}`).toLowerCase();
             break;
+          case 'role':
+            // Sort by tenant role for now
+            aVal = a.roles?.toLowerCase() || '';
+            bVal = b.roles?.toLowerCase() || '';
+            break;
           case 'status':
             aVal = a.status?.toLowerCase() || '';
             bVal = b.status?.toLowerCase() || '';
             break;
+          case 'joinedDate':
+            aVal = (a.created_time || a.created_at) ? new Date(a.created_time || a.created_at || '').getTime() : 0;
+            bVal = (b.created_time || b.created_at) ? new Date(b.created_time || b.created_at || '').getTime() : 0;
+            break;
           case 'lastActive':
-            aVal = a.last_login_at ? new Date(a.last_login_at).getTime() : 0;
-            bVal = b.last_login_at ? new Date(b.last_login_at).getTime() : 0;
+            aVal = (a.last_active_at || a.last_login_at) ? new Date(a.last_active_at || a.last_login_at || '').getTime() : 0;
+            bVal = (b.last_active_at || b.last_login_at) ? new Date(b.last_active_at || b.last_login_at || '').getTime() : 0;
+            break;
+          case 'language':
+            aVal = getLanguageDisplay(a.locale).toLowerCase();
+            bVal = getLanguageDisplay(b.locale).toLowerCase();
             break;
           case 'timezone':
             aVal = a.timezone?.toLowerCase() || '';
             bVal = b.timezone?.toLowerCase() || '';
-            break;
-          case 'createdTime':
-            aVal = (a.created_time || a.created_at) ? new Date(a.created_time || a.created_at || '').getTime() : 0;
-            bVal = (b.created_time || b.created_at) ? new Date(b.created_time || b.created_at || '').getTime() : 0;
             break;
           default:
             return 0;
@@ -186,15 +420,35 @@ export const UserTable: React.FC<UserTableProps> = ({
     }
 
     return filtered;
-  }, [users, searchTerm, sortColumn, sortDirection]);
+  }, [users, searchTerm, selectedRoleFilter, sortColumn, sortDirection]);
 
-  const handleSort = (column: 'name' | 'status' | 'lastActive' | 'timezone' | 'createdTime') => {
+  // Pagination
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return filteredUsers.slice(start, end);
+  }, [filteredUsers, currentPage]);
+
+  const handleSort = (column: 'name' | 'role' | 'status' | 'joinedDate' | 'lastActive' | 'language' | 'timezone') => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortColumn(column);
       setSortDirection('asc');
     }
+  };
+
+  const handleExpand = (userId: string) => {
+    setExpandedUsers(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
   };
 
   // Calculate menu position when opening
@@ -207,32 +461,25 @@ export const UserTable: React.FC<UserTableProps> = ({
       const scrollX = window.scrollX;
       const scrollY = window.scrollY;
 
-      // Get menu width (estimate or actual if rendered)
-      const menuWidth = menuRef.current?.offsetWidth || 192; // w-48 = 12rem = 192px
+      const menuWidth = menuRef.current?.offsetWidth || 192;
 
-      // Calculate left position - align to right edge of button
       let left = rect.right + scrollX - menuWidth;
-
-      // Adjust if menu would go off-screen
       const margin = 10;
       if (left < margin) {
-        left = rect.left + scrollX; // Fallback to left edge
+        left = rect.left + scrollX;
       } else if (left + menuWidth > viewportWidth - margin) {
         left = viewportWidth - menuWidth - margin;
       }
 
-      // Calculate top position
       let top = rect.bottom + scrollY + 4;
       const spaceBelow = viewportHeight - rect.bottom;
       const spaceAbove = rect.top;
       const estimatedHeight = menuRef.current?.offsetHeight || 100;
 
-      // If not enough space below, open above
       if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
         top = rect.top + scrollY - estimatedHeight - 4;
       }
 
-      // Adjust vertical position for viewport boundaries
       if (top < scrollY + margin) {
         top = scrollY + margin;
       } else if (top + estimatedHeight > scrollY + viewportHeight - margin) {
@@ -262,6 +509,29 @@ export const UserTable: React.FC<UserTableProps> = ({
     }
   }, [openActionMenu]);
 
+  // Close role filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isRoleFilterOpen && roleFilterRef.current && !roleFilterRef.current.contains(event.target as Node) &&
+          roleFilterButtonRef.current && !roleFilterButtonRef.current.contains(event.target as Node)) {
+        setIsRoleFilterOpen(false);
+      }
+    };
+
+    if (isRoleFilterOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isRoleFilterOpen]);
+
+  // Available roles for filtering
+  const availableRoles = ['Owner', 'Co-owner', 'Workspace Maintainer', 'Workspace Read Only', 'Base Member', 'Base Read Only'];
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedRoleFilter, searchTerm]);
+
   if (users.length === 0) {
     return (
       <div className="bg-card rounded-xl border p-8">
@@ -280,32 +550,85 @@ export const UserTable: React.FC<UserTableProps> = ({
 
   return (
     <div className="bg-card rounded-xl border overflow-hidden">
-      {/* Search Bar with Actions */}
-      {showSearch && (
-        <div className="p-4 border-b">
-          <div className="flex items-center justify-between gap-3">
-            <div className="relative min-w-96">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search User"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full text-xs pl-9 pr-4 py-2 h-11 border flex items-center rounded-[var(--radius-lg)] text-[var(--color-text-primary)] focus:border-[--color-brand-600] placeholder:text-[var(--color-text-placeholder)] bg-[--color-alpha-white] truncate overflow-ellipsis whitespace-nowrap outline-none cursor-pointer transition-all duration-200"
-              />
-            </div>
-            {headerActions && (
-              <div className="flex-shrink-0">
-                {headerActions}
-              </div>
+      {/* Header */}
+      <div className="p-4 border-b">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold text-primary">Users</h2>
+          <div className="flex items-center gap-3">
+            {showSearch && (
+              <>
+                <div className="relative w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full text-xs pl-9 pr-4 py-2 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-background outline-none transition-all"
+                  />
+                </div>
+                <div className="relative" ref={roleFilterRef}>
+                  <button
+                    ref={roleFilterButtonRef}
+                    onClick={() => setIsRoleFilterOpen(!isRoleFilterOpen)}
+                    className={`px-4 py-2 text-sm border rounded-lg flex items-center gap-2 transition-colors ${
+                      selectedRoleFilter
+                        ? 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100'
+                        : 'border text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Filter className="w-4 h-4" />
+                    Filter by Role
+                    {selectedRoleFilter && (
+                      <span className="ml-1 px-1.5 py-0.5 bg-blue-200 text-blue-800 rounded text-xs">
+                        {selectedRoleFilter}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Role Filter Dropdown */}
+                  {isRoleFilterOpen && (
+                    <div className="absolute top-full right-0 mt-2 w-64 bg-card border rounded-xl shadow-lg z-[9999] max-h-64 overflow-y-auto">
+                      <div className="p-2">
+                        <button
+                          onClick={() => {
+                            setSelectedRoleFilter(null);
+                            setIsRoleFilterOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm rounded-xl hover:bg-gray-100 transition-colors ${
+                            !selectedRoleFilter ? 'bg-gray-100 font-medium' : ''
+                          }`}
+                        >
+                          All Roles
+                        </button>
+                        {availableRoles.map((role) => (
+                          <button
+                            key={role}
+                            onClick={() => {
+                              setSelectedRoleFilter(role);
+                              setIsRoleFilterOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors ${
+                              selectedRoleFilter === role ? 'bg-gray-100 font-medium' : ''
+                            }`}
+                          >
+                            {role}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
+            {headerActions}
           </div>
         </div>
-      )}
+      </div>
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <div className="max-h-[calc(100vh-190px)] overflow-y-auto">
+        <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b sticky top-0 z-10">
               <tr>
@@ -315,7 +638,16 @@ export const UserTable: React.FC<UserTableProps> = ({
                     className="flex items-center gap-2 text-xs text-gray-700 font-semibold hover:text-gray-900"
                   >
                     User
-                    <ArrowUpDown className="w-3 h-3" />
+                    <ChevronsUpDown className="w-3 h-3" />
+                  </button>
+                </th>
+                <th className="px-6 py-3 text-left">
+                  <button
+                    onClick={() => handleSort('role')}
+                    className="flex items-center gap-2 text-xs text-gray-700 font-semibold hover:text-gray-900"
+                  >
+                    Role
+                    <ChevronsUpDown className="w-3 h-3" />
                   </button>
                 </th>
                 <th className="px-6 py-3 text-left">
@@ -324,7 +656,16 @@ export const UserTable: React.FC<UserTableProps> = ({
                     className="flex items-center gap-2 text-xs text-gray-700 font-semibold hover:text-gray-900"
                   >
                     Status
-                    <ArrowUpDown className="w-3 h-3" />
+                    <ChevronsUpDown className="w-3 h-3" />
+                  </button>
+                </th>
+                <th className="px-6 py-3 text-left">
+                  <button
+                    onClick={() => handleSort('joinedDate')}
+                    className="flex items-center gap-2 text-xs text-gray-700 font-semibold hover:text-gray-900"
+                  >
+                    Joined Date
+                    <ChevronsUpDown className="w-3 h-3" />
                   </button>
                 </th>
                 <th className="px-6 py-3 text-left">
@@ -333,7 +674,16 @@ export const UserTable: React.FC<UserTableProps> = ({
                     className="flex items-center gap-2 text-xs text-gray-700 font-semibold hover:text-gray-900"
                   >
                     Last Active
-                    <ArrowUpDown className="w-3 h-3" />
+                    <ChevronsUpDown className="w-3 h-3" />
+                  </button>
+                </th>
+                <th className="px-6 py-3 text-left">
+                  <button
+                    onClick={() => handleSort('language')}
+                    className="flex items-center gap-2 text-xs text-gray-700 font-semibold hover:text-gray-900"
+                  >
+                    Language
+                    <ChevronsUpDown className="w-3 h-3" />
                   </button>
                 </th>
                 <th className="px-6 py-3 text-left">
@@ -342,16 +692,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                     className="flex items-center gap-2 text-xs text-gray-700 font-semibold hover:text-gray-900"
                   >
                     Timezone
-                    <ArrowUpDown className="w-3 h-3" />
-                  </button>
-                </th>
-                <th className="px-6 py-3 text-left">
-                  <button
-                    onClick={() => handleSort('createdTime')}
-                    className="flex items-center gap-2 text-xs text-gray-700 font-semibold hover:text-gray-900"
-                  >
-                    Created Time
-                    <ArrowUpDown className="w-3 h-3" />
+                    <ChevronsUpDown className="w-3 h-3" />
                   </button>
                 </th>
                 {(onRemoveUser || onEditUser || onActivateUser || onDeactivateUser) && (
@@ -362,80 +703,154 @@ export const UserTable: React.FC<UserTableProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredUsers.map((user) => {
+              {paginatedUsers.map((user) => {
                 const statusBadge = getStatusBadge(user.status, user.email_verified);
                 const avatarColor = getAvatarColor(user.id);
                 const avatarInitials = getAvatarInitials(user.first_name, user.last_name);
+                const isExpanded = expandedUsers.has(user.id);
+                // Get roles - for now use tenant role, will be enhanced with access details
+                const roles = getOverallRoles(user);
 
                 return (
-                  <tr key={user.id} className="bg-card hover:bg-[var(--color-hover-bg)] transition-colors">
-                    {/* User Info */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        {user.avatar ? (
-                          <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                            <img
-                              src={user.avatar}
-                              alt={user.display_name || `${user.first_name} ${user.last_name}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className={`w-10 h-10 ${avatarColor} rounded-full flex items-center justify-center text-white text-sm font-semibold`}>
-                            {avatarInitials}
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{user.display_name || `${user.first_name} ${user.last_name}`}</p>
-                          <p className="text-xs text-gray-500">{user.email}</p>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-6 py-4">
-                      <span className={`inline-block  px-3 py-1 rounded-full text-xs font-medium ${statusBadge.color}`}>
-                        {statusBadge.text}
-                      </span>
-                    </td>
-
-                    {/* Last Active */}
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-gray-600">{formatLastActive(user.last_login_at)}</p>
-                    </td>
-
-                    {/* Timezone */}
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-gray-600">{getTimezoneName(user.timezone)}</p>
-                    </td>
-
-                    {/* Created Time */}
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-gray-600">{formatCreatedTime(user.created_time || user.created_at)}</p>
-                    </td>
-
-                    {/* Actions */}
-                    {(onRemoveUser || onEditUser || onActivateUser || onDeactivateUser) && (
+                  <React.Fragment key={user.id}>
+                    <tr className="bg-card hover:bg-gray-50 transition-colors">
+                      {/* User Info */}
                       <td className="px-6 py-4">
-                        <button
-                          ref={(el) => {
-                            if (el) actionButtonRefs.current[user.id] = el;
-                          }}
-                          onClick={() => setOpenActionMenu(openActionMenu === user.id ? null : user.id)}
-                          className="p-1 rounded hover:bg-gray-200 transition-colors"
-                          aria-label="More actions"
-                        >
-                          <MoreVertical className="w-4 h-4 text-gray-600" />
-                        </button>
+                        <div className="flex items-center gap-3">
+                          {user.avatar ? (
+                            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                              <img
+                                src={user.avatar}
+                                alt={user.display_name || `${user.first_name} ${user.last_name}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className={`w-10 h-10 ${avatarColor} rounded-full flex items-center justify-center text-white text-sm font-semibold`}>
+                              {avatarInitials}
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{user.display_name || `${user.first_name} ${user.last_name}`}</p>
+                            <p className="text-xs text-gray-500">{user.email}</p>
+                          </div>
+                        </div>
                       </td>
+
+                      {/* Role */}
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex flex-wrap gap-1.5">
+                            {roles.map((role, idx) => (
+                              <span
+                                key={idx}
+                                className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getRolePillStyle(role)}`}
+                              >
+                                {role}
+                              </span>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => handleExpand(user.id)}
+                            className="text-xs text-primary hover:underline self-start"
+                          >
+                            {isExpanded ? 'Collapse ↑' : 'View in detail ↓'}
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-6 py-4">
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusBadge.color}`}>
+                          {statusBadge.text}
+                        </span>
+                      </td>
+
+                      {/* Joined Date */}
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-gray-600">{formatCreatedTime(user.created_time || user.created_at)}</p>
+                      </td>
+
+                      {/* Last Active */}
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-gray-600">{formatLastActive(user.last_active_at, user.last_login_at)}</p>
+                      </td>
+
+                      {/* Language */}
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-gray-600">{getLanguageDisplay(user.locale)}</p>
+                      </td>
+
+                      {/* Timezone */}
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-gray-600">{getTimezoneName(user.timezone)}</p>
+                      </td>
+
+                      {/* Actions */}
+                      {(onRemoveUser || onEditUser || onActivateUser || onDeactivateUser) && (
+                        <td className="px-6 py-4">
+                          <button
+                            ref={(el) => {
+                              if (el) actionButtonRefs.current[user.id] = el;
+                            }}
+                            onClick={() => setOpenActionMenu(openActionMenu === user.id ? null : user.id)}
+                            className="p-1 rounded hover:bg-gray-200 transition-colors"
+                            aria-label="More actions"
+                          >
+                            <MoreVertical className="w-4 h-4 text-gray-600" />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+
+                    {/* Expanded Access Details Row */}
+                    {isExpanded && (
+                      <AccessDetailsRow
+                        userId={user.id}
+                        colSpan={7 + (onRemoveUser || onEditUser || onActivateUser || onDeactivateUser ? 1 : 0)}
+                      />
                     )}
-                  </tr>
+                  </React.Fragment>
                 );
               })}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Footer with Pagination */}
+      {totalPages > 1 && (
+        <div className="px-6 py-4 bg-gray-50 border-t flex items-center justify-center">
+          <div className="flex items-center gap-2">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+              if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1 text-sm rounded-lg ${currentPage === page
+                      ? 'bg-gray-200 text-gray-900'
+                      : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                  >
+                    {page}
+                  </button>
+                );
+              } else if (page === currentPage - 2 || page === currentPage + 2) {
+                return <span key={page} className="px-2 text-sm text-gray-500">...</span>;
+              }
+              return null;
+            })}
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 text-sm border rounded-lg text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Dropdown Menu - Rendered via Portal outside table */}
       {openActionMenu && menuPosition && ReactDOM.createPortal(
@@ -447,30 +862,26 @@ export const UserTable: React.FC<UserTableProps> = ({
             left: `${menuPosition.left}px`,
           }}
         >
-          {/* View Access Details */}
-          {(() => {
-            const user = filteredUsers.find(u => u.id === openActionMenu);
-            if (!user) return null;
-            return (
-              <button
-                onClick={() => {
-                  setAccessDetailsUserId(openActionMenu);
-                  setOpenActionMenu(null);
-                }}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl flex items-center gap-2"
-              >
-                <Info className="w-4 h-4" />
-                View Access Details
-              </button>
-            );
-          })()}
+          {/* Edit Details */}
+          {onEditUser && (
+            <button
+              onClick={() => {
+                const user = paginatedUsers.find(u => u.id === openActionMenu);
+                if (user) onEditUser(user);
+                setOpenActionMenu(null);
+              }}
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl flex items-center gap-2"
+            >
+              <Edit className="w-4 h-4" />
+              Edit Details
+            </button>
+          )}
           {/* Activate/Deactivate user - Admin only */}
           {isAdmin() && (() => {
-            const user = filteredUsers.find(u => u.id === openActionMenu);
+            const user = paginatedUsers.find(u => u.id === openActionMenu);
             if (!user) return null;
 
             const isActive = user.status?.toLowerCase() === 'active' && user.email_verified;
-            const isActivated = user.status?.toLowerCase() === 'deactivated' && user.email_verified;
             if (isActive && onDeactivateUser) {
               return (
                 <button
@@ -484,7 +895,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                   Deactivate User
                 </button>
               );
-            } else if (isActivated && onActivateUser) {
+            } else if (!isActive && onActivateUser) {
               return (
                 <button
                   onClick={() => {
@@ -500,20 +911,7 @@ export const UserTable: React.FC<UserTableProps> = ({
             }
             return null;
           })()}
-          {/* Edit user */}
-          {/* {onEditUser && filteredUsers.find(u => u.id === openActionMenu) && (
-                              <button
-                                onClick={() => {
-                const user = filteredUsers.find(u => u.id === openActionMenu);
-                if (user) onEditUser(user);
-                                  setOpenActionMenu(null);
-                                }}
-              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                              >
-                                Edit User
-                              </button>
-                            )} */}
-          {/* Delete user */}
+          {/* Remove Member */}
           {onRemoveUser && (
             <button
               onClick={() => {
@@ -523,23 +921,16 @@ export const UserTable: React.FC<UserTableProps> = ({
               className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2"
             >
               <Trash2 className="w-4 h-4" />
-              Remove User
+              Remove Member
             </button>
           )}
         </div>,
         document.body
       )}
 
-      {/* Footer Info */}
-      <div className="px-6 py-4 bg-gray-50 border-t">
-        <p className="text-xs text-gray-500">
-          Showing <span className="font-medium">{formatCompactNumber(filteredUsers.length)}</span> of <span className="font-medium">{formatCompactNumber(users.length)}</span> users
-        </p>
-      </div>
-
       {/* Access Details Modal */}
       {accessDetailsUserId && (() => {
-        const user = filteredUsers.find(u => u.id === accessDetailsUserId) || users.find(u => u.id === accessDetailsUserId);
+        const user = paginatedUsers.find(u => u.id === accessDetailsUserId) || users.find(u => u.id === accessDetailsUserId);
         if (!user) return null;
         return ReactDOM.createPortal(
           <UserAccessDetailsModal

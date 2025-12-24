@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronDown, X, Check, Search, Loader2, ChevronUp, Info } from 'lucide-react';
+import { ChevronDown, X, Check, Search, Loader2, Info } from 'lucide-react';
 
 interface DropdownOption<T = string | number> {
   label: string;

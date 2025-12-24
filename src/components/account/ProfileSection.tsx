@@ -505,7 +505,7 @@ export const ProfileSection: React.FC = () => {
           {isEditing ? (
             <AdvancedDropdown
               options={Array.from(new Set(timeZoneOptions.map(t => t.country)))
-                .sort((a, b) => a.localeCompare(b))
+                .sort((a: string, b: string) => a.localeCompare(b))
                 .map((country) => ({ label: country, value: country }))}
               value={formData.country || ''}
               onChange={(val) => handleInputChange('country', (val as string) || '')}

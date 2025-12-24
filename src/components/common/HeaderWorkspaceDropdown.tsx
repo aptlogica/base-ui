@@ -85,14 +85,14 @@ const HeaderWorkspaceDropdown: React.FC = () => {
   // Get workspace initials and color
   const getWorkspaceIcon = (workspace: any, index: number) => {
     if (!workspace) return { initials: 'S', color: 'bg-gray-400' };
-
+    
     const initials = (
       workspace.title?.charAt(0) ||
       workspace.name?.charAt(0) ||
       workspace.slug?.charAt(0) ||
       'U'
     ).toUpperCase();
-
+    
     // Color mapping for workspace icons
     const colors = [
       'bg-purple-400', // Design Workspace
@@ -101,15 +101,15 @@ const HeaderWorkspaceDropdown: React.FC = () => {
       'bg-blue-400',
       'bg-green-400',
     ];
-
+    
     // Try to match workspace name to color, otherwise use index
     const title = (workspace.title || workspace.name || '').toLowerCase();
     let color = colors[index % colors.length];
-
+    
     if (title.includes('design')) color = 'bg-purple-400';
     else if (title.includes('test')) color = 'bg-red-400';
     else if (title.includes('dev')) color = 'bg-orange-400';
-
+    
     return { initials, color };
   };
 
@@ -166,12 +166,12 @@ const HeaderWorkspaceDropdown: React.FC = () => {
               <span className="text-muted-foreground font-bold text-sm">S</span>
             </div>
           )}
-
+          
           {/* Workspace Name */}
           <span className="text-sm font-medium text-primary">
             {displayWorkspace?.title || displayWorkspace?.name || 'Select Workspace'}
           </span>
-
+          
           {/* Dropdown Icon - chevron up when open */}
           <ChevronsUpDown className="w-4 h-4 text-gray-400 transition-transform flex-shrink-0" />
         </button>
@@ -265,7 +265,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                 onClick={() => {
                   if (canCreateWorkspace()) {
                     setShowCreateWorkspace(true);
-                    setWorkspaceDropdownOpen(false);
+            setWorkspaceDropdownOpen(false);
                   }
                 }}
                 disabled={!canCreateWorkspace()}
