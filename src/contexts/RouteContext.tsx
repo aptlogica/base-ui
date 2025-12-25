@@ -6,7 +6,6 @@ export type RouteType =
   | 'settings' 
   | 'administrator' 
   | 'view' 
-  | 'projects' 
   | 'public'
   | 'unknown';
 
@@ -39,7 +38,6 @@ const ROUTE_PATTERNS = {
   ],
   settings: [
     { path: '/workspace/:workspaceId/workspace-settings' },
-    { path: '/workspace/:workspaceId/settings' },
   ],
   administrator: [
     { path: '/workspace/:workspaceId/administrator' },
@@ -48,10 +46,7 @@ const ROUTE_PATTERNS = {
   view: [
     { path: '/base/:baseId/table/:tableId/:viewId' },
     { path: '/table/:tableId/:viewId' },
-  ],
-  projects: [
-    '/projects',
-  ],
+  ]
 } as const;
 
 // Component visibility rules by route type
@@ -74,10 +69,6 @@ const VISIBILITY_RULES: Record<RouteType, {
   view: {
     visible: ['header-members', 'breadcrumb'],
     hidden: ['workspace-settings-button', 'workspace-dropdown', 'administrator-settings-button'],
-  },
-  projects: {
-    visible: ['workspace-dropdown'],
-    hidden: ['header-members', 'workspace-settings-button', 'breadcrumb'],
   },
   public: {
     visible: [],
@@ -122,15 +113,6 @@ function determineRouteType(pathname: string): RouteType {
     if (match) return 'view';
   }
   
-  // Projects
-  for (const pattern of ROUTE_PATTERNS.projects) {
-    if (typeof pattern === 'string' && pathname === pattern) return 'projects';
-    const match = matchPath(
-      typeof pattern === 'string' ? { path: pattern } : pattern,
-      pathname
-    );
-    if (match) return 'projects';
-  }
   
   // Homepage (check last to avoid false matches)
   for (const pattern of ROUTE_PATTERNS.homepage) {

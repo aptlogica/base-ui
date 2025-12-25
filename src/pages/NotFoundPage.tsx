@@ -6,7 +6,7 @@ const NotFoundPage: React.FC = () => (
     <p className="text-secondary text-lg mb-6">
       Sorry, the page you are looking for does not exist.
     </p>
-    <a href="/dashboard" className="text-primary underline">Go to Home</a>
+    <a href="/homepage" className="text-primary underline">Go to Home</a>
   </div>
 );
 

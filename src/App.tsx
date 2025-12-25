@@ -13,10 +13,8 @@ import { AnnouncementBar, AnnouncementBarProps } from './components/Announcement
 import { NavigationRecovery } from './components/ZustandNavigationRecovery';
 import { NavigationResolver } from './components/NavigationResolver';
 import { initializeClientToken } from './service/clientService';
-import { ViewType } from './types/viewTypes';
 import { useExtensions } from './core/PluginFrameworkContext';
 import { registerPlugin } from './core/PluginRegistry';
-import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import LoginPage from './pages/LoginPage';
 import RegistrationPage from './pages/RegistrationPage';
@@ -24,7 +22,6 @@ import RegisterValidation from './pages/RegisterValidation';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import OAuthCallbackPage from './pages/OAuthCallbackPage';
-import SettingsPageRoute from './pages/SettingsPage';
 import { usePluginStore } from './stores/pluginStore';
 import { ExtensionPoint } from './core/ExtensionPoint';
 import { ToastProvider } from './components/common/Toast';
@@ -33,7 +30,6 @@ import { Loader } from './components/ui/Loader';
 import { useQueryClient } from '@tanstack/react-query';
 import AdministratorPage from './pages/AdministratorPage';
 import WorkspaceSettingsPage from './pages/WorkspaceSettingsPage';
-import { useNavigationStore } from './stores/navigationStore';
 import { useClientHeaders } from './hooks/useClientHeaders';
 import { RouteContextProvider } from './contexts/RouteContext';
 
@@ -297,9 +293,7 @@ const AppRoutes = ({ loading }: { loading: boolean }) => {
       <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route path="/" element={<Navigate to="/homepage" replace />} />
         <Route path="/homepage" element={<ExtensionPoint id="page:homepage" />} />
-        {/* <Route path="/dashboard" element={<ExtensionPoint id="page:dashboard" />} /> */}
         <Route path="/projects" element={<ExtensionPoint id="page:projects" />} />
-        <Route path="/workspace/:workspaceId/settings" element={<SettingsPageRoute />} />
         <Route
           path="/workspace/:workspaceId/administrator"
           element={

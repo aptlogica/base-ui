@@ -100,13 +100,6 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
     }
   };
 
-  const copyFieldId = () => {
-    if (column.id) {
-      navigator.clipboard.writeText(column.id);
-      setIsOpen(false);
-    }
-  };
-
   return (
     <>
       <button
@@ -136,20 +129,6 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
             left: `${dropdownPosition.left}px`
           }}
         >
-          {/* Field ID */}
-          {column.id && (
-            <div className="pb-2 text-xs text-gray-500 border-b border-gray-100 flex items-center justify-between">
-              <span>FIELD ID: {column.id}</span>
-              <button
-                onClick={copyFieldId}
-                className="p-1 hover:bg-gray-100 rounded"
-                title="Copy field ID"
-              >
-                <Copy className="w-3 h-3" />
-              </button>
-            </div>
-          )}
-
           {/* Edit field */}
           <button
             onClick={handleEdit}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { PopoverMenu } from '../common/PopoverMenu';
-import { Ellipsis, Edit, Trash2, Copy, Table2, Pin } from 'lucide-react';
+import { Ellipsis, Edit, Trash2, Table2, Pin } from 'lucide-react';
 import { EditItemModal } from '../modals/EditItemModal';
 import DeleteConfirmModal from '../modals/DeleteConfirmModal';
 import { useUpdateTable, useDeleteTable } from '../../hooks/useApi';
@@ -27,19 +27,12 @@ interface TableOptionsMenuProps {
 const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, onEditDescription, onDelete, onEditingChange, portaled = false, align = 'auto', onPinToggle, isPinned = false, baseId, existingTables = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
-  const [showIdCopied, setShowIdCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   // TanStack Query mutations
   const updateTableMutation = useUpdateTable();
   const deleteTableMutation = useDeleteTable();
   const { handleTableDeletion } = useNavigationActions();
   const { canDeleteTable } = useWorkspaceAccess(table?.workspace_id);
-
-  const handleCopyId = () => {
-    navigator.clipboard.writeText(table.id);
-    setShowIdCopied(true);
-    setTimeout(() => setShowIdCopied(false), 1200);
-  };
 
   const handleEditTable = async ({ name, description }: { name: string; description: string }) => {
     try {
@@ -92,11 +85,6 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
         portaled={portaled}
         trigger={<Ellipsis className="w-4 h-4 text-gray-500 hover:text-gray-600" />}
         items={[
-          {
-            label: `TABLE ID: ${table.id}`,
-            icon: <Copy className="w-4 h-4" />,
-            onClick: () => handleCopyId(),
-          },
           ...(onPinToggle ? [{ 
             label: isPinned ? 'Unpin table' : 'Pin table', 
             icon: <Pin className="w-4 h-4" />, 

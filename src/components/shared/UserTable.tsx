@@ -571,7 +571,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                   <button
                     ref={roleFilterButtonRef}
                     onClick={() => setIsRoleFilterOpen(!isRoleFilterOpen)}
-                    className={`px-4 py-2 text-sm border rounded-lg flex items-center gap-2 transition-colors ${
+                    className={`px-4 py-2 text-sm border rounded-xl flex items-center gap-2 transition-colors ${
                       selectedRoleFilter
                         ? 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100'
                         : 'border text-gray-700 hover:bg-gray-50'
@@ -628,7 +628,7 @@ export const UserTable: React.FC<UserTableProps> = ({
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+        <div className="max-h-[calc(100vh-230px)] overflow-y-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b sticky top-0 z-10">
               <tr>
@@ -739,7 +739,7 @@ export const UserTable: React.FC<UserTableProps> = ({
 
                       {/* Role */}
                       <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-col gap-1.5 min-w-48">
                           <div className="flex flex-wrap gap-1.5">
                             {roles.map((role, idx) => (
                               <span
@@ -768,22 +768,22 @@ export const UserTable: React.FC<UserTableProps> = ({
 
                       {/* Joined Date */}
                       <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600">{formatCreatedTime(user.created_time || user.created_at)}</p>
+                        <p className="text-sm text-gray-600 min-w-48">{formatCreatedTime(user.created_time || user.created_at)}</p>
                       </td>
 
                       {/* Last Active */}
                       <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600">{formatLastActive(user.last_active_at, user.last_login_at)}</p>
+                        <p className="text-sm text-gray-600 min-w-48">{formatLastActive(user.last_active_at, user.last_login_at)}</p>
                       </td>
 
                       {/* Language */}
                       <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600">{getLanguageDisplay(user.locale)}</p>
+                        <p className="text-sm text-gray-600 min-w-48">{getLanguageDisplay(user.locale)}</p>
                       </td>
 
                       {/* Timezone */}
                       <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600">{getTimezoneName(user.timezone)}</p>
+                        <p className="text-sm text-gray-600 min-w-48">{getTimezoneName(user.timezone)}</p>
                       </td>
 
                       {/* Actions */}

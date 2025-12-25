@@ -5,7 +5,6 @@ import {
   Ellipsis,
   Edit,
   Trash2,
-  Copy,
   Eye,
   Pin,
 } from 'lucide-react';
@@ -30,7 +29,6 @@ interface ViewOptionsMenuProps {
 const ViewOptionsMenu: React.FC<ViewOptionsMenuProps> = ({ view, onRename, onEditDescription, onDelete, onEditingChange, portaled = false, align = 'auto', onPinToggle, isPinned = false, workspaceId: propWorkspaceId }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
-  const [showIdCopied, setShowIdCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const updateViewMutation = useUpdateView();
@@ -38,12 +36,6 @@ const ViewOptionsMenu: React.FC<ViewOptionsMenuProps> = ({ view, onRename, onEdi
   // Get workspace_id from prop, view, or nested table
   const workspaceId = propWorkspaceId || view?.workspace_id || view?.table?.workspace_id;
   const { canDeleteView } = useWorkspaceAccess(workspaceId);
-
-  const handleCopyId = () => {
-    navigator.clipboard.writeText(view.id);
-    setShowIdCopied(true);
-    setTimeout(() => setShowIdCopied(false), 1200);
-  };
 
   const handleEditView = async ({ name, description }: { name: string; description: string }) => {
     try {
@@ -91,11 +83,6 @@ const ViewOptionsMenu: React.FC<ViewOptionsMenuProps> = ({ view, onRename, onEdi
         portaled={portaled}
         trigger={<Ellipsis className="w-4 h-4 text-gray-500" />}
         items={[
-          {
-            label: `VIEW ID: ${view.id}`,
-            icon: <Copy className="w-4 h-4" />,
-            onClick: () => handleCopyId(),
-          },
           ...(onPinToggle ? [{
             label: isPinned ? 'Unpin view' : 'Pin view',
             icon: <Pin className="w-4 h-4" />,

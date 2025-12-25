@@ -8,6 +8,8 @@ import { Loader2, CheckCircle, CloudUpload } from 'lucide-react';
 import { AdvancedDropdown } from '../common/dropdown/AdvancedDropdown';
 import { timeZoneOptions } from '../../types/constants';
 import { useFooterButtons } from './AccountSettings';
+import { DateField } from '../common/Fields/DateField';
+import { validateDOB, getYesterdayISO, convertDateToFormat } from '../../utils/dateValidation';
 
 export const ProfileSection: React.FC = () => {
   const { user: authUser } = useAuth();
@@ -21,9 +23,11 @@ export const ProfileSection: React.FC = () => {
     country?: string;
     dob?: string;
     timezone?: string;
+    locale?: string;
   }>({});
 
   const [hasChanges, setHasChanges] = useState(false);
+  const [dobError, setDobError] = useState<string | null>(null);
 
   // Toast for notifications
   const toast = useToast();
@@ -64,6 +68,7 @@ export const ProfileSection: React.FC = () => {
         display_name: userProfile.display_name || '',
         country: userProfile.country || '',
         dob: userProfile.dob || '',
+        locale: userProfile.locale || '',
         // Store IANA label in form state for timezone (UI value). Convert from short code if needed.
         timezone:
           (userProfile.timezone
@@ -90,11 +95,17 @@ export const ProfileSection: React.FC = () => {
   // Check for changes
   useEffect(() => {
     if (userProfile && isEditing) {
+      const formTzShort = formData.timezone
+        ? (timeZoneOptions.find(t => t.label === formData.timezone)?.value || formData.timezone)
+        : '';
       const hasFormChanges =
         formData.first_name !== userProfile.first_name ||
         formData.last_name !== userProfile.last_name ||
         formData.display_name !== userProfile.display_name ||
-        formData.country !== (userProfile.country || '');
+        formData.country !== (userProfile.country || '') ||
+        formData.dob !== (userProfile.dob || '') ||
+        formData.locale !== (userProfile.locale || '') ||
+        formTzShort !== (userProfile.timezone || '');
       setHasChanges(hasFormChanges);
     }
   }, [formData, userProfile, isEditing]);
@@ -116,7 +127,7 @@ export const ProfileSection: React.FC = () => {
         </button>
       </div>
     ) : (
-      <div className="flex items-center justify-between w-full">
+      <div className="flex items-center justify-end gap-3 w-full">
         <button
           onClick={handleCancel}
           disabled={isSaving}
@@ -147,7 +158,7 @@ export const ProfileSection: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing, isSaving, hasChanges, updateProfileMutation.isPending, registerFooter, clearFooter, currentSection]);
 
-  const handleInputChange = (field: 'first_name' | 'last_name' | 'display_name' | 'country' | 'dob' | 'timezone', value: string) => {
+  const handleInputChange = (field: 'first_name' | 'last_name' | 'display_name' | 'country' | 'dob' | 'timezone' | 'locale', value: string) => {
     if (field === 'country') {
       const country = value;
       const tzEntries = timeZoneOptions.filter(t => t.country === country);
@@ -171,6 +182,16 @@ export const ProfileSection: React.FC = () => {
 
   const handleSave = async () => {
     if (!hasChanges) return;
+
+    // Validate DOB before saving
+    if (formData.dob) {
+      const dobErr = validateDOB(formData.dob, 'DD-MM-YYYY');
+      if (dobErr) {
+        setDobError(dobErr);
+        toast.error(dobErr, { title: 'Invalid Date of Birth' });
+        return;
+      }
+    }
 
     setIsSaving(true);
     try {
@@ -199,6 +220,7 @@ export const ProfileSection: React.FC = () => {
       setIsEditing(false);
       setHasChanges(false);
       setFormData({});
+      setDobError(null);
     } catch (error: any) {
       console.error('Failed to save profile:', error);
       toast.error(error?.message || 'Failed to save profile. Please try again.', { title: 'Save Failed' });
@@ -215,12 +237,14 @@ export const ProfileSection: React.FC = () => {
         display_name: userProfile.display_name || '',
         country: userProfile.country || '',
         dob: userProfile.dob || '',
+        locale: userProfile.locale || '',
         timezone:
           (userProfile.timezone
             ? (timeZoneOptions.find(t => t.value === userProfile.timezone)?.label || userProfile.timezone)
             : ''),
       });
     }
+    setDobError(null);
     setIsEditing(false);
     setHasChanges(false);
   };
@@ -328,77 +352,58 @@ export const ProfileSection: React.FC = () => {
     );
   }
 
-  // Helper functions
-  const getUserInitials = () => {
-    if (userProfile.first_name && userProfile.last_name) {
-      return `${userProfile.first_name[0]}${userProfile.last_name[0]}`.toUpperCase();
-    }
-    return userProfile.email?.[0]?.toUpperCase() || 'U';
-  };
 
 
   return (
     <div className="space-y-6">
       {/* Form Fields */}
       <div className="space-y-6">
-        {/* First Name */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            First Name
-          </label>
-          {isEditing ? (
+        {/* First Name and Last Name - Side by Side */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* First Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              First Name
+            </label>
             <input
               type="text"
-              value={formData.first_name || ''}
+              value={isEditing ? (formData.first_name || '') : (userProfile.first_name || '')}
               onChange={(e) => handleInputChange('first_name', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors"
+              disabled={!isEditing}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
               placeholder="Enter first name"
             />
-          ) : (
-            <div className="px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900">
-              {userProfile.first_name || 'Not set'}
-            </div>
-          )}
-        </div>
+          </div>
 
-        {/* Last Name */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Last Name
-          </label>
-          {isEditing ? (
+          {/* Last Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Last Name
+            </label>
             <input
               type="text"
-              value={formData.last_name || ''}
+              value={isEditing ? (formData.last_name || '') : (userProfile.last_name || '')}
               onChange={(e) => handleInputChange('last_name', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors"
+              disabled={!isEditing}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
               placeholder="Enter last name"
             />
-          ) : (
-            <div className="px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900">
-              {userProfile.last_name || 'Not set'}
-            </div>
-          )}
+          </div>
         </div>
 
-        {/* Display Name */}
+        {/* Display Name - Full Width */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Display Name
           </label>
-          {isEditing ? (
-            <input
-              type="text"
-              value={formData.display_name || ''}
-              onChange={(e) => handleInputChange('display_name', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors"
-              placeholder="Enter display name"
-            />
-          ) : (
-            <div className="px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900">
-              {userProfile.display_name || 'Not set'}
-            </div>
-          )}
+          <input
+            type="text"
+            value={isEditing ? (formData.display_name || '') : (userProfile.display_name || '')}
+            onChange={(e) => handleInputChange('display_name', e.target.value)}
+            disabled={!isEditing}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+            placeholder="Enter display name"
+          />
         </div>
 
         {/* Email Address */}
@@ -406,7 +411,7 @@ export const ProfileSection: React.FC = () => {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Email address
           </label>
-          <div className="px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 flex items-center justify-between gap-2">
+          <div className="px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-500 flex items-center justify-between gap-2 disabled:cursor-not-allowed">
             <span>{userProfile.email}</span>
             {userProfile.email_verified && (
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
@@ -423,43 +428,41 @@ export const ProfileSection: React.FC = () => {
             Profile Image
           </label>
           <div className="flex items-start gap-4">
-            {/* Small Profile Picture */}
-            <div className="flex-shrink-0">
-              <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center shadow-md relative overflow-hidden">
-                {userProfile?.avatar || currentUser?.avatar ? (
+            {/* Small Profile Picture - Left Side */}
+            {(userProfile?.avatar || currentUser?.avatar) && (
+              <div className="flex-shrink-0">
+                <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center shadow-md relative overflow-hidden">
                   <img
                     src={userProfile?.avatar || currentUser?.avatar}
                     alt="Profile"
                     className="w-full h-full object-cover"
                   />
-                ) : (
-                  <span className="text-white font-bold text-2xl">
-                    {getUserInitials()}
-                  </span>
-                )}
-                {(isUploadingAvatar || addOrUpdateAvatarMutation.isPending) && (
-                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                    <Loader2 className="w-5 h-5 animate-spin text-white" />
-                  </div>
-                )}
+                  {(isUploadingAvatar || addOrUpdateAvatarMutation.isPending) && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <Loader2 className="w-5 h-5 animate-spin text-white" />
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Upload Area */}
-            <div className="flex-1">
+            {/* Upload Area - Right Side or Full Width if no image */}
+            <div className={userProfile?.avatar || currentUser?.avatar ? "flex-1" : "w-full"}>
               <div
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
+                onDrop={isEditing ? handleDrop : undefined}
+                onDragOver={isEditing ? handleDragOver : undefined}
+                onDragLeave={isEditing ? handleDragLeave : undefined}
                 className={`
-                  border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
-                  ${isDragging 
-                    ? 'border-[var(--color-brand-600)] bg-[var(--color-brand-50)]' 
-                    : 'border-gray-300 hover:border-gray-400 bg-gray-50'
+                  border-2 border-dashed rounded-xl p-8 text-center transition-colors
+                  ${!isEditing 
+                    ? 'border-gray-300 bg-gray-50 cursor-not-allowed opacity-60' 
+                    : isDragging 
+                      ? 'border-[var(--color-brand-600)] bg-[var(--color-brand-50)] cursor-pointer' 
+                      : 'border-gray-300 hover:border-gray-400 bg-gray-50 cursor-pointer'
                   }
                   ${isUploadingAvatar || addOrUpdateAvatarMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''}
                 `}
-                onClick={() => !isUploadingAvatar && !addOrUpdateAvatarMutation.isPending && document.getElementById('avatar-upload-input')?.click()}
+                onClick={() => isEditing && !isUploadingAvatar && !addOrUpdateAvatarMutation.isPending && document.getElementById('avatar-upload-input')?.click()}
               >
                 <input
                   id="avatar-upload-input"
@@ -470,10 +473,10 @@ export const ProfileSection: React.FC = () => {
                   className="hidden"
                 />
                 <div className="flex flex-col items-center gap-3">
-                  <CloudUpload className={`w-8 h-8 ${isDragging ? 'text-[var(--color-brand-600)]' : 'text-gray-400'}`} />
+                  <CloudUpload className={`w-12 h-12 ${isDragging ? 'text-[var(--color-brand-600)]' : 'text-gray-400'}`} />
                   <div>
                     <p className="text-sm font-medium text-gray-700 mb-1">
-                      Click to upload or drag and drop
+                      <span className="text-green-500">Click to upload</span> or drag and drop
                     </p>
                     <p className="text-xs text-gray-500">
                       SVG, PNG, JPG or GIF (max. 800 x 400px)
@@ -502,22 +505,96 @@ export const ProfileSection: React.FC = () => {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Country
           </label>
+          <AdvancedDropdown
+            options={Array.from(new Set(timeZoneOptions.map(t => t.country)))
+              .sort((a: string, b: string) => a.localeCompare(b))
+              .map((country) => ({ label: country, value: country }))}
+            value={isEditing ? (formData.country || '') : (userProfile.country || '')}
+            onChange={(val) => handleInputChange('country', (val as string) || '')}
+            placeholder="Select Country"
+            searchable
+            clearable
+            disabled={!isEditing}
+            className=""
+          />
+        </div>
+
+        {/* Time Zone */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Time Zone
+          </label>
+          <AdvancedDropdown
+            options={(isEditing ? (formData.country ? timeZoneOptions.filter(t => t.country === formData.country) : []) : (userProfile.country ? timeZoneOptions.filter(t => t.country === userProfile.country) : []))
+              .map((t) => ({ label: `${t.label} (${t.value})`, value: t.label }))}
+            value={isEditing ? (formData.timezone || '') : (userProfile.timezone ? (timeZoneOptions.find(t => t.value === userProfile.timezone)?.label || userProfile.timezone) : '')}
+            onChange={(val) => handleInputChange('timezone', (val as string) || '')}
+            placeholder={isEditing ? (formData.country ? 'Select Time Zone' : 'Select Country first') : 'Not set'}
+            searchable
+            clearable
+            disabled={!isEditing}
+            className=""
+          />
+        </div>
+
+        {/* Language */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Language
+          </label>
+          <AdvancedDropdown
+            options={[
+              { label: 'English (US)', value: 'en-US' },
+              { label: 'English (GB)', value: 'en-GB' },
+              { label: 'English (IN)', value: 'en-IN' },
+              { label: 'Spanish', value: 'es' },
+              { label: 'French', value: 'fr' },
+              { label: 'German', value: 'de' },
+              { label: 'Japanese', value: 'ja' },
+              { label: 'Chinese', value: 'zh' },
+            ]}
+            value={isEditing ? (formData.locale || '') : (userProfile.locale || '')}
+            onChange={(val) => handleInputChange('locale', (val as string) || '')}
+            placeholder="Select Language"
+            searchable
+            clearable
+            disabled={!isEditing}
+            className=""
+          />
+        </div>
+
+        {/* Date of Birth */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Date of Birth
+          </label>
           {isEditing ? (
-            <AdvancedDropdown
-              options={Array.from(new Set(timeZoneOptions.map(t => t.country)))
-                .sort((a: string, b: string) => a.localeCompare(b))
-                .map((country) => ({ label: country, value: country }))}
-              value={formData.country || ''}
-              onChange={(val) => handleInputChange('country', (val as string) || '')}
-              placeholder="Select Country"
-              searchable
-              clearable
-              className=""
-            />
+            <>
+              <DateField
+                value={formData.dob || ''}
+                onChange={(val) => { 
+                  handleInputChange('dob', val);
+                  if (dobError) setDobError(null);
+                }}
+                format="DD-MM-YYYY"
+                isBorder
+                max={convertDateToFormat(getYesterdayISO(), 'DD-MM-YYYY')}
+                config={{ 
+                  max: convertDateToFormat(getYesterdayISO(), 'DD-MM-YYYY'),
+                  hideTodayButton: true
+                }}
+                disabled={!isEditing}
+              />
+              {dobError && <div className="mt-1.5 text-red-500 text-sm">{dobError}</div>}
+            </>
           ) : (
-            <div className="px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900">
-              {userProfile.country || 'Not set'}
-            </div>
+            <input
+              type="text"
+              value={userProfile.dob || ''}
+              disabled
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+              placeholder="Not set"
+            />
           )}
         </div>
       </div>
