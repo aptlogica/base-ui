@@ -168,7 +168,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
                 value={isControlled ? (controlledName || '') : name}
                 onChange={(e) => (isControlled ? setControlledName?.(e.target.value) : setName(e.target.value))}
                 placeholder="Enter workspace name"
-                className={`field-component field-component-border field-component-focus ${(!isControlled && error) || (isControlled && controlledError) ? 'border-red-500' : 'border-gray-300'}`}
+                className={`field-component field-component-border field-component-focus ${(!isControlled && error) || (isControlled && controlledError) ? 'border-red-500' : 'border'}`}
                 required
                 minLength={3}
                 maxLength={50}
@@ -177,7 +177,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
               <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
                 <span className="relative inline-block group">
                   <HelpCircle className={`w-4 h-4 ${( (!isControlled && error) || (isControlled && controlledError) ) ? 'text-red-500' : ( (isControlled ? (controlledName || '').trim().length >=3 : name.trim().length >=3) ? 'text-green-600' : 'text-gray-400' )} cursor-help`} />
-                  <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-white border rounded-xl shadow-lg p-3 text-sm z-50">
+                  <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                     <h4 className="font-medium mb-2">Workspace name requirements:</h4>
                     <ul className="space-y-1">
                       <li className={`flex items-center ${(isControlled ? (controlledName || '').trim().length >= 3 : name.trim().length >= 3) ? 'text-green-600' : 'text-gray-500'}`}>
@@ -222,7 +222,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
             <button
               type="submit"
               disabled={submitting || !(isControlled ? (controlledName || '').trim().length >= 3 : name.trim().length >= 3)}
-              className="flex items-center gap-2 px-6 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+              className="flex items-center gap-2 px-6 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {submitting && <Loader2 size={16} className="animate-spin" />}
               {submitting ? (submitButtonText.includes('Save') ? 'Saving...' : 'Creating...') : submitButtonText}

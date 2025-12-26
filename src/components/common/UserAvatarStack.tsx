@@ -126,7 +126,7 @@ export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({
                   className="w-full h-full rounded-full object-cover"
                 />
               ) : (
-                <div className={`w-full h-full ${getAvatarColor(user.id)} rounded-full flex items-center justify-center text-white font-semibold`}>
+                <div className={`w-full h-full ${getAvatarColor(user.id)} rounded-full flex items-center justify-center text-primary font-semibold`}>
                   {getInitials(user.name)}
                 </div>
               )}
@@ -169,7 +169,7 @@ export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({
                         className="w-full h-full rounded-full object-cover"
                       />
                     ) : (
-                      <div className={`w-full h-full ${getAvatarColor(user.id)} rounded-full flex items-center justify-center text-white font-semibold`}>
+                      <div className={`w-full h-full ${getAvatarColor(user.id)} rounded-full flex items-center justify-center text-primary font-semibold`}>
                         {getInitials(user.name)}
                       </div>
                     )}

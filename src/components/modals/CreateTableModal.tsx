@@ -126,7 +126,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter table name"
-                className={`field-component field-component-border field-component-focus ${error || validationError ? 'border-red-500' : 'border-gray-300'}`}
+                className={`field-component field-component-border field-component-focus ${error || validationError ? 'border-red-500' : 'border'}`}
                 required
                 minLength={3}
                 maxLength={50}

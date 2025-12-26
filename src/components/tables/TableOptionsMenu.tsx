@@ -87,11 +87,11 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
         items={[
           ...(onPinToggle ? [{ 
             label: isPinned ? 'Unpin table' : 'Pin table', 
-            icon: <Pin className="w-4 h-4" />, 
+            icon: <Pin className="w-5 h-5 text-gray-400" />, 
             onClick: handlePinClick
           }] : []),
-          { label: 'Edit table', icon: <Edit className="w-4 h-4" />, onClick: () => setShowEditModal(true) },
-          ...(canDeleteTable() ? [{ label: 'Delete table', icon: <Trash2 className="w-4 h-4" />, onClick: () => setShowDelete(true), danger: true }] : []),
+          { label: 'Edit table', icon: <Edit className="w-5 h-5 text-gray-400" />, onClick: () => setShowEditModal(true) },
+          ...(canDeleteTable() ? [{ label: 'Delete table', icon: <Trash2 className="w-5 h-5 text-gray-400" />, onClick: () => setShowDelete(true), danger: true }] : []),
         ]}
       />
       {showEditModal && ReactDOM.createPortal(

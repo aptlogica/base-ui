@@ -701,12 +701,12 @@ export const LongText: React.FC<LongTextProps> = ({
                 <style>{`
                   [contenteditable][data-placeholder]:empty:before {
                     content: attr(data-placeholder);
-                    color: #9ca3af;
+                    color: var(--color-gray-400);
                     pointer-events: none;
                   }
                   [contenteditable][data-placeholder]:focus:empty:before {
                     content: attr(data-placeholder);
-                    color: #9ca3af;
+                    color: var(--color-gray-400);
                     pointer-events: none;
                   }
                   [contenteditable] a {
@@ -759,7 +759,7 @@ export const LongText: React.FC<LongTextProps> = ({
           {/* Popup */}
           <div
             ref={linkPopupRef}
-            className="fixed z-[10000] bg-white border border-gray-200 rounded-xl shadow-xl p-3 min-w-[280px] max-w-[400px]"
+            className="fixed z-[10000] bg-card border border rounded-xl shadow-xl p-3 min-w-[280px] max-w-[400px]"
             style={{
               top: `${linkPopupPosition.top}px`,
               left: `${linkPopupPosition.left}px`
@@ -774,7 +774,7 @@ export const LongText: React.FC<LongTextProps> = ({
                     type="text"
                     value={linkEditData.text}
                     onChange={(e) => setLinkEditData({ ...linkEditData, text: e.target.value })}
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
+                    className="w-full px-2 py-1.5 border border rounded text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
                     placeholder="Link text"
                     autoFocus
                     onKeyDown={(e) => {
@@ -792,7 +792,7 @@ export const LongText: React.FC<LongTextProps> = ({
                     type="text"
                     value={linkEditData.url}
                     onChange={(e) => setLinkEditData({ ...linkEditData, url: e.target.value })}
-                    className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
+                    className="flex-1 px-2 py-1.5 border border rounded text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
                     placeholder="https://example.com"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -805,7 +805,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   />
                   <button
                     onClick={handleLinkSave}
-                    className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+                    className="px-3 py-1.5 bg-blue-600 text-primary rounded text-sm hover:bg-blue-700 transition-colors"
                   >
                     {linkEditData.link ? 'Save' : 'Insert'}
                   </button>

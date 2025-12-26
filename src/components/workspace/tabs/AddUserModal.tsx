@@ -21,7 +21,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
   const [workspaceAssignments, setWorkspaceAssignments] = useState<Record<string, WorkspaceAssignment>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  
   const { mutate: addUser, isPending: isAddingUser } = useAddTenantUser();
   const assignUserToWorkspaceMutation = useAssignUserToWorkspace();
   const workspacesQuery = useWorkspaces();
@@ -62,19 +62,19 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
+    
     if (!firstName.trim()) {
       newErrors.firstName = 'First name is required';
     } else if (!/^[a-zA-Z\s]+$/.test(firstName.trim())) {
       newErrors.firstName = 'First name must contain only letters and spaces';
     }
-
+    
     if (!lastName.trim()) {
       newErrors.lastName = 'Last name is required';
     } else if (!/^[a-zA-Z\s]+$/.test(lastName.trim())) {
       newErrors.lastName = 'Last name must contain only letters and spaces';
     }
-
+    
     if (!email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!validateEmail(email)) {
@@ -131,11 +131,11 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
           if (img.width <= 800 && img.height <= 400) {
             setAvatar(file);
             setAvatarPreview(URL.createObjectURL(file));
-            setErrors(prev => {
-              const newErrors = { ...prev };
+      setErrors(prev => {
+        const newErrors = { ...prev };
               delete newErrors.avatar;
-              return newErrors;
-            });
+        return newErrors;
+      });
           } else {
             setErrors(prev => ({ ...prev, avatar: 'Image dimensions must be max 800 x 400px' }));
           }
@@ -223,7 +223,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (!validateForm()) {
       return;
     }
@@ -237,7 +237,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
         lastname: lastName.trim(),
         email: email.trim()
       };
-
+      
       const userResult = await new Promise<any>((resolve, reject) => {
         addUser(userPayload, {
           onSuccess: (data) => resolve(data),
@@ -303,23 +303,23 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
         await Promise.all(assignmentPromises);
       }
 
-      toast.success(`User ${firstName} ${lastName} added successfully`);
+            toast.success(`User ${firstName} ${lastName} added successfully`);
 
       // Reset form
-      setFirstName('');
-      setLastName('');
-      setEmail('');
+            setFirstName('');
+            setLastName('');
+            setEmail('');
       setAvatar(null);
       setAvatarPreview(null);
       setIsCoOwner(false);
-      setErrors({});
+            setErrors({});
       setWorkspaceAssignments({});
       setSearchTerm('');
 
-      onClose();
+            onClose();
     } catch (error: any) {
-      const errorMsg = error?.response?.data?.message || error?.message || 'Failed to add user';
-      toast.error(errorMsg);
+            const errorMsg = error?.response?.data?.message || error?.message || 'Failed to add user';
+            toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -377,71 +377,71 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
 
                 {/* First Name and Last Name - Side by Side */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* First Name */}
-                  <div>
+          {/* First Name */}
+          <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       First Name <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      value={firstName}
-                      onChange={(e) => {
-                        setFirstName(e.target.value);
-                        if (errors.firstName) {
-                          setErrors(prev => {
-                            const newErrors = { ...prev };
-                            delete newErrors.firstName;
-                            return newErrors;
-                          });
-                        }
-                      }}
-                      placeholder="Enter first name"
-                      className={`w-full text-sm px-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all ${errors.firstName ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                    />
-                    {errors.firstName && (
-                      <p className="mt-1 text-xs text-red-500">{errors.firstName}</p>
-                    )}
-                  </div>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => {
+                setFirstName(e.target.value);
+                if (errors.firstName) {
+                  setErrors(prev => {
+                    const newErrors = { ...prev };
+                    delete newErrors.firstName;
+                    return newErrors;
+                  });
+                }
+              }}
+              placeholder="Enter first name"
+                      className={`w-full text-sm px-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all ${errors.firstName ? 'border-red-500' : 'border'
+              }`}
+            />
+            {errors.firstName && (
+              <p className="mt-1 text-xs text-red-500">{errors.firstName}</p>
+            )}
+          </div>
 
-                  {/* Last Name */}
-                  <div>
+          {/* Last Name */}
+          <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Last Name <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      value={lastName}
-                      onChange={(e) => {
-                        setLastName(e.target.value);
-                        if (errors.lastName) {
-                          setErrors(prev => {
-                            const newErrors = { ...prev };
-                            delete newErrors.lastName;
-                            return newErrors;
-                          });
-                        }
-                      }}
-                      placeholder="Enter last name"
-                      className={`w-full text-sm px-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all ${errors.lastName ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                    />
-                    {errors.lastName && (
-                      <p className="mt-1 text-xs text-red-500">{errors.lastName}</p>
-                    )}
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => {
+                setLastName(e.target.value);
+                if (errors.lastName) {
+                  setErrors(prev => {
+                    const newErrors = { ...prev };
+                    delete newErrors.lastName;
+                    return newErrors;
+                  });
+                }
+              }}
+              placeholder="Enter last name"
+                      className={`w-full text-sm px-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all ${errors.lastName ? 'border-red-500' : 'border'
+              }`}
+            />
+            {errors.lastName && (
+              <p className="mt-1 text-xs text-red-500">{errors.lastName}</p>
+            )}
                   </div>
-                </div>
+          </div>
 
-                {/* Email */}
-                <div>
+          {/* Email */}
+          <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Email address <span className="text-red-500">*</span>
-                  </label>
+            </label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="email"
-                      value={email}
+            <input
+              type="email"
+              value={email}
                       onChange={(e) => {
                         setEmail(e.target.value);
                         if (errors.email) {
@@ -457,15 +457,15 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
                           setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
                         }
                       }}
-                      placeholder="Enter email address"
-                      className={`w-full text-sm pl-10 pr-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all ${errors.email ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                    />
+              placeholder="Enter email address"
+                      className={`w-full text-sm pl-10 pr-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all ${errors.email ? 'border-red-500' : 'border'
+              }`}
+            />
                   </div>
-                  {errors.email && (
-                    <p className="mt-1 text-xs text-red-500">{errors.email}</p>
-                  )}
-                </div>
+            {errors.email && (
+              <p className="mt-1 text-xs text-red-500">{errors.email}</p>
+            )}
+          </div>
 
                 {/* Profile Image */}
                 <div>
@@ -492,7 +492,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
                             const input = document.getElementById('avatar-upload') as HTMLInputElement;
                             if (input) input.value = '';
                           }}
-                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-primary rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
                         >
                           <X size={12} />
                         </button>
@@ -502,7 +502,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
                       <div
                         onDragOver={handleDragOver}
                         onDrop={handleDrop}
-                        className="flex-1 relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                        className="flex-1 relative border-2 border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
                         onClick={() => document.getElementById('avatar-upload')?.click()}
                       >
                         <input
@@ -525,7 +525,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
                     <div
                       onDragOver={handleDragOver}
                       onDrop={handleDrop}
-                      className="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                      className="relative border-2 border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
                       onClick={() => document.getElementById('avatar-upload')?.click()}
                     >
                       <input
@@ -626,7 +626,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
             type="submit"
             form="add-user-form"
             disabled={!isValid || isSubmitting || isAddingUser}
-            className="flex items-center gap-2 px-6 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="flex items-center gap-2 px-6 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             {(isSubmitting || isAddingUser) ? (
               <>

@@ -172,7 +172,7 @@ const UserDropdown: React.FC = () => {
       {/* User Avatar Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-9 h-9 flex items-center justify-center bg-green-500 hover:bg-green-600 text-white rounded-full transition-colors duration-200 relative flex-shrink-0"
+        className="w-9 h-9 flex items-center justify-center bg-green-500 hover:bg-green-600 text-primary rounded-full transition-colors duration-200 relative flex-shrink-0"
         title={`${displayName} - User Menu`}
       >
         {userProfile?.avatar ? (

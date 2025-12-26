@@ -231,7 +231,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={`Enter ${itemType} name`}
-                className={`field-component field-component-border field-component-focus ${error || validationError ? 'border-red-500' : 'border-gray-300'}`}
+                className={`field-component field-component-border field-component-focus ${error || validationError ? 'border-red-500' : 'border'}`}
                 required
                 minLength={3}
                 maxLength={50}
@@ -241,7 +241,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
                 <span className="relative inline-block group">
                   <HelpCircle className={`w-4 h-4 ${validationError ? 'text-red-500' : name.trim().length >= 3 ? 'text-green-600' : 'text-gray-400'
                     } cursor-help`} />
-                  <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-white border rounded-xl shadow-lg p-3 text-sm z-50">
+                  <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                     <h4 className="font-medium mb-2">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} name requirements:</h4>
                     <ul className="space-y-1">
                       <li className={`flex items-center ${name.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
@@ -297,7 +297,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
                         const input = document.getElementById('edit-image-upload') as HTMLInputElement;
                         if (input) input.value = '';
                       }}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-primary rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
                     >
                       <X size={12} />
                     </button>
@@ -307,7 +307,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
                   <div
                     onDragOver={handleDragOver}
                     onDrop={handleDrop}
-                    className="flex-1 relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                    className="flex-1 relative border-2 border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
                     onClick={() => document.getElementById('edit-image-upload')?.click()}
                   >
                     <input
@@ -330,7 +330,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
                 <div
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
-                  className="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                  className="relative border-2 border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
                   onClick={() => document.getElementById('edit-image-upload')?.click()}
                 >
                   <input
@@ -365,7 +365,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting || !name.trim() || name.trim().length < 3 || !!validationError}
-              className="flex items-center gap-2 px-6 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+              className="flex items-center gap-2 px-6 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {isSubmitting ? (
                 <>

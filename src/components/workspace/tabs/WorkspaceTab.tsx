@@ -209,7 +209,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
             {selectedWorkspace ? (
               <>
                 <div className={`w-8 h-8 ${workspaceIcon.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                  <span className="text-white font-bold text-sm">
+                  <span className="text-primary font-bold text-sm">
                     {workspaceIcon.initials}
                   </span>
                 </div>
@@ -220,7 +220,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
             ) : (
               <>
                 <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-sm">W</span>
+                  <span className="text-primary font-bold text-sm">W</span>
                 </div>
                 <span className="text-sm font-medium text-gray-500">Select Workspace</span>
               </>
@@ -252,7 +252,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
                         }`}
                       >
                         <div className={`w-8 h-8 ${icon.color} rounded-full flex items-center justify-center flex-shrink-0`}>
-                          <span className="text-white font-bold text-sm">
+                          <span className="text-primary font-bold text-sm">
                             {icon.initials}
                           </span>
                         </div>

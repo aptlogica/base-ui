@@ -195,7 +195,7 @@ const Breadcrumb: React.FC = () => {
           />
         </div>
       ) : (
-        <div className={`w-6 h-6 ${baseIcon.color} rounded-lg flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}>
+        <div className={`w-6 h-6 ${baseIcon.color} rounded-lg flex items-center justify-center text-primary font-semibold text-xs flex-shrink-0`}>
           {baseIcon.letter}
         </div>
       );
@@ -412,7 +412,7 @@ const Breadcrumb: React.FC = () => {
         id: base.id,
         label: base.title || base.name || 'Base',
         icon: (
-          <div className={`w-6 h-6 ${icon.color} rounded-md flex items-center justify-center text-white font-semibold text-sm flex-shrink-0`}>
+          <div className={`w-6 h-6 ${icon.color} rounded-md flex items-center justify-center text-primary font-semibold text-sm flex-shrink-0`}>
             {icon.letter}
           </div>
         ),
@@ -526,8 +526,8 @@ const Breadcrumb: React.FC = () => {
               >
                 {item.icon}
                 <span className={`font-medium truncate max-w-[150px] ${isLast
-                  ? 'text-[var(--color-text-primary)]'
-                  : 'text-gray-700 group-hover:text-[var(--color-text-primary)]'
+                    ? 'text-[var(--color-text-primary)]'
+                    : 'text-gray-700 group-hover:text-[var(--color-text-primary)]'
                   }`} title={item.label}>
                   {item.label}
                 </span>
@@ -682,9 +682,9 @@ const Breadcrumb: React.FC = () => {
                             <Plus className="w-4 h-4 text-primary" />
                           </div>
                           <span>Create New Base</span>
-                        </button>
-                      </div>
-                    )}
+                          </button>
+                        </div>
+                      )}
                   </div>
                 </div>,
                 document.body
@@ -768,7 +768,7 @@ const Breadcrumb: React.FC = () => {
               <button
                 onClick={handleConfirmDelete}
                 disabled={!isDeletingBase}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-red-600 text-primary rounded-md hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Delete Base
               </button>

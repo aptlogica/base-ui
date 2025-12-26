@@ -70,7 +70,7 @@ const HeaderMembers: React.FC = () => {
       <div className="flex items-center gap-3">
         <button
           onClick={() => setShowAddMemberModal(true)}
-          className="p-2.5 rounded-xl btn-primary text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="p-2.5 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <UserPlus className="w-4 h-4" />
           {/* Add Member */}

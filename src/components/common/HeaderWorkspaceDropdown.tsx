@@ -157,7 +157,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
           {/* Workspace Icon */}
           {displayWorkspace ? (
             <div className={`w-8 h-8 ${workspaceIcon.color} rounded-full flex items-center justify-center flex-shrink-0`}>
-              <span className="text-white font-bold text-sm">
+              <span className="text-primary font-bold text-sm">
                 {workspaceIcon.initials}
               </span>
             </div>
@@ -222,7 +222,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                       <div className="flex items-center gap-3">
                         {/* Workspace Icon */}
                         <div className={`w-6 h-6 ${iconColor} rounded-full flex items-center justify-center flex-shrink-0`}>
-                          <span className="text-white text-center">
+                          <span className="text-primary text-center">
                             {initials}
                           </span>
                         </div>

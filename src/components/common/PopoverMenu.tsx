@@ -245,8 +245,8 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
           disabled={item.disabled}
           tabIndex={0}
         >
-          {item.icon && <span className="w-4 h-4 flex items-center justify-center">{item.icon}</span>}
-          <span>{item.label}</span>
+          {item.icon && <span className="w-5 h-5 flex items-center justify-center text-gray-400">{item.icon}</span>}
+          <span className="text-sm text-[var(--color-text-primary)]">{item.label}</span>
         </button>
       ))}
     </div>

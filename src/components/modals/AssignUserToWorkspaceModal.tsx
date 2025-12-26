@@ -326,7 +326,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
       onKeyDown={handleKeyDown}
     >
       <div
-        className="bg-modal !max-w-2xl !p-0 flex flex-col h-[90vh] max-h-[90vh]"
+        className="bg-modal !max-w-5xl !p-0 flex flex-col h-[90vh] max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
@@ -374,7 +374,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Select Member</label>
                   {editMode ? (
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-sm text-gray-700">
+                    <div className="px-4 py-3 bg-gray-50 border border rounded-xl text-sm text-gray-700">
                       {(() => {
                         const user = tenantUsers.find((u: any) => u.id === memberToEdit);
                         return user?.display_name || user?.email || memberToEdit || 'Unknown User';

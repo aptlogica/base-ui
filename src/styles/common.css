@@ -246,7 +246,7 @@
 }
 
 .field-component-focus {
-  @apply  w-[99%] focus:border focus:border-[--color-brand-600] bg-[--color-alpha-white];
+  @apply w-[99%] focus:border focus:border-[--color-brand-600] bg-[--color-alpha-white];
 }
 
 .field-component-label {

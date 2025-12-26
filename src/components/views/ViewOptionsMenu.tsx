@@ -85,11 +85,11 @@ const ViewOptionsMenu: React.FC<ViewOptionsMenuProps> = ({ view, onRename, onEdi
         items={[
           ...(onPinToggle ? [{
             label: isPinned ? 'Unpin view' : 'Pin view',
-            icon: <Pin className="w-4 h-4" />,
+            icon: <Pin className="w-5 h-5 text-gray-400" />,
             onClick: handlePinClick
           }] : []),
-          { label: 'Edit view', icon: <Edit className="w-4 h-4" />, onClick: () => setShowEditModal(true) },
-          ...(canDeleteView() ? [{ label: 'Delete view', icon: <Trash2 className="w-4 h-4" />, onClick: () => setShowDelete(true), danger: true }] : []),
+          { label: 'Edit view', icon: <Edit className="w-5 h-5 text-gray-400" />, onClick: () => setShowEditModal(true) },
+          ...(canDeleteView() ? [{ label: 'Delete view', icon: <Trash2 className="w-5 h-5 text-gray-400" />, onClick: () => setShowDelete(true), danger: true }] : []),
         ]}
       />
 

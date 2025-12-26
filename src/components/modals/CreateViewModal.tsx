@@ -320,7 +320,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter view name"
-                className={`field-component field-component-border field-component-focus ${error || validationError ? 'border-red-500' : 'border-gray-300'
+                className={`field-component field-component-border field-component-focus ${error || validationError ? 'border-red-500' : 'border'
                   }`}
                 minLength={3}
                 maxLength={50}
@@ -470,7 +470,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
                     startDateField === endDateField
                   ) : !selectedField)))
               }
-              className="px-6 py-2 rounded-xl btn-primary text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>

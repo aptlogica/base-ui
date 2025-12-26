@@ -69,7 +69,7 @@ export const WorkspaceSettingsTab: React.FC = () => {
         {canCreateWorkspace() && (
           <button
             onClick={() => setShowCreateForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-colors font-medium"
+            className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-primary rounded-xl transition-colors font-medium"
           >
             <Plus size={18} />
             Create Space
@@ -102,7 +102,7 @@ export const WorkspaceSettingsTab: React.FC = () => {
                 type="text"
                 value={workspaceDetails.id || ''}
                 disabled
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 font-medium cursor-not-allowed"
+                className="w-full px-4 py-2 bg-gray-50 border border rounded-xl text-gray-900 font-medium cursor-not-allowed"
               />
             </div>
 
@@ -113,7 +113,7 @@ export const WorkspaceSettingsTab: React.FC = () => {
                 type="text"
                 value={workspaceDetails.title || ''}
                 disabled
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 font-medium cursor-not-allowed"
+                className="w-full px-4 py-2 bg-gray-50 border border rounded-xl text-gray-900 font-medium cursor-not-allowed"
               />
             </div>
 
@@ -124,7 +124,7 @@ export const WorkspaceSettingsTab: React.FC = () => {
                 value={workspaceDetails.description || ''}
                 disabled
                 rows={3}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 font-medium cursor-not-allowed resize-none"
+                className="w-full px-4 py-2 bg-gray-50 border border rounded-xl text-gray-900 font-medium cursor-not-allowed resize-none"
               />
             </div>
           </div>
@@ -157,7 +157,7 @@ export const WorkspaceSettingsTab: React.FC = () => {
                 placeholder="Enter space name"
                 value={newWorkspaceName}
                 onChange={(e) => setNewWorkspaceName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                className="w-full px-4 py-2 border border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] focus:border-transparent text-gray-900"
               />
             </div>
 
@@ -169,7 +169,7 @@ export const WorkspaceSettingsTab: React.FC = () => {
                 value={newWorkspaceDescription}
                 onChange={(e) => setNewWorkspaceDescription(e.target.value)}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 resize-none"
+                className="w-full px-4 py-2 border border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] focus:border-transparent text-gray-900 resize-none"
               />
             </div>
           </div>
@@ -189,7 +189,7 @@ export const WorkspaceSettingsTab: React.FC = () => {
             <button
               onClick={handleCreateWorkspace}
               disabled={createWorkspaceMutation.isPending}
-              className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-xl font-medium transition-colors"
+              className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-primary rounded-xl font-medium transition-colors"
             >
               {createWorkspaceMutation.isPending ? 'Creating...' : 'Create Space'}
             </button>

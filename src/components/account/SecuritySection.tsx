@@ -225,7 +225,7 @@ export const SecuritySection: React.FC = () => {
             setConfirmPasswordError(null);
           }}
           disabled={isUpdatingPassword || changePasswordMutation.isPending}
-          className="flex items-center gap-2 px-6 py-2.5 text-sm border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50 transition-colors"
+          className="flex items-center gap-2 px-6 py-2.5 text-sm border border text-gray-700 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50 transition-colors"
         >
           Cancel
         </button>
@@ -238,7 +238,7 @@ export const SecuritySection: React.FC = () => {
           }
           className={`flex items-center gap-2 px-6 py-2.5 text-sm rounded-xl transition-colors ${
             isPasswordFormValid && !isUpdatingPassword && !changePasswordMutation.isPending
-              ? 'btn-primary text-white'
+              ? 'btn-primary text-primary'
               : 'bg-gray-300 text-gray-600 cursor-not-allowed'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
@@ -294,7 +294,7 @@ export const SecuritySection: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Current Password
             </label>
-            <div className={`relative flex items-center ${currentPasswordError ? "border-red-500" : "border-gray-300"}`}>
+            <div className={`relative flex items-center ${currentPasswordError ? "border-red-500" : "border"}`}>
               <input
                 type={showCurrentPassword ? "text" : "password"}
                 value={passwordData.currentPassword}
@@ -306,7 +306,7 @@ export const SecuritySection: React.FC = () => {
                     setCurrentPasswordError(null);
                   }
                 }}
-                className={`w-full px-4 py-3 pr-20 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-white ${currentPasswordError ? "border-red-500 bg-red-50" : ""}`}
+                className={`w-full px-4 py-3 pr-20 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-card ${currentPasswordError ? "border-red-500 bg-red-50" : ""}`}
                 placeholder="Enter your current password"
                 autoComplete="off"
                 data-form-type="other"
@@ -335,7 +335,7 @@ export const SecuritySection: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 New Password
               </label>
-              <div className={`relative flex items-center ${newPasswordError ? "border-red-500" : "border-gray-300"}`}>
+              <div className={`relative flex items-center ${newPasswordError ? "border-red-500" : "border"}`}>
                 <input
                   type={showNewPassword ? "text" : "password"}
                   value={passwordData.newPassword}
@@ -357,7 +357,7 @@ export const SecuritySection: React.FC = () => {
                       }
                     }
                   }}
-                  className={`w-full px-4 py-3 pr-20 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-white ${newPasswordError ? "border-red-500 bg-red-50" : ""}`}
+                  className={`w-full px-4 py-3 pr-20 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-card ${newPasswordError ? "border-red-500 bg-red-50" : ""}`}
                   placeholder="Enter new password"
                   autoComplete="new-password"
                 />
@@ -425,7 +425,7 @@ export const SecuritySection: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Confirm New Password
               </label>
-              <div className={`relative flex items-center ${confirmPasswordError ? "border-red-500" : "border-gray-300"}`}>
+              <div className={`relative flex items-center ${confirmPasswordError ? "border-red-500" : "border"}`}>
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   value={passwordData.confirmPassword}
@@ -439,7 +439,7 @@ export const SecuritySection: React.FC = () => {
                       setConfirmPasswordError(null);
                     }
                   }}
-                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-white ${confirmPasswordError ? "border-red-500 bg-red-50" : ""}`}
+                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-card ${confirmPasswordError ? "border-red-500 bg-red-50" : ""}`}
                   placeholder="Confirm new password"
                   autoComplete="new-password"
                 />
@@ -536,8 +536,8 @@ export const SecuritySection: React.FC = () => {
                     {/* Session content - Single line with all info */}
                     <div className="flex-1 flex items-center gap-2 flex-wrap">
                       {/* Browser Icon - Simple browser window representation */}
-                      <div className="w-4 h-4 border-2 border-gray-400 rounded-sm">
-                        <div className="w-full h-1 border-b-2 border-gray-400 mt-0.5"></div>
+                      <div className="w-4 h-4 border-2 border rounded-sm">
+                        <div className="w-full h-1 border-b-2 border mt-0.5"></div>
                       </div>
                       
                       {/* Browser/OS Text */}

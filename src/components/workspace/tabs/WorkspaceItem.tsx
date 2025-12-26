@@ -107,7 +107,7 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
                         e.stopPropagation();
                         onToggleBase(workspace.id, base.id);
                       }}
-                      className="text-xs px-2 py-1 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 text-gray-600 transition-colors"
+                      className="text-xs px-2 py-1 border border rounded-lg bg-card hover:bg-gray-50 text-gray-600 transition-colors"
                     >
                       Select a role
                     </button>

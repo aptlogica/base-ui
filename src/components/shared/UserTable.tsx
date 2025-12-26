@@ -68,7 +68,7 @@ const getStatusBadge = (status: string, emailVerified: boolean) => {
     case 'inactive':
       return { text: 'Inactive', color: 'bg-gray-100 text-gray-700' };
     case 'deactivated':
-      return { text: 'Deactivated', color: 'bg-red-500 text-white' };
+      return { text: 'Deactivated', color: 'bg-red-500 text-primary' };
     default:
       return { text: status || 'Active', color: 'bg-blue-100 text-blue-700' };
   }
@@ -216,9 +216,9 @@ const getRolePillStyle = (role: string) => {
   } else if (roleLower.includes('base member')) {
     return 'bg-red-100 text-red-700 border border-red-200';
   } else if (roleLower.includes('base read only')) {
-    return 'bg-gray-100 text-gray-700 border border-gray-200';
+    return 'bg-gray-100 text-gray-700 border border';
   }
-  return 'bg-gray-100 text-gray-700 border border-gray-200';
+  return 'bg-gray-100 text-gray-700 border border';
 };
 
 // Infer base role from workspace access level (TEMPORARY)
@@ -306,7 +306,7 @@ const AccessDetailsRow: React.FC<{
                 return ws.bases?.map((base: { id: string; title: string }, baseIndex: number) => (
                   <tr key={`${ws.id}-${base.id}`} className="bg-background">
                     {baseIndex === 0 && (
-                      <td rowSpan={baseCount} className="px-4 py-3 text-sm text-gray-900 font-medium align-top border-r border-gray-200">
+                      <td rowSpan={baseCount} className="px-4 py-3 text-sm text-gray-900 font-medium align-top border-r border">
                         {ws.title}
                       </td>
                     )}
@@ -726,7 +726,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                               />
                             </div>
                           ) : (
-                            <div className={`w-10 h-10 ${avatarColor} rounded-full flex items-center justify-center text-white text-sm font-semibold`}>
+                            <div className={`w-10 h-10 ${avatarColor} rounded-full flex items-center justify-center text-primary text-sm font-semibold`}>
                               {avatarInitials}
                             </div>
                           )}

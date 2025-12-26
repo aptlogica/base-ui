@@ -253,7 +253,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             return (
               <div key={table.id}>
                 <div
-                  className={`flex items-center gap-3 py-1.5 pl-2 pr-3 mb-1 hover:bg-[var(--color-gray-100)] rounded-xl ${isTableActive(table.base_id, table.id) ? 'bg-background' : ''
+                  className={`flex items-center gap-3 py-1.5 pr-3 mb-1 hover:bg-[var(--color-gray-100)] rounded-xl ${isTableActive(table.base_id, table.id) ? 'bg-background' : ''
                     } relative hover:shadow-xs transition-all ease-in duration-200`}
                 >
                   {/* Expand/collapse chevron */}
@@ -297,7 +297,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   >
                     <span
                       title={table.title}
-                      className="font-medium text-[var(--color-text-primary)] truncate"
+                      className="font-medium text-[var(--color-text-tertiary)] truncate"
                       style={{ maxWidth: '200px' }}
                     >
                       {table.title}
@@ -361,10 +361,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Fixed Footer - Non-scrollable */}
-      <div className="sidebar-flyout-footer flex flex-col items-start gap-2 p-2 border-t bg-card">
+      <div className="sidebar-flyout-footer flex flex-col items-start gap-2 p-2 bg-card">
         {canCreateTable() && (
           <button
-            className="w-full flex items-center justify-center gap-2 btn-primary p-2.5 rounded transition"
+            className="w-full flex items-center justify-center gap-2 btn-primary p-2 rounded transition"
             onClick={(e) => {
               e.stopPropagation();
               if (selectedBase?.id) {

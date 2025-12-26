@@ -271,7 +271,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
       {isOpen && dropdownPosition && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] bg-card border border-gray-200 rounded-xl shadow-lg overflow-hidden"
+          className="fixed z-[9999] bg-card border border rounded-xl shadow-lg overflow-hidden"
           style={{
             top: `${dropdownPosition.top}px`,
             left: `${dropdownPosition.left}px`,

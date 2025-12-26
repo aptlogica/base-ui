@@ -31,15 +31,15 @@ export function DropdownTrigger({
   dropdownPosition = 'below',
 }: DropdownTriggerProps) {
   const baseClasses = `
-    relative w-full px-3 py-2.5 text-left bg-white border rounded-xl shadow-sm
+    relative w-full px-3 py-2.5 text-left bg-card border rounded-xl shadow-sm
     cursor-pointer transition-all duration-200 ease-in-out
-    focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+    focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] focus:border-[var(--color-brand-600)]
   `;
 
   const stateClasses = `
-    ${disabled ? 'bg-gray-50 cursor-not-allowed opacity-60' : 'hover:border-gray-400'}
-    ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'}
-    ${isOpen ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-20' : ''}
+    ${disabled ? 'bg-gray-50 cursor-not-allowed opacity-60' : 'hover:border'}
+    ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border'}
+    ${isOpen ? 'border-[var(--color-brand-600)] ring-1 ring-[var(--color-focus-ring)] ring-opacity-20' : ''}
   `;
 
   const handleClear = (e: React.MouseEvent) => {

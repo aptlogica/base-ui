@@ -121,7 +121,7 @@ export const ProfileSection: React.FC = () => {
       <div className="flex items-center justify-end gap-3">
         <button
           onClick={() => setIsEditing(true)}
-          className="flex items-center gap-2 px-6 py-2.5 text-sm btn-primary transition-colors rounded-xl text-white"
+          className="flex items-center gap-2 px-6 py-2.5 text-sm btn-primary transition-colors rounded-xl text-primary"
         >
           Edit
         </button>
@@ -131,14 +131,14 @@ export const ProfileSection: React.FC = () => {
         <button
           onClick={handleCancel}
           disabled={isSaving}
-          className="flex items-center gap-2 px-6 py-2.5 text-sm border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50 transition-colors"
+          className="flex items-center gap-2 px-6 py-2.5 text-sm border text-gray-700 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50 transition-colors"
         >
           Cancel
         </button>
         <button
           onClick={handleSave}
           disabled={!hasChanges || isSaving || updateProfileMutation.isPending}
-          className="flex items-center gap-2 px-6 py-2.5 text-sm btn-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white"
+          className="flex items-center gap-2 px-6 py-2.5 text-sm btn-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-primary"
         >
           {(isSaving || updateProfileMutation.isPending) && (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -332,7 +332,7 @@ export const ProfileSection: React.FC = () => {
           <div className="text-red-600 mb-2">Failed to load profile</div>
           <button
             onClick={() => refetch()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="px-4 py-2 bg-blue-600 text-primary rounded-md hover:bg-blue-700"
           >
             Try Again
           </button>
@@ -370,7 +370,7 @@ export const ProfileSection: React.FC = () => {
               value={isEditing ? (formData.first_name || '') : (userProfile.first_name || '')}
               onChange={(e) => handleInputChange('first_name', e.target.value)}
               disabled={!isEditing}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
               placeholder="Enter first name"
             />
           </div>
@@ -385,7 +385,7 @@ export const ProfileSection: React.FC = () => {
               value={isEditing ? (formData.last_name || '') : (userProfile.last_name || '')}
               onChange={(e) => handleInputChange('last_name', e.target.value)}
               disabled={!isEditing}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
               placeholder="Enter last name"
             />
           </div>
@@ -401,7 +401,7 @@ export const ProfileSection: React.FC = () => {
             value={isEditing ? (formData.display_name || '') : (userProfile.display_name || '')}
             onChange={(e) => handleInputChange('display_name', e.target.value)}
             disabled={!isEditing}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+            className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
             placeholder="Enter display name"
           />
         </div>
@@ -411,7 +411,7 @@ export const ProfileSection: React.FC = () => {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Email address
           </label>
-          <div className="px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-500 flex items-center justify-between gap-2 disabled:cursor-not-allowed">
+          <div className="px-4 py-3 bg-gray-50 border rounded-xl text-gray-500 flex items-center justify-between gap-2 disabled:cursor-not-allowed">
             <span>{userProfile.email}</span>
             {userProfile.email_verified && (
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
@@ -439,7 +439,7 @@ export const ProfileSection: React.FC = () => {
                   />
                   {(isUploadingAvatar || addOrUpdateAvatarMutation.isPending) && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                      <Loader2 className="w-5 h-5 animate-spin text-white" />
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
                     </div>
                   )}
                 </div>
@@ -455,10 +455,10 @@ export const ProfileSection: React.FC = () => {
                 className={`
                   border-2 border-dashed rounded-xl p-8 text-center transition-colors
                   ${!isEditing 
-                    ? 'border-gray-300 bg-gray-50 cursor-not-allowed opacity-60' 
+                    ? 'border bg-gray-50 cursor-not-allowed opacity-60' 
                     : isDragging 
                       ? 'border-[var(--color-brand-600)] bg-[var(--color-brand-50)] cursor-pointer' 
-                      : 'border-gray-300 hover:border-gray-400 bg-gray-50 cursor-pointer'
+                      : 'border hover:border bg-gray-50 cursor-pointer'
                   }
                   ${isUploadingAvatar || addOrUpdateAvatarMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''}
                 `}
@@ -592,7 +592,7 @@ export const ProfileSection: React.FC = () => {
               type="text"
               value={userProfile.dob || ''}
               disabled
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
               placeholder="Not set"
             />
           )}

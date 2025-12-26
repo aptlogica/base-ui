@@ -430,9 +430,9 @@ const DropdownTrigger = React.forwardRef<HTMLButtonElement, {
   `;
 
   const stateClasses = `
-    ${disabled ? 'bg-gray-50 cursor-not-allowed opacity-60' : 'hover:border-gray-400'}
-    ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'}
-    ${isOpen ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-20' : ''}
+    ${disabled ? 'bg-gray-50 cursor-not-allowed opacity-60' : 'hover:border'}
+    ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border'}
+    ${isOpen ? 'border-[var(--color-brand-600)] ring-1 ring-[var(--color-focus-ring)] ring-opacity-20' : ''}
   `;
 
   return (
@@ -501,7 +501,7 @@ const DropdownSearch = React.forwardRef<HTMLInputElement, {
   }, [value, onChange]);
 
   return (
-    <div className="p-3 border-b border-gray-200">
+    <div className="p-3 border-b border">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
@@ -601,7 +601,7 @@ function DropdownOptionItem<T>({
           {multiple ? (
             <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${isSelected
                 ? 'bg-[var(--color-bg-brand-primary)] border-[var(--color-bg-brand-primary)]'
-                : 'border-gray-300 bg-black'
+                : 'border bg-black'
               }`}>
               <Check className="w-3 h-3 text-black" />
             </div>
