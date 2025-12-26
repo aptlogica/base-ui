@@ -27,7 +27,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   memberToEdit,
 }) => {
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [selectedRole, setSelectedRole] = useState<string>('base_member');
+  const [selectedRole, setSelectedRole] = useState<string>('base-member');
   const [accessLevel, setAccessLevel] = useState<'full_access' | 'limited_access'>('full_access');
   const [selectedBases, setSelectedBases] = useState<string[]>([]);
   const [baseSelectionType, setBaseSelectionType] = useState<'all_bases' | 'specific_base'>('all_bases');
@@ -82,8 +82,8 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
         
         // Exclude current user
         if (user.id === currentUserId) return false;
-        // Exclude admin users
-        if (user.roles === 'Admin') return false;
+        // Exclude owner users
+        if (user.roles === 'owner') return false;
         // Exclude users who are already members (workspace or base, depending on context)
         if (existingMemberUserIds.includes(user.id)) return false;
         return true;
@@ -98,10 +98,10 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   // Role options - based on design, these are the available roles
   const roleOptions = React.useMemo(() => {
     return [
-      { label: 'Workspace Maintainer', value: 'workspace_maintainer' },
-      { label: 'Workspace Read Only', value: 'workspace_read_only' },
-      { label: 'Base Member', value: 'base_member' },
-      { label: 'Base Read only', value: 'base_read_only' },
+      { label: 'Workspace Maintainer', value: 'maintainer' },
+      { label: 'Workspace Read Only', value: 'workspace-read' },
+      { label: 'Base Member', value: 'base-member' },
+      { label: 'Base Read only', value: 'base-read' },
     ];
   }, []);
 
@@ -115,7 +115,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
 
   // Map role to access_level for API
   const getAccessLevelFromRole = (role: string): 'full_access' | 'limited_access' => {
-    if (role === 'workspace_maintainer' || role === 'base_member') {
+    if (role === 'maintainer' || role === 'base-member') {
       return 'full_access';
     }
     return 'limited_access';
@@ -123,7 +123,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
 
   // Check if role allows base selection
   const roleAllowsBaseSelection = (role: string): boolean => {
-    return role === 'base_member' || role === 'base_read_only';
+    return role === 'base-member' || role === 'base-read';
   };
 
   // Reset form when modal opens/closes or load edit data
@@ -143,9 +143,9 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
             
             // Determine role based on access level
             if (wsAccessLevel === 'full_access') {
-              setSelectedRole('workspace_maintainer');
+              setSelectedRole('maintainer');
             } else {
-              setSelectedRole('workspace_read_only');
+              setSelectedRole('workspace-read');
             }
             
             // Set selected bases (existing bases for limited access)
@@ -165,7 +165,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
       } else {
         // Add mode: Reset form
         setSelectedUserIds([]);
-        setSelectedRole('base_member');
+        setSelectedRole('base-member');
         // Default to limited_access for full_access users, full_access for admin users
         setAccessLevel(currentUserAccessLevel === 'admin' ? 'full_access' : 'limited_access');
         setSelectedBases([]);

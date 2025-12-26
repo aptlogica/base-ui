@@ -148,7 +148,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
   };
 
   // Handle workspace role change
-  const handleWorkspaceRoleChange = (workspaceId: string, role: 'workspace_maintainer' | 'workspace_read_only' | 'base_specific' | null) => {
+  const handleWorkspaceRoleChange = (workspaceId: string, role: 'maintainer' | 'workspace-read' | 'base_specific' | null) => {
     setWorkspaceAssignments(prev => {
       const updated = { ...prev };
       if (role === null) {
@@ -171,7 +171,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
   };
 
   // Handle base role change
-  const handleBaseRoleChange = (workspaceId: string, baseId: string, role: 'base_member' | 'base_read_only') => {
+  const handleBaseRoleChange = (workspaceId: string, baseId: string, role: 'base-member' | 'base-read') => {
     setWorkspaceAssignments(prev => {
       const updated = { ...prev };
       if (!updated[workspaceId]) {
@@ -214,7 +214,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
             delete updated[workspaceId];
           }
         } else {
-          assignment.bases.push({ baseId, role: 'base_member' });
+          assignment.bases.push({ baseId, role: 'base-member' });
         }
       }
       return updated;
@@ -276,7 +276,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
               bases_ids: baseIds
             })
           );
-        } else if (assignment.role === 'workspace_maintainer') {
+        } else if (assignment.role === 'maintainer') {
           // Assign with limited_access to all bases
           assignmentPromises.push(
             assignUserToWorkspaceMutation.mutateAsync({
@@ -286,7 +286,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
               bases_ids: '*' // All bases
             })
           );
-        } else if (assignment.role === 'workspace_read_only') {
+        } else if (assignment.role === 'workspace-read') {
           // Assign with read-only (if API supports, otherwise use limited_access)
           assignmentPromises.push(
             assignUserToWorkspaceMutation.mutateAsync({

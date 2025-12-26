@@ -8,10 +8,8 @@ import {
   useCreateView, useUpdateView, useDeleteView,
   useAddRow, useInsertRowData, useDeleteRecord
 } from '../../hooks/useApi';
-import { isTenantSchemaAvailable } from '../../service/clientService';
 
 export const useWorkspaceDataService = (workspaceId?: string, baseId?: string, tableId?: string, viewId?: string) => {
-  const tenantReady = isTenantSchemaAvailable();
 
   // Queries
   const workspacesQuery = useWorkspaces();
@@ -46,7 +44,6 @@ export const useWorkspaceDataService = (workspaceId?: string, baseId?: string, t
   const deleteRecordMutation = useDeleteRecord();
 
   return {
-    tenantReady,
     // Queries
     workspacesQuery,
     workspaceByIdQuery,

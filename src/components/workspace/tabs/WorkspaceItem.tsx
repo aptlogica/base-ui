@@ -5,18 +5,18 @@ import { RoleDropdown } from '../../common/dropdown/RoleDropdown';
 
 export interface WorkspaceAssignment {
   workspaceId: string;
-  role: 'workspace_maintainer' | 'workspace_read_only' | 'base_specific' | null;
+  role: 'maintainer' | 'workspace-read' | 'base_specific' | null;
   bases?: Array<{
     baseId: string;
-    role: 'base_member' | 'base_read_only';
+    role: 'base-member' | 'base-read';
   }>;
 }
 
 interface WorkspaceItemProps {
   workspace: any;
   assignment: WorkspaceAssignment | undefined;
-  onRoleChange: (workspaceId: string, role: 'workspace_maintainer' | 'workspace_read_only' | 'base_specific' | null) => void;
-  onBaseRoleChange: (workspaceId: string, baseId: string, role: 'base_member' | 'base_read_only') => void;
+  onRoleChange: (workspaceId: string, role: 'maintainer' | 'workspace-read' | 'base_specific' | null) => void;
+  onBaseRoleChange: (workspaceId: string, baseId: string, role: 'base-member' | 'base-read') => void;
   onToggleBase: (workspaceId: string, baseId: string) => void;
 }
 
@@ -32,14 +32,14 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
   const baseCount = Array.isArray(bases) ? bases.length : 0;
 
   const workspaceRoleOptions = [
-    { label: 'Workspace Maintainer', value: 'workspace_maintainer' },
-    { label: 'Workspace Read only', value: 'workspace_read_only' },
+    { label: 'Workspace Maintainer', value: 'maintainer' },
+    { label: 'Workspace Read only', value: 'workspace-read' },
     { label: 'Base Specific Role', value: 'base_specific' },
   ];
 
   const baseRoleOptions = [
-    { label: 'Base Member', value: 'base_member' },
-    { label: 'Base Read only', value: 'base_read_only' },
+    { label: 'Base Member', value: 'base-member' },
+    { label: 'Base Read only', value: 'base-read' },
   ];
 
   return (
@@ -60,7 +60,7 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
           onChange={(value) => {
             onRoleChange(
               workspace.id,
-              value === '' ? null : value as 'workspace_maintainer' | 'workspace_read_only' | 'base_specific'
+              value === '' ? null : value as 'maintainer' | 'workspace-read' | 'base_specific'
             );
           }}
           placeholder="Select a role"
@@ -95,7 +95,7 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
                         onBaseRoleChange(
                           workspace.id,
                           base.id,
-                          value as 'base_member' | 'base_read_only'
+                          value as 'base-member' | 'base-read'
                         );
                       }}
                       className="min-w-[120px]"

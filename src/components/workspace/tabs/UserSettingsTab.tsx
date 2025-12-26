@@ -17,9 +17,9 @@ export const UserSettingsTab: React.FC<UserSettingsTabProps> = ({ workspaceId })
   const activateTenantUserMutation = useActivateTenantUser();
   const deactivateTenantUserMutation = useDeactivateTenantUser();
 
-  // Filter out admin users
-  const nonAdminUsers = useMemo(() => {
-    return (tenantUsers as any[]).filter((u: any) => u.roles !== 'Admin');
+  // Filter out owner users
+  const nonOwnerUsers = useMemo(() => {
+    return (tenantUsers as any[]).filter((u: any) => u.roles !== 'owner');
   }, [tenantUsers]);
 
   const handleRemoveUser = async (userId: string) => {
@@ -80,7 +80,7 @@ export const UserSettingsTab: React.FC<UserSettingsTabProps> = ({ workspaceId })
     <div className="space-y-0">
       {/* User Table */}
       <UserTable
-        users={nonAdminUsers as TenantUser[]}
+        users={nonOwnerUsers as TenantUser[]}
         onRemoveUser={handleRemoveUser}
         onEditUser={handleEditUser}
         onActivateUser={handleActivateUser}

@@ -280,6 +280,7 @@ interface CreateView {
     description?: string;
     meta: Record<string, any>;
     type: string;
+    order_index: number;
 }
 interface UpdateView {
     view_id: string;
@@ -304,6 +305,25 @@ interface ImportTable {
     description: string;
     order_index: number;
     file: File;
+}
+interface ImportAiTable {
+    prompt: string;
+}
+interface AiTableField {
+    name: string;
+    type: string;
+    constraints?: Record<string, any>;
+}
+interface AiTable {
+    name: string;
+    fields: AiTableField[];
+}
+interface ApplyImportAiTable {
+    base_id: string;
+    workspace_id: string;
+    tables: AiTable[];
+    sample_data: boolean;
+    row: number;
 }
 
 declare class TableService {
@@ -344,6 +364,8 @@ declare class TableService {
     updateAssetById(id: string, params: UpdateAsset): Promise<StandardResponse<any>>;
     deleteAssetById(id: string): Promise<StandardResponse<any>>;
     import(params: ImportTable, extra?: (progressEvent: ProgressEvent) => void): Promise<StandardResponse<any>>;
+    importAiTable(params: ImportAiTable): Promise<StandardResponse<any>>;
+    applyImportAiTable(params: ApplyImportAiTable, schema: string): Promise<StandardResponse<any>>;
 }
 
 interface UpdateUserProfileParams {
@@ -357,10 +379,17 @@ interface ChangePasswordParams {
     new_password: string;
 }
 interface AssignToWorkspaceParams {
-    workspace_id: string;
     user_id: string;
-    access_level: string;
-    bases_ids: string;
+    membership: MembershipRequest$1[];
+}
+interface MembershipRequest$1 {
+    workspace_id: string;
+    role: string;
+    bases?: BaseMembership$1[];
+}
+interface BaseMembership$1 {
+    base_id: string;
+    role: string;
 }
 interface RemoveUserFromWorkspace {
     workspace_id: string;
@@ -398,6 +427,18 @@ interface AddUserRequest {
     email: string;
     firstname: string;
     lastname: string;
+    profile_pic?: File;
+    is_coowner?: boolean;
+    membership?: MembershipRequest[];
+}
+interface MembershipRequest {
+    workspace_id: string;
+    role: string;
+    bases?: BaseMembership[];
+}
+interface BaseMembership {
+    base_id: string;
+    role: string;
 }
 interface UserIDPayload {
     user_id: string;

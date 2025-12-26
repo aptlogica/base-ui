@@ -322,7 +322,7 @@ const AppRoutes = ({ loading }: { loading: boolean }) => {
         <Route
           path="/administrator"
           element={
-            <RoleBasedRoute requiredRoles={['Admin']}>
+            <RoleBasedRoute requiredRoles={['owner']}>
               <PrivateRoute>
                 <AdministratorPage />
               </PrivateRoute>

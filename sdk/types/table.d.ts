@@ -73,6 +73,7 @@ export interface CreateView {
     description?: string;
     meta: Record<string, any>;
     type: string;
+    order_index: number;
 }
 export interface UpdateView {
     view_id: string;
@@ -103,5 +104,24 @@ export interface ImportTable {
     description: string;
     order_index: number;
     file: File;
+}
+export interface ImportAiTable {
+    prompt: string;
+}
+export interface AiTableField {
+    name: string;
+    type: string;
+    constraints?: Record<string, any>;
+}
+export interface AiTable {
+    name: string;
+    fields: AiTableField[];
+}
+export interface ApplyImportAiTable {
+    base_id: string;
+    workspace_id: string;
+    tables: AiTable[];
+    sample_data: boolean;
+    row: number;
 }
 //# sourceMappingURL=table.d.ts.map

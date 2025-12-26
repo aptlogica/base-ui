@@ -108,12 +108,22 @@ const OtpValidation: React.FC<OtpValidationProps> = ({
             }
           }
 
-          // Store roles from decoded token (needed for RBAC)
+          // Store role from decoded token (single string, not array)
           if (accessDecoded?.roles) {
-            const roles = Array.isArray(accessDecoded.roles)
-              ? accessDecoded.roles
-              : [accessDecoded.roles];
-            sessionStorage.setItem('user_roles', JSON.stringify(roles));
+            const role = typeof accessDecoded.roles === 'string' 
+              ? accessDecoded.roles 
+              : (Array.isArray(accessDecoded.roles) ? accessDecoded.roles[0] : null);
+            
+            if (role) {
+              sessionStorage.setItem('user_role', role);
+              // Also store full token data for reference
+              sessionStorage.setItem('user_token_data', JSON.stringify({
+                user_id: accessDecoded.user_id,
+                email: accessDecoded.email,
+                roles: role,
+                email_verified: accessDecoded.email_verified,
+              }));
+            }
           }
 
           // Extract tenant_schema from decoded access token

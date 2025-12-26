@@ -38,5 +38,7 @@ export declare class TableService {
     updateAssetById(id: string, params: types.UpdateAsset): Promise<import("..").StandardResponse<any>>;
     deleteAssetById(id: string): Promise<import("..").StandardResponse<any>>;
     import(params: types.ImportTable, extra?: (progressEvent: ProgressEvent) => void): Promise<import("..").StandardResponse<any>>;
+    importAiTable(params: types.ImportAiTable): Promise<import("..").StandardResponse<any>>;
+    applyImportAiTable(params: types.ApplyImportAiTable, schema: string): Promise<import("..").StandardResponse<any>>;
 }
 //# sourceMappingURL=table-service.d.ts.map

@@ -9,12 +9,9 @@ import {
   useCreateView,
   useUpdateTable,
 } from './useApi';
-import { isTenantSchemaAvailable } from '../service/clientService';
 
 
 export const useWorkspaceData = (selectedWorkspaceId?: string, selectedBaseId?: string) => {
-  const tenantReady = isTenantSchemaAvailable();
-
   const workspacesQuery = useWorkspaces();
   const workspaceBasesQuery = useWorkspaceBases(selectedWorkspaceId || '');
   const baseTablesQuery = useBaseTables(selectedBaseId || '');
@@ -27,10 +24,8 @@ export const useWorkspaceData = (selectedWorkspaceId?: string, selectedBaseId?: 
 
   // Aggregate loading & error state
   const loading = useMemo(() => {
-    // If tenant schema not ready, show loading so UI waits for login flow to finish
-    if (!tenantReady) return true;
     return !!(workspacesQuery.isLoading || workspaceBasesQuery.isLoading || baseTablesQuery.isLoading);
-  }, [tenantReady, workspacesQuery.isLoading, workspaceBasesQuery.isLoading, baseTablesQuery.isLoading]);
+  }, [workspacesQuery.isLoading, workspaceBasesQuery.isLoading, baseTablesQuery.isLoading]);
 
   const error = useMemo(() => {
     return workspacesQuery.error || workspaceBasesQuery.error || baseTablesQuery.error || null;

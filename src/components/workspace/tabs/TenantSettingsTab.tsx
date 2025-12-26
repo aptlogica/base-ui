@@ -177,7 +177,7 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
     // If no owner found, use first admin
     if (owners.length === 0) {
       const admins = (tenantUsers as any[])
-        .filter((u: any) => u.roles === 'Admin' || u.is_admin || u.role === 'admin')
+        .filter((u: any) => u.roles === 'owner' || u.is_admin || u.role === 'owner')
         .map((u: any) => ({
           id: u.id || u.user_id || '',
           name: u.display_name || u.name || `${u.first_name || ''} ${u.last_name || ''}`.trim(),

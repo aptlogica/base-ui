@@ -16,7 +16,6 @@ export const useWorkspaceBusinessLogic = () => {
 
   // Centralized Data Service
   const {
-    tenantReady,
     workspacesQuery,
     workspaceByIdQuery,
     workspaceBasesQuery,
@@ -119,7 +118,7 @@ export const useWorkspaceBusinessLogic = () => {
 
   // Loading and error states
   // Removed tableViewsLoading - views are now fetched on-demand, not during initial load
-  const loading = workspacesLoading || basesLoading || tablesLoading || viewsLoading || !tenantReady;
+  const loading = workspacesLoading || basesLoading || tablesLoading || viewsLoading;
   const error = workspacesError || basesError || tablesError || viewsError;
 
   // Business logic functions

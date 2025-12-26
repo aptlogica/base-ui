@@ -27,7 +27,7 @@ interface AuthContextType {
   loading: boolean;
   saving: boolean;
   restoreCompleted: boolean;
-  userRoles: string[];
+  userRole: string | null;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -40,21 +40,25 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const lastUserIdRef = useRef<string | null>(null);
 
-  // Get user roles from sessionStorage or user object
-  const userRoles = React.useMemo(() => {
+  // Get user role from sessionStorage or user object
+  const userRole = React.useMemo(() => {
     try {
-      const storedRoles = sessionStorage.getItem('user_roles');
-      if (storedRoles) {
-        const parsed = JSON.parse(storedRoles);
-        return Array.isArray(parsed) ? parsed : [];
+      // Try to get from token data
+      const tokenData = sessionStorage.getItem('user_token_data');
+      if (tokenData) {
+        const parsed = JSON.parse(tokenData);
+        return parsed.roles || null;
       }
+      // Fallback: check if role stored directly
+      const role = sessionStorage.getItem('user_role');
+      if (role) return role;
       // Fallback to user.roles if available
       if (user?.roles) {
-        return Array.isArray(user.roles) ? user.roles : [];
+        return typeof user.roles === 'string' ? user.roles : null;
       }
-      return [];
+      return null;
     } catch {
-      return [];
+      return null;
     }
   }, [user]);
 
@@ -95,7 +99,7 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
         }
         
         // Remove known keys (only what we actually store)
-        const keys = ['user_id','user_email','user_display_name','user_avatar','tenant_schema','user_roles'];
+        const keys = ['user_id','user_email','user_display_name','user_avatar','tenant_schema','user_role','user_token_data'];
         keys.forEach(k => { sessionStorage.removeItem(k); localStorage.removeItem(k); });
         // Clear navigation for current user if any
         const remoteUserId = sessionStorage.getItem('user_id') || localStorage.getItem('user_id');
@@ -411,7 +415,7 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
 
     // STEP 5: Remove user & tenant data from storage
     try {
-      const keysToRemove = ['user_id','user_email','user_display_name','user_avatar','tenant_schema','user_roles'];
+      const keysToRemove = ['user_id','user_email','user_display_name','user_avatar','tenant_schema','user_role','user_token_data'];
       keysToRemove.forEach(k => {
         try { sessionStorage.removeItem(k); } catch {}
         try { localStorage.removeItem(k); } catch {}
@@ -442,7 +446,7 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, saving, restoreCompleted, userRoles }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, saving, restoreCompleted, userRole }}>
       {children}
     </AuthContext.Provider>
   );

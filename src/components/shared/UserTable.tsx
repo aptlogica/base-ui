@@ -20,7 +20,7 @@ export interface TenantUser {
   last_active_at?: string;
   created_at?: string;
   created_time?: string;
-  roles: string; // "Admin" or "User"
+  roles: string; // "owner" or other role values
   activity_data?: {
     last_workspace_id?: string;
     last_base_id?: string;
@@ -166,7 +166,7 @@ const getOverallRoles = (user: TenantUser, accessDetails?: UserAccessDetailsResp
   const roles: string[] = [];
 
   // Tenant-level role
-  if (user.roles === 'Admin') {
+  if (user.roles === 'owner') {
     roles.push('Owner');
   }
 
@@ -196,7 +196,7 @@ const getOverallRoles = (user: TenantUser, accessDetails?: UserAccessDetailsResp
 
   // Fallback: if no roles found, use tenant role
   if (roles.length === 0) {
-    roles.push(user.roles === 'Admin' ? 'Owner' : 'User');
+    roles.push(user.roles === 'owner' ? 'Owner' : 'User');
   }
 
   return [...new Set(roles)]; // Remove duplicates

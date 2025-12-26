@@ -428,6 +428,12 @@ class TableService {
         }
         return this.http.post(`/table/import`, formData, config);
     }
+    importAiTable(params) {
+        return this.http.post(`/table/import/ai`, params);
+    }
+    applyImportAiTable(params, schema) {
+        return this.http.post(`/table/import/ai/apply`, params);
+    }
 }
 
 class UserService {
@@ -490,7 +496,24 @@ class TenantService {
      * Equivalent to POST /tenant/user/create
      */
     async addUser(userData) {
-        return this.http.post(`/tenant/user/create`, userData);
+        const formData = new FormData();
+        formData.append('email', userData.email);
+        formData.append('firstname', userData.firstname);
+        formData.append('lastname', userData.lastname);
+        if (userData.profile_pic) {
+            formData.append('profile_pic', userData.profile_pic);
+        }
+        if (userData.is_coowner !== undefined) {
+            formData.append('is_coowner', String(userData.is_coowner));
+        }
+        if (userData.membership) {
+            formData.append('membership', JSON.stringify(userData.membership));
+        }
+        return this.http.post(`/tenant/user/create`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
     }
     /**
      * Removes a user from the tenant.

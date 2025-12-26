@@ -67,7 +67,6 @@ import {
   getAllRecordsService,
   getWorkspacesByUser,
 } from '../service/clientService';
-import { isTenantSchemaAvailable } from '../service/clientService';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
 
 // Query Keys
@@ -153,7 +152,7 @@ export const useWorkspaces = () => {
       }
       return failureCount < 2;
     },
-    enabled: isTenantSchemaAvailable() && !isPublicRoute, // Don't fetch on public routes
+    enabled: !isPublicRoute, // Don't fetch on public routes
   });
 };
 
@@ -193,7 +192,7 @@ export const useWorkspaceBases = (workspaceId: string) => {
   return useQuery({
     queryKey: queryKeys.bases(workspaceId),
     queryFn: () => getBasesByWorkspaceIdService(workspaceId),
-    enabled: !!workspaceId && isTenantSchemaAvailable(),
+    enabled: !!workspaceId,
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
   });
@@ -206,7 +205,7 @@ export const useWorkspaceMembers = (workspaceId: string) => {
       const result = await getWorkspaceMembersService(workspaceId);
       return result;
     },
-    enabled: !!workspaceId && isTenantSchemaAvailable(),
+    enabled: !!workspaceId,
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
   });
@@ -225,7 +224,7 @@ export const useBaseMembers = (baseId: string) => {
       const result = await getBaseMembersService(baseId);
       return result;
     },
-    enabled: !!baseId && hasWorkspaces && isTenantSchemaAvailable(),
+    enabled: !!baseId && hasWorkspaces,
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
   });
@@ -241,7 +240,7 @@ export const useBaseTables = (baseId: string) => {
   return useQuery({
     queryKey: queryKeys.tables(baseId),
     queryFn: () => getTablesByBaseIdService(baseId),
-    enabled: !!baseId && hasWorkspaces && isTenantSchemaAvailable(),
+    enabled: !!baseId && hasWorkspaces,
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
   });
@@ -267,7 +266,7 @@ export const useAllBases = () => {
         return [];
       }
     },
-    enabled: isTenantSchemaAvailable(),
+    enabled: true,
     staleTime: 30 * 1000, // Cache for 30 seconds
     gcTime: 5 * 60 * 1000,
   });
@@ -289,7 +288,7 @@ export const useAllTables = () => {
         return [];
       }
     },
-    enabled: isTenantSchemaAvailable(),
+    enabled: true,
     staleTime: 30 * 1000, // Cache for 30 seconds
     gcTime: 5 * 60 * 1000,
   });
@@ -311,7 +310,7 @@ export const useAllFields = () => {
         return [];
       }
     },
-    enabled: isTenantSchemaAvailable(),
+    enabled: true,
     staleTime: 30 * 1000, // Cache for 30 seconds
     gcTime: 5 * 60 * 1000,
   });
@@ -333,7 +332,7 @@ export const useAllViews = () => {
         return [];
       }
     },
-    enabled: isTenantSchemaAvailable(),
+    enabled: true,
     staleTime: 30 * 1000, // Cache for 30 seconds
     gcTime: 5 * 60 * 1000,
   });
@@ -349,7 +348,7 @@ export const useBaseById = (baseId: string) => {
   return useQuery({
     queryKey: ['bases', baseId],
     queryFn: () => getBaseByIdService(baseId),
-    enabled: !!baseId && hasWorkspaces && isTenantSchemaAvailable(),
+    enabled: !!baseId && hasWorkspaces,
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
   });
@@ -359,7 +358,7 @@ export const useTable = (tableId: string, options?: any) => {
   return useQuery({
     queryKey: ['tables', tableId],
     queryFn: () => getTableByIdService(tableId, options),
-    enabled: !!tableId && isTenantSchemaAvailable(),
+    enabled: !!tableId,
     staleTime: 5 * 60 * 1000, // Increased from 2 to 5 minutes - faster navigation between views
     gcTime: 15 * 60 * 1000, // Increased from 10 to 15 minutes
     refetchOnWindowFocus: false,
@@ -375,7 +374,7 @@ export const useTableViews = (tableId: string) => {
   return useQuery({
     queryKey: queryKeys.views(tableId),
     queryFn: () => getViewsByModelIdService(tableId),
-    enabled: !!tableId && isTenantSchemaAvailable(),
+    enabled: !!tableId,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -1196,7 +1195,7 @@ export const useGetTenantUsers = () => {
         throw error;
       }
     },
-    enabled: isTenantSchemaAvailable(),
+    enabled: true,
     staleTime: 0, // Always consider data stale to allow refetching
     refetchOnMount: 'always', // Always refetch when component mounts (e.g., when navigating to user tab)
   });
@@ -1214,7 +1213,7 @@ export const useGetTenant = () => {
         throw error;
       }
     },
-    enabled: isTenantSchemaAvailable(),
+    enabled: true,
   });
 };
 
