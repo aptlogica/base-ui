@@ -265,6 +265,9 @@ interface InviteMultipleUsers {
     bases_ids?: string;
 }
 interface BulkAddMembersRequest$1 {
+    members: BulkMemberRequest[];
+}
+interface BulkMemberRequest {
     user_id: string;
     memberships: MembershipRequest[];
 }
@@ -341,6 +344,11 @@ declare class WorkspaceService {
      */
     bulkAddMembers(workspaceId: string, params: BulkAddMembersRequest$1): Promise<StandardResponse<any>>;
     /**
+     * Remove access member from workspace
+     * DELETE /workspace/:id/access/:id
+     */
+    removeAccessMember(workspaceId: string, accessId: string): Promise<StandardResponse<any>>;
+    /**
      * Invite multiple users to the workspace (deprecated - use bulkAddMembers)
      * @deprecated Use bulkAddMembers instead
      */
@@ -361,6 +369,9 @@ interface UpdateBase {
 interface BulkAddMembersRequest {
     user_id: string;
     memberships: MembershipRequest[];
+}
+interface BulkAddBaseMembersRequest {
+    members: BulkAddMembersRequest[];
 }
 
 declare class BaseService {
@@ -410,7 +421,12 @@ declare class BaseService {
      * Add multiple members to base
      * POST /base/:id/bulk-add-members
      */
-    bulkAddMembers(id: string, params: BulkAddMembersRequest): Promise<StandardResponse<any>>;
+    bulkAddMembers(id: string, params: BulkAddBaseMembersRequest): Promise<StandardResponse<any>>;
+    /**
+     * Remove access member from base
+     * DELETE /base/:id/access/:id
+     */
+    removeAccessMember(baseId: string, accessId: string): Promise<StandardResponse<any>>;
 }
 
 interface CreateTable {

@@ -606,7 +606,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                               />
                             </div>
                           ) : (
-                              <div className={`w-10 h-10 ${avatarColor} rounded-full flex items-center justify-center text-primary text-sm font-semibold`}>
+                              <div className={`w-10 h-10 ${avatarColor} rounded-full flex items-center justify-center text-white text-sm`}>
                               {initials}
                             </div>
                           )}

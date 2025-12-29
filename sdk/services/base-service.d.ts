@@ -47,6 +47,11 @@ export declare class BaseService {
      * Add multiple members to base
      * POST /base/:id/bulk-add-members
      */
-    bulkAddMembers(id: string, params: types.BulkAddMembersRequest): Promise<import("..").StandardResponse<any>>;
+    bulkAddMembers(id: string, params: types.BulkAddBaseMembersRequest): Promise<import("..").StandardResponse<any>>;
+    /**
+     * Remove access member from base
+     * DELETE /base/:id/access/:id
+     */
+    removeAccessMember(baseId: string, accessId: string): Promise<import("..").StandardResponse<any>>;
 }
 //# sourceMappingURL=base-service.d.ts.map

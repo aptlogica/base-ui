@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Loader2, CheckCircle2, UserPlus, Edit, ChevronDown } from 'lucide-react';
-import { useAssignUserToWorkspace, useGetUsersForAssign, useWorkspaceBases, useWorkspaceMembers, useBaseMembers, useUserAccessDetails } from '../../hooks/useApi';
+import { useBulkAddMembers, useGetUsersForAssign, useWorkspaceBases, useWorkspaceMembers, useBaseMembers, useUserAccessDetails } from '../../hooks/useApi';
 import { useToast } from '../common/Toast';
 import { AdvancedDropdown } from '../common/dropdown/AdvancedDropdown';
 import { useAuth } from '../../auth/AuthContext';
@@ -32,7 +32,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   const [selectedBases, setSelectedBases] = useState<string[]>([]);
   const [baseSelectionType, setBaseSelectionType] = useState<'all_bases' | 'specific_base'>('all_bases');
 
-  const assignUserToWorkspaceMutation = useAssignUserToWorkspace();
+  const bulkAddMembersMutation = useBulkAddMembers();
   const tenantUsersQuery = useGetUsersForAssign();
   const workspaceBasesQuery = useWorkspaceBases(workspaceId);
   // Fetch user access details when in edit mode
@@ -186,26 +186,45 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
       return;
     }
 
-    // Map role to access_level
-    const finalAccessLevel = getAccessLevelFromRole(selectedRole);
-
     try {
-      // Determine bases_ids based on selection type
-      let basesIds = baseSelectionType === 'all_bases' ? '*' : selectedBases.join(',');
-      
-      const params: {
+      // Build membership request based on role and base selection
+      const membership: {
         workspace_id: string;
-        user_ids: string[];
-        access_level: string;
-        bases_ids: string;
+        role: string;
+        bases: Array<{ base_id: string; role: string }>;
       } = {
         workspace_id: workspaceId,
-        user_ids: selectedUserIds,
-        access_level: finalAccessLevel,
-        bases_ids: basesIds,
+        role: '',
+        bases: []
       };
 
-      const result = await assignUserToWorkspaceMutation.mutateAsync(params);
+      // If specific bases are provided (base-member or base-read with specific bases), set bases and leave role empty
+      if (roleAllowsBaseSelection(selectedRole) && baseSelectionType === 'specific_base' && selectedBases.length > 0) {
+        // Map selected bases to base membership format
+        membership.bases = selectedBases.map(baseId => ({
+          base_id: baseId,
+          role: selectedRole // base-member or base-read
+        }));
+        // role remains empty string when specific bases are provided
+      } 
+      // If workspace-level role is assigned (maintainer, workspace-read, or base-member/base-read with "All Bases"), set role and leave bases empty
+      else {
+        membership.role = selectedRole;
+        // bases remains empty array when workspace role is assigned
+      }
+
+      // Build members array - each user gets the same membership
+      const members = selectedUserIds.map(user_id => ({
+        user_id,
+        memberships: [membership]
+      }));
+
+      const params = {
+        workspaceId,
+        members
+      };
+
+      const result = await bulkAddMembersMutation.mutateAsync(params);
       const response = result?.data || result;
 
       // Handle response with success/failure counts
@@ -387,7 +406,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
                       onChange={(newValue) => setSelectedUserIds(newValue as string[])}
                       placeholder="Select users to assign"
                       searchPlaceholder="Search users..."
-                      disabled={assignUserToWorkspaceMutation.isPending}
+                      disabled={bulkAddMembersMutation.isPending}
                     />
                   )}
                 </div>
@@ -413,7 +432,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
                         }
                       }}
                       placeholder="Select a role"
-                      disabled={assignUserToWorkspaceMutation.isPending || (editMode && userAccessDetailsQuery.isLoading)}
+                      disabled={bulkAddMembersMutation.isPending || (editMode && userAccessDetailsQuery.isLoading)}
                     />
                   </div>
                 )}
@@ -433,7 +452,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
                         }
                       }}
                       placeholder="Select base selection type"
-                      disabled={assignUserToWorkspaceMutation.isPending || (editMode && userAccessDetailsQuery.isLoading)}
+                      disabled={bulkAddMembersMutation.isPending || (editMode && userAccessDetailsQuery.isLoading)}
                     />
                   </div>
                 )}
@@ -487,18 +506,18 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
           <button
             type="button"
             onClick={onClose}
-            disabled={assignUserToWorkspaceMutation.isPending}
+            disabled={bulkAddMembersMutation.isPending}
             className="px-4 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
           >
             Cancel
           </button>
           <button
             onClick={handleAssignUser}
-            disabled={assignUserToWorkspaceMutation.isPending || selectedUserIds.length === 0 || (baseSelectionType === 'specific_base' && selectedBases.length === 0) || (editMode && userAccessDetailsQuery.isLoading)}
+            disabled={bulkAddMembersMutation.isPending || selectedUserIds.length === 0 || (baseSelectionType === 'specific_base' && selectedBases.length === 0) || (editMode && userAccessDetailsQuery.isLoading)}
             className="flex items-center gap-2 px-6 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-black font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
-            {assignUserToWorkspaceMutation.isPending && <Loader2 size={16} className="animate-spin" />}
-            {assignUserToWorkspaceMutation.isPending
+            {bulkAddMembersMutation.isPending && <Loader2 size={16} className="animate-spin" />}
+            {bulkAddMembersMutation.isPending
               ? editMode
                 ? 'Updating...'
                 : 'Adding...'

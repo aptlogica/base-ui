@@ -43,6 +43,7 @@ import {
   addOrUpdateAvatarService,
   removeAvatarService,
   assignUserToWorkspaceService,
+  bulkAddMembersService,
   removeUserFromWorkspaceService,
   getUserAccessDetailsService,
   // Tenant API services
@@ -1370,6 +1371,49 @@ export const useAssignUserToWorkspace = () => {
     },
     onError: (error: any) => {
       console.error('❌ Assign user to workspace failed:', error);
+    }
+  });
+};
+
+export const useBulkAddMembers = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      workspaceId: string;
+      members: Array<{
+        user_id: string;
+        memberships: Array<{
+          workspace_id: string;
+          role: string;
+          bases?: Array<{
+            base_id: string;
+            role: string;
+          }>;
+        }>;
+      }>;
+    }) => {
+      const result = await bulkAddMembersService(params.workspaceId, { members: params.members });
+      return result;
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate user access details for all assigned users
+      variables.members.forEach(member => {
+        queryClient.invalidateQueries({
+          queryKey: ['userAccessDetails', member.user_id],
+          exact: false
+        });
+      });
+
+      // Invalidate workspaces query to refresh workspace members
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      // Invalidate workspace members query
+      queryClient.invalidateQueries({ queryKey: ['workspaceMembers', variables.workspaceId] });
+      // Invalidate tenant users query in case it affects user data
+      queryClient.invalidateQueries({ queryKey: queryKeys.users });
+    },
+    onError: (error: any) => {
+      console.error('❌ Bulk add members failed:', error);
     }
   });
 };

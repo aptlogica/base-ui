@@ -808,7 +808,7 @@ export async function getBasesByWorkspaceIdService(id: string) {
 }
 
 export async function getWorkspaceMembersService(workspaceId: string) {
-  return await makeAuthenticatedCall(() => client.workspace.getMembers(workspaceId));
+  return await makeAuthenticatedCall(() => client.workspace.getMembersWithRoles(workspaceId));
 }
 
 export async function removeUserFromWorkspaceService(workspaceId: string, params: { workspace_id: string; user_id: string }) {
@@ -889,6 +889,22 @@ export async function assignUserToWorkspaceService(params: {
   bases_ids: string;
 }) {
   return await makeAuthenticatedCall(() => client.workspace.inviteUser(params.workspace_id, params));
+}
+
+export async function bulkAddMembersService(workspaceId: string, params: {
+  members: Array<{
+    user_id: string;
+    memberships: Array<{
+      workspace_id: string;
+      role: string;
+      bases?: Array<{
+        base_id: string;
+        role: string;
+      }>;
+    }>;
+  }>;
+}) {
+  return await makeAuthenticatedCall(() => client.workspace.bulkAddMembers(workspaceId, params));
 }
 
 export async function updateTableService(id: string, params: any) {

@@ -1,4 +1,4 @@
-import { MembershipRequest, BaseMembership } from "./user";
+import { MembershipRequest } from "./user";
 export interface CreateBase {
     title: string;
     description?: string;
@@ -15,10 +15,6 @@ export interface BulkAddMembersRequest {
     memberships: MembershipRequest[];
 }
 export interface BulkAddBaseMembersRequest {
-    members: BulkBaseMemberRequest[];
-}
-export interface BulkBaseMemberRequest {
-    user_id: string;
-    base_role: BaseMembership[];
+    members: BulkAddMembersRequest[];
 }
 //# sourceMappingURL=base.d.ts.map

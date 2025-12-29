@@ -299,6 +299,13 @@
             return this.http.post(`/workspace/${workspaceId}/bulk-add-members`, params);
         }
         /**
+         * Remove access member from workspace
+         * DELETE /workspace/:id/access/:id
+         */
+        removeAccessMember(workspaceId, accessId) {
+            return this.http.delete(`/workspace/${workspaceId}/access/${accessId}`);
+        }
+        /**
          * Invite multiple users to the workspace (deprecated - use bulkAddMembers)
          * @deprecated Use bulkAddMembers instead
          */
@@ -373,6 +380,13 @@
          */
         bulkAddMembers(id, params) {
             return this.http.post(`/base/${id}/bulk-add-members`, params);
+        }
+        /**
+         * Remove access member from base
+         * DELETE /base/:id/access/:id
+         */
+        removeAccessMember(baseId, accessId) {
+            return this.http.delete(`/base/${baseId}/access/${accessId}`);
         }
     }
 

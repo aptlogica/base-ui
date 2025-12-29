@@ -185,7 +185,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node;
       if (workspaceDropdownRef.current && !workspaceDropdownRef.current.contains(target) &&
-          workspaceButtonRef.current && !workspaceButtonRef.current.contains(target)) {
+        workspaceButtonRef.current && !workspaceButtonRef.current.contains(target)) {
         setWorkspaceDropdownOpen(false);
       }
     }
@@ -209,7 +209,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
             {selectedWorkspace ? (
               <>
                 <div className={`w-8 h-8 ${workspaceIcon.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                  <span className="text-primary font-bold text-sm">
+                  <span className="text-white text-sm">
                     {workspaceIcon.initials}
                   </span>
                 </div>
@@ -220,7 +220,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
             ) : (
               <>
                 <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-primary font-bold text-sm">W</span>
+                  <span className="text-white text-sm">W</span>
                 </div>
                 <span className="text-sm font-medium text-gray-500">Select Workspace</span>
               </>
@@ -247,12 +247,11 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
                           setSelectedWorkspaceId(ws.id);
                           setWorkspaceDropdownOpen(false);
                         }}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-gray-100 transition-colors ${
-                          isSelected ? 'bg-gray-50' : ''
-                        }`}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-gray-100 transition-colors ${isSelected ? 'bg-gray-50' : ''
+                          }`}
                       >
                         <div className={`w-8 h-8 ${icon.color} rounded-full flex items-center justify-center flex-shrink-0`}>
-                          <span className="text-primary font-bold text-sm">
+                          <span className="text-white font-bold text-sm">
                             {icon.initials}
                           </span>
                         </div>

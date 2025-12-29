@@ -27,8 +27,7 @@ export interface InviteMultipleUsers {
     bases_ids?: string;
 }
 export interface BulkAddMembersRequest {
-    user_id: string;
-    memberships: MembershipRequest[];
+    members: BulkMemberRequest[];
 }
 export interface BulkMemberRequest {
     user_id: string;
