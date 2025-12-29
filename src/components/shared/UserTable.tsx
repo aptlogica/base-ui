@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { MoreVertical, Search, ChevronsUpDown, UserX, UserCheck, Trash2, Filter, Edit, Loader2 } from 'lucide-react';
 import { useUserRole } from '../../hooks/useUserRole';
 import { UserAccessDetailsModal } from '../modals/UserAccessDetailsModal';
-import { useUserAccessDetails } from '../../hooks/useApi';
+import { useUserRolesAndAccess } from '../../hooks/useApi';
 
 export interface TenantUser {
   id: string;
@@ -294,7 +294,7 @@ const AccessDetailsRow: React.FC<{
   userId: string;
   colSpan: number;
 }> = ({ userId, colSpan }) => {
-  const { data: accessDetails, isLoading, error } = useUserAccessDetails(userId);
+  const { data: rolesAndAccess, isLoading, error } = useUserRolesAndAccess(userId);
 
   if (isLoading) {
     return (
@@ -321,7 +321,12 @@ const AccessDetailsRow: React.FC<{
     );
   }
 
-  if (!accessDetails?.workspaces || accessDetails.workspaces.length === 0) {
+  // Handle the getUserRolesAndAccess API response structure
+  // The hook already extracts result?.data, so rolesAndAccess is the array directly
+  // Response structure: [{ workspace_name, access, bases: [] }]
+  const workspaces = Array.isArray(rolesAndAccess) ? rolesAndAccess : [];
+  
+  if (!workspaces || workspaces.length === 0) {
     return (
       <tr>
         <td colSpan={colSpan} className="px-6 py-8 bg-gray-50">
@@ -332,6 +337,22 @@ const AccessDetailsRow: React.FC<{
       </tr>
     );
   }
+
+  // Helper function to format role display name
+  const getRoleDisplayName = (access: string): string => {
+    switch (access) {
+      case 'maintainer':
+        return 'Workspace Maintainer';
+      case 'workspace-read':
+        return 'Workspace Read Only';
+      case 'base-member':
+        return 'Base Member';
+      case 'base-read':
+        return 'Base Read Only';
+      default:
+        return access || 'User';
+    }
+  };
 
   return (
     <tr>
@@ -346,36 +367,42 @@ const AccessDetailsRow: React.FC<{
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {accessDetails.workspaces.map((ws: { id: string; title: string; access_level: string; bases?: Array<{ id: string; title: string }> }) => {
+              {workspaces.map((ws: { workspace_name: string; access: string; bases?: Array<{ base_id?: string; base_name?: string; role?: string }> }, wsIndex: number) => {
                 const baseCount = ws.bases?.length || 0;
+                const workspaceRole = ws.access || '';
+                
                 if (baseCount === 0) {
                   return (
-                    <tr key={ws.id} className="bg-background">
-                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">{ws.title}</td>
+                    <tr key={wsIndex} className="bg-background">
+                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">{ws.workspace_name}</td>
                       <td className="px-4 py-3 text-sm text-gray-500">-</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getRolePillStyle(inferBaseRole(ws.access_level))}`}>
-                          {inferBaseRole(ws.access_level)}
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getRolePillStyle(getRoleDisplayName(workspaceRole))}`}>
+                          {getRoleDisplayName(workspaceRole)}
                         </span>
                       </td>
                     </tr>
                   );
                 }
-                return ws.bases?.map((base: { id: string; title: string }, baseIndex: number) => (
-                  <tr key={`${ws.id}-${base.id}`} className="bg-background">
-                    {baseIndex === 0 && (
-                      <td rowSpan={baseCount} className="px-4 py-3 text-sm text-gray-900 font-medium align-top border-r border">
-                        {ws.title}
+                return ws.bases?.map((base: { base_id?: string; base_name?: string; role?: string }, baseIndex: number) => {
+                  const baseRole = base.role || '';
+                  const baseName = base.base_name || `Base ${base.base_id || baseIndex + 1}`;
+                  return (
+                    <tr key={`${wsIndex}-${baseIndex}`} className="bg-background">
+                      {baseIndex === 0 && (
+                        <td rowSpan={baseCount} className="px-4 py-3 text-sm text-gray-900 font-medium align-top border-r">
+                          {ws.workspace_name}
+                        </td>
+                      )}
+                      <td className="px-4 py-3 text-sm text-gray-700">{baseName}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getRolePillStyle(getRoleDisplayName(baseRole))}`}>
+                          {getRoleDisplayName(baseRole)}
+                        </span>
                       </td>
-                    )}
-                    <td className="px-4 py-3 text-sm text-gray-700">{base.title}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getRolePillStyle(inferBaseRole(ws.access_level))}`}>
-                        {inferBaseRole(ws.access_level)}
-                      </span>
-                    </td>
-                  </tr>
-                ));
+                    </tr>
+                  );
+                });
               })}
             </tbody>
           </table>
@@ -694,7 +721,7 @@ export const UserTable: React.FC<UserTableProps> = ({
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <div className="max-h-[calc(100vh-230px)] overflow-y-auto">
+        <div className="max-h-[calc(100vh-170px)] overflow-y-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b sticky top-0 z-10">
               <tr>
@@ -776,6 +803,10 @@ export const UserTable: React.FC<UserTableProps> = ({
                 const isExpanded = expandedUsers.has(user.id);
                 // Get roles - for now use tenant role, will be enhanced with access details
                 const roles = getOverallRoles(user);
+                // Check if user is owner or co-owner - hide "View in detail" for these roles
+                const isOwnerOrCoOwner = roles.some(role => 
+                  role.toLowerCase().includes('owner') || role.toLowerCase().includes('co-owner')
+                );
 
                 return (
                   <React.Fragment key={user.id}>
@@ -816,12 +847,14 @@ export const UserTable: React.FC<UserTableProps> = ({
                               </span>
                             ))}
                           </div>
-                          <button
-                            onClick={() => handleExpand(user.id)}
-                            className="text-xs text-primary hover:underline self-start"
-                          >
-                            {isExpanded ? 'Collapse ↑' : 'View in detail ↓'}
-                          </button>
+                          {!isOwnerOrCoOwner && (
+                            <button
+                              onClick={() => handleExpand(user.id)}
+                              className="text-xs text-primary hover:underline self-start"
+                            >
+                              {isExpanded ? 'Collapse ↑' : 'View in detail ↓'}
+                            </button>
+                          )}
                         </div>
                       </td>
 

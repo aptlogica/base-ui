@@ -724,6 +724,13 @@
             return this.http.get(`/user/access-details`);
         }
         /**
+         * Get user roles and access
+         * GET /user/roles-and-access
+         */
+        getUserRolesAndAccess(id) {
+            return this.http.get(`/user/roles-and-access/${id}`);
+        }
+        /**
          * Assign user to workspace
          * POST /user/assign
          */

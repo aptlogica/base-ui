@@ -871,6 +871,10 @@ export async function getUserAccessDetailsService(userId: string, workspaceId?: 
   return await makeAuthenticatedCall(() => client.userService.getUserAccessDetails(userId, workspaceId));
 }
 
+export async function getUserRolesAndAccessService(userId: string) {
+  return await makeAuthenticatedCall(() => client.userService.getUserRolesAndAccess(userId));
+}
+
 export async function changePasswordService(id: string, params: any) {
   return await makeAuthenticatedCall(() => client.userService.changePassword(id, params));
 }

@@ -752,6 +752,11 @@ declare class UserService {
      */
     getUserAccessDetails(): Promise<StandardResponse<UserAccessDetailsResponse>>;
     /**
+     * Get user roles and access
+     * GET /user/roles-and-access
+     */
+    getUserRolesAndAccess(id: string): Promise<StandardResponse<any>>;
+    /**
      * Assign user to workspace
      * POST /user/assign
      */

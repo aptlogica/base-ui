@@ -46,6 +46,7 @@ import {
   bulkAddMembersService,
   removeUserFromWorkspaceService,
   getUserAccessDetailsService,
+  getUserRolesAndAccessService,
   // Tenant API services
   getTenantUsersService,
   getUsersForAssignService,
@@ -1126,6 +1127,22 @@ export const useUserAccessDetails = (userId: string | null, workspaceId?: string
     queryFn: async () => {
       if (!userId) return null;
       const result = await getUserAccessDetailsService(userId, workspaceId);
+      // Extract the data from StandardResponse structure
+      return result?.data || null;
+    },
+    enabled: !!userId,
+    staleTime: 0, // Always consider data stale to allow refetching when invalidated
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: 'always', // Always refetch when component mounts
+  });
+};
+
+export const useUserRolesAndAccess = (userId: string | null) => {
+  return useQuery({
+    queryKey: ['userRolesAndAccess', userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const result = await getUserRolesAndAccessService(userId);
       // Extract the data from StandardResponse structure
       return result?.data || null;
     },
