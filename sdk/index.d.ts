@@ -828,6 +828,49 @@ declare class AssetService {
     deleteById(id: string): Promise<StandardResponse<any>>;
 }
 
+/**
+ * Organization Types
+ */
+interface OrganizationResponse {
+    id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    logo_url?: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+}
+interface OrganizationListResponse extends OrganizationResponse {
+}
+interface OrganizationUpdateRequest {
+    name?: string;
+    slug?: string;
+    description?: string;
+    logo_url?: string;
+    status?: string;
+}
+
+declare class OrganizationService {
+    private http;
+    constructor(http: HttpClient);
+    /**
+     * Get all organizations (user is member of)
+     * GET /organization
+     */
+    getAll(): Promise<StandardResponse<OrganizationListResponse[]>>;
+    /**
+     * Get organization by ID
+     * GET /organization/:id
+     */
+    getById(id: string): Promise<StandardResponse<OrganizationResponse>>;
+    /**
+     * Update organization
+     * PUT /organization/:id
+     */
+    update(id: string, params: OrganizationUpdateRequest): Promise<StandardResponse<OrganizationResponse>>;
+}
+
 declare class SereniBaseClient {
     private http;
     readonly auth: AuthService;
@@ -836,6 +879,7 @@ declare class SereniBaseClient {
     readonly tableService: TableService;
     readonly userService: UserService;
     readonly assetService: AssetService;
+    readonly organization: OrganizationService;
     constructor(config: ClientConfig);
     /**
      * Set authentication token

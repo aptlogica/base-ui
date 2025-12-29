@@ -850,6 +850,33 @@
         }
     }
 
+    class OrganizationService {
+        constructor(http) {
+            this.http = http;
+        }
+        /**
+         * Get all organizations (user is member of)
+         * GET /organization
+         */
+        getAll() {
+            return this.http.get(`/organization`);
+        }
+        /**
+         * Get organization by ID
+         * GET /organization/:id
+         */
+        getById(id) {
+            return this.http.get(`/organization/${id}`);
+        }
+        /**
+         * Update organization
+         * PUT /organization/:id
+         */
+        update(id, params) {
+            return this.http.put(`/organization/${id}`, params);
+        }
+    }
+
     class SereniBaseClient {
         constructor(config) {
             this.http = new HttpClient(config);
@@ -860,6 +887,7 @@
             this.tableService = new TableService(this.http);
             this.userService = new UserService(this.http);
             this.assetService = new AssetService(this.http);
+            this.organization = new OrganizationService(this.http);
         }
         /**
          * Set authentication token
