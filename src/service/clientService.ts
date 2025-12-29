@@ -1,3 +1,4 @@
+// @ts-ignore - SDK module does not have type declarations
 import { SereniBaseClient } from '../../sdk/index.esm.js';
 import { WorkspaceBaseInput } from "../types/interfaces/workspace.interface.js";
 import { decodeJwt } from 'jose';
@@ -1116,4 +1117,16 @@ export async function deactivateTenantUserService(userId: string) {
 
 export async function activateTenantUserService(userId: string) {
   return await makeAuthenticatedCall(() => client.tenantService.activateUser({ user_id: userId }));
+}
+
+export async function getOrganizationService() {
+  return await makeAuthenticatedCall(() => client.organization.getAll()); 
+}
+
+export async function updateOrganizationService(orgId: string, updateData: { name: string, description: string }) {
+  return await makeAuthenticatedCall(() => client.organization.update(orgId, updateData));
+}
+
+export async function getOrganizationServiceById(orgId: string) {
+  return await makeAuthenticatedCall(() => client.organization.getById(orgId)); 
 }
