@@ -769,10 +769,9 @@ export async function getAllWorkspacesService() {
   }
 
   try {
-    // Clear workspace and base headers for getAll() call - we want all workspaces, not filtered by workspace
-    updateClientHeaders(null, null);
-
-    const result = await makeAuthenticatedCall(() => client.workspace.getAll());
+    // Use userService.getWorkspaces() instead of workspace.getAll()
+    // This gets workspaces for the current user
+    const result = await makeAuthenticatedCall(() => client.userService.getWorkspaces());
     return result;
   } catch (error: any) {
     // Check if it's a schema-related error
