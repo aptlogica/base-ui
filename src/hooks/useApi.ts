@@ -67,6 +67,10 @@ import {
   reorderColumnService,
   getAllRecordsService,
   getWorkspacesByUser,
+  //Organization Services 
+  getOrganizationService,
+  getOrganizationServiceById,
+  updateOrganizationService
 } from '../service/clientService';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
 
@@ -1406,6 +1410,58 @@ export const useRemoveUserFromWorkspace = () => {
     },
     onError: (error: any) => {
       console.error('❌ Remove user from workspace failed:', error);
+    }
+  });
+};
+
+export const useGetOrganization = () => {
+  return useQuery({
+    queryKey: ['organization'], 
+    queryFn: async () => {
+     try{
+      const result = await getOrganizationService();
+      return result?.data;
+     } catch (error: any) {
+      console.error('❌ Get organization failed:', error);
+      throw error;
+     }
+    },
+    enabled: true,
+    
+  });
+}
+
+export const useGetOrganizationById = (organizationId: string) => {
+  return useQuery({
+    queryKey: ['organization', organizationId],
+    queryFn: async () => {
+     try{
+      const result = await getOrganizationServiceById(organizationId);
+      return result?.data;
+     } catch (error: any) {
+      console.error('❌ Get organization by ID failed:', error);
+      throw error;
+     }
+    },
+    enabled: !!organizationId,
+  });
+}
+
+export const useUpdateOrganization = (organizationId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (updateData: { name?: string; decription?: string; }) => {
+      const result = await updateOrganizationService(organizationId, updateData);
+      console.log(result);
+      
+      return result;
+    },
+    onSuccess: () => {
+      // Invalidate organization query to refetch updated data
+      queryClient.invalidateQueries({ queryKey: ['organization'] });
+    },
+    onError: (error: any) => {
+      console.error('❌ Update organization failed:', error);
     }
   });
 };
