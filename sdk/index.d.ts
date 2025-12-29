@@ -177,6 +177,72 @@ declare class AuthService {
     register(params: RegisterParams): Promise<StandardResponse<any>>;
 }
 
+interface UpdateUserProfileParams {
+    first_name?: string;
+    last_name?: string;
+    display_name?: string;
+    dob?: string;
+    country?: string;
+    timezone?: string;
+}
+interface ChangePasswordParams {
+    current_password: string;
+    new_password: string;
+}
+interface AddUserRequest {
+    email: string;
+    firstname: string;
+    lastname: string;
+    profile_pic?: File;
+    is_coowner?: boolean;
+    membership?: MembershipRequest[];
+}
+interface UserRemoveRequest {
+    user_id: string;
+}
+interface UserActivateRequest {
+    user_id: string;
+}
+interface UserDeactivateRequest {
+    user_id: string;
+}
+interface AssignToWorkspaceParams {
+    user_id: string;
+    membership: MembershipRequest[];
+}
+interface UpdateUserAccessParams {
+    user_id: string;
+    workspace_id: string;
+    role: string;
+    access_level?: string;
+}
+interface MembershipRequest {
+    workspace_id: string;
+    role: string;
+    bases?: BaseMembership[];
+}
+interface BaseMembership {
+    base_id: string;
+    role: string;
+}
+interface RemoveUserFromWorkspace$1 {
+    workspace_id: string;
+    user_id: string;
+}
+interface BaseAccessInfo {
+    id: string;
+    title: string;
+}
+interface WorkspaceAccessInfo {
+    id: string;
+    title: string;
+    access_level: string;
+    bases: BaseAccessInfo[];
+}
+interface UserAccessDetailsResponse {
+    workspaces: WorkspaceAccessInfo[];
+}
+
 interface CreateWorkspace {
     title: string;
     description?: string;
@@ -189,7 +255,7 @@ interface UpdateWorkspace {
     is_default?: boolean;
     status?: string;
 }
-interface RemoveUserFromWorkspace$1 {
+interface RemoveUserFromWorkspace {
     user_id: string;
 }
 interface InviteMultipleUsers {
@@ -199,11 +265,8 @@ interface InviteMultipleUsers {
     bases_ids?: string;
 }
 interface BulkAddMembersRequest$1 {
-    members: Array<{
-        user_id: string;
-        role: string;
-        access_level?: string;
-    }>;
+    user_id: string;
+    memberships: MembershipRequest[];
 }
 interface MemberAddSuccess {
     user_id: string;
@@ -271,7 +334,7 @@ declare class WorkspaceService {
      * Remove user from workspace
      * POST /workspace/:id/remove
      */
-    removeUserFromWorkspace(workspaceId: string, params: RemoveUserFromWorkspace$1): Promise<StandardResponse<any>>;
+    removeUserFromWorkspace(workspaceId: string, params: RemoveUserFromWorkspace): Promise<StandardResponse<any>>;
     /**
      * Add multiple members to workspace
      * POST /workspace/:id/bulk-add-members
@@ -296,11 +359,8 @@ interface UpdateBase {
     status?: string;
 }
 interface BulkAddMembersRequest {
-    members: Array<{
-        user_id: string;
-        role: string;
-        access_level?: string;
-    }>;
+    user_id: string;
+    memberships: MembershipRequest[];
 }
 
 declare class BaseService {
@@ -637,72 +697,6 @@ declare class TableService {
     deleteAssetById(id: string): Promise<StandardResponse<any>>;
 }
 
-interface UpdateUserProfileParams {
-    first_name?: string;
-    last_name?: string;
-    display_name?: string;
-    dob?: string;
-    country?: string;
-    timezone?: string;
-}
-interface ChangePasswordParams {
-    current_password: string;
-    new_password: string;
-}
-interface AddUserRequest {
-    email: string;
-    firstname: string;
-    lastname: string;
-    profile_pic?: File;
-    is_coowner?: boolean;
-    membership?: MembershipRequest[];
-}
-interface UserRemoveRequest {
-    user_id: string;
-}
-interface UserActivateRequest {
-    user_id: string;
-}
-interface UserDeactivateRequest {
-    user_id: string;
-}
-interface AssignToWorkspaceParams {
-    user_id: string;
-    membership: MembershipRequest[];
-}
-interface UpdateUserAccessParams {
-    user_id: string;
-    workspace_id: string;
-    role: string;
-    access_level?: string;
-}
-interface MembershipRequest {
-    workspace_id: string;
-    role: string;
-    bases?: BaseMembership[];
-}
-interface BaseMembership {
-    base_id: string;
-    role: string;
-}
-interface RemoveUserFromWorkspace {
-    workspace_id: string;
-    user_id: string;
-}
-interface BaseAccessInfo {
-    id: string;
-    title: string;
-}
-interface WorkspaceAccessInfo {
-    id: string;
-    title: string;
-    access_level: string;
-    bases: BaseAccessInfo[];
-}
-interface UserAccessDetailsResponse {
-    workspaces: WorkspaceAccessInfo[];
-}
-
 declare class UserService {
     private http;
     constructor(http: HttpClient);
@@ -785,7 +779,7 @@ declare class UserService {
      * Remove user from workspace
      * POST /workspace/:id/remove
      */
-    removeFromWorkspace(workspaceId: string, params: RemoveUserFromWorkspace): Promise<StandardResponse<any>>;
+    removeFromWorkspace(workspaceId: string, params: RemoveUserFromWorkspace$1): Promise<StandardResponse<any>>;
 }
 
 interface GetBulkAssets {

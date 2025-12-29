@@ -235,20 +235,29 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
         const membershipItem: {
           workspace_id: string;
           role: string;
-          bases?: Array<{ base_id: string; role: string }>;
+          bases: Array<{ base_id: string; role: string }>;
         } = {
           workspace_id: assignment.workspaceId,
-          role: assignment.role === 'base_specific' 
-            ? 'base-member' // Default workspace role for base-specific assignments
-            : (assignment.role || 'base-member')
+          role: '',
+          bases: []
         };
 
-        // Add bases if it's a base_specific role with bases
+        // If bases are provided, set bases and leave role as empty string
         if (assignment.role === 'base_specific' && assignment.bases && assignment.bases.length > 0) {
           membershipItem.bases = assignment.bases.map(base => ({
             base_id: base.baseId,
             role: base.role // base-member or base-read
           }));
+          // role remains empty string when bases are provided
+        } 
+        // If workspace-level role is assigned, set role and leave bases as empty array
+        else if (assignment.role === 'maintainer' || assignment.role === 'workspace-read') {
+          membershipItem.role = assignment.role;
+          // bases remains empty array when workspace role is assigned
+        }
+        // Fallback: default to base-member role with empty bases
+        else {
+          membershipItem.role = assignment.role || 'base-member';
         }
 
         return membershipItem;
