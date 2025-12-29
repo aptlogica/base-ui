@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Loader2, CheckCircle2, UserPlus, Edit, ChevronDown } from 'lucide-react';
-import { useAssignUserToWorkspace, useGetTenantUsers, useWorkspaceBases, useWorkspaceMembers, useBaseMembers, useUserAccessDetails } from '../../hooks/useApi';
+import { useAssignUserToWorkspace, useGetUsersForAssign, useWorkspaceBases, useWorkspaceMembers, useBaseMembers, useUserAccessDetails } from '../../hooks/useApi';
 import { useToast } from '../common/Toast';
 import { AdvancedDropdown } from '../common/dropdown/AdvancedDropdown';
 import { useAuth } from '../../auth/AuthContext';
@@ -33,7 +33,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   const [baseSelectionType, setBaseSelectionType] = useState<'all_bases' | 'specific_base'>('all_bases');
 
   const assignUserToWorkspaceMutation = useAssignUserToWorkspace();
-  const tenantUsersQuery = useGetTenantUsers();
+  const tenantUsersQuery = useGetUsersForAssign();
   const workspaceBasesQuery = useWorkspaceBases(workspaceId);
   // Fetch user access details when in edit mode
   const userAccessDetailsQuery = useUserAccessDetails(editMode && memberToEdit ? memberToEdit : null, editMode ? workspaceId : undefined);

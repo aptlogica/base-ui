@@ -1057,7 +1057,11 @@ export const isAuthenticated = async (): Promise<boolean> => {
 };
 
 export async function getTenantUsersService() {
-  return await makeAuthenticatedCall(() => client.tenantService.getUsers());
+  return await makeAuthenticatedCall(() => client.userService.listUsers());
+}
+
+export async function getUsersForAssignService() {
+  return await makeAuthenticatedCall(() => client.userService.listUsersForAssign());
 }
 
 export async function getTenantService() {
@@ -1083,7 +1087,7 @@ export async function addTenantUserService(userData: {
     }>;
   }>;
 }) {
-  return await makeAuthenticatedCall(() => client.tenantService.addUser(userData));
+  return await makeAuthenticatedCall(() => client.userService.addUser(userData));
 }
 
 export async function removeTenantUserService(userId: string) {

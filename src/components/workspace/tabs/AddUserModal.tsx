@@ -338,7 +338,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
         {/* Scrollable Content Area */}
         <form id="add-user-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto min-h-0">
           <div className="p-0">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className={`grid grid-cols-1 ${!isCoOwner ? 'lg:grid-cols-2' : ''} gap-6`}>
               {/* Left Column - User Details */}
               <div className="space-y-4 bg-card p-4 lg:p-6">
                 <h3 className="text-sm font-bold text-primary">User Details</h3>
@@ -522,7 +522,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
                   <button
                     type="button"
                     onClick={() => setIsCoOwner(!isCoOwner)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isCoOwner ? 'bg-green-500' : 'bg-gray-300'
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isCoOwner ? 'bg-brand-600' : 'bg-gray-300'
                       }`}
                   >
                     <span
@@ -537,45 +537,47 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
               </div>
 
               {/* Right Column - Workspace/Base Selection */}
-              <div className="space-y-4 bg-gray-50 p-4 lg:p-6">
-                <h3 className="text-sm font-semibold text-primary">Select Workspace(s) & Base(s)</h3>
+              {!isCoOwner && (
+                <div className="space-y-4 bg-gray-50 p-4 lg:p-6">
+                  <h3 className="text-sm font-semibold text-primary">Select Workspace(s) & Base(s)</h3>
 
-                {/* Search Bar */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search Workspace or Base"
-                    className="w-full text-sm pl-10 pr-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all"
-                  />
-                </div>
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Search Workspace or Base"
+                      className="w-full text-sm pl-10 pr-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all"
+                    />
+                  </div>
 
-                {/* Workspaces List */}
-                <div className="space-y-3 max-h-96 min-h-max overflow-y-auto pr-2">
-                  {workspacesQuery.isLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                    </div>
-                  ) : filteredWorkspaces.length === 0 ? (
-                    <div className="text-center py-8 text-sm text-gray-500">
-                      {searchTerm ? 'No workspaces found' : 'No workspaces available'}
-                    </div>
-                  ) : (
-                    filteredWorkspaces.map((workspace: any) => (
-                      <WorkspaceItem
-                        key={workspace.id}
-                        workspace={workspace}
-                        assignment={workspaceAssignments[workspace.id]}
-                        onRoleChange={handleWorkspaceRoleChange}
-                        onBaseRoleChange={handleBaseRoleChange}
-                        onToggleBase={toggleBaseSelection}
-                      />
-                    ))
-                  )}
+                  {/* Workspaces List */}
+                  <div className="space-y-3 max-h-96 min-h-max overflow-y-auto pr-2">
+                    {workspacesQuery.isLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                      </div>
+                    ) : filteredWorkspaces.length === 0 ? (
+                      <div className="text-center py-8 text-sm text-gray-500">
+                        {searchTerm ? 'No workspaces found' : 'No workspaces available'}
+                      </div>
+                    ) : (
+                      filteredWorkspaces.map((workspace: any) => (
+                        <WorkspaceItem
+                          key={workspace.id}
+                          workspace={workspace}
+                          assignment={workspaceAssignments[workspace.id]}
+                          onRoleChange={handleWorkspaceRoleChange}
+                          onBaseRoleChange={handleBaseRoleChange}
+                          onToggleBase={toggleBaseSelection}
+                        />
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </form>

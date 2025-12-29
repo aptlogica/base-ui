@@ -10,6 +10,14 @@ export interface ChangePasswordParams {
     current_password: string;
     new_password: string;
 }
+export interface AddUserRequest {
+    email: string;
+    firstname: string;
+    lastname: string;
+    profile_pic?: File;
+    is_coowner?: boolean;
+    membership?: MembershipRequest[];
+}
 export interface UserCreateRequest {
     email: string;
     first_name: string;

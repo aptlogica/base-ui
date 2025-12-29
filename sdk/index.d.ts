@@ -649,14 +649,13 @@ interface ChangePasswordParams {
     current_password: string;
     new_password: string;
 }
-interface UserCreateRequest {
+interface AddUserRequest {
     email: string;
-    first_name: string;
-    last_name: string;
-    password?: string;
-    dob?: string;
-    country?: string;
-    timezone?: string;
+    firstname: string;
+    lastname: string;
+    profile_pic?: File;
+    is_coowner?: boolean;
+    membership?: MembershipRequest[];
 }
 interface UserRemoveRequest {
     user_id: string;
@@ -753,10 +752,10 @@ declare class UserService {
      */
     updateUserAccess(params: UpdateUserAccessParams): Promise<StandardResponse<any>>;
     /**
-     * Create new user (Tenant Admin)
+     * Add new user
      * POST /user/create
      */
-    createUser(params: UserCreateRequest): Promise<StandardResponse<any>>;
+    addUser(userData: AddUserRequest): Promise<StandardResponse<any>>;
     /**
      * Remove/delete user (Tenant Admin)
      * POST /user/remove

@@ -49,10 +49,10 @@ export declare class UserService {
      */
     updateUserAccess(params: types.UpdateUserAccessParams): Promise<import("..").StandardResponse<any>>;
     /**
-     * Create new user (Tenant Admin)
+     * Add new user
      * POST /user/create
      */
-    createUser(params: types.UserCreateRequest): Promise<import("..").StandardResponse<any>>;
+    addUser(userData: types.AddUserRequest): Promise<import("..").StandardResponse<any>>;
     /**
      * Remove/delete user (Tenant Admin)
      * POST /user/remove

@@ -20,14 +20,28 @@ export interface TenantUser {
   last_active_at?: string;
   created_at?: string;
   created_time?: string;
-  roles: string; // "owner" or other role values
+  roles: Array<{
+    id: string;
+    name: string;
+    scope_level: string;
+    access_member_id?: string;
+    role_id?: string;
+    description?: string;
+    priority?: number;
+  }> | string; // Can be array of role objects or legacy string format
   activity_data?: {
+    last_updated_at?: string;
     last_workspace_id?: string;
     last_base_id?: string;
     login_sessions?: Array<{
       browser: string;
-      timezone: string;
+      browser_version?: string;
+      device_memory?: number;
+      device_type?: string;
       language: string;
+      login_at: string;
+      os?: string;
+      timezone: string;
     }>;
   };
 }
@@ -74,7 +88,16 @@ const getStatusBadge = (status: string, emailVerified: boolean) => {
   }
 };
 
-const getTimezoneName = (timezone: string) => {
+const getTimezoneName = (timezone: string, activityData?: TenantUser['activity_data']): string => {
+  // First try to get timezone from login_sessions
+  if (activityData?.login_sessions && activityData.login_sessions.length > 0) {
+    const tz = activityData.login_sessions[0].timezone;
+    if (tz) {
+      return tz;
+    }
+  }
+  
+  // Fallback to timezone field
   if (!timezone || timezone.trim() === '') {
     return '-';
   }
@@ -96,8 +119,10 @@ const formatCreatedTime = (createdTime?: string) => {
   }
 };
 
-const formatLastActive = (lastActiveAt?: string, lastLoginAt?: string) => {
-  const dateStr = lastActiveAt || lastLoginAt;
+const formatLastActive = (lastActiveAt?: string, lastLoginAt?: string, activityData?: TenantUser['activity_data']) => {
+  // Try activity_data.last_updated_at first
+  let dateStr = activityData?.last_updated_at || lastActiveAt || lastLoginAt;
+  
   if (!dateStr || dateStr === '0001-01-01T00:00:00Z') {
     return '-';
   }
@@ -156,7 +181,18 @@ const localeToLanguage: Record<string, string> = {
   'en-GB': 'English',
 };
 
-const getLanguageDisplay = (locale: string): string => {
+const getLanguageDisplay = (locale: string, activityData?: TenantUser['activity_data']): string => {
+  // First try to get language from login_sessions
+  if (activityData?.login_sessions && activityData.login_sessions.length > 0) {
+    const language = activityData.login_sessions[0].language;
+    if (language) {
+      // Extract language code (e.g., "en-IN" -> "en")
+      const langCode = language.split('-')[0];
+      return localeToLanguage[langCode] || localeToLanguage[language] || language || '-';
+    }
+  }
+  
+  // Fallback to locale
   if (!locale) return '-';
   return localeToLanguage[locale] || locale || '-';
 };
@@ -165,9 +201,26 @@ const getLanguageDisplay = (locale: string): string => {
 const getOverallRoles = (user: TenantUser, accessDetails?: UserAccessDetailsResponse): string[] => {
   const roles: string[] = [];
 
-  // Tenant-level role
-  if (user.roles === 'owner') {
-    roles.push('Owner');
+  // Extract tenant-level roles from roles array
+  if (Array.isArray(user.roles)) {
+    user.roles.forEach(role => {
+      if (role.scope_level === 'system') {
+        // Map role names to display names
+        if (role.name === 'owner') {
+          roles.push('Owner');
+        } else if (role.name === 'co-owner') {
+          roles.push('Co-owner');
+        } else {
+          // Capitalize first letter of role name
+          roles.push(role.name.charAt(0).toUpperCase() + role.name.slice(1));
+        }
+      }
+    });
+  } else if (typeof user.roles === 'string') {
+    // Legacy format support
+    if (user.roles === 'owner') {
+      roles.push('Owner');
+    }
   }
 
   // Workspace/base roles (from access details if available)
@@ -196,7 +249,12 @@ const getOverallRoles = (user: TenantUser, accessDetails?: UserAccessDetailsResp
 
   // Fallback: if no roles found, use tenant role
   if (roles.length === 0) {
-    roles.push(user.roles === 'owner' ? 'Owner' : 'User');
+    if (Array.isArray(user.roles) && user.roles.length > 0) {
+      const firstRole = user.roles[0];
+      roles.push(firstRole.name === 'owner' ? 'Owner' : firstRole.name.charAt(0).toUpperCase() + firstRole.name.slice(1));
+    } else {
+      roles.push(user.roles === 'owner' ? 'Owner' : 'User');
+    }
   }
 
   return [...new Set(roles)]; // Remove duplicates
@@ -385,9 +443,17 @@ export const UserTable: React.FC<UserTableProps> = ({
             bVal = (b.display_name || `${b.first_name} ${b.last_name}`).toLowerCase();
             break;
           case 'role':
-            // Sort by tenant role for now
-            aVal = a.roles?.toLowerCase() || '';
-            bVal = b.roles?.toLowerCase() || '';
+            // Sort by tenant role
+            if (Array.isArray(a.roles) && a.roles.length > 0) {
+              aVal = a.roles[0].name?.toLowerCase() || '';
+            } else {
+              aVal = (typeof a.roles === 'string' ? a.roles : '').toLowerCase();
+            }
+            if (Array.isArray(b.roles) && b.roles.length > 0) {
+              bVal = b.roles[0].name?.toLowerCase() || '';
+            } else {
+              bVal = (typeof b.roles === 'string' ? b.roles : '').toLowerCase();
+            }
             break;
           case 'status':
             aVal = a.status?.toLowerCase() || '';
@@ -402,12 +468,12 @@ export const UserTable: React.FC<UserTableProps> = ({
             bVal = (b.last_active_at || b.last_login_at) ? new Date(b.last_active_at || b.last_login_at || '').getTime() : 0;
             break;
           case 'language':
-            aVal = getLanguageDisplay(a.locale).toLowerCase();
-            bVal = getLanguageDisplay(b.locale).toLowerCase();
+            aVal = getLanguageDisplay(a.locale, a.activity_data).toLowerCase();
+            bVal = getLanguageDisplay(b.locale, b.activity_data).toLowerCase();
             break;
           case 'timezone':
-            aVal = a.timezone?.toLowerCase() || '';
-            bVal = b.timezone?.toLowerCase() || '';
+            aVal = getTimezoneName(a.timezone, a.activity_data)?.toLowerCase() || '';
+            bVal = getTimezoneName(b.timezone, b.activity_data)?.toLowerCase() || '';
             break;
           default:
             return 0;
@@ -726,7 +792,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                               />
                             </div>
                           ) : (
-                            <div className={`w-10 h-10 ${avatarColor} rounded-full flex items-center justify-center text-primary text-sm font-semibold`}>
+                            <div className={`w-10 h-10 ${avatarColor} rounded-full flex items-center justify-center text-white text-sm font-semibold`}>
                               {avatarInitials}
                             </div>
                           )}
@@ -773,17 +839,17 @@ export const UserTable: React.FC<UserTableProps> = ({
 
                       {/* Last Active */}
                       <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600 min-w-48">{formatLastActive(user.last_active_at, user.last_login_at)}</p>
+                        <p className="text-sm text-gray-600 min-w-48">{formatLastActive(user.last_active_at, user.last_login_at, user.activity_data)}</p>
                       </td>
 
                       {/* Language */}
                       <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600 min-w-48">{getLanguageDisplay(user.locale)}</p>
+                        <p className="text-sm text-gray-600 min-w-48">{getLanguageDisplay(user.locale, user.activity_data)}</p>
                       </td>
 
                       {/* Timezone */}
                       <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600 min-w-48">{getTimezoneName(user.timezone)}</p>
+                        <p className="text-sm text-gray-600 min-w-48">{getTimezoneName(user.timezone, user.activity_data)}</p>
                       </td>
 
                       {/* Actions */}

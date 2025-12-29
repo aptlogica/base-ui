@@ -47,6 +47,7 @@ import {
   getUserAccessDetailsService,
   // Tenant API services
   getTenantUsersService,
+  getUsersForAssignService,
   addTenantUserService,
   removeTenantUserService,
   activateTenantUserService,
@@ -1198,6 +1199,28 @@ export const useGetTenantUsers = () => {
     enabled: true,
     staleTime: 0, // Always consider data stale to allow refetching
     refetchOnMount: 'always', // Always refetch when component mounts (e.g., when navigating to user tab)
+  });
+};
+
+export const useGetUsersForAssign = () => {
+  return useQuery({
+    queryKey: ['usersForAssign'],
+    queryFn: async () => {
+      try {
+        const result = await getUsersForAssignService();
+        const data = result?.data as any;
+        if (data) {
+          return Array.isArray(data) ? data : [];
+        }
+        return [];
+      } catch (error: any) {
+        console.error('❌ Users for assign query failed:', error);
+        throw error;
+      }
+    },
+    enabled: true,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
 

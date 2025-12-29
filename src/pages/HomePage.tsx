@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Download, Search, Clock, Zap, Database, ChevronDown } from 'lucide-react';
+import { Plus, Download, Search, Zap, Database, ChevronDown } from 'lucide-react';
 import { useWorkspaceBases, useCreateBase, useUpdateBase, useDeleteBase } from '../hooks/useApi';
 import { useNavigation } from '../hooks/useNavigation';
 import { useNavigationStore } from '../stores/navigationStore';
