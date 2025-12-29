@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, UserPlus, CloudUpload, Search, Mail, Loader2 } from 'lucide-react';
-import { useAddTenantUser, useWorkspaces, useAssignUserToWorkspace } from '../../../hooks/useApi';
-import { addOrUpdateAvatarService } from '../../../service/clientService';
+import { useAddTenantUser, useWorkspaces } from '../../../hooks/useApi';
 import { useToast } from '../../common/Toast';
 import { WorkspaceItem, WorkspaceAssignment } from './WorkspaceItem';
 
@@ -23,7 +22,6 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { mutate: addUser, isPending: isAddingUser } = useAddTenantUser();
-  const assignUserToWorkspaceMutation = useAssignUserToWorkspace();
   const workspacesQuery = useWorkspaces();
   const toast = useToast();
 
@@ -187,6 +185,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
         if (baseIndex >= 0) {
           assignment.bases[baseIndex].role = role;
         } else {
+          // Add base with the selected role
           assignment.bases.push({ baseId, role });
         }
       }
@@ -231,79 +230,48 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
     setIsSubmitting(true);
 
     try {
-      // Step 1: Create user
+      // Build membership array from workspace assignments
+      const membership = Object.values(workspaceAssignments).map(assignment => {
+        const membershipItem: {
+          workspace_id: string;
+          role: string;
+          bases?: Array<{ base_id: string; role: string }>;
+        } = {
+          workspace_id: assignment.workspaceId,
+          role: assignment.role === 'base_specific' 
+            ? 'base-member' // Default workspace role for base-specific assignments
+            : (assignment.role || 'base-member')
+        };
+
+        // Add bases if it's a base_specific role with bases
+        if (assignment.role === 'base_specific' && assignment.bases && assignment.bases.length > 0) {
+          membershipItem.bases = assignment.bases.map(base => ({
+            base_id: base.baseId,
+            role: base.role // base-member or base-read
+          }));
+        }
+
+        return membershipItem;
+      });
+
+      // Create user with all data in one call
       const userPayload = {
         firstname: firstName.trim(),
         lastname: lastName.trim(),
-        email: email.trim()
+        email: email.trim(),
+        ...(avatar && { profile_pic: avatar }),
+        ...(isCoOwner && { is_coowner: true }),
+        ...(membership.length > 0 && { membership })
       };
       
-      const userResult = await new Promise<any>((resolve, reject) => {
+      await new Promise<void>((resolve, reject) => {
         addUser(userPayload, {
-          onSuccess: (data) => resolve(data),
+          onSuccess: () => resolve(),
           onError: (error) => reject(error)
         });
       });
 
-      const userId = userResult?.data?.id || userResult?.data?.user_id || userResult?.data?.data?.id;
-
-      if (!userId) {
-        throw new Error('Failed to get user ID from creation response');
-      }
-
-      // Step 2: Upload avatar if provided
-      if (avatar && userId) {
-        try {
-          await addOrUpdateAvatarService(userId, avatar);
-        } catch (avatarError) {
-          console.error('Avatar upload failed:', avatarError);
-          // Continue even if avatar upload fails
-        }
-      }
-
-      // Step 3: Assign to workspaces
-      const assignmentPromises: Promise<any>[] = [];
-
-      for (const assignment of Object.values(workspaceAssignments)) {
-        if (assignment.role === 'base_specific' && assignment.bases && assignment.bases.length > 0) {
-          // For base-specific, assign with comma-separated base IDs
-          const baseIds = assignment.bases.map(b => b.baseId).join(',');
-          assignmentPromises.push(
-            assignUserToWorkspaceMutation.mutateAsync({
-              workspace_id: assignment.workspaceId,
-              user_ids: [userId],
-              access_level: 'limited_access', // Base-specific uses limited_access
-              bases_ids: baseIds
-            })
-          );
-        } else if (assignment.role === 'maintainer') {
-          // Assign with limited_access to all bases
-          assignmentPromises.push(
-            assignUserToWorkspaceMutation.mutateAsync({
-              workspace_id: assignment.workspaceId,
-              user_ids: [userId],
-              access_level: 'limited_access',
-              bases_ids: '*' // All bases
-            })
-          );
-        } else if (assignment.role === 'workspace-read') {
-          // Assign with read-only (if API supports, otherwise use limited_access)
-          assignmentPromises.push(
-            assignUserToWorkspaceMutation.mutateAsync({
-              workspace_id: assignment.workspaceId,
-              user_ids: [userId],
-              access_level: 'limited_access', // TODO: Update when API supports read_only
-              bases_ids: '*'
-            })
-          );
-        }
-      }
-
-      if (assignmentPromises.length > 0) {
-        await Promise.all(assignmentPromises);
-      }
-
-            toast.success(`User ${firstName} ${lastName} added successfully`);
+      toast.success(`User ${firstName} ${lastName} added successfully`);
 
       // Reset form
             setFirstName('');
@@ -585,7 +553,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
                 </div>
 
                 {/* Workspaces List */}
-                <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                <div className="space-y-3 max-h-96 min-h-max overflow-y-auto pr-2">
                   {workspacesQuery.isLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-5 h-5 animate-spin text-gray-400" />

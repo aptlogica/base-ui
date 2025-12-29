@@ -315,7 +315,7 @@ const HomePage: React.FC = () => {
   // Show message if no workspace is selected
   if (!selectedWorkspaceId) {
     return (
-      <div className="relative overflow-hidden h-full bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url(/assets/login-bg.png)' }}>
+      <div className="relative overflow-hidden h-full bg-background">
         <div className="p-8 md:p-12 lg:p-16">
           <div className="mb-8">
             <h1 className="text-4xl md:text-5xl font-semibold text-primary mb-4">

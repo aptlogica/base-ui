@@ -128,45 +128,89 @@ class AuthService {
     constructor(http) {
         this.http = http;
     }
-    // Register new user
-    register(params) {
-        return this.http.post(`/auth/register`, params);
-    }
-    // Login user
+    /**
+     * Login with email and password
+     * POST /auth/login
+     */
     login(params) {
         return this.http.post(`/auth/login`, params);
     }
-    // Refresh token
-    refreshToken(params) {
-        return this.http.post(`/auth/refresh`, params);
-    }
-    // Verify OTP
+    /**
+     * Verify email with OTP
+     * POST /auth/otp/verify
+     */
     verifyOtp(params) {
         return this.http.post(`/auth/otp/verify`, params);
     }
-    // Resend OTP
+    /**
+     * Resend OTP
+     * POST /auth/otp/resend
+     */
     resendOtp(params) {
         return this.http.post(`/auth/otp/resend`, params);
     }
-    // Add reset password
-    resetPassword(params) {
-        return this.http.post(`/auth/reset-password`, params);
-    }
-    // Add forgot password
+    /**
+     * Request password reset
+     * POST /auth/forgot-password
+     */
     forgotPassword(params) {
         return this.http.post(`/auth/forgot-password`, params);
     }
-    // identity provider
-    loginByIdentityProvider(provider) {
-        return this.http.get(`/auth/login/${provider}`);
+    /**
+     * Reset password with token
+     * POST /auth/reset-password
+     */
+    resetPassword(params) {
+        return this.http.post(`/auth/reset-password`, params);
     }
-    // Logout user
+    /**
+     * Validate if token is valid
+     * POST /auth/validate-token
+     */
+    validateToken(params) {
+        return this.http.post(`/auth/validate-token`, params);
+    }
+    /**
+     * Verify token validity
+     * POST /auth/verify-token
+     */
+    verifyToken(params) {
+        return this.http.post(`/auth/verify-token`, params);
+    }
+    /**
+     * Logout and invalidate token
+     * POST /auth/logout
+     */
     logout(params) {
         return this.http.post(`/auth/logout`, params);
     }
-    // callback for login
+    /**
+     * Login with identity provider
+     * @deprecated Use OAuth/identity provider flows
+     */
+    loginByIdentityProvider(provider) {
+        return this.http.get(`/auth/login/${provider}`);
+    }
+    /**
+     * Callback for identity provider login
+     * @deprecated Use OAuth/identity provider flows
+     */
     callback(queryString) {
         return this.http.post(`/auth/callback${queryString}`);
+    }
+    /**
+     * Refresh token
+     * @deprecated Use standard refresh token flow
+     */
+    refreshToken(params) {
+        return this.http.post(`/auth/refresh`, params);
+    }
+    /**
+     * Register new user
+     * @deprecated Use standard auth flow
+     */
+    register(params) {
+        return this.http.post(`/auth/register`, params);
     }
 }
 
@@ -174,45 +218,89 @@ class WorkspaceService {
     constructor(http) {
         this.http = http;
     }
-    // create workspace
+    /**
+     * Create new workspace
+     * POST /workspace/create
+     */
     create(params) {
         return this.http.post(`/workspace/create`, params);
     }
-    // Get all workspaces
+    /**
+     * Get all workspaces
+     * GET /workspace/
+     */
     getAll() {
         return this.http.get(`/workspace/`);
     }
-    // Get a workspace by ID
+    /**
+     * Get workspace by ID
+     * GET /workspace/:id
+     */
     getById(id) {
         return this.http.get(`/workspace/${id}`);
     }
-    // Get tables by workspace ID
-    getTablesByWorkspaceId(id) {
-        return this.http.get(`/workspace/${id}/tables`);
-    }
-    // Update a workspace by ID
+    /**
+     * Update workspace
+     * PUT /workspace/:id
+     */
     update(id, params) {
         return this.http.put(`/workspace/${id}`, params);
     }
-    // Delete a workspace by ID
+    /**
+     * Delete workspace
+     * DELETE /workspace/:id
+     */
     delete(id) {
         return this.http.delete(`/workspace/${id}`);
     }
-    // Get bases by workspace ID
+    /**
+     * Get all tables in workspace
+     * GET /workspace/:id/tables
+     */
+    getTablesByWorkspaceId(id) {
+        return this.http.get(`/workspace/${id}/tables`);
+    }
+    /**
+     * Get all bases in workspace
+     * GET /workspace/:id/bases
+     */
     getBasesByWorkspaceId(id) {
         return this.http.get(`/workspace/${id}/bases`);
     }
-    // Invite multiple users to the workspace
-    inviteUser(workspaceId, params) {
-        return this.http.post(`/workspace/${workspaceId}/invite`, params);
+    /**
+     * Get workspace members
+     * GET /workspace/:id/members
+     */
+    getMembers(workspaceId) {
+        return this.http.get(`/workspace/${workspaceId}/members`);
     }
-    // Remove a user from the workspace
+    /**
+     * Get members with detailed role information
+     * GET /workspace/:id/members-with-roles
+     */
+    getMembersWithRoles(workspaceId) {
+        return this.http.get(`/workspace/${workspaceId}/members-with-roles`);
+    }
+    /**
+     * Remove user from workspace
+     * POST /workspace/:id/remove
+     */
     removeUserFromWorkspace(workspaceId, params) {
         return this.http.post(`/workspace/${workspaceId}/remove`, params);
     }
-    // Get members of a workspace
-    getMembers(workspaceId) {
-        return this.http.get(`/workspace/${workspaceId}/members`);
+    /**
+     * Add multiple members to workspace
+     * POST /workspace/:id/bulk-add-members
+     */
+    bulkAddMembers(workspaceId, params) {
+        return this.http.post(`/workspace/${workspaceId}/bulk-add-members`, params);
+    }
+    /**
+     * Invite multiple users to the workspace (deprecated - use bulkAddMembers)
+     * @deprecated Use bulkAddMembers instead
+     */
+    inviteUser(workspaceId, params) {
+        return this.http.post(`/workspace/${workspaceId}/invite`, params);
     }
 }
 
@@ -220,33 +308,68 @@ class BaseService {
     constructor(http) {
         this.http = http;
     }
-    // Create a new base
+    /**
+     * Create new base (database)
+     * POST /base/create
+     */
     create(params) {
         return this.http.post(`/base/create`, params);
     }
-    // Get a base by ID
+    /**
+     * Get base by ID
+     * GET /base/:id
+     */
     getById(id) {
         return this.http.get(`/base/${id}`);
     }
-    // Get tables by base ID
-    getTablesByBaseId(id) {
-        return this.http.get(`/base/${id}/tables`);
-    }
-    // Get all bases
-    getAll() {
-        return this.http.get(`/base/`);
-    }
-    // Update a base by ID
+    /**
+     * Update base
+     * PUT /base/:id
+     */
     update(id, params) {
         return this.http.put(`/base/${id}`, params);
     }
-    // Delete a base by ID
+    /**
+     * Delete base
+     * DELETE /base/:id
+     */
     delete(id) {
         return this.http.delete(`/base/${id}`);
     }
-    // Get base members
+    /**
+     * Get all tables in base
+     * GET /base/:id/tables
+     */
+    getTablesByBaseId(id) {
+        return this.http.get(`/base/${id}/tables`);
+    }
+    /**
+     * Get all bases
+     * GET /base/
+     */
+    getAll() {
+        return this.http.get(`/base/`);
+    }
+    /**
+     * Get base members
+     * GET /base/:id/members
+     */
     getMembers(id) {
         return this.http.get(`/base/${id}/members`);
+    }
+    /**
+     * Get members with role details
+     * GET /base/:id/members-with-roles
+     */
+    getMembersWithRoles(id) {
+        return this.http.get(`/base/${id}/members-with-roles`);
+    }
+    /**
+     * Add multiple members to base
+     * POST /base/:id/bulk-add-members
+     */
+    bulkAddMembers(id, params) {
+        return this.http.post(`/base/${id}/bulk-add-members`, params);
     }
 }
 
@@ -254,158 +377,52 @@ class TableService {
     constructor(http) {
         this.http = http;
     }
-    // Table-related API methods for SDK
-    // Create a new table
+    // ============ TABLE ENDPOINTS ============
+    /**
+     * Create new table
+     * POST /table/create
+     */
     create(params) {
         return this.http.post(`/table/create`, params);
     }
-    // Update a table by ID
-    update(id, params) {
-        return this.http.patch(`/table/${id}`, params);
-    }
-    // Get a table by ID
+    /**
+     * Get table by ID
+     * GET /table/:id
+     */
     getById(id, options) {
         var _a, _b;
-        if (options && (options.pageNumber !== undefined || options.pageLimit !== undefined)) {
-            const pageNumber = (_a = options.pageNumber) !== null && _a !== void 0 ? _a : 1;
-            const pageLimit = (_b = options.pageLimit) !== null && _b !== void 0 ? _b : 30;
-            return this.http.get(`/table/${id}?page=${pageNumber}&page_size=${pageLimit}`);
+        if (options && (options.page !== undefined || options.page_size !== undefined)) {
+            const page = (_a = options.page) !== null && _a !== void 0 ? _a : 1;
+            const page_size = (_b = options.page_size) !== null && _b !== void 0 ? _b : 30;
+            return this.http.get(`/table/${id}?page=${page}&page_size=${page_size}`);
         }
         return this.http.get(`/table/${id}`);
     }
-    // Get all tables
+    /**
+     * Get all tables
+     * GET /table/
+     */
     getAll() {
         return this.http.get(`/table/`);
     }
-    // Get columns by table ID
-    getColumnsByTableId(id) {
-        return this.http.get(`/table/${id}/columns`);
+    /**
+     * Update table
+     * PATCH /table/:id
+     */
+    update(id, params) {
+        return this.http.patch(`/table/${id}`, params);
     }
-    // Get views by table/model ID
-    getViewsByModelId(id) {
-        return this.http.get(`/table/${id}/views`);
-    }
-    // Get all records by table ID
-    getAllRecords(id, options) {
-        var _a, _b;
-        const pageNumber = (_a = options === null || options === void 0 ? void 0 : options.pageNumber) !== null && _a !== void 0 ? _a : 1;
-        const pageLimit = (_b = options === null || options === void 0 ? void 0 : options.pageLimit) !== null && _b !== void 0 ? _b : 30;
-        return this.http.get(`/table/${id}/records?page=${pageNumber}&page_size=${pageLimit}`);
-    }
-    // Delete a table by ID
+    /**
+     * Delete table
+     * DELETE /table/:id
+     */
     delete(id) {
         return this.http.delete(`/table/${id}`);
     }
-    // Column-related API methods
-    // Add a new column
-    addColumn(params) {
-        return this.http.post(`/column/create`, params);
-    }
-    // Get a column by ID
-    getColumnById(id) {
-        return this.http.get(`/column/${id}`);
-    }
-    // Get all columns
-    getAllColumns() {
-        return this.http.get(`/column/`);
-    }
-    // Update a column by ID
-    updateColumn(id, params) {
-        return this.http.patch(`/column/${id}`, params);
-    }
-    // Delete a column by ID
-    deleteColumn(id) {
-        return this.http.delete(`/column/${id}`);
-    }
-    // Column reorder
-    // Reorder columns in a table by specifying source and target column IDs
-    reorderColumn(params) {
-        return this.http.post(`/column/reorder`, params);
-    }
-    // Row-related API methods
-    // Create a new row
-    createRow(params) {
-        return this.http.post(`/row/create`, params);
-    }
-    // Insert row data
-    insertRowData(params) {
-        // implement validations per column datatype
-        // implement logic for attachment type 
-        return this.http.post(`/row/data/insert`, params);
-    }
-    // Insert relation data for a row (e.g., for many-to-many or linked records)
-    insertRelationData(params) {
-        return this.http.post(`/row/data/relation`, params);
-    }
-    // Add attachment(s) to a row
-    addAttachment(params, extra) {
-        const formData = new FormData();
-        formData.append('model_id', params.model_id);
-        formData.append('column_id', params.column_id);
-        formData.append('row_id', params.row_id.toString());
-        if (Array.isArray(params.files)) {
-            params.files.forEach((file) => {
-                formData.append('files', file);
-            });
-        }
-        const config = {
-            headers: {
-                'content-type': 'multipart/form-data'
-            },
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
-        };
-        if (typeof extra === 'function') {
-            config.onUploadProgress = extra;
-        }
-        return this.http.post(`/row/attachment/add`, formData, config);
-    }
-    // Remove attachment(s) from a row
-    removeAttachments(params) {
-        return this.http.post(`/row/attachment/remove`, params);
-    }
-    // // Get user profile by ID
-    // getUserProfileByID(id: string) {
-    //     return this.http.get(`/user/profile/${id}`);
-    // }
-    // Delete a row
-    deleteRow(params) {
-        return this.http.post(`/row/remove`, params);
-    }
-    // View-related API methods
-    // Create a new view
-    createView(params) {
-        return this.http.post(`/view/create`, params);
-    }
-    // Get a view by ID
-    getViewById(id) {
-        return this.http.get(`/view/${id}`);
-    }
-    // Get all views
-    getAllViews() {
-        return this.http.get(`/view/`);
-    }
-    // Update a view by ID
-    updateView(id, params) {
-        return this.http.patch(`/view/${id}`, params);
-    }
-    // Delete a view by ID
-    deleteView(id) {
-        return this.http.delete(`/view/${id}`);
-    }
-    // Asset-related API methods
-    // Get bulk assets
-    getBulkAssets(params) {
-        return this.http.post(`/asset/bulk`, params);
-    }
-    // Update asset by ID
-    updateAssetById(id, params) {
-        return this.http.patch(`/asset/${id}`, params);
-    }
-    // Delete asset by ID
-    deleteAssetById(id) {
-        return this.http.delete(`/asset/${id}`);
-    }
+    /**
+     * Import table from CSV/file
+     * POST /table/import
+     */
     import(params, extra) {
         const formData = new FormData();
         formData.append('base_id', params.base_id);
@@ -418,7 +435,7 @@ class TableService {
         }
         const config = {
             headers: {
-                'content-type': 'multipart/form-data'
+                'Content-Type': 'multipart/form-data'
             },
             maxContentLength: Infinity,
             maxBodyLength: Infinity,
@@ -428,156 +445,117 @@ class TableService {
         }
         return this.http.post(`/table/import`, formData, config);
     }
+    /**
+     * Import AI table
+     * POST /table/import/ai
+     */
     importAiTable(params) {
         return this.http.post(`/table/import/ai`, params);
     }
+    /**
+     * Apply AI table import
+     * POST /table/import/ai/apply
+     */
     applyImportAiTable(params, schema) {
         return this.http.post(`/table/import/ai/apply`, params);
     }
-}
-
-class UserService {
-    constructor(http) {
-        this.http = http;
+    // ============ COLUMN ENDPOINTS ============
+    /**
+     * Get all columns in table
+     * GET /table/:id/columns
+     */
+    getColumnsByTableId(id) {
+        return this.http.get(`/table/${id}/columns`);
     }
-    // Get current user profile
-    getProfile(id) {
-        return this.http.get(`/user/profile/${id}`);
+    /**
+     * Create new column in table
+     * POST /column/create
+     */
+    addColumn(params) {
+        return this.http.post(`/column/create`, params);
     }
-    // Update current user profile
-    updateProfile(id, params) {
-        return this.http.patch(`/user/profile/${id}`, params);
+    /**
+     * Get column by ID
+     * GET /column/:id
+     */
+    getColumnById(id) {
+        return this.http.get(`/column/${id}`);
     }
-    // Change password
-    changePassword(id, params) {
-        return this.http.post(`/user/change-password/${id}`, params);
+    /**
+     * Get all columns
+     * GET /column/
+     */
+    getAllColumns() {
+        return this.http.get(`/column/`);
     }
-    // Add or update user avatar
-    addOrUpdateAvatar(id, avatarFile) {
+    /**
+     * Update column
+     * PATCH /column/:id
+     */
+    updateColumn(id, params) {
+        return this.http.patch(`/column/${id}`, params);
+    }
+    /**
+     * Delete column
+     * DELETE /column/:id
+     */
+    deleteColumn(id) {
+        return this.http.delete(`/column/${id}`);
+    }
+    /**
+     * Reorder columns in table
+     * POST /column/reorder
+     */
+    reorderColumn(params) {
+        return this.http.post(`/column/reorder`, params);
+    }
+    // ============ ROW ENDPOINTS ============
+    /**
+     * Get all records in table
+     * GET /table/:id/records
+     */
+    getAllRecords(id, options) {
+        var _a, _b;
+        const page = (_a = options === null || options === void 0 ? void 0 : options.page) !== null && _a !== void 0 ? _a : 1;
+        const page_size = (_b = options === null || options === void 0 ? void 0 : options.page_size) !== null && _b !== void 0 ? _b : 30;
+        return this.http.get(`/table/${id}/records?page=${page}&page_size=${page_size}`);
+    }
+    /**
+     * Create new record/row
+     * POST /row/create
+     */
+    createRow(params) {
+        return this.http.post(`/row/create`, params);
+    }
+    /**
+     * Delete row(s)
+     * POST /row/remove
+     */
+    deleteRow(params) {
+        return this.http.post(`/row/remove`, params);
+    }
+    /**
+     * Insert row data
+     * POST /row/data/insert
+     */
+    insertRowData(params) {
+        return this.http.post(`/row/data/insert`, params);
+    }
+    /**
+     * Insert relationship/link data between rows
+     * POST /row/data/relation
+     */
+    insertRelationData(params) {
+        return this.http.post(`/row/data/relation`, params);
+    }
+    /**
+     * Add attachment to row
+     * POST /row/attachment/add
+     */
+    addAttachment(params, extra) {
         const formData = new FormData();
-        formData.append("avatar", avatarFile);
-        return this.http.post(`/user/profile/${id}/avatar`, formData, {
-            headers: {
-                "content-type": "multipart/form-data",
-            },
-        });
-    }
-    // Remove user avatar
-    removeAvatar(id) {
-        return this.http.delete(`/user/profile/${id}/avatar`);
-    }
-    // Get workspaces for a user
-    getWorkspaces() {
-        return this.http.get(`/user/workspaces`);
-    }
-    // Assign user to workspace
-    assignToWorkspace(params) {
-        return this.http.post(`/user/assign`, params);
-    }
-    removeFromWorkspace(workspaceId, params) {
-        return this.http.post(`/workspace/${workspaceId}/remove`, params);
-    }
-    // Get user's workspace and base access details
-    getUserAccessDetails(userId, workspaceId) {
-        const params = new URLSearchParams({ user_id: userId });
-        if (workspaceId) {
-            params.append("workspace_id", workspaceId);
-        }
-        return this.http.get(`/user/access-details?user_id=${userId}`);
-    }
-}
-
-class TenantService {
-    constructor(http) {
-        this.http = http;
-    }
-    /**
-     * Creates a new user under the tenant.
-     * Equivalent to POST /tenant/user/create
-     */
-    async addUser(userData) {
-        const formData = new FormData();
-        formData.append('email', userData.email);
-        formData.append('firstname', userData.firstname);
-        formData.append('lastname', userData.lastname);
-        if (userData.profile_pic) {
-            formData.append('profile_pic', userData.profile_pic);
-        }
-        if (userData.is_coowner !== undefined) {
-            formData.append('is_coowner', String(userData.is_coowner));
-        }
-        if (userData.membership) {
-            formData.append('membership', JSON.stringify(userData.membership));
-        }
-        return this.http.post(`/tenant/user/create`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
-    }
-    /**
-     * Removes a user from the tenant.
-     * Equivalent to POST /tenant/user/remove
-     */
-    async removeUser(userData) {
-        return this.http.post(`/tenant/user/remove`, userData);
-    }
-    /**
-     * activate a user from the tenant.
-     * Equivalent to POST /tenant/user/activate
-     */
-    async activateUser(userData) {
-        return this.http.post(`/tenant/user/activate`, userData);
-    }
-    /**
-     * deactivate a user from the tenant.
-     * Equivalent to POST /tenant/user/deactivate
-     */
-    async deactivateUser(userData) {
-        return this.http.post(`/tenant/user/deactivate`, userData);
-    }
-    /**
-     * Retrieves the list of users for the tenant.
-     * Equivalent to GET /tenant/users
-     */
-    async getUsers() {
-        return this.http.get(`/tenant/users`);
-    }
-    /**
-     * Retrieves the tenant information.
-     * Equivalent to GET /tenant
-     */
-    async getTenant() {
-        return this.http.get(`/tenant/info`);
-    }
-    /**
-     * Updates tenant information.
-     * Equivalent to PATCH /tenant/update
-     */
-    async updateTenant(updateData) {
-        return this.http.patch(`/tenant/info`, updateData);
-    }
-}
-
-class AssetService {
-    constructor(http) {
-        this.http = http;
-    }
-    // Get bulk assets
-    getBulk(params) {
-        return this.http.post(`/asset/bulk`, params);
-    }
-    // Update asset by ID
-    updateById(id, params) {
-        return this.http.patch(`/asset/${id}`, params);
-    }
-    // Delete asset by ID
-    deleteById(id) {
-        return this.http.delete(`/asset/${id}`);
-    }
-    // Add image
-    addImage(params, extra) {
-        const formData = new FormData();
+        formData.append('model_id', params.model_id);
+        formData.append('column_id', params.column_id);
         if (Array.isArray(params.files)) {
             params.files.forEach((file) => {
                 formData.append('files', file);
@@ -585,7 +563,258 @@ class AssetService {
         }
         const config = {
             headers: {
-                'content-type': 'multipart/form-data'
+                'Content-Type': 'multipart/form-data'
+            },
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
+        };
+        if (typeof extra === 'function') {
+            config.onUploadProgress = extra;
+        }
+        return this.http.post(`/row/attachment/add`, formData, config);
+    }
+    /**
+     * Remove attachment from row
+     * POST /row/attachment/remove
+     */
+    removeAttachments(params) {
+        return this.http.post(`/row/attachment/remove`, params);
+    }
+    // ============ VIEW ENDPOINTS ============
+    /**
+     * Get all views for table
+     * GET /table/:id/views
+     */
+    getViewsByModelId(id) {
+        return this.http.get(`/table/${id}/views`);
+    }
+    /**
+     * Create view of table data
+     * POST /view/create
+     */
+    createView(params) {
+        return this.http.post(`/view/create`, params);
+    }
+    /**
+     * Get view by ID
+     * GET /view/:id
+     */
+    getViewById(id) {
+        return this.http.get(`/view/${id}`);
+    }
+    /**
+     * Get all views
+     * GET /view/
+     */
+    getAllViews() {
+        return this.http.get(`/view/`);
+    }
+    /**
+     * Update view
+     * PATCH /view/:id
+     */
+    updateView(id, params) {
+        return this.http.patch(`/view/${id}`, params);
+    }
+    /**
+     * Delete view
+     * DELETE /view/:id
+     */
+    deleteView(id) {
+        return this.http.delete(`/view/${id}`);
+    }
+    // ============ ASSET ENDPOINTS ============
+    /**
+     * Get multiple assets by IDs
+     * POST /asset/bulk
+     */
+    getBulkAssets(params) {
+        return this.http.post(`/asset/bulk`, params);
+    }
+    /**
+     * Update asset metadata
+     * PATCH /asset/:id
+     */
+    updateAssetById(id, params) {
+        return this.http.patch(`/asset/${id}`, params);
+    }
+    /**
+     * Delete asset
+     * DELETE /asset/:id
+     */
+    deleteAssetById(id) {
+        return this.http.delete(`/asset/${id}`);
+    }
+}
+
+class UserService {
+    constructor(http) {
+        this.http = http;
+    }
+    /**
+     * Get user profile by ID
+     * GET /user/profile/:id
+     */
+    getProfile(id) {
+        return this.http.get(`/user/profile/${id}`);
+    }
+    /**
+     * Update user profile
+     * PATCH /user/profile/:id
+     */
+    updateProfile(id, params) {
+        return this.http.patch(`/user/profile/${id}`, params);
+    }
+    /**
+     * Change user password
+     * POST /user/change-password/:id
+     */
+    changePassword(id, params) {
+        return this.http.post(`/user/change-password/${id}`, params);
+    }
+    /**
+     * Add or update user avatar
+     * POST /user/profile/:id/avatar
+     */
+    addOrUpdateAvatar(id, avatarFile) {
+        const formData = new FormData();
+        formData.append("file", avatarFile);
+        return this.http.post(`/user/profile/${id}/avatar`, formData, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        });
+    }
+    /**
+     * Remove user avatar
+     * DELETE /user/profile/:id/avatar
+     */
+    removeAvatar(id) {
+        return this.http.delete(`/user/profile/${id}/avatar`);
+    }
+    /**
+     * Get all workspaces for current user
+     * GET /user/workspaces
+     */
+    getWorkspaces() {
+        return this.http.get(`/user/workspaces`);
+    }
+    /**
+     * Get detailed access information for user
+     * GET /user/access-details
+     */
+    getUserAccessDetails() {
+        return this.http.get(`/user/access-details`);
+    }
+    /**
+     * Assign user to workspace
+     * POST /user/assign
+     */
+    assignToWorkspace(params) {
+        return this.http.post(`/user/assign`, params);
+    }
+    /**
+     * Update user access permissions
+     * PUT /user/access/update
+     */
+    updateUserAccess(params) {
+        return this.http.put(`/user/access/update`, params);
+    }
+    /**
+     * Create new user (Tenant Admin)
+     * POST /user/create
+     */
+    createUser(params) {
+        return this.http.post(`/user/create`, params);
+    }
+    /**
+     * Remove/delete user (Tenant Admin)
+     * POST /user/remove
+     */
+    removeUser(params) {
+        return this.http.post(`/user/remove`, params);
+    }
+    /**
+     * Activate user account (Tenant Admin)
+     * POST /user/activate
+     */
+    activateUser(params) {
+        return this.http.post(`/user/activate`, params);
+    }
+    /**
+     * Deactivate user account (Tenant Admin)
+     * POST /user/deactivate
+     */
+    deactivateUser(params) {
+        return this.http.post(`/user/deactivate`, params);
+    }
+    /**
+     * Get all users in tenant (Tenant Admin)
+     * GET /user/list
+     */
+    listUsers() {
+        return this.http.get(`/user/list`);
+    }
+    /**
+     * Get active users available for assignment
+     * GET /user/list-for-assign
+     */
+    listUsersForAssign() {
+        return this.http.get(`/user/list-for-assign`);
+    }
+    /**
+     * Remove user from workspace
+     * POST /workspace/:id/remove
+     */
+    removeFromWorkspace(workspaceId, params) {
+        return this.http.post(`/workspace/${workspaceId}/remove`, params);
+    }
+}
+
+class AssetService {
+    constructor(http) {
+        this.http = http;
+    }
+    /**
+     * Upload assets/files
+     * POST /asset/upload
+     */
+    upload(files, description, tags, extra) {
+        const formData = new FormData();
+        files.forEach((file) => {
+            formData.append('files', file);
+        });
+        if (description) {
+            formData.append('description', description);
+        }
+        if (tags && tags.length > 0) {
+            formData.append('tags', JSON.stringify(tags));
+        }
+        const config = {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            },
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
+        };
+        if (typeof extra === 'function') {
+            config.onUploadProgress = extra;
+        }
+        return this.http.post(`/asset/upload`, formData, config);
+    }
+    /**
+     * Upload single image (optimized)
+     * POST /asset/upload-image
+     */
+    uploadImage(file, optimize, extra) {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (optimize !== undefined) {
+            formData.append('optimize', String(optimize));
+        }
+        const config = {
+            headers: {
+                'Content-Type': 'multipart/form-data'
             },
             maxContentLength: Infinity,
             maxBodyLength: Infinity,
@@ -594,6 +823,27 @@ class AssetService {
             config.onUploadProgress = extra;
         }
         return this.http.post(`/asset/upload-image`, formData, config);
+    }
+    /**
+     * Get multiple assets by IDs
+     * POST /asset/bulk
+     */
+    getBulk(params) {
+        return this.http.post(`/asset/bulk`, params);
+    }
+    /**
+     * Update asset metadata
+     * PATCH /asset/:id
+     */
+    updateById(id, params) {
+        return this.http.patch(`/asset/${id}`, params);
+    }
+    /**
+     * Delete asset
+     * DELETE /asset/:id
+     */
+    deleteById(id) {
+        return this.http.delete(`/asset/${id}`);
     }
 }
 
@@ -606,7 +856,6 @@ class SereniBaseClient {
         this.baseService = new BaseService(this.http);
         this.tableService = new TableService(this.http);
         this.userService = new UserService(this.http);
-        this.tenantService = new TenantService(this.http);
         this.assetService = new AssetService(this.http);
     }
     /**

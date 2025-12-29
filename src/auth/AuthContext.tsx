@@ -99,7 +99,7 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
         }
         
         // Remove known keys (only what we actually store)
-        const keys = ['user_id','user_email','user_display_name','user_avatar','tenant_schema','user_role','user_token_data'];
+        const keys = ['user_id','user_email','user_display_name','user_avatar','user_role','user_token_data'];
         keys.forEach(k => { sessionStorage.removeItem(k); localStorage.removeItem(k); });
         // Clear navigation for current user if any
         const remoteUserId = sessionStorage.getItem('user_id') || localStorage.getItem('user_id');
@@ -145,9 +145,6 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
         const user_email = sessionStorage.getItem('user_email');
         const user_display_name = sessionStorage.getItem('user_display_name');
         const user_avatar = sessionStorage.getItem('user_avatar');
-        
-        // Validate tenant schema is present for workspace API calls
-        const tenant_schema = sessionStorage.getItem('tenant_schema') || localStorage.getItem('tenant_schema');
         
         if (user_id) {
           // Clear cache if user changed (e.g., different user logged in this session)
@@ -229,44 +226,6 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
         if (userInfo.email) sessionStorage.setItem('user_email', userInfo.email);
         if (userInfo.display_name) sessionStorage.setItem('user_display_name', userInfo.display_name);
         if (userInfo.avatar) sessionStorage.setItem('user_avatar', userInfo.avatar);
-        
-        // Extract tenant_schema from decoded access token (preferred) or fallback to userInfo
-        let schema: string | undefined;
-        try {
-          const accessToken = getStoredAccessToken();
-          if (accessToken) {
-            const decoded = decodeJwt(accessToken);
-            const schemaValue = decoded?.tenant_id || 
-              decoded?.tenant_schema || 
-              decoded?.schema || 
-              decoded?.schema_name || 
-              decoded?.tenantSchema ||
-              userInfo?.tenant?.schema_name || 
-              userInfo?.tenant?.schema || 
-              userInfo?.schema_name;
-            schema = schemaValue ? String(schemaValue).trim() : undefined;
-          } else {
-            // Fallback to userInfo if token not available
-            const schemaValue = userInfo?.tenant?.schema_name || 
-              userInfo?.tenant?.schema || 
-              userInfo?.schema_name;
-            schema = schemaValue ? String(schemaValue).trim() : undefined;
-          }
-        } catch (error) {
-          // Fallback to userInfo if token decode fails
-          const schemaValue = userInfo?.tenant?.schema_name || 
-            userInfo?.tenant?.schema || 
-            userInfo?.schema_name;
-          schema = schemaValue ? String(schemaValue).trim() : undefined;
-        }
-        
-        if (schema) {
-          try {
-            sessionStorage.setItem('tenant_schema', schema);
-            // Keep in localStorage as fallback only
-            localStorage.setItem('tenant_schema', schema);
-          } catch {}
-        }
       }
       
       // Set minimal user state - full profile will be fetched via useUserProfile hook

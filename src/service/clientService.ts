@@ -319,7 +319,7 @@ export const forceLogout = async (): Promise<void> => {
   window.dispatchEvent(new CustomEvent('auth_token_expired'));
 
   // Clear all stored user and tenant data (only what we actually store)
-  const keys = ['user_id', 'user_email', 'user_display_name', 'user_avatar', 'tenant_schema', 'user_role', 'user_token_data'];
+  const keys = ['user_id', 'user_email', 'user_display_name', 'user_avatar', 'user_role', 'user_token_data'];
   keys.forEach(k => {
     sessionStorage.removeItem(k);
     localStorage.removeItem(k);
@@ -330,23 +330,6 @@ export const forceLogout = async (): Promise<void> => {
   }, 100);
 };
 
-/**
- * Retrieves the tenant schema from storage (sessionStorage preferred, falls back to localStorage)
- * @returns The tenant schema string, or empty string if not found
- */
-export const getTenantSchema = () => {
-  const schema = sessionStorage.getItem('tenant_schema') || localStorage.getItem('tenant_schema') || '';
-  return schema;
-};
-
-/**
- * Checks if tenant schema is available in storage
- * Used by hooks to determine if tenant info is ready
- * @returns True if tenant schema exists, false otherwise
- */
-export const isTenantSchemaAvailable = (): boolean => {
-  return !!getTenantSchema();
-};
 
 /**
  * Validates that all required authentication data is present in storage
@@ -381,7 +364,7 @@ export const client = new SereniBaseClient({
     type: 'bearer',
     token: '' // Will be updated after login
   },
-  headers: { 'schema': '', 'workspace': '', 'base': '' },
+  headers: { 'workspace': '', 'base': '' },
 });
 
 /**
@@ -484,7 +467,7 @@ const makeAuthenticatedCall = async <T>(apiCall: () => Promise<T>): Promise<T> =
 };
 
 /**
- * Initializes the client with token and schema from storage on startup
+ * Initializes the client with token from storage on startup
  * Called automatically when the module loads
  */
 const initializeClient = async () => {
@@ -492,12 +475,6 @@ const initializeClient = async () => {
     const token = await getStoredToken();
     if (token) {
       updateClientToken(token);
-    }
-
-    // Initialize schema header if available
-    const schema = getTenantSchema();
-    if (schema) {
-      updateClientHeaders(schema);
     }
 
     // Initialize workspace and base from navigation store if available
@@ -521,8 +498,8 @@ initializeClient().catch(console.warn);
 
 /**
  * Authenticates a user with email and password
- * Stores tokens, user info, and tenant info in sessionStorage
- * Updates client with access token and schema header
+ * Stores tokens and user info in sessionStorage
+ * Updates client with access token
  * @param params - Login credentials (email and password)
  * @returns The login response containing user and tenant data
  */
@@ -584,23 +561,6 @@ export async function login(params: LoginParams) {
           email_verified: accessDecoded.email_verified,
         }));
       }
-    }
-
-    // Extract tenant_schema from decoded access token
-    const schemaName = String(accessDecoded?.tenant_id ||
-      accessDecoded?.tenant_schema ||
-      accessDecoded?.schema ||
-      accessDecoded?.schema_name ||
-      accessDecoded?.tenantSchema ||
-      '').trim();
-
-    if (schemaName) {
-      sessionStorage.setItem('tenant_schema', schemaName);
-      // Keep in localStorage as fallback only
-      localStorage.setItem('tenant_schema', schemaName);
-      updateClientHeaders(schemaName);
-    } else {
-      console.warn('No tenant schema found in access token');
     }
 
     // Validate that all required auth data is present
@@ -809,6 +769,9 @@ export async function getAllWorkspacesService() {
   }
 
   try {
+    // Clear workspace and base headers for getAll() call - we want all workspaces, not filtered by workspace
+    updateClientHeaders(null, null);
+
     const result = await makeAuthenticatedCall(() => client.workspace.getAll());
     return result;
   } catch (error: any) {
@@ -1047,12 +1010,9 @@ export async function importTableService(
   return await makeAuthenticatedCall(() => client.tableService.import(params, onProgress));
 }
 
-const updateClientHeaders = (schema?: string, workspaceId?: string | null, baseId?: string | null) => {
+const updateClientHeaders = (workspaceId?: string | null, baseId?: string | null) => {
   const headers: Record<string, string> = {};
 
-  if (schema !== undefined) {
-    headers['schema'] = schema;
-  }
   if (workspaceId !== undefined) {
     headers['workspace'] = workspaceId || '';
   }
@@ -1064,12 +1024,8 @@ const updateClientHeaders = (schema?: string, workspaceId?: string | null, baseI
   client.setHeaders(headers);
 };
 
-export const updateClientSchema = (schema: string) => {
-  updateClientHeaders(schema);
-};
-
 export const updateClientWorkspaceAndBase = (workspaceId: string | null, baseId: string | null) => {
-  updateClientHeaders(undefined, workspaceId, baseId);
+  updateClientHeaders(workspaceId, baseId);
 };
 
 export const initializeClientToken = async () => {
@@ -1077,12 +1033,6 @@ export const initializeClientToken = async () => {
     const token = await getStoredToken();
     if (token) {
       updateClientToken(token);
-    }
-
-    // Initialize schema header if available
-    const schema = getTenantSchema();
-    if (schema) {
-      updateClientHeaders(schema);
     }
 
     // Initialize workspace and base from navigation store if available
@@ -1123,6 +1073,16 @@ export async function addTenantUserService(userData: {
   firstname: string;
   lastname: string;
   email: string;
+  profile_pic?: File;
+  is_coowner?: boolean;
+  membership?: Array<{
+    workspace_id: string;
+    role: string;
+    bases?: Array<{
+      base_id: string;
+      role: string;
+    }>;
+  }>;
 }) {
   return await makeAuthenticatedCall(() => client.tenantService.addUser(userData));
 }

@@ -84,8 +84,8 @@ const OtpValidation: React.FC<OtpValidationProps> = ({
             sessionStorage.setItem('_rte_', tokenData.refresh_expires_at.toString()); // Use _rte_ not _rt_exp
           }
 
-          // Update client token and schema for API calls (must be done synchronously)
-          const { updateClientToken, updateClientSchema } = await import('../service/clientService');
+          // Update client token for API calls (must be done synchronously)
+          const { updateClientToken } = await import('../service/clientService');
           updateClientToken(token.access_token);
 
           // Store only minimal user info in sessionStorage (for instant UI render)
@@ -126,21 +126,7 @@ const OtpValidation: React.FC<OtpValidationProps> = ({
             }
           }
 
-          // Extract tenant_schema from decoded access token
-          const schemaName = String(accessDecoded?.tenant_id ||
-            accessDecoded?.tenant_schema ||
-            accessDecoded?.schema ||
-            accessDecoded?.schema_name ||
-            accessDecoded?.tenantSchema ||
-            '').trim();
-
-          if (schemaName) {
-            sessionStorage.setItem('tenant_schema', schemaName);
-            // Keep in localStorage as fallback only
-            localStorage.setItem('tenant_schema', schemaName);
-            // Update client schema header for API calls
-            updateClientSchema(schemaName);
-          }
+          // No schema storage needed
 
           return true;
         } catch (error) {

@@ -1,5 +1,5 @@
 import { decodeJwt } from 'jose';
-import { updateClientToken, updateClientSchema, validateAuthData } from '../service/clientService';
+import { updateClientToken, validateAuthData } from '../service/clientService';
 
 interface TokenData {
   access_token: string;
@@ -69,28 +69,10 @@ const storeUserInfo = (user: any): void => {
 };
 
 /**
- * Store tenant schema in sessionStorage and localStorage (as fallback)
- * Only store schema, not tenant_id or tenant_name (not used)
+ * Store tenant info (placeholder - no schema storage needed)
  */
 const storeTenantInfo = (tenant: any, accessDecoded?: any): void => {
-  // Extract tenant_schema from decoded access token (preferred) or fallback to tenant object
-  const schemaName = String(accessDecoded?.tenant_id || 
-    accessDecoded?.tenant_schema || 
-    accessDecoded?.schema || 
-    accessDecoded?.schema_name || 
-    accessDecoded?.tenantSchema ||
-    tenant?.schema_name || 
-    tenant?.schema || 
-    tenant?.schemaName || 
-    '').trim();
-
-  if (schemaName) {
-    sessionStorage.setItem('tenant_schema', schemaName);
-    // Keep in localStorage as fallback only
-    localStorage.setItem('tenant_schema', schemaName);
-    // Update client schema if available
-    updateClientSchema(schemaName);
-  }
+  // No schema storage needed
 };
 
 /**

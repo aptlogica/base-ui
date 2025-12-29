@@ -85,14 +85,14 @@ const HeaderWorkspaceDropdown: React.FC = () => {
   // Get workspace initials and color
   const getWorkspaceIcon = (workspace: any, index: number) => {
     if (!workspace) return { initials: 'S', color: 'bg-gray-400' };
-    
+
     const initials = (
       workspace.title?.charAt(0) ||
       workspace.name?.charAt(0) ||
       workspace.slug?.charAt(0) ||
       'U'
     ).toUpperCase();
-    
+
     // Color mapping for workspace icons
     const colors = [
       'bg-purple-400', // Design Workspace
@@ -101,15 +101,15 @@ const HeaderWorkspaceDropdown: React.FC = () => {
       'bg-blue-400',
       'bg-green-400',
     ];
-    
+
     // Try to match workspace name to color, otherwise use index
     const title = (workspace.title || workspace.name || '').toLowerCase();
     let color = colors[index % colors.length];
-    
+
     if (title.includes('design')) color = 'bg-purple-400';
     else if (title.includes('test')) color = 'bg-red-400';
     else if (title.includes('dev')) color = 'bg-orange-400';
-    
+
     return { initials, color };
   };
 
@@ -166,12 +166,12 @@ const HeaderWorkspaceDropdown: React.FC = () => {
               <span className="text-muted-foreground font-bold text-sm">S</span>
             </div>
           )}
-          
+
           {/* Workspace Name */}
           <span className="text-sm font-medium text-primary">
             {displayWorkspace?.title || displayWorkspace?.name || 'Select Workspace'}
           </span>
-          
+
           {/* Dropdown Icon - chevron up when open */}
           <ChevronsUpDown className="w-4 h-4 text-gray-400 transition-transform flex-shrink-0" />
         </button>
@@ -205,14 +205,21 @@ const HeaderWorkspaceDropdown: React.FC = () => {
 
                   // Color mapping for workspace icons
                   const colors = [
-                    'bg-purple-400', // Design Workspace
-                    'bg-red-400',   // Testing Workspace
-                    'bg-orange-400', // Development Workspace
-                    'bg-blue-400',
-                    'bg-green-400',
+                    'bg-purple-300',
+                    'bg-red-300',
+                    'bg-orange-300',
+                    'bg-blue-300',
+                    'bg-green-300',
+                  ];
+                  const textColors = [
+                    'text-purple-800',
+                    'text-red-800',
+                    'text-orange-800',
+                    'text-blue-800',
+                    'text-green-800',
                   ];
                   const iconColor = colors[index % colors.length];
-
+                  const textColor = textColors[index % textColors.length];
                   return (
                     <div
                       key={workspace.id}
@@ -221,8 +228,8 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                     >
                       <div className="flex items-center gap-3">
                         {/* Workspace Icon */}
-                        <div className={`w-6 h-6 ${iconColor} rounded-full flex items-center justify-center flex-shrink-0`}>
-                          <span className="text-primary text-center">
+                        <div className={`w-8 h-8 ${iconColor} rounded-full flex items-center justify-center flex-shrink-0`}>
+                          <span className={`${textColor} text-center`}>
                             {initials}
                           </span>
                         </div>
@@ -265,7 +272,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                 onClick={() => {
                   if (canCreateWorkspace()) {
                     setShowCreateWorkspace(true);
-            setWorkspaceDropdownOpen(false);
+                    setWorkspaceDropdownOpen(false);
                   }
                 }}
                 disabled={!canCreateWorkspace()}

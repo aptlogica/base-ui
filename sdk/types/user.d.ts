@@ -2,15 +2,41 @@ export interface UpdateUserProfileParams {
     first_name?: string;
     last_name?: string;
     display_name?: string;
-    activity_data?: any;
+    dob?: string;
+    country?: string;
+    timezone?: string;
 }
 export interface ChangePasswordParams {
-    old_password: string;
+    current_password: string;
     new_password: string;
+}
+export interface UserCreateRequest {
+    email: string;
+    first_name: string;
+    last_name: string;
+    password?: string;
+    dob?: string;
+    country?: string;
+    timezone?: string;
+}
+export interface UserRemoveRequest {
+    user_id: string;
+}
+export interface UserActivateRequest {
+    user_id: string;
+}
+export interface UserDeactivateRequest {
+    user_id: string;
 }
 export interface AssignToWorkspaceParams {
     user_id: string;
     membership: MembershipRequest[];
+}
+export interface UpdateUserAccessParams {
+    user_id: string;
+    workspace_id: string;
+    role: string;
+    access_level?: string;
 }
 export interface MembershipRequest {
     workspace_id: string;

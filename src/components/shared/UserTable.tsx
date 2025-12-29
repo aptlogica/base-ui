@@ -256,7 +256,7 @@ const AccessDetailsRow: React.FC<{
       <tr>
         <td colSpan={colSpan} className="px-6 py-8 bg-gray-50">
           <div className="text-center">
-            <p className="text-sm text-red-600">Failed to load access details</p>
+            <p className="text-sm text-red-600">Access details not available</p>
           </div>
         </td>
       </tr>
