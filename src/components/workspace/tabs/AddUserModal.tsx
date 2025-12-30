@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, UserPlus, CloudUpload, Search, Loader2 } from 'lucide-react';
 import {
-  useAddTenantUser,
+  useAddUser,
   useEditUser,
   useWorkspaces,
   useUserRolesAndAccess
@@ -11,31 +11,6 @@ import { WorkspaceItem, WorkspaceAssignment } from './WorkspaceItem';
 import { TenantUser } from '../../shared/UserTable';
 import { useCurrentUser } from '../../../auth/useCurrentUser';
 import { useUserRole } from '../../../hooks/useUserRole';
-
-// Helper function to extract roles from user object
-const getOverallRoles = (user: TenantUser): string[] => {
-  const roles: string[] = [];
-  
-  if (Array.isArray(user.roles)) {
-    user.roles.forEach(role => {
-      if (role.scope_level === 'system') {
-        if (role.name === 'owner') {
-          roles.push('Owner');
-        } else if (role.name === 'co-owner') {
-          roles.push('Co-owner');
-        }
-      }
-    });
-  } else if (typeof user.roles === 'string') {
-    if (user.roles === 'owner') {
-      roles.push('Owner');
-    } else if (user.roles === 'co-owner') {
-      roles.push('Co-owner');
-    }
-  }
-  
-  return roles;
-};
 
 interface AddUserModalProps {
   isOpen: boolean;
@@ -57,7 +32,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { mutate: addUser, isPending: isAddingUser } = useAddTenantUser();
+  const { mutate: addUser, isPending: isAddingUser } = useAddUser();
   const editUserMutation = useEditUser();
   const workspacesQuery = useWorkspaces();
   const toast = useToast();
@@ -70,14 +45,20 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
   const { data: userAccessData } = useUserRolesAndAccess(editUser?.id || null);
 
   // Determine if the user being edited is Owner or Co-owner
-  const editedUserRoles = useMemo(() => {
-    if (!isEditMode || !editUser) return [];
-    return getOverallRoles(editUser);
-  }, [isEditMode, editUser]);
+  const editedUserIsOwnerOrCoOwner = useMemo(() => {
+    if (!isEditMode || !editUser) return false;
 
-  const editedUserIsOwner = editedUserRoles.some(role => role.toLowerCase() === 'owner');
-  const editedUserIsCoOwner = editedUserRoles.some(role => role.toLowerCase() === 'co-owner');
-  const editedUserIsOwnerOrCoOwner = editedUserIsOwner || editedUserIsCoOwner;
+    // Check for Owner or Co-owner roles
+    if (Array.isArray(editUser.roles)) {
+      return editUser.roles.some(role => 
+        role.scope_level === 'system' && (role.name === 'owner' || role.name === 'co-owner')
+      );
+    } else if (typeof editUser.roles === 'string') {
+      return editUser.roles === 'owner' || editUser.roles === 'co-owner';
+    }
+
+    return false;
+  }, [isEditMode, editUser]);
 
   // Check if current user is editing themselves
   const isEditingSelf = useMemo(() => {
@@ -815,7 +796,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
             type="button"
             onClick={onClose}
             disabled={isSubmitting || isAddingUser || editUserMutation.isPending}
-            className="px-4 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
+            className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
           >
             Cancel
           </button>
@@ -823,7 +804,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
             type="submit"
             form="add-user-form"
             disabled={!isValid || isSubmitting || isAddingUser || editUserMutation.isPending}
-            className="flex items-center gap-2 px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             {(isSubmitting || isAddingUser || editUserMutation.isPending) ? (
               <>

@@ -75,8 +75,6 @@ export const BaseSettingsTab: React.FC<BaseSettingsTabProps> = ({ baseId }) => {
     setIsDeleting(true);
     try {
       const result = await deleteBaseMutation.mutateAsync(baseId);
-      console.log(`Base deletion completed:`, result);
-
       // Use the navigation handler to properly clean up localStorage and navigate
       handleBaseDeletion(baseId);
 

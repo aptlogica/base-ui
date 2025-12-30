@@ -91,10 +91,11 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
 
   // Map API response to Member interface
   const members: Member[] = React.useMemo(() => {
-    if (!workspaceMembersQuery.data?.data) return [];
+    const queryData = workspaceMembersQuery.data as any;
+    if (!queryData?.data) return [];
 
-    const membersData = Array.isArray(workspaceMembersQuery.data.data)
-      ? workspaceMembersQuery.data.data
+    const membersData = Array.isArray(queryData.data)
+      ? queryData.data
       : [];
 
     return membersData.map((member: any) => {

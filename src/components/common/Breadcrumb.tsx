@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { useWorkspaceDataService } from '../../hooks/workspace/useWorkspaceDataService';
 import { ChevronRight, ChevronDown, Database, Sheet, Plus } from 'lucide-react';
-import { useWorkspaceBases, useBaseTables, useTableViews, useUpdateBase, useDeleteBase, useCreateBase /*, useCreateTable */ } from '../../hooks/useApi';
+import { useWorkspaceBases, useBaseTables, useTableViews, useUpdateBase, useDeleteBase, useCreateBase} from '../../hooks/useApi';
 import { getViewIconInfo } from '../../types/viewTypes';
 import { useNavigateToBaseFirstView } from '../../hooks/useNavigateToBaseFirstView';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
@@ -12,7 +12,6 @@ import { BaseMenu } from './BaseMenu';
 import { EditItemModal } from '../modals/EditItemModal';
 import { AddBaseMembersModal } from '../modals/AddBaseMembersModal';
 import { CreateBaseModal } from '../modals/CreateBaseModal';
-// import { CreateTableModal } from '../modals/CreateTableModal'; // COMMENTED OUT: Create table functionality
 import { useNavigationActions } from '../../hooks/useNavigationActions';
 import { useToast } from './Toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -170,8 +169,8 @@ const Breadcrumb: React.FC = () => {
   }
 
   const pathname = location.pathname;
-  const currentBase = baseByIdQuery.data?.data;
-  const currentTable = tableByIdQuery.data?.data;
+  const currentBase = (baseByIdQuery.data as any)?.data;
+  const currentTable = (tableByIdQuery.data as any)?.data;
   const currentView = viewByIdQuery.data;
 
   // Build breadcrumb items (only Base > Table > View, no workspace)
@@ -354,26 +353,27 @@ const Breadcrumb: React.FC = () => {
       setShowCreateBase(false);
 
       // Navigate to the new base
-      const baseId = newBase?.data?.id;
+      const baseId = (newBase as any)?.data?.id;
       if (baseId) {
-        try {
-          // Update navigation store first
-          const { navigateToBase } = useNavigationStore.getState();
-          navigateToBase(selectedWorkspaceId, baseId);
+        // COMMENTED OUT: Navigation to table on base creation
+        // try {
+        //   // Update navigation store first
+        //   const { navigateToBase } = useNavigationStore.getState();
+        //   navigateToBase(selectedWorkspaceId, baseId);
           
-          // Try to navigate to first view, but fallback to base page if no tables exist
-          await navigateToFirstView(baseId);
-        } catch (err) {
-          console.error('Navigation error after base creation:', err);
-          // Fallback: navigate directly to base page
-          const { navigateToBase } = useNavigationStore.getState();
-          navigateToBase(selectedWorkspaceId, baseId);
-          navigate(`/base/${baseId}`);
-        }
+        //   // Try to navigate to first view, but fallback to base page if no tables exist
+        //   await navigateToFirstView(baseId);
+        // } catch (err) {
+        //   console.error('Navigation error after base creation:', err);
+        //   // Fallback: navigate directly to base page
+        //   const { navigateToBase } = useNavigationStore.getState();
+        //   navigateToBase(selectedWorkspaceId, baseId);
+        //   navigate(`/base/${baseId}`);
+        // }
       } else {
         console.error('Base created but no ID in response:', newBase);
         // If no ID, just refresh the homepage
-          navigate('/homepage');
+        // navigate('/homepage');
       }
     } catch (err: any) {
       toast.error(err?.message || 'Failed to create base. Please try again.');
@@ -420,7 +420,7 @@ const Breadcrumb: React.FC = () => {
 
   // Get dropdown items for each level
   const getBaseDropdownItems = (): DropdownItem[] => {
-    const bases = workspaceBasesQuery.data?.data || [];
+    const bases = ((workspaceBasesQuery.data as any)?.data || []) as any[];
     return bases.map((base: any, index: number) => {
       const icon = getBaseIcon(base, index);
       return {
@@ -447,7 +447,7 @@ const Breadcrumb: React.FC = () => {
   };
 
   const getTableDropdownItems = (): DropdownItem[] => {
-    const tables = baseTablesQuery.data?.data || [];
+    const tables = ((baseTablesQuery.data as any)?.data || []) as any[];
     return tables.map((item: any) => {
       const table = item.model || item;
       const tableId = table.id;
@@ -472,7 +472,7 @@ const Breadcrumb: React.FC = () => {
   };
 
   const getViewDropdownItems = (): DropdownItem[] => {
-    const views = tableViewsQuery.data?.data || [];
+    const views = ((tableViewsQuery.data as any)?.data || []) as any[];
     return views.map((view: any) => {
       const viewType = view.type || 'grid';
       const viewIconInfo = getViewIconInfo(viewType);
@@ -721,7 +721,7 @@ const Breadcrumb: React.FC = () => {
           initialName={editingBase.title || editingBase.name || ''}
           initialDescription={editingBase.description || ''}
           itemType="base"
-          existingItems={(workspaceBasesQuery.data?.data || []).map((b: any) => ({
+          existingItems={(((workspaceBasesQuery.data as any)?.data || []) as any[]).map((b: any) => ({
             id: b.id,
             name: b.title || b.name || '',
           }))}
@@ -815,7 +815,7 @@ const Breadcrumb: React.FC = () => {
           onClose={() => setShowCreateBase(false)}
           onCreate={handleCreateBase}
           workspaceId={selectedWorkspaceId}
-          existingBases={(workspaceBasesQuery.data?.data || [])}
+          existingBases={((workspaceBasesQuery.data as any)?.data || []) as any[]}
         />
       )}
 

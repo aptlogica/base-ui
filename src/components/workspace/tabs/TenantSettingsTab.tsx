@@ -19,8 +19,6 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
 
   // Load organization data when available
   useEffect(() => {
-    console.log(organizationData);
-    
     if (organizationData) {
       const name = organizationData.name || '';
       const description = organizationData.description || '';
@@ -79,7 +77,7 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
 
   const owner = useMemo(() => {
     if (!organizationData) return null;
-    
+
     return {
       id: organizationData.id || '',
       name: organizationData.name || 'Organization',
@@ -161,7 +159,7 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
 
           {/* Owner Information Section */}
           <div className="px-6 py-4">
-            <div className="flex items-start gap-4 items-center">
+            <div className="flex items-start gap-4">
               {owner.logo ? (
                 <img
                   src={owner.logo}

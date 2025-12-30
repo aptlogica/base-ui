@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { UserPlus } from 'lucide-react';
 import { UserAvatarStack } from './UserAvatarStack';
 import { useBaseMembers } from '../../hooks/useApi';
@@ -21,12 +21,14 @@ const HeaderMembers: React.FC = () => {
 
     // Try different data structures
     let data: any[] = [];
-    if (Array.isArray(baseMembersQuery.data)) {
-      data = baseMembersQuery.data;
-    } else if (baseMembersQuery.data?.data && Array.isArray(baseMembersQuery.data.data)) {
-      data = baseMembersQuery.data.data;
-    } else if (baseMembersQuery.data?.members && Array.isArray(baseMembersQuery.data.members)) {
-      data = baseMembersQuery.data.members;
+    const queryData = baseMembersQuery.data as any;
+    
+    if (Array.isArray(queryData)) {
+      data = queryData;
+    } else if (queryData?.data && Array.isArray(queryData.data)) {
+      data = queryData.data;
+    } else if (queryData?.members && Array.isArray(queryData.members)) {
+      data = queryData.members;
     }
 
     return data.map((m: any) => ({
@@ -37,23 +39,6 @@ const HeaderMembers: React.FC = () => {
     }));
   }, [baseMembersQuery.data]);
 
-  // Debug logging (remove in production)
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[HeaderMembers] Debug:', {
-        selectedBaseId,
-        selectedWorkspaceId,
-        canAssignUsers: canAssignUsers(),
-        queryStatus: baseMembersQuery.status,
-        queryData: baseMembersQuery.data,
-        queryError: baseMembersQuery.error,
-        isLoading: baseMembersQuery.isLoading,
-        isError: baseMembersQuery.isError,
-        membersCount: members.length,
-        members: members,
-      });
-    }
-  }, [selectedBaseId, selectedWorkspaceId, canAssignUsers, baseMembersQuery, members]);
 
   // Combined visibility check:
   // 1. Route-based visibility (handled by RouteContext)

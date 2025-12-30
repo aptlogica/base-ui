@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 import {
   // New workspace API services
   createWorkspaceService,
-  getAllWorkspacesService,
   getWorkspaceByIdService,
   updateWorkspaceService,
   deleteWorkspaceService,
@@ -54,14 +54,11 @@ import {
   // Tenant API services
   getTenantUsersService,
   getUsersForAssignService,
-  addTenantUserService,
+  addUserService,
   editUserService,
-  removeTenantUserService,
   activateTenantUserService,
   deactivateTenantUserService,
-  getTenantService,
-  updateTenantService,
-  // Legacy APIs (to be replaced gradually)
+  removeUserService,
   addRow,
   deleteRowService,
   insertRowDataService,
@@ -107,6 +104,7 @@ export const queryKeys = {
 
 export const useWorkspaces = () => {
   const location = useLocation();
+  const { user } = useAuth();
 
   // Public routes that don't need workspace data
   const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
@@ -164,7 +162,7 @@ export const useWorkspaces = () => {
       }
       return failureCount < 2;
     },
-    enabled: !isPublicRoute, // Don't fetch on public routes
+    enabled: !!user && !isPublicRoute, // Only fetch if user is authenticated and not on public routes
   });
 };
 
@@ -318,7 +316,7 @@ export const useAllBases = () => {
     queryKey: queryKeys.allBases,
     queryFn: async () => {
       try {
-        const result = await getAllBasesService();
+        const result = await getAllBasesService() as any;
         // Ensure we return the data in the expected format
         if (result && result.data) {
           return Array.isArray(result.data) ? result.data : [];
@@ -340,7 +338,7 @@ export const useAllTables = () => {
     queryKey: queryKeys.allTables,
     queryFn: async () => {
       try {
-        const result = await getAllTablesService();
+        const result = await getAllTablesService() as any;
         // Ensure we return the data in the expected format
         if (result && result.data) {
           return Array.isArray(result.data) ? result.data : [];
@@ -362,7 +360,7 @@ export const useAllFields = () => {
     queryKey: queryKeys.allFields,
     queryFn: async () => {
       try {
-        const result = await getAllFieldsService();
+        const result = await getAllFieldsService() as any;
         // Ensure we return the data in the expected format
         if (result && result.data) {
           return Array.isArray(result.data) ? result.data : [];
@@ -384,7 +382,7 @@ export const useAllViews = () => {
     queryKey: queryKeys.allViews,
     queryFn: async () => {
       try {
-        const result = await getAllViewsService();
+        const result = await getAllViewsService() as any;
         // Ensure we return the data in the expected format
         if (result && result.data) {
           return Array.isArray(result.data) ? result.data : [];
@@ -463,8 +461,8 @@ export const useViewById = (viewId: string) => {
   return useQuery({
     queryKey: ['view', viewId],
     queryFn: async () => {
-      const result = await getViewByIdService(viewId);
-      return result.data;
+      const result = await getViewByIdService(viewId) as any;
+      return result?.data;
     },
     enabled: !!viewId && !isSlug && looksLikeId,
     staleTime: 0,
@@ -479,8 +477,18 @@ export const useCreateWorkspace = () => {
   return useMutation({
     mutationFn: ({ workspace }: { workspace: WorkspaceBaseInput }) =>
       createWorkspaceService(workspace),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      // Invalidate workspaces list
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      
+      // If the new workspace has an ID, invalidate its bases query
+      const newWorkspaceId = data?.data?.id || data?.id;
+      if (newWorkspaceId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.bases(newWorkspaceId) });
+      }
+      
+      // Also invalidate all workspace-related queries to ensure bases are refreshed
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
     },
   });
 };
@@ -1182,7 +1190,7 @@ export const useUserAccessDetails = (userId: string | null, workspaceId?: string
     queryKey: ['userAccessDetails', userId, workspaceId],
     queryFn: async () => {
       if (!userId) return null;
-      const result = await getUserAccessDetailsService(userId, workspaceId);
+      const result = await getUserAccessDetailsService(userId, workspaceId) as any;
       // Extract the data from StandardResponse structure
       return result?.data || null;
     },
@@ -1198,7 +1206,7 @@ export const useUserRolesAndAccess = (userId: string | null) => {
     queryKey: ['userRolesAndAccess', userId],
     queryFn: async () => {
       if (!userId) return null;
-      const result = await getUserRolesAndAccessService(userId);
+      const result = await getUserRolesAndAccessService(userId) as any;
       // Extract the data from StandardResponse structure
       return result?.data || null;
     },
@@ -1263,8 +1271,8 @@ export const useGetTenantUsers = () => {
     queryKey: queryKeys.users,
     queryFn: async () => {
       try {
-        const result = await getTenantUsersService();
-        const data = result?.data as any;
+        const result = await getTenantUsersService() as any;
+        const data = result?.data;
         if (data) {
           return Array.isArray(data) ? data : [];
         }
@@ -1285,8 +1293,8 @@ export const useGetUsersForAssign = () => {
     queryKey: ['usersForAssign'],
     queryFn: async () => {
       try {
-        const result = await getUsersForAssignService();
-        const data = result?.data as any;
+        const result = await getUsersForAssignService() as any;
+        const data = result?.data;
         if (data) {
           return Array.isArray(data) ? data : [];
         }
@@ -1307,36 +1315,20 @@ export const useGetTenant = () => {
     queryKey: ['tenant'],
     queryFn: async () => {
       try {
-        const result = await getTenantService();
-        return result?.data;
+        // TODO: Implement getTenantService if needed
+        // const result = await getTenantService();
+        // return (result as any)?.data;
+        return null;
       } catch (error: any) {
         console.error('❌ Get tenant failed:', error);
         throw error;
       }
     },
-    enabled: true,
+    enabled: false, // Disabled until service is implemented
   });
 };
 
-export const useUpdateTenant = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (updateData: { name: string }) => {
-      const result = await updateTenantService(updateData);
-      return result;
-    },
-    onSuccess: () => {
-      // Invalidate tenant query to refetch updated data
-      queryClient.invalidateQueries({ queryKey: ['tenant'] });
-    },
-    onError: (error: any) => {
-      console.error('❌ Update tenant failed:', error);
-    }
-  });
-};
-
-export const useAddTenantUser = () => {
+export const useAddUser = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -1345,7 +1337,7 @@ export const useAddTenantUser = () => {
       lastname: string;
       email: string;
     }) => {
-      const result = await addTenantUserService(userData);
+      const result = await addUserService(userData);
       return result;
     },
     onSuccess: () => {
@@ -1383,7 +1375,7 @@ export const useEditUser = () => {
     onSuccess: () => {
       // Invalidate tenant users query to refetch the list
       queryClient.invalidateQueries({ queryKey: queryKeys.users });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
     onError: (error: any) => {
       console.error('❌ Edit user failed:', error);
@@ -1396,7 +1388,7 @@ export const useRemoveTenantUser = () => {
 
   return useMutation({
     mutationFn: async (userId: string) => {
-      const result = await removeTenantUserService(userId);
+      const result = await removeUserService(userId);
       return result;
     },
     onSuccess: () => {
@@ -1589,7 +1581,7 @@ export const useGetOrganization = () => {
     queryKey: ['organization'], 
     queryFn: async () => {
      try{
-      const result = await getOrganizationService();
+      const result = await getOrganizationService() as any;
       return result?.data;
      } catch (error: any) {
       console.error('❌ Get organization failed:', error);
@@ -1606,7 +1598,7 @@ export const useGetOrganizationById = (organizationId: string) => {
     queryKey: ['organization', organizationId],
     queryFn: async () => {
      try{
-      const result = await getOrganizationServiceById(organizationId);
+      const result = await getOrganizationServiceById(organizationId) as any;
       return result?.data;
      } catch (error: any) {
       console.error('❌ Get organization by ID failed:', error);
@@ -1620,10 +1612,13 @@ export const useGetOrganizationById = (organizationId: string) => {
 export const useUpdateOrganization = (organizationId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (updateData: { name?: string; decription?: string; }) => {
-      const result = await updateOrganizationService(organizationId, updateData);
-      console.log(result);
-      
+    mutationFn: async (updateData: { name?: string; description?: string; }) => {
+      // Build payload with only provided fields, ensuring required fields are present
+      const payload: { name: string; description: string } = {
+        name: updateData.name || '',
+        description: updateData.description || ''
+      };
+      const result = await updateOrganizationService(organizationId, payload);
       return result;
     },
     onSuccess: () => {

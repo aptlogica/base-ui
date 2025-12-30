@@ -208,7 +208,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
   if (!isOpen) return null;
 
   const isValid = selectedUserIds.length > 0;
-console.log(userDropdownOptions)
+
   return (
     <div
       className="bg-modal-backdrop"
@@ -243,7 +243,7 @@ console.log(userDropdownOptions)
         {/* Scrollable Content Area */}
         <form id="add-base-members-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto min-h-0">
           <div className="p-0 h-full">
-            <div className="grid grid-cols-1 h-full lg:grid-cols-2 gap-6">
+            <div className={`grid grid-cols-1 h-full ${Array.isArray(baseMembers) && baseMembers.length > 0 ? 'lg:grid-cols-2' : ''} gap-6`}>
               {/* Left Column - Add Members */}
               <div className="space-y-4 bg-card p-4 lg:p-6">
                 {/* Select Member */}
@@ -277,23 +277,15 @@ console.log(userDropdownOptions)
                 )}
               </div>
 
-              {/* Right Column - People with access */}
-              <div className="flex flex-col h-full min-h-0 bg-gray-50 p-4 lg:p-6">
-                <h3 className="text-sm font-semibold text-primary flex-shrink-0 mb-4">People with access</h3>
+              {/* Right Column - People with access (only show when there are members) */}
+              {!baseMembersQuery.isLoading && Array.isArray(baseMembers) && baseMembers.length > 0 && (
+                <div className="flex flex-col h-full min-h-0 bg-gray-50 p-4 lg:p-6">
+                  <h3 className="text-sm font-semibold text-primary flex-shrink-0 mb-4">People with access</h3>
 
-                {/* Members List - Scrollable */}
-                <div className="flex-1 min-h-0 overflow-y-auto pr-2">
-                  {baseMembersQuery.isLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                    </div>
-                  ) : Array.isArray(baseMembers) && baseMembers.length === 0 ? (
-                    <div className="text-center py-8 text-sm text-gray-500">
-                      No members have access to this base yet
-                    </div>
-                  ) : (
+                  {/* Members List - Scrollable */}
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-2">
                     <div className="space-y-3">
-                      {Array.isArray(baseMembers) && baseMembers.map((member: any) => {
+                      {baseMembers.map((member: any) => {
                         const memberId = member.id || member.access_id || member.user_id;
                         const displayName = member.display_name || member.name || member.email || 'Unknown User';
                         const email = member.email || '';
@@ -358,9 +350,9 @@ console.log(userDropdownOptions)
                         );
                       })}
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </form>

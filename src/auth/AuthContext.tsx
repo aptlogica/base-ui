@@ -350,14 +350,22 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
       // Continue with logout even if save fails
     }
 
-    // STEP 2: Clear React Query cache (before API call to prevent refetch attempts)
+    // STEP 2: Cancel all pending queries and clear React Query cache (before API call to prevent refetch attempts)
     try {
+      // Cancel all pending queries first to prevent them from completing
+      queryClient.cancelQueries();
+      // Then clear the cache
       queryClient.clear(); // Use clear() instead of invalidateQueries() to prevent refetch attempts
     } catch (err) {
       debug('Failed to clear React Query cache on logout', err);
     }
 
-    // STEP 3: Clean up old token keys and navigation entries
+    // STEP 3: Clear user ref and state IMMEDIATELY to disable all queries
+    // This must happen before navigation to prevent queries from running
+    lastUserIdRef.current = null;
+    setUser(null);
+
+    // STEP 4: Clean up old token keys and navigation entries
     try {
       cleanupOldTokenKeys();
       clearAllLastNavigation();
@@ -365,14 +373,14 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
       // Ignore cleanup errors
     }
 
-    // STEP 4: Call logout API to expire token on backend (this will also clear local tokens)
+    // STEP 5: Call logout API to expire token on backend (this will also clear local tokens)
     try {
       await clientLogout(); // This now calls the logout API before clearing tokens
     } catch (err) {
       // Continue with cleanup even if API call fails
     }
 
-    // STEP 5: Remove user & tenant data from storage
+    // STEP 6: Remove user & tenant data from storage
     try {
       const keysToRemove = ['user_id','user_email','user_display_name','user_avatar','tenant_schema','user_role','user_token_data'];
       keysToRemove.forEach(k => {
@@ -383,7 +391,7 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
       // Ignore storage errors
     }
 
-    // STEP 6: Clear user navigation persistence for this user (if any)
+    // STEP 7: Clear user navigation persistence for this user (if any)
     try {
       const uid = sessionStorage.getItem('user_id') || localStorage.getItem('user_id') || undefined;
       if (uid) clearUserNavigation(uid);
@@ -391,17 +399,13 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
       // Ignore navigation cleanup errors
     }
 
-    // STEP 7: Broadcast sign-out to other tabs (write-then-remove to trigger storage event)
+    // STEP 8: Broadcast sign-out to other tabs (write-then-remove to trigger storage event)
     try {
       localStorage.setItem('sb_signout', Date.now().toString());
       localStorage.removeItem('sb_signout');
     } catch (err) {
       // ignore
     }
-
-    // STEP 8: Clear user ref and state
-    lastUserIdRef.current = null;
-    setUser(null);
   };
 
   return (

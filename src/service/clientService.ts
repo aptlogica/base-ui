@@ -312,12 +312,11 @@ export const updateClientToken = (token: string) => {
 /**
  * Forces logout by clearing all tokens and user data, then redirects to login
  * Dispatches 'auth_token_expired' event for components to handle
+ * Uses custom event for navigation to avoid full page refresh
  */
 export const forceLogout = async (): Promise<void> => {
   clearTokens();
   updateClientToken('');
-
-  window.dispatchEvent(new CustomEvent('auth_token_expired'));
 
   // Clear all stored user and tenant data (only what we actually store)
   const keys = ['user_id', 'user_email', 'user_display_name', 'user_avatar', 'user_role', 'user_token_data'];
@@ -326,8 +325,16 @@ export const forceLogout = async (): Promise<void> => {
     localStorage.removeItem(k);
   });
 
+  // Dispatch custom event for React Router navigation (prevents page refresh)
+  window.dispatchEvent(new CustomEvent('auth_token_expired', { detail: { navigate: true } }));
+
+  // Fallback: Only use window.location if no component handles the event within 100ms
+  // This ensures we still redirect even if no component is listening
   setTimeout(() => {
-    window.location.href = '/login';
+    // Check if we're still on a non-login page (event wasn't handled)
+    if (window.location.pathname !== '/login' && !window.location.pathname.startsWith('/login')) {
+      window.location.href = '/login';
+    }
   }, 100);
 };
 
@@ -548,10 +555,10 @@ export async function login(params: LoginParams) {
 
     // Store role from decoded token (single string, not array)
     if (accessDecoded?.roles) {
-      const role = typeof accessDecoded.roles === 'string' 
-        ? accessDecoded.roles 
+      const role = typeof accessDecoded.roles === 'string'
+        ? accessDecoded.roles
         : (Array.isArray(accessDecoded.roles) ? accessDecoded.roles[0] : null);
-      
+
       if (role) {
         sessionStorage.setItem('user_role', role);
         // Also store full token data for reference
@@ -1113,15 +1120,7 @@ export async function getUsersForAssignService() {
   return await makeAuthenticatedCall(() => client.userService.listUsersForAssign());
 }
 
-export async function getTenantService() {
-  return await makeAuthenticatedCall(() => client.tenantService.getTenant());
-}
-
-export async function updateTenantService(updateData: { name: string }) {
-  return await makeAuthenticatedCall(() => client.tenantService.updateTenant(updateData));
-}
-
-export async function addTenantUserService(userData: {
+export async function addUserService(userData: {
   firstname: string;
   lastname: string;
   email: string;
@@ -1157,10 +1156,6 @@ export async function editUserService(userData: {
   return await makeAuthenticatedCall(() => client.userService.editUser(userData));
 }
 
-export async function removeTenantUserService(userId: string) {
-  return await makeAuthenticatedCall(() => client.tenantService.removeUser({ user_id: userId }));
-}
-
 export async function deactivateTenantUserService(userId: string) {
   return await makeAuthenticatedCall(() => client.userService.deactivateUser({ user_id: userId }));
 }
@@ -1169,8 +1164,12 @@ export async function activateTenantUserService(userId: string) {
   return await makeAuthenticatedCall(() => client.userService.activateUser({ user_id: userId }));
 }
 
+export async function removeUserService(userId: string) {
+  return await makeAuthenticatedCall(() => client.userService.removeUser({ user_id: userId }));
+}
+
 export async function getOrganizationService() {
-  return await makeAuthenticatedCall(() => client.organization.getAll()); 
+  return await makeAuthenticatedCall(() => client.organization.getAll());
 }
 
 export async function updateOrganizationService(orgId: string, updateData: { name: string, description: string }) {
@@ -1178,5 +1177,5 @@ export async function updateOrganizationService(orgId: string, updateData: { nam
 }
 
 export async function getOrganizationServiceById(orgId: string) {
-  return await makeAuthenticatedCall(() => client.organization.getById(orgId)); 
+  return await makeAuthenticatedCall(() => client.organization.getById(orgId));
 }

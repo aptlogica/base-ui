@@ -16,7 +16,7 @@ const UserDropdown: React.FC = () => {
 
   // Get user profile data from API (single source of truth)
   const { data: profileResponse, isLoading: isLoadingProfile } = useUserProfile(authUser?.id || '');
-  const userProfile = profileResponse?.data;
+  const userProfile = (profileResponse as any)?.data;
 
   // Theme initialization - more robust
   useEffect(() => {

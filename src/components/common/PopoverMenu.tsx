@@ -40,11 +40,11 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
       const viewportHeight = window.innerHeight;
       const scrollX = window.scrollX;
       const scrollY = window.scrollY;
-      
+
       // Get actual menu dimensions if available, otherwise use estimates
       const menuWidth = menuRef.current?.offsetWidth || 210; // min-w-[210px]
       const menuHeight = menuRef.current?.offsetHeight || (items.length * 40 + 16); // Estimate: ~40px per item + padding
-      
+
       // Calculate initial position based on align prop
       let left: number;
       if (align === 'right') {
@@ -57,7 +57,7 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
         // Auto: prefer right alignment for right-side buttons, left for left-side
         const spaceRight = viewportWidth - buttonRect.right;
         const spaceLeft = buttonRect.left;
-        
+
         // If button is on the right side of viewport, align menu to right edge of button
         if (buttonRect.right > viewportWidth * 0.6 || spaceRight < menuWidth) {
           left = buttonRect.right + scrollX - menuWidth;
@@ -100,7 +100,7 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
         const menuRect = menuRef.current.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
-        
+
         let horizontal = 'left';
         let vertical = 'down';
 
@@ -108,7 +108,7 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
         if (align === 'auto') {
           const spaceRight = viewportWidth - buttonRect.right;
           const spaceLeft = buttonRect.left;
-          
+
           if (spaceRight < menuRect.width && spaceLeft > menuRect.width) {
             horizontal = 'right';
           }
@@ -119,7 +119,7 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
         // Auto-detect vertical position
         const spaceDown = viewportHeight - buttonRect.bottom;
         const spaceUp = buttonRect.top;
-        
+
         if (spaceDown < menuRect.height && spaceUp > menuRect.height) {
           vertical = 'up';
         }
@@ -141,10 +141,10 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
       const viewportHeight = window.innerHeight;
       const scrollX = window.scrollX;
       const scrollY = window.scrollY;
-      
+
       const menuWidth = menuRect.width;
       const menuHeight = menuRect.height;
-      
+
       // Calculate initial position based on align prop
       let left: number;
       if (align === 'right') {
@@ -212,29 +212,29 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
 
   const getMenuClasses = () => {
     if (portaled) {
-      return `fixed z-[9999] min-w-[210px] p-2 space-y-1 bg-card border border-border rounded-xl shadow-lg`;
+      return `fixed z-[9999] min-w-[210px] p-2 space-y-1 bg-card border rounded-xl shadow-lg`;
     }
-    
+
     const horizontalClass = position.horizontal === 'right' ? 'right-0' : 'left-0';
     const verticalClass = position.vertical === 'up' ? 'bottom-full mb-2' : 'top-full mt-2';
-    return `absolute z-50 min-w-[210px] p-2 space-y-1 bg-card border border-border rounded-xl shadow-lg ${horizontalClass} ${verticalClass}`;
+    return `absolute z-50 min-w-[210px] p-2 space-y-1 bg-card border rounded-xl shadow-lg ${horizontalClass} ${verticalClass}`;
   };
 
   const renderMenu = () => (
     <div
       ref={menuRef}
       className={getMenuClasses()}
-      style={portaled ? { 
-        top: `${absolutePosition.top}px`, 
-        left: `${absolutePosition.left}px` 
+      style={portaled ? {
+        top: `${absolutePosition.top}px`,
+        left: `${absolutePosition.left}px`
       } : undefined}
     >
-      {items.map((item, idx) => (
+      {items.map((item) => (
         <button
           key={item.label}
-          className={`w-full flex items-center gap-2 px-4 py-2 text-xs text-left text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] ${item.label.toLowerCase().includes('delete') && "hover:bg-red-400 hover:text-black"} transition-colors duration-200 ${item.danger
-              ? 'text-destructive hover:text-[var(--color-error-500)]'
-              : 'text-tertiary'
+          className={`w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 rounded-xl hover:bg-gray-100 focus:bg-[var(--color-bg-brand-secondary)] ${item.label.toLowerCase().includes('delete') || item.label.toLowerCase().includes('remove') && "text-red-600 hover:bg-red-200"} transition-colors duration-200 ${item.danger
+            ? 'text-red-600 hover:bg-red-200'
+            : 'text-gray-700'
             } ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           onClick={() => {
             if (!item.disabled) {

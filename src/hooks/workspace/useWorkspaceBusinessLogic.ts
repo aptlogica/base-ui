@@ -151,16 +151,30 @@ export const useWorkspaceBusinessLogic = () => {
       const firstTable = firstBase?.tables?.[0]?.model;
       const firstView = firstBase?.tables?.[0]?.views?.[0];
 
-      if (firstBase && firstTable && authUser?.id) {
-        try {
-          navigateAndPersist(workspaceData.id, firstBase.id, firstTable.id, authUser.id);
-          navigate(`/base/${firstBase.id}/table/${firstTable.id}/grid`);
-        } catch (navErr) {
-          
-        }
-      } else {
-        navigate(`/homepage`);
+      // Update navigation store with new workspace ID immediately
+      // This ensures bases query refetches with the new workspaceId
+      if (workspaceData?.id) {
+        setWorkspace(workspaceData.id);
       }
+
+      // Navigate after a brief delay to ensure state updates and query invalidation are processed
+      // This prevents blank page issues when navigating immediately after workspace creation
+      requestAnimationFrame(() => {
+        if (firstBase && firstTable && authUser?.id) {
+          try {
+            navigateAndPersist(workspaceData.id, firstBase.id, firstTable.id, authUser.id);
+            navigate(`/base/${firstBase.id}/table/${firstTable.id}/grid`);
+          } catch (navErr) {
+            console.error('Navigation error after workspace creation:', navErr);
+            // Fallback to homepage if navigation fails
+            navigate(`/homepage`);
+          }
+        } else {
+          // Navigate to homepage if no base/table exists
+          // Use replace to avoid adding to history stack
+          navigate(`/homepage`, { replace: true });
+        }
+      });
 
       onSuccess?.(workspaceData);
     } catch (error) {
@@ -184,7 +198,8 @@ export const useWorkspaceBusinessLogic = () => {
       });
 
       setShowCreateBaseWorkspaceId(null);
-      navigateToBase(currentWorkspace.id, newBase.data.id);
+      // COMMENTED OUT: Navigation to table on base creation
+      // navigateToBase(currentWorkspace.id, newBase.data.id);
       toast.success('Base created successfully');
     } catch (err) {
       
@@ -398,7 +413,11 @@ export const useWorkspaceBusinessLogic = () => {
       newWorkspaceName,
       newWorkspaceDescription,
       (workspace: any) => {
+        // Update both the workspace object and the selectedWorkspaceId in navigation store
         setSelectedWorkspace(workspace);
+        if (workspace?.id) {
+          setWorkspace(workspace.id); // This updates selectedWorkspaceId in navigation store
+        }
         setShowCreateWorkspace(false);
         setNewWorkspaceName('');
         setNewWorkspaceDescription('');

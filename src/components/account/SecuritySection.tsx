@@ -39,11 +39,11 @@ export const SecuritySection: React.FC = () => {
 
   // API hooks
   const changePasswordMutation = useChangePassword(userId || '');
-  
+
   // Footer buttons context
   const { registerFooter, clearFooter, currentSection } = useFooterButtons();
 
-  const userProfile = profileResponse?.data;
+  const userProfile = (profileResponse as any)?.data;
 
   // Get user data for password validation
   const userFirstName = userProfile?.first_name || authUser?.first_name || '';
@@ -225,7 +225,7 @@ export const SecuritySection: React.FC = () => {
             setConfirmPasswordError(null);
           }}
           disabled={isUpdatingPassword || changePasswordMutation.isPending}
-          className="flex items-center gap-2 px-6 py-2.5 text-sm border border text-gray-700 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50 transition-colors"
+          className="flex items-center gap-2 px-6 py-2.5 text-sm border text-gray-700 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50 transition-colors"
         >
           Cancel
         </button>
@@ -236,11 +236,10 @@ export const SecuritySection: React.FC = () => {
             changePasswordMutation.isPending ||
             !isPasswordFormValid
           }
-          className={`flex items-center gap-2 px-6 py-2.5 text-sm rounded-xl transition-colors ${
-            isPasswordFormValid && !isUpdatingPassword && !changePasswordMutation.isPending
+          className={`flex items-center gap-2 px-6 py-2.5 text-sm rounded-xl transition-colors ${isPasswordFormValid && !isUpdatingPassword && !changePasswordMutation.isPending
               ? 'btn-primary text-primary'
               : 'bg-gray-300 text-gray-600 cursor-not-allowed'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           {(isUpdatingPassword || changePasswordMutation.isPending) && (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -250,7 +249,7 @@ export const SecuritySection: React.FC = () => {
       </div>
     );
     registerFooter(footerContent, 'security');
-    
+
     // Cleanup: clear footer when component unmounts or section changes
     return () => {
       if (currentSection === 'security') {
@@ -294,7 +293,7 @@ export const SecuritySection: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Current Password
             </label>
-            <div className={`relative flex items-center ${currentPasswordError ? "border-red-500" : "border"}`}>
+            <div className={`relative flex items-center ${currentPasswordError ? "border-red-500" : ""}`}>
               <input
                 type={showCurrentPassword ? "text" : "password"}
                 value={passwordData.currentPassword}
@@ -335,7 +334,7 @@ export const SecuritySection: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 New Password
               </label>
-              <div className={`relative flex items-center ${newPasswordError ? "border-red-500" : "border"}`}>
+              <div className={`relative flex items-center ${newPasswordError ? "border-red-500" : ""}`}>
                 <input
                   type={showNewPassword ? "text" : "password"}
                   value={passwordData.newPassword}
@@ -425,7 +424,7 @@ export const SecuritySection: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Confirm New Password
               </label>
-              <div className={`relative flex items-center ${confirmPasswordError ? "border-red-500" : "border"}`}>
+              <div className={`relative flex items-center ${confirmPasswordError ? "border-red-500" : ""}`}>
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   value={passwordData.confirmPassword}
@@ -464,7 +463,7 @@ export const SecuritySection: React.FC = () => {
       </div>
 
       {/* Recent Login Activity */}
-              <div>
+      <div>
         <h3 className="text-xl font-semibold text-primary mb-6">Recent Login Activity</h3>
 
         {sessionsLoading ? (
@@ -476,7 +475,7 @@ export const SecuritySection: React.FC = () => {
             {/* Timeline with Current Session and Past Sessions */}
             {loginSessions.length > 0 ? (
               <div className="relative">
-            {/* Current/Most Recent Session */}
+                {/* Current/Most Recent Session */}
                 {currentSession && (
                   <div className="relative flex items-center pb-4">
                     {/* Timeline indicator */}
@@ -486,31 +485,31 @@ export const SecuritySection: React.FC = () => {
                         <div className="w-0.5 h-full bg-gray-300 mt-2" style={{ borderStyle: 'dotted' }}></div>
                       )}
                     </div>
-                    
+
                     {/* Session content - Single line with all info */}
                     <div className="flex-1 flex items-center gap-2 flex-wrap">
                       {/* Browser Icon - Simple browser window representation */}
                       <div className={`w-4 h-4 border-2 rounded-sm ${'border-[var(--color-brand-600)]'}`}>
                         <div className={`w-full h-1 border-b-2 ${'border-[var(--color-brand-600)]'} mt-0.5`}></div>
                       </div>
-                      
+
                       {/* Browser/OS Text */}
                       <span className="text-sm font-medium text-[var(--color-brand-600)]">
-                      {currentSession.browser}{currentSession.browser_version ? ` ${currentSession.browser_version}` : ''} on {currentSession.os}
+                        {currentSession.browser}{currentSession.browser_version ? ` ${currentSession.browser_version}` : ''} on {currentSession.os}
                       </span>
-                      
+
                       {/* Desktop Icon */}
                       <Monitor className="w-4 h-4 text-[var(--color-brand-600)]" />
-                      
+
                       {/* Desktop Text */}
                       <span className="text-sm text-[var(--color-brand-600)]">Desktop</span>
-                      
+
                       {/* Clock Icon */}
                       <Clock className="w-4 h-4 text-[var(--color-brand-600)]" />
-                      
+
                       {/* Time Text */}
                       <span className="text-sm text-[var(--color-brand-600)]">{formatDate(currentSession.login_at)}</span>
-                      
+
                       {/* Globe Icon and Location */}
                       {currentSession.timezone && (
                         <>
@@ -519,10 +518,10 @@ export const SecuritySection: React.FC = () => {
                         </>
                       )}
                     </div>
-              </div>
-            )}
+                  </div>
+                )}
 
-            {/* Past Sessions */}
+                {/* Past Sessions */}
                 {pastSessions.map((session, index) => (
                   <div key={`${session.login_at}-${index}`} className="relative flex items-center pb-4">
                     {/* Timeline indicator */}
@@ -530,33 +529,33 @@ export const SecuritySection: React.FC = () => {
                       <div className="w-3 h-3 bg-gray-300 rounded-full z-10"></div>
                       {index < pastSessions.length - 1 && (
                         <div className="w-0.5 h-full bg-gray-300 mt-2" style={{ borderStyle: 'dotted' }}></div>
-                          )}
-                        </div>
-                    
+                      )}
+                    </div>
+
                     {/* Session content - Single line with all info */}
                     <div className="flex-1 flex items-center gap-2 flex-wrap">
                       {/* Browser Icon - Simple browser window representation */}
-                      <div className="w-4 h-4 border-2 border rounded-sm">
+                      <div className="w-4 h-4 border-2 rounded-sm">
                         <div className="w-full h-1 border-b-2 border mt-0.5"></div>
                       </div>
-                      
+
                       {/* Browser/OS Text */}
                       <span className="text-sm font-medium text-gray-600">
                         {session.browser}{session.browser_version ? ` ${session.browser_version}` : ''} on {session.os}
                       </span>
-                      
+
                       {/* Desktop Icon */}
                       <Monitor className="w-4 h-4 text-gray-400" />
-                      
+
                       {/* Desktop Text */}
                       <span className="text-sm text-gray-600">Desktop</span>
-                      
+
                       {/* Clock Icon */}
                       <Clock className="w-4 h-4 text-gray-400" />
-                      
+
                       {/* Time Text */}
                       <span className="text-sm text-gray-600">{formatDate(session.login_at)}</span>
-                      
+
                       {/* Globe Icon and Location */}
                       {session.timezone && (
                         <>

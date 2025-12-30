@@ -604,7 +604,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
             type="button"
             onClick={onClose}
             disabled={bulkAddMembersMutation.isPending}
-            className="px-4 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
+            className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
           >
             Cancel
           </button>
@@ -617,7 +617,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
               (baseSelectionType === 'specific_base' && selectedBases.length === 0) ||
               (editMode && isLoadingUserAccess)
             }
-            className="flex items-center gap-2 px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             {(bulkAddMembersMutation.isPending || removeUserFromWorkspaceMutation.isPending) && <Loader2 size={16} className="animate-spin" />}
             {(bulkAddMembersMutation.isPending || removeUserFromWorkspaceMutation.isPending)

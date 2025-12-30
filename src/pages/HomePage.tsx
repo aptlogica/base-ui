@@ -1,8 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Plus, Download, Search, Zap, Database, ChevronDown } from 'lucide-react';
 import { useWorkspaceBases, useCreateBase, useUpdateBase, useDeleteBase } from '../hooks/useApi';
-import { useNavigation } from '../hooks/useNavigation';
 import { useNavigationStore } from '../stores/navigationStore';
 import { useNavigationActions } from '../hooks/useNavigationActions';
 import { Loader } from '../components/ui/Loader';
@@ -44,11 +42,9 @@ import { useCurrentUser, getUserDisplayName } from '../auth/useCurrentUser';
 import { useNavigateToBaseFirstView } from '../hooks/useNavigateToBaseFirstView';
 
 const HomePage: React.FC = () => {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { selectedWorkspaceId } = useNavigationStore();
   const { data: workspaceBasesData, isLoading: basesLoading } = useWorkspaceBases(selectedWorkspaceId || '');
-  const { navigateToBase } = useNavigation();
   const toast = useToast();
   const { canCreateBase } = useWorkspaceAccess(selectedWorkspaceId || undefined);
   const createBaseMutation = useCreateBase();
@@ -56,8 +52,9 @@ const HomePage: React.FC = () => {
 
   // Extract bases array from workspaceBases response
   const allBases = useMemo(() => {
-    if (!workspaceBasesData?.data) return [];
-    return Array.isArray(workspaceBasesData.data) ? workspaceBasesData.data : [];
+    const data = workspaceBasesData as any;
+    if (!data?.data) return [];
+    return Array.isArray(data.data) ? data.data : [];
   }, [workspaceBasesData]);
 
   const [showCreateBase, setShowCreateBase] = useState(false);
@@ -249,26 +246,27 @@ const HomePage: React.FC = () => {
       setShowCreateBase(false);
 
       // Navigate to the new base
-      const baseId = newBase?.data?.id;
+      const baseId = (newBase as any)?.data?.id;
       if (baseId) {
-        try {
-          // Update navigation store first
-          const { navigateToBase } = useNavigationStore.getState();
-          navigateToBase(selectedWorkspaceId, baseId);
+        // COMMENTED OUT: Navigation to table on base creation
+        // try {
+        //   // Update navigation store first
+        //   const { navigateToBase } = useNavigationStore.getState();
+        //   navigateToBase(selectedWorkspaceId, baseId);
 
-          // Try to navigate to first view, but fallback to base page if no tables exist
-          await navigateToFirstView(baseId);
-        } catch (err) {
-          console.error('Navigation error after base creation:', err);
-          // Fallback: navigate directly to base page
-          const { navigateToBase } = useNavigationStore.getState();
-          navigateToBase(selectedWorkspaceId, baseId);
-          navigate(`/base/${baseId}`);
-        }
+        //   // Try to navigate to first view, but fallback to base page if no tables exist
+        //   await navigateToFirstView(baseId);
+        // } catch (err) {
+        //   console.error('Navigation error after base creation:', err);
+        //   // Fallback: navigate directly to base page
+        //   const { navigateToBase } = useNavigationStore.getState();
+        //   navigateToBase(selectedWorkspaceId, baseId);
+        //   navigate(`/base/${baseId}`);
+        // }
       } else {
         console.error('Base created but no ID in response:', newBase);
         // If no ID, just refresh the homepage
-        navigate('/homepage');
+        // navigate('/homepage');
       }
     } catch (err: any) {
       toast.error(err?.message || 'Failed to create base. Please try again.');

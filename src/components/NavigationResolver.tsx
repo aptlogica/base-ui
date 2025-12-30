@@ -96,7 +96,11 @@ export const NavigationResolver: React.FC = () => {
     const currentExcluded = isExcludedRoute(location.pathname);
     const currentPath = location.pathname;
     
-    const hasNavigationState = !!(selectedBaseId && selectedTableId && selectedViewId);
+    // Check if selectedViewId is a slug (not a real view ID)
+    // Slugs like "grid" should not be treated as navigation state
+    const viewTypeSlugs = ['grid', 'form', 'gallery', 'kanban', 'calendar', 'gantt'];
+    const isViewSlug = selectedViewId && viewTypeSlugs.includes(selectedViewId.toLowerCase());
+    const hasNavigationState = !!(selectedBaseId && selectedTableId && selectedViewId && !isViewSlug);
     const expectedPath = hasNavigationState
       ? `/base/${selectedBaseId}/table/${selectedTableId}/${selectedViewId}`
       : null;

@@ -41,15 +41,15 @@ const AdministratorSettingsButton: React.FC = () => {
         onClick={handleClick}
         className={`relative p-2 rounded-xl transition-colors focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-2 ${
           isActive
-            ? 'bg-green-500 hover:bg-green-600'
-            : 'bg-card icons-bg hover:bg-[var(--color-gray-100)] hover:text-[var(--color-alpha-black)]'
+            ? 'bg-green-200 text-black'
+            : 'bg-card icons-bg hover:bg-[var(--color-gray-100)] hover:text-black'
         }`}
-        title="Administrator Settings"
-        aria-label="Administrator Settings"
+        title="Owner Settings"
+        aria-label="Owner Settings"
       >
         <Settings className={`w-5 h-5 transition-all duration-200 ${
           isActive
-            ? 'text-white'
+            ? 'text-green-600'
             : 'text-gray-500 hover:scale-110'
         }`} />
       </button>

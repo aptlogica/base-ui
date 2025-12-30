@@ -450,7 +450,7 @@ export const UserTable: React.FC<UserTableProps> = ({
   showSearch = true,
   headerActions
 }) => {
-  const { isAdmin } = useUserRole();
+  const { isAdmin, isOwner } = useUserRole();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortColumn, setSortColumn] = useState<'name' | 'role' | 'status' | 'joinedDate' | 'lastActive' | 'language' | 'timezone' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -783,8 +783,8 @@ export const UserTable: React.FC<UserTableProps> = ({
                       setIsRoleFilterOpen(!isRoleFilterOpen);
                     }}
                     className={`px-4 py-2 text-sm border rounded-xl flex items-center gap-2 transition-colors ${selectedRoleFilter
-                        ? 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100'
-                        : 'border text-gray-700 hover:bg-gray-50'
+                      ? 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100'
+                      : 'border text-gray-700 hover:bg-gray-50'
                       }`}
                     data-dropdown-trigger="role-filter"
                   >
@@ -926,122 +926,143 @@ export const UserTable: React.FC<UserTableProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {paginatedUsers.map((user) => {
-                const statusBadge = getStatusBadge(user.status, user.email_verified);
-                const avatarColor = getAvatarColor(user.id);
-                const avatarInitials = getAvatarInitials(user.first_name, user.last_name);
-                const isExpanded = expandedUsers.has(user.id);
-                // Get roles - for now use tenant role, will be enhanced with access details
-                const roles = getOverallRoles(user);
-                // Check if user is owner or co-owner - hide "View in detail" for these roles
-                const isOwnerOrCoOwner = roles.some(role =>
-                  role.toLowerCase().includes('owner') || role.toLowerCase().includes('co-owner')
-                );
-
-                return (
-                  <React.Fragment key={user.id}>
-                    <tr className="bg-card hover:bg-gray-50 transition-colors">
-                      {/* User Info */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          {user.avatar ? (
-                            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                              <img
-                                src={user.avatar}
-                                alt={user.display_name || `${user.first_name} ${user.last_name}`}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          ) : (
-                            <div className={`w-10 h-10 ${avatarColor} rounded-full flex items-center justify-center text-white text-sm font-semibold`}>
-                              {avatarInitials}
-                            </div>
-                          )}
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{user.display_name || `${user.first_name} ${user.last_name}`}</p>
-                            <p className="text-xs text-gray-500">{user.email}</p>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Role */}
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1.5 min-w-48">
-                          <div className="flex flex-wrap gap-1.5">
-                            {roles.map((role, idx) => (
-                              <span
-                                key={idx}
-                                className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getRolePillStyle(role)}`}
-                              >
-                                {role}
-                              </span>
-                            ))}
-                          </div>
-                          {!isOwnerOrCoOwner && (
-                            <button
-                              onClick={() => handleExpand(user.id)}
-                              className="text-xs text-primary hover:underline self-start"
-                            >
-                              {isExpanded ? 'Collapse ↑' : 'View in detail ↓'}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-6 py-4">
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusBadge.color}`}>
-                          {statusBadge.text}
-                        </span>
-                      </td>
-
-                      {/* Joined Date */}
-                      <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600 min-w-48">{formatCreatedTime(user.created_time || user.created_at)}</p>
-                      </td>
-
-                      {/* Last Active */}
-                      <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600 min-w-48">{formatLastActive(user.last_active_at, user.last_login_at, user.activity_data)}</p>
-                      </td>
-
-                      {/* Language */}
-                      <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600 min-w-48">{getLanguageDisplay(user.locale, user.activity_data)}</p>
-                      </td>
-
-                      {/* Timezone */}
-                      <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600 min-w-48">{getTimezoneName(user.timezone, user.activity_data)}</p>
-                      </td>
-
-                      {/* Actions */}
-                      {(onRemoveUser || onEditUser || onActivateUser || onDeactivateUser) && (
-                        <td className="px-6 py-4">
-                          <button
-                            ref={(el) => {
-                              if (el) actionButtonRefs.current[user.id] = el;
-                            }}
-                            onClick={() => setOpenActionMenu(openActionMenu === user.id ? null : user.id)}
-                            className="p-1 rounded hover:bg-gray-200 transition-colors"
-                            aria-label="More actions"
-                          >
-                            <MoreVertical className="w-4 h-4 text-gray-600" />
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-
-                    {/* Expanded Access Details Row */}
-                    {isExpanded && (
-                      <AccessDetailsRow
-                        userId={user.id}
-                        colSpan={7 + (onRemoveUser || onEditUser || onActivateUser || onDeactivateUser ? 1 : 0)}
-                      />
+              {paginatedUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={6 + (onRemoveUser || onEditUser || onActivateUser || onDeactivateUser ? 1 : 0)} className="px-6 py-12 text-center">
+                    {filteredUsers.length === 0 && users.length > 0 && selectedRoleFilter ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <p className="text-sm text-gray-500">No users found with the role</p>
+                        <p className="text-sm font-medium text-gray-700">"{selectedRoleFilter}"</p>
+                        <button
+                          onClick={() => setSelectedRoleFilter(null)}
+                          className="text-xs text-primary hover:underline mt-1"
+                        >
+                          Clear filter
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">No users found</p>
                     )}
-                  </React.Fragment>
-                );
-              })}
+                  </td>
+                </tr>
+              ) : (
+                paginatedUsers.map((user) => {
+                  const statusBadge = getStatusBadge(user.status, user.email_verified);
+                  const avatarColor = getAvatarColor(user.id);
+                  const avatarInitials = getAvatarInitials(user.first_name, user.last_name);
+                  const isExpanded = expandedUsers.has(user.id);
+                  // Get roles - for now use tenant role, will be enhanced with access details
+                  const roles = getOverallRoles(user);
+                  // Check if user is owner or co-owner - hide "View in detail" for these roles
+                  const isOwnerOrCoOwner = roles.some(role =>
+                    role.toLowerCase().includes('owner') || role.toLowerCase().includes('co-owner')
+                  );
+
+                  return (
+                    <React.Fragment key={user.id}>
+                      <tr className="bg-card hover:bg-gray-50 transition-colors">
+                        {/* User Info */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            {user.avatar ? (
+                              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                                <img
+                                  src={user.avatar}
+                                  alt={user.display_name || `${user.first_name} ${user.last_name}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className={`w-10 h-10 ${avatarColor} rounded-full flex items-center justify-center text-white text-sm font-semibold`}>
+                                {avatarInitials}
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{user.display_name || `${user.first_name} ${user.last_name}`}</p>
+                              <p className="text-xs text-gray-500">{user.email}</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Role */}
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1.5 min-w-48">
+                            <div className="flex flex-wrap gap-1.5">
+                              {roles.map((role, idx) => (
+                                <span
+                                  key={idx}
+                                  className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getRolePillStyle(role)}`}
+                                >
+                                  {role}
+                                </span>
+                              ))}
+                            </div>
+                            {!isOwnerOrCoOwner && (
+                              <button
+                                onClick={() => handleExpand(user.id)}
+                                className="text-xs text-primary hover:underline self-start"
+                              >
+                                {isExpanded ? 'Collapse ↑' : 'View in detail ↓'}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-6 py-4">
+                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusBadge.color}`}>
+                            {statusBadge.text}
+                          </span>
+                        </td>
+
+                        {/* Joined Date */}
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-600 min-w-48">{formatCreatedTime(user.created_time || user.created_at)}</p>
+                        </td>
+
+                        {/* Last Active */}
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-600 min-w-48">{formatLastActive(user.last_active_at, user.last_login_at, user.activity_data)}</p>
+                        </td>
+
+                        {/* Language */}
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-600 min-w-48">{getLanguageDisplay(user.locale, user.activity_data)}</p>
+                        </td>
+
+                        {/* Timezone */}
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-600 min-w-48">{getTimezoneName(user.timezone, user.activity_data)}</p>
+                        </td>
+
+                        {/* Actions */}
+                        {(onRemoveUser || onEditUser || onActivateUser || onDeactivateUser) && (
+                          <td className="px-6 py-4">
+                            <button
+                              ref={(el) => {
+                                if (el) actionButtonRefs.current[user.id] = el;
+                              }}
+                              onClick={() => setOpenActionMenu(openActionMenu === user.id ? null : user.id)}
+                              className="p-1 rounded hover:bg-gray-200 transition-colors"
+                              aria-label="More actions"
+                            >
+                              <MoreVertical className="w-4 h-4 text-gray-600" />
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+
+                      {/* Expanded Access Details Row */}
+                      {isExpanded && (
+                        <AccessDetailsRow
+                          userId={user.id}
+                          colSpan={7 + (onRemoveUser || onEditUser || onActivateUser || onDeactivateUser ? 1 : 0)}
+                        />
+                      )}
+                    </React.Fragment>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -1112,16 +1133,19 @@ export const UserTable: React.FC<UserTableProps> = ({
 
             // Check if user is Owner or Co-owner - don't show deactivate option
             const roles = getOverallRoles(user);
-            const isOwnerOrCoOwner = roles.some(role => 
+            const isOwnerOrCoOwner = roles.some(role =>
               role.toLowerCase() === 'owner' || role.toLowerCase() === 'co-owner'
             );
-            
+
             // Don't show deactivate/activate options for owners or co-owners
             if (isOwnerOrCoOwner) {
               return null;
             }
 
-            const isActive = user.status?.toLowerCase() === 'active' && user.email_verified;
+            const status = user.status?.toLowerCase();
+            const isActive = status === 'active' && user.email_verified;
+            const isDeactivated = status === 'deactivated';
+            
             if (isActive && onDeactivateUser) {
               return (
                 <button
@@ -1135,7 +1159,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                   Deactivate User
                 </button>
               );
-            } else if (!isActive && onActivateUser) {
+            } else if (isDeactivated && onActivateUser) {
               return (
                 <button
                   onClick={() => {
@@ -1155,19 +1179,19 @@ export const UserTable: React.FC<UserTableProps> = ({
           {onRemoveUser && (() => {
             const user = paginatedUsers.find(u => u.id === openActionMenu);
             if (!user) return null;
-            
+
             const isPending = user.status?.toLowerCase() === 'pending';
             if (!isPending) return null;
-            
+
             // Check if current user is Co-owner and target user is Owner
             const userRoles = getOverallRoles(user);
             const targetUserIsOwner = userRoles.some(role => role.toLowerCase() === 'owner');
-            
+
             // Co-owner cannot delete Owner (but Owner can delete anyone)
             if (!isOwner() && targetUserIsOwner) {
               return null;
             }
-            
+
             return (
               <button
                 onClick={() => {

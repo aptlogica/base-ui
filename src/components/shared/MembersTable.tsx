@@ -105,11 +105,77 @@ const formatLastActive = (lastActiveAt?: string, lastLoginAt?: string) => {
   }
 };
 
-// Role calculation utility - same logic as UserTable
-const getOverallRoles = (member: Member): string[] => {
+// Helper function to extract roles from getUserRolesAndAccess API response
+// Response structure: [{ workspace_name, access, bases: [{ base_name, access }] }]
+const extractRolesFromAccessData = (workspaces: Array<{
+  workspace_id?: string;
+  workspace_name: string;
+  access: string;
+  bases?: Array<{
+    base_id?: string;
+    base_name?: string;
+    access?: string;
+  }>;
+}>): string[] => {
   const roles: string[] = [];
 
-  // Extract roles from roles array (same as UserTable logic)
+  if (!Array.isArray(workspaces)) return roles;
+
+  workspaces.forEach(ws => {
+    // If workspace has access (e.g., "maintainer"), show workspace-level role
+    if (ws.access && ws.access.trim() !== '') {
+      if (ws.access === 'maintainer') {
+        roles.push('Workspace Maintainer');
+      } else if (ws.access === 'workspace-read') {
+        roles.push('Workspace Read Only');
+      } else {
+        // Capitalize first letter
+        roles.push(ws.access.charAt(0).toUpperCase() + ws.access.slice(1));
+      }
+    }
+
+    // If workspace access is empty but has bases, show base-level access
+    // OR if workspace has access but also has bases, show base-level access too
+    if (ws.bases && ws.bases.length > 0) {
+      ws.bases.forEach(base => {
+        const baseAccess = base.access || '';
+        if (baseAccess === 'base-member') {
+          roles.push('Base Member');
+        } else if (baseAccess === 'base-read') {
+          roles.push('Base Read Only');
+        } else if (baseAccess) {
+          // Capitalize first letter
+          roles.push(baseAccess.charAt(0).toUpperCase() + baseAccess.slice(1));
+        }
+      });
+    }
+  });
+
+  return [...new Set(roles)]; // Remove duplicates
+};
+
+// Role calculation utility - same logic as UserTable
+const getOverallRoles = (member: Member, rolesAndAccessData?: Array<{
+  workspace_id?: string;
+  workspace_name: string;
+  access: string;
+  bases?: Array<{
+    base_id?: string;
+    base_name?: string;
+    access?: string;
+  }>;
+}>): string[] => {
+  const roles: string[] = [];
+
+  // PRIORITY 1: Extract from getUserRolesAndAccess API response if available
+  if (rolesAndAccessData && Array.isArray(rolesAndAccessData)) {
+    const extractedRoles = extractRolesFromAccessData(rolesAndAccessData);
+    if (extractedRoles.length > 0) {
+      return extractedRoles;
+    }
+  }
+
+  // PRIORITY 2: Extract roles from roles array (same as UserTable logic)
   if (Array.isArray(member.roles)) {
     member.roles.forEach(role => {
       // Map role names to display names based on scope_level
@@ -203,6 +269,38 @@ const inferBaseRole = (workspaceAccessLevel: string): string => {
     return 'Base Member';
   }
   return 'Base Read Only';
+};
+
+// Component to fetch and display roles for a member
+const MemberRoleCell: React.FC<{
+  member: Member;
+  onExpand: () => void;
+  isExpanded: boolean;
+}> = ({ member, onExpand, isExpanded }) => {
+  // Fetch rolesAndAccess data to extract roles from API response structure
+  const { data: rolesAndAccessData } = useUserRolesAndAccess(member.userId);
+  const roles = getOverallRoles(member, rolesAndAccessData);
+
+  return (
+    <div className="flex flex-col gap-1.5 min-w-48">
+      <div className="flex flex-wrap gap-1.5">
+        {roles.map((role, idx) => (
+          <span
+            key={idx}
+            className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getRolePillStyle(role)}`}
+          >
+            {role}
+          </span>
+        ))}
+      </div>
+      <button
+        onClick={onExpand}
+        className="text-xs text-primary hover:underline self-start"
+      >
+        {isExpanded ? 'Collapse ↑' : 'View in detail ↓'}
+      </button>
+    </div>
+  );
 };
 
 // Expandable Row Component for Access Details
@@ -766,8 +864,21 @@ export const MembersTable: React.FC<MembersTableProps> = ({
             <tbody className="divide-y divide-gray-200">
               {paginatedMembers.length === 0 ? (
                 <tr>
-                  <td colSpan={4 + (onRemoveMember || onEditMember ? 1 : 0)} className="px-6 py-12 text-center text-gray-500">
-                    No members found
+                  <td colSpan={4 + (onRemoveMember || onEditMember ? 1 : 0)} className="px-6 py-12 text-center">
+                    {filteredMembers.length === 0 && members.length > 0 && selectedRoleFilter ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <p className="text-sm text-gray-500">No members found with the role</p>
+                        <p className="text-sm font-medium text-gray-700">"{selectedRoleFilter}"</p>
+                        <button
+                          onClick={() => setSelectedRoleFilter(null)}
+                          className="text-xs text-primary hover:underline mt-1"
+                        >
+                          Clear filter
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">No members found</p>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -775,7 +886,6 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                   const avatarColor = getAvatarColor(member.userId);
                   const initials = getInitials(member.name);
                   const isExpanded = expandedMembers.has(member.id);
-                  const roles = getOverallRoles(member);
 
                   return (
                     <React.Fragment key={member.id}>
@@ -805,24 +915,11 @@ export const MembersTable: React.FC<MembersTableProps> = ({
 
                         {/* Role */}
                         <td className="px-6 py-4">
-                          <div className="flex flex-col gap-1.5 min-w-48">
-                            <div className="flex flex-wrap gap-1.5">
-                              {roles.map((role, idx) => (
-                                <span
-                                  key={idx}
-                                  className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getRolePillStyle(role)}`}
-                                >
-                                  {role}
-                                </span>
-                              ))}
-                            </div>
-                            <button
-                              onClick={() => handleExpand(member.id)}
-                              className="text-xs text-primary hover:underline self-start"
-                            >
-                              {isExpanded ? 'Collapse ↑' : 'View in detail ↓'}
-                            </button>
-                          </div>
+                          <MemberRoleCell
+                            member={member}
+                            onExpand={() => handleExpand(member.id)}
+                            isExpanded={isExpanded}
+                          />
                         </td>
 
                         {/* Joined Date */}

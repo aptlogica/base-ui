@@ -26,7 +26,6 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
     setIsLeaving(true);
     try {
       // TODO: Implement leave workspace logic
-      console.log('Leaving workspace:', workspaceId);
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
       setShowLeaveConfirm(false);
     } catch (error) {
@@ -40,7 +39,6 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
     setIsDeleting(true);
     try {
       const result = await deleteWorkspaceMutation.mutateAsync(workspaceId);
-      console.log('Workspace deletion result:', result);
       // Use the navigation handler to properly clean up localStorage and navigate
       handleWorkspaceDeletion(workspaceId);
       setShowDeleteConfirm(false);

@@ -30,6 +30,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
   const [imagePreview, setImagePreview] = useState<string | null>(initialImage);
   const [error, setError] = useState('');
   const [validationError, setValidationError] = useState('');
+  const [imageError, setImageError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
       setImagePreview(initialImage);
       setError('');
       setValidationError('');
+      setImageError('');
       setIsSubmitting(false);
     }
   }, [isOpen, defaultName, initialImage]);
@@ -50,7 +52,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
       // Validate file type
       const validTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
       if (!validTypes.includes(file.type)) {
-        setError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
+        setImageError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
         return;
       }
       
@@ -58,12 +60,15 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
       const img = new Image();
       img.onload = () => {
         if (img.width > 800 || img.height > 400) {
-          setError('Image dimensions must be max 800 x 400px');
+          setImageError('Image dimensions must be max 800 x 400px');
           return;
         }
         setImage(file);
         setImagePreview(URL.createObjectURL(file));
-        setError('');
+        setImageError('');
+      };
+      img.onerror = () => {
+        setImageError('Failed to load image. Please try again.');
       };
       img.src = URL.createObjectURL(file);
     }
@@ -87,14 +92,17 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
           if (img.width <= 800 && img.height <= 400) {
             setImage(file);
             setImagePreview(URL.createObjectURL(file));
-            setError('');
+            setImageError('');
           } else {
-            setError('Image dimensions must be max 800 x 400px');
+            setImageError('Image dimensions must be max 800 x 400px');
           }
+        };
+        img.onerror = () => {
+          setImageError('Failed to load image. Please try again.');
         };
         img.src = URL.createObjectURL(file);
       } else {
-        setError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
+        setImageError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
       }
     }
   };
@@ -214,7 +222,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                 </span>
               </div>
             </div>
-            {/* Validation Error */}
+            {/* Validation Error - Only show name-related errors here */}
             {(error || validationError) && (
               <div className="mt-1 text-sm text-red-600">
                 <span>{validationError || error}</span>
@@ -239,6 +247,12 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
             <label className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
               Image
             </label>
+            {/* Image Error - Display here, not under Base Name */}
+            {imageError && (
+              <div className="mb-2 text-sm text-red-600">
+                <span>{imageError}</span>
+              </div>
+            )}
             {imagePreview ? (
               <div className="flex gap-4">
                 {/* Image Preview - Left Side */}
@@ -269,7 +283,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                 <div
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
-                  className="flex-1 relative border-2 border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                  className="flex-1 relative border-2 border-dashed rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
                   onClick={() => document.getElementById('image-upload')?.click()}
                 >
                   <input
@@ -292,7 +306,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
               <div
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
-                className="relative border-2 border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                className="relative border-2 border-dashed rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
                 onClick={() => document.getElementById('image-upload')?.click()}
               >
                 <input
@@ -319,14 +333,14 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl border hover:bg-gray-100 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
+              className="px-16 py-2 rounded-xl border hover:bg-gray-100 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !name.trim() || name.trim().length < 3}
-              className="flex items-center gap-2 px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+              className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {isSubmitting ? (
                 <>

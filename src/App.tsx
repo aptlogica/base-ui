@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams, Outlet, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTable, useWorkspaceBases, useBaseTables, useBaseById } from './hooks/useApi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useWorkspaces } from './hooks/useApi';
@@ -279,6 +279,24 @@ const TableViewRouteWrapper: React.FC = () => {
 };
 
 const AppRoutes = ({ loading }: { loading: boolean }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Listen for auth_token_expired event and navigate using React Router (prevents page refresh)
+  useEffect(() => {
+    const handleAuthTokenExpired = (event: Event) => {
+      // Only navigate if we're not already on the login page
+      if (location.pathname !== '/login' && !location.pathname.startsWith('/login')) {
+        navigate('/login', { replace: true });
+      }
+    };
+
+    window.addEventListener('auth_token_expired', handleAuthTokenExpired);
+    return () => {
+      window.removeEventListener('auth_token_expired', handleAuthTokenExpired);
+    };
+  }, [navigate, location.pathname]);
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
