@@ -16,8 +16,6 @@ const HeaderMembers: React.FC = () => {
   // Route-based visibility check
   const isRouteVisible = useComponentVisibility(COMPONENT_IDS.HEADER_MEMBERS);
 
-  // Transform base members to UserAvatarStack format
-  // Handle both { data: [...] } and direct array responses
   const members = useMemo(() => {
     if (!baseMembersQuery.data) return [];
 
@@ -79,7 +77,7 @@ const HeaderMembers: React.FC = () => {
         <UserAvatarStack
           users={members}
           maxVisible={3}
-          size="md"
+          size="lg"
         />
       </div>
 

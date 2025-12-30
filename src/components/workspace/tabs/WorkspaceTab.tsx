@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Plus, Loader2, Edit2, ChevronsUpDown } from 'lucide-react';
-import { useUpdateWorkspace, useWorkspaces, useWorkspaceMembers, useRemoveAccessMember } from '../../../hooks/useApi';
+import { useUpdateWorkspace, useWorkspaces, useWorkspaceMembers, useRemoveUserFromWorkspace } from '../../../hooks/useApi';
 import { useToast } from '../../common/Toast';
 import { CreateWorkspaceModal } from '../../modals/CreateWorkspaceModal';
 import { AssignUserToWorkspaceModal } from '../../modals/AssignUserToWorkspaceModal';
@@ -31,7 +31,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
   const updateWorkspaceMutation = useUpdateWorkspace();
   const workspacesQuery = useWorkspaces();
   const workspaceMembersQuery = useWorkspaceMembers(selectedWorkspaceId);
-  const removeAccessMemberMutation = useRemoveAccessMember();
+  const removeUserFromWorkspaceMutation = useRemoveUserFromWorkspace();
   const toast = useToast();
   const { canCreateWorkspace, canAssignUsers } = useWorkspaceAccess(selectedWorkspaceId);
   const { isAdmin } = useUserRole();
@@ -139,11 +139,18 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
       return;
     }
 
-    // memberId is the accessId from the API
+    // Find the member to get user_id
+    const member = members.find(m => m.id === memberId);
+    if (!member) {
+      toast.error('Member not found');
+      return;
+    }
+
+    // Use user_id instead of accessId for removeUserFromWorkspace API
     try {
-      await removeAccessMemberMutation.mutateAsync({
+      await removeUserFromWorkspaceMutation.mutateAsync({
         workspaceId: selectedWorkspaceId,
-        accessId: memberId
+        user_id: member.userId
       });
       toast.success('Member removed successfully');
     } catch (error: any) {

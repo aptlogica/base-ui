@@ -55,6 +55,7 @@ import {
   getTenantUsersService,
   getUsersForAssignService,
   addTenantUserService,
+  editUserService,
   removeTenantUserService,
   activateTenantUserService,
   deactivateTenantUserService,
@@ -1357,6 +1358,39 @@ export const useAddTenantUser = () => {
   });
 };
 
+export const useEditUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userData: {
+      user_id: string;
+      firstname?: string;
+      lastname?: string;
+      profile_pic?: File;
+      is_coowner?: boolean;
+      membership?: Array<{
+        workspace_id: string;
+        role: string;
+        bases?: Array<{
+          base_id: string;
+          role: string;
+        }>;
+      }>;
+    }) => {
+      const result = await editUserService(userData);
+      return result;
+    },
+    onSuccess: () => {
+      // Invalidate tenant users query to refetch the list
+      queryClient.invalidateQueries({ queryKey: queryKeys.users });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces() });
+    },
+    onError: (error: any) => {
+      console.error('❌ Edit user failed:', error);
+    }
+  });
+};
+
 export const useRemoveTenantUser = () => {
   const queryClient = useQueryClient();
 
@@ -1522,11 +1556,9 @@ export const useRemoveUserFromWorkspace = () => {
   return useMutation({
     mutationFn: async (params: {
       workspaceId: string;
-      workspace_id: string;
       user_id: string;
     }) => {
       const result = await removeUserFromWorkspaceService(params.workspaceId, {
-        workspace_id: params.workspace_id,
         user_id: params.user_id
       });
       return result;

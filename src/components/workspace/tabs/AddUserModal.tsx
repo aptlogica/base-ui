@@ -2,11 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, UserPlus, CloudUpload, Search, Loader2 } from 'lucide-react';
 import {
   useAddTenantUser,
+  useEditUser,
   useWorkspaces,
-  useUserRolesAndAccess,
-  useUpdateUserProfile,
-  useAddOrUpdateAvatar,
-  useBulkAddMembers
+  useUserRolesAndAccess
 } from '../../../hooks/useApi';
 import { useToast } from '../../common/Toast';
 import { WorkspaceItem, WorkspaceAssignment } from './WorkspaceItem';
@@ -60,6 +58,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { mutate: addUser, isPending: isAddingUser } = useAddTenantUser();
+  const editUserMutation = useEditUser();
   const workspacesQuery = useWorkspaces();
   const toast = useToast();
   
@@ -69,9 +68,6 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
   // Edit mode hooks
   const { data: userAccessData } = useUserRolesAndAccess(editUser?.id || null);
-  const updateProfileMutation = useUpdateUserProfile(editUser?.id || '');
-  const updateAvatarMutation = useAddOrUpdateAvatar(editUser?.id || '');
-  const bulkAddMembersMutation = useBulkAddMembers();
 
   // Determine if the user being edited is Owner or Co-owner
   const editedUserRoles = useMemo(() => {
@@ -357,62 +353,74 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
     try {
       if (isEditMode && editUser) {
-        // EDIT MODE: Update existing user
-        // 1. Update profile (name)
-        await updateProfileMutation.mutateAsync({
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          display_name: `${firstName.trim()} ${lastName.trim()}`.trim()
-        });
-
-        // 2. Update avatar if changed
-        if (avatar) {
-          await updateAvatarMutation.mutateAsync(avatar);
-        }
-
-        // 3. Update access permissions for each workspace
-        // Note: bulkAddMembers replaces existing access for that workspace
-        const workspaceIds = Object.keys(workspaceAssignments);
-
-        for (const workspaceId of workspaceIds) {
-          const assignment = workspaceAssignments[workspaceId];
-
-          const membership: {
+        // EDIT MODE: Update existing user using editUser API
+        // Build membership array from workspace assignments
+        const membership = Object.values(workspaceAssignments).map(assignment => {
+          const membershipItem: {
             workspace_id: string;
             role: string;
-            bases: Array<{ base_id: string; role: string }>;
+            bases?: Array<{ base_id: string; role: string }>;
           } = {
-            workspace_id: workspaceId,
+            workspace_id: assignment.workspaceId,
             role: '',
             bases: []
           };
 
           // If bases are provided, set bases and leave role as empty string
           if (assignment.role === 'base_specific' && assignment.bases && assignment.bases.length > 0) {
-            membership.bases = assignment.bases.map(base => ({
+            membershipItem.bases = assignment.bases.map(base => ({
               base_id: base.baseId,
               role: base.role // base-member or base-read
             }));
+            // role remains empty string when bases are provided
           }
           // If workspace-level role is assigned, set role and leave bases as empty array
           else if (assignment.role === 'maintainer' || assignment.role === 'workspace-read') {
-            membership.role = assignment.role;
+            membershipItem.role = assignment.role;
+            // bases remains empty array when workspace role is assigned
           }
           // Fallback: default to base-member role with empty bases
           else {
-            membership.role = assignment.role || 'base-member';
+            membershipItem.role = assignment.role || 'base-member';
           }
 
-          // Update access for this workspace
-          await bulkAddMembersMutation.mutateAsync({
-            workspaceId,
-            members: [{
-              user_id: editUser.id,
-              memberships: [membership]
-            }]
-          });
+          return membershipItem;
+        });
+
+        // Prepare edit user data
+        const editUserData: {
+          user_id: string;
+          firstname?: string;
+          lastname?: string;
+          profile_pic?: File;
+          is_coowner?: boolean;
+          membership?: Array<{
+            workspace_id: string;
+            role: string;
+            bases?: Array<{ base_id: string; role: string }>;
+          }>;
+        } = {
+          user_id: editUser.id,
+          firstname: firstName.trim(),
+          lastname: lastName.trim(),
+        };
+
+        // Add profile picture if changed
+        if (avatar) {
+          editUserData.profile_pic = avatar;
         }
 
+        // Add co-owner status if applicable
+        if (isCoOwner) {
+          editUserData.is_coowner = true;
+        }
+
+        // Add membership if there are workspace assignments
+        if (membership.length > 0) {
+          editUserData.membership = membership;
+        }
+
+        await editUserMutation.mutateAsync(editUserData);
         toast.success(`User ${firstName} ${lastName} updated successfully`);
       } else {
         // ADD MODE: Create new user
@@ -541,8 +549,8 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
         {/* Scrollable Content Area */}
         <form id="add-user-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto min-h-0">
-          <div className="p-0">
-            <div className={`grid grid-cols-1 ${!isCoOwner && !(isEditMode && editedUserIsOwnerOrCoOwner) ? 'lg:grid-cols-2' : ''} gap-6`}>
+          <div className="p-0 h-full">
+            <div className={`grid grid-cols-1 ${!isCoOwner && !(isEditMode && editedUserIsOwnerOrCoOwner) ? 'lg:grid-cols-2' : ''} gap-6 h-full`}>
               {/* Left Column - User Details */}
               <div className="space-y-4 bg-card p-4 lg:p-6">
                 {/* First Name and Last Name - Side by Side */}
@@ -755,11 +763,11 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
               {/* Right Column - Workspace/Base Selection - Hide for Co-owner and when editing Owner/Co-owner */}
               {!isCoOwner && !(isEditMode && editedUserIsOwnerOrCoOwner) && (
-                <div className="space-y-4 bg-gray-50 p-4 lg:p-6">
-                  <h3 className="text-sm font-semibold text-primary">Select Workspace(s) & Base(s)</h3>
+                <div className="flex flex-col h-full min-h-0 bg-gray-50 p-4 lg:p-6">
+                  <h3 className="text-sm font-semibold text-primary flex-shrink-0 mb-4">Select Workspace(s) & Base(s)</h3>
 
                   {/* Search Bar */}
-                  <div className="relative">
+                  <div className="relative flex-shrink-0 mb-4">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
@@ -770,28 +778,30 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                     />
                   </div>
 
-                  {/* Workspaces List */}
-                  <div className="space-y-3 max-h-96 min-h-max overflow-y-auto pr-2">
-                    {workspacesQuery.isLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                      </div>
-                    ) : filteredWorkspaces.length === 0 ? (
-                      <div className="text-center py-8 text-sm text-gray-500">
-                        {searchTerm ? 'No workspaces found' : 'No workspaces available'}
-                      </div>
-                    ) : (
-                      filteredWorkspaces.map((workspace: any) => (
-                        <WorkspaceItem
-                          key={workspace.id}
-                          workspace={workspace}
-                          assignment={workspaceAssignments[workspace.id]}
-                          onRoleChange={handleWorkspaceRoleChange}
-                          onBaseRoleChange={handleBaseRoleChange}
-                          onToggleBase={toggleBaseSelection}
-                        />
-                      ))
-                    )}
+                  {/* Workspaces List - Scrollable */}
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-2">
+                    <div className="space-y-3">
+                      {workspacesQuery.isLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                        </div>
+                      ) : filteredWorkspaces.length === 0 ? (
+                        <div className="text-center py-8 text-sm text-gray-500">
+                          {searchTerm ? 'No workspaces found' : 'No workspaces available'}
+                        </div>
+                      ) : (
+                        filteredWorkspaces.map((workspace: any) => (
+                          <WorkspaceItem
+                            key={workspace.id}
+                            workspace={workspace}
+                            assignment={workspaceAssignments[workspace.id]}
+                            onRoleChange={handleWorkspaceRoleChange}
+                            onBaseRoleChange={handleBaseRoleChange}
+                            onToggleBase={toggleBaseSelection}
+                          />
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -804,7 +814,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
           <button
             type="button"
             onClick={onClose}
-            disabled={isSubmitting || isAddingUser}
+            disabled={isSubmitting || isAddingUser || editUserMutation.isPending}
             className="px-4 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
           >
             Cancel
@@ -812,10 +822,10 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
           <button
             type="submit"
             form="add-user-form"
-            disabled={!isValid || isSubmitting || isAddingUser}
+            disabled={!isValid || isSubmitting || isAddingUser || editUserMutation.isPending}
             className="flex items-center gap-2 px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
-            {(isSubmitting || isAddingUser) ? (
+            {(isSubmitting || isAddingUser || editUserMutation.isPending) ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 {isEditMode ? 'Updating...' : 'Adding...'}

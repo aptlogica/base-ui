@@ -187,7 +187,7 @@ const Breadcrumb: React.FC = () => {
 
       // Use image if available, otherwise use initial with colored background
       const baseIconElement = baseImage ? (
-        <div className="w-5 h-5 rounded-lg overflow-hidden flex-shrink-0">
+        <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0">
           <img
             src={baseImage}
             alt={baseName}
@@ -195,7 +195,7 @@ const Breadcrumb: React.FC = () => {
           />
         </div>
       ) : (
-        <div className={`w-6 h-6 ${baseIcon.color} rounded-lg flex items-center justify-center text-primary font-semibold text-xs flex-shrink-0`}>
+        <div className={`w-7 h-7 ${baseIcon.color} rounded-lg flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}>
           {baseIcon.letter}
         </div>
       );

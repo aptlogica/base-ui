@@ -811,8 +811,8 @@ export async function removeAccessMemberService(workspaceId: string, accessId: s
   return await makeAuthenticatedCall(() => client.workspace.removeAccessMember(workspaceId, accessId));
 }
 
-export async function removeUserFromWorkspaceService(workspaceId: string, params: { workspace_id: string; user_id: string }) {
-  return await makeAuthenticatedCall(() => client.userService.removeFromWorkspace(workspaceId, params));
+export async function removeUserFromWorkspaceService(workspaceId: string, params: { user_id: string }) {
+  return await makeAuthenticatedCall(() => client.workspace.removeUserFromWorkspace(workspaceId, params));
 }
 
 // BaseService wrappers with auth/tenant headers
@@ -1139,16 +1139,34 @@ export async function addTenantUserService(userData: {
   return await makeAuthenticatedCall(() => client.userService.addUser(userData));
 }
 
+export async function editUserService(userData: {
+  user_id: string;
+  firstname?: string;
+  lastname?: string;
+  profile_pic?: File;
+  is_coowner?: boolean;
+  membership?: Array<{
+    workspace_id: string;
+    role: string;
+    bases?: Array<{
+      base_id: string;
+      role: string;
+    }>;
+  }>;
+}) {
+  return await makeAuthenticatedCall(() => client.userService.editUser(userData));
+}
+
 export async function removeTenantUserService(userId: string) {
   return await makeAuthenticatedCall(() => client.tenantService.removeUser({ user_id: userId }));
 }
 
 export async function deactivateTenantUserService(userId: string) {
-  return await makeAuthenticatedCall(() => client.tenantService.deactivateUser({ user_id: userId }));
+  return await makeAuthenticatedCall(() => client.userService.deactivateUser({ user_id: userId }));
 }
 
 export async function activateTenantUserService(userId: string) {
-  return await makeAuthenticatedCall(() => client.tenantService.activateUser({ user_id: userId }));
+  return await makeAuthenticatedCall(() => client.userService.activateUser({ user_id: userId }));
 }
 
 export async function getOrganizationService() {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Loader2, CheckCircle2, UserPlus, Edit, Trash2 } from 'lucide-react';
-import { useBulkAddMembers, useGetUsersForAssign, useWorkspaceBases, useWorkspaceMembers, useBaseMembers, useUserRolesAndAccess, useRemoveAccessMember } from '../../hooks/useApi';
+import { useBulkAddMembers, useGetUsersForAssign, useWorkspaceBases, useWorkspaceMembers, useBaseMembers, useUserRolesAndAccess, useRemoveUserFromWorkspace } from '../../hooks/useApi';
 import { useToast } from '../common/Toast';
 import { AdvancedDropdown } from '../common/dropdown/AdvancedDropdown';
 import { useAuth } from '../../auth/AuthContext';
@@ -31,7 +31,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   const [baseSelectionType, setBaseSelectionType] = useState<'all_bases' | 'specific_base'>('all_bases');
 
   const bulkAddMembersMutation = useBulkAddMembers();
-  const removeAccessMemberMutation = useRemoveAccessMember();
+  const removeUserFromWorkspaceMutation = useRemoveUserFromWorkspace();
   const tenantUsersQuery = useGetUsersForAssign();
   const workspaceBasesQuery = useWorkspaceBases(workspaceId);
   // Fetch user roles and access when in edit mode - using same API as UserTable
@@ -449,7 +449,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
                                   }
                                 }}
                                 placeholder="Select a role"
-                                disabled={bulkAddMembersMutation.isPending || removeAccessMemberMutation.isPending || isLoadingUserAccess}
+                                disabled={bulkAddMembersMutation.isPending || removeUserFromWorkspaceMutation.isPending || isLoadingUserAccess}
                               />
 
                             {/* Remove Button */}
@@ -461,23 +461,14 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
                                 }
 
                                 try {
-                                  // Find accessId from workspace members
-                                  const workspaceData = workspaceMembersQuery.data as any;
-                                  const membersData = workspaceData?.data || [];
-                                  const member = Array.isArray(membersData)
-                                    ? membersData.find((m: any) => m.user_id === memberToEdit)
-                                    : null;
-
-                                  if (!member) {
-                                    toast.error('Member access not found');
+                                  if (!memberToEdit) {
+                                    toast.error('User ID not found');
                                     return;
                                   }
 
-                                  const accessId = member.id || member.access_id;
-
-                                  await removeAccessMemberMutation.mutateAsync({
+                                  await removeUserFromWorkspaceMutation.mutateAsync({
                                     workspaceId,
-                                    accessId
+                                    user_id: memberToEdit
                                   });
 
                                   toast.success('Workspace access removed successfully');
@@ -487,11 +478,11 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
                                   toast.error(error?.message || 'Failed to remove workspace access');
                                 }
                               }}
-                              disabled={removeAccessMemberMutation.isPending || bulkAddMembersMutation.isPending}
+                              disabled={removeUserFromWorkspaceMutation.isPending || bulkAddMembersMutation.isPending}
                               className="w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                               title="Remove workspace access"
                             >
-                              {removeAccessMemberMutation.isPending ? (
+                              {removeUserFromWorkspaceMutation.isPending ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
                                 <Trash2 className="w-4 h-4" />
@@ -621,15 +612,15 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
             onClick={handleAssignUser}
             disabled={
               bulkAddMembersMutation.isPending ||
-              removeAccessMemberMutation.isPending ||
+              removeUserFromWorkspaceMutation.isPending ||
               (!editMode && selectedUserIds.length === 0) ||
               (baseSelectionType === 'specific_base' && selectedBases.length === 0) ||
               (editMode && isLoadingUserAccess)
             }
             className="flex items-center gap-2 px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
-            {(bulkAddMembersMutation.isPending || removeAccessMemberMutation.isPending) && <Loader2 size={16} className="animate-spin" />}
-            {(bulkAddMembersMutation.isPending || removeAccessMemberMutation.isPending)
+            {(bulkAddMembersMutation.isPending || removeUserFromWorkspaceMutation.isPending) && <Loader2 size={16} className="animate-spin" />}
+            {(bulkAddMembersMutation.isPending || removeUserFromWorkspaceMutation.isPending)
               ? editMode
                 ? 'Updating...'
                 : 'Adding...'

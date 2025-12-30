@@ -2,7 +2,6 @@ import { PluginAPI } from './types';
 import Breadcrumb from '../components/common/Breadcrumb';
 import HeaderLogo from '../components/common/HeaderLogo';
 import HeaderWorkspaceDropdown from '../components/common/HeaderWorkspaceDropdown';
-import WorkspaceSettingsButton from '../components/common/WorkspaceSettingsButton';
 import AdministratorSettingsButton from '../components/common/AdministratorSettingsButton';
 import HeaderMembers from '../components/common/HeaderMembers';
 import UserDropdown from '../components/common/UserDropdown';
@@ -44,14 +43,8 @@ export const registerCoreLayoutComponents = (api: PluginAPI, config: any = {}) =
   });
   
   api.registerExtension('layout:header', {
-    id: 'header-settings',
-    order: 1,
-    render: () => <WorkspaceSettingsButton />
-  });
-  
-  api.registerExtension('layout:header', {
     id: 'header-administrator-settings',
-    order: 1.5,
+    order: 1,
     render: () => <AdministratorSettingsButton />
   });
   

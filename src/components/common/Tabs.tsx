@@ -21,7 +21,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeKey, onChange, className }) => 
         <div
           key={tab.key}
           className={`
-              py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 relative cursor-pointer
+              py-3 px-1 border-b-2 font-medium text-sm flex outline-none items-center gap-2 relative cursor-pointer
               ${activeKey === tab.key
                 ? 'border-green-500 text-green-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'

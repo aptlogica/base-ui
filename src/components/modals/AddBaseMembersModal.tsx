@@ -242,7 +242,7 @@ console.log(userDropdownOptions)
 
         {/* Scrollable Content Area */}
         <form id="add-base-members-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto min-h-0">
-          <div className="p-0">
+          <div className="p-0 h-full">
             <div className="grid grid-cols-1 h-full lg:grid-cols-2 gap-6">
               {/* Left Column - Add Members */}
               <div className="space-y-4 bg-card p-4 lg:p-6">
@@ -278,85 +278,88 @@ console.log(userDropdownOptions)
               </div>
 
               {/* Right Column - People with access */}
-              <div className="space-y-4 bg-gray-50 p-4 lg:p-6">
-                <h3 className="text-sm font-semibold text-primary">People with access</h3>
+              <div className="flex flex-col h-full min-h-0 bg-gray-50 p-4 lg:p-6">
+                <h3 className="text-sm font-semibold text-primary flex-shrink-0 mb-4">People with access</h3>
 
-                {baseMembersQuery.isLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                  </div>
-                ) : Array.isArray(baseMembers) && baseMembers.length === 0 ? (
-                  <div className="text-center py-8 text-sm text-gray-500">
-                    No members have access to this base yet
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {Array.isArray(baseMembers) && baseMembers.map((member: any) => {
-                      const memberId = member.id || member.access_id || member.user_id;
-                      const displayName = member.display_name || member.name || member.email || 'Unknown User';
-                      const email = member.email || '';
-                      const avatar = member.avatar || member.user?.avatar;
-                      // Extract role from roles array using the same logic as UserTable/MembersTable
-                      const roleValue = getBaseRoleFromRoles(member);
+                {/* Members List - Scrollable */}
+                <div className="flex-1 min-h-0 overflow-y-auto pr-2">
+                  {baseMembersQuery.isLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    </div>
+                  ) : Array.isArray(baseMembers) && baseMembers.length === 0 ? (
+                    <div className="text-center py-8 text-sm text-gray-500">
+                      No members have access to this base yet
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {Array.isArray(baseMembers) && baseMembers.map((member: any) => {
+                        const memberId = member.id || member.access_id || member.user_id;
+                        const displayName = member.display_name || member.name || member.email || 'Unknown User';
+                        const email = member.email || '';
+                        const avatar = member.avatar || member.user?.avatar;
+                        // Extract role from roles array using the same logic as UserTable/MembersTable
+                        const roleValue = getBaseRoleFromRoles(member);
 
-                      return (
-                        <div
-                          key={memberId}
-                          className="flex items-center justify-between px-3 py-2 bg-card border rounded-xl"
-                        >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            {/* Avatar */}
-                            {avatar ? (
-                              <img
-                                src={avatar}
-                                alt={displayName}
-                                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-semibold text-sm flex-shrink-0">
-                                {getInitials(displayName)}
+                        return (
+                          <div
+                            key={memberId}
+                            className="flex items-center justify-between px-3 py-2 bg-card border rounded-xl"
+                          >
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              {/* Avatar */}
+                              {avatar ? (
+                                <img
+                                  src={avatar}
+                                  alt={displayName}
+                                  className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-semibold text-sm flex-shrink-0">
+                                  {getInitials(displayName)}
+                                </div>
+                              )}
+
+                              {/* Name and Email */}
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-gray-900 truncate">
+                                  {displayName}
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  {email}
+                                </div>
                               </div>
-                            )}
 
-                            {/* Name and Email */}
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-gray-900 truncate">
-                                {displayName}
+                              {/* Role Dropdown */}
+                              <div className="flex items-center gap-2">
+                                <RoleDropdown
+                                  value={roleValue}
+                                  options={baseRoleOptions}
+                                  onChange={() => {
+                                    // TODO: Implement role update API call
+                                    toast.info('Role update functionality coming soon');
+                                  }}
+                                  placeholder="Select a role"
+                                  className="min-w-[140px]"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveMember(memberId)}
+                                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors flex-shrink-0"
+                                  title="Remove member"
+                                  aria-label="Remove member"
+                                  disabled={removeBaseAccessMemberMutation.isPending}
+                                >
+                                  <Trash2 size={16} />
+                                </button>
                               </div>
-                              <div className="text-xs text-gray-500 truncate">
-                                {email}
-                              </div>
-                            </div>
-
-                            {/* Role Dropdown */}
-                            <div className="flex items-center gap-2">
-                              <RoleDropdown
-                                value={roleValue}
-                                options={baseRoleOptions}
-                                onChange={() => {
-                                  // TODO: Implement role update API call
-                                  toast.info('Role update functionality coming soon');
-                                }}
-                                placeholder="Select a role"
-                                className="min-w-[140px]"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveMember(memberId)}
-                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors flex-shrink-0"
-                                title="Remove member"
-                                aria-label="Remove member"
-                                disabled={removeBaseAccessMemberMutation.isPending}
-                              >
-                                <Trash2 size={16} />
-                              </button>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

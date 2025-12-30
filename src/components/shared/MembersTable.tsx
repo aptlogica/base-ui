@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import ReactDOM from 'react-dom';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import ReactDOM, { createPortal } from 'react-dom';
 import { MoreVertical, ChevronsUpDown, Search, Edit, Trash2, Filter, Loader2 } from 'lucide-react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { AccessRoleSelector, AccessRole, RoleConfig } from './AccessRoleSelector';
@@ -130,6 +130,18 @@ const getOverallRoles = (member: Member): string[] => {
         } else if (role.name === 'workspace-read' || role.name === 'workspace_read') {
           roles.push('Workspace Read Only');
         } else if (role.name === 'base-member' || role.name === 'base_member') {
+          // When workspace access is empty but has bases, show base-level access
+          roles.push('Base Member');
+        } else if (role.name === 'base-read' || role.name === 'base_read') {
+          // When workspace access is empty but has bases, show base-level access
+          roles.push('Base Read Only');
+        } else {
+          // Capitalize first letter of role name
+          roles.push(role.name.charAt(0).toUpperCase() + role.name.slice(1));
+        }
+      } else if (role.scope_level === 'base') {
+        // Base-level roles (when workspace access is empty but bases exist)
+        if (role.name === 'base-member' || role.name === 'base_member') {
           roles.push('Base Member');
         } else if (role.name === 'base-read' || role.name === 'base_read') {
           roles.push('Base Read Only');
@@ -294,7 +306,7 @@ const AccessDetailsRow: React.FC<{
                   return (
                     <tr key={`${wsIndex}-${baseIndex}`} className="bg-background">
                       {baseIndex === 0 && (
-                        <td rowSpan={baseCount} className="px-4 py-3 text-sm text-gray-900 font-medium align-top border-r border">
+                        <td rowSpan={baseCount} className="px-4 py-3 text-sm text-gray-900 font-medium align-top border-r">
                           {ws.workspace_name}
                         </td>
                       )}
@@ -339,11 +351,20 @@ export const MembersTable: React.FC<MembersTableProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string | null>(null);
   const [isRoleFilterOpen, setIsRoleFilterOpen] = useState(false);
+  const [roleFilterPosition, setRoleFilterPosition] = useState<{
+    top?: number;
+    bottom?: number;
+    right?: number;
+    left?: number;
+    width: number;
+    position: 'above' | 'below';
+  } | null>(null);
   const itemsPerPage = 10;
   const actionsMenuRef = useRef<HTMLDivElement>(null);
   const actionButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
   const roleFilterRef = useRef<HTMLDivElement>(null);
   const roleFilterButtonRef = useRef<HTMLButtonElement>(null);
+  const roleFilterMenuRef = useRef<HTMLDivElement>(null);
 
   // Filter members based on search
   const filteredMembers = useMemo(() => {
@@ -500,18 +521,95 @@ export const MembersTable: React.FC<MembersTableProps> = ({
     excludeRefs: [actionsMenuRef]
   });
 
+  // Calculate role filter dropdown position
+  const calculateRoleFilterPosition = useCallback(() => {
+    if (!roleFilterButtonRef.current) return null;
+
+    const rect = roleFilterButtonRef.current.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    const dropdownMinHeight = 200;
+    const dropdownWidth = 256; // w-64 = 256px
+
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    // Determine if we should open above or below
+    let position: 'above' | 'below' = 'below';
+    if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
+      position = 'above';
+    }
+
+    // Calculate right position (align to right edge of trigger)
+    let right = viewportWidth - rect.right;
+    if (right < 10) {
+      right = 10;
+    }
+    if (right + dropdownWidth > viewportWidth - 10) {
+      right = viewportWidth - dropdownWidth - 10;
+    }
+
+    return {
+      top: position === 'below' ? rect.bottom + 8 : undefined,
+      bottom: position === 'above' ? viewportHeight - rect.top + 8 : undefined,
+      right,
+      width: dropdownWidth,
+      position
+    };
+  }, []);
+
+  // Update position when dropdown opens
+  useEffect(() => {
+    if (isRoleFilterOpen) {
+      const position = calculateRoleFilterPosition();
+      setRoleFilterPosition(position);
+    } else {
+      setRoleFilterPosition(null);
+    }
+  }, [isRoleFilterOpen, calculateRoleFilterPosition]);
+
   // Close role filter dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (isRoleFilterOpen && roleFilterRef.current && !roleFilterRef.current.contains(event.target as Node) &&
-        roleFilterButtonRef.current && !roleFilterButtonRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const clickedElement = event.target as HTMLElement;
+
+      // Don't close if clicking inside this dropdown's trigger or menu
+      if (
+        (roleFilterButtonRef.current && roleFilterButtonRef.current.contains(target)) ||
+        (roleFilterMenuRef.current && roleFilterMenuRef.current.contains(target))
+      ) {
+        return;
+      }
+
+      // Don't close if clicking on another dropdown trigger or menu
+      if (clickedElement) {
+        const clickedTrigger = clickedElement.closest('[data-dropdown-trigger="role-filter"]');
+        if (clickedTrigger && clickedTrigger !== roleFilterButtonRef.current) {
+          return;
+        }
+
+        const clickedMenu = clickedElement.closest('[data-dropdown-menu="role-filter"]');
+        if (clickedMenu && clickedMenu !== roleFilterMenuRef.current) {
+          return;
+        }
+      }
+
+      // Close this dropdown if clicking outside
+      if (isRoleFilterOpen) {
         setIsRoleFilterOpen(false);
       }
     };
 
     if (isRoleFilterOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      const timeoutId = setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 0);
+
+      return () => {
+        clearTimeout(timeoutId);
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
     }
   }, [isRoleFilterOpen]);
 
@@ -545,11 +643,15 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                 <div className="relative" ref={roleFilterRef}>
                   <button
                     ref={roleFilterButtonRef}
-                    onClick={() => setIsRoleFilterOpen(!isRoleFilterOpen)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsRoleFilterOpen(!isRoleFilterOpen);
+                    }}
                     className={`px-4 py-2 text-sm border rounded-xl flex items-center gap-2 transition-colors ${selectedRoleFilter
                         ? 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100'
                         : 'border text-gray-700 hover:bg-gray-50'
                       }`}
+                    data-dropdown-trigger="role-filter"
                   >
                     <Filter className="w-4 h-4" />
                     Filter
@@ -560,16 +662,28 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                     )} */}
                   </button>
 
-                  {/* Role Filter Dropdown */}
-                  {isRoleFilterOpen && (
-                    <div className="absolute top-full right-0 mt-2 w-64 bg-card border rounded-lg shadow-lg z-[9999] max-h-64 overflow-y-auto">
-                      <div className="p-2">
+                  {/* Role Filter Dropdown - Portal to prevent cropping */}
+                  {isRoleFilterOpen && roleFilterPosition && createPortal(
+                    <div
+                      ref={roleFilterMenuRef}
+                      data-dropdown-menu="role-filter"
+                      className="fixed z-[9999] bg-card border rounded-xl shadow-lg max-h-64 overflow-y-auto"
+                      style={{
+                        ...(roleFilterPosition.top !== undefined && { top: `${roleFilterPosition.top}px` }),
+                        ...(roleFilterPosition.bottom !== undefined && { bottom: `${roleFilterPosition.bottom}px` }),
+                        ...(roleFilterPosition.right !== undefined && { right: `${roleFilterPosition.right}px` }),
+                        width: `${roleFilterPosition.width}px`
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="p-2 space-y-1">
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedRoleFilter(null);
                             setIsRoleFilterOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors ${!selectedRoleFilter ? 'bg-gray-100 font-medium' : ''
+                          className={`w-full text-left px-3 py-2 text-sm rounded-xl hover:bg-gray-100 transition-colors ${!selectedRoleFilter ? 'bg-gray-100 font-medium' : ''
                             }`}
                         >
                           All Roles
@@ -577,7 +691,8 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                         {availableRoles.map((role) => (
                           <button
                             key={role}
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedRoleFilter(role);
                               setIsRoleFilterOpen(false);
                             }}
@@ -588,7 +703,8 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                           </button>
                         ))}
                       </div>
-                    </div>
+                    </div>,
+                    document.body
                   )}
                 </div>
               </>

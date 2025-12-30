@@ -201,15 +201,42 @@ const getLanguageDisplay = (locale: string, activityData?: TenantUser['activity_
 const getOverallRoles = (user: TenantUser, accessDetails?: UserAccessDetailsResponse): string[] => {
   const roles: string[] = [];
 
-  // Extract tenant-level roles from roles array
+  // Extract roles from roles array (same logic as MembersTable)
   if (Array.isArray(user.roles)) {
     user.roles.forEach(role => {
+      // Map role names to display names based on scope_level
       if (role.scope_level === 'system') {
-        // Map role names to display names
+        // System-level roles (owner, co-owner)
         if (role.name === 'owner') {
           roles.push('Owner');
         } else if (role.name === 'co-owner') {
           roles.push('Co-owner');
+        } else {
+          // Capitalize first letter of role name
+          roles.push(role.name.charAt(0).toUpperCase() + role.name.slice(1));
+        }
+      } else if (role.scope_level === 'workspace') {
+        // Workspace-level roles
+        if (role.name === 'maintainer') {
+          roles.push('Workspace Maintainer');
+        } else if (role.name === 'workspace-read' || role.name === 'workspace_read') {
+          roles.push('Workspace Read Only');
+        } else if (role.name === 'base-member' || role.name === 'base_member') {
+          // When workspace access is empty but has bases, show base-level access
+          roles.push('Base Member');
+        } else if (role.name === 'base-read' || role.name === 'base_read') {
+          // When workspace access is empty but has bases, show base-level access
+          roles.push('Base Read Only');
+        } else {
+          // Capitalize first letter of role name
+          roles.push(role.name.charAt(0).toUpperCase() + role.name.slice(1));
+        }
+      } else if (role.scope_level === 'base') {
+        // Base-level roles (when workspace access is empty but bases exist)
+        if (role.name === 'base-member' || role.name === 'base_member') {
+          roles.push('Base Member');
+        } else if (role.name === 'base-read' || role.name === 'base_read') {
+          roles.push('Base Read Only');
         } else {
           // Capitalize first letter of role name
           roles.push(role.name.charAt(0).toUpperCase() + role.name.slice(1));
@@ -223,7 +250,7 @@ const getOverallRoles = (user: TenantUser, accessDetails?: UserAccessDetailsResp
     }
   }
 
-  // Workspace/base roles (from access details if available)
+  // Workspace/base roles (from access details if available - legacy support)
   if (accessDetails?.workspaces) {
     accessDetails.workspaces.forEach(ws => {
       if (ws.access_level === 'full_access') {
@@ -367,10 +394,12 @@ const AccessDetailsRow: React.FC<{
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {workspaces.map((ws: { workspace_name: string; access: string; bases?: Array<{ base_id?: string; base_name?: string; role?: string }> }, wsIndex: number) => {
+              {workspaces.map((ws: { workspace_id?: string; workspace_name: string; access: string; bases?: Array<{ base_id?: string; base_name?: string; access?: string }> }, wsIndex: number) => {
                 const baseCount = ws.bases?.length || 0;
                 const workspaceRole = ws.access || '';
 
+                // When workspace access is empty but has bases, show base access names
+                // When workspace access is "maintainer", show "Workspace Maintainer"
                 if (baseCount === 0) {
                   return (
                     <tr key={wsIndex} className="bg-background">
@@ -384,8 +413,8 @@ const AccessDetailsRow: React.FC<{
                     </tr>
                   );
                 }
-                return ws.bases?.map((base: { base_id?: string; base_name?: string; role?: string }, baseIndex: number) => {
-                  const baseRole = base.role || '';
+                return ws.bases?.map((base: { base_id?: string; base_name?: string; access?: string }, baseIndex: number) => {
+                  const baseRole = base.access || '';
                   const baseName = base.base_name || `Base ${base.base_id || baseIndex + 1}`;
                   return (
                     <tr key={`${wsIndex}-${baseIndex}`} className="bg-background">

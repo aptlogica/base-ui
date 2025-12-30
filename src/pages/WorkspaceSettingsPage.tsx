@@ -114,7 +114,6 @@ const WorkspaceSettingsPage: React.FC = () => {
     try {
       await removeUserFromWorkspaceMutation.mutateAsync({
         workspaceId: effectiveWorkspaceId,
-        workspace_id: effectiveWorkspaceId,
         user_id: member.userId
       });
       toast.success('Member removed successfully');
