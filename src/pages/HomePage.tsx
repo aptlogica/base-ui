@@ -366,10 +366,10 @@ const HomePage: React.FC = () => {
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 lg:gap-8">
           {/* Left Side - Welcome Message */}
           <div className="flex-1 min-w-0">
-            <h1 className="text-3xl font-normal text-primary mb-3">
-              Welcome back, <span className="text-3xl font-semibold text-primary">{userName}</span> 👋
+            <h1 className="text-3xl font-normal text-black mb-3">
+              Welcome back, <span className="text-3xl font-semibold text-black">{userName}</span> 👋
             </h1>
-            <p className="text-base md:text-lg text-primary max-w-2xl">
+            <p className="text-base md:text-lg text-black max-w-2xl">
               We've prepared quick actions to help you create interfaces efficiently and effortlessly.
             </p>
           </div>
