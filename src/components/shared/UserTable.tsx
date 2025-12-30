@@ -1076,10 +1076,21 @@ export const UserTable: React.FC<UserTableProps> = ({
               Edit
             </button>
           )}
-          {/* Activate/Deactivate user - Admin only */}
+          {/* Activate/Deactivate user - Admin only, but not for Owner or Co-owner */}
           {isAdmin() && (() => {
             const user = paginatedUsers.find(u => u.id === openActionMenu);
             if (!user) return null;
+
+            // Check if user is Owner or Co-owner - don't show deactivate option
+            const roles = getOverallRoles(user);
+            const isOwnerOrCoOwner = roles.some(role => 
+              role.toLowerCase() === 'owner' || role.toLowerCase() === 'co-owner'
+            );
+            
+            // Don't show deactivate/activate options for owners or co-owners
+            if (isOwnerOrCoOwner) {
+              return null;
+            }
 
             const isActive = user.status?.toLowerCase() === 'active' && user.email_verified;
             if (isActive && onDeactivateUser) {
@@ -1111,12 +1122,22 @@ export const UserTable: React.FC<UserTableProps> = ({
             }
             return null;
           })()}
-          {/* Remove Member - Only show when status is pending */}
+          {/* Remove Member - Only show when status is pending, and Co-owner can't delete Owner */}
           {onRemoveUser && (() => {
             const user = paginatedUsers.find(u => u.id === openActionMenu);
             if (!user) return null;
+            
             const isPending = user.status?.toLowerCase() === 'pending';
             if (!isPending) return null;
+            
+            // Check if current user is Co-owner and target user is Owner
+            const userRoles = getOverallRoles(user);
+            const targetUserIsOwner = userRoles.some(role => role.toLowerCase() === 'owner');
+            
+            // Co-owner cannot delete Owner (but Owner can delete anyone)
+            if (!isOwner() && targetUserIsOwner) {
+              return null;
+            }
             
             return (
               <button
