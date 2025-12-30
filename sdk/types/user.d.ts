@@ -18,6 +18,14 @@ export interface AddUserRequest {
     is_coowner?: boolean;
     membership?: MembershipRequest[];
 }
+export interface EditUserRequest {
+    user_id: string;
+    firstname?: string;
+    lastname?: string;
+    profile_pic?: File;
+    is_coowner?: boolean;
+    membership?: MembershipRequest[];
+}
 export interface UserCreateRequest {
     email: string;
     first_name: string;

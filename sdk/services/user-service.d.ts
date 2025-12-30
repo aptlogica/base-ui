@@ -59,6 +59,11 @@ export declare class UserService {
      */
     addUser(userData: types.AddUserRequest): Promise<import("..").StandardResponse<any>>;
     /**
+     * Edit existing user
+     * POST /user/edit
+     */
+    editUser(userData: types.EditUserRequest): Promise<import("..").StandardResponse<any>>;
+    /**
      * Remove/delete user (Tenant Admin)
      * POST /user/remove
      */
