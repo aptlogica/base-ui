@@ -4,20 +4,22 @@ import { Settings } from 'lucide-react';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { useUserRole } from '../../hooks/useUserRole';
 import { useComponentVisibility, COMPONENT_IDS } from '../../contexts/RouteContext';
+import { ROLES } from '../../types/roles';
 
 const AdministratorSettingsButton: React.FC = () => {
   const navigate = useNavigate();
   const { selectedWorkspaceId } = useNavigationStore();
-  const { isAdmin } = useUserRole();
+  const { isAdmin, hasRole } = useUserRole();
   
   // Route-based visibility check
   const isRouteVisible = useComponentVisibility(COMPONENT_IDS.ADMINISTRATOR_SETTINGS_BUTTON);
 
   // Combined visibility check:
   // 1. Route-based visibility (handled by RouteContext)
-  // 2. Role-based permission (must be admin)
+  // 2. Role-based permission (must be admin or maintainer)
   // 3. Workspace must be selected
-  if (!isRouteVisible || !isAdmin() || !selectedWorkspaceId) {
+  const isMaintainer = hasRole(ROLES.WorkspaceMaintainer);
+  if (!isRouteVisible || (!isAdmin() && !isMaintainer) || !selectedWorkspaceId) {
     return null;
   }
 

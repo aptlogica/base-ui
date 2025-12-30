@@ -2,6 +2,7 @@ import React from 'react';
 import { useUserRole } from './useUserRole';
 import { useWorkspaces } from './useApi';
 import { useNavigationStore } from '../stores/navigationStore';
+import { ROLES } from '../types/roles';
 
 export type AccessLevel = 'admin' | 'full_access' | 'limited_access';
 
@@ -10,7 +11,7 @@ export type AccessLevel = 'admin' | 'full_access' | 'limited_access';
  * Combines global admin role with workspace-specific access_level
  */
 export function useWorkspaceAccess(workspaceId?: string) {
-  const { isAdmin } = useUserRole();
+  const { isAdmin, hasRole } = useUserRole();
   const { data: workspaces = [] } = useWorkspaces();
   const { selectedWorkspaceId } = useNavigationStore();
   
@@ -32,6 +33,11 @@ export function useWorkspaceAccess(workspaceId?: string) {
       return 'admin';
     }
     
+    // Check if user is maintainer - treat as limited_access (only workspace tab, no create workspace)
+    if (hasRole(ROLES.WorkspaceMaintainer)) {
+      return 'limited_access';
+    }
+    
     // If no workspace found, return limited_access as default (most restrictive)
     if (!currentWorkspace) {
       return 'limited_access';
@@ -41,7 +47,7 @@ export function useWorkspaceAccess(workspaceId?: string) {
     return currentWorkspace.access_level === 'full_access' 
       ? 'full_access' 
       : 'limited_access';
-  }, [isAdmin, currentWorkspace]);
+  }, [isAdmin, hasRole, currentWorkspace]);
   
   // Check if user has any workspace with full_access (for Settings menu visibility)
   const hasAnyFullAccessWorkspace = React.useMemo(() => {
