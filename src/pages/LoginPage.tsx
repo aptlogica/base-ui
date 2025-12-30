@@ -127,13 +127,8 @@ const LogIn: React.FC = () => {
           setIsSendingOtp(false);
         }
 
-        navigate('/registervalidation', {
-          state: {
-            email: userInfo.email,
-            token: verificationToken,
-            fromLogin: true
-          }
-        });
+        // OTP sent successfully - user should check their email
+        toast.success('OTP sent to your email. Please check your inbox.');
         return;
       }
 
@@ -275,10 +270,6 @@ const LogIn: React.FC = () => {
               {isSendingOtp ? 'Sending OTP...' : formText.login.signIn}
             </button>
           </form>
-          <div className="text-sm text-center text-[var(--color-text-primary-brand)]">
-            {formText.login.signupPrompt}{' '}
-            <Link to="/register" className="text-primary-brand hover:underline">{formText.login.signupLink}</Link>
-          </div>
         </div>
       </div>
 

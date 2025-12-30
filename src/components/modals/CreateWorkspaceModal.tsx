@@ -140,7 +140,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
-              <Plus size={20} className="text-green-600" />
+              <Plus size={16} className="text-green-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-primary">{title}</h2>
@@ -222,7 +222,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
             <button
               type="submit"
               disabled={submitting || !(isControlled ? (controlledName || '').trim().length >= 3 : name.trim().length >= 3)}
-              className="flex items-center gap-2 px-6 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+              className="flex items-center gap-2 px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {submitting && <Loader2 size={16} className="animate-spin" />}
               {submitting ? (submitButtonText.includes('Save') ? 'Saving...' : 'Creating...') : submitButtonText}

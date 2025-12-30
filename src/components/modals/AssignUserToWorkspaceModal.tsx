@@ -514,7 +514,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
           <button
             onClick={handleAssignUser}
             disabled={bulkAddMembersMutation.isPending || selectedUserIds.length === 0 || (baseSelectionType === 'specific_base' && selectedBases.length === 0) || (editMode && userAccessDetailsQuery.isLoading)}
-            className="flex items-center gap-2 px-6 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-black font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="flex items-center gap-2 px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             {bulkAddMembersMutation.isPending && <Loader2 size={16} className="animate-spin" />}
             {bulkAddMembersMutation.isPending

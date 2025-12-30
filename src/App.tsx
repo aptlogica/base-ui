@@ -17,8 +17,6 @@ import { useExtensions } from './core/PluginFrameworkContext';
 import { registerPlugin } from './core/PluginRegistry';
 import { Loader2 } from 'lucide-react';
 import LoginPage from './pages/LoginPage';
-import RegistrationPage from './pages/RegistrationPage';
-import RegisterValidation from './pages/RegisterValidation';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import OAuthCallbackPage from './pages/OAuthCallbackPage';
@@ -284,8 +282,6 @@ const AppRoutes = ({ loading }: { loading: boolean }) => {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegistrationPage />} />
-      <Route path="/registervalidation" element={<RegisterValidation />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
@@ -451,7 +447,7 @@ const WorkspacesGuard: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const qc = useQueryClient();
 
   // Public routes that don't need workspace data
-  const publicRoutes = ['/login', '/register', '/registervalidation', '/forgot-password', '/reset-password', '/auth/callback'];
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
   const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
 
   // Only fetch workspaces if not on a public route

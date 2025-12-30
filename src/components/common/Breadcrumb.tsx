@@ -10,7 +10,7 @@ import { useNavigateToBaseFirstView } from '../../hooks/useNavigateToBaseFirstVi
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
 import { BaseMenu } from './BaseMenu';
 import { EditItemModal } from '../modals/EditItemModal';
-import { AssignUserToWorkspaceModal } from '../modals/AssignUserToWorkspaceModal';
+import { AddBaseMembersModal } from '../modals/AddBaseMembersModal';
 import { CreateBaseModal } from '../modals/CreateBaseModal';
 // import { CreateTableModal } from '../modals/CreateTableModal'; // COMMENTED OUT: Create table functionality
 import { useNavigationActions } from '../../hooks/useNavigationActions';
@@ -352,13 +352,27 @@ const Breadcrumb: React.FC = () => {
       toast.success('Base created successfully');
       setShowCreateBase(false);
 
-      // Navigate to the new base's first view
-      if (newBase?.data?.id) {
+      // Navigate to the new base
+      const baseId = newBase?.data?.id;
+      if (baseId) {
         try {
-          await navigateToFirstView(newBase.data.id);
+          // Update navigation store first
+          const { navigateToBase } = useNavigationStore.getState();
+          navigateToBase(selectedWorkspaceId, baseId);
+          
+          // Try to navigate to first view, but fallback to base page if no tables exist
+          await navigateToFirstView(baseId);
         } catch (err) {
-          navigate('/homepage');
+          console.error('Navigation error after base creation:', err);
+          // Fallback: navigate directly to base page
+          const { navigateToBase } = useNavigationStore.getState();
+          navigateToBase(selectedWorkspaceId, baseId);
+          navigate(`/base/${baseId}`);
         }
+      } else {
+        console.error('Base created but no ID in response:', newBase);
+        // If no ID, just refresh the homepage
+        navigate('/homepage');
       }
     } catch (err: any) {
       toast.error(err?.message || 'Failed to create base. Please try again.');
@@ -778,13 +792,17 @@ const Breadcrumb: React.FC = () => {
       )}
 
       {showAddMembers && baseForMembers && (
-        <AssignUserToWorkspaceModal
+        <AddBaseMembersModal
           isOpen={showAddMembers}
           onClose={() => {
             setShowAddMembers(false);
             setBaseForMembers(null);
           }}
-          workspaceId={selectedWorkspaceId || ''}
+          onSuccess={() => {
+            setShowAddMembers(false);
+            setBaseForMembers(null);
+          }}
+          workspaceId={selectedWorkspaceId || baseForMembers.workspace_id || ''}
           baseId={baseForMembers.id}
         />
       )}

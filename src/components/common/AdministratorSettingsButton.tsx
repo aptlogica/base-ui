@@ -34,14 +34,18 @@ const AdministratorSettingsButton: React.FC = () => {
   }
 
   return (
-    <button
-      onClick={handleClick}
-      className="relative p-2 rounded-xl bg-card icons-bg hover:bg-[var(--color-gray-100)] hover:text-[var(--color-alpha-black)] transition-colors focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-2"
-      title="Administrator Settings"
-      aria-label="Administrator Settings"
-    >
-      <Settings className="w-5 h-5 text-muted-foreground transition-transform duration-200 hover:scale-110" />
-    </button>
+    <>
+      <button
+        onClick={handleClick}
+        className="relative p-2 rounded-xl bg-card icons-bg hover:bg-[var(--color-gray-100)] hover:text-[var(--color-alpha-black)] transition-colors focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-2"
+        title="Administrator Settings"
+        aria-label="Administrator Settings"
+      >
+        <Settings className="w-5 h-5 text-gray-500 transition-transform duration-200 hover:scale-110" />
+      </button>
+      {/* Vertical Separator */}
+      <div className="h-7 w-px border mx-3"></div>
+    </>
   );
 };
 

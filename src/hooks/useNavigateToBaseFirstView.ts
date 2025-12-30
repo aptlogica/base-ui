@@ -63,10 +63,10 @@ export const useNavigateToBaseFirstView = () => {
       }
     } catch (error) {
       console.error('Failed to navigate to base first view:', error);
-      // Fallback: navigate to homepage
+      // Fallback: navigate to base page instead of homepage
       navigateToBase(selectedWorkspaceId, baseId);
-      navigate(`/homepage`);
-      throw error;
+      navigate(`/base/${baseId}`);
+      // Don't throw error - we've handled it by navigating to base page
     }
   };
 

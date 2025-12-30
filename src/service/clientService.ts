@@ -2,7 +2,7 @@
 import { SereniBaseClient } from '../../sdk/index.esm.js';
 import { WorkspaceBaseInput } from "../types/interfaces/workspace.interface.js";
 import { decodeJwt } from 'jose';
-import { LoginParams, RegisterParams, VerifyOtpParams, ResendOtpParams } from '../types/interfaces/auth.js';
+import { LoginParams, VerifyOtpParams, ResendOtpParams } from '../types/interfaces/auth.js';
 
 interface TokenData {
   access_token: string;
@@ -602,11 +602,6 @@ export const logout = async (): Promise<void> => {
 };
 
 
-export async function register(params: RegisterParams) {
-  const response = await client.auth.register(params);
-  return response;
-}
-
 /**
  * Initiates OAuth login with an identity provider (e.g., Google, GitHub)
  * Opens a popup window for OAuth authentication
@@ -812,6 +807,10 @@ export async function getWorkspaceMembersService(workspaceId: string) {
   return await makeAuthenticatedCall(() => client.workspace.getMembersWithRoles(workspaceId));
 }
 
+export async function removeAccessMemberService(workspaceId: string, accessId: string) {
+  return await makeAuthenticatedCall(() => client.workspace.removeAccessMember(workspaceId, accessId));
+}
+
 export async function removeUserFromWorkspaceService(workspaceId: string, params: { workspace_id: string; user_id: string }) {
   return await makeAuthenticatedCall(() => client.userService.removeFromWorkspace(workspaceId, params));
 }
@@ -842,7 +841,36 @@ export async function deleteBaseService(id: string) {
 }
 
 export async function getBaseMembersService(baseId: string) {
-  return await makeAuthenticatedCall(() => client.baseService.getMembers(baseId));
+  return await makeAuthenticatedCall(() => client.baseService.getMembersWithRoles(baseId));
+}
+
+export async function bulkAddBaseMembersService(baseId: string, params: {
+  workspaceId: string;
+  members: Array<{
+    user_id: string;
+    role: string;
+  }>;
+}) {
+  // Transform to BulkAddBaseMembersRequest format
+  // When bases are provided, role should be empty string
+  const bulkRequest = {
+    members: params.members.map(m => ({
+      user_id: m.user_id,
+      memberships: [{
+        workspace_id: params.workspaceId,
+        role: '', // Empty when bases are provided
+        bases: [{
+          base_id: baseId,
+          role: m.role // base-member or base-read
+        }]
+      }]
+    }))
+  };
+  return await makeAuthenticatedCall(() => client.baseService.bulkAddMembers(baseId, bulkRequest));
+}
+
+export async function removeBaseAccessMemberService(baseId: string, accessId: string) {
+  return await makeAuthenticatedCall(() => client.baseService.removeAccessMember(baseId, accessId));
 }
 
 // TableService wrappers with auth/tenant headers

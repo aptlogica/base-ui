@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Plus, Loader2, Edit2, ChevronsUpDown } from 'lucide-react';
-import { useUpdateWorkspace, useWorkspaces, useWorkspaceMembers, useRemoveUserFromWorkspace } from '../../../hooks/useApi';
+import { useUpdateWorkspace, useWorkspaces, useWorkspaceMembers, useRemoveAccessMember } from '../../../hooks/useApi';
 import { useToast } from '../../common/Toast';
 import { CreateWorkspaceModal } from '../../modals/CreateWorkspaceModal';
 import { AssignUserToWorkspaceModal } from '../../modals/AssignUserToWorkspaceModal';
@@ -31,7 +31,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
   const updateWorkspaceMutation = useUpdateWorkspace();
   const workspacesQuery = useWorkspaces();
   const workspaceMembersQuery = useWorkspaceMembers(selectedWorkspaceId);
-  const removeUserFromWorkspaceMutation = useRemoveUserFromWorkspace();
+  const removeAccessMemberMutation = useRemoveAccessMember();
   const toast = useToast();
   const { canCreateWorkspace, canAssignUsers } = useWorkspaceAccess(selectedWorkspaceId);
   const { isAdmin } = useUserRole();
@@ -138,18 +138,11 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
       return;
     }
 
-    // Find the member to get user_id
-    const member = members.find(m => m.id === memberId);
-    if (!member) {
-      toast.error('Member not found');
-      return;
-    }
-
+    // memberId is the accessId from the API
     try {
-      await removeUserFromWorkspaceMutation.mutateAsync({
+      await removeAccessMemberMutation.mutateAsync({
         workspaceId: selectedWorkspaceId,
-        workspace_id: selectedWorkspaceId,
-        user_id: member.userId
+        accessId: memberId
       });
       toast.success('Member removed successfully');
     } catch (error: any) {
@@ -208,7 +201,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
           >
             {selectedWorkspace ? (
               <>
-                <div className={`w-8 h-8 ${workspaceIcon.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                <div className={`w-10 h-10 ${workspaceIcon.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
                   <span className="text-white text-sm">
                     {workspaceIcon.initials}
                   </span>
@@ -219,7 +212,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
               </>
             ) : (
               <>
-                <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 bg-gray-400 border rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-white text-sm">W</span>
                 </div>
                 <span className="text-sm font-medium text-gray-500">Select Workspace</span>
@@ -231,7 +224,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
           {/* Workspace Dropdown Menu */}
           {workspaceDropdownOpen && (
             <div className="absolute top-full left-0 mt-2 w-80 bg-card border rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
-              <div className="p-2">
+              <div className="p-2 space-y-1">
                 {workspaces.length === 0 ? (
                   <div className="px-4 py-8 text-center text-gray-500 text-sm">
                     No workspaces found
@@ -247,11 +240,11 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
                           setSelectedWorkspaceId(ws.id);
                           setWorkspaceDropdownOpen(false);
                         }}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-gray-100 transition-colors ${isSelected ? 'bg-gray-50' : ''
+                        className={`w-full space-y-1 flex items-center gap-3 px-3 py-2 rounded-xl text-left hover:bg-gray-100 transition-colors ${isSelected ? 'bg-gray-50' : ''
                           }`}
                       >
                         <div className={`w-8 h-8 ${icon.color} rounded-full flex items-center justify-center flex-shrink-0`}>
-                          <span className="text-white font-bold text-sm">
+                          <span className="text-white text-sm">
                             {icon.initials}
                           </span>
                         </div>

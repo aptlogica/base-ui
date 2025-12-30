@@ -183,7 +183,7 @@ const AccessDetailsRow: React.FC<{
   // The hook already extracts result?.data, so rolesAndAccess is the array directly
   // Response structure: [{ workspace_name, access, bases: [] }]
   const workspaces = Array.isArray(rolesAndAccess) ? rolesAndAccess : [];
-  
+
   if (!workspaces || workspaces.length === 0) {
     return (
       <tr>
@@ -228,7 +228,7 @@ const AccessDetailsRow: React.FC<{
               {workspaces.map((ws: { workspace_name: string; access: string; bases?: Array<{ base_id?: string; base_name?: string; role?: string }> }, wsIndex: number) => {
                 const baseCount = ws.bases?.length || 0;
                 const workspaceRole = ws.access || '';
-                
+
                 if (baseCount === 0) {
                   return (
                     <tr key={wsIndex} className="bg-background">
@@ -282,7 +282,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
   className = '',
   headerActions
 }) => {
- 
+
   const [searchQuery, setSearchQuery] = useState('');
   const [sortColumn, setSortColumn] = useState<'name' | 'role' | 'date' | 'lastActive' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -458,7 +458,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isRoleFilterOpen && roleFilterRef.current && !roleFilterRef.current.contains(event.target as Node) &&
-          roleFilterButtonRef.current && !roleFilterButtonRef.current.contains(event.target as Node)) {
+        roleFilterButtonRef.current && !roleFilterButtonRef.current.contains(event.target as Node)) {
         setIsRoleFilterOpen(false);
       }
     };
@@ -478,13 +478,13 @@ export const MembersTable: React.FC<MembersTableProps> = ({
   }, [selectedRoleFilter, searchQuery]);
 
   return (
-      <div className="bg-card rounded-xl border overflow-hidden">
+    <div className="bg-card rounded-xl border overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b">
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-lg font-semibold text-primary">Workspace Members</h2>
           <div className="flex items-center gap-3">
-              {showSearch && (
+            {showSearch && (
               <>
                 <div className="relative w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -500,19 +500,18 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                   <button
                     ref={roleFilterButtonRef}
                     onClick={() => setIsRoleFilterOpen(!isRoleFilterOpen)}
-                    className={`px-4 py-2 text-sm border rounded-xl flex items-center gap-2 transition-colors ${
-                      selectedRoleFilter
+                    className={`px-4 py-2 text-sm border rounded-xl flex items-center gap-2 transition-colors ${selectedRoleFilter
                         ? 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100'
                         : 'border text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     <Filter className="w-4 h-4" />
                     Filter
-                    {selectedRoleFilter && (
+                    {/* {selectedRoleFilter && (
                       <span className="ml-1 px-1.5 py-0.5 bg-blue-200 text-blue-800 rounded text-xs">
                         {selectedRoleFilter}
                       </span>
-                    )}
+                    )} */}
                   </button>
 
                   {/* Role Filter Dropdown */}
@@ -524,9 +523,8 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                             setSelectedRoleFilter(null);
                             setIsRoleFilterOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors ${
-                            !selectedRoleFilter ? 'bg-gray-100 font-medium' : ''
-                          }`}
+                          className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors ${!selectedRoleFilter ? 'bg-gray-100 font-medium' : ''
+                            }`}
                         >
                           All Roles
                         </button>
@@ -537,23 +535,22 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                               setSelectedRoleFilter(role);
                               setIsRoleFilterOpen(false);
                             }}
-                            className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors ${
-                              selectedRoleFilter === role ? 'bg-gray-100 font-medium' : ''
-                            }`}
+                            className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors ${selectedRoleFilter === role ? 'bg-gray-100 font-medium' : ''
+                              }`}
                           >
                             {role}
                           </button>
                         ))}
-                  </div>
-                  </div>
-                )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </>
             )}
             {headerActions}
-              </div>
-            </div>
           </div>
+        </div>
+      </div>
 
       {/* Table */}
       <div className="overflow-x-auto">
@@ -600,7 +597,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                 {(onRemoveMember || onEditMember) && (
                   <th className="px-6 py-3 text-left">
                     <span className="text-xs text-gray-700 font-semibold">Actions</span>
-                </th>
+                  </th>
                 )}
               </tr>
             </thead>
@@ -622,76 +619,76 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                     <React.Fragment key={member.id}>
                       <tr className="bg-card hover:bg-gray-50 transition-colors">
                         {/* User Info */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          {member.avatar ? (
-                            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                              <img
-                                src={member.avatar}
-                                alt={member.name}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          ) : (
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            {member.avatar ? (
+                              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                                <img
+                                  src={member.avatar}
+                                  alt={member.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
                               <div className={`w-10 h-10 ${avatarColor} rounded-full flex items-center justify-center text-white text-sm`}>
-                              {initials}
-                            </div>
-                          )}
+                                {initials}
+                              </div>
+                            )}
                             <div>
                               <p className="text-sm font-medium text-gray-900">{member.name}</p>
                               <p className="text-xs text-gray-500">{member.email}</p>
+                            </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Role */}
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1.5 min-w-48">
-                          <div className="flex flex-wrap gap-1.5">
-                            {roles.map((role, idx) => (
-                              <span
-                                key={idx}
-                                className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getRolePillStyle(role)}`}
-                              >
-                                {role}
-                              </span>
-                            ))}
-                          </div>
-                          <button
-                            onClick={() => handleExpand(member.id)}
-                            className="text-xs text-primary hover:underline self-start"
-                          >
-                            {isExpanded ? 'Collapse ↑' : 'View in detail ↓'}
-                          </button>
-                          </div>
-                      </td>
-
-                      {/* Joined Date */}
-                      <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600 min-w-48">{formatCreatedTime(member.dateJoined)}</p>
-                      </td>
-
-                      {/* Last Active */}
-                      <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600 min-w-48">{formatLastActive(member.last_active_at, member.last_login_at)}</p>
-                      </td>
-
-                      {/* Actions */}
-                      {(onRemoveMember || onEditMember) && (
+                        {/* Role */}
                         <td className="px-6 py-4">
-                          <button
-                            ref={(el) => {
-                              if (el) actionButtonRefs.current[member.id] = el;
-                            }}
-                            onClick={() => setOpenActionsMenu(openActionsMenu === member.id ? null : member.id)}
-                            className="p-1 rounded hover:bg-gray-200 transition-colors"
-                            aria-label="More actions"
-                          >
-                            <MoreVertical className="w-4 h-4 text-gray-600" />
-                          </button>
-                      </td>
-                      )}
-                    </tr>
+                          <div className="flex flex-col gap-1.5 min-w-48">
+                            <div className="flex flex-wrap gap-1.5">
+                              {roles.map((role, idx) => (
+                                <span
+                                  key={idx}
+                                  className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getRolePillStyle(role)}`}
+                                >
+                                  {role}
+                                </span>
+                              ))}
+                            </div>
+                            <button
+                              onClick={() => handleExpand(member.id)}
+                              className="text-xs text-primary hover:underline self-start"
+                            >
+                              {isExpanded ? 'Collapse ↑' : 'View in detail ↓'}
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* Joined Date */}
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-600 min-w-48">{formatCreatedTime(member.dateJoined)}</p>
+                        </td>
+
+                        {/* Last Active */}
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-600 min-w-48">{formatLastActive(member.last_active_at, member.last_login_at)}</p>
+                        </td>
+
+                        {/* Actions */}
+                        {(onRemoveMember || onEditMember) && (
+                          <td className="px-6 py-4">
+                            <button
+                              ref={(el) => {
+                                if (el) actionButtonRefs.current[member.id] = el;
+                              }}
+                              onClick={() => setOpenActionsMenu(openActionsMenu === member.id ? null : member.id)}
+                              className="p-1 rounded hover:bg-gray-200 transition-colors"
+                              aria-label="More actions"
+                            >
+                              <MoreVertical className="w-4 h-4 text-gray-600" />
+                            </button>
+                          </td>
+                        )}
+                      </tr>
 
                       {/* Expanded Access Details Row */}
                       {isExpanded && (
@@ -739,40 +736,40 @@ export const MembersTable: React.FC<MembersTableProps> = ({
             >
               Next →
             </button>
-      </div>
-      </div>
+          </div>
+        </div>
       )}
 
       {/* Actions Menu Portal */}
       {openActionsMenu && menuPosition && ReactDOM.createPortal(
-          <div
-            ref={actionsMenuRef}
+        <div
+          ref={actionsMenuRef}
           className="fixed w-60 bg-card border rounded-xl shadow-lg z-50 p-1.5"
-            style={{
-              top: `${menuPosition.top}px`,
+          style={{
+            top: `${menuPosition.top}px`,
             left: `${menuPosition.left}px`,
           }}
         >
-            {onEditMember && (
-              <button
-                onClick={() => handleEditMember(openActionsMenu)}
+          {onEditMember && (
+            <button
+              onClick={() => handleEditMember(openActionsMenu)}
               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl flex items-center gap-2"
-              >
-                <Edit className="w-4 h-4" />
-              Edit Details
-              </button>
-            )}
-            {onRemoveMember && (
-              <button
-                onClick={() => handleRemoveMember(openActionsMenu)}
+            >
+              <Edit className="w-4 h-4" />
+              Manage Role
+            </button>
+          )}
+          {onRemoveMember && (
+            <button
+              onClick={() => handleRemoveMember(openActionsMenu)}
               className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
+            >
+              <Trash2 className="w-4 h-4" />
               Remove Member
-              </button>
-            )}
-          </div>,
-          document.body
+            </button>
+          )}
+        </div>,
+        document.body
       )}
     </div>
   );
