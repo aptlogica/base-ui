@@ -67,7 +67,7 @@ export const NavigationResolver: React.FC = () => {
     }
     
     // Only resolve on private routes after login completes
-    const publicRoutes = ['/login', '/register', '/registervalidation', '/forgot-password', '/reset-password', '/auth/callback'];
+    const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
     const isPublicRoute = publicRoutes.some(route => 
       location.pathname === route || location.pathname.startsWith(route + '/')
     );
@@ -608,7 +608,7 @@ export const NavigationResolver: React.FC = () => {
   }, [workspacesData, workspacesLoading, selectedWorkspaceId, user?.id, restoreCompleted, location.pathname, navigate, isResolving]);
   
   // Show loading state while resolving (only on private routes)
-  const publicRoutes = ['/login', '/register', '/registervalidation', '/forgot-password', '/reset-password'];
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password'];
   const isPublicRoute = publicRoutes.some(route =>
     location.pathname === route || location.pathname.startsWith(route + '/')
   );

@@ -161,7 +161,7 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
 
           {/* Owner Information Section */}
           <div className="px-6 py-4">
-            <div className="flex items-start gap-4">
+            <div className="flex items-start gap-4 items-center">
               {owner.logo ? (
                 <img
                   src={owner.logo}

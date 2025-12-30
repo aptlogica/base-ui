@@ -147,9 +147,6 @@ const UserDropdown: React.FC = () => {
 
   return (
     <div className="relative flex items-center gap-2" ref={dropdownRef}>
-      {/* Vertical Separator */}
-      <div className="h-6 w-px bg-gray-300 mx-3"></div>
-      
       {/* User Info in Header */}
       <div className="flex flex-col items-end">
         {isLoadingProfile ? (
@@ -182,7 +179,7 @@ const UserDropdown: React.FC = () => {
             className="w-9 h-9 rounded-full object-cover"
           />
         ) : (
-          <span className="text-sm font-bold">
+          <span className="text-sm font-bold text-white">
             {getUserInitials()}
           </span>
         )}

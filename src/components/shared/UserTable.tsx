@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import ReactDOM from 'react-dom';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import ReactDOM, { createPortal } from 'react-dom';
 import { MoreVertical, Search, ChevronsUpDown, UserX, UserCheck, Trash2, Filter, Edit, Loader2 } from 'lucide-react';
 import { useUserRole } from '../../hooks/useUserRole';
 import { UserAccessDetailsModal } from '../modals/UserAccessDetailsModal';
@@ -96,7 +96,7 @@ const getTimezoneName = (timezone: string, activityData?: TenantUser['activity_d
       return tz;
     }
   }
-  
+
   // Fallback to timezone field
   if (!timezone || timezone.trim() === '') {
     return '-';
@@ -122,7 +122,7 @@ const formatCreatedTime = (createdTime?: string) => {
 const formatLastActive = (lastActiveAt?: string, lastLoginAt?: string, activityData?: TenantUser['activity_data']) => {
   // Try activity_data.last_updated_at first
   let dateStr = activityData?.last_updated_at || lastActiveAt || lastLoginAt;
-  
+
   if (!dateStr || dateStr === '0001-01-01T00:00:00Z') {
     return '-';
   }
@@ -191,7 +191,7 @@ const getLanguageDisplay = (locale: string, activityData?: TenantUser['activity_
       return localeToLanguage[langCode] || localeToLanguage[language] || language || '-';
     }
   }
-  
+
   // Fallback to locale
   if (!locale) return '-';
   return localeToLanguage[locale] || locale || '-';
@@ -325,7 +325,7 @@ const AccessDetailsRow: React.FC<{
   // The hook already extracts result?.data, so rolesAndAccess is the array directly
   // Response structure: [{ workspace_name, access, bases: [] }]
   const workspaces = Array.isArray(rolesAndAccess) ? rolesAndAccess : [];
-  
+
   if (!workspaces || workspaces.length === 0) {
     return (
       <tr>
@@ -370,7 +370,7 @@ const AccessDetailsRow: React.FC<{
               {workspaces.map((ws: { workspace_name: string; access: string; bases?: Array<{ base_id?: string; base_name?: string; role?: string }> }, wsIndex: number) => {
                 const baseCount = ws.bases?.length || 0;
                 const workspaceRole = ws.access || '';
-                
+
                 if (baseCount === 0) {
                   return (
                     <tr key={wsIndex} className="bg-background">
@@ -432,11 +432,20 @@ export const UserTable: React.FC<UserTableProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string | null>(null);
   const [isRoleFilterOpen, setIsRoleFilterOpen] = useState(false);
+  const [roleFilterPosition, setRoleFilterPosition] = useState<{
+    top?: number;
+    bottom?: number;
+    right?: number;
+    left?: number;
+    width: number;
+    position: 'above' | 'below';
+  } | null>(null);
   const itemsPerPage = 10;
   const actionButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
   const menuRef = useRef<HTMLDivElement>(null);
   const roleFilterRef = useRef<HTMLDivElement>(null);
   const roleFilterButtonRef = useRef<HTMLButtonElement>(null);
+  const roleFilterMenuRef = useRef<HTMLDivElement>(null);
 
   const filteredUsers = useMemo(() => {
     let filtered = users;
@@ -602,18 +611,95 @@ export const UserTable: React.FC<UserTableProps> = ({
     }
   }, [openActionMenu]);
 
+  // Calculate role filter dropdown position
+  const calculateRoleFilterPosition = useCallback(() => {
+    if (!roleFilterButtonRef.current) return null;
+
+    const rect = roleFilterButtonRef.current.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    const dropdownMinHeight = 200;
+    const dropdownWidth = 220;
+
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    // Determine if we should open above or below
+    let position: 'above' | 'below' = 'below';
+    if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
+      position = 'above';
+    }
+
+    // Calculate right position (align to right edge of trigger)
+    let right = viewportWidth - rect.right;
+    if (right < 10) {
+      right = 10;
+    }
+    if (right + dropdownWidth > viewportWidth - 10) {
+      right = viewportWidth - dropdownWidth - 10;
+    }
+
+    return {
+      top: position === 'below' ? rect.bottom + 8 : undefined,
+      bottom: position === 'above' ? viewportHeight - rect.top + 8 : undefined,
+      right,
+      width: dropdownWidth,
+      position
+    };
+  }, []);
+
+  // Update position when dropdown opens
+  useEffect(() => {
+    if (isRoleFilterOpen) {
+      const position = calculateRoleFilterPosition();
+      setRoleFilterPosition(position);
+    } else {
+      setRoleFilterPosition(null);
+    }
+  }, [isRoleFilterOpen, calculateRoleFilterPosition]);
+
   // Close role filter dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (isRoleFilterOpen && roleFilterRef.current && !roleFilterRef.current.contains(event.target as Node) &&
-          roleFilterButtonRef.current && !roleFilterButtonRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const clickedElement = event.target as HTMLElement;
+
+      // Don't close if clicking inside this dropdown's trigger or menu
+      if (
+        (roleFilterButtonRef.current && roleFilterButtonRef.current.contains(target)) ||
+        (roleFilterMenuRef.current && roleFilterMenuRef.current.contains(target))
+      ) {
+        return;
+      }
+
+      // Don't close if clicking on another dropdown trigger or menu
+      if (clickedElement) {
+        const clickedTrigger = clickedElement.closest('[data-dropdown-trigger="role-filter"]');
+        if (clickedTrigger && clickedTrigger !== roleFilterButtonRef.current) {
+          return;
+        }
+
+        const clickedMenu = clickedElement.closest('[data-dropdown-menu="role-filter"]');
+        if (clickedMenu && clickedMenu !== roleFilterMenuRef.current) {
+          return;
+        }
+      }
+
+      // Close this dropdown if clicking outside
+      if (isRoleFilterOpen) {
         setIsRoleFilterOpen(false);
       }
     };
 
     if (isRoleFilterOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      const timeoutId = setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 0);
+
+      return () => {
+        clearTimeout(timeoutId);
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
     }
   }, [isRoleFilterOpen]);
 
@@ -657,61 +743,76 @@ export const UserTable: React.FC<UserTableProps> = ({
                     placeholder="Search"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full text-xs pl-9 pr-4 py-2 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-background outline-none transition-all"
+                    className="w-full text-xs pl-9 pr-4 py-2 h-10 border rounded-xl text-primary focus:border-primary placeholder:text-gray-400 bg-background outline-none transition-all"
                   />
                 </div>
                 <div className="relative" ref={roleFilterRef}>
                   <button
                     ref={roleFilterButtonRef}
-                    onClick={() => setIsRoleFilterOpen(!isRoleFilterOpen)}
-                    className={`px-4 py-2 text-sm border rounded-xl flex items-center gap-2 transition-colors ${
-                      selectedRoleFilter
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsRoleFilterOpen(!isRoleFilterOpen);
+                    }}
+                    className={`px-4 py-2 text-sm border rounded-xl flex items-center gap-2 transition-colors ${selectedRoleFilter
                         ? 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100'
                         : 'border text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
+                    data-dropdown-trigger="role-filter"
                   >
                     <Filter className="w-4 h-4" />
                     Filter by Role
-                    {selectedRoleFilter && (
+                    {/* {selectedRoleFilter && (
                       <span className="ml-1 px-1.5 py-0.5 bg-blue-200 text-blue-800 rounded text-xs">
                         {selectedRoleFilter}
                       </span>
-                    )}
+                    )} */}
                   </button>
+                </div>
 
-                  {/* Role Filter Dropdown */}
-                  {isRoleFilterOpen && (
-                    <div className="absolute top-full right-0 mt-2 w-64 bg-card border rounded-xl shadow-lg z-[9999] max-h-64 overflow-y-auto">
-                      <div className="p-2">
+                {/* Role Filter Dropdown - Portal to prevent cropping */}
+                {isRoleFilterOpen && roleFilterPosition && createPortal(
+                  <div
+                    ref={roleFilterMenuRef}
+                    data-dropdown-menu="role-filter"
+                    className="fixed z-[9999] bg-card border rounded-xl shadow-lg max-h-64 overflow-y-auto"
+                    style={{
+                      ...(roleFilterPosition.top !== undefined && { top: `${roleFilterPosition.top}px` }),
+                      ...(roleFilterPosition.bottom !== undefined && { bottom: `${roleFilterPosition.bottom}px` }),
+                      ...(roleFilterPosition.right !== undefined && { right: `${roleFilterPosition.right}px` }),
+                      width: `${roleFilterPosition.width}px`
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="p-2 space-y-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedRoleFilter(null);
+                          setIsRoleFilterOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm rounded-xl hover:bg-gray-100 transition-colors ${!selectedRoleFilter ? 'bg-gray-100 font-medium' : ''
+                          }`}
+                      >
+                        All Roles
+                      </button>
+                      {availableRoles.map((role) => (
                         <button
-                          onClick={() => {
-                            setSelectedRoleFilter(null);
+                          key={role}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedRoleFilter(role);
                             setIsRoleFilterOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-2 text-sm rounded-xl hover:bg-gray-100 transition-colors ${
-                            !selectedRoleFilter ? 'bg-gray-100 font-medium' : ''
-                          }`}
-                        >
-                          All Roles
-                        </button>
-                        {availableRoles.map((role) => (
-                          <button
-                            key={role}
-                            onClick={() => {
-                              setSelectedRoleFilter(role);
-                              setIsRoleFilterOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors ${
-                              selectedRoleFilter === role ? 'bg-gray-100 font-medium' : ''
+                          className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors ${selectedRoleFilter === role ? 'bg-gray-100 font-medium' : ''
                             }`}
-                          >
-                            {role}
-                          </button>
-                        ))}
-                      </div>
+                        >
+                          {role}
+                        </button>
+                      ))}
                     </div>
-                  )}
-                </div>
+                  </div>,
+                  document.body
+                )}
               </>
             )}
             {headerActions}
@@ -804,7 +905,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                 // Get roles - for now use tenant role, will be enhanced with access details
                 const roles = getOverallRoles(user);
                 // Check if user is owner or co-owner - hide "View in detail" for these roles
-                const isOwnerOrCoOwner = roles.some(role => 
+                const isOwnerOrCoOwner = roles.some(role =>
                   role.toLowerCase().includes('owner') || role.toLowerCase().includes('co-owner')
                 );
 
@@ -971,8 +1072,8 @@ export const UserTable: React.FC<UserTableProps> = ({
               }}
               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl flex items-center gap-2"
             >
-              <Edit className="w-4 h-4" />
-              Edit Details
+              <Edit className="w-4 h-4 text-gray-500" />
+              Edit
             </button>
           )}
           {/* Activate/Deactivate user - Admin only */}
@@ -990,7 +1091,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                   }}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl flex items-center gap-2"
                 >
-                  <UserX className="w-4 h-4" />
+                  <UserX className="w-4 h-4 text-gray-500" />
                   Deactivate User
                 </button>
               );
@@ -1020,7 +1121,7 @@ export const UserTable: React.FC<UserTableProps> = ({
               className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2"
             >
               <Trash2 className="w-4 h-4" />
-              Remove Member
+              Remove User
             </button>
           )}
         </div>,

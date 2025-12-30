@@ -365,7 +365,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting || !name.trim() || name.trim().length < 3 || !!validationError}
-              className="flex items-center gap-2 px-6 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+              className="flex items-center gap-2 px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {isSubmitting ? (
                 <>

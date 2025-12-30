@@ -1,15 +1,26 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, UserPlus, CloudUpload, Search, Mail, Loader2 } from 'lucide-react';
-import { useAddTenantUser, useWorkspaces } from '../../../hooks/useApi';
+import { X, UserPlus, CloudUpload, Search, Loader2 } from 'lucide-react';
+import { 
+  useAddTenantUser, 
+  useWorkspaces, 
+  useUserRolesAndAccess,
+  useUpdateUserProfile,
+  useAddOrUpdateAvatar,
+  useBulkAddMembers
+} from '../../../hooks/useApi';
 import { useToast } from '../../common/Toast';
 import { WorkspaceItem, WorkspaceAssignment } from './WorkspaceItem';
+import { TenantUser } from '../../shared/UserTable';
 
 interface AddUserModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editUser?: TenantUser | null;
 }
 
-export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) => {
+export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, editUser = null }) => {
+  const isEditMode = !!editUser;
+  
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -20,26 +31,95 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
   const [workspaceAssignments, setWorkspaceAssignments] = useState<Record<string, WorkspaceAssignment>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const { mutate: addUser, isPending: isAddingUser } = useAddTenantUser();
   const workspacesQuery = useWorkspaces();
   const toast = useToast();
+  
+  // Edit mode hooks
+  const { data: userAccessData } = useUserRolesAndAccess(editUser?.id || null);
+  const updateProfileMutation = useUpdateUserProfile(editUser?.id || '');
+  const updateAvatarMutation = useAddOrUpdateAvatar(editUser?.id || '');
+  const bulkAddMembersMutation = useBulkAddMembers();
 
-  // Reset form when modal opens/closes
+  // Load user data when in edit mode
   useEffect(() => {
     if (isOpen) {
-      setFirstName('');
-      setLastName('');
-      setEmail('');
-      setAvatar(null);
-      setAvatarPreview(null);
-      setIsCoOwner(false);
-      setErrors({});
-      setWorkspaceAssignments({});
-      setSearchTerm('');
-      setIsSubmitting(false);
+      if (isEditMode && editUser) {
+        // EDIT MODE: Pre-populate form with user data
+        setFirstName(editUser.first_name || '');
+        setLastName(editUser.last_name || '');
+        setEmail(editUser.email || '');
+        
+        // Check if user is co-owner
+        const roles = Array.isArray(editUser.roles) ? editUser.roles : [];
+        const isCoOwnerRole = roles.some((r: any) => 
+          r.name === 'co-owner' || r.name === 'Co-owner' || r.name === 'co_owner'
+        );
+        setIsCoOwner(isCoOwnerRole);
+        
+        // Load avatar preview if exists
+        if (editUser.avatar) {
+          setAvatarPreview(editUser.avatar);
+        } else {
+          setAvatarPreview(null);
+        }
+        setAvatar(null); // Reset file input
+        
+        setErrors({});
+        setSearchTerm('');
+        setIsSubmitting(false);
+      } else {
+        // ADD MODE: Reset form
+        setFirstName('');
+        setLastName('');
+        setEmail('');
+        setAvatar(null);
+        setAvatarPreview(null);
+        setIsCoOwner(false);
+        setErrors({});
+        setWorkspaceAssignments({});
+        setSearchTerm('');
+        setIsSubmitting(false);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, isEditMode, editUser]);
+  
+  // Load workspace assignments when userAccessData is available
+  useEffect(() => {
+    if (isEditMode && userAccessData && Array.isArray(userAccessData)) {
+      const assignments: Record<string, WorkspaceAssignment> = {};
+      
+      userAccessData.forEach((workspaceAccess: any) => {
+        const workspaceId = workspaceAccess.workspace_id;
+        const workspaceAccessLevel = workspaceAccess.access || '';
+        
+        // Determine role based on access data
+        // If access is empty string and bases exist, it's base_specific
+        // If access has a value, it's a workspace-level role
+        let role: 'maintainer' | 'workspace-read' | 'base_specific' = 'base_specific';
+        if (workspaceAccessLevel === 'maintainer') {
+          role = 'maintainer';
+        } else if (workspaceAccessLevel === 'workspace-read') {
+          role = 'workspace-read';
+        } else if (workspaceAccess.bases && workspaceAccess.bases.length > 0) {
+          // Empty access string with bases means base-specific role
+          role = 'base_specific';
+        }
+        
+        assignments[workspaceId] = {
+          workspaceId,
+          role,
+          bases: workspaceAccess.bases?.map((base: any) => ({
+            baseId: base.base_id,
+            role: (base.access || 'base-member') as 'base-member' | 'base-read'
+          })) || []
+        };
+      });
+      
+      setWorkspaceAssignments(assignments);
+    }
+  }, [isEditMode, userAccessData]);
 
   const workspaces = workspacesQuery.data || [];
 
@@ -60,19 +140,19 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!firstName.trim()) {
       newErrors.firstName = 'First name is required';
     } else if (!/^[a-zA-Z\s]+$/.test(firstName.trim())) {
       newErrors.firstName = 'First name must contain only letters and spaces';
     }
-    
+
     if (!lastName.trim()) {
       newErrors.lastName = 'Last name is required';
     } else if (!/^[a-zA-Z\s]+$/.test(lastName.trim())) {
       newErrors.lastName = 'Last name must contain only letters and spaces';
     }
-    
+
     if (!email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!validateEmail(email)) {
@@ -129,11 +209,11 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
           if (img.width <= 800 && img.height <= 400) {
             setAvatar(file);
             setAvatarPreview(URL.createObjectURL(file));
-      setErrors(prev => {
-        const newErrors = { ...prev };
+            setErrors(prev => {
+              const newErrors = { ...prev };
               delete newErrors.avatar;
-        return newErrors;
-      });
+              return newErrors;
+            });
           } else {
             setErrors(prev => ({ ...prev, avatar: 'Image dimensions must be max 800 x 400px' }));
           }
@@ -222,7 +302,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -230,73 +310,135 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
     setIsSubmitting(true);
 
     try {
-      // Build membership array from workspace assignments
-      const membership = Object.values(workspaceAssignments).map(assignment => {
-        const membershipItem: {
-          workspace_id: string;
-          role: string;
-          bases: Array<{ base_id: string; role: string }>;
-        } = {
-          workspace_id: assignment.workspaceId,
-          role: '',
-          bases: []
+      if (isEditMode && editUser) {
+        // EDIT MODE: Update existing user
+        // 1. Update profile (name)
+        await updateProfileMutation.mutateAsync({
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          display_name: `${firstName.trim()} ${lastName.trim()}`.trim()
+        });
+        
+        // 2. Update avatar if changed
+        if (avatar) {
+          await updateAvatarMutation.mutateAsync(avatar);
+        }
+        
+        // 3. Update access permissions for each workspace
+        // Note: bulkAddMembers replaces existing access for that workspace
+        const workspaceIds = Object.keys(workspaceAssignments);
+        
+        for (const workspaceId of workspaceIds) {
+          const assignment = workspaceAssignments[workspaceId];
+          
+          const membership: {
+            workspace_id: string;
+            role: string;
+            bases: Array<{ base_id: string; role: string }>;
+          } = {
+            workspace_id: workspaceId,
+            role: '',
+            bases: []
+          };
+
+          // If bases are provided, set bases and leave role as empty string
+          if (assignment.role === 'base_specific' && assignment.bases && assignment.bases.length > 0) {
+            membership.bases = assignment.bases.map(base => ({
+              base_id: base.baseId,
+              role: base.role // base-member or base-read
+            }));
+          }
+          // If workspace-level role is assigned, set role and leave bases as empty array
+          else if (assignment.role === 'maintainer' || assignment.role === 'workspace-read') {
+            membership.role = assignment.role;
+          }
+          // Fallback: default to base-member role with empty bases
+          else {
+            membership.role = assignment.role || 'base-member';
+          }
+
+          // Update access for this workspace
+          await bulkAddMembersMutation.mutateAsync({
+            workspaceId,
+            members: [{
+              user_id: editUser.id,
+              memberships: [membership]
+            }]
+          });
+        }
+        
+        toast.success(`User ${firstName} ${lastName} updated successfully`);
+      } else {
+        // ADD MODE: Create new user
+        // Build membership array from workspace assignments
+        const membership = Object.values(workspaceAssignments).map(assignment => {
+          const membershipItem: {
+            workspace_id: string;
+            role: string;
+            bases: Array<{ base_id: string; role: string }>;
+          } = {
+            workspace_id: assignment.workspaceId,
+            role: '',
+            bases: []
+          };
+
+          // If bases are provided, set bases and leave role as empty string
+          if (assignment.role === 'base_specific' && assignment.bases && assignment.bases.length > 0) {
+            membershipItem.bases = assignment.bases.map(base => ({
+              base_id: base.baseId,
+              role: base.role // base-member or base-read
+            }));
+            // role remains empty string when bases are provided
+          }
+          // If workspace-level role is assigned, set role and leave bases as empty array
+          else if (assignment.role === 'maintainer' || assignment.role === 'workspace-read') {
+            membershipItem.role = assignment.role;
+            // bases remains empty array when workspace role is assigned
+          }
+          // Fallback: default to base-member role with empty bases
+          else {
+            membershipItem.role = assignment.role || 'base-member';
+          }
+
+          return membershipItem;
+        });
+
+        // Create user with all data in one call
+        const userPayload = {
+          firstname: firstName.trim(),
+          lastname: lastName.trim(),
+          email: email.trim(),
+          ...(avatar && { profile_pic: avatar }),
+          ...(isCoOwner && { is_coowner: true }),
+          ...(membership.length > 0 && { membership })
         };
 
-        // If bases are provided, set bases and leave role as empty string
-        if (assignment.role === 'base_specific' && assignment.bases && assignment.bases.length > 0) {
-          membershipItem.bases = assignment.bases.map(base => ({
-            base_id: base.baseId,
-            role: base.role // base-member or base-read
-          }));
-          // role remains empty string when bases are provided
-        } 
-        // If workspace-level role is assigned, set role and leave bases as empty array
-        else if (assignment.role === 'maintainer' || assignment.role === 'workspace-read') {
-          membershipItem.role = assignment.role;
-          // bases remains empty array when workspace role is assigned
-        }
-        // Fallback: default to base-member role with empty bases
-        else {
-          membershipItem.role = assignment.role || 'base-member';
-        }
-
-        return membershipItem;
-      });
-
-      // Create user with all data in one call
-      const userPayload = {
-        firstname: firstName.trim(),
-        lastname: lastName.trim(),
-        email: email.trim(),
-        ...(avatar && { profile_pic: avatar }),
-        ...(isCoOwner && { is_coowner: true }),
-        ...(membership.length > 0 && { membership })
-      };
-      
-      await new Promise<void>((resolve, reject) => {
-        addUser(userPayload, {
-          onSuccess: () => resolve(),
-          onError: (error) => reject(error)
+        await new Promise<void>((resolve, reject) => {
+          addUser(userPayload, {
+            onSuccess: () => resolve(),
+            onError: (error) => reject(error)
+          });
         });
-      });
 
-      toast.success(`User ${firstName} ${lastName} added successfully`);
+        toast.success(`User ${firstName} ${lastName} added successfully`);
+      }
 
       // Reset form
-            setFirstName('');
-            setLastName('');
-            setEmail('');
+      setFirstName('');
+      setLastName('');
+      setEmail('');
       setAvatar(null);
       setAvatarPreview(null);
       setIsCoOwner(false);
-            setErrors({});
+      setErrors({});
       setWorkspaceAssignments({});
       setSearchTerm('');
 
-            onClose();
+      onClose();
     } catch (error: any) {
-            const errorMsg = error?.response?.data?.message || error?.message || 'Failed to add user';
-            toast.error(errorMsg);
+      const errorMsg = error?.response?.data?.message || error?.message || 
+        (isEditMode ? 'Failed to update user' : 'Failed to add user');
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -331,8 +473,15 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
               <UserPlus className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-primary">Add Users</h2>
-              <p className="text-sm text-secondary">Add users to collaborate on this project.</p>
+              <h2 className="text-xl font-semibold text-primary">
+                {isEditMode ? 'Edit User' : 'Add Users'}
+              </h2>
+              <p className="text-sm text-secondary">
+                {isEditMode 
+                  ? 'Update user information and access permissions'
+                  : 'Add users to collaborate on this project'
+                }
+              </p>
             </div>
           </div>
           <button
@@ -350,83 +499,81 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
             <div className={`grid grid-cols-1 ${!isCoOwner ? 'lg:grid-cols-2' : ''} gap-6`}>
               {/* Left Column - User Details */}
               <div className="space-y-4 bg-card p-4 lg:p-6">
-                <h3 className="text-sm font-bold text-primary">User Details</h3>
-
                 {/* First Name and Last Name - Side by Side */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* First Name */}
-          <div>
+                  {/* First Name */}
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       First Name <span className="text-red-500">*</span>
                     </label>
-            <input
-              type="text"
-              value={firstName}
-              onChange={(e) => {
-                setFirstName(e.target.value);
-                if (errors.firstName) {
-                  setErrors(prev => {
-                    const newErrors = { ...prev };
-                    delete newErrors.firstName;
-                    return newErrors;
-                  });
-                }
-              }}
-              placeholder="Enter first name"
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => {
+                        setFirstName(e.target.value);
+                        if (errors.firstName) {
+                          setErrors(prev => {
+                            const newErrors = { ...prev };
+                            delete newErrors.firstName;
+                            return newErrors;
+                          });
+                        }
+                      }}
+                      placeholder="Enter first name"
                       className={`w-full text-sm px-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all ${errors.firstName ? 'border-red-500' : 'border'
-              }`}
-            />
-            {errors.firstName && (
-              <p className="mt-1 text-xs text-red-500">{errors.firstName}</p>
-            )}
-          </div>
+                        }`}
+                    />
+                    {errors.firstName && (
+                      <p className="mt-1 text-xs text-red-500">{errors.firstName}</p>
+                    )}
+                  </div>
 
-          {/* Last Name */}
-          <div>
+                  {/* Last Name */}
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Last Name <span className="text-red-500">*</span>
                     </label>
-            <input
-              type="text"
-              value={lastName}
-              onChange={(e) => {
-                setLastName(e.target.value);
-                if (errors.lastName) {
-                  setErrors(prev => {
-                    const newErrors = { ...prev };
-                    delete newErrors.lastName;
-                    return newErrors;
-                  });
-                }
-              }}
-              placeholder="Enter last name"
-                      className={`w-full text-sm px-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all ${errors.lastName ? 'border-red-500' : 'border'
-              }`}
-            />
-            {errors.lastName && (
-              <p className="mt-1 text-xs text-red-500">{errors.lastName}</p>
-            )}
-                  </div>
-          </div>
-
-          {/* Email */}
-          <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email address <span className="text-red-500">*</span>
-            </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="email"
-              value={email}
+                    <input
+                      type="text"
+                      value={lastName}
                       onChange={(e) => {
-                        setEmail(e.target.value);
-                        if (errors.email) {
+                        setLastName(e.target.value);
+                        if (errors.lastName) {
                           setErrors(prev => {
                             const newErrors = { ...prev };
-                            delete newErrors.email;
+                            delete newErrors.lastName;
                             return newErrors;
                           });
+                        }
+                      }}
+                      placeholder="Enter last name"
+                      className={`w-full text-sm px-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all ${errors.lastName ? 'border-red-500' : 'border'
+                        }`}
+                    />
+                    {errors.lastName && (
+                      <p className="mt-1 text-xs text-red-500">{errors.lastName}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email address <span className="text-red-500">*</span>
+                  </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => {
+                        if (!isEditMode) {
+                          setEmail(e.target.value);
+                          if (errors.email) {
+                            setErrors(prev => {
+                              const newErrors = { ...prev };
+                              delete newErrors.email;
+                              return newErrors;
+                            });
+                          }
                         }
                       }}
                       onBlur={() => {
@@ -434,15 +581,15 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
                           setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
                         }
                       }}
-              placeholder="Enter email address"
-                      className={`w-full text-sm pl-10 pr-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all ${errors.email ? 'border-red-500' : 'border'
-              }`}
-            />
-                  </div>
-            {errors.email && (
-              <p className="mt-1 text-xs text-red-500">{errors.email}</p>
-            )}
-          </div>
+                      disabled={isEditMode}
+                      placeholder="Enter email address"
+                      className={`w-full text-sm px-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all ${errors.email ? 'border-red-500' : 'border'
+                        } ${isEditMode ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                    />
+                  {errors.email && (
+                    <p className="mt-1 text-xs text-red-500">{errors.email}</p>
+                  )}
+                </div>
 
                 {/* Profile Image */}
                 <div>
@@ -531,11 +678,11 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
                   <button
                     type="button"
                     onClick={() => setIsCoOwner(!isCoOwner)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isCoOwner ? 'bg-brand-600' : 'bg-gray-300'
+                    className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors ${isCoOwner ? 'bg-brand-600' : 'bg-gray-300'
                       }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${isCoOwner ? 'translate-x-6' : 'translate-x-1'
+                      className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${isCoOwner ? 'translate-x-5' : 'translate-x-1'
                         }`}
                     />
                   </button>
@@ -605,15 +752,15 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
             type="submit"
             form="add-user-form"
             disabled={!isValid || isSubmitting || isAddingUser}
-            className="flex items-center gap-2 px-6 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="flex items-center gap-2 px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             {(isSubmitting || isAddingUser) ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Adding...
+                {isEditMode ? 'Updating...' : 'Adding...'}
               </>
             ) : (
-              'Add'
+              isEditMode ? 'Update' : 'Add'
             )}
           </button>
         </div>

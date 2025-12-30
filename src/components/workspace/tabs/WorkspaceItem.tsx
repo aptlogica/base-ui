@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { useWorkspaceBases } from '../../../hooks/useApi';
 import { RoleDropdown } from '../../common/dropdown/RoleDropdown';
 
@@ -54,17 +54,33 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
             {baseCount} Base{baseCount !== 1 ? 's' : ''}
           </span>
         </div>
-        <RoleDropdown
-          value={assignment?.role || ''}
-          options={workspaceRoleOptions}
-          onChange={(value) => {
-            onRoleChange(
-              workspace.id,
-              value === '' ? null : value as 'maintainer' | 'workspace-read' | 'base_specific'
-            );
-          }}
-          placeholder="Select a role"
-        />
+        <div className="flex items-center gap-2">
+          <RoleDropdown
+            value={assignment?.role || ''}
+            options={workspaceRoleOptions}
+            onChange={(value) => {
+              onRoleChange(
+                workspace.id,
+                value === '' ? null : value as 'maintainer' | 'workspace-read' | 'base_specific'
+              );
+            }}
+            placeholder="Select a role"
+          />
+          {assignment?.role && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRoleChange(workspace.id, null);
+              }}
+              className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              title="Clear selection"
+              aria-label="Clear role selection"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Bases List (when Base Specific Role is selected) */}
@@ -87,24 +103,41 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
                   <span className="text-xs text-gray-700">
                     {base.title || base.name}
                   </span>
-                  <RoleDropdown
-                    value={baseAssignment?.role || ''}
-                    options={baseRoleOptions}
-                    onChange={(value) => {
-                      if (!isBaseSelected) {
-                        // If base is not selected yet, toggle it first
-                        onToggleBase(workspace.id, base.id);
-                      }
-                      // Then set the role
-                      onBaseRoleChange(
-                        workspace.id,
-                        base.id,
-                        value as 'base-member' | 'base-read'
-                      );
-                    }}
-                    placeholder="Select a role"
-                    className="min-w-[120px]"
-                  />
+                  <div className="flex items-center gap-2">
+                    <RoleDropdown
+                      value={baseAssignment?.role || ''}
+                      options={baseRoleOptions}
+                      onChange={(value) => {
+                        if (!isBaseSelected) {
+                          // If base is not selected yet, toggle it first
+                          onToggleBase(workspace.id, base.id);
+                        }
+                        // Then set the role
+                        onBaseRoleChange(
+                          workspace.id,
+                          base.id,
+                          value as 'base-member' | 'base-read'
+                        );
+                      }}
+                      placeholder="Select a role"
+                      className="min-w-[120px]"
+                    />
+                    {isBaseSelected && baseAssignment?.role && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Remove base from selection
+                          onToggleBase(workspace.id, base.id);
+                        }}
+                        className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Clear selection"
+                        aria-label="Clear base role selection"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })

@@ -16,6 +16,7 @@ import {
   deleteBaseService,
   getAllBasesService,
   getBaseMembersService,
+  removeBaseAccessMemberService,
   // New table API services
   createTableService,
   getTableByIdService,
@@ -45,6 +46,9 @@ import {
   assignUserToWorkspaceService,
   bulkAddMembersService,
   removeUserFromWorkspaceService,
+  bulkAddBaseMembersService,
+  
+  removeAccessMemberService,
   getUserAccessDetailsService,
   getUserRolesAndAccessService,
   // Tenant API services
@@ -104,7 +108,7 @@ export const useWorkspaces = () => {
   const location = useLocation();
 
   // Public routes that don't need workspace data
-  const publicRoutes = ['/login', '/register', '/registervalidation', '/forgot-password', '/reset-password', '/auth/callback'];
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
   const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
 
   return useQuery({
@@ -215,6 +219,57 @@ export const useWorkspaceMembers = (workspaceId: string) => {
     enabled: !!workspaceId,
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
+  });
+};
+
+export const useBulkAddBaseMembers = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      baseId: string;
+      workspaceId: string;
+      members: Array<{
+        user_id: string;
+        role: string;
+      }>;
+    }) => {
+      return await bulkAddBaseMembersService(params.baseId, { workspaceId: params.workspaceId, members: params.members });
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate base members query to refresh the list
+      queryClient.invalidateQueries({
+        queryKey: ['base', variables.baseId, 'members']
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['bases']
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['workspaces']
+      });
+    },
+  });
+};
+
+export const useRemoveBaseAccessMember = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      baseId: string;
+      accessId: string;
+    }) => {
+      return await removeBaseAccessMemberService(params.baseId, params.accessId);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate base members query to refresh the list
+      queryClient.invalidateQueries({
+        queryKey: ['base', variables.baseId, 'members']
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['bases']
+      });
+    },
   });
 };
 
@@ -1436,6 +1491,28 @@ export const useBulkAddMembers = () => {
     onError: (error: any) => {
       console.error('❌ Bulk add members failed:', error);
     }
+  });
+};
+
+export const useRemoveAccessMember = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      workspaceId: string;
+      accessId: string;
+    }) => {
+      return await removeAccessMemberService(params.workspaceId, params.accessId);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate workspace members query to refresh the list
+      queryClient.invalidateQueries({
+        queryKey: ['workspaceMembers', variables.workspaceId]
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['workspaces']
+      });
+    },
   });
 };
 

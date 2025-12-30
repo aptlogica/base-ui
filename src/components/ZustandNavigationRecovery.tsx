@@ -82,7 +82,6 @@ export const NavigationRecovery: React.FC = () => {
   // Routes we should not hijack with recovery (but we still allow auto-select from /workspace)
   const excludedRoutes = [
     '/login',
-    '/register',
     '/forgot-password',
     '/reset-password',
     '/projects'
@@ -397,7 +396,7 @@ export const NavigationRecovery: React.FC = () => {
 
   // Don't run on public routes (login, register, etc.)
   const currentPath = location.pathname;
-  const publicRoutes = ['/login', '/register', '/registervalidation', '/forgot-password', '/reset-password'];
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password'];
   const isPublicRoute = publicRoutes.some(route => currentPath === route || currentPath.startsWith(route + '/'));
   
   // Early return for public routes - don't interfere with login page

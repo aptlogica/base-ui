@@ -10,7 +10,7 @@ import { CreateBaseModal } from '../components/modals/CreateBaseModal';
 import { ImportDataModal } from '../components/modals/ImportDataModal';
 import { ImportModal } from '../components/modals/ImportModal';
 import { EditItemModal } from '../components/modals/EditItemModal';
-import { AssignUserToWorkspaceModal } from '../components/modals/AssignUserToWorkspaceModal';
+import { AddBaseMembersModal } from '../components/modals/AddBaseMembersModal';
 import { BaseMenu } from '../components/common/BaseMenu';
 
 // Wrapper component to handle hooks properly
@@ -250,15 +250,27 @@ const HomePage: React.FC = () => {
       toast.success('Base created successfully');
       setShowCreateBase(false);
       
-      // Navigate to the new base's first view
-      if (newBase?.data?.id) {
-        // Use the navigation hook to go to first table/view
+      // Navigate to the new base
+      const baseId = newBase?.data?.id;
+      if (baseId) {
         try {
-          await navigateToFirstView(newBase.data.id);
+          // Update navigation store first
+          const { navigateToBase } = useNavigationStore.getState();
+          navigateToBase(selectedWorkspaceId, baseId);
+          
+          // Try to navigate to first view, but fallback to base page if no tables exist
+          await navigateToFirstView(baseId);
         } catch (err) {
-          // If navigation fails, just go to homepage
-          navigate('/homepage');
+          console.error('Navigation error after base creation:', err);
+          // Fallback: navigate directly to base page
+          const { navigateToBase } = useNavigationStore.getState();
+          navigateToBase(selectedWorkspaceId, baseId);
+          navigate(`/base/${baseId}`);
         }
+      } else {
+        console.error('Base created but no ID in response:', newBase);
+        // If no ID, just refresh the homepage
+        navigate('/homepage');
       }
     } catch (err: any) {
       toast.error(err?.message || 'Failed to create base. Please try again.');
@@ -521,7 +533,7 @@ const HomePage: React.FC = () => {
                 {/* Top Section: Icon, Title, Description, Menu */}
                 <div className="flex items-start gap-3 border-b p-5">
                   {/* Icon on left */}
-                  <div className={`w-12 h-12 border rounded-xl ${icon.color} flex items-center justify-center text-white font-semibold text-base flex-shrink-0 shadow-sm`}>
+                  <div className={`w-12 h-12 border rounded-xl ${icon.color} flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-xs`}>
                     {icon.letter}
                   </div>
                   
@@ -690,7 +702,7 @@ const HomePage: React.FC = () => {
 
       {/* Add Members Modal */}
       {showAddMembers && baseForMembers && (
-        <AssignUserToWorkspaceModal
+        <AddBaseMembersModal
           isOpen={showAddMembers}
           onClose={() => {
             setShowAddMembers(false);
