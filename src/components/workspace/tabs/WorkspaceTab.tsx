@@ -33,7 +33,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
   const workspaceMembersQuery = useWorkspaceMembers(selectedWorkspaceId);
   const removeAccessMemberMutation = useRemoveAccessMember();
   const toast = useToast();
-  const { canCreateWorkspace, canAssignUsers } = useWorkspaceAccess(selectedWorkspaceId);
+  const { canCreateWorkspace, canAssignUsers, isFullAccess, isWorkspaceReadOnly } = useWorkspaceAccess(selectedWorkspaceId);
   const { isAdmin } = useUserRole();
 
   const workspaces = workspacesQuery.data || [];
@@ -270,7 +270,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
 
         {/* Edit Details and Create Workspace Buttons */}
         <div className="flex items-center gap-3">
-          {selectedWorkspaceId && selectedWorkspace && isAdmin() && (
+          {selectedWorkspaceId && selectedWorkspace && (isAdmin() || isFullAccess) && !isWorkspaceReadOnly() && (
             <button
               onClick={() => setIsEditModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 text-sm border rounded-xl text-primary hover:bg-gray-100 transition-colors"
@@ -279,7 +279,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
               Edit Details
             </button>
           )}
-          {canCreateWorkspace() && (
+          {canCreateWorkspace() && !isWorkspaceReadOnly() && (
             <button
               onClick={() => setIsCreateWorkspaceModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 btn-primary text-sm"
@@ -318,11 +318,11 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
               roleConfig={defaultRoleConfig}
               onRoleChange={handleRoleChange}
               onCopyUserId={handleCopyUserId}
-              onRemoveMember={canAssignUsers() ? handleRemoveMember : undefined}
-              onEditMember={canAssignUsers() ? handleEditMember : undefined}
+              onRemoveMember={canAssignUsers() && !isWorkspaceReadOnly() ? handleRemoveMember : undefined}
+              onEditMember={canAssignUsers() && !isWorkspaceReadOnly() ? handleEditMember : undefined}
               showSearch={true}
               headerActions={
-                canAssignUsers() ? (
+                canAssignUsers() && !isWorkspaceReadOnly() ? (
                   <button
                     onClick={() => setIsAssignUserModalOpen(true)}
                     className="flex items-center gap-2 px-4 py-2 btn-primary text-sm"

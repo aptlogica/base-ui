@@ -3,6 +3,15 @@ import { ROLES } from '../types/roles';
 /**
  * Hook to check user roles from JWT token
  * Token contains roles field (string) that we parse
+ * 
+ * Role values from JWT token:
+ * - "owner" (ROLES.Owner)
+ * - "co-owner" (ROLES.CoOwner)
+ * - "maintainer" (ROLES.WorkspaceMaintainer)
+ * - "workspace-read" (ROLES.WorkspaceMaintainerRO)
+ * - "base-member" (ROLES.BaseMember)
+ * - "base-read" (ROLES.BaseMemberReadOnly)
+ * - "user" (ROLES.NoAccess)
  */
 export function useUserRole() {
   const getRole = (): string | null => {
@@ -29,15 +38,40 @@ export function useUserRole() {
     return hasRole(ROLES.Owner);
   };
 
-  // Keep isAdmin for backward compatibility (maps to owner)
+  const isCoOwner = (): boolean => {
+    return hasRole(ROLES.CoOwner);
+  };
+
+  const isMaintainer = (): boolean => {
+    return hasRole(ROLES.WorkspaceMaintainer);
+  };
+
+  const isBaseMember = (): boolean => {
+    return hasRole(ROLES.BaseMember);
+  };
+
+  const hasAdminRole = (): boolean => {
+    return isOwner() || isCoOwner();
+  };
+
+  const hasFullAccessRole = (): boolean => {
+    return hasAdminRole() || isMaintainer();
+  };
+
+  // Keep isAdmin for backward compatibility (maps to owner or co-owner)
   const isAdmin = (): boolean => {
-    return isOwner();
+    return hasAdminRole();
   };
 
   return {
     getRole,
     hasRole,
     isOwner,
+    isCoOwner,
+    isMaintainer,
+    isBaseMember,
+    hasAdminRole,
+    hasFullAccessRole,
     isAdmin, // Backward compatibility
   };
 }

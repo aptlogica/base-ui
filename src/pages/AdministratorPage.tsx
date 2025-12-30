@@ -8,7 +8,7 @@ import { useWorkspaceAccess } from '../hooks/useWorkspaceAccess';
 
 const AdministratorPage: React.FC = () => {
   const { workspaceId } = useParams<{ workspaceId: string }>();
-  const { canAccessAllSettingsTabs } = useWorkspaceAccess(workspaceId);
+  const { canAccessAllSettingsTabs, isWorkspaceReadOnly } = useWorkspaceAccess(workspaceId);
   const [searchParams, setSearchParams] = useSearchParams();
 
 
@@ -19,7 +19,12 @@ const AdministratorPage: React.FC = () => {
     { key: 'workspaces', label: 'Workspaces', icon: 'Database' },
   ];
 
-  const tabs = canAccessAllSettingsTabs()
+  // workspace-read users only see Workspace tab
+  // admin users see all tabs
+  // maintainer/full_access users see only Workspaces tab
+  const tabs = isWorkspaceReadOnly()
+    ? allTabs.filter(tab => tab.key === 'workspaces')
+    : canAccessAllSettingsTabs()
     ? allTabs
     : allTabs.filter(tab => tab.key === 'workspaces');
 
@@ -56,14 +61,14 @@ const AdministratorPage: React.FC = () => {
 
   // Update active tab if access level changes (and current tab becomes invalid)
   useEffect(() => {
-    if (!canAccessAllSettingsTabs() && activeTab !== 'workspaces') {
+    if ((isWorkspaceReadOnly() || !canAccessAllSettingsTabs()) && activeTab !== 'workspaces') {
       setSearchParams(prev => {
         const newParams = new URLSearchParams(prev);
         newParams.delete('tab'); // Remove tab param to use default 'workspaces'
         return newParams;
       }, { replace: true });
     }
-  }, [canAccessAllSettingsTabs, activeTab, setSearchParams]);
+  }, [isWorkspaceReadOnly, canAccessAllSettingsTabs, activeTab, setSearchParams]);
 
   if (!workspaceId) {
     return (
