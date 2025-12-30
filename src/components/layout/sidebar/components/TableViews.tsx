@@ -23,7 +23,7 @@ export const TableViews: React.FC<TableViewsProps> = ({
   setViewsRefetchTrigger
 }) => {
   const updateTable = useUpdateTable();
-  const { canCreateView } = useWorkspaceAccess(table.workspace_id);
+  const { canCreateView, isWorkspaceReadOnly } = useWorkspaceAccess(table.workspace_id);
   const [pinnedViews, setPinnedViews] = React.useState<PinnedViews>(() => {
     return table.meta?.pinnedViews || {};
   });
@@ -119,7 +119,7 @@ export const TableViews: React.FC<TableViewsProps> = ({
   return (
     <div className="mb-2">
       {/* Create View Button - only show for admin and full_access users */}
-      {canCreateView() && (
+      {canCreateView() && !isWorkspaceReadOnly() && (
         <CreateViewButton
           table={table}
           onOpenModal={(type) => {
@@ -157,48 +157,50 @@ export const TableViews: React.FC<TableViewsProps> = ({
               )}
             </div>
             {/* Three dots menu for view */}
-            <div className='flex items-center gap-2'>
-              <ViewOptionsMenu
-                view={view}
-                workspaceId={table.workspace_id}
-                align="auto"
-                isPinned={pinnedViews[view.id] || false}
-                onPinToggle={handlePinToggle}
-                onRename={async (newName) => {
-                  try {
-                    // Trigger refetch to update UI with new view name
-                    if (setViewsRefetchTrigger) {
-                      setViewsRefetchTrigger(prev => prev + 1);
+            {!isWorkspaceReadOnly() && (
+              <div className='flex items-center gap-2'>
+                <ViewOptionsMenu
+                  view={view}
+                  workspaceId={table.workspace_id}
+                  align="auto"
+                  isPinned={pinnedViews[view.id] || false}
+                  onPinToggle={handlePinToggle}
+                  onRename={async (newName) => {
+                    try {
+                      // Trigger refetch to update UI with new view name
+                      if (setViewsRefetchTrigger) {
+                        setViewsRefetchTrigger(prev => prev + 1);
+                      }
+                    } catch (err) {
+                      console.error('Failed to rename view:', err);
                     }
-                  } catch (err) {
-                    console.error('Failed to rename view:', err);
-                  }
-                }}
-                onEditDescription={async (description) => {
-                  try {
-                    // Trigger refetch to update UI with new view description
-                    if (setViewsRefetchTrigger) {
-                      setViewsRefetchTrigger(prev => prev + 1);
+                  }}
+                  onEditDescription={async (description) => {
+                    try {
+                      // Trigger refetch to update UI with new view description
+                      if (setViewsRefetchTrigger) {
+                        setViewsRefetchTrigger(prev => prev + 1);
+                      }
+                    } catch (err) {
+                      console.error('Failed to update view description:', err);
                     }
-                  } catch (err) {
-                    console.error('Failed to update view description:', err);
-                  }
-                }}
-                onDelete={async () => {
-                  try {
-                    // handleViewDeletion will trigger views refetch
-                    // The useEffect will then clean up the pinnedViews automatically
-                    handleViewDeletion(view);
-                  } catch (err) {
-                    console.error('Failed to delete view:', err);
-                  }
-                }}
-                onEditingChange={(isEditing) => {
-                  setEditingViewId(isEditing ? view.id : null);
-                }}
-                portaled={true}
-              />
-            </div>
+                  }}
+                  onDelete={async () => {
+                    try {
+                      // handleViewDeletion will trigger views refetch
+                      // The useEffect will then clean up the pinnedViews automatically
+                      handleViewDeletion(view);
+                    } catch (err) {
+                      console.error('Failed to delete view:', err);
+                    }
+                  }}
+                  onEditingChange={(isEditing) => {
+                    setEditingViewId(isEditing ? view.id : null);
+                  }}
+                  portaled={true}
+                />
+              </div>
+            )}
           </div>
         );
       })}

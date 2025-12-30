@@ -11,7 +11,7 @@ const HeaderMembers: React.FC = () => {
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const { selectedBaseId, selectedWorkspaceId } = useNavigationStore();
   const baseMembersQuery = useBaseMembers(selectedBaseId || '');
-  const { canAssignUsers } = useWorkspaceAccess(selectedWorkspaceId || '');
+  const { canAssignUsers, isWorkspaceReadOnly } = useWorkspaceAccess(selectedWorkspaceId || '');
 
   // Route-based visibility check
   const isRouteVisible = useComponentVisibility(COMPONENT_IDS.HEADER_MEMBERS);
@@ -44,20 +44,26 @@ const HeaderMembers: React.FC = () => {
   // 1. Route-based visibility (handled by RouteContext)
   // 2. Role-based permission (user can assign members)
   // 3. Base must be selected
-  if (!isRouteVisible || !canAssignUsers() || !selectedBaseId) {
+  if (!isRouteVisible || !selectedBaseId) {
     return null;
   }
 
   return (
     <>
       <div className="flex items-center gap-3">
-        <button
-          onClick={() => setShowAddMemberModal(true)}
-          className="p-2.5 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          <UserPlus className="w-4 h-4" />
-          {/* Add Member */}
-        </button>
+        {isWorkspaceReadOnly() ? (
+          <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border">Read Only</span>
+        ) : (
+          canAssignUsers() && (
+            <button
+              onClick={() => setShowAddMemberModal(true)}
+              className="p-2.5 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              {/* Add Member */}
+            </button>
+          )
+        )}
         <div className="h-6 w-px bg-gray-300"></div>
         <UserAvatarStack
           users={members}
@@ -67,7 +73,7 @@ const HeaderMembers: React.FC = () => {
       </div>
 
       {/* Add Member Modal */}
-      {showAddMemberModal && selectedBaseId && selectedWorkspaceId && (
+      {!isWorkspaceReadOnly() && showAddMemberModal && selectedBaseId && selectedWorkspaceId && (
         <AssignUserToWorkspaceModal
           isOpen={showAddMemberModal}
           onClose={() => setShowAddMemberModal(false)}

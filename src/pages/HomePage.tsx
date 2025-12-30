@@ -46,7 +46,7 @@ const HomePage: React.FC = () => {
   const { selectedWorkspaceId } = useNavigationStore();
   const { data: workspaceBasesData, isLoading: basesLoading } = useWorkspaceBases(selectedWorkspaceId || '');
   const toast = useToast();
-  const { canCreateBase } = useWorkspaceAccess(selectedWorkspaceId || undefined);
+  const { canCreateBase, accessLevel, isWorkspaceReadOnly } = useWorkspaceAccess(selectedWorkspaceId || undefined);
   const createBaseMutation = useCreateBase();
   const { navigateToFirstView } = useNavigateToBaseFirstView();
 
@@ -376,40 +376,41 @@ const HomePage: React.FC = () => {
 
           {/* Right Side - Action Cards */}
           <div className="flex flex-col sm:flex-row gap-4 flex-shrink-0 w-full lg:w-auto">
-            {/* Create New Base */}
-            <div
-              onClick={() => {
-                if (!selectedWorkspaceId) {
-                  toast.error('Please select a workspace first');
-                  return;
-                }
-                if (!canCreateBase()) {
-                  toast.error('You do not have permission to create bases');
-                  return;
-                }
-                setShowCreateBase(true);
-              }}
-              className="rounded-xl bg-card border px-5 py-5 flex flex-col items-start cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px]"
-            >
-              <div className="w-10 h-10 rounded-xl bg-card border flex items-center justify-center mb-3">
-                <Plus className="w-5 h-5 text-gray-900" />
-              </div>
-              <div className="font-semibold text-sm text-gray-900 mb-0.5">Create New Base</div>
-              <div className="text-xs text-gray-600">Creates a new base.</div>
+          {/* Create New Base - Hidden if access level is base-member */}
+          {accessLevel !== 'limited_access' && (
+          <div
+            onClick={() => {
+              if (!selectedWorkspaceId) {
+                toast.error('Please select a workspace first');
+                return;
+              }
+              if (!canCreateBase()) {
+                toast.error('You do not have permission to create bases');
+                return;
+              }
+              setShowCreateBase(true);
+            }}
+            className="rounded-xl bg-card border px-5 py-5 flex flex-col items-start cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px]"
+          >
+            <div className="w-10 h-10 rounded-xl bg-card border flex items-center justify-center mb-3">
+              <Plus className="w-5 h-5 text-gray-900" />
             </div>
+            <div className="font-semibold text-sm text-gray-900 mb-0.5">Create New Base</div>
+            <div className="text-xs text-gray-600">Creates a new base.</div>
+          </div>
+          )}
 
-            {/* Import Data */}
-            <div
-              onClick={() => setShowImportData(true)}
-              className="rounded-xl bg-card border px-5 py-5 flex flex-col items-start cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px]"
-            >
-              <div className="w-10 h-10 rounded-xl bg-card border flex items-center justify-center mb-3">
-                <Download className="w-5 h-5 text-gray-900" />
-              </div>
-              <div className="font-semibold text-sm text-gray-900 mb-0.5">Import Data</div>
-              <div className="text-xs text-gray-600">Imports external data.</div>
+          {/* Import Data - Hidden if access level is base-member */}
+          {accessLevel !== 'limited_access' && (
+          <div
+            onClick={() => setShowImportData(true)}
+            className="rounded-xl bg-card border px-5 py-5 flex flex-col items-start cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px]"
+          >
+            <div className="w-10 h-10 rounded-xl bg-card border flex items-center justify-center mb-3">
+              <Download className="w-5 h-5 text-gray-900" />
             </div>
           </div>
+          )}
         </div>
       </div>
 
@@ -555,12 +556,16 @@ const HomePage: React.FC = () => {
                       >
                         {base.title || base.name || 'Untitled Base'}
                       </h3>
-                      <BaseMenuWrapper
-                        base={base}
-                        onEdit={handleEditBase}
-                        onAddMembers={handleAddMembers}
-                        onDelete={handleDeleteBase}
-                      />
+                      {isWorkspaceReadOnly() ? (
+                          <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border">Read Only</span>
+                      ) : (
+                        <BaseMenuWrapper
+                          base={base}
+                          onEdit={handleEditBase}
+                          onAddMembers={handleAddMembers}
+                          onDelete={handleDeleteBase}
+                        />
+                      )}
                     </div>
                     <p
                       onClick={() => handleBaseClick(base)}
