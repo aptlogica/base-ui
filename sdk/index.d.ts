@@ -357,8 +357,9 @@ declare class WorkspaceService {
 
 interface CreateBase {
     title: string;
-    description?: string;
-    workspace_id?: string;
+    description: string;
+    workspace_id: string;
+    image?: File | Blob;
 }
 interface UpdateBase {
     title?: string;
@@ -427,6 +428,16 @@ declare class BaseService {
      * DELETE /base/:id/access/:id
      */
     removeAccessMember(baseId: string, accessId: string): Promise<StandardResponse<any>>;
+    /**
+     * Upload or update base image
+     * POST /base/:id/image
+     */
+    uploadImage(id: string, imageFile: File): Promise<StandardResponse<any>>;
+    /**
+     * Delete base image
+     * DELETE /base/:id/image
+     */
+    deleteImage(id: string): Promise<StandardResponse<any>>;
 }
 
 interface CreateTable {

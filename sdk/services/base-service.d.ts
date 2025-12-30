@@ -53,5 +53,15 @@ export declare class BaseService {
      * DELETE /base/:id/access/:id
      */
     removeAccessMember(baseId: string, accessId: string): Promise<import("..").StandardResponse<any>>;
+    /**
+     * Upload or update base image
+     * POST /base/:id/image
+     */
+    uploadImage(id: string, imageFile: File): Promise<import("..").StandardResponse<any>>;
+    /**
+     * Delete base image
+     * DELETE /base/:id/image
+     */
+    deleteImage(id: string): Promise<import("..").StandardResponse<any>>;
 }
 //# sourceMappingURL=base-service.d.ts.map
