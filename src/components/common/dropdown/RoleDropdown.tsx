@@ -143,7 +143,7 @@ export const RoleDropdown: React.FC<RoleDropdownProps> = ({
             e.stopPropagation();
             setIsOpen(!isOpen);
           }}
-          className="w-full text-xs px-3 py-1.5 border rounded-xl gap-1 bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-gray-700 flex items-center justify-between transition-all"
+          className="w-full text-xs px-3 py-2.5 border rounded-xl gap-1 bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-gray-700 flex items-center justify-between transition-all"
           data-dropdown-trigger="true"
         >
           <span>{selectedOption ? selectedOption.label : placeholder}</span>

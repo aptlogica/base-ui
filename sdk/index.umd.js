@@ -322,8 +322,23 @@
          * Create new base (database)
          * POST /base/create
          */
-        create(params) {
-            return this.http.post(`/base/create`, params);
+        async create(params) {
+            const formData = new FormData();
+            formData.append('title', params.title);
+            if (params.description) {
+                formData.append('description', params.description);
+            }
+            if (params.workspace_id) {
+                formData.append('workspace_id', params.workspace_id);
+            }
+            if (params.image) {
+                formData.append('image', params.image);
+            }
+            return this.http.post(`/base/create`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
         }
         /**
          * Get base by ID
@@ -387,6 +402,26 @@
          */
         removeAccessMember(baseId, accessId) {
             return this.http.delete(`/base/${baseId}/access/${accessId}`);
+        }
+        /**
+         * Upload or update base image
+         * POST /base/:id/image
+         */
+        uploadImage(id, imageFile) {
+            const formData = new FormData();
+            formData.append('image', imageFile);
+            return this.http.post(`/base/${id}/image`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+        }
+        /**
+         * Delete base image
+         * DELETE /base/:id/image
+         */
+        deleteImage(id) {
+            return this.http.delete(`/base/${id}/image`);
         }
     }
 

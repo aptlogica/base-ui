@@ -372,7 +372,7 @@ const Breadcrumb: React.FC = () => {
       } else {
         console.error('Base created but no ID in response:', newBase);
         // If no ID, just refresh the homepage
-        navigate('/homepage');
+          navigate('/homepage');
       }
     } catch (err: any) {
       toast.error(err?.message || 'Failed to create base. Please try again.');

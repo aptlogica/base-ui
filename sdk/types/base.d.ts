@@ -1,8 +1,9 @@
 import { MembershipRequest } from "./user";
 export interface CreateBase {
     title: string;
-    description?: string;
-    workspace_id?: string;
+    description: string;
+    workspace_id: string;
+    image?: File | Blob;
 }
 export interface UpdateBase {
     title?: string;

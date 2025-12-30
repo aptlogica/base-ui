@@ -83,6 +83,7 @@ const WorkspaceSettingsPage: React.FC = () => {
         dateJoined: member.created_time ? new Date(member.created_time).toLocaleDateString() : '-',
         avatar: member.avatar || undefined,
         access_level: member.access_level, // Pass raw access_level from API
+        roles: member.roles || undefined, // Pass roles array from API (same structure as UserTable)
       };
     });
   }, [workspaceMembersQuery.data]);
