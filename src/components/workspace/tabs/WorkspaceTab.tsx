@@ -117,6 +117,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
         access_level: member.access_level, // Pass raw access_level from API
         last_active_at: member.last_active_at || undefined,
         last_login_at: member.last_login_at || undefined,
+        roles: member.roles || undefined, // Pass roles array from API (same structure as UserTable)
       };
     });
   }, [workspaceMembersQuery.data]);

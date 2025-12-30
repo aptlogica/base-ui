@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, UserPlus, CloudUpload, Search, Loader2 } from 'lucide-react';
-import { 
-  useAddTenantUser, 
-  useWorkspaces, 
+import {
+  useAddTenantUser,
+  useWorkspaces,
   useUserRolesAndAccess,
   useUpdateUserProfile,
   useAddOrUpdateAvatar,
@@ -20,7 +20,7 @@ interface AddUserModalProps {
 
 export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, editUser = null }) => {
   const isEditMode = !!editUser;
-  
+
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -35,7 +35,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
   const { mutate: addUser, isPending: isAddingUser } = useAddTenantUser();
   const workspacesQuery = useWorkspaces();
   const toast = useToast();
-  
+
   // Edit mode hooks
   const { data: userAccessData } = useUserRolesAndAccess(editUser?.id || null);
   const updateProfileMutation = useUpdateUserProfile(editUser?.id || '');
@@ -50,14 +50,14 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
         setFirstName(editUser.first_name || '');
         setLastName(editUser.last_name || '');
         setEmail(editUser.email || '');
-        
+
         // Check if user is co-owner
         const roles = Array.isArray(editUser.roles) ? editUser.roles : [];
-        const isCoOwnerRole = roles.some((r: any) => 
+        const isCoOwnerRole = roles.some((r: any) =>
           r.name === 'co-owner' || r.name === 'Co-owner' || r.name === 'co_owner'
         );
         setIsCoOwner(isCoOwnerRole);
-        
+
         // Load avatar preview if exists
         if (editUser.avatar) {
           setAvatarPreview(editUser.avatar);
@@ -65,7 +65,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
           setAvatarPreview(null);
         }
         setAvatar(null); // Reset file input
-        
+
         setErrors({});
         setSearchTerm('');
         setIsSubmitting(false);
@@ -84,16 +84,16 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
       }
     }
   }, [isOpen, isEditMode, editUser]);
-  
+
   // Load workspace assignments when userAccessData is available
   useEffect(() => {
     if (isEditMode && userAccessData && Array.isArray(userAccessData)) {
       const assignments: Record<string, WorkspaceAssignment> = {};
-      
+
       userAccessData.forEach((workspaceAccess: any) => {
         const workspaceId = workspaceAccess.workspace_id;
         const workspaceAccessLevel = workspaceAccess.access || '';
-        
+
         // Determine role based on access data
         // If access is empty string and bases exist, it's base_specific
         // If access has a value, it's a workspace-level role
@@ -106,7 +106,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
           // Empty access string with bases means base-specific role
           role = 'base_specific';
         }
-        
+
         assignments[workspaceId] = {
           workspaceId,
           role,
@@ -116,7 +116,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
           })) || []
         };
       });
-      
+
       setWorkspaceAssignments(assignments);
     }
   }, [isEditMode, userAccessData]);
@@ -318,19 +318,19 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
           last_name: lastName.trim(),
           display_name: `${firstName.trim()} ${lastName.trim()}`.trim()
         });
-        
+
         // 2. Update avatar if changed
         if (avatar) {
           await updateAvatarMutation.mutateAsync(avatar);
         }
-        
+
         // 3. Update access permissions for each workspace
         // Note: bulkAddMembers replaces existing access for that workspace
         const workspaceIds = Object.keys(workspaceAssignments);
-        
+
         for (const workspaceId of workspaceIds) {
           const assignment = workspaceAssignments[workspaceId];
-          
+
           const membership: {
             workspace_id: string;
             role: string;
@@ -366,7 +366,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
             }]
           });
         }
-        
+
         toast.success(`User ${firstName} ${lastName} updated successfully`);
       } else {
         // ADD MODE: Create new user
@@ -436,7 +436,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
       onClose();
     } catch (error: any) {
-      const errorMsg = error?.response?.data?.message || error?.message || 
+      const errorMsg = error?.response?.data?.message || error?.message ||
         (isEditMode ? 'Failed to update user' : 'Failed to add user');
       toast.error(errorMsg);
     } finally {
@@ -477,7 +477,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                 {isEditMode ? 'Edit User' : 'Add Users'}
               </h2>
               <p className="text-sm text-secondary">
-                {isEditMode 
+                {isEditMode
                   ? 'Update user information and access permissions'
                   : 'Add users to collaborate on this project'
                 }
@@ -561,31 +561,31 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Email address <span className="text-red-500">*</span>
                   </label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => {
-                        if (!isEditMode) {
-                          setEmail(e.target.value);
-                          if (errors.email) {
-                            setErrors(prev => {
-                              const newErrors = { ...prev };
-                              delete newErrors.email;
-                              return newErrors;
-                            });
-                          }
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      if (!isEditMode) {
+                        setEmail(e.target.value);
+                        if (errors.email) {
+                          setErrors(prev => {
+                            const newErrors = { ...prev };
+                            delete newErrors.email;
+                            return newErrors;
+                          });
                         }
-                      }}
-                      onBlur={() => {
-                        if (email.trim() && !validateEmail(email)) {
-                          setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
-                        }
-                      }}
-                      disabled={isEditMode}
-                      placeholder="Enter email address"
-                      className={`w-full text-sm px-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all ${errors.email ? 'border-red-500' : 'border'
-                        } ${isEditMode ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                    />
+                      }
+                    }}
+                    onBlur={() => {
+                      if (email.trim() && !validateEmail(email)) {
+                        setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
+                      }
+                    }}
+                    disabled={isEditMode}
+                    placeholder="Enter email address"
+                    className={`w-full text-sm px-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all ${errors.email ? 'border-red-500' : 'border'
+                      } ${isEditMode ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  />
                   {errors.email && (
                     <p className="mt-1 text-xs text-red-500">{errors.email}</p>
                   )}

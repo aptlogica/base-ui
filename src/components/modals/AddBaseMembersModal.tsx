@@ -139,6 +139,47 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
     return name.substring(0, 2).toUpperCase();
   };
 
+  // Extract base role from roles array (same logic as UserTable/MembersTable)
+  const getBaseRoleFromRoles = (member: any): string => {
+    // If member has roles array, extract base role
+    if (Array.isArray(member.roles)) {
+      // Look for base-level roles
+      const baseRole = member.roles.find((role: any) => 
+        role.scope_level === 'base' || 
+        role.scope_type === 'base' ||
+        role.name === 'base-member' || 
+        role.name === 'base_member' ||
+        role.name === 'base-read' || 
+        role.name === 'base_read'
+      );
+      
+      if (baseRole) {
+        // Map role name to value
+        if (baseRole.name === 'base-read' || baseRole.name === 'base_read') {
+          return 'base-read';
+        }
+        return 'base-member'; // default to base-member
+      }
+      
+      // Fallback: check for workspace-level base roles
+      const workspaceBaseRole = member.roles.find((role: any) => 
+        role.scope_level === 'workspace' && 
+        (role.name === 'base-member' || role.name === 'base_member' || role.name === 'base-read' || role.name === 'base_read')
+      );
+      
+      if (workspaceBaseRole) {
+        if (workspaceBaseRole.name === 'base-read' || workspaceBaseRole.name === 'base_read') {
+          return 'base-read';
+        }
+        return 'base-member';
+      }
+    }
+    
+    // Fallback to old logic for backward compatibility
+    const currentRole = member.role || member.access_level || 'base-member';
+    return currentRole === 'base-read' || currentRole === 'base_read' ? 'base-read' : 'base-member';
+  };
+
   if (!isOpen) return null;
 
   const isValid = selectedUserIds.length > 0;
@@ -150,7 +191,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
       onKeyDown={handleKeyDown}
     >
       <div
-        className="bg-modal !max-w-7xl !p-0 flex flex-col max-h-[90vh]"
+        className="bg-modal !max-w-7xl !p-0 flex flex-col h-[90vh] max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
@@ -177,7 +218,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
         {/* Scrollable Content Area */}
         <form id="add-base-members-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto min-h-0">
           <div className="p-0">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 h-full lg:grid-cols-2 gap-6">
               {/* Left Column - Add Members */}
               <div className="space-y-4 bg-card p-4 lg:p-6">
                 <h3 className="text-sm font-semibold text-primary">Add & Manage Members</h3>
@@ -232,13 +273,13 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
                       const displayName = member.display_name || member.name || member.email || 'Unknown User';
                       const email = member.email || '';
                       const avatar = member.avatar || member.user?.avatar;
-                      const currentRole = member.role || member.access_level || 'base-member';
-                      const roleValue = currentRole === 'base-read' || currentRole === 'base_read' ? 'base-read' : 'base-member';
+                      // Extract role from roles array using the same logic as UserTable/MembersTable
+                      const roleValue = getBaseRoleFromRoles(member);
 
                       return (
                         <div
                           key={memberId}
-                          className="flex items-center justify-between p-3 bg-card border rounded-xl"
+                          className="flex items-center justify-between px-3 py-2 bg-card border rounded-xl"
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
                             {/* Avatar */}
@@ -304,7 +345,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
             type="button"
             onClick={onClose}
             disabled={isSubmitting || bulkAddBaseMembersMutation.isPending}
-            className="px-4 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
+            className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
           >
             Cancel
           </button>
@@ -312,7 +353,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
             type="submit"
             form="add-base-members-form"
             disabled={!isValid || isSubmitting || bulkAddBaseMembersMutation.isPending}
-            className="flex items-center gap-2 px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             {(isSubmitting || bulkAddBaseMembersMutation.isPending) ? (
               <>

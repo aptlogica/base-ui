@@ -152,7 +152,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
             e.stopPropagation();
             setWorkspaceDropdownOpen(!workspaceDropdownOpen);
           }}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-card hover:bg-muted/30 transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl border max-w-64 min-w-64 truncate bg-card hover:bg-muted/30 transition-colors"
         >
           {/* Workspace Icon */}
           {displayWorkspace ? (
@@ -168,7 +168,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
           )}
 
           {/* Workspace Name */}
-          <span className="text-sm font-medium text-primary">
+          <span className="text-sm font-medium text-left text-primary min-w-40 truncate">
             {displayWorkspace?.title || displayWorkspace?.name || 'Select Workspace'}
           </span>
 
