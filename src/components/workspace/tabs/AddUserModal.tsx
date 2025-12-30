@@ -11,6 +11,33 @@ import {
 import { useToast } from '../../common/Toast';
 import { WorkspaceItem, WorkspaceAssignment } from './WorkspaceItem';
 import { TenantUser } from '../../shared/UserTable';
+import { useCurrentUser } from '../../../auth/useCurrentUser';
+import { useUserRole } from '../../../hooks/useUserRole';
+
+// Helper function to extract roles from user object
+const getOverallRoles = (user: TenantUser): string[] => {
+  const roles: string[] = [];
+  
+  if (Array.isArray(user.roles)) {
+    user.roles.forEach(role => {
+      if (role.scope_level === 'system') {
+        if (role.name === 'owner') {
+          roles.push('Owner');
+        } else if (role.name === 'co-owner') {
+          roles.push('Co-owner');
+        }
+      }
+    });
+  } else if (typeof user.roles === 'string') {
+    if (user.roles === 'owner') {
+      roles.push('Owner');
+    } else if (user.roles === 'co-owner') {
+      roles.push('Co-owner');
+    }
+  }
+  
+  return roles;
+};
 
 interface AddUserModalProps {
   isOpen: boolean;
@@ -35,12 +62,31 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
   const { mutate: addUser, isPending: isAddingUser } = useAddTenantUser();
   const workspacesQuery = useWorkspaces();
   const toast = useToast();
+  
+  // Get current user info for role-based access control
+  const currentUser = useCurrentUser();
+  const { isOwner: currentUserIsOwner } = useUserRole();
 
   // Edit mode hooks
   const { data: userAccessData } = useUserRolesAndAccess(editUser?.id || null);
   const updateProfileMutation = useUpdateUserProfile(editUser?.id || '');
   const updateAvatarMutation = useAddOrUpdateAvatar(editUser?.id || '');
   const bulkAddMembersMutation = useBulkAddMembers();
+
+  // Determine if the user being edited is Owner or Co-owner
+  const editedUserRoles = useMemo(() => {
+    if (!isEditMode || !editUser) return [];
+    return getOverallRoles(editUser);
+  }, [isEditMode, editUser]);
+
+  const editedUserIsOwner = editedUserRoles.some(role => role.toLowerCase() === 'owner');
+  const editedUserIsCoOwner = editedUserRoles.some(role => role.toLowerCase() === 'co-owner');
+  const editedUserIsOwnerOrCoOwner = editedUserIsOwner || editedUserIsCoOwner;
+
+  // Check if current user is editing themselves
+  const isEditingSelf = useMemo(() => {
+    return isEditMode && editUser && currentUser && editUser.id === currentUser.id;
+  }, [isEditMode, editUser, currentUser]);
 
   // Load user data when in edit mode
   useEffect(() => {
@@ -462,7 +508,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
       onKeyDown={handleKeyDown}
     >
       <div
-        className="bg-modal !max-w-7xl !p-0 flex flex-col max-h-[90vh]"
+        className="bg-modal !max-w-7xl !p-0 flex flex-col h-[90vh] max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
@@ -496,7 +542,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
         {/* Scrollable Content Area */}
         <form id="add-user-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto min-h-0">
           <div className="p-0">
-            <div className={`grid grid-cols-1 ${!isCoOwner ? 'lg:grid-cols-2' : ''} gap-6`}>
+            <div className={`grid grid-cols-1 ${!isCoOwner && !(isEditMode && editedUserIsOwnerOrCoOwner) ? 'lg:grid-cols-2' : ''} gap-6`}>
               {/* Left Column - User Details */}
               <div className="space-y-4 bg-card p-4 lg:p-6">
                 {/* First Name and Last Name - Side by Side */}
@@ -673,27 +719,42 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                   )}
                 </div>
 
-                {/* Co-owner Toggle */}
-                <div className="flex items-center justify-start gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsCoOwner(!isCoOwner)}
-                    className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors ${isCoOwner ? 'bg-brand-600' : 'bg-gray-300'
-                      }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${isCoOwner ? 'translate-x-5' : 'translate-x-1'
-                        }`}
-                    />
-                  </button>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Set as Co-owner
-                  </label>
-                </div>
+                {/* Co-owner Toggle - Hide when Owner edits themselves, show when Owner edits Co-owner */}
+                {(() => {
+                  // Don't show toggle if editing Owner or Co-owner (they can't be changed)
+                  if (isEditMode && editedUserIsOwnerOrCoOwner) {
+                    return null;
+                  }
+                  
+                  // Don't show toggle if Owner is editing themselves
+                  if (isEditMode && isEditingSelf && currentUserIsOwner()) {
+                    return null;
+                  }
+                  
+                  // Show toggle in all other cases (add mode, or Owner editing Co-owner, etc.)
+                  return (
+                    <div className="flex items-center justify-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setIsCoOwner(!isCoOwner)}
+                        className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors ${isCoOwner ? 'bg-brand-600' : 'bg-gray-300'
+                          }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${isCoOwner ? 'translate-x-5' : 'translate-x-1'
+                            }`}
+                        />
+                      </button>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Set as Co-owner
+                      </label>
+                    </div>
+                  );
+                })()}
               </div>
 
-              {/* Right Column - Workspace/Base Selection */}
-              {!isCoOwner && (
+              {/* Right Column - Workspace/Base Selection - Hide for Co-owner and when editing Owner/Co-owner */}
+              {!isCoOwner && !(isEditMode && editedUserIsOwnerOrCoOwner) && (
                 <div className="space-y-4 bg-gray-50 p-4 lg:p-6">
                   <h3 className="text-sm font-semibold text-primary">Select Workspace(s) & Base(s)</h3>
 

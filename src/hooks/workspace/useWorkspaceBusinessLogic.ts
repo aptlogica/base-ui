@@ -169,7 +169,7 @@ export const useWorkspaceBusinessLogic = () => {
     }
   }, [createWorkspaceMutation, authUser?.id, navigateAndPersist, navigate]);
 
-  const handleCreateBaseForWorkspace = useCallback(async ({ name, description }: { name: string; description: string }) => {
+  const handleCreateBaseForWorkspace = useCallback(async ({ name, description, image }: { name: string; description: string; image?: File | null }) => {
     if (!currentWorkspace) {
       toast.error('No workspace selected');
       return;
@@ -180,6 +180,7 @@ export const useWorkspaceBusinessLogic = () => {
         title: name,
         description: description || '',
         workspace_id: currentWorkspace.id,
+        image: image || undefined,
       });
 
       setShowCreateBaseWorkspaceId(null);

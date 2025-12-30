@@ -426,9 +426,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           isOpen={!!showCreateBaseWorkspaceId}
           onClose={() => setShowCreateBaseWorkspaceId(null)}
           workspaceId={showCreateBaseWorkspaceId}
-          onCreate={async ({ name, description }) => {
+          onCreate={async ({ name, description, image }) => {
             try {
-              await handleCreateBaseForWorkspace({ name, description });
+              await handleCreateBaseForWorkspace({ name, description, image });
               setShowCreateBaseWorkspaceId(null);
             } catch (err) {
               console.error('Failed to create base:', err);

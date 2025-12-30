@@ -6,7 +6,7 @@ import { validateBaseName } from '../../utils/nameValidation';
 interface CreateBaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (data: { name: string; description: string }) => void;
+  onCreate: (data: { name: string; description: string; image?: File | null }) => void;
   workspaceId: string;
   defaultName?: string;
   existingBases?: any[];
@@ -26,7 +26,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
 }) => {
   const [name, setName] = useState(defaultName);
   const [description, setDescription] = useState('');
-  const [_image, setImage] = useState<File | null>(null);
+  const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialImage);
   const [error, setError] = useState('');
   const [validationError, setValidationError] = useState('');
@@ -131,6 +131,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
       await onCreate({
         name: name.trim(),
         description: description.trim(),
+        image: image || null,
       });
       // Close the modal on successful creation
       onClose();

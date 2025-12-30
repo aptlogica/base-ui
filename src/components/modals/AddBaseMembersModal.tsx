@@ -31,7 +31,30 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
   const toast = useToast();
 
   const tenantUsers = tenantUsersQuery.data || [];
-  const baseMembers = (baseMembersQuery.data as any)?.data || (baseMembersQuery.data as any) || [];
+  
+  // Extract base members from response - handle StandardResponse structure
+  const baseMembers = useMemo(() => {
+    if (!baseMembersQuery.data) return [];
+    
+    const data = baseMembersQuery.data as any;
+    
+    // StandardResponse structure: { data: [...] }
+    if (data?.data && Array.isArray(data.data)) {
+      return data.data;
+    }
+    
+    // Direct array response
+    if (Array.isArray(data)) {
+      return data;
+    }
+    
+    // Fallback: try to find array in response
+    if (data?.members && Array.isArray(data.members)) {
+      return data.members;
+    }
+    
+    return [];
+  }, [baseMembersQuery.data]);
 
   // Base role options only
   const baseRoleOptions = [
@@ -53,21 +76,23 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
 
   // User dropdown options
   const userDropdownOptions: MultiSelectTagsOption[] = useMemo(() => {
-    return availableUsers.map((user: any) => ({
+    return tenantUsers.map((user: any) => ({
       label: user.display_name || user.email || 'Unknown User',
       value: user.id,
       description: user.email,
     }));
   }, [availableUsers]);
 
-  // Reset form when modal opens/closes
+  // Reset form and refetch members when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && baseId) {
       setSelectedUserIds([]);
       setSelectedRole('base-member');
       setIsSubmitting(false);
+      // Refetch members when modal opens to get updated data
+      baseMembersQuery.refetch();
     }
-  }, [isOpen]);
+  }, [isOpen, baseId]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -183,7 +208,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
   if (!isOpen) return null;
 
   const isValid = selectedUserIds.length > 0;
-
+console.log(userDropdownOptions)
   return (
     <div
       className="bg-modal-backdrop"
@@ -221,8 +246,6 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
             <div className="grid grid-cols-1 h-full lg:grid-cols-2 gap-6">
               {/* Left Column - Add Members */}
               <div className="space-y-4 bg-card p-4 lg:p-6">
-                <h3 className="text-sm font-semibold text-primary">Add & Manage Members</h3>
-
                 {/* Select Member */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">

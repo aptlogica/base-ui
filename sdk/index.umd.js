@@ -804,6 +804,34 @@
             });
         }
         /**
+         * Edit existing user
+         * POST /user/edit
+         */
+        async editUser(userData) {
+            const formData = new FormData();
+            formData.append('user_id', userData.user_id);
+            if (userData.firstname !== undefined) {
+                formData.append('firstname', userData.firstname);
+            }
+            if (userData.lastname !== undefined) {
+                formData.append('lastname', userData.lastname);
+            }
+            if (userData.profile_pic) {
+                formData.append('profile_pic', userData.profile_pic);
+            }
+            if (userData.is_coowner !== undefined) {
+                formData.append('is_coowner', String(userData.is_coowner));
+            }
+            if (userData.membership) {
+                formData.append('membership', JSON.stringify(userData.membership));
+            }
+            return this.http.post(`/user/edit`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+        }
+        /**
          * Remove/delete user (Tenant Admin)
          * POST /user/remove
          */

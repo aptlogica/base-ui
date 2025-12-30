@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import formText from '../config/formText';
 import { login as apiLogin, resendOtp, loginByIdentityProvider } from '../service/clientService';
 import { processOAuthResponse, clearOAuthSession } from '../utils/oauthUtils';
+import { useToast } from "../components/common/Toast";
 
 interface FormData {
   email: string;
@@ -20,6 +21,7 @@ const LogIn: React.FC = () => {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const toast = useToast();
   const [isOAuthLoading, setIsOAuthLoading] = useState<{ google: boolean; github: boolean }>({ google: false, github: false });
   const navigate = useNavigate();
   const auth = useAuth();

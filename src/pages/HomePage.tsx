@@ -21,12 +21,9 @@ const BaseMenuWrapper: React.FC<{
   onDelete: (base: any) => void;
 }> = ({ base, onEdit, onAddMembers, onDelete }) => {
   const { canUpdateBase, canDeleteBase, canAssignUsers } = useWorkspaceAccess(base.workspace_id);
-  
+
   return (
-    <div
-      onClick={(e) => e.stopPropagation()}
-      className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-    >
+    <div onClick={(e) => e.stopPropagation()}>
       <BaseMenu
         base={base}
         onEdit={onEdit}
@@ -78,7 +75,7 @@ const HomePage: React.FC = () => {
   const [isDeletingBase, setIsDeletingBase] = useState(false);
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [baseForMembers, setBaseForMembers] = useState<any | null>(null);
-  
+
   const updateBaseMutation = useUpdateBase();
   const deleteBaseMutation = useDeleteBase();
   const { handleBaseDeletion } = useNavigationActions();
@@ -108,9 +105,9 @@ const HomePage: React.FC = () => {
   // Filter and sort bases based on search term and sort option
   const filteredBases = useMemo(() => {
     if (!allBases || !Array.isArray(allBases)) return [];
-    
+
     let filtered = allBases;
-    
+
     // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -120,7 +117,7 @@ const HomePage: React.FC = () => {
         return title.includes(term) || description.includes(term);
       });
     }
-    
+
     // Apply sorting
     const sorted = [...filtered].sort((a: any, b: any) => {
       if (sortOption === 'recent') {
@@ -139,7 +136,7 @@ const HomePage: React.FC = () => {
       }
       return 0;
     });
-    
+
     return sorted;
   }, [allBases, searchTerm, sortOption]);
 
@@ -177,7 +174,7 @@ const HomePage: React.FC = () => {
       await updateBaseMutation.mutateAsync({ baseId: editingBase.id, updates });
       toast.success('Base updated successfully');
       setEditingBase(null);
-      
+
       // Invalidate queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
       queryClient.invalidateQueries({ queryKey: ['workspaces'] });
@@ -196,7 +193,7 @@ const HomePage: React.FC = () => {
 
   const handleConfirmDelete = async () => {
     if (!deletingBase) return;
-    
+
     const baseTitle = deletingBase.title || deletingBase.name || '';
     if (baseNameToDelete !== baseTitle) {
       toast.error('Base name does not match');
@@ -205,15 +202,15 @@ const HomePage: React.FC = () => {
 
     try {
       await deleteBaseMutation.mutateAsync(deletingBase.id);
-      
+
       // Use the navigation handler to properly clean up localStorage
       handleBaseDeletion(deletingBase.id);
-      
+
       // Invalidate queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
       queryClient.invalidateQueries({ queryKey: ['workspaces'] });
       queryClient.invalidateQueries({ queryKey: ['allBases'] });
-      
+
       toast.success('Base deleted successfully');
       setDeletingBase(null);
       setBaseNameToDelete('');
@@ -229,7 +226,7 @@ const HomePage: React.FC = () => {
     setShowAddMembers(true);
   };
 
-  const handleCreateBase = async ({ name, description }: { name: string; description: string }) => {
+  const handleCreateBase = async ({ name, description, image }: { name: string; description: string; image?: File | null }) => {
     if (!selectedWorkspaceId) {
       toast.error('Please select a workspace first');
       return;
@@ -240,16 +237,17 @@ const HomePage: React.FC = () => {
         title: name,
         description: description || '',
         workspace_id: selectedWorkspaceId,
+        image: image || undefined,
       });
 
       // Invalidate queries to refresh the bases list
       queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
       queryClient.invalidateQueries({ queryKey: ['workspaces'] });
       queryClient.invalidateQueries({ queryKey: ['allBases'] });
-      
+
       toast.success('Base created successfully');
       setShowCreateBase(false);
-      
+
       // Navigate to the new base
       const baseId = newBase?.data?.id;
       if (baseId) {
@@ -257,7 +255,7 @@ const HomePage: React.FC = () => {
           // Update navigation store first
           const { navigateToBase } = useNavigationStore.getState();
           navigateToBase(selectedWorkspaceId, baseId);
-          
+
           // Try to navigate to first view, but fallback to base page if no tables exist
           await navigateToFirstView(baseId);
         } catch (err) {
@@ -289,7 +287,7 @@ const HomePage: React.FC = () => {
   const getBaseIcon = (base: any, index: number) => {
     const title = base.title || base.name || '';
     const firstLetter = title.charAt(0).toUpperCase();
-    
+
     // Color mapping based on first letter or index - using lighter pastel colors
     const colorMap: Record<string, string> = {
       'G': 'bg-green-400', // Light pastel green for General
@@ -297,11 +295,11 @@ const HomePage: React.FC = () => {
       'N': 'bg-purple-400', // Light purple for New
       'P': 'bg-orange-400', // Light orange for Practicals
     };
-    
+
     const color = colorMap[firstLetter] || ['bg-green-400', 'bg-blue-500', 'bg-purple-400', 'bg-orange-400'][index % 4];
-    
-    return { 
-      letter: firstLetter, 
+
+    return {
+      letter: firstLetter,
       color
     };
   };
@@ -356,10 +354,10 @@ const HomePage: React.FC = () => {
       {/* Welcome Banner Section */}
       <div className="rounded-2xl relative overflow-hidden p-6 md:p-8 lg:p-10 mb-8">
         {/* Rotated Background Image */}
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ 
-            backgroundImage: 'url(/assets/login-bg.png)',
+          style={{
+            backgroundImage: 'url(/assets/home_header_bg.png)',
             // transform: 'rotate(-13.85deg)',
             // transformOrigin: 'center center',
             // width: '100%',
@@ -413,11 +411,8 @@ const HomePage: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-card border flex items-center justify-center mb-3">
               <Download className="w-5 h-5 text-gray-900" />
             </div>
-            <div className="font-semibold text-sm text-gray-900 mb-0.5">Import Data</div>
-            <div className="text-xs text-gray-600">Imports external data.</div>
           </div>
           )}
-        </div>
         </div>
       </div>
 
@@ -438,24 +433,23 @@ const HomePage: React.FC = () => {
               />
             </div>
           </div>
-          
+
           {/* Recents Dropdown */}
           <div className="relative" ref={sortDropdownRef}>
             <button
               ref={sortButtonRef}
               onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
-              className={`flex items-center gap-2 px-3 py-2 text-sm border rounded-xl bg-card transition-all duration-200 whitespace-nowrap ${
-                isSortDropdownOpen
+              className={`flex items-center gap-2 px-3 py-2 text-sm border rounded-xl bg-card transition-all duration-200 whitespace-nowrap ${isSortDropdownOpen
                   ? 'border-primary ring-1 ring-primary ring-opacity-20'
                   : 'border hover:border-gray-400'
-              }`}
+                }`}
             >
               <span className="font-medium text-primary">
                 {sortOption === 'recent' ? 'Recents' : sortOption === 'a-z' ? 'A-Z' : 'Z-A'}
               </span>
               <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
-            
+
             {/* Dropdown Menu */}
             {isSortDropdownOpen && (
               <div className="absolute right-0 top-full mt-2 w-44 bg-card border rounded-xl shadow-lg z-50 overflow-hidden">
@@ -528,7 +522,11 @@ const HomePage: React.FC = () => {
             // Extract the time part (e.g., "30 minutes ago") to make it bold
             const timeMatch = lastModified.match(/(\d+\s+(?:minute|hour|day|week|month|year)s?\s+ago)/i);
             const timePart = timeMatch ? timeMatch[1] : '';
-            
+
+            // Check for base image (same logic as breadcrumb)
+            const baseImage = base.image || base.logo || base.meta?.image;
+            const baseName = base.title || base.name || 'Base';
+
             return (
               <div
                 key={base.id}
@@ -536,15 +534,25 @@ const HomePage: React.FC = () => {
               >
                 {/* Top Section: Icon, Title, Description, Menu */}
                 <div className="flex items-start gap-3 border-b p-5">
-                  {/* Icon on left */}
-                  <div className={`w-12 h-12 border rounded-xl ${icon.color} flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-xs`}>
-                    {icon.letter}
-                  </div>
-                  
+                  {/* Icon on left - Use image if available, otherwise use initial with colored background */}
+                  {baseImage ? (
+                    <div className="w-12 h-12 border rounded-xl overflow-hidden flex-shrink-0 shadow-xs">
+                      <img
+                        src={baseImage}
+                        alt={baseName}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className={`w-12 h-12 border rounded-xl ${icon.color} flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-xs`}>
+                      {icon.letter}
+                    </div>
+                  )}
+
                   {/* Title and Description on right of icon */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <h3 
+                      <h3
                         onClick={() => handleBaseClick(base)}
                         className="font-semibold text-base text-gray-900 leading-tight"
                       >
@@ -561,7 +569,7 @@ const HomePage: React.FC = () => {
                         />
                       )}
                     </div>
-                    <p 
+                    <p
                       onClick={() => handleBaseClick(base)}
                       className="text-sm text-gray-600 line-clamp-1 leading-relaxed"
                     >
@@ -569,9 +577,9 @@ const HomePage: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                
+
                 {/* Bottom Section: Last Modified */}
-                <div 
+                <div
                   onClick={() => handleBaseClick(base)}
                   className="text-xs text-gray-600 p-5"
                 >

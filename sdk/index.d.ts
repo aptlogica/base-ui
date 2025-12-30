@@ -197,6 +197,14 @@ interface AddUserRequest {
     is_coowner?: boolean;
     membership?: MembershipRequest[];
 }
+interface EditUserRequest {
+    user_id: string;
+    firstname?: string;
+    lastname?: string;
+    profile_pic?: File;
+    is_coowner?: boolean;
+    membership?: MembershipRequest[];
+}
 interface UserRemoveRequest {
     user_id: string;
 }
@@ -782,6 +790,11 @@ declare class UserService {
      * POST /user/create
      */
     addUser(userData: AddUserRequest): Promise<StandardResponse<any>>;
+    /**
+     * Edit existing user
+     * POST /user/edit
+     */
+    editUser(userData: EditUserRequest): Promise<StandardResponse<any>>;
     /**
      * Remove/delete user (Tenant Admin)
      * POST /user/remove

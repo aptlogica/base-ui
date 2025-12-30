@@ -331,7 +331,7 @@ const Breadcrumb: React.FC = () => {
     setDropdownPosition(null);
   };
 
-  const handleCreateBase = async ({ name, description }: { name: string; description: string }) => {
+  const handleCreateBase = async ({ name, description, image }: { name: string; description: string; image?: File | null }) => {
     if (!selectedWorkspaceId) {
       toast.error('Please select a workspace first');
       return;
@@ -342,6 +342,7 @@ const Breadcrumb: React.FC = () => {
         title: name,
         description: description || '',
         workspace_id: selectedWorkspaceId,
+        image: image || undefined,
       });
 
       // Invalidate queries to refresh the list
