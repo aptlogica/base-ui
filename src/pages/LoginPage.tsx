@@ -277,26 +277,26 @@ const LogIn: React.FC = () => {
 
 
       {/* Right Panel */}
-      <div className="relative overflow-hidden h-full bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url(/assets/login-bg.png)' }}>
+      <div className="hidden md:block relative overflow-hidden h-full bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url(/assets/login-bg.png)' }}>
         <div className="absolute inset-0 bg-black/5"></div>
         
         {/* Content Container - Text and Image */}
-        <div className="relative z-10 flex flex-col h-full pt-12 md:pt-16 lg:pt-20 overflow-hidden">
+        <div className="relative z-10 flex flex-col h-full pt-12 md:pt-16 lg:pt-20 xl:pt-24 overflow-hidden">
           {/* Promotional Text - Top Left, Consistent Alignment */}
-          <div className="pl-8 md:pl-12 lg:pl-16 pr-8 md:pr-12 lg:pr-16 mb-8 md:mb-12">
-            <div className="space-y-4 text-left max-w-xl">
-              <h1 className="text-3xl lg:text-5xl xl:text-6xl font-bold text-black leading-tight">{formText.login.subtitle}</h1>
-              <p className="text-base lg:text-lg text-black leading-relaxed">{formText.login.description3}</p>
+          <div className="pl-8 md:pl-12 lg:pl-16 xl:pl-20 pr-8 md:pr-12 lg:pr-16 mb-10 md:mb-14 lg:mb-16 xl:mb-20">
+            <div className="space-y-4 text-left max-w-xl lg:max-w-2xl">
+              <h1 className="text-3xl lg:text-4xl xl:text-5xl 2xl:text-6xl font-bold text-black leading-tight">{formText.login.subtitle}</h1>
+              <p className="text-base lg:text-lg xl:text-xl text-black leading-relaxed">{formText.login.description3}</p>
             </div>
           </div>
 
-          {/* Calendar View Image - Below Text, Same Left Alignment, Extending Outside (Right Only) - Can be cropped */}
-          <div className="pl-8 md:pl-12 lg:pl-16 pr-0 flex-1 overflow-hidden">
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden w-[calc(100%-2rem+5%)] sm:w-[calc(100%-3rem+8%)] md:w-[calc(100%-3rem+12%)] lg:w-[calc(100%-4rem+20%)] xl:w-[calc(100%-4rem+30%)] 2xl:w-[calc(100%-4rem+40%)] max-w-4xl">
+          {/* Calendar View Image - Below Text, Same Left Alignment, Extending Outside (Right Only) */}
+          <div className="pl-8 md:pl-12 lg:pl-16 xl:pl-20 flex-1 min-h-0 overflow-hidden">
+            <div className="bg-white rounded-tl-2xl shadow-2xl overflow-hidden w-[115%] lg:w-[120%] xl:w-[125%] 2xl:w-[130%] h-full">
               <img
                 src="/assets/CalendarVIewImage.png"
                 alt="Calendar View Preview"
-                className="w-full h-auto object-contain"
+                className="w-full h-full object-cover object-left-top"
               />
             </div>
           </div>
