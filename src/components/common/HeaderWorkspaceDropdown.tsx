@@ -8,6 +8,7 @@ import { useNavigation } from '../../hooks/useNavigation';
 import { CreateWorkspaceModal } from '../modals/CreateWorkspaceModal';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
 import { getRoleLabel } from '../../types/roles';
+import { getInitials } from '../../utils/helpers';
 
 const HeaderWorkspaceDropdown: React.FC = () => {
   const location = useLocation();
@@ -120,14 +121,12 @@ const HeaderWorkspaceDropdown: React.FC = () => {
 
   // Get workspace initials and color
   const getWorkspaceIcon = (workspace: any, index: number) => {
-    if (!workspace) return { initials: 'S', color: 'bg-gray-400' };
+    if (!workspace) return { initials: 'WS', color: 'bg-gray-400' };
 
-    const initials = (
-      workspace.title?.charAt(0) ||
-      workspace.name?.charAt(0) ||
-      workspace.slug?.charAt(0) ||
-      'U'
-    ).toUpperCase();
+    const initials = getInitials(
+      workspace.title || workspace.name || workspace.slug || 'W',
+      'WS'
+    );
 
     // Color mapping for workspace icons
     const colors = [
@@ -193,13 +192,13 @@ const HeaderWorkspaceDropdown: React.FC = () => {
           {/* Workspace Icon */}
           {displayWorkspace ? (
             <div className={`w-8 h-8 ${workspaceIcon.color} rounded-full flex items-center justify-center flex-shrink-0`}>
-              <span className="text-white font-bold text-sm">
+              <span className="text-white font-bold text-[10px]">
                 {workspaceIcon.initials}
               </span>
             </div>
           ) : (
             <div className="w-8 h-8 bg-gray-200 border rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-muted-foreground font-bold text-sm">S</span>
+              <span className="text-black font-bold text-[10px]">S</span>
             </div>
           )}
 
@@ -221,23 +220,20 @@ const HeaderWorkspaceDropdown: React.FC = () => {
             : 'opacity-0 max-h-0 scale-95 pointer-events-none'
             }`}
         >
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col" style={{ minHeight: '200px', maxHeight: '384px' }}>
             {/* Workspaces Header */}
             <div className="px-4 py-2 flex-shrink-0">
-              <div className="text-xs font-semibold text-primary tracking-wide">Workspaces</div>
+              <div className="text-xs font-semibold text-gray-900 tracking-wide">Workspaces</div>
             </div>
 
             {/* Workspaces Section - scrollable */}
-            <div className="overflow-y-auto flex-1 max-h-48 p-2">
+            <div className="overflow-y-auto flex-1 min-h-0 p-2" style={{ maxHeight: 'calc(384px - 120px)' }}>
               {workspaces && Array.isArray(workspaces) && workspaces.length > 0 ? (
                 workspaces.map((workspace: any, index: number) => {
                   const isSelected = (displayWorkspace?.id || selectedWorkspaceId) === workspace.id;
-                  const initials = (
-                    workspace.title?.charAt(0) ||
-                    workspace.name?.charAt(0) ||
-                    workspace.slug?.charAt(0) ||
-                    'U'
-                  ).toUpperCase();
+                  const workspaceInitials = getInitials(
+                    workspace.title || workspace.name || workspace.slug || 'W'
+                  );
 
                   // Color mapping for workspace icons
                   const colors = [
@@ -265,14 +261,14 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                       <div className="flex items-center gap-3">
                         {/* Workspace Icon */}
                         <div className={`w-8 h-8 ${iconColor} rounded-full flex items-center justify-center flex-shrink-0`}>
-                          <span className={`${textColor} text-center`}>
-                            {initials}
+                          <span className={`${textColor} text-center font-semibold text-[10px] text-base`}>
+                            {workspaceInitials}
                           </span>
                         </div>
 
                         {/* Workspace Name */}
                         <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                          <span className="font-semibold text-primary truncate">
+                          <span className="font-semibold text-gray-900 truncate">
                             {workspace.title || workspace.name || workspace.slug || 'Untitled Workspace'}
                           </span>
                           
@@ -304,7 +300,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                   );
                 })
               ) : (
-                <div className="px-4 py-8 text-center text-muted-foreground text-sm">
+                <div className="px-4 py-8 text-center text-gray-500 text-sm">
                   {workspaces === null ? (
                     <div>Loading workspaces...</div>
                   ) : (

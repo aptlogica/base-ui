@@ -258,7 +258,10 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
         ref={buttonRef}
         type="button"
         className="flex items-center justify-center p-1.5 rounded-xl hover:bg-gray-300  focus:outline-none transition-colors duration-200"
-        onClick={() => setOpen(v => !v)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(v => !v);
+        }}
         aria-haspopup="menu"
         aria-expanded={open}
       >

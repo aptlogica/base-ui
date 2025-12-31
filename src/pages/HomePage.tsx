@@ -55,6 +55,7 @@ import { getRoleLabel } from '../types/roles';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser, getUserDisplayName } from '../auth/useCurrentUser';
 import { useNavigateToBaseFirstView } from '../hooks/useNavigateToBaseFirstView';
+import { getInitials } from '../utils/helpers';
 
 const HomePage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -315,7 +316,8 @@ const HomePage: React.FC = () => {
 
   const getBaseIcon = (base: any, index: number) => {
     const title = base.title || base.name || '';
-    const firstLetter = title.charAt(0).toUpperCase();
+    const initials = getInitials(title, 'B');
+    const firstLetter = initials.charAt(0);
 
     // Color mapping based on first letter or index - using lighter pastel colors
     const colorMap: Record<string, string> = {
@@ -328,7 +330,7 @@ const HomePage: React.FC = () => {
     const color = colorMap[firstLetter] || ['bg-green-400', 'bg-blue-500', 'bg-purple-400', 'bg-orange-400'][index % 4];
 
     return {
-      letter: firstLetter,
+      letter: initials,
       color
     };
   };
@@ -562,6 +564,7 @@ const HomePage: React.FC = () => {
               return (
                 <div
                   key={base.id}
+                  onClick={() => handleBaseClick(base)}
                   className="rounded-xl bg-card border cursor-pointer hover:shadow-md transition-all duration-200 relative group"
                 >
                   {/* Top Section: Icon, Title, Description, Menu */}
@@ -585,7 +588,6 @@ const HomePage: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <h3
-                          onClick={() => handleBaseClick(base)}
                           className="font-semibold text-base text-gray-900 leading-tight flex-1 min-w-0"
                         >
                           {base.title || base.name || 'Untitled Base'}
@@ -605,7 +607,6 @@ const HomePage: React.FC = () => {
                         )}
                       </div>
                       <p
-                        onClick={() => handleBaseClick(base)}
                         className="text-sm text-gray-600 line-clamp-1 leading-relaxed"
                       >
                         {base.description || 'Base for general purpose work.'}
@@ -615,7 +616,6 @@ const HomePage: React.FC = () => {
 
                   {/* Bottom Section: Last Modified */}
                   <div
-                    onClick={() => handleBaseClick(base)}
                     className="text-xs text-gray-600 p-5"
                   >
                     {timePart ? (

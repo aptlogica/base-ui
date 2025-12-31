@@ -39,7 +39,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
   
   // Get current user info for role-based access control
   const currentUser = useCurrentUser();
-  const { isOwner: currentUserIsOwner } = useUserRole();
+  const { isOwner: currentUserIsOwner, isCoOwner: currentUserIsCoOwner } = useUserRole();
 
   // Edit mode hooks
   const { data: userAccessData } = useUserRolesAndAccess(editUser?.id || null);
@@ -708,19 +708,47 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                   )}
                 </div>
 
-                {/* Co-owner Toggle - Hide when Owner edits themselves, show when Owner edits Co-owner */}
+                {/* Co-owner Toggle */}
                 {(() => {
+                  // When creating a new user: Both Owner and Co-owner can see and use the toggle (no restrictions)
+                  if (!isEditMode) {
+                    return (
+                      <div className="flex items-center justify-start gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setIsCoOwner(!isCoOwner)}
+                          className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors ${isCoOwner ? 'bg-brand-600' : 'bg-gray-300'
+                            }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${isCoOwner ? 'translate-x-5' : 'translate-x-1'
+                              }`}
+                          />
+                        </button>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Set as Co-owner
+                        </label>
+                      </div>
+                    );
+                  }
+                  
+                  // When editing: Only Owner can see and use the co-owner toggle
+                  // Co-owner cannot see the toggle when editing (including themselves)
+                  if (!currentUserIsOwner()) {
+                    return null;
+                  }
+                  
                   // Don't show toggle if editing Owner or Co-owner (they can't be changed)
-                  if (isEditMode && editedUserIsOwnerOrCoOwner) {
+                  if (editedUserIsOwnerOrCoOwner) {
                     return null;
                   }
                   
                   // Don't show toggle if Owner is editing themselves
-                  if (isEditMode && isEditingSelf && currentUserIsOwner()) {
+                  if (isEditingSelf) {
                     return null;
                   }
                   
-                  // Show toggle in all other cases (add mode, or Owner editing Co-owner, etc.)
+                  // Show toggle for Owner when editing non-owner/co-owner users
                   return (
                     <div className="flex items-center justify-start gap-3">
                       <button
@@ -742,8 +770,16 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                 })()}
               </div>
 
-              {/* Right Column - Workspace/Base Selection - Hide for Co-owner and when editing Owner/Co-owner */}
-              {!isCoOwner && !(isEditMode && editedUserIsOwnerOrCoOwner) && (
+              {/* Right Column - Workspace/Base Selection */}
+              {(() => {
+                // When creating: Both Owner and Co-owner can assign workspaces/bases (no restrictions)
+                if (!isEditMode) {
+                  return !isCoOwner;
+                }
+                
+                // When editing: Hide if co-owner toggle is on, or if editing Owner/Co-owner, or if Co-owner is editing
+                return !isCoOwner && !editedUserIsOwnerOrCoOwner && !currentUserIsCoOwner();
+              })() && (
                 <div className="flex flex-col h-full min-h-0 bg-gray-50 p-4 lg:p-6">
                   <h3 className="text-sm font-semibold text-primary flex-shrink-0 mb-4">Select Workspace(s) & Base(s)</h3>
 

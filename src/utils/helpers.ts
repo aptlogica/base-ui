@@ -150,3 +150,24 @@ export function formatCompactNumber(num: number): string {
   const rounded = Math.round(billions * 10) / 10;
   return rounded % 1 === 0 ? `${rounded}B` : `${rounded.toFixed(1)}B`;
 }
+
+/**
+ * Gets initials from a name string (2 letters when possible)
+ * Examples: "Movies Base" -> "MB", "Base" -> "BA", "New" -> "NE"
+ * @param name - The name string to get initials from
+ * @param fallback - Fallback initial if name is empty (default: 'U')
+ * @returns 2-letter initials when possible, or 1-2 characters
+ */
+export function getInitials(name: string, fallback: string = 'U'): string {
+  if (!name || !name.trim()) return fallback;
+  
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    // If multiple words, take first letter of first two words
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  
+  // If single word, take first 2 characters (or first if only 1 char)
+  const result = name.substring(0, 2).toUpperCase();
+  return result || name.charAt(0).toUpperCase() || fallback;
+}

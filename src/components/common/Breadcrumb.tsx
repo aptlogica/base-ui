@@ -17,6 +17,7 @@ import { useNavigationActions } from '../../hooks/useNavigationActions';
 import { useToast } from './Toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useComponentVisibility, COMPONENT_IDS } from '../../contexts/RouteContext';
+import { getInitials } from '../../utils/helpers';
 
 interface BreadcrumbItem {
   type: 'base' | 'table' | 'view';
@@ -123,7 +124,8 @@ const Breadcrumb: React.FC = () => {
   // Get base icon (matching homepage styling)
   const getBaseIcon = (base: any, index: number) => {
     const title = base.title || base.name || '';
-    const firstLetter = title.charAt(0).toUpperCase();
+    const initials = getInitials(title, 'B');
+    const firstLetter = initials.charAt(0);
 
     // Color mapping based on first letter or index - using lighter pastel colors
     const colorMap: Record<string, string> = {
@@ -136,7 +138,7 @@ const Breadcrumb: React.FC = () => {
     const color = colorMap[firstLetter] || ['bg-green-400', 'bg-blue-500', 'bg-purple-400', 'bg-orange-400'][index % 4];
 
     return {
-      letter: firstLetter || 'B',
+      letter: initials || 'B',
       color: color
     };
   };
@@ -484,14 +486,28 @@ const Breadcrumb: React.FC = () => {
     
     return bases.map((base: any, index: number) => {
       const icon = getBaseIcon(base, index);
+      const baseName = base.title || base.name || 'Base';
+      const baseImage = base.image || base.logo || base.meta?.image;
+      
+      // Use image if available, otherwise use initial with colored background
+      const baseIconElement = baseImage ? (
+        <div className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0 border">
+          <img
+            src={baseImage}
+            alt={baseName}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ) : (
+        <div className={`w-8 h-8 ${icon.color} rounded-md flex items-center justify-center text-white text-sm font-semibold flex-shrink-0`}>
+          {icon.letter}
+        </div>
+      );
+      
       return {
         id: base.id,
-        label: base.title || base.name || 'Base',
-        icon: (
-          <div className={`w-8 h-8 ${icon.color} rounded-md flex items-center justify-center text-white text-sm flex-shrink-0`}>
-            {icon.letter}
-          </div>
-        ),
+        label: baseName,
+        icon: baseIconElement,
         onClick: async () => {
           setOpenDropdown(null);
           setDropdownPosition(null);

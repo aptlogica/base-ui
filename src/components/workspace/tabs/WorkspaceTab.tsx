@@ -10,6 +10,7 @@ import { defaultRoleConfig } from '../../shared/roleConfig';
 import { useWorkspaceAccess } from '../../../hooks/useWorkspaceAccess';
 import { useUserRole } from '../../../hooks/useUserRole';
 import { getRoleLabel } from '../../../types/roles';
+import { getInitials } from '../../../utils/helpers';
 
 interface WorkspaceTabProps {
   workspaceId: string;
@@ -173,8 +174,8 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
 
   // Get workspace icon
   const getWorkspaceIcon = (workspace: any) => {
-    if (!workspace) return { initials: 'W', color: 'bg-purple-400' };
-    const initials = (workspace.title?.charAt(0) || workspace.name?.charAt(0) || 'W').toUpperCase();
+    if (!workspace) return { initials: 'WS', color: 'bg-purple-400' };
+    const initials = getInitials(workspace.title || workspace.name || 'W', 'WS');
     const colors = ['bg-purple-400', 'bg-red-400', 'bg-orange-400', 'bg-blue-400', 'bg-green-400'];
     const hash = workspace.id ? workspace.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) : 0;
     return { initials, color: colors[hash % colors.length] };

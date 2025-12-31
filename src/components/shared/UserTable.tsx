@@ -450,7 +450,7 @@ export const UserTable: React.FC<UserTableProps> = ({
   showSearch = true,
   headerActions
 }) => {
-  const { isAdmin, isOwner } = useUserRole();
+  const { isAdmin, isOwner, isCoOwner } = useUserRole();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortColumn, setSortColumn] = useState<'name' | 'role' | 'status' | 'joinedDate' | 'lastActive' | 'language' | 'timezone' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -819,7 +819,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                           setSelectedRoleFilter(null);
                           setIsRoleFilterOpen(false);
                         }}
-                        className={`w-full text-left px-3 py-2 text-sm rounded-xl hover:bg-gray-100 transition-colors ${!selectedRoleFilter ? 'bg-gray-100 font-medium' : ''
+                        className={`w-full text-left px-3 py-2 text-sm text-primary rounded-xl hover:bg-gray-100 transition-colors ${!selectedRoleFilter ? 'bg-gray-100 font-medium' : ''
                           }`}
                       >
                         All Roles
@@ -832,7 +832,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                             setSelectedRoleFilter(role);
                             setIsRoleFilterOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors ${selectedRoleFilter === role ? 'bg-gray-100 font-medium' : ''
+                          className={`w-full text-left px-3 py-2 text-sm text-primary rounded-lg hover:bg-gray-100 transition-colors ${selectedRoleFilter === role ? 'bg-gray-100 font-medium' : ''
                             }`}
                         >
                           {role}
@@ -1036,20 +1036,37 @@ export const UserTable: React.FC<UserTableProps> = ({
                         </td>
 
                         {/* Actions */}
-                        {(onRemoveUser || onEditUser || onActivateUser || onDeactivateUser) && (
-                          <td className="px-6 py-4">
-                            <button
-                              ref={(el) => {
-                                if (el) actionButtonRefs.current[user.id] = el;
-                              }}
-                              onClick={() => setOpenActionMenu(openActionMenu === user.id ? null : user.id)}
-                              className="p-1 rounded hover:bg-gray-200 transition-colors"
-                              aria-label="More actions"
-                            >
-                              <MoreVertical className="w-4 h-4 text-gray-600" />
-                            </button>
-                          </td>
-                        )}
+                        {(() => {
+                          // Check if user is Owner
+                          const roles = getOverallRoles(user);
+                          const userIsOwner = roles.some(role =>
+                            role.toLowerCase() === 'owner'
+                          );
+                          
+                          // Co-owner cannot see action button for Owner users
+                          if (isCoOwner() && userIsOwner) {
+                            return null;
+                          }
+                          
+                          // Show action button if there are any actions available
+                          if (onRemoveUser || onEditUser || onActivateUser || onDeactivateUser) {
+                            return (
+                              <td className="px-6 py-4">
+                                <button
+                                  ref={(el) => {
+                                    if (el) actionButtonRefs.current[user.id] = el;
+                                  }}
+                                  onClick={() => setOpenActionMenu(openActionMenu === user.id ? null : user.id)}
+                                  className="p-1 rounded hover:bg-gray-200 transition-colors"
+                                  aria-label="More actions"
+                                >
+                                  <MoreVertical className="w-4 h-4 text-gray-600" />
+                                </button>
+                              </td>
+                            );
+                          }
+                          return null;
+                        })()}
                       </tr>
 
                       {/* Expanded Access Details Row */}

@@ -4,6 +4,7 @@ import { MoreVertical, ChevronsUpDown, Search, Edit, Trash2, Filter, Loader2 } f
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { AccessRoleSelector, AccessRole, RoleConfig } from './AccessRoleSelector';
 import { useUserRolesAndAccess } from '../../hooks/useApi';
+import { getInitials } from '../../utils/helpers';
 
 export interface Member {
   id: string;
@@ -43,13 +44,6 @@ interface MembersTableProps {
   workspaceId?: string; // Optional workspaceId to pass as scopeId for getUserRolesAndAccess
 }
 
-const getInitials = (name: string): string => {
-  const parts = name.split(/[.\s]/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
-  return name.substring(0, 2).toUpperCase();
-};
 
 const getAvatarColor = (userId: string): string => {
   const colors = [
@@ -778,7 +772,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                             setSelectedRoleFilter(null);
                             setIsRoleFilterOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-2 text-sm rounded-xl hover:bg-gray-100 transition-colors ${!selectedRoleFilter ? 'bg-gray-100 font-medium' : ''
+                          className={`w-full text-left px-3 py-2 text-sm text-primary rounded-xl hover:bg-gray-100 transition-colors ${!selectedRoleFilter ? 'bg-gray-100 font-medium' : ''
                           }`}
                         >
                           All Roles
@@ -791,7 +785,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                               setSelectedRoleFilter(role);
                               setIsRoleFilterOpen(false);
                             }}
-                            className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors ${selectedRoleFilter === role ? 'bg-gray-100 font-medium' : ''
+                            className={`w-full text-left px-3 py-2 text-sm text-primary rounded-lg hover:bg-gray-100 transition-colors ${selectedRoleFilter === role ? 'bg-gray-100 font-medium' : ''
                             }`}
                           >
                             {role}
