@@ -52,7 +52,7 @@ export declare class BaseService {
      * Remove access member from base
      * DELETE /base/:id/access/:id
      */
-    removeAccessMember(baseId: string, accessId: string): Promise<import("..").StandardResponse<any>>;
+    removeAccessMember(accessId: string): Promise<import("..").StandardResponse<any>>;
     /**
      * Upload or update base image
      * POST /base/:id/image
@@ -63,5 +63,10 @@ export declare class BaseService {
      * DELETE /base/:id/image
      */
     deleteImage(id: string): Promise<import("..").StandardResponse<any>>;
+    /**
+       * Remove user from base
+       * POST /base/:id/remove
+       */
+    removeUserFromBase(baseId: string, params: types.RemoveUserFromBase): Promise<import("..").StandardResponse<any>>;
 }
 //# sourceMappingURL=base-service.d.ts.map

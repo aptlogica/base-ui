@@ -355,7 +355,7 @@ declare class WorkspaceService {
      * Remove access member from workspace
      * DELETE /workspace/:id/access/:id
      */
-    removeAccessMember(workspaceId: string, accessId: string): Promise<StandardResponse<any>>;
+    removeAccessMember(accessId: string): Promise<StandardResponse<any>>;
     /**
      * Invite multiple users to the workspace (deprecated - use bulkAddMembers)
      * @deprecated Use bulkAddMembers instead
@@ -374,6 +374,8 @@ interface UpdateBase {
     description?: string;
     icon?: string;
     status?: string;
+    visibility?: string;
+    image?: File | Blob;
 }
 interface BulkAddMembersRequest {
     user_id: string;
@@ -381,6 +383,9 @@ interface BulkAddMembersRequest {
 }
 interface BulkAddBaseMembersRequest {
     members: BulkAddMembersRequest[];
+}
+interface RemoveUserFromBase {
+    user_id: string;
 }
 
 declare class BaseService {
@@ -435,7 +440,7 @@ declare class BaseService {
      * Remove access member from base
      * DELETE /base/:id/access/:id
      */
-    removeAccessMember(baseId: string, accessId: string): Promise<StandardResponse<any>>;
+    removeAccessMember(accessId: string): Promise<StandardResponse<any>>;
     /**
      * Upload or update base image
      * POST /base/:id/image
@@ -446,6 +451,11 @@ declare class BaseService {
      * DELETE /base/:id/image
      */
     deleteImage(id: string): Promise<StandardResponse<any>>;
+    /**
+       * Remove user from base
+       * POST /base/:id/remove
+       */
+    removeUserFromBase(baseId: string, params: RemoveUserFromBase): Promise<StandardResponse<any>>;
 }
 
 interface CreateTable {
@@ -773,8 +783,9 @@ declare class UserService {
     /**
      * Get user roles and access
      * GET /user/roles-and-access
+     * @param scopeId - Optional scope ID to filter by (e.g., workspace ID)
      */
-    getUserRolesAndAccess(id: string): Promise<StandardResponse<any>>;
+    getUserRolesAndAccess(scopeId?: string): Promise<StandardResponse<any>>;
     /**
      * Assign user to workspace
      * POST /user/assign

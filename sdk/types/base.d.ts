@@ -10,6 +10,8 @@ export interface UpdateBase {
     description?: string;
     icon?: string;
     status?: string;
+    visibility?: string;
+    image?: File | Blob;
 }
 export interface BulkAddMembersRequest {
     user_id: string;
@@ -17,5 +19,8 @@ export interface BulkAddMembersRequest {
 }
 export interface BulkAddBaseMembersRequest {
     members: BulkAddMembersRequest[];
+}
+export interface RemoveUserFromBase {
+    user_id: string;
 }
 //# sourceMappingURL=base.d.ts.map

@@ -62,7 +62,7 @@ export declare class WorkspaceService {
      * Remove access member from workspace
      * DELETE /workspace/:id/access/:id
      */
-    removeAccessMember(workspaceId: string, accessId: string): Promise<import("..").StandardResponse<any>>;
+    removeAccessMember(accessId: string): Promise<import("..").StandardResponse<any>>;
     /**
      * Invite multiple users to the workspace (deprecated - use bulkAddMembers)
      * @deprecated Use bulkAddMembers instead

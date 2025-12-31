@@ -302,8 +302,8 @@
          * Remove access member from workspace
          * DELETE /workspace/:id/access/:id
          */
-        removeAccessMember(workspaceId, accessId) {
-            return this.http.delete(`/workspace/${workspaceId}/access/${accessId}`);
+        removeAccessMember(accessId) {
+            return this.http.delete(`/workspace/access/${accessId}`);
         }
         /**
          * Invite multiple users to the workspace (deprecated - use bulkAddMembers)
@@ -352,7 +352,30 @@
          * PUT /base/:id
          */
         update(id, params) {
-            return this.http.put(`/base/${id}`, params);
+            const formData = new FormData();
+            if (params.title !== undefined) {
+                formData.append('title', params.title);
+            }
+            if (params.description !== undefined) {
+                formData.append('description', params.description);
+            }
+            if (params.icon !== undefined) {
+                formData.append('icon', params.icon);
+            }
+            if (params.status !== undefined) {
+                formData.append('status', params.status);
+            }
+            if (params.visibility !== undefined) {
+                formData.append('visibility', params.visibility);
+            }
+            if (params.image) {
+                formData.append('image', params.image);
+            }
+            return this.http.put(`/base/${id}`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
         }
         /**
          * Delete base
@@ -400,8 +423,8 @@
          * Remove access member from base
          * DELETE /base/:id/access/:id
          */
-        removeAccessMember(baseId, accessId) {
-            return this.http.delete(`/base/${baseId}/access/${accessId}`);
+        removeAccessMember(accessId) {
+            return this.http.delete(`/base/access/${accessId}`);
         }
         /**
          * Upload or update base image
@@ -422,6 +445,13 @@
          */
         deleteImage(id) {
             return this.http.delete(`/base/${id}/image`);
+        }
+        /**
+           * Remove user from base
+           * POST /base/:id/remove
+           */
+        removeUserFromBase(baseId, params) {
+            return this.http.post(`/base/${baseId}/remove`, params);
         }
     }
 
@@ -606,8 +636,9 @@
          */
         addAttachment(params, extra) {
             const formData = new FormData();
-            formData.append('model_id', params.model_id);
-            formData.append('column_id', params.column_id);
+            formData.append('model_id', params.model_id.toString());
+            formData.append('column_id', params.column_id.toString());
+            formData.append('row_id', params.row_id.toString());
             if (Array.isArray(params.files)) {
                 params.files.forEach((file) => {
                     formData.append('files', file);
@@ -761,9 +792,11 @@
         /**
          * Get user roles and access
          * GET /user/roles-and-access
+         * @param scopeId - Optional scope ID to filter by (e.g., workspace ID)
          */
-        getUserRolesAndAccess(id) {
-            return this.http.get(`/user/roles-and-access/${id}`);
+        getUserRolesAndAccess(scopeId) {
+            const params = scopeId ? { scope_id: scopeId } : undefined;
+            return this.http.get(`/user/roles-and-access`, { params });
         }
         /**
          * Assign user to workspace
