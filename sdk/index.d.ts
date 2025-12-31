@@ -782,10 +782,11 @@ declare class UserService {
     getUserAccessDetails(): Promise<StandardResponse<UserAccessDetailsResponse>>;
     /**
      * Get user roles and access
-     * GET /user/roles-and-access
+     * GET /user/roles-and-access/:id
+     * @param id - User ID
      * @param scopeId - Optional scope ID to filter by (e.g., workspace ID)
      */
-    getUserRolesAndAccess(scopeId?: string): Promise<StandardResponse<any>>;
+    getUserRolesAndAccess(id: string, scopeId?: string): Promise<StandardResponse<any>>;
     /**
      * Assign user to workspace
      * POST /user/assign

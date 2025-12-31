@@ -40,10 +40,11 @@ export declare class UserService {
     getUserAccessDetails(): Promise<import("..").StandardResponse<types.UserAccessDetailsResponse>>;
     /**
      * Get user roles and access
-     * GET /user/roles-and-access
+     * GET /user/roles-and-access/:id
+     * @param id - User ID
      * @param scopeId - Optional scope ID to filter by (e.g., workspace ID)
      */
-    getUserRolesAndAccess(scopeId?: string): Promise<import("..").StandardResponse<any>>;
+    getUserRolesAndAccess(id: string, scopeId?: string): Promise<import("..").StandardResponse<any>>;
     /**
      * Assign user to workspace
      * POST /user/assign

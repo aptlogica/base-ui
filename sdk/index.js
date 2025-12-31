@@ -792,12 +792,13 @@ class UserService {
     }
     /**
      * Get user roles and access
-     * GET /user/roles-and-access
+     * GET /user/roles-and-access/:id
+     * @param id - User ID
      * @param scopeId - Optional scope ID to filter by (e.g., workspace ID)
      */
-    getUserRolesAndAccess(scopeId) {
+    getUserRolesAndAccess(id, scopeId) {
         const params = scopeId ? { scope_id: scopeId } : undefined;
-        return this.http.get(`/user/roles-and-access`, { params });
+        return this.http.get(`/user/roles-and-access/${id}`, { params });
     }
     /**
      * Assign user to workspace
