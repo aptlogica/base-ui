@@ -15,7 +15,7 @@ interface CalendarHeaderProps {
   dateFields: any[];
   onDateFieldChange: (fieldId: string) => void;
   onExport: () => void;
-  onCreateRecord: () => void;
+  onCreateRecord?: () => void; // Optional - only provided if user has permission
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
   // Props for the popover components

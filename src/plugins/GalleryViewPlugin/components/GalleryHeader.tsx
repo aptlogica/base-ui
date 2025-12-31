@@ -15,6 +15,7 @@ interface GalleryHeaderProps {
   loadedCount?: number;
   hasMore?: boolean;
   onAddRecord: () => void;
+  canCreateRecord?: boolean; // Permission to create records
   attachmentField?: BaseColumn;
   attachmentFields: BaseColumn[];
   onAttachmentFieldChange: (field: BaseColumn) => void;
@@ -43,6 +44,7 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
   loadedCount,
   hasMore,
   onAddRecord,
+  canCreateRecord = true,
   attachmentField,
   attachmentFields,
   onAttachmentFieldChange,
@@ -117,14 +119,16 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
           />
           </div>
 
-          {/* Add Record Button */}
-          <button
-            onClick={onAddRecord}
-            className="px-6 py-2 rounded-xl btn-primary text-[var(--color-text-primary)] font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Add Record
-          </button>
+          {/* Add Record Button - only show if user can create records */}
+          {canCreateRecord && (
+            <button
+              onClick={onAddRecord}
+              className="px-6 py-2 rounded-xl btn-primary text-[var(--color-text-primary)] font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Record
+            </button>
+          )}
         </div>
       </div>
 

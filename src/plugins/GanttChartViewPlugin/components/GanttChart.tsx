@@ -18,6 +18,7 @@ import { useGanttFieldConfig } from '../hooks/useGanttFieldConfig';
 import { useFrontendPagination } from '../../../hooks/useFrontendPagination';
 import { formatCompactNumber } from '../../../utils/helpers';
 import { Loader } from '../../../components/ui/Loader';
+import { useBaseAccess } from '../../../hooks/useBaseAccess';
 import type { GanttTask } from '../hooks/useGanttData';
 
 interface GanttChartProps {
@@ -38,6 +39,12 @@ interface GanttChartProps {
 }
 
 export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, actions }) => {
+  // Extract base ID for permission checks
+  const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
+  
+  // Check permissions for read-only access
+  const { isBaseReadOnly, canCreateRecord } = useBaseAccess(baseId || undefined);
+  
   // Process data into Gantt-ready format
   const processedData = useGanttTaskProcessing({ tableData });
 
@@ -545,13 +552,16 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
               onUpdateFilter={handleUpdateFilter}
               onRealTimeFilter={handleRealTimeFilter}
             />
-            <button
-              onClick={handleCreateRecord}
-              className="px-6 py-2 flex gap-2 items-center rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Plus className="w-4 h-4" />
-              New Record
-            </button>
+            {/* New Record Button - only show if user can create records and not read-only */}
+            {canCreateRecord() && !isBaseReadOnly() && (
+              <button
+                onClick={handleCreateRecord}
+                className="px-6 py-2 flex gap-2 items-center rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Plus className="w-4 h-4" />
+                New Record
+              </button>
+            )}
           </div>
         </div>
 

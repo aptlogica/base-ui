@@ -18,7 +18,20 @@ const BaseMenuWrapper: React.FC<{
   onAddMembers: (base: any) => void;
   onDelete: (base: any) => void;
 }> = ({ base, onEdit, onAddMembers, onDelete }) => {
-  const { canUpdateBase, canDeleteBase, canAssignUsers } = useWorkspaceAccess(base.workspace_id);
+  const { canUpdateBase: canUpdateBaseFromWorkspace, canDeleteBase: canDeleteBaseFromWorkspace, canAssignUsers } = useWorkspaceAccess(base.workspace_id);
+  const { canUpdateBase: canUpdateBaseFromBase, canDeleteBase: canDeleteBaseFromBase, canManageBaseMembers, baseAccess } = useBaseAccess(base.id);
+  
+  // Base-member can edit title/description, but not delete or manage members
+  // Allow edit if: workspace-level permission OR base-level permission OR base-member
+  const canEdit = canUpdateBaseFromWorkspace() || canUpdateBaseFromBase() || baseAccess === 'base-member';
+  const canDelete = canDeleteBaseFromWorkspace() || canDeleteBaseFromBase();
+  const canAddMembers = canAssignUsers() || canManageBaseMembers();
+  const hasAnyAction = canEdit || canDelete || canAddMembers;
+
+  // Don't render menu if no actions are available
+  if (!hasAnyAction) {
+    return null;
+  }
 
   return (
     <div onClick={(e) => e.stopPropagation()}>
@@ -27,16 +40,18 @@ const BaseMenuWrapper: React.FC<{
         onEdit={onEdit}
         onAddMembers={onAddMembers}
         onDelete={onDelete}
-        canEdit={canUpdateBase()}
-        canDelete={canDeleteBase()}
-        canAddMembers={canAssignUsers()}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        canAddMembers={canAddMembers}
       />
     </div>
   );
 };
 import { useToast } from '../components/common/Toast';
 import { useWorkspaceAccess } from '../hooks/useWorkspaceAccess';
+import { useBaseAccess } from '../hooks/useBaseAccess';
 import { formatRelativeDate } from '../utils/dateUtils';
+import { getRoleLabel } from '../types/roles';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser, getUserDisplayName } from '../auth/useCurrentUser';
 import { useNavigateToBaseFirstView } from '../hooks/useNavigateToBaseFirstView';
@@ -46,7 +61,7 @@ const HomePage: React.FC = () => {
   const { selectedWorkspaceId } = useNavigationStore();
   const { data: workspaceBasesData, isLoading: basesLoading } = useWorkspaceBases(selectedWorkspaceId || '');
   const toast = useToast();
-  const { canCreateBase, accessLevel, isWorkspaceReadOnly, isBaseLevelAccess } = useWorkspaceAccess(selectedWorkspaceId || undefined);
+  const { canCreateBase, accessLevel, isBaseLevelAccess } = useWorkspaceAccess(selectedWorkspaceId || undefined);
   const createBaseMutation = useCreateBase();
   const { navigateToFirstView } = useNavigateToBaseFirstView();
 
@@ -571,12 +586,15 @@ const HomePage: React.FC = () => {
                       <div className="flex items-start justify-between gap-2">
                         <h3
                           onClick={() => handleBaseClick(base)}
-                          className="font-semibold text-base text-gray-900 leading-tight"
+                          className="font-semibold text-base text-gray-900 leading-tight flex-1 min-w-0"
                         >
                           {base.title || base.name || 'Untitled Base'}
                         </h3>
-                        {isWorkspaceReadOnly() ? (
-                          <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border">Read Only</span>
+                        {/* Show badge in place of menu for read-only access, otherwise show menu */}
+                        {base.access_level && (base.access_level === 'workspace-read' || base.access_level === 'base-read') ? (
+                          <span className="px-2 py-0.5 text-xs font-medium rounded-full border flex-shrink-0 bg-green-50 text-green-700 border-green-200">
+                            {getRoleLabel(base.access_level)}
+                          </span>
                         ) : (
                           <BaseMenuWrapper
                             base={base}

@@ -14,6 +14,7 @@ import { fieldsToExcludeInFilter } from '../../../types/constants';
 import { useFrontendPagination } from '../../../hooks/useFrontendPagination';
 import { formatCompactNumber } from '../../../utils/helpers';
 import { Loader } from '../../../components/ui/Loader';
+import { useBaseAccess } from '../../../hooks/useBaseAccess';
 // Custom hooks
 import { useGalleryViewConfig } from '../hooks/useGalleryViewConfig';
 import { useGalleryModals } from '../hooks/useGalleryModals';
@@ -39,6 +40,12 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   // Extract actions
   const { addRow, insertRowData, deleteRecord, updateField, updateView, updateViewConfig } = actions;
   const removeAttachmentsMutation = useRemoveAttachments();
+  
+  // Extract base ID for permission checks
+  const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
+  
+  // Check permissions for read-only access
+  const { isBaseReadOnly, canCreateRecord } = useBaseAccess(baseId || undefined);
 
   // Use the useGalleryData hook for consistent data processing
   const galleryData = useGalleryData({ 
@@ -301,6 +308,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         loadedCount={paginatedItems.length}
         hasMore={hasMore}
         onAddRecord={handleCreateRecord}
+        canCreateRecord={canCreateRecord() && !isBaseReadOnly()}
         attachmentField={galleryData.attachmentField}
         attachmentFields={galleryData.attachmentFields}
         onAttachmentFieldChange={handleAttachmentFieldChange}
@@ -333,13 +341,15 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
               <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No items in gallery</h3>
               <p className="text-gray-500 mb-4">Start by adding some records with attachments</p>
-              <button
-                onClick={handleCreateRecord}
-                className="px-4 py-2 btn-primary rounded-xl flex items-center gap-2 mx-auto"
-              >
-                <Plus className="w-4 h-4" />
-                Add Record
-              </button>
+              {canCreateRecord() && !isBaseReadOnly() && (
+                <button
+                  onClick={handleCreateRecord}
+                  className="px-4 py-2 btn-primary rounded-xl flex items-center gap-2 mx-auto"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Record
+                </button>
+              )}
             </div>
           </div>
         ) : (

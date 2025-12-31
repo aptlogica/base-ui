@@ -31,6 +31,7 @@ import { useFrontendPagination } from '../../../../hooks/useFrontendPagination';
 import { useCellEditing } from '../../hooks/useCellEditing';
 import { useColumnManagement } from '../../hooks/useColumnManagement';
 import { useTableModals } from '../../hooks/useTableModals';
+import { useBaseAccess } from '../../../../hooks/useBaseAccess';
 
 type TableActions = {
   addRow: any;
@@ -86,6 +87,9 @@ export const Table: React.FC<TableProps> = ({
   // Extract IDs from tableData.model
   const tableId = useMemo(() => String(tableData?.model?.id ?? ''), [tableData?.model?.id]);
   const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
+  
+  // Check permissions for read-only access
+  const { isBaseReadOnly, canCreateColumn, canDeleteRecord, canUpdateRecord } = useBaseAccess(baseId || undefined);
 
   // Resolve current view and base meta from tableData; allow override via viewConfig
   const currentView = useMemo(() => {
@@ -794,28 +798,30 @@ export const Table: React.FC<TableProps> = ({
                   );
                 })}
 
-                {/* Add column button */}
-                <div className="flex-shrink-0 bg-[var(--color-hover-bg)] flex items-center justify-center h-[35px] border-r border-b border-l relative">
-                  <button
-                    ref={addColumnButtonRef}
-                    className="p-1 rounded hover:bg-muted/70 transition-colors duration-200"
-                    title="Add column"
-                    onClick={() => setIsColumnModalOpen(prev => !prev)}
-                  >
-                    <Plus className="w-5 h-5 text-tertiary" />
-                  </button>
-                  <NewColumnModalPortal
-                    ref={newColumnModalRef}
-                    isOpen={isColumnModalOpen}
-                    onClose={() => setIsColumnModalOpen(false)}
-                    onAddColumn={handleAddColumn}
-                    fields={columns}
-                    isAddNewColumn={true}
-                    excludeRefs={[addColumnButtonRef]}
-                    addColumnButtonRef={addColumnButtonRef as React.RefObject<HTMLButtonElement>}
-                    tableId={tableId}
-                  />
-                </div>
+                {/* Add column button - only show if user can create columns and not read-only */}
+                {canCreateColumn() && !isBaseReadOnly() && (
+                  <div className="flex-shrink-0 bg-[var(--color-hover-bg)] flex items-center justify-center h-[35px] border-r border-b border-l relative">
+                    <button
+                      ref={addColumnButtonRef}
+                      className="p-1 rounded hover:bg-muted/70 transition-colors duration-200"
+                      title="Add column"
+                      onClick={() => setIsColumnModalOpen(prev => !prev)}
+                    >
+                      <Plus className="w-5 h-5 text-tertiary" />
+                    </button>
+                    <NewColumnModalPortal
+                      ref={newColumnModalRef}
+                      isOpen={isColumnModalOpen}
+                      onClose={() => setIsColumnModalOpen(false)}
+                      onAddColumn={handleAddColumn}
+                      fields={columns}
+                      isAddNewColumn={true}
+                      excludeRefs={[addColumnButtonRef]}
+                      addColumnButtonRef={addColumnButtonRef as React.RefObject<HTMLButtonElement>}
+                      tableId={tableId}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -845,6 +851,7 @@ export const Table: React.FC<TableProps> = ({
                     setExpandedGroups={setExpandedGroups}
                     visibleColumns={visibleColumns}
                     outerRef={tableRef}
+                    canEdit={canUpdateRecord() && !isBaseReadOnly()}
                     allColumns={columns}
                     onScroll={(scrollTop) => {
                       // FRONTEND PAGINATION: Load next page when scrolling near bottom
@@ -924,6 +931,7 @@ export const Table: React.FC<TableProps> = ({
             handleCloseContextMenu();
           }}
           onDelete={() => { handleDelete(contextMenu.rowId!); handleCloseContextMenu(); }}
+          canDeleteRecord={canDeleteRecord()}
         />
       )}
 

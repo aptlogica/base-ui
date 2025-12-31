@@ -16,6 +16,7 @@ import { useAllViews } from '../../../../hooks/useApi';
 import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldConfirmModal';
 import { isFormulaField } from '../../../../utils/fieldUtils';
 import { Loader } from '../../../../components/ui/Loader';
+import { useBaseAccess } from '../../../../hooks/useBaseAccess';
 // Custom hooks
 import { useFormDataState } from '../../hooks/useFormDataState';
 import { useFormModals } from '../../hooks/useFormModals';
@@ -91,6 +92,9 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
   // Extract IDs from tableData.model
   const tableId = useMemo(() => String(tableData?.model?.id ?? ''), [tableData?.model?.id]);
   const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
+  
+  // Check permissions for read-only access
+  const { isBaseReadOnly, canCreateColumn } = useBaseAccess(baseId || undefined);
   
   // Use actions passed from hook (no need to re-instantiate)
   const toast = useToast();
@@ -565,15 +569,17 @@ const handleConfirmUpdateField = async () => {
           </div>
           
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Inline Add Field Button */}
-            <button
-              ref={addFieldButtonRef}
-              onClick={handleAddField}
-              className="flex items-center gap-1 btn-primary p-2 rounded transition"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add Field</span>
-            </button>
+            {/* Inline Add Field Button - only show if user can create columns and not read-only */}
+            {canCreateColumn() && !isBaseReadOnly() && (
+              <button
+                ref={addFieldButtonRef}
+                onClick={handleAddField}
+                className="flex items-center gap-1 btn-primary p-2 rounded transition"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Add Field</span>
+              </button>
+            )}
             
             {/* Sidebar Toggle Button */}
             <button

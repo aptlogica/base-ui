@@ -17,6 +17,7 @@ import { BaseColumn } from '../../../../types/column.types';
 import { normalizeFieldType } from '../../../../utils/fieldType';
 import { parseApiColumnMeta } from '../../../../components/shared/table/tableUtils';
 import { fieldsToExcludeInFilter } from '../../../../types/constants';
+import { useBaseAccess } from '../../../../hooks/useBaseAccess';
 // Custom hooks
 import { useKanbanViewConfig } from '../../hooks/useKanbanViewConfig';
 import { useKanbanModals } from '../../hooks/useKanbanModals';
@@ -74,6 +75,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   actions,
 }) => {
   const toast = useToast();
+  
+  // Extract base ID for permission checks
+  const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
+  
+  // Check permissions for read-only access
+  const { isBaseReadOnly, canCreateRecord, canDeleteRecord, canUpdateRecord } = useBaseAccess(baseId || undefined);
   
   // Transform API data to UI-ready format (similar to Table and FormView components)
   const columns = useMemo(() => {
@@ -389,8 +396,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
     // Create final stack order: Uncategorized first, then custom order + remaining options
     const allStackNames = new Set([...fieldOptions, 'Uncategorized']);
-    const orderedStacks = customStackOrder.filter(name => allStackNames.has(name) && name !== 'Uncategorized');
-    const remainingStacks = Array.from(allStackNames).filter(name => !customStackOrder.includes(name) && name !== 'Uncategorized');
+    const orderedStacks = customStackOrder.filter((name: string) => allStackNames.has(name) && name !== 'Uncategorized');
+    const remainingStacks = Array.from(allStackNames).filter((name: string) => !customStackOrder.includes(name) && name !== 'Uncategorized');
     const finalOrder = ['Uncategorized', ...orderedStacks, ...remainingStacks];
 
     // Default colors for fallback (used when option has no color or for Uncategorized)
@@ -717,7 +724,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
     try {
       // Get existing option names to check for duplicates
-      const existingOptionNames = localOptions.map(opt => {
+      const existingOptionNames = localOptions.map((opt: any) => {
         if (typeof opt === 'string') return opt;
         return (opt as any)?.option || (opt as any)?.value || (opt as any)?.label || String(opt);
       });
@@ -725,7 +732,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       // Add new option if it doesn't exist
       if (!existingOptionNames.includes(trimmed)) {
         // Preserve existing options structure (with colors)
-        const preservedOptions = localOptions.map(opt => {
+        const preservedOptions = localOptions.map((opt: any) => {
           if (typeof opt === 'string') {
             return { option: opt, color: '' };
           }
@@ -764,7 +771,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
     try {
       // Get existing option names to check for duplicates
-      const existingOptionNames = localOptions.map(opt => {
+      const existingOptionNames = localOptions.map((opt: any) => {
         if (typeof opt === 'string') return opt;
         return (opt as any)?.option || (opt as any)?.value || (opt as any)?.label || String(opt);
       });
@@ -772,7 +779,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       // Add new option if it doesn't exist
       if (!existingOptionNames.includes(trimmed)) {
         // Preserve existing options structure (with colors)
-        const preservedOptions = localOptions.map(opt => {
+        const preservedOptions = localOptions.map((opt: any) => {
           if (typeof opt === 'string') {
             return { option: opt, color: '' };
           }
@@ -848,7 +855,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     if (!groupCol?.id || stackId === 'Uncategorized') return;
     try {
       // Get existing option names to check if stack exists
-      const existingOptionNames = localOptions.map(opt => {
+      const existingOptionNames = localOptions.map((opt: any) => {
         if (typeof opt === 'string') return opt;
         return (opt as any)?.option || (opt as any)?.value || (opt as any)?.label || String(opt);
       });
@@ -876,7 +883,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
         // 2. Remove the option from field options (preserve structure with colors)
         const preservedOptions = localOptions
-          .map(opt => {
+          .map((opt: any) => {
             if (typeof opt === 'string') {
               return { option: opt, color: '' };
             }
@@ -885,7 +892,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               color: (opt as any)?.color || ''
             };
           })
-          .filter(opt => opt.option !== stackId);
+          .filter((opt: { option: string; color: string }) => opt.option !== stackId);
         
         await onUpdateFieldOptions(groupCol.id, preservedOptions);
 
@@ -903,14 +910,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     if (!groupCol?.id || oldName === newName || newName.trim() === '') return;
     try {
       // Convert options to strings for comparison
-      const stringOptions = localOptions.map(opt =>
+      const stringOptions = localOptions.map((opt: any) =>
         typeof opt === 'string' ? opt : (opt as any)?.value || (opt as any)?.label || String(opt)
       );
 
       // Only edit if the old name exists in field options (proper Kanban behavior)
       if (stringOptions.includes(oldName)) {
         // 1. Update field options (preserve structure with colors)
-        const preservedOptions = localOptions.map(opt => {
+        const preservedOptions = localOptions.map((opt: any) => {
           const optionName = typeof opt === 'string' 
             ? opt 
             : (opt as any)?.option || (opt as any)?.value || (opt as any)?.label || String(opt);
@@ -1033,9 +1040,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               groupCol={groupCol}
               groupFieldTitle={(groupCol?.title as string) || (groupCol?.key as string) || 'Status'}
               onCardMove={handleCardMove}
-              onCardCreate={handleOpenCreateRecord}
-              onCardEdit={handleOpenEditRecord}
-              onCardDelete={handleOpenDeleteRecord}
+              onCardCreate={canCreateRecord() && !isBaseReadOnly() ? handleOpenCreateRecord : undefined}
+              onCardEdit={canUpdateRecord() && !isBaseReadOnly() ? handleOpenEditRecord : undefined}
+              onCardDelete={canDeleteRecord() ? handleOpenDeleteRecord : undefined}
               onDuplicate={handleDuplicateCard}
               onStackCollapse={handleStackCollapse}
               onStackEdit={handleStackEdit}

@@ -35,6 +35,52 @@ interface DropdownItem {
   base?: any; // For base items, include the full base object
 }
 
+// Wrapper component to handle base menu permissions
+const BaseMenuWrapper: React.FC<{
+  base: any;
+  onEdit: (base: any) => void;
+  onAddMembers: (base: any) => void;
+  onDelete: (base: any) => void;
+}> = ({ base, onEdit, onAddMembers, onDelete }) => {
+  const { canUpdateBase: canUpdateBaseFromWorkspace, canDeleteBase: canDeleteBaseFromWorkspace, canAssignUsers } = useWorkspaceAccess(base.workspace_id);
+  const { canUpdateBase: canUpdateBaseFromBase, canDeleteBase: canDeleteBaseFromBase, canManageBaseMembers, baseAccess } = useBaseAccess(base.id);
+  
+  // Base-member can edit title/description, but not delete or manage members
+  // Allow edit if: workspace-level permission OR base-level permission OR base-member
+  const canEdit = canUpdateBaseFromWorkspace() || canUpdateBaseFromBase() || baseAccess === 'base-member';
+  const canDelete = canDeleteBaseFromWorkspace() || canDeleteBaseFromBase();
+  const canAddMembers = canAssignUsers() || canManageBaseMembers();
+  const hasAnyAction = canEdit || canDelete || canAddMembers;
+
+  // Don't render menu if no actions are available
+  if (!hasAnyAction) {
+    return null;
+  }
+
+  return (
+    <div
+      onClick={(e) => {
+        e.stopPropagation();
+        // Prevent closing the dropdown when clicking the menu trigger
+      }}
+      onMouseDown={(e) => {
+        // Prevent the click-outside handler from closing the dropdown
+        e.stopPropagation();
+      }}
+    >
+      <BaseMenu
+        base={base}
+        onEdit={onEdit}
+        onAddMembers={onAddMembers}
+        onDelete={onDelete}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        canAddMembers={canAddMembers}
+      />
+    </div>
+  );
+};
+
 const Breadcrumb: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -42,8 +88,7 @@ const Breadcrumb: React.FC = () => {
   const toast = useToast();
   const { selectedWorkspaceId, selectedBaseId, selectedTableId, selectedViewId } = useNavigationStore();
   const { navigateToFirstView } = useNavigateToBaseFirstView();
-  const { canCreateBase, canUpdateBase, canDeleteBase, canAssignUsers, isBaseLevelAccess } = useWorkspaceAccess(selectedWorkspaceId || undefined);
-  const { canCreateTable, canCreateView } = useBaseAccess(selectedBaseId || undefined);
+  const { canCreateBase, isBaseLevelAccess } = useWorkspaceAccess(selectedWorkspaceId || undefined);
   const updateBaseMutation = useUpdateBase();
   const deleteBaseMutation = useDeleteBase();
   const createBaseMutation = useCreateBase();
@@ -443,7 +488,7 @@ const Breadcrumb: React.FC = () => {
         id: base.id,
         label: base.title || base.name || 'Base',
         icon: (
-          <div className={`w-6 h-6 ${icon.color} rounded-md flex items-center justify-center text-primary font-semibold text-sm flex-shrink-0`}>
+          <div className={`w-8 h-8 ${icon.color} rounded-md flex items-center justify-center text-white text-sm flex-shrink-0`}>
             {icon.letter}
           </div>
         ),
@@ -618,26 +663,12 @@ const Breadcrumb: React.FC = () => {
 
                                   {/* Base Menu - only for base items */}
                                   {item.type === 'base' && dropdownItem.base && (
-                                    <div
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        // Prevent closing the dropdown when clicking the menu trigger
-                                      }}
-                                      onMouseDown={(e) => {
-                                        // Prevent the click-outside handler from closing the dropdown
-                                        e.stopPropagation();
-                                      }}
-                                    >
-                                      <BaseMenu
-                                        base={dropdownItem.base}
-                                        onEdit={handleEditBase}
-                                        onAddMembers={handleAddMembers}
-                                        onDelete={handleDeleteBase}
-                                        canEdit={canUpdateBase()}
-                                        canDelete={canDeleteBase()}
-                                        canAddMembers={canAssignUsers()}
-                                      />
-                                    </div>
+                                    <BaseMenuWrapper
+                                      base={dropdownItem.base}
+                                      onEdit={handleEditBase}
+                                      onAddMembers={handleAddMembers}
+                                      onDelete={handleDeleteBase}
+                                    />
                                   )}
                                 </div>
                               </div>

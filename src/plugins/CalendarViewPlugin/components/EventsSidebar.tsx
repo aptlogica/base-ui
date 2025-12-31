@@ -19,7 +19,7 @@ interface EventsSidebarProps {
   columns?: BaseColumn[];
   sorts?: SortItem[];
   onSortChange?: (newSorts: SortItem[]) => void;
-  onCreateRecord?: () => void;
+  onCreateRecord?: () => void; // Optional - only provided if user has permission
 }
 
 const EventsSidebar: React.FC<EventsSidebarProps> = ({

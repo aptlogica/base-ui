@@ -13,6 +13,7 @@ import { GridColumn } from "../../GridViewPlugin/types/grid.types";
 import { applyFilters } from "../../../utils/filterUtils";
 import { buildInitialValuesForEdit } from "../../../utils/initialValues";
 import { utcISOToZoned } from '../../../utils/dateUtils';
+import { useBaseAccess } from '../../../hooks/useBaseAccess';
 // Custom hooks
 import { useCalendarViewConfig } from "../hooks/useCalendarViewConfig";
 import { useCalendarModals } from "../hooks/useCalendarModals";
@@ -452,7 +453,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         dateFields={dateFields}
         onDateFieldChange={handleDateFieldChange}
         onExport={handleOpenExportModal}
-        onCreateRecord={() => handleOpenCreateModal(currentDate)}
+        onCreateRecord={canCreateRecord() && !isBaseReadOnly() ? () => handleOpenCreateModal(currentDate) : undefined}
         sidebarCollapsed={sidebarCollapsed}
         onToggleSidebar={toggleSidebar}
         columns={visibleColumns as GridColumn[]}
@@ -531,7 +532,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                 currentDate={currentDate}
                 columns={visibleColumns}
                 sorts={sorts}
-                onCreateRecord={() => handleOpenCreateModal(currentDate)}
+                onCreateRecord={canCreateRecord() && !isBaseReadOnly() ? () => handleOpenCreateModal(currentDate) : undefined}
                 onSortChange={handleSortChange}
             />
           </div>

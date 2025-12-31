@@ -9,6 +9,7 @@ interface ContextMenuProps {
   onInsertBelow: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  canDeleteRecord?: boolean;
 }
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -18,7 +19,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onInsertAbove,
   onInsertBelow,
   onDuplicate,
-  onDelete
+  onDelete,
+  canDeleteRecord = true
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ top: y, left: x });
@@ -131,10 +133,15 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       >
         <Copy className="w-4 h-4" /> Duplicate row
       </button>
-      <div className="border-t my-1" />
-      <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors" onClick={onDelete}>
-        <Trash2 className="w-4 h-4" /> Delete record
-      </button>
+      {/* Delete record - only show if user can delete */}
+      {canDeleteRecord && (
+        <>
+          <div className="border-t my-1" />
+          <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors" onClick={onDelete}>
+            <Trash2 className="w-4 h-4" /> Delete record
+          </button>
+        </>
+      )}
     </div>
   );
 }; 

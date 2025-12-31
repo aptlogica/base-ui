@@ -600,15 +600,18 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
           )}
         </div>
       )}
-      <div className={`${stack.isCollapsed ? '' : 'absolute bottom-0 left-0'} w-full border-t border-primary`}>
-        <button
-          onClick={handleNewRecordClick}
-          className="w-full inline-flex items-center justify-center gap-1 text-primary-brand hover:text-hover-primary-dark text-xs font-medium p-3"
-        >
-          <Plus className="w-3 h-3" />
-          New record
-        </button>
-      </div>
+      {/* New record button - only show if onCardCreate is provided (user has permission) */}
+      {onCardCreate && (
+        <div className={`${stack.isCollapsed ? '' : 'absolute bottom-0 left-0'} w-full border-t border-primary`}>
+          <button
+            onClick={handleNewRecordClick}
+            className="w-full inline-flex items-center justify-center gap-1 text-primary-brand hover:text-hover-primary-dark text-xs font-medium p-3"
+          >
+            <Plus className="w-3 h-3" />
+            New record
+          </button>
+        </div>
+      )}
 
       {/* Delete confirmation modal */}
       <DeleteConfirmModal

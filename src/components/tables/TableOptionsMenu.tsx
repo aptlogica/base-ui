@@ -33,7 +33,7 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
   const updateTableMutation = useUpdateTable();
   const deleteTableMutation = useDeleteTable();
   const { handleTableDeletion } = useNavigationActions();
-  const { canDeleteTable } = useBaseAccess(table?.base_id);
+  const { canDeleteTable, isBaseReadOnly, canUpdateTable } = useBaseAccess(table?.base_id);
 
   const handleEditTable = async ({ name, description }: { name: string; description: string }) => {
     try {
@@ -79,21 +79,41 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
     if (onPinToggle) onPinToggle(table.id, !isPinned);
   };
 
+  // Build menu items based on permissions
+  const menuItems = [
+    // Pin table - only show if not read-only
+    ...(onPinToggle && !isBaseReadOnly() ? [{ 
+      label: isPinned ? 'Unpin table' : 'Pin table', 
+      icon: <Pin className="w-5 h-5 text-gray-400" />, 
+      onClick: handlePinClick
+    }] : []),
+    // Edit table - only show if user can update table and not read-only
+    ...(canUpdateTable() && !isBaseReadOnly() ? [{ 
+      label: 'Edit table', 
+      icon: <Edit className="w-5 h-5 text-gray-400" />, 
+      onClick: () => setShowEditModal(true) 
+    }] : []),
+    // Delete table - only show if user can delete
+    ...(canDeleteTable() ? [{ 
+      label: 'Delete table', 
+      icon: <Trash2 className="w-5 h-5 text-gray-400" />, 
+      onClick: () => setShowDelete(true), 
+      danger: true 
+    }] : []),
+  ];
+
+  // Don't render menu if no actions are available
+  if (menuItems.length === 0) {
+    return null;
+  }
+
   return (
     <>
       <PopoverMenu
         align={align}
         portaled={portaled}
         trigger={<Ellipsis className="w-4 h-4 text-gray-500 hover:text-gray-600" />}
-        items={[
-          ...(onPinToggle ? [{ 
-            label: isPinned ? 'Unpin table' : 'Pin table', 
-            icon: <Pin className="w-5 h-5 text-gray-400" />, 
-            onClick: handlePinClick
-          }] : []),
-          { label: 'Edit table', icon: <Edit className="w-5 h-5 text-gray-400" />, onClick: () => setShowEditModal(true) },
-          ...(canDeleteTable() ? [{ label: 'Delete table', icon: <Trash2 className="w-5 h-5 text-gray-400" />, onClick: () => setShowDelete(true), danger: true }] : []),
-        ]}
+        items={menuItems}
       />
       {showEditModal && ReactDOM.createPortal(
         // Add a key so the modal remounts when a different table is edited (avoids stale props in portaled contexts)

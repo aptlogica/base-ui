@@ -26,6 +26,7 @@ interface VirtualizedTableBodyProps {
   setExpandedGroups?: React.Dispatch<React.SetStateAction<Set<string>>>;
   visibleColumns?: ColumnConfig[];
   allColumns?: ColumnConfig[]; // All columns for formula field name mapping
+  canEdit?: boolean; // Permission to edit cells
 }
 
 const ROW_HEIGHT = 40; // Row height in pixels
@@ -98,6 +99,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
   height,
   width,
   rowHeight = ROW_HEIGHT,
+  canEdit = true,
   onScroll,
   outerRef,
   groupedData,
@@ -288,6 +290,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
         setActiveCell={setActiveCell}
         tableId={tableId}
         allColumns={allColumns || columns}
+        canEdit={canEdit}
       />
     );
   }, [columns, columnWidths, selectedRows, onRowSelect, onCellChange, onDelete, onContextMenu, activeCell, setActiveCell, tableId, allColumns]);

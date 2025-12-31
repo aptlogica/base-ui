@@ -36,7 +36,7 @@ const ViewOptionsMenu: React.FC<ViewOptionsMenuProps> = ({ view, onRename, onEdi
   const deleteViewMutation = useDeleteView();
   // Get base_id from view or nested table
   const baseId = view?.base_id || view?.table?.base_id;
-  const { canDeleteView } = useBaseAccess(baseId);
+  const { canDeleteView, isBaseReadOnly, canUpdateView } = useBaseAccess(baseId);
 
   const handleEditView = async ({ name, description }: { name: string; description: string }) => {
     try {
@@ -77,21 +77,41 @@ const ViewOptionsMenu: React.FC<ViewOptionsMenuProps> = ({ view, onRename, onEdi
     if (onPinToggle) onPinToggle(view.id, !isPinned);
   };
 
+  // Build menu items based on permissions
+  const menuItems = [
+    // Pin view - only show if not read-only
+    ...(onPinToggle && !isBaseReadOnly() ? [{
+      label: isPinned ? 'Unpin view' : 'Pin view',
+      icon: <Pin className="w-5 h-5 text-gray-400" />,
+      onClick: handlePinClick
+    }] : []),
+    // Edit view - only show if user can update view and not read-only
+    ...(canUpdateView() && !isBaseReadOnly() ? [{ 
+      label: 'Edit view', 
+      icon: <Edit className="w-5 h-5 text-gray-400" />, 
+      onClick: () => setShowEditModal(true) 
+    }] : []),
+    // Delete view - only show if user can delete
+    ...(canDeleteView() ? [{ 
+      label: 'Delete view', 
+      icon: <Trash2 className="w-5 h-5 text-gray-400" />, 
+      onClick: () => setShowDelete(true), 
+      danger: true 
+    }] : []),
+  ];
+
+  // Don't render menu if no actions are available
+  if (menuItems.length === 0) {
+    return null;
+  }
+
   return (
     <>
       <PopoverMenu
         align={align}
         portaled={portaled}
         trigger={<Ellipsis className="w-4 h-4 text-gray-500" />}
-        items={[
-          ...(onPinToggle ? [{
-            label: isPinned ? 'Unpin view' : 'Pin view',
-            icon: <Pin className="w-5 h-5 text-gray-400" />,
-            onClick: handlePinClick
-          }] : []),
-          { label: 'Edit view', icon: <Edit className="w-5 h-5 text-gray-400" />, onClick: () => setShowEditModal(true) },
-          ...(canDeleteView() ? [{ label: 'Delete view', icon: <Trash2 className="w-5 h-5 text-gray-400" />, onClick: () => setShowDelete(true), danger: true }] : []),
-        ]}
+        items={menuItems}
       />
 
       {showEditModal &&
