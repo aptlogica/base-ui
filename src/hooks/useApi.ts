@@ -284,6 +284,11 @@ export const useRemoveUserFromBase = () => {
       return await removeUserFromBaseService(params.baseId, { user_id: params.user_id });
     },
     onSuccess: (_, variables) => {
+      // Invalidate userRolesAndAccess queries to refresh role display in MembersTable
+      queryClient.invalidateQueries({
+        queryKey: ['userRolesAndAccess', variables.user_id],
+        exact: false
+      });
       // Invalidate base members query to refresh the list
       queryClient.invalidateQueries({
         queryKey: ['base', variables.baseId, 'members']
@@ -1528,6 +1533,11 @@ export const useBulkAddMembers = () => {
           queryKey: ['userAccessDetails', member.user_id],
           exact: false
         });
+        // Invalidate userRolesAndAccess queries to refresh role display in MembersTable
+        queryClient.invalidateQueries({
+          queryKey: ['userRolesAndAccess', member.user_id],
+          exact: false
+        });
       });
 
       // Invalidate workspaces query to refresh workspace members
@@ -1584,6 +1594,11 @@ export const useRemoveUserFromWorkspace = () => {
       queryClient.invalidateQueries({
         queryKey: ['userAccessDetails', variables.user_id],
         exact: false // Match all queries starting with ['userAccessDetails', userId]
+      });
+      // Invalidate userRolesAndAccess queries to refresh role display in MembersTable
+      queryClient.invalidateQueries({
+        queryKey: ['userRolesAndAccess', variables.user_id],
+        exact: false
       });
 
       // Invalidate workspace members query to refresh the list

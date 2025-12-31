@@ -23,6 +23,8 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [selectedRole, setSelectedRole] = useState<string>('base-member');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Track pending role changes for existing members (user_id -> new role)
+  const [pendingRoleChanges, setPendingRoleChanges] = useState<Record<string, string>>({});
 
   const bulkAddBaseMembersMutation = useBulkAddBaseMembers();
   const removeUserFromBaseMutation = useRemoveUserFromBase();
@@ -89,6 +91,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
       setSelectedUserIds([]);
       setSelectedRole('base-member');
       setIsSubmitting(false);
+      setPendingRoleChanges({});
       // Refetch members when modal opens to get updated data
       baseMembersQuery.refetch();
     }
@@ -161,6 +164,41 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
     } catch (error: any) {
       const errorMsg = error?.response?.data?.message || error?.message || 'Failed to remove member';
       toast.error(errorMsg);
+    }
+  };
+
+  // Handle updating all pending role changes
+  const handleUpdateRoles = async () => {
+    const roleChangeEntries = Object.entries(pendingRoleChanges);
+    
+    if (roleChangeEntries.length === 0) {
+      toast.info('No role changes to update');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const members = roleChangeEntries.map(([userId, role]) => ({
+        user_id: userId,
+        role: role, // base-member or base-read
+      }));
+
+      await bulkAddBaseMembersMutation.mutateAsync({
+        baseId,
+        workspaceId,
+        members
+      });
+
+      toast.success('Roles updated successfully');
+      setPendingRoleChanges({});
+      baseMembersQuery.refetch();
+      onSuccess?.();
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.message || error?.message || 'Failed to update roles';
+      toast.error(errorMsg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -333,11 +371,24 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
                               {/* Role Dropdown */}
                               <div className="flex items-center gap-2">
                                 <RoleDropdown
-                                  value={roleValue}
+                                  value={pendingRoleChanges[member.user_id || member.id] || roleValue}
                                   options={baseRoleOptions}
-                                  onChange={() => {
-                                    // TODO: Implement role update API call
-                                    toast.info('Role update functionality coming soon');
+                                  onChange={(value) => {
+                                    const newRole = value as string;
+                                    const userId = member.user_id || member.id;
+                                    if (newRole !== roleValue) {
+                                      setPendingRoleChanges(prev => ({
+                                        ...prev,
+                                        [userId]: newRole
+                                      }));
+                                    } else {
+                                      // If changed back to original, remove from pending changes
+                                      setPendingRoleChanges(prev => {
+                                        const updated = { ...prev };
+                                        delete updated[userId];
+                                        return updated;
+                                      });
+                                    }
                                   }}
                                   placeholder="Select a role"
                                   className="min-w-[140px]"
@@ -375,6 +426,25 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
           >
             Cancel
           </button>
+          {/* Update button for pending role changes */}
+          {Object.keys(pendingRoleChanges).length > 0 && (
+            <button
+              type="button"
+              onClick={handleUpdateRoles}
+              disabled={isSubmitting || bulkAddBaseMembersMutation.isPending}
+              className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+            >
+              {(isSubmitting || bulkAddBaseMembersMutation.isPending) ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Update'
+              )}
+            </button>
+          )}
+          {/* Add button for new members */}
           <button
             type="submit"
             form="add-base-members-form"

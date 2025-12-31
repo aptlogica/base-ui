@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Loader2, CheckCircle2, UserPlus, Edit, Trash2 } from 'lucide-react';
-import { useBulkAddMembers, useGetUsersForAssign, useWorkspaceBases, useWorkspaceMembers, useBaseMembers, useUserRolesAndAccess, useRemoveUserFromWorkspace } from '../../hooks/useApi';
+import { useBulkAddMembers, useGetUsersForAssign, useWorkspaceBases, useWorkspaceMembers, useBaseMembers, useUserRolesAndAccess, useRemoveUserFromWorkspace, useRemoveUserFromBase } from '../../hooks/useApi';
 import { useToast } from '../common/Toast';
 import { AdvancedDropdown } from '../common/dropdown/AdvancedDropdown';
 import { useAuth } from '../../auth/AuthContext';
@@ -29,9 +29,12 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   const [selectedRole, setSelectedRole] = useState<string>('maintainer');
   const [selectedBases, setSelectedBases] = useState<string[]>([]);
   const [baseSelectionType, setBaseSelectionType] = useState<'all_bases' | 'specific_base'>('all_bases');
+  // State to track individual base roles in edit mode
+  const [baseRoles, setBaseRoles] = useState<Record<string, string>>({});
 
   const bulkAddMembersMutation = useBulkAddMembers();
   const removeUserFromWorkspaceMutation = useRemoveUserFromWorkspace();
+  const removeUserFromBaseMutation = useRemoveUserFromBase();
   const tenantUsersQuery = useGetUsersForAssign();
   const workspaceBasesQuery = useWorkspaceBases(workspaceId);
   // Fetch user roles and access when in edit mode - using same API as UserTable
@@ -113,6 +116,12 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
     ];
   }, [editMode]);
 
+  // Base role options - constant to avoid recreating
+  const baseRoleOptions = React.useMemo(() => [
+    { label: 'Base Member', value: 'base-member' },
+    { label: 'Base Read Only', value: 'base-read' },
+  ], []);
+
   // Base selection options
   const baseSelectionOptions = React.useMemo(() => {
     return [
@@ -139,31 +148,31 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
             const workspaceAccess = currentWorkspace.access || '';
 
             // Determine role based on access field
-            // If access is empty and bases exist, it's base-specific
-            // If access has a value, it's a workspace-level role
-            if (workspaceAccess === 'maintainer') {
-              setSelectedRole('maintainer');
-            } else if (workspaceAccess === 'workspace-read') {
-              setSelectedRole('workspace-read');
-            } else if (currentWorkspace.bases && currentWorkspace.bases.length > 0) {
-              // Base-specific role - check first base's access to determine role
-              const firstBase = currentWorkspace.bases[0];
-              const baseAccess = firstBase.access || 'base-member';
-              setSelectedRole(baseAccess); // base-member or base-read
-              
-              // Set selected bases
-              const baseIds = currentWorkspace.bases.map((base: any) => base.base_id).filter(Boolean);
-              setSelectedBases(baseIds);
-              setBaseSelectionType('specific_base');
+            // If access is empty string, it's base-level access (bases array has data)
+            // If access has a value, it's workspace-level role (bases array is empty)
+            if (workspaceAccess && workspaceAccess !== '') {
+              // Workspace-level role
+              setSelectedRole(workspaceAccess === 'maintainer' ? 'maintainer' : 'workspace-read');
             } else {
-              // Default fallback
-              setSelectedRole('maintainer');
-              setSelectedBases([]);
-              setBaseSelectionType('all_bases');
+              // Base-level access - initialize base roles
+              setSelectedRole('base-member'); // Default, but won't be used in UI
             }
 
             // Set selected user (disabled in edit mode)
             setSelectedUserIds([memberToEdit]);
+
+            // Initialize base roles from API response
+            if (currentWorkspace.bases && Array.isArray(currentWorkspace.bases)) {
+              const baseRolesMap: Record<string, string> = {};
+              currentWorkspace.bases.forEach((base: any) => {
+                if (base.base_id) {
+                  baseRolesMap[base.base_id] = base.access || 'base-member';
+                }
+              });
+              setBaseRoles(baseRolesMap);
+            } else {
+              setBaseRoles({});
+            }
           }
         }
       } else {
@@ -176,6 +185,68 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
       }
     }
   }, [isOpen, editMode, memberToEdit, userRolesAndAccessData, workspaceId]);
+
+  // Handle updating roles in edit mode (called when Update button is clicked)
+  const handleUpdateRoles = async () => {
+    if (!memberToEdit || !workspaceId) return;
+
+    try {
+      const workspaces = Array.isArray(userRolesAndAccessData) ? userRolesAndAccessData : [];
+      const currentWorkspace = workspaces.find((ws: any) => ws.workspace_id === workspaceId);
+      
+      if (!currentWorkspace) {
+        toast.error('Workspace not found');
+        return;
+      }
+
+      const workspaceAccess = currentWorkspace.access || '';
+      const isWorkspaceLevel = workspaceAccess !== '';
+      
+      let membership: {
+        workspace_id: string;
+        role: string;
+        bases: Array<{ base_id: string; role: string }>;
+      };
+
+      if (isWorkspaceLevel) {
+        // Workspace-level role update
+        membership = {
+          workspace_id: workspaceId,
+          role: selectedRole,
+          bases: []
+        };
+      } else {
+        // Base-level role updates - get all bases with their updated roles
+        const userBases = currentWorkspace.bases || [];
+        const basesToUpdate = userBases.map((base: any) => ({
+          base_id: base.base_id,
+          role: baseRoles[base.base_id] || base.access || 'base-member'
+        }));
+
+        membership = {
+          workspace_id: workspaceId,
+          role: '', // Empty when bases are provided
+          bases: basesToUpdate
+        };
+      }
+
+      const members = [{
+        user_id: memberToEdit,
+        memberships: [membership]
+      }];
+
+      await bulkAddMembersMutation.mutateAsync({
+        workspaceId,
+        members
+      });
+
+      toast.success('Roles updated successfully');
+      onClose();
+      onSuccess?.();
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update roles');
+    }
+  };
 
   const handleAssignUser = async () => {
     if (!selectedUserIds || selectedUserIds.length === 0 || !workspaceId) {
@@ -417,80 +488,171 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
                       );
                     }
 
-                    // Get workspace icon/avatar
+                    // Get workspace info
                     const workspaceInitials = (currentWorkspace.workspace_name || 'W').charAt(0).toUpperCase();
                     const workspaceName = currentWorkspace.workspace_name || 'Workspace';
+                    const workspaceAccess = currentWorkspace.access || '';
+                    const userBases = currentWorkspace.bases || [];
+                    
+                    // Determine if workspace-level or base-level access
+                    const isWorkspaceLevel = workspaceAccess !== '';
 
                     return (
                       <div className="space-y-4">
-                        {/* Workspace with Role Management */}
-                        <div className="flex items-center gap-4 justify-between">
-                          {/* Workspace Info with Icon */}
-                          <div className="flex items-center gap-3 flex-shrink-0">
-                            <div className="w-10 h-10 bg-purple-400 rounded-lg flex items-center justify-center text-white font-semibold">
-                              {workspaceInitials}
+                        {isWorkspaceLevel ? (
+                          // Workspace-level role management (access is not empty)
+                          <div className="flex items-center gap-4 justify-between">
+                            {/* Workspace Info with Icon */}
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                              <div className="w-10 h-10 bg-purple-400 rounded-lg flex items-center justify-center text-white font-semibold">
+                                {workspaceInitials}
+                              </div>
+                              <span className="text-sm font-medium text-gray-900 max-w-52 truncate">
+                                {workspaceName}
+                              </span>
                             </div>
-                            <span className="text-sm font-medium text-gray-900 max-w-52 truncate">
-                              {workspaceName}
-                            </span>
-                          </div>
 
-                          {/* Role Dropdown */}
-                          <div className="flex-1 max-w-xs flex items-center gap-3">
+                            {/* Role Dropdown */}
+                            <div className="flex-1 max-w-xs flex items-center gap-3">
                               <AdvancedDropdown
                                 options={roleOptions}
                                 value={selectedRole}
                                 onChange={(value) => {
                                   const role = value as string;
                                   setSelectedRole(role);
-                                  if (!roleAllowsBaseSelection(role)) {
-                                    setBaseSelectionType('all_bases');
-                                    setSelectedBases([]);
-                                  }
                                 }}
                                 placeholder="Select a role"
                                 disabled={bulkAddMembersMutation.isPending || removeUserFromWorkspaceMutation.isPending || isLoadingUserAccess}
                               />
 
-                            {/* Remove Button */}
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                if (!window.confirm(`Are you sure you want to remove access to "${workspaceName}"?`)) {
-                                  return;
-                                }
-
-                                try {
-                                  if (!memberToEdit) {
-                                    toast.error('User ID not found');
+                              {/* Remove Button */}
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!window.confirm(`Are you sure you want to remove access to "${workspaceName}"?`)) {
                                     return;
                                   }
 
-                                  await removeUserFromWorkspaceMutation.mutateAsync({
-                                    workspaceId,
-                                    user_id: memberToEdit
-                                  });
+                                  try {
+                                    if (!memberToEdit) {
+                                      toast.error('User ID not found');
+                                      return;
+                                    }
 
-                                  toast.success('Workspace access removed successfully');
-                                  onClose();
-                                  onSuccess?.();
-                                } catch (error: any) {
-                                  toast.error(error?.message || 'Failed to remove workspace access');
-                                }
-                              }}
-                              disabled={removeUserFromWorkspaceMutation.isPending || bulkAddMembersMutation.isPending}
-                              className="w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                              title="Remove workspace access"
-                            >
-                              {removeUserFromWorkspaceMutation.isPending ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="w-4 h-4" />
-                              )}
-                            </button>
+                                    await removeUserFromWorkspaceMutation.mutateAsync({
+                                      workspaceId,
+                                      user_id: memberToEdit
+                                    });
+
+                                    toast.success('Workspace access removed successfully');
+                                    onClose();
+                                    onSuccess?.();
+                                  } catch (error: any) {
+                                    toast.error(error?.message || 'Failed to remove workspace access');
+                                  }
+                                }}
+                                disabled={removeUserFromWorkspaceMutation.isPending || bulkAddMembersMutation.isPending}
+                                className="w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                                title="Remove workspace access"
+                              >
+                                {removeUserFromWorkspaceMutation.isPending ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-4 h-4" />
+                                )}
+                              </button>
+                            </div>
                           </div>
+                        ) : (
+                          // Base-level access management (access is empty string, bases array has data)
+                          userBases.length === 0 ? (
+                            <div className="text-center py-8 text-sm text-gray-500">
+                              No base access found
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              <h3 className="text-sm font-semibold text-gray-700">Bases</h3>
+                              <div className="space-y-2">
+                                {userBases.map((base: any) => {
+                                  const baseId = base.base_id;
+                                  const baseName = base.base_name || 'Unnamed Base';
+                                  const currentBaseRole = baseRoles[baseId] || base.access || 'base-member';
+                                  
+                                  return (
+                                    <div key={baseId} className="flex items-center gap-4 justify-between p-3 bg-gray-50 rounded-lg">
+                                      {/* Base Info */}
+                                      <div className="flex items-center gap-3 flex-shrink-0 flex-1 min-w-0">
+                                        <div className="w-8 h-8 bg-blue-400 rounded-lg flex items-center justify-center text-white font-semibold text-xs">
+                                          {baseName.charAt(0).toUpperCase()}
+                                        </div>
+                                        <span className="text-sm font-medium text-gray-900 truncate">
+                                          {baseName}
+                                        </span>
+                                      </div>
 
-                        </div>
+                                      {/* Base Role Dropdown */}
+                                      <div className="flex items-center gap-3">
+                                        <AdvancedDropdown
+                                          options={baseRoleOptions}
+                                          value={currentBaseRole}
+                                          onChange={(value) => {
+                                            const newRole = value as string;
+                                            setBaseRoles(prev => ({ ...prev, [baseId]: newRole }));
+                                          }}
+                                          placeholder="Select a role"
+                                          disabled={bulkAddMembersMutation.isPending || removeUserFromBaseMutation.isPending}
+                                          className="min-w-[140px]"
+                                        />
+
+                                        {/* Remove Base Access Button */}
+                                        <button
+                                          type="button"
+                                          onClick={async () => {
+                                            if (!window.confirm(`Are you sure you want to remove access to "${baseName}"?`)) {
+                                              return;
+                                            }
+
+                                            try {
+                                              if (!memberToEdit) {
+                                                toast.error('User ID not found');
+                                                return;
+                                              }
+
+                                              await removeUserFromBaseMutation.mutateAsync({
+                                                baseId,
+                                                user_id: memberToEdit
+                                              });
+
+                                              toast.success('Base access removed successfully');
+                                              // Remove from local state
+                                              setBaseRoles(prev => {
+                                                const updated = { ...prev };
+                                                delete updated[baseId];
+                                                return updated;
+                                              });
+                                              onSuccess?.();
+                                            } catch (error: any) {
+                                              toast.error(error?.message || 'Failed to remove base access');
+                                            }
+                                          }}
+                                          disabled={removeUserFromBaseMutation.isPending || bulkAddMembersMutation.isPending}
+                                          className="w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                                          title="Remove base access"
+                                        >
+                                          {removeUserFromBaseMutation.isPending ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                          ) : (
+                                            <Trash2 className="w-4 h-4" />
+                                          )}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )
+                        )}
                       </div>
                     );
                   })()
@@ -609,12 +771,12 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
             Cancel
           </button>
           <button
-            onClick={handleAssignUser}
+            onClick={editMode ? handleUpdateRoles : handleAssignUser}
             disabled={
               bulkAddMembersMutation.isPending ||
               removeUserFromWorkspaceMutation.isPending ||
               (!editMode && selectedUserIds.length === 0) ||
-              (baseSelectionType === 'specific_base' && selectedBases.length === 0) ||
+              (!editMode && baseSelectionType === 'specific_base' && selectedBases.length === 0) ||
               (editMode && isLoadingUserAccess)
             }
             className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
