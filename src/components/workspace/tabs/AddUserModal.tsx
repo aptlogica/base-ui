@@ -51,10 +51,10 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
     // Check for Owner or Co-owner roles
     if (Array.isArray(editUser.roles)) {
       return editUser.roles.some(role => 
-        role.scope_level === 'system' && (role.name === 'owner' || role.name === 'co-owner')
+        role.scope_level === 'system' &&role.name === 'owner'
       );
     } else if (typeof editUser.roles === 'string') {
-      return editUser.roles === 'owner' || editUser.roles === 'co-owner';
+      return editUser.roles === 'owner';
     }
 
     return false;
@@ -391,10 +391,8 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
           editUserData.profile_pic = avatar;
         }
 
-        // Add co-owner status if applicable
-        if (isCoOwner) {
-          editUserData.is_coowner = true;
-        }
+        // Always include co-owner status to allow removing the role
+        editUserData.is_coowner = isCoOwner;
 
         // Add membership if there are workspace assignments
         if (membership.length > 0) {
