@@ -44,17 +44,17 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
   // Edit mode hooks
   const { data: userAccessData } = useUserRolesAndAccess(editUser?.id || null);
 
-  // Determine if the user being edited is Owner (used to hide toggle/workspace selection)
+  // Determine if the user being edited is Owner or Co-owner
   const editedUserIsOwnerOrCoOwner = useMemo(() => {
     if (!isEditMode || !editUser) return false;
 
-    // Check for Owner role specifically
+    // Check for Owner or Co-owner roles
     if (Array.isArray(editUser.roles)) {
       return editUser.roles.some(role => 
-        role.scope_level === 'system' && role.name === 'owner'
+        role.scope_level === 'system' && (role.name === 'owner' || role.name === 'co-owner')
       );
     } else if (typeof editUser.roles === 'string') {
-      return editUser.roles === 'owner';
+      return editUser.roles === 'owner' || editUser.roles === 'co-owner';
     }
 
     return false;
@@ -391,10 +391,9 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
           editUserData.profile_pic = avatar;
         }
 
-        // Add co-owner status - always send when editing (to allow granting or revoking)
-        // Only send if user is not an Owner (toggle is visible/changeable for Co-owner)
-        if (!editedUserIsOwnerOrCoOwner) {
-          editUserData.is_coowner = isCoOwner;
+        // Add co-owner status if applicable
+        if (isCoOwner) {
+          editUserData.is_coowner = true;
         }
 
         // Add membership if there are workspace assignments
@@ -711,8 +710,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
                 {/* Co-owner Toggle - Hide when Owner edits themselves, show when Owner edits Co-owner */}
                 {(() => {
-                  // Don't show toggle if editing Owner (Owner role can't be changed)
-                  // But show it for Co-owner
+                  // Don't show toggle if editing Owner or Co-owner (they can't be changed)
                   if (isEditMode && editedUserIsOwnerOrCoOwner) {
                     return null;
                   }
@@ -722,7 +720,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                     return null;
                   }
                   
-                  // Show toggle in all other cases (add mode, or Owner editing Co-owner to revoke access, etc.)
+                  // Show toggle in all other cases (add mode, or Owner editing Co-owner, etc.)
                   return (
                     <div className="flex items-center justify-start gap-3">
                       <button
@@ -744,7 +742,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                 })()}
               </div>
 
-              {/* Right Column - Workspace/Base Selection - Hide for Co-owner and when editing Owner */}
+              {/* Right Column - Workspace/Base Selection - Hide for Co-owner and when editing Owner/Co-owner */}
               {!isCoOwner && !(isEditMode && editedUserIsOwnerOrCoOwner) && (
                 <div className="flex flex-col h-full min-h-0 bg-gray-50 p-4 lg:p-6">
                   <h3 className="text-sm font-semibold text-primary flex-shrink-0 mb-4">Select Workspace(s) & Base(s)</h3>
