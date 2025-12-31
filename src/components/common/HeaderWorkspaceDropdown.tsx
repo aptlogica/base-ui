@@ -7,6 +7,7 @@ import { useNavigationStore } from '../../stores/navigationStore';
 import { useNavigation } from '../../hooks/useNavigation';
 import { CreateWorkspaceModal } from '../modals/CreateWorkspaceModal';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
+import { getRoleLabel } from '../../types/roles';
 
 const HeaderWorkspaceDropdown: React.FC = () => {
   const location = useLocation();
@@ -79,8 +80,43 @@ const HeaderWorkspaceDropdown: React.FC = () => {
     if (selectedWorkspaceId && workspaces && Array.isArray(workspaces)) {
       return workspaces.find((ws: any) => ws.id === selectedWorkspaceId) || null;
     }
+    // FALLBACK: If no workspace is selected but workspaces are available, return first one for display
+    // The actual selection will be handled by the useEffect below
+    if (workspaces && Array.isArray(workspaces) && workspaces.length > 0) {
+      return workspaces[0];
+    }
     return null;
   }, [selectedWorkspace, selectedWorkspaceId, workspaces]);
+
+  // FALLBACK: Ensure a workspace is always selected when workspaces are available
+  // This handles cases where workspace selection gets lost due to errors or other issues
+  React.useEffect(() => {
+    if (!workspaces || !Array.isArray(workspaces) || workspaces.length === 0) return;
+    
+    // If no workspace is selected but workspaces are available, select the first one
+    if (!selectedWorkspace && !selectedWorkspaceId) {
+      const firstWorkspace = workspaces[0];
+      setSelectedWorkspace(firstWorkspace);
+      setWorkspace(firstWorkspace.id);
+      return;
+    }
+
+    // If selectedWorkspaceId exists but workspace is not found in list, select first one
+    if (selectedWorkspaceId && !workspaces.find((ws: any) => ws.id === selectedWorkspaceId)) {
+      const firstWorkspace = workspaces[0];
+      setSelectedWorkspace(firstWorkspace);
+      setWorkspace(firstWorkspace.id);
+      return;
+    }
+
+    // If selectedWorkspace is null but selectedWorkspaceId exists and workspace is in list, sync it
+    if (selectedWorkspaceId && !selectedWorkspace) {
+      const found = workspaces.find((ws: any) => ws.id === selectedWorkspaceId);
+      if (found) {
+        setSelectedWorkspace(found);
+      }
+    }
+  }, [workspaces, selectedWorkspace, selectedWorkspaceId, setSelectedWorkspace, setWorkspace]);
 
   // Get workspace initials and color
   const getWorkspaceIcon = (workspace: any, index: number) => {
@@ -180,7 +216,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
         <div
           ref={dropdownRef}
           data-workspace-dropdown
-          className={`fixed top-0 left-3.5 w-80 bg-card border rounded-xl shadow-lg z-50 overflow-hidden transition-all duration-300 ease-in-out flex flex-col ${workspaceDropdownOpen
+          className={`fixed top-0 left-3.5 w-96 bg-card border rounded-xl shadow-lg z-50 overflow-hidden transition-all duration-300 ease-in-out flex flex-col ${workspaceDropdownOpen
             ? 'opacity-100 max-h-96 scale-100'
             : 'opacity-0 max-h-0 scale-95 pointer-events-none'
             }`}
@@ -239,11 +275,29 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                           <span className="font-semibold text-primary truncate">
                             {workspace.title || workspace.name || workspace.slug || 'Untitled Workspace'}
                           </span>
+                          
+                          {/* Right side: Badge and Status Indicator */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {/* Access Level Badge - Don't show for owner/co-owner */}
+                            {workspace.access_level && workspace.access_level !== 'owner' && workspace.access_level !== 'co-owner' && (
+                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${
+                                workspace.access_level === 'workspace-read' || workspace.access_level === 'base-read'
+                                  ? 'bg-green-50 text-green-700 border-green-200'
+                                  : workspace.access_level === 'base'
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                  : workspace.access_level === 'maintainer'
+                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                  : 'bg-gray-50 text-gray-700 border-gray-200'
+                              }`}>
+                                {getRoleLabel(workspace.access_level)}
+                              </span>
+                            )}
 
-                          {/* Status Indicator - only for selected */}
-                          {isSelected && (
-                            <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                          )}
+                            {/* Status Indicator - only for selected */}
+                            {isSelected && (
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -260,29 +314,28 @@ const HeaderWorkspaceDropdown: React.FC = () => {
               )}
             </div>
 
-            {/* Separator */}
-            {workspaces && workspaces.length > 0 && (
+            {/* Separator - only show if there are workspaces and user can create */}
+            {workspaces && workspaces.length > 0 && canCreateWorkspace() && (
               <div className="border-t flex-shrink-0"></div>
             )}
 
-            {/* Create Workspace Button - always visible at bottom */}
-            <div className="p-2 flex-shrink-0">
-              <button
-                className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-muted/30 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={() => {
-                  if (canCreateWorkspace()) {
+            {/* Create Workspace Button - only show if user has permission */}
+            {canCreateWorkspace() && (
+              <div className="p-2 flex-shrink-0">
+                <button
+                  className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-muted/30 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1"
+                  onClick={() => {
                     setShowCreateWorkspace(true);
                     setWorkspaceDropdownOpen(false);
-                  }
-                }}
-                disabled={!canCreateWorkspace()}
-              >
-                <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
-                  <Plus className="w-4 h-4 text-primary" />
-                </div>
-                <span>Create Workspace</span>
-              </button>
-            </div>
+                  }}
+                >
+                  <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
+                    <Plus className="w-4 h-4 text-primary" />
+                  </div>
+                  <span>Create Workspace</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

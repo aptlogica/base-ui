@@ -6,7 +6,6 @@ import AdministratorSettingsButton from '../components/common/AdministratorSetti
 import HeaderMembers from '../components/common/HeaderMembers';
 import UserDropdown from '../components/common/UserDropdown';
 import HomePage from '../pages/HomePage';
-import ProjectsPage from '../pages/ProjectsPage';
 
 /**
  * Core layout registrations that were previously in WorkspacePlugin
@@ -61,10 +60,5 @@ export const registerCoreLayoutComponents = (api: PluginAPI, config: any = {}) =
     render: () => <HomePage />
   });
   
-  api.registerExtension('page:projects', {
-    id: 'default-projects-page',
-    order: 1,
-    render: () => <ProjectsPage />
-  });
 };
 

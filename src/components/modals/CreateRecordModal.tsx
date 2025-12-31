@@ -12,6 +12,7 @@ import {
     createFieldRendererProps
 } from '../../utils/standardFieldUtils';
 import { isFormulaField } from '../../utils/fieldUtils';
+import { useBaseAccess } from '../../hooks/useBaseAccess';
 
 type CreateRecordModalProps = {
     isOpen: boolean;
@@ -39,6 +40,10 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const [formError, setFormError] = useState<string | null>(null);
     const [rowData, setRowData] = useState<Record<string, any>>({});
     const [createdRecordId, setCreatedRecordId] = useState<string | null>(null);
+
+    // Get base_id from table (could be table.base_id or table.model.base_id)
+    const baseId = table?.base_id || table?.model?.base_id;
+    const { canCreateRecord } = useBaseAccess(baseId);
 
     const addRowMutation = useAddRow();
     const insertValueMutation = useInsertRowData();
@@ -127,6 +132,12 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
 
 
     const handleSave = async () => {
+        // Check permission before saving
+        if (!canCreateRecord()) {
+            setFormError('You do not have permission to create records.');
+            return;
+        }
+
         setFormError(null);
         const missing = validateRequired();
         if (missing.length) {
@@ -294,15 +305,16 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            disabled={submitting}
-                            onClick={handleSave}
-                            className={`px-3 py-1.5 rounded btn-primary ${submitting ? 'opacity-60 cursor-not-allowed' : ''
-                                }`}
-                        >
-                            {submitLabel}
-                        </button>
+                        {canCreateRecord() && (
+                            <button
+                                type="button"
+                                disabled={submitting}
+                                onClick={handleSave}
+                                className={`px-3 py-1.5 rounded btn-primary ${submitting ? 'opacity-60 cursor-not-allowed' : ''}`}
+                            >
+                                {submitLabel}
+                            </button>
+                        )}
                         <button type="button" className="p-2" onClick={onClose} aria-label="Close">
                             <X className="w-5 h-5 text-gray-500" />
                         </button>

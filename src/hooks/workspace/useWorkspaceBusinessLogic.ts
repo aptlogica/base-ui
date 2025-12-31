@@ -160,20 +160,20 @@ export const useWorkspaceBusinessLogic = () => {
       // Navigate after a brief delay to ensure state updates and query invalidation are processed
       // This prevents blank page issues when navigating immediately after workspace creation
       requestAnimationFrame(() => {
-        if (firstBase && firstTable && authUser?.id) {
-          try {
-            navigateAndPersist(workspaceData.id, firstBase.id, firstTable.id, authUser.id);
-            navigate(`/base/${firstBase.id}/table/${firstTable.id}/grid`);
-          } catch (navErr) {
+      if (firstBase && firstTable && authUser?.id) {
+        try {
+          navigateAndPersist(workspaceData.id, firstBase.id, firstTable.id, authUser.id);
+          navigate(`/base/${firstBase.id}/table/${firstTable.id}/grid`);
+        } catch (navErr) {
             console.error('Navigation error after workspace creation:', navErr);
             // Fallback to homepage if navigation fails
             navigate(`/homepage`);
-          }
-        } else {
+        }
+      } else {
           // Navigate to homepage if no base/table exists
           // Use replace to avoid adding to history stack
           navigate(`/homepage`, { replace: true });
-        }
+      }
       });
 
       onSuccess?.(workspaceData);
@@ -334,9 +334,14 @@ export const useWorkspaceBusinessLogic = () => {
   // Process workspace data from TanStack Query
   // CRITICAL: This effect must always sync selectedWorkspace with selectedWorkspaceId from store
   // On browser reload, the store has the ID but workspace object needs to be restored
+  // FALLBACK: Always ensure a workspace is selected when workspaces are available
   useEffect(() => {
     if (!restoreCompleted) return;
     if (!workspaces || !Array.isArray(workspaces) || workspaces.length === 0) return;
+
+    // Check if selectedWorkspace is null or invalid (workspace doesn't exist in list)
+    const isSelectedWorkspaceInvalid = !selectedWorkspace || 
+      (selectedWorkspace.id && !workspaces.find(ws => ws.id === selectedWorkspace.id));
 
     // Priority 1: If store has selectedWorkspaceId (from activity_data or previous selection), sync the workspace object
     // This is critical for browser reload - store has ID, need to restore workspace object
@@ -355,8 +360,13 @@ export const useWorkspaceBusinessLogic = () => {
         // This could happen if workspace was deleted or user lost access
         // FALLBACK: Always select first workspace when saved workspace is invalid
         if (workspaces.length > 0) {
-          setSelectedWorkspace(workspaces[0]);
-          setWorkspace(workspaces[0].id);
+          const firstWorkspace = workspaces[0];
+          setSelectedWorkspace(firstWorkspace);
+          setWorkspace(firstWorkspace.id);
+          // Persist the selection for refresh scenarios
+          if (authUser?.id) {
+            navigateAndPersist(firstWorkspace.id, null as any, null as any, authUser.id);
+          }
         }
       }
     } else {
@@ -373,7 +383,23 @@ export const useWorkspaceBusinessLogic = () => {
         }
       }
     }
-  }, [workspaces, restoreCompleted, selectedWorkspace, selectedWorkspaceId, setWorkspace]);
+
+    // ADDITIONAL SAFETY CHECK: If selectedWorkspace is null or invalid but workspaces are available,
+    // always fallback to first workspace. This handles edge cases where selection gets lost unexpectedly.
+    // This ensures workspace selection never disappears when workspaces are available.
+    if (isSelectedWorkspaceInvalid && workspaces.length > 0) {
+      const firstWorkspace = workspaces[0];
+      // Only update if we don't already have a valid selection
+      if (!selectedWorkspaceId || !workspaces.find(ws => ws.id === selectedWorkspaceId)) {
+        setSelectedWorkspace(firstWorkspace);
+        setWorkspace(firstWorkspace.id);
+        // Persist the selection for refresh scenarios
+        if (authUser?.id) {
+          navigateAndPersist(firstWorkspace.id, null as any, null as any, authUser.id);
+        }
+      }
+    }
+  }, [workspaces, restoreCompleted, selectedWorkspace, selectedWorkspaceId, setWorkspace, authUser, navigateAndPersist]);
 
   // Auto-select first base when workspace is selected but no base is selected
   useEffect(() => {

@@ -12,6 +12,7 @@ import { EditItemModal } from '../modals/EditItemModal';
 import DeleteConfirmModal from '../modals/DeleteConfirmModal';
 import { useUpdateView, useDeleteView } from '../../hooks/useApi';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
+import { useBaseAccess } from '../../hooks/useBaseAccess';
 
 interface ViewOptionsMenuProps {
   view: any;
@@ -33,9 +34,9 @@ const ViewOptionsMenu: React.FC<ViewOptionsMenuProps> = ({ view, onRename, onEdi
 
   const updateViewMutation = useUpdateView();
   const deleteViewMutation = useDeleteView();
-  // Get workspace_id from prop, view, or nested table
-  const workspaceId = propWorkspaceId || view?.workspace_id || view?.table?.workspace_id;
-  const { canDeleteView } = useWorkspaceAccess(workspaceId);
+  // Get base_id from view or nested table
+  const baseId = view?.base_id || view?.table?.base_id;
+  const { canDeleteView } = useBaseAccess(baseId);
 
   const handleEditView = async ({ name, description }: { name: string; description: string }) => {
     try {

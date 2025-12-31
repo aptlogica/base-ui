@@ -19,7 +19,6 @@ import { Loader2 } from 'lucide-react';
 import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-import OAuthCallbackPage from './pages/OAuthCallbackPage';
 import { usePluginStore } from './stores/pluginStore';
 import { ExtensionPoint } from './core/ExtensionPoint';
 import { ToastProvider } from './components/common/Toast';
@@ -303,7 +302,6 @@ const AppRoutes = ({ loading }: { loading: boolean }) => {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-      <Route path="/auth/callback" element={<OAuthCallbackPage />} />
       <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route path="/" element={<Navigate to="/homepage" replace />} />
         <Route path="/homepage" element={<ExtensionPoint id="page:homepage" />} />

@@ -9,6 +9,7 @@ import { AccessRole } from '../../shared/AccessRoleSelector';
 import { defaultRoleConfig } from '../../shared/roleConfig';
 import { useWorkspaceAccess } from '../../../hooks/useWorkspaceAccess';
 import { useUserRole } from '../../../hooks/useUserRole';
+import { getRoleLabel } from '../../../types/roles';
 
 interface WorkspaceTabProps {
   workspaceId: string;
@@ -258,12 +259,28 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-gray-900 truncate">
                               {ws.title || ws.name || 'Untitled Workspace'}
                             </span>
+                            
+                            {/* Access Level Badge - Don't show for owner/co-owner */}
+                            {ws.access_level && ws.access_level !== 'owner' && ws.access_level !== 'co-owner' && (
+                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full border flex-shrink-0 ${
+                                ws.access_level === 'workspace-read' || ws.access_level === 'base-read'
+                                  ? 'bg-green-50 text-green-700 border-green-200'
+                                  : ws.access_level === 'base'
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                  : ws.access_level === 'maintainer'
+                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                  : 'bg-gray-50 text-gray-700 border-gray-200'
+                              }`}>
+                                {getRoleLabel(ws.access_level)}
+                              </span>
+                            )}
+                            
                             {isSelected && (
-                              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0 ml-auto"></div>
                             )}
                           </div>
                         </div>

@@ -7,6 +7,7 @@ import DeleteConfirmModal from '../modals/DeleteConfirmModal';
 import { useUpdateTable, useDeleteTable } from '../../hooks/useApi';
 import { useNavigationActions } from '../../hooks/useNavigationActions';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
+import { useBaseAccess } from '../../hooks/useBaseAccess';
 
 import { ExistingItem } from '../../utils/nameValidation';
 
@@ -32,7 +33,7 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
   const updateTableMutation = useUpdateTable();
   const deleteTableMutation = useDeleteTable();
   const { handleTableDeletion } = useNavigationActions();
-  const { canDeleteTable } = useWorkspaceAccess(table?.workspace_id);
+  const { canDeleteTable } = useBaseAccess(table?.base_id);
 
   const handleEditTable = async ({ name, description }: { name: string; description: string }) => {
     try {

@@ -46,7 +46,7 @@ const HomePage: React.FC = () => {
   const { selectedWorkspaceId } = useNavigationStore();
   const { data: workspaceBasesData, isLoading: basesLoading } = useWorkspaceBases(selectedWorkspaceId || '');
   const toast = useToast();
-  const { canCreateBase, accessLevel, isWorkspaceReadOnly } = useWorkspaceAccess(selectedWorkspaceId || undefined);
+  const { canCreateBase, accessLevel, isWorkspaceReadOnly, isBaseLevelAccess } = useWorkspaceAccess(selectedWorkspaceId || undefined);
   const createBaseMutation = useCreateBase();
   const { navigateToFirstView } = useNavigateToBaseFirstView();
 
@@ -54,8 +54,24 @@ const HomePage: React.FC = () => {
   const allBases = useMemo(() => {
     const data = workspaceBasesData as any;
     if (!data?.data) return [];
-    return Array.isArray(data.data) ? data.data : [];
-  }, [workspaceBasesData]);
+    const bases = Array.isArray(data.data) ? data.data : [];
+    
+    // If workspace access is "base", filter to only show bases user has access to
+    if (isBaseLevelAccess()) {
+      return bases.filter((base: any) => {
+        const baseAccess = base?.access_level?.toLowerCase();
+        // Show bases where user has any valid access level
+        return baseAccess === 'owner' || 
+               baseAccess === 'maintainer' || 
+               baseAccess === 'base-member' || 
+               baseAccess === 'base-read' ||
+               baseAccess === 'workspace-read';
+      });
+    }
+    
+    // For owner/co-owner/maintainer, show all bases
+    return bases;
+  }, [workspaceBasesData, isBaseLevelAccess]);
 
   const [showCreateBase, setShowCreateBase] = useState(false);
   const [showImportData, setShowImportData] = useState(false);
@@ -376,225 +392,228 @@ const HomePage: React.FC = () => {
 
           {/* Right Side - Action Cards */}
           <div className="flex flex-col sm:flex-row gap-4 flex-shrink-0 w-full lg:w-auto">
-          {/* Create New Base - Hidden if access level is base-member */}
-          {accessLevel !== 'limited_access' && (
-          <div
-            onClick={() => {
-              if (!selectedWorkspaceId) {
-                toast.error('Please select a workspace first');
-                return;
-              }
-              if (!canCreateBase()) {
-                toast.error('You do not have permission to create bases');
-                return;
-              }
-              setShowCreateBase(true);
-            }}
-            className="rounded-xl bg-card border px-5 py-5 flex flex-col items-start cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px]"
-          >
-            <div className="w-10 h-10 rounded-xl bg-card border flex items-center justify-center mb-3">
-              <Plus className="w-5 h-5 text-gray-900" />
-            </div>
-            <div className="font-semibold text-sm text-gray-900 mb-0.5">Create New Base</div>
-            <div className="text-xs text-gray-600">Creates a new base.</div>
-          </div>
-          )}
-
-          {/* Import Data - Hidden if access level is base-member */}
-          {accessLevel !== 'limited_access' && (
-          <div
-            onClick={() => setShowImportData(true)}
-            className="rounded-xl bg-card border px-5 py-5 flex flex-col items-start cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px]"
-          >
-            <div className="w-10 h-10 rounded-xl bg-card border flex items-center justify-center mb-3">
-              <Download className="w-5 h-5 text-gray-900" />
-            </div>
-          </div>
-          )}
-        </div>
-      </div>
-
-      {/* All Bases Section */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center border-b justify-between gap-4 py-5 mb-5">
-        <h2 className="text-2xl font-semibold text-primary">All Bases</h2>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          {/* Search Input */}
-          <div className="relative flex-1 sm:flex-none sm:w-64">
-            <div className="flex items-center bg-gray-50 border rounded-xl px-3 py-2 focus-within:outline-none focus-within:ring-1 focus-within:ring-[var(--color-focus-ring)] focus-within:border-[var(--color-focus-ring)] outline-none transition-all">
-              <Search className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
-              <input
-                type="text"
-                placeholder="Search"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 bg-transparent border-none outline-none text-sm text-primary placeholder-gray-400"
-              />
-            </div>
-          </div>
-
-          {/* Recents Dropdown */}
-          <div className="relative" ref={sortDropdownRef}>
-            <button
-              ref={sortButtonRef}
-              onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
-              className={`flex items-center gap-2 px-3 py-2 text-sm border rounded-xl bg-card transition-all duration-200 whitespace-nowrap ${isSortDropdownOpen
-                  ? 'border-primary ring-1 ring-primary ring-opacity-20'
-                  : 'border hover:border-gray-400'
-                }`}
-            >
-              <span className="font-medium text-primary">
-                {sortOption === 'recent' ? 'Recents' : sortOption === 'a-z' ? 'A-Z' : 'Z-A'}
-              </span>
-              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {/* Dropdown Menu */}
-            {isSortDropdownOpen && (
-              <div className="absolute right-0 top-full mt-2 w-44 bg-card border rounded-xl shadow-lg z-50 overflow-hidden">
-                <div className="p-2">
-                  <button
-                    onClick={() => {
-                      setSortOption('recent');
-                      setIsSortDropdownOpen(false);
-                    }}
-                    className="w-full rounded-xl text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-primary">Recent</span>
-                      {sortOption === 'recent' && (
-                        <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                      )}
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSortOption('a-z');
-                      setIsSortDropdownOpen(false);
-                    }}
-                    className="w-full rounded-xl text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-primary">A-Z</span>
-                      {sortOption === 'a-z' && (
-                        <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                      )}
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSortOption('z-a');
-                      setIsSortDropdownOpen(false);
-                    }}
-                    className="w-full rounded-xl text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-primary">Z-A</span>
-                      {sortOption === 'z-a' && (
-                        <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                      )}
-                    </div>
-                  </button>
+            {/* Create New Base - Hidden if access level is base-member */}
+            {accessLevel !== 'limited_access' && (
+              <div
+                onClick={() => {
+                  if (!selectedWorkspaceId) {
+                    toast.error('Please select a workspace first');
+                    return;
+                  }
+                  if (!canCreateBase()) {
+                    toast.error('You do not have permission to create bases');
+                    return;
+                  }
+                  setShowCreateBase(true);
+                }}
+                className="rounded-xl bg-card border px-5 py-5 flex flex-col items-start cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px]"
+              >
+                <div className="w-10 h-10 rounded-xl bg-card border flex items-center justify-center mb-3">
+                  <Plus className="w-5 h-5 text-gray-900" />
                 </div>
+                <div className="font-semibold text-sm text-gray-900 mb-0.5">Create New Base</div>
+                <div className="text-xs text-gray-600">Creates a new base.</div>
+              </div>
+            )}
+
+            {/* Import Data - Hidden if access level is base-member */}
+            {accessLevel !== 'limited_access' && (
+              <div
+                onClick={() => setShowImportData(true)}
+                className="rounded-xl bg-card border px-5 py-5 flex flex-col items-start cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px]"
+              >
+                <div className="w-10 h-10 rounded-xl bg-card border flex items-center justify-center mb-3">
+                  <Download className="w-5 h-5 text-gray-900" />
+                </div>
+                <div className="font-semibold text-sm text-gray-900 mb-0.5">Import Data</div>
+                <div className="text-xs text-gray-600">Bring in external data.</div>
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Bases Grid */}
-      {filteredBases.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 border border-dashed rounded-xl bg-gray-50">
-          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-            <Zap className="w-8 h-8 text-gray-400" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No bases found</h3>
-          <p className="text-sm text-gray-600 text-center max-w-md">
-            {searchTerm ? 'No bases match your search. Try a different term.' : 'You don\'t have any bases yet. Create your first base to get started.'}
-          </p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredBases.map((base: any, index: number) => {
-            const icon = getBaseIcon(base, index);
-            const lastModified = formatLastModified(base.updated_time || base.created_time);
-            // Extract the time part (e.g., "30 minutes ago") to make it bold
-            const timeMatch = lastModified.match(/(\d+\s+(?:minute|hour|day|week|month|year)s?\s+ago)/i);
-            const timePart = timeMatch ? timeMatch[1] : '';
 
-            // Check for base image (same logic as breadcrumb)
-            const baseImage = base.image || base.logo || base.meta?.image;
-            const baseName = base.title || base.name || 'Base';
+        {/* All Bases Section */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center border-b justify-between gap-4 py-5 mb-5">
+          <h2 className="text-2xl font-semibold text-primary">All Bases</h2>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            {/* Search Input */}
+            <div className="relative flex-1 sm:flex-none sm:w-64">
+              <div className="flex items-center bg-gray-50 border rounded-xl px-3 py-2 focus-within:outline-none focus-within:ring-1 focus-within:ring-[var(--color-focus-ring)] focus-within:border-[var(--color-focus-ring)] outline-none transition-all">
+                <Search className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1 bg-transparent border-none outline-none text-sm text-primary placeholder-gray-400"
+                />
+              </div>
+            </div>
 
-            return (
-              <div
-                key={base.id}
-                className="rounded-xl bg-card border cursor-pointer hover:shadow-md transition-all duration-200 relative group"
+            {/* Recents Dropdown */}
+            <div className="relative" ref={sortDropdownRef}>
+              <button
+                ref={sortButtonRef}
+                onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
+                className={`flex items-center gap-2 px-3 py-2 text-sm border rounded-xl bg-card transition-all duration-200 whitespace-nowrap ${isSortDropdownOpen
+                  ? 'border-primary ring-1 ring-primary ring-opacity-20'
+                  : 'border hover:border-gray-400'
+                  }`}
               >
-                {/* Top Section: Icon, Title, Description, Menu */}
-                <div className="flex items-start gap-3 border-b p-5">
-                  {/* Icon on left - Use image if available, otherwise use initial with colored background */}
-                  {baseImage ? (
-                    <div className="w-12 h-12 border rounded-xl overflow-hidden flex-shrink-0 shadow-xs">
-                      <img
-                        src={baseImage}
-                        alt={baseName}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className={`w-12 h-12 border rounded-xl ${icon.color} flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-xs`}>
-                      {icon.letter}
-                    </div>
-                  )}
+                <span className="font-medium text-primary">
+                  {sortOption === 'recent' ? 'Recents' : sortOption === 'a-z' ? 'A-Z' : 'Z-A'}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
 
-                  {/* Title and Description on right of icon */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3
-                        onClick={() => handleBaseClick(base)}
-                        className="font-semibold text-base text-gray-900 leading-tight"
-                      >
-                        {base.title || base.name || 'Untitled Base'}
-                      </h3>
-                      {isWorkspaceReadOnly() ? (
-                          <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border">Read Only</span>
-                      ) : (
-                        <BaseMenuWrapper
-                          base={base}
-                          onEdit={handleEditBase}
-                          onAddMembers={handleAddMembers}
-                          onDelete={handleDeleteBase}
-                        />
-                      )}
-                    </div>
-                    <p
-                      onClick={() => handleBaseClick(base)}
-                      className="text-sm text-gray-600 line-clamp-1 leading-relaxed"
+              {/* Dropdown Menu */}
+              {isSortDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-44 bg-card border rounded-xl shadow-lg z-50 overflow-hidden">
+                  <div className="p-2">
+                    <button
+                      onClick={() => {
+                        setSortOption('recent');
+                        setIsSortDropdownOpen(false);
+                      }}
+                      className="w-full rounded-xl text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
                     >
-                      {base.description || 'Base for general purpose work.'}
-                    </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-primary">Recent</span>
+                        {sortOption === 'recent' && (
+                          <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                        )}
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSortOption('a-z');
+                        setIsSortDropdownOpen(false);
+                      }}
+                      className="w-full rounded-xl text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-primary">A-Z</span>
+                        {sortOption === 'a-z' && (
+                          <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                        )}
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSortOption('z-a');
+                        setIsSortDropdownOpen(false);
+                      }}
+                      className="w-full rounded-xl text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-primary">Z-A</span>
+                        {sortOption === 'z-a' && (
+                          <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                        )}
+                      </div>
+                    </button>
                   </div>
                 </div>
-
-                {/* Bottom Section: Last Modified */}
-                <div
-                  onClick={() => handleBaseClick(base)}
-                  className="text-xs text-gray-600 p-5"
-                >
-                  {timePart ? (
-                    <>
-                      <span className="text-gray-600">Last modified </span>
-                      <span className="font-semibold text-gray-700">{timePart}</span>
-                    </>
-                  ) : (
-                    <span>{lastModified}</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+              )}
+            </div>
+          </div>
         </div>
-      )}
+
+        {/* Bases Grid */}
+        {filteredBases.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 border border-dashed rounded-xl bg-gray-50">
+            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+              <Zap className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No bases found</h3>
+            <p className="text-sm text-gray-600 text-center max-w-md">
+              {searchTerm ? 'No bases match your search. Try a different term.' : 'You don\'t have any bases yet. Create your first base to get started.'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredBases.map((base: any, index: number) => {
+              const icon = getBaseIcon(base, index);
+              const lastModified = formatLastModified(base.updated_time || base.created_time);
+              // Extract the time part (e.g., "30 minutes ago") to make it bold
+              const timeMatch = lastModified.match(/(\d+\s+(?:minute|hour|day|week|month|year)s?\s+ago)/i);
+              const timePart = timeMatch ? timeMatch[1] : '';
+
+              // Check for base image (same logic as breadcrumb)
+              const baseImage = base.image || base.logo || base.meta?.image;
+              const baseName = base.title || base.name || 'Base';
+
+              return (
+                <div
+                  key={base.id}
+                  className="rounded-xl bg-card border cursor-pointer hover:shadow-md transition-all duration-200 relative group"
+                >
+                  {/* Top Section: Icon, Title, Description, Menu */}
+                  <div className="flex items-start gap-3 border-b p-5">
+                    {/* Icon on left - Use image if available, otherwise use initial with colored background */}
+                    {baseImage ? (
+                      <div className="w-12 h-12 border rounded-xl overflow-hidden flex-shrink-0 shadow-xs">
+                        <img
+                          src={baseImage}
+                          alt={baseName}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className={`w-12 h-12 border rounded-xl ${icon.color} flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-xs`}>
+                        {icon.letter}
+                      </div>
+                    )}
+
+                    {/* Title and Description on right of icon */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3
+                          onClick={() => handleBaseClick(base)}
+                          className="font-semibold text-base text-gray-900 leading-tight"
+                        >
+                          {base.title || base.name || 'Untitled Base'}
+                        </h3>
+                        {isWorkspaceReadOnly() ? (
+                          <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border">Read Only</span>
+                        ) : (
+                          <BaseMenuWrapper
+                            base={base}
+                            onEdit={handleEditBase}
+                            onAddMembers={handleAddMembers}
+                            onDelete={handleDeleteBase}
+                          />
+                        )}
+                      </div>
+                      <p
+                        onClick={() => handleBaseClick(base)}
+                        className="text-sm text-gray-600 line-clamp-1 leading-relaxed"
+                      >
+                        {base.description || 'Base for general purpose work.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Bottom Section: Last Modified */}
+                  <div
+                    onClick={() => handleBaseClick(base)}
+                    className="text-xs text-gray-600 p-5"
+                  >
+                    {timePart ? (
+                      <>
+                        <span className="text-gray-600">Last modified </span>
+                        <span className="font-semibold text-gray-700">{timePart}</span>
+                      </>
+                    ) : (
+                      <span>{lastModified}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
       {/* Modals */}
       {showCreateBase && selectedWorkspaceId && (
@@ -736,4 +755,3 @@ const HomePage: React.FC = () => {
 };
 
 export default HomePage;
-

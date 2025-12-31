@@ -6,6 +6,7 @@ import { TableViewsProps } from '../types';
 import { useUpdateTable } from '../../../../hooks/useApi';
 import { Pin } from 'lucide-react';
 import { useWorkspaceAccess } from '../../../../hooks/useWorkspaceAccess';
+import { useBaseAccess } from '../../../../hooks/useBaseAccess';
 
 interface PinnedViews {
   [viewId: string]: boolean;
@@ -23,7 +24,8 @@ export const TableViews: React.FC<TableViewsProps> = ({
   setViewsRefetchTrigger
 }) => {
   const updateTable = useUpdateTable();
-  const { canCreateView, isWorkspaceReadOnly } = useWorkspaceAccess(table.workspace_id);
+  const { isWorkspaceReadOnly } = useWorkspaceAccess(table.workspace_id);
+  const { canCreateView } = useBaseAccess(table.base_id);
   const [pinnedViews, setPinnedViews] = React.useState<PinnedViews>(() => {
     return table.meta?.pinnedViews || {};
   });

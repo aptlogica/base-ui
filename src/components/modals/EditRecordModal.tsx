@@ -10,6 +10,7 @@ import {
   getStandardFieldType 
 } from '../../utils/standardFieldUtils';
 import { isFormulaField } from '../../utils/fieldUtils';
+import { useBaseAccess } from '../../hooks/useBaseAccess';
 
 type EditRecordModalProps = {
   isOpen: boolean;
@@ -45,6 +46,10 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   const [originalData, setOriginalData] = useState<Record<string, any>>({});
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Get base_id from table (could be table.base_id or table.model.base_id)
+  const baseId = table?.base_id || table?.model?.base_id;
+  const { canUpdateRecord, canDeleteRecord } = useBaseAccess(baseId);
 
   const insertValueMutation = useInsertRowData();
   
@@ -180,6 +185,12 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   };
 
   const handleSave = async () => {
+    // Check permission before saving
+    if (!canUpdateRecord()) {
+      setFormError('You do not have permission to edit records.');
+      return;
+    }
+
     setFormError(null);
     const missing = validateRequired();
     if (missing.length) {
@@ -284,16 +295,18 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2 relative">
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={handleSave}
-              className={`px-3 py-1.5 rounded btn-primary ${
-                submitting ? 'opacity-60 cursor-not-allowed' : ''
-              }`}
-            >
-              {submitLabel}
-            </button>
+            {canUpdateRecord() && (
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={handleSave}
+                className={`px-3 py-1.5 rounded btn-primary ${
+                  submitting ? 'opacity-60 cursor-not-allowed' : ''
+                }`}
+              >
+                {submitLabel}
+              </button>
+            )}
             {/* Menu button for duplicate/delete */}
             <div className="relative" ref={menuRef}>
               <button
@@ -333,19 +346,21 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                     <Copy className="w-4 h-4" /> Duplicate record
                   </button>
                   <div className="border-t my-1" /> */}
-                  <button
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
-                    onClick={(e) => { 
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (onDelete && recordId) {
-                        onDelete(recordId);
-                      }
-                      setMenuOpen(false); 
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" /> Delete record
-                  </button>
+                  {canDeleteRecord() && onDelete && (
+                    <button
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+                      onClick={(e) => { 
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (onDelete && recordId) {
+                          onDelete(recordId);
+                        }
+                        setMenuOpen(false); 
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete record
+                    </button>
+                  )}
                 </div>
               )}
             </div>

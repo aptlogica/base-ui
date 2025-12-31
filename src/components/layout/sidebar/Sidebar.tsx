@@ -17,6 +17,7 @@ import { useWorkspaceBusinessLogic } from '../../../hooks/workspace/useWorkspace
 import { Loader } from '../../ui/Loader';
 import { SidebarSkeleton } from '../../common/Skeleton/SidebarSkeleton';
 import { useWorkspaceAccess } from '../../../hooks/useWorkspaceAccess';
+import { useBaseAccess } from '../../../hooks/useBaseAccess';
 import { useUpdateBase } from '../../../hooks/useApi';
 
 interface PinnedTables {
@@ -73,7 +74,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Use propSelectedWorkspace if available, otherwise fall back to currentWorkspace from business logic
   const effectiveSelectedWorkspace = propSelectedWorkspace || currentWorkspace;
-  const { canCreateTable } = useWorkspaceAccess(effectiveSelectedWorkspace?.id);
+  const { canCreateTable } = useBaseAccess(selectedBase?.id);
   const updateBaseMutation = useUpdateBase();
 
   // Pinned tables state - stored in base.meta.pinnedTables

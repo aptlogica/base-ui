@@ -8,6 +8,7 @@ import { useWorkspaceBases, useBaseTables, useTableViews, useUpdateBase, useDele
 import { getViewIconInfo } from '../../types/viewTypes';
 import { useNavigateToBaseFirstView } from '../../hooks/useNavigateToBaseFirstView';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
+import { useBaseAccess } from '../../hooks/useBaseAccess';
 import { BaseMenu } from './BaseMenu';
 import { EditItemModal } from '../modals/EditItemModal';
 import { AddBaseMembersModal } from '../modals/AddBaseMembersModal';
@@ -41,7 +42,8 @@ const Breadcrumb: React.FC = () => {
   const toast = useToast();
   const { selectedWorkspaceId, selectedBaseId, selectedTableId, selectedViewId } = useNavigationStore();
   const { navigateToFirstView } = useNavigateToBaseFirstView();
-  const { canCreateBase, /* canCreateTable, canCreateView, */ canUpdateBase, canDeleteBase, canAssignUsers } = useWorkspaceAccess(selectedWorkspaceId || undefined);
+  const { canCreateBase, canUpdateBase, canDeleteBase, canAssignUsers, isBaseLevelAccess } = useWorkspaceAccess(selectedWorkspaceId || undefined);
+  const { canCreateTable, canCreateView } = useBaseAccess(selectedBaseId || undefined);
   const updateBaseMutation = useUpdateBase();
   const deleteBaseMutation = useDeleteBase();
   const createBaseMutation = useCreateBase();
@@ -420,7 +422,21 @@ const Breadcrumb: React.FC = () => {
 
   // Get dropdown items for each level
   const getBaseDropdownItems = (): DropdownItem[] => {
-    const bases = ((workspaceBasesQuery.data as any)?.data || []) as any[];
+    let bases = ((workspaceBasesQuery.data as any)?.data || []) as any[];
+    
+    // If workspace access is "base", filter to only show bases user has access to
+    if (isBaseLevelAccess()) {
+      bases = bases.filter((base: any) => {
+        const baseAccess = base?.access_level?.toLowerCase();
+        // Show bases where user has any valid access level
+        return baseAccess === 'owner' || 
+               baseAccess === 'maintainer' || 
+               baseAccess === 'base-member' || 
+               baseAccess === 'base-read' ||
+               baseAccess === 'workspace-read';
+      });
+    }
+    
     return bases.map((base: any, index: number) => {
       const icon = getBaseIcon(base, index);
       return {
