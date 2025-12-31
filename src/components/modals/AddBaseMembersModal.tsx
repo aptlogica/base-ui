@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, UserPlus, Loader2, Trash2 } from 'lucide-react';
-import { useBulkAddBaseMembers, useGetUsersForAssign, useBaseMembers, useRemoveBaseAccessMember } from '../../hooks/useApi';
+import { useBulkAddBaseMembers, useGetUsersForAssign, useBaseMembers, useRemoveUserFromBase } from '../../hooks/useApi';
 import { useToast } from '../common/Toast';
 import { MultiSelectTags, MultiSelectTagsOption } from '../common/MultiSelectTags';
 import { RoleDropdown } from '../common/dropdown/RoleDropdown';
@@ -25,7 +25,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const bulkAddBaseMembersMutation = useBulkAddBaseMembers();
-  const removeBaseAccessMemberMutation = useRemoveBaseAccessMember();
+  const removeUserFromBaseMutation = useRemoveUserFromBase();
   const tenantUsersQuery = useGetUsersForAssign();
   const baseMembersQuery = useBaseMembers(baseId);
   const toast = useToast();
@@ -142,11 +142,19 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
     }
   };
 
-  const handleRemoveMember = async (accessId: string) => {
+  const handleRemoveMember = async (member: any) => {
+    // Extract user_id from member object
+    const userId = member.user_id || member.user?.id || member.id;
+    
+    if (!userId) {
+      toast.error('Unable to identify user to remove');
+      return;
+    }
+
     try {
-      await removeBaseAccessMemberMutation.mutateAsync({
+      await removeUserFromBaseMutation.mutateAsync({
         baseId,
-        accessId,
+        user_id: String(userId),
       });
       toast.success('Member removed successfully');
       baseMembersQuery.refetch();
@@ -336,11 +344,11 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
                                 />
                                 <button
                                   type="button"
-                                  onClick={() => handleRemoveMember(memberId)}
+                                  onClick={() => handleRemoveMember(member)}
                                   className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors flex-shrink-0"
                                   title="Remove member"
                                   aria-label="Remove member"
-                                  disabled={removeBaseAccessMemberMutation.isPending}
+                                  disabled={removeUserFromBaseMutation.isPending}
                                 >
                                   <Trash2 size={16} />
                                 </button>

@@ -262,6 +262,7 @@ const WorkspaceSettingsPage: React.FC = () => {
                       onCopyUserId={handleCopyUserId}
                       onRemoveMember={handleRemoveMember}
                       showSearch={true}
+                      workspaceId={effectiveWorkspaceId}
                     />
                   )}
                 </div>

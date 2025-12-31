@@ -40,6 +40,7 @@ interface MembersTableProps {
   editorSeats?: number;
   className?: string;
   headerActions?: React.ReactNode;
+  workspaceId?: string; // Optional workspaceId to pass as scopeId for getUserRolesAndAccess
 }
 
 const getInitials = (name: string): string => {
@@ -261,24 +262,17 @@ const getRolePillStyle = (role: string) => {
   return 'bg-gray-100 text-gray-700 border border';
 };
 
-// Infer base role from workspace access level (TEMPORARY)
-const inferBaseRole = (workspaceAccessLevel: string): string => {
-  // TEMPORARY: Infer base role from workspace access level
-  // TODO: Replace when API provides actual base roles
-  if (workspaceAccessLevel === 'full_access') {
-    return 'Base Member';
-  }
-  return 'Base Read Only';
-};
 
 // Component to fetch and display roles for a member
 const MemberRoleCell: React.FC<{
   member: Member;
   onExpand: () => void;
   isExpanded: boolean;
-}> = ({ member, onExpand, isExpanded }) => {
+  workspaceId?: string;
+}> = ({ member, onExpand, isExpanded, workspaceId }) => {
   // Fetch rolesAndAccess data to extract roles from API response structure
-  const { data: rolesAndAccessData } = useUserRolesAndAccess(member.userId);
+  // Pass workspaceId as scopeId to filter workspace-related roles
+  const { data: rolesAndAccessData } = useUserRolesAndAccess(member.userId, workspaceId);
   const roles = getOverallRoles(member, rolesAndAccessData);
 
   return (
@@ -307,8 +301,10 @@ const MemberRoleCell: React.FC<{
 const AccessDetailsRow: React.FC<{
   userId: string;
   colSpan: number;
-}> = ({ userId, colSpan }) => {
-  const { data: rolesAndAccess, isLoading, error } = useUserRolesAndAccess(userId);
+  workspaceId?: string;
+}> = ({ userId, colSpan, workspaceId }) => {
+  // Pass workspaceId as scopeId to filter workspace-related roles
+  const { data: rolesAndAccess, isLoading, error } = useUserRolesAndAccess(userId, workspaceId);
 
   if (isLoading) {
     return (
@@ -436,7 +432,8 @@ export const MembersTable: React.FC<MembersTableProps> = ({
   showSearch = true,
   editorSeats,
   className = '',
-  headerActions
+  headerActions,
+  workspaceId
 }) => {
  
   const [searchQuery, setSearchQuery] = useState('');
@@ -919,6 +916,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                             member={member}
                             onExpand={() => handleExpand(member.id)}
                             isExpanded={isExpanded}
+                            workspaceId={workspaceId}
                           />
                       </td>
 
@@ -954,6 +952,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                         <AccessDetailsRow
                           userId={member.userId}
                           colSpan={4 + (onRemoveMember || onEditMember ? 1 : 0)}
+                          workspaceId={workspaceId}
                         />
                       )}
                     </React.Fragment>

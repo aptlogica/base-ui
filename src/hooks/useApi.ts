@@ -17,6 +17,7 @@ import {
   getAllBasesService,
   getBaseMembersService,
   removeBaseAccessMemberService,
+  removeUserFromBaseService,
   // New table API services
   createTableService,
   getTableByIdService,
@@ -259,6 +260,28 @@ export const useRemoveBaseAccessMember = () => {
       accessId: string;
     }) => {
       return await removeBaseAccessMemberService(params.baseId, params.accessId);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate base members query to refresh the list
+      queryClient.invalidateQueries({
+        queryKey: ['base', variables.baseId, 'members']
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['bases']
+      });
+    },
+  });
+};
+
+export const useRemoveUserFromBase = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      baseId: string;
+      user_id: string;
+    }) => {
+      return await removeUserFromBaseService(params.baseId, { user_id: params.user_id });
     },
     onSuccess: (_, variables) => {
       // Invalidate base members query to refresh the list
@@ -1201,12 +1224,12 @@ export const useUserAccessDetails = (userId: string | null, workspaceId?: string
   });
 };
 
-export const useUserRolesAndAccess = (userId: string | null) => {
+export const useUserRolesAndAccess = (userId: string | null, scopeId?: string) => {
   return useQuery({
-    queryKey: ['userRolesAndAccess', userId],
+    queryKey: ['userRolesAndAccess', userId, scopeId],
     queryFn: async () => {
       if (!userId) return null;
-      const result = await getUserRolesAndAccessService(userId) as any;
+      const result = await getUserRolesAndAccessService(userId, scopeId) as any;
       // Extract the data from StandardResponse structure
       return result?.data || null;
     },

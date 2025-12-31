@@ -876,8 +876,13 @@ export async function bulkAddBaseMembersService(baseId: string, params: {
   return await makeAuthenticatedCall(() => client.baseService.bulkAddMembers(baseId, bulkRequest));
 }
 
-export async function removeBaseAccessMemberService(baseId: string, accessId: string) {
-  return await makeAuthenticatedCall(() => client.baseService.removeAccessMember(baseId, accessId));
+export async function removeBaseAccessMemberService(_baseId: string, accessId: string) {
+  // Note: baseId is no longer needed in the API path, but kept for backward compatibility
+  return await makeAuthenticatedCall(() => client.baseService.removeAccessMember(accessId));
+}
+
+export async function removeUserFromBaseService(baseId: string, params: { user_id: string }) {
+  return await makeAuthenticatedCall(() => client.baseService.removeUserFromBase(baseId, params));
 }
 
 // TableService wrappers with auth/tenant headers
@@ -906,8 +911,8 @@ export async function getUserAccessDetailsService(userId: string, workspaceId?: 
   return await makeAuthenticatedCall(() => client.userService.getUserAccessDetails(userId, workspaceId));
 }
 
-export async function getUserRolesAndAccessService(userId: string) {
-  return await makeAuthenticatedCall(() => client.userService.getUserRolesAndAccess(userId));
+export async function getUserRolesAndAccessService(userId: string, scopeId?: string) {
+  return await makeAuthenticatedCall(() => client.userService.getUserRolesAndAccess(userId, scopeId));
 }
 
 export async function changePasswordService(id: string, params: any) {

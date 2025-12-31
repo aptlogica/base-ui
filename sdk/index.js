@@ -1,7 +1,11 @@
-import axios from 'axios';
-import { EventEmitter } from 'eventemitter3';
+'use strict';
 
-class HttpClient extends EventEmitter {
+Object.defineProperty(exports, '__esModule', { value: true });
+
+var axios = require('axios');
+var eventemitter3 = require('eventemitter3');
+
+class HttpClient extends eventemitter3.EventEmitter {
     constructor(config) {
         super();
         this.config = config;
@@ -1059,5 +1063,8 @@ class SereniBaseClient {
     }
 }
 
-export { AuthService, HttpClient, SereniBaseClient, SereniBaseClient as default };
-//# sourceMappingURL=index.esm.js.map
+exports.AuthService = AuthService;
+exports.HttpClient = HttpClient;
+exports.SereniBaseClient = SereniBaseClient;
+exports.default = SereniBaseClient;
+//# sourceMappingURL=index.js.map

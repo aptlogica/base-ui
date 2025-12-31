@@ -344,6 +344,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
               onRoleChange={handleRoleChange}
               onCopyUserId={handleCopyUserId}
               onRemoveMember={canAssignUsers() && !isWorkspaceReadOnly() ? handleRemoveMember : undefined}
+              workspaceId={selectedWorkspaceId}
               onEditMember={canAssignUsers() && !isWorkspaceReadOnly() ? handleEditMember : undefined}
               showSearch={true}
               headerActions={
