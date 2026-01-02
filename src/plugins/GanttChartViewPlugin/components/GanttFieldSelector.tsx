@@ -80,10 +80,10 @@ interface GanttFieldConfigurationProps {
   endDateField?: Column;
   progressField?: Column;
   completionField?: Column;
-  onStartDateFieldChange: (field: Column | undefined) => void;
-  onEndDateFieldChange: (field: Column | undefined) => void;
-  onProgressFieldChange: (field: Column | undefined) => void;
-  onCompletionFieldChange: (field: Column | undefined) => void;
+  onStartDateFieldChange?: (field: Column | undefined) => void;
+  onEndDateFieldChange?: (field: Column | undefined) => void;
+  onProgressFieldChange?: (field: Column | undefined) => void;
+  onCompletionFieldChange?: (field: Column | undefined) => void;
   className?: string;
 }
 
@@ -146,6 +146,11 @@ export const GanttFieldConfiguration: React.FC<GanttFieldConfigurationProps> = (
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [isOpen]);
 
+  // Hide button if handlers are not provided (read-only)
+  if (!onStartDateFieldChange || !onEndDateFieldChange || !onProgressFieldChange || !onCompletionFieldChange) {
+    return null;
+  }
+
   return (
     <div className={`relative ${className}`}>
       <button
@@ -180,7 +185,7 @@ export const GanttFieldConfiguration: React.FC<GanttFieldConfigurationProps> = (
                 value={startDateField?.id}
                 onChange={(val) => {
                   const field = dateColumns.find(col => col.id === val);
-                  onStartDateFieldChange(field);
+                  onStartDateFieldChange?.(field);
                 }}
                 placeholder="Select start date field"
                 searchable={true}
@@ -211,7 +216,7 @@ export const GanttFieldConfiguration: React.FC<GanttFieldConfigurationProps> = (
                 value={endDateField?.id}
                 onChange={(val) => {
                   const field = dateColumns.find(col => col.id === val);
-                  onEndDateFieldChange(field);
+                  onEndDateFieldChange?.(field);
                 }}
                 placeholder="Select end date field"
                 searchable={true}
@@ -242,7 +247,7 @@ export const GanttFieldConfiguration: React.FC<GanttFieldConfigurationProps> = (
                 value={progressField?.id}
                 onChange={(val) => {
                   const field = progressColumns.find(col => col.id === val);
-                  onProgressFieldChange(field);
+                  onProgressFieldChange?.(field);
                 }}
                 placeholder="Select progress field"
                 searchable={true}
@@ -264,7 +269,7 @@ export const GanttFieldConfiguration: React.FC<GanttFieldConfigurationProps> = (
                 value={completionField?.id}
                 onChange={(val) => {
                   const field = completionColumns.find(col => col.id === val);
-                  onCompletionFieldChange(field);
+                  onCompletionFieldChange?.(field);
                 }}
                 placeholder="Select completion field"
                 searchable={true}

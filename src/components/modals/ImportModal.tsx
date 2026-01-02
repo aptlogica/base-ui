@@ -9,7 +9,7 @@ interface ImportModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   importType: 'csv' | 'excel' | 'sql' | 'json' | 'airtable' | 'nocodb';
-  baseId: string;
+  baseId?: string; // Optional: required from sidebar, optional from home page
   workspaceId: string;
   existingTables?: any[];
 }
@@ -73,8 +73,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importMutation = useImportTable();
   const toast = useToast();
-  const { user } = useAuth();
-
   const config = IMPORT_CONFIG[importType];
 
   // Reset form when modal opens/closes
@@ -100,9 +98,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
   const validateFile = (file: File): string | null => {
     // Check file size
-    // if (file.size > config.maxSize) {
-    //   return `File size exceeds ${formatFileSize(config.maxSize)}. Please select a smaller file.`;
-    // }
+    if (file.size > config.maxSize) {
+      return `File size exceeds ${formatFileSize(config.maxSize)}. Please select a smaller file.`;
+    }
 
     // Check file extension
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -179,8 +177,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       return;
     }
 
-    if (!baseId || !workspaceId) {
-      setError('Base ID and Workspace ID are required');
+    if (!workspaceId) {
+      setError('Workspace ID is required');
       return;
     }
 
@@ -192,7 +190,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
     try {
       await importMutation.mutateAsync({
-        base_id: baseId,
+        ...(baseId && { base_id: baseId }), // Only include base_id if provided
         workspace_id: workspaceId,
         title: title.trim(),
         description: description.trim(),
@@ -280,8 +278,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             </label>
             <div
               className={`border border-dashed rounded-xl p-6 text-center transition-colors ${isDragOver
-                  ? 'border-[var(--color-bg-brand-primary)] bg-[var(--color-bg-brand-primary)]/10'
-                  : 'border-gray-300 hover:border-gray-400'
+                ? 'border-[var(--color-bg-brand-primary)] bg-[var(--color-bg-brand-primary)]/10'
+                : 'border-gray-300 hover:border-gray-400'
                 } ${selectedFile ? 'bg-green-50 border-green-300' : ''}`}
               onDrop={handleDrop}
               onDragOver={handleDragOver}

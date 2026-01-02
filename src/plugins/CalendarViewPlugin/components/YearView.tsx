@@ -4,8 +4,8 @@ import { CalendarEvent } from "../hooks/useCalendarData";
 interface YearViewProps {
   currentDate: Date;
   events: CalendarEvent[];
-  onEventClick: (event: CalendarEvent) => void;
-  onDateClick: (date: Date) => void;
+  onEventClick?: (event: CalendarEvent) => void;
+  onDateClick?: (date: Date) => void;
   onDateSelect: (date: Date) => void;
   onViewChange?: (view: string) => void;
 }

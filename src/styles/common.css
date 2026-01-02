@@ -281,7 +281,7 @@
 
 /*Secondary Button styles */
 .btn-secondary {
-  @apply bg-[var(--color-gray-blue-600)] text-[var(--color-white)] border border-primary rounded-xl p-2;
+  @apply bg-[var(--color-gray-blue-600)] text-primary border rounded-xl p-2;
 }
 
 .btn-secondary:hover {

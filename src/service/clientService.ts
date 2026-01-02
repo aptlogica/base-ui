@@ -1058,7 +1058,7 @@ export async function addImageService(files: File[], onProgress?: (progressEvent
 
 export async function importTableService(
   params: {
-    base_id: string;
+    base_id?: string; // Optional: required from sidebar, optional from home page
     workspace_id: string;
     title: string;
     description: string;

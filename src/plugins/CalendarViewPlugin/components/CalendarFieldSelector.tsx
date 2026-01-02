@@ -9,7 +9,7 @@ import type { GridColumn } from '../../GridViewPlugin/types/grid.types';
 interface CalendarFieldConfigurationProps {
   columns: GridColumn[];
   dateField?: GridColumn;
-  onDateFieldChange: (field: GridColumn | undefined) => void;
+  onDateFieldChange?: (field: GridColumn | undefined) => void;
   className?: string;
 }
 
@@ -46,6 +46,11 @@ export const CalendarFieldConfiguration: React.FC<CalendarFieldConfigurationProp
     if (isOpen) document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [isOpen]);
+
+  // Hide button if handler is not provided (read-only)
+  if (!onDateFieldChange) {
+    return null;
+  }
 
   return (
     <div className={`relative ${className}`}>

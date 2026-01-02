@@ -26,6 +26,7 @@ interface UseTableViewConfigOptions {
   columns: ColumnConfig[];
   updateViewMutation?: any;
   searchableColumns: ColumnConfig[];
+  isReadOnly?: boolean;
 }
 
 export function useTableViewConfig({
@@ -34,6 +35,7 @@ export function useTableViewConfig({
   columns,
   updateViewMutation,
   searchableColumns,
+  isReadOnly = false,
 }: UseTableViewConfigOptions) {
   // View configuration state
   const [viewConfigState, setViewConfigState] = useState<ViewConfigState>({
@@ -171,15 +173,18 @@ export function useTableViewConfig({
     setRealTimeFilter(filter);
   }, []);
 
-  // Add a filter and persist view config
+  // Add a filter and persist view config (only if not read-only)
   const handleAddFilter = useCallback(async (filter: any) => {
     const newFilters = [...viewConfigState.filters, filter];
     const newConfig = { ...viewConfigState, filters: newFilters };
-    setViewConfigState(newConfig);
-    await updateViewConfigBackend(newConfig);
-  }, [viewConfigState, updateViewConfigBackend]);
+    setViewConfigState(newConfig); // Always update local state
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly) {
+      await updateViewConfigBackend(newConfig);
+    }
+  }, [viewConfigState, updateViewConfigBackend, isReadOnly]);
 
-  // Remove a filter at given index and persist view config
+  // Remove a filter at given index and persist view config (only if not read-only)
   const handleRemoveFilter = useCallback(async (idx: number) => {
     // Use functional update to avoid stale closure issues
     let newConfig: any;
@@ -190,11 +195,13 @@ export function useTableViewConfig({
     });
     // Clear real-time filter when a saved filter is removed
     setRealTimeFilter(null);
-    // Update backend asynchronously
-    await updateViewConfigBackend(newConfig);
-  }, [updateViewConfigBackend]);
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly) {
+      await updateViewConfigBackend(newConfig);
+    }
+  }, [updateViewConfigBackend, isReadOnly]);
 
-  // Update a filter at given index and persist view config
+  // Update a filter at given index and persist view config (only if not read-only)
   const handleUpdateFilter = useCallback(async (idx: number, updates: Partial<any>) => {
     // Use functional update to avoid stale closure issues
     let newConfig: any;
@@ -207,33 +214,39 @@ export function useTableViewConfig({
       }
       return prev;
     });
-    // Update backend asynchronously
-    if (newConfig) {
+    // Only persist to backend if NOT read-only
+    if (newConfig && !isReadOnly) {
       await updateViewConfigBackend(newConfig);
     }
-  }, [updateViewConfigBackend]);
+  }, [updateViewConfigBackend, isReadOnly]);
 
   // Expose handleUpdateFilter for use in Table component
   // (This is already returned, but making it explicit)
 
-  // Change groupBy and persist view config
+  // Change groupBy and persist view config (only if not read-only)
   const handleGroupByChange = useCallback(async (newGroupBy: GroupByItem[] | ((prev: GroupByItem[]) => GroupByItem[])) => {
     const resolvedGroupBy = typeof newGroupBy === 'function' ? newGroupBy(viewConfigState.groupBy) : newGroupBy;
     // Filter out empty groups (with empty column) before saving
     const validGroupBy = Array.isArray(resolvedGroupBy) ? resolvedGroupBy.filter(g => g.column && g.column.trim()) : [];
     const newConfig = { ...viewConfigState, groupBy: validGroupBy };
-    setViewConfigState(newConfig);
-    await updateViewConfigBackend(newConfig);
-  }, [viewConfigState, updateViewConfigBackend]);
+    setViewConfigState(newConfig); // Always update local state
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly) {
+      await updateViewConfigBackend(newConfig);
+    }
+  }, [viewConfigState, updateViewConfigBackend, isReadOnly]);
 
-  // Change sorts and persist view config
+  // Change sorts and persist view config (only if not read-only)
   const handleSortChange = useCallback(async (newSorts: any) => {
     // Filter out empty sorts (with empty column) before saving
     const validSorts = filterValidSorts(Array.isArray(newSorts) ? newSorts : []);
     const newConfig = { ...viewConfigState, sorts: validSorts };
-    setViewConfigState(newConfig);
-    await updateViewConfigBackend(newConfig);
-  }, [viewConfigState, updateViewConfigBackend]);
+    setViewConfigState(newConfig); // Always update local state
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly) {
+      await updateViewConfigBackend(newConfig);
+    }
+  }, [viewConfigState, updateViewConfigBackend, isReadOnly]);
 
   // Ensure all fields are registered in fieldConfig when FieldsPopover opens
   const handleEnsureAllFieldsRegistered = useCallback(async () => {

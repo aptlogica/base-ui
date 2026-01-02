@@ -7,8 +7,8 @@ import { CalendarEvent } from "../hooks/useCalendarData";
 interface WeekViewProps {
   currentDate: Date;
   events: CalendarEvent[];
-  onEventClick: (event: CalendarEvent) => void;
-  onDateClick: (date: Date) => void;
+  onEventClick?: (event: CalendarEvent) => void;
+  onDateClick?: (date: Date) => void;
   onDateSelect: (date: Date) => void;
   dateField?: any;
   columns?: any[];
@@ -170,7 +170,7 @@ const WeekView: React.FC<WeekViewProps> = ({
                       className="h-12 border-b relative group overflow-visible"
                       onClick={() => {
                         // Only trigger date click if clicking on empty space (not on events)
-                        if (!hasEvents) {
+                        if (!hasEvents && onDateClick) {
                           const dateWithTime = new Date(date);
                           dateWithTime.setHours(slot.hour, 0, 0, 0);
                           onDateClick(dateWithTime);
@@ -187,7 +187,7 @@ const WeekView: React.FC<WeekViewProps> = ({
                                 <EventChip
                                   key={event.id}
                                   event={event}
-                                  onClick={onEventClick}
+                                  onClick={onEventClick || undefined}
                                   columns={columns}
                                   fieldConfig={fieldConfig}
                                 />
@@ -211,25 +211,27 @@ const WeekView: React.FC<WeekViewProps> = ({
                             )}
                             
                             {/* Add event button on the right side when there are events */}
-                            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const dateWithTime = new Date(date);
-                                  dateWithTime.setHours(slot.hour, 0, 0, 0);
-                                  onDateClick(dateWithTime);
-                                }}
-                                className="p-1 hover:bg-gray-200 rounded"
-                              >
-                                <Plus className="w-4 h-4 text-gray-500" />
-                              </button>
-                            </div>
+                            {onDateClick && (
+                              <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const dateWithTime = new Date(date);
+                                    dateWithTime.setHours(slot.hour, 0, 0, 0);
+                                    onDateClick(dateWithTime);
+                                  }}
+                                  className="p-1 hover:bg-gray-200 rounded"
+                                >
+                                  <Plus className="w-4 h-4 text-gray-500" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
                       
                       {/* Add event button - only show when no events and on hover */}
-                      {!hasEvents && (
+                      {!hasEvents && onDateClick && (
                         <div className="opacity-0 group-hover:opacity-100 absolute inset-0 flex items-center justify-center pointer-events-none">
                           <button
                             onClick={(e) => {
@@ -303,7 +305,7 @@ const WeekView: React.FC<WeekViewProps> = ({
                       <EventChip
                         key={event.id}
                         event={event}
-                        onClick={() => onEventClick(event)}
+                        onClick={onEventClick ? () => onEventClick(event) : undefined}
                         columns={columns}
                         fieldConfig={fieldConfig}
                       />
@@ -311,14 +313,16 @@ const WeekView: React.FC<WeekViewProps> = ({
                   </div>
                   
                   {/* Add event button on hover */}
-                  <div className="opacity-0 group-hover:opacity-100 absolute top-2 right-2">
-                    <button
-                      onClick={() => onDateClick(date)}
-                      className="p-1 hover:bg-gray-200 rounded"
-                    >
-                      <Plus className="w-4 h-4 text-gray-500" />
-                    </button>
-                  </div>
+                  {onDateClick && (
+                    <div className="opacity-0 group-hover:opacity-100 absolute top-2 right-2">
+                      <button
+                        onClick={() => onDateClick(date)}
+                        className="p-1 hover:bg-gray-200 rounded"
+                      >
+                        <Plus className="w-4 h-4 text-gray-500" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}

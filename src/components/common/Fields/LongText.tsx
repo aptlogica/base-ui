@@ -539,7 +539,7 @@ export const LongText: React.FC<LongTextProps> = ({
         <button
           type="button"
           onClick={openModal}
-          className="mx-2 w-8 h-7 text-gray-400 flex items-center justify-center rounded-xl border shadow-xs hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors z-0"
+          className="mx-2 w-8 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-colors z-0"
           tabIndex={-1}
           disabled={disabled}
         >
@@ -759,7 +759,7 @@ export const LongText: React.FC<LongTextProps> = ({
           {/* Popup */}
           <div
             ref={linkPopupRef}
-            className="fixed z-[10000] bg-card border border rounded-xl shadow-xl p-3 min-w-[280px] max-w-[400px]"
+            className="fixed z-[10000] bg-card border rounded-xl shadow-xl p-3 min-w-[280px] max-w-[400px]"
             style={{
               top: `${linkPopupPosition.top}px`,
               left: `${linkPopupPosition.left}px`
@@ -774,7 +774,7 @@ export const LongText: React.FC<LongTextProps> = ({
                     type="text"
                     value={linkEditData.text}
                     onChange={(e) => setLinkEditData({ ...linkEditData, text: e.target.value })}
-                    className="w-full px-2 py-1.5 border border rounded text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
+                    className="w-full px-2 py-1.5 border rounded text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
                     placeholder="Link text"
                     autoFocus
                     onKeyDown={(e) => {
@@ -792,7 +792,7 @@ export const LongText: React.FC<LongTextProps> = ({
                     type="text"
                     value={linkEditData.url}
                     onChange={(e) => setLinkEditData({ ...linkEditData, url: e.target.value })}
-                    className="flex-1 px-2 py-1.5 border border rounded text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
+                    className="flex-1 px-2 py-1.5 border rounded text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
                     placeholder="https://example.com"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {

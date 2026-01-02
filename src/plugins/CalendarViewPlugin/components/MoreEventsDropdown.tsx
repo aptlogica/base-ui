@@ -9,7 +9,7 @@ import { Loader } from '../../../components/ui/Loader';
 
 interface MoreEventsDropdownProps {
   events: CalendarEvent[];
-  onEventClick: (event: CalendarEvent) => void;
+  onEventClick?: (event: CalendarEvent) => void;
   children: React.ReactNode;
   columns?: GridColumn[];
   fieldConfig?: any[];
@@ -134,8 +134,10 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
   }, [isOpen]);
 
   const handleEventClick = (event: CalendarEvent) => {
-    onEventClick(event);
-    setIsOpen(false);
+    if (onEventClick) {
+      onEventClick(event);
+      setIsOpen(false);
+    }
   };
 
   return (
@@ -180,7 +182,7 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
                 <EventChip
                   key={event.id || index}
                   event={event}
-                  onClick={handleEventClick}
+                  onClick={onEventClick ? handleEventClick : undefined}
                   columns={columns}
                   fieldConfig={fieldConfig}
                 />

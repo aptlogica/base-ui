@@ -12,7 +12,7 @@ interface SortableFieldItemProps {
   field: FormField;
   isSelected: boolean;
   onSelect: (fieldId: string) => void;
-  onToggle: (fieldId: string) => void;
+  onToggle?: (fieldId: string) => void;
   draggable?: boolean;
   isDragging?: boolean;
   isDragOver?: boolean;
@@ -79,27 +79,31 @@ export const SortableFieldItem: React.FC<SortableFieldItemProps> = ({
       </div>
       
       <div className="flex items-center gap-2 ml-2">
-        <button
-          className="p-1.5 rounded-md bg-background border hover:bg-gray-200 transition-colors"
-          title={field.is_hidden ? 'Show field' : 'Hide field'}
-          onClick={e => {
-            e.stopPropagation();
-            onToggle(field.id);
-          }}
-        >
-         {field.is_hidden ? <EyeOff className="w-4 h-4 text-muted-foreground" /> :  <Eye className="w-4 h-4 text-muted-foreground" />} 
-        </button>
-        <button
-          type='button'
-          className="p-1.5 text-destructive hover:text-destructive/80 bg-background border rounded-md hover:bg-gray-200 transition-colors"
-          title="Delete field"
-          onClick={e => {
-            e.stopPropagation();
-            onDelete?.(field.id);
-          }}
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        {onToggle && (
+          <button
+            className="p-1.5 rounded-md bg-background border hover:bg-gray-200 transition-colors"
+            title={field.is_hidden ? 'Show field' : 'Hide field'}
+            onClick={e => {
+              e.stopPropagation();
+              onToggle(field.id);
+            }}
+          >
+           {field.is_hidden ? <EyeOff className="w-4 h-4 text-muted-foreground" /> :  <Eye className="w-4 h-4 text-muted-foreground" />} 
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type='button'
+            className="p-1.5 text-destructive hover:text-destructive/80 bg-background border rounded-md hover:bg-gray-200 transition-colors"
+            title="Delete field"
+            onClick={e => {
+              e.stopPropagation();
+              onDelete(field.id);
+            }}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </div>
   );

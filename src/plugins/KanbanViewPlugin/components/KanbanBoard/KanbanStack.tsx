@@ -408,14 +408,14 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
       ref={containerRef}
       data-stack-id={stack.id}
       className={`kanban-stack bg-[var(--color-bg-secondary-subtle)] rounded-xl w-full md:w-96 transition-all duration-200 ${stack.isCollapsed ? 'self-start' : ''} border border-primary relative overflow-hidden ${!stack.isCollapsed ? 'pb-12' : ''}`}
-      onDragEnter={handleDragEnter}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleContainerDrop}
+      onDragEnter={onCardMove !== undefined ? handleDragEnter : undefined}
+      onDragOver={onCardMove !== undefined ? handleDragOver : undefined}
+      onDragLeave={onCardMove !== undefined ? handleDragLeave : undefined}
+      onDrop={onCardMove !== undefined ? handleContainerDrop : undefined}
     >
       {/* Stack Header */}
-      <div className={`flex items-center justify-between border-b p-3 ${!isUncategorized ? 'cursor-grab' : 'cursor-default'}`}
-        draggable={!isUncategorized}
+      <div className={`flex items-center justify-between border-b p-3 ${!isUncategorized && onStackDragStart ? 'cursor-grab' : 'cursor-default'}`}
+        draggable={!isUncategorized && onStackDragStart !== undefined}
         onDragStart={handleHeaderDragStart}
         onDragEnter={handleDragEnter}
         onDragOver={handleHeaderDragOver}
@@ -423,7 +423,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
         onDrop={handleHeaderDrop}
       >
         <div className="flex items-center gap-2">
-          {!isUncategorized ? <GripVertical className='w-5 h-5 text-gray-500' /> : null}
+          {!isUncategorized && onStackDragStart ? <GripVertical className='w-5 h-5 text-gray-500' /> : null}
           <div className="flex items-center gap-2 flex-1">
             {isEditing ? (
               <input
@@ -493,22 +493,26 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
               </button>
               {!isUncategorized && (
                 <>
-                  <button
-                    className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors text-sm"
-                    onClick={handleStackEditClick}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Edit stack
-                  </button>
-                  <div className="border-t my-1" />
-                  <button
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
-                    onClick={handleDeleteStackClick}
-                  >
-                    <Trash2 className="w-4 h-4" /> Delete stack
-                  </button>
+                  {onStackEdit && (
+                    <button
+                      className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors text-sm"
+                      onClick={handleStackEditClick}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit stack
+                    </button>
+                  )}
+                  {onStackEdit && onStackDelete && <div className="border-t my-1" />}
+                  {onStackDelete && (
+                    <button
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+                      onClick={handleDeleteStackClick}
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete stack
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -555,8 +559,8 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
                         />
                       )}
                       <div
-                        draggable
-                        onDragStart={getCardDragStartHandler(card)}
+                        draggable={onCardMove !== undefined}
+                        onDragStart={onCardMove !== undefined ? getCardDragStartHandler(card) : undefined}
                       >
                         <div data-card-id={card._meta.id}>
                           <KanbanCard

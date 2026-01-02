@@ -14,13 +14,13 @@ interface FormPreviewProps {
   onSubmit?: (e: React.FormEvent) => void;
   onDeleteField: (fieldId: string) => void;
   formError?: string | null;
-  onResetSuccess?: () => void;
   // Props needed for attachment fields
   model_id?: string;
   column_id?: string;
   row_id?: number;
   onEdit?: (fieldId: string) => void;
   onConfigChange?: (updates: Partial<FormConfig>) => void;
+  isReadOnly?: boolean;
 }
 
 export const FormPreview: React.FC<FormPreviewProps> = ({
@@ -34,12 +34,12 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
   onSubmit,
   onDeleteField,
   formError,
-  onResetSuccess,
   model_id,
   column_id,
   row_id,
   onEdit,
-  onConfigChange
+  onConfigChange,
+  isReadOnly = false
 }) => {
   const [draggedFieldId, setDraggedFieldId] = useState<string | null>(null);
   const [dragOverFieldId, setDragOverFieldId] = useState<string | null>(null);
@@ -149,8 +149,8 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
           )}
 
           <div className={`mb-8 ${titleAlign}`}>
-            {/* Editable Title */}
-            {isEditingTitle ? (
+            {/* Editable Title - disable editing for read-only users */}
+            {isEditingTitle && !isReadOnly ? (
               <input
                 type="text"
                 value={editedTitle}
@@ -170,17 +170,17 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
               />
             ) : (
               <h1
-                className={`mb-4 text-2xl font-bold p-4 rounded-xl ${onConfigChange ? 'cursor-text hover:bg-gray-100 transition-colors' : ''}`}
+                className={`mb-4 text-2xl font-bold p-4 rounded-xl ${!isReadOnly && onConfigChange ? 'cursor-text hover:bg-gray-100 transition-colors' : ''}`}
                 style={{ color: appearance.textColor || undefined }}
-                onClick={onConfigChange ? () => setIsEditingTitle(true) : undefined}
-                title={onConfigChange ? 'Click to edit' : undefined}
+                onClick={!isReadOnly && onConfigChange ? () => setIsEditingTitle(true) : undefined}
+                title={!isReadOnly && onConfigChange ? 'Click to edit' : undefined}
               >
                 {config.title}
               </h1>
             )}
 
-            {/* Editable Description */}
-            {isEditingDescription ? (
+            {/* Editable Description - disable editing for read-only users */}
+            {isEditingDescription && !isReadOnly ? (
               <textarea
                 value={editedDescription}
                 onChange={(e) => setEditedDescription(e.target.value)}
@@ -198,9 +198,9 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
               />
             ) : (
               <div
-                className={`mb-4 p-4 rounded-xl ${onConfigChange ? 'cursor-text hover:bg-gray-100 transition-colors' : ''}`}
-                onClick={onConfigChange ? () => setIsEditingDescription(true) : undefined}
-                title={onConfigChange ? 'Click to edit' : undefined}
+                className={`mb-4 p-4 rounded-xl ${!isReadOnly && onConfigChange ? 'cursor-text hover:bg-gray-100 transition-colors' : ''}`}
+                onClick={!isReadOnly && onConfigChange ? () => setIsEditingDescription(true) : undefined}
+                title={!isReadOnly && onConfigChange ? 'Click to edit' : undefined}
               >
                 {config.description ? (
                   <p className="leading-relaxed" style={{ color: appearance.textColor || undefined }}>
@@ -235,7 +235,9 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
                 ? 'grid grid-cols-1 md:grid-cols-2 gap-4' 
                 : 'space-y-2'
             } 
-            onSubmit={onSubmit}
+            onSubmit={onSubmit || ((e: React.FormEvent) => { 
+              e.preventDefault(); // Prevent form submission when read-only
+            })}
           >
             {config.fields.filter(f => {
               // Always show Title fields even if they're system fields
@@ -276,44 +278,50 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
                       onSelect={onFieldSelect}
                       value={rowData[field.id] ?? ''}
                       onChange={(val: unknown) => onRowDataChange(field.id, val)}
-                      draggable
+                      draggable={!isReadOnly}
                       isDragging={draggedFieldId === field.id}
                       isDragOver={dragOverFieldId === field.id}
-                      onDragStart={() => handleDragStart(field.id)}
-                      onDragOver={() => handleDragOver(field.id)}
-                      onDrop={() => handleDrop(field.id)}
-                      onDragEnd={handleDragEnd}
+                      onDragStart={onFieldOrderChange !== undefined ? () => handleDragStart(field.id) : undefined}
+                      onDragOver={onFieldOrderChange !== undefined ? () => handleDragOver(field.id) : undefined}
+                      onDrop={onFieldOrderChange !== undefined ? () => handleDrop(field.id) : undefined}
+                      onDragEnd={onFieldOrderChange !== undefined ? handleDragEnd : undefined}
                       onDelete={onDeleteField}
                       appearance={appearance}
                       model_id={model_id}
                       column_id={column_id}
                       row_id={row_id}
                       onEdit={onEdit}
+                      isReadOnly={isReadOnly}
                     />
                   </div>
                 </div>
               );
             })}
 
-            <div className="pt-6 flex gap-2">
-              <button
-                type="submit"
-                className="flex-1 rounded-xl py-3 px-4 font-medium text-white transition-colors"
-                style={{
-                  backgroundColor: appearance.primaryColor || '#2563eb',
-                  borderColor: appearance.primaryColor || '#2563eb'
-                }}
-              >
-                Submit
-              </button>
-              <button
-                type="button"
-                className="flex-1 btn-tertiary rounded-xl py-3 px-4 font-medium"
-                onClick={onClear}
-              >
-                Clear
-              </button>
-            </div>
+            {/* Submit and Clear buttons - hide when handlers are undefined */}
+            {onSubmit && (
+              <div className="pt-6 flex gap-2">
+                <button
+                  type="submit"
+                  className="flex-1 rounded-xl py-3 px-4 font-medium text-white transition-colors"
+                  style={{
+                    backgroundColor: appearance.primaryColor || '#2563eb',
+                    borderColor: appearance.primaryColor || '#2563eb'
+                  }}
+                >
+                  Submit
+                </button>
+                {onClear && (
+                  <button
+                    type="button"
+                    className="flex-1 btn-tertiary rounded-xl py-3 px-4 font-medium"
+                    onClick={onClear}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
           </form>
         </div>
 

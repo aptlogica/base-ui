@@ -13,6 +13,7 @@ interface UseCalendarViewConfigOptions {
   columns: GridColumn[];
   updateView?: any; // Mutation object with mutateAsync
   updateViewConfig?: (viewId: string, updates: any) => Promise<void>;
+  isReadOnly?: boolean;
 }
 
 export function useCalendarViewConfig({
@@ -20,6 +21,7 @@ export function useCalendarViewConfig({
   columns,
   updateView,
   updateViewConfig,
+  isReadOnly = false,
 }: UseCalendarViewConfigOptions) {
   // Filters state
   const [filters, setFilters] = useState<FilterType[]>([]);
@@ -181,7 +183,7 @@ export function useCalendarViewConfig({
     setDraftFilter(filter);
   }, []);
 
-  // Add a filter and persist view config
+  // Add a filter and persist view config (only if not read-only)
   const handleAddFilter = useCallback(async (filter: FilterType) => {
     const newFilters = [...filters, filter];
     // Update local state immediately for optimistic UI
@@ -189,33 +191,33 @@ export function useCalendarViewConfig({
     // Clear draft filter when filter is saved
     setDraftFilter(null);
 
-    // Persist to backend - use updateViewConfig which properly merges into meta
-    if (updateViewConfig && view?.id) {
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateViewConfig && view?.id) {
       await updateViewConfig(String(view.id), {
         filters: newFilters
       });
       // Update ref after successful save
       lastBackendFiltersRef.current = JSON.stringify(newFilters);
     }
-  }, [filters, updateViewConfig, view]);
+  }, [filters, updateViewConfig, view, isReadOnly]);
 
-  // Remove a filter at given index and persist view config
+  // Remove a filter at given index and persist view config (only if not read-only)
   const handleRemoveFilter = useCallback(async (index: number) => {
     const newFilters = filters.filter((_, i) => i !== index);
     // Update local state immediately for optimistic UI
     setFilters(newFilters);
 
-    // Persist to backend - use updateViewConfig which properly merges into meta
-    if (updateViewConfig && view?.id) {
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateViewConfig && view?.id) {
       await updateViewConfig(String(view.id), {
         filters: newFilters
       });
       // Update ref after successful save
       lastBackendFiltersRef.current = JSON.stringify(newFilters);
     }
-  }, [filters, updateViewConfig, view]);
+  }, [filters, updateViewConfig, view, isReadOnly]);
 
-  // Update a filter at given index and persist view config
+  // Update a filter at given index and persist view config (only if not read-only)
   const handleUpdateFilter = useCallback(async (index: number, updates: Partial<FilterType>) => {
     if (index < 0 || index >= filters.length) return;
 
@@ -236,17 +238,17 @@ export function useCalendarViewConfig({
     // Update local state immediately for optimistic UI
     setFilters(newFilters);
 
-    // Persist to backend - use updateViewConfig which properly merges into meta
-    if (updateViewConfig && view?.id) {
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateViewConfig && view?.id) {
       await updateViewConfig(String(view.id), {
         filters: newFilters
       });
       // Update ref after successful save
       lastBackendFiltersRef.current = JSON.stringify(newFilters);
     }
-  }, [filters, updateViewConfig, view, handleRemoveFilter]);
+  }, [filters, updateViewConfig, view, handleRemoveFilter, isReadOnly]);
 
-  // Change sorts and persist view config
+  // Change sorts and persist view config (only if not read-only)
   const handleSortChange = useCallback(async (newSorts: SortItem[]) => {
     // Filter out empty sorts (with empty column) before saving
     const validSorts = filterValidSorts(newSorts);
@@ -254,15 +256,15 @@ export function useCalendarViewConfig({
     // Update local state immediately for optimistic UI
     setSorts(validSorts);
 
-    // Persist to backend - use updateViewConfig which properly merges into meta
-    if (updateViewConfig && view?.id) {
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateViewConfig && view?.id) {
       await updateViewConfig(String(view.id), {
         sorts: validSorts
       });
       // Update ref after successful save
       lastBackendSortsRef.current = JSON.stringify(validSorts);
     }
-  }, [updateViewConfig, view]);
+  }, [updateViewConfig, view, isReadOnly]);
 
   // Field toggle handler for FieldsPopover
   const handleFieldToggle = useCallback(async (fieldId: string) => {

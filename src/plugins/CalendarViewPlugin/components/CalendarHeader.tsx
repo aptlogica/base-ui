@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, Calendar, Download, Search, PanelRightClose, Plus, Settings, Palette, List, Filter, MoreVertical, SortAsc, SortDesc } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ExternalLink, PanelRightClose, Plus, List } from "lucide-react";
 import { FilterPopover } from '../../../components/shared/table/FilterPopover';
 import { FieldsPopover } from '../../../components/shared/table/FieldsPopover';
 import { GridColumn } from '../../GridViewPlugin/types/grid.types';
-import { SortItem } from '../../../utils/sortUtils';
 import { CalendarFieldConfiguration } from './CalendarFieldSelector';
 
 interface CalendarHeaderProps {
@@ -15,19 +14,19 @@ interface CalendarHeaderProps {
   dateFields: any[];
   onDateFieldChange: (fieldId: string) => void;
   onExport: () => void;
-  onCreateRecord?: () => void; // Optional - only provided if user has permission
+  onCreateRecord?: () => void;
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
   // Props for the popover components
   columns: GridColumn[];
   fieldConfig: any[];
   filters: { column: string; operator: string; value: string }[];
-  onFieldToggle: (fieldId: string) => void;
-  onAddFilter: (filter: { column: string; operator: string; value: string }) => void;
-  onRemoveFilter: (index: number) => void;
+  onFieldToggle?: (fieldId: string) => void;
+  onAddFilter?: (filter: { column: string; operator: string; value: string }) => void;
+  onRemoveFilter?: (index: number) => void;
   onUpdateFilter?: (index: number, updates: Partial<{ column: string; operator: string; value: string }>) => void;
   onRealTimeFilter?: (filter: { column: string; operator: string; value: string } | null) => void;
-  onGroupByChange: (column: GridColumn | undefined) => void;
+  onGroupByChange?: (column: GridColumn | undefined) => void;
   tableId: string;
   events?: Array<{ date: string; id: string; title: string;[key: string]: any }>;
 }
@@ -649,38 +648,44 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           {/* Right Section - Actions */}
           <div className="flex items-center space-x-2">
             {/* Date Field Selector */}
-            <CalendarFieldConfiguration
-              columns={columns}
-              dateField={dateField}
-              onDateFieldChange={(field) => onGroupByChange(field)}
-            />
+            {onGroupByChange && (
+              <CalendarFieldConfiguration
+                columns={columns}
+                dateField={dateField}
+                onDateFieldChange={(field) => onGroupByChange(field)}
+              />
+            )}
 
             {/* Fields Popover */}
-            <FieldsPopover
-              columns={columns}
-              fieldConfig={fieldConfig}
-              onFieldToggle={onFieldToggle}
-              tableId={tableId}
-              label="Fields"
-              iconComponent={List}
-            />
+            {onFieldToggle && (
+              <FieldsPopover
+                columns={columns}
+                fieldConfig={fieldConfig}
+                onFieldToggle={onFieldToggle}
+                tableId={tableId}
+                label="Fields"
+                iconComponent={List}
+              />
+            )}
 
             {/* Filter Popover */}
-            <FilterPopover
-              columns={columns}
-              filters={filters}
-              onAddFilter={onAddFilter}
-              onRemoveFilter={onRemoveFilter}
-              onUpdateFilter={handleUpdateFilter}
-              onRealTimeFilter={onRealTimeFilter}
-            />
+            {onAddFilter && (
+              <FilterPopover
+                columns={columns}
+                filters={filters}
+                onAddFilter={onAddFilter}
+                onRemoveFilter={onRemoveFilter}
+                onUpdateFilter={handleUpdateFilter}
+                onRealTimeFilter={onRealTimeFilter}
+              />
+            )}
 
             {/* Export */}
             <button
               onClick={onExport}
               className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
             >
-              <Download className="w-4 h-4" />
+              <ExternalLink className="w-5 h-5" />
             </button>
 
             {/* Toggle Sidebar */}
@@ -692,13 +697,15 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             </button>
 
             {/* Create Record */}
-            {/* <button 
-          onClick={onCreateRecord}
-          className="px-6 py-2 rounded-xl btn-primary text-[var(--color-text-primary)] font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          <Plus className="w-3 h-3" />
-          <span>Add Record</span>
-        </button> */}
+            {onCreateRecord && (
+              <button 
+                onClick={onCreateRecord}
+                className="px-6 py-2 rounded-xl btn-primary text-[var(--color-text-primary)] font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Add Record</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -739,13 +746,15 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             </div>
 
             {/* Create Record */}
-            <button
-              onClick={onCreateRecord}
-              className="px-4 py-2 rounded-xl btn-primary text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <Plus className="w-3 h-3" />
-              <span>Create</span>
-            </button>
+            {onCreateRecord && (
+              <button
+                onClick={onCreateRecord}
+                className="px-4 py-2 rounded-xl btn-primary text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Create</span>
+              </button>
+            )}
           </div>
 
           {/* Second row: View tabs and navigation */}
@@ -795,7 +804,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                 onClick={onExport}
                 className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
               >
-                <Download className="w-4 h-4" />
+                <ExternalLink className="w-5 h-5" />
               </button>
 
               {/* Toggle Sidebar */}

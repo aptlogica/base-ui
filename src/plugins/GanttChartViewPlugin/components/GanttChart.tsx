@@ -40,10 +40,13 @@ interface GanttChartProps {
 
 export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, actions }) => {
   // Extract base ID for permission checks
-  const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
+  const baseId = useMemo(() => String(tableData?.data?.model?.base_id ?? ''), [tableData?.data?.model?.base_id]);
   
   // Check permissions for read-only access
-  const { isBaseReadOnly, canCreateRecord } = useBaseAccess(baseId || undefined);
+  const { isBaseReadOnly, canCreateRecord, canUpdateRecord, canDeleteRecord } = useBaseAccess(baseId || undefined);
+  
+  // Safe handlers pattern: Check read-only once at top level
+  const isReadOnly = isBaseReadOnly();
   
   // Process data into Gantt-ready format
   const processedData = useGanttTaskProcessing({ tableData });
@@ -68,6 +71,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
     columns: processedData.columns,
     updateView: actions?.updateView,
     tasks: processedData.tasks,
+    isReadOnly,
   });
 
   // Timeline hook
@@ -222,7 +226,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
   }, [hasMore, isLoadingMore, handleLoadMore]);
 
   // Memoize task card component to prevent unnecessary re-renders
-  const TaskCard = React.memo(({ task, onEdit, onDelete }: { task: GanttTask; onEdit: () => void; onDelete: (e: React.MouseEvent) => void }) => {
+  const TaskCard = React.memo(({ task, onEdit, onDelete }: { task: GanttTask; onEdit?: () => void; onDelete?: (e: React.MouseEvent) => void }) => {
     const duration = useMemo(() => 
       Math.ceil((task.endDate.getTime() - task.startDate.getTime()) / (1000 * 60 * 60 * 24)),
       [task.endDate, task.startDate]
@@ -232,7 +236,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
     
     return (
       <div
-        className="bg-card border rounded-xl hover:border-gray-300 hover:shadow-md cursor-pointer group transition-all duration-200 relative overflow-hidden"
+        className={`bg-card border rounded-xl transition-all duration-200 relative overflow-hidden ${onEdit ? 'hover:border-gray-300 hover:shadow-md cursor-pointer group' : ''}`}
         onClick={onEdit}
       >
         {/* Color accent bar */}
@@ -303,15 +307,17 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
             </div>
 
             {/* Delete Button */}
-            <button
-              className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md flex-shrink-0 ml-1"
-              onClick={onDelete}
-              title="Delete Record"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
+            {onDelete && (
+              <button
+                className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md flex-shrink-0 ml-1"
+                onClick={onDelete}
+                title="Delete Record"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -337,7 +343,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
     task: GanttTask;
     position: { left: number; width: number };
     rowTop: number;
-    onEdit: () => void;
+    onEdit?: () => void;
     onMouseEnter: () => void;
     onMouseLeave: () => void;
     showTooltip: boolean;
@@ -354,7 +360,9 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
     
     return (
       <div
-        className={`absolute group transition-all duration-200 cursor-pointer ${
+        className={`absolute group transition-all duration-200 ${
+          onEdit ? 'cursor-pointer' : ''
+        } ${
           isMilestone ? 'w-0 h-0' : 'bg-background border rounded-xl'
         }`}
         style={{
@@ -522,38 +530,44 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
         {/* Desktop Layout - Hidden on mobile */}
         <div className="hidden md:flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <GanttFieldConfiguration
-              columns={processedData.columns}
-              startDateField={processedData.startDateField}
-              endDateField={processedData.endDateField}
-              progressField={processedData.progressField}
-              completionField={processedData.completionField}
-              onStartDateFieldChange={handleStartDateFieldChange}
-              onEndDateFieldChange={handleEndDateFieldChange}
-              onProgressFieldChange={handleProgressFieldChange}
-              onCompletionFieldChange={handleCompletionFieldChange}
-            />
+            {!isReadOnly && (
+              <GanttFieldConfiguration
+                columns={processedData.columns}
+                startDateField={processedData.startDateField}
+                endDateField={processedData.endDateField}
+                progressField={processedData.progressField}
+                completionField={processedData.completionField}
+                onStartDateFieldChange={handleStartDateFieldChange}
+                onEndDateFieldChange={handleEndDateFieldChange}
+                onProgressFieldChange={handleProgressFieldChange}
+                onCompletionFieldChange={handleCompletionFieldChange}
+              />
+            )}
           </div>
 
           <div className="flex items-center gap-2">
-            <FieldsPopover
-              columns={fieldsPopoverColumns}
-              fieldConfig={localFieldConfig}
-              onFieldToggle={handleFieldToggle}
-              tableId={String(tableData?.data?.model?.id || '')}
-              label="Fields"
-              iconComponent={Layers}
-            />
-            <FilterPopover
-              columns={filterPopoverColumns}
-              filters={filters}
-              onAddFilter={handleAddFilter}
-              onRemoveFilter={handleRemoveFilter}
-              onUpdateFilter={handleUpdateFilter}
-              onRealTimeFilter={handleRealTimeFilter}
-            />
+            {!isReadOnly && handleFieldToggle && (
+              <FieldsPopover
+                columns={fieldsPopoverColumns}
+                fieldConfig={localFieldConfig}
+                onFieldToggle={handleFieldToggle}
+                tableId={String(tableData?.data?.model?.id || '')}
+                label="Fields"
+                iconComponent={Layers}
+              />
+            )}
+            {handleAddFilter && (
+              <FilterPopover
+                columns={filterPopoverColumns}
+                filters={filters}
+                onAddFilter={handleAddFilter}
+                onRemoveFilter={handleRemoveFilter}
+                onUpdateFilter={handleUpdateFilter}
+                onRealTimeFilter={handleRealTimeFilter}
+              />
+            )}
             {/* New Record Button - only show if user can create records and not read-only */}
-            {canCreateRecord() && !isBaseReadOnly() && (
+            {!isReadOnly && canCreateRecord() && (
               <button
                 onClick={handleCreateRecord}
                 className="px-6 py-2 flex gap-2 items-center rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -568,30 +582,34 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
         {/* Mobile Layout - Shown on mobile */}
         <div className="flex md:hidden flex-col gap-3">
           {/* Top row: Title and create button */}
-          <div className="flex items-center justify-between">
-            <button
-              onClick={handleCreateRecord}
-              className="px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Plus className="w-4 h-4" />
-              New Record
-            </button>
-          </div>
+          {!isReadOnly && canCreateRecord() && (
+            <div className="flex items-center justify-between">
+              <button
+                onClick={handleCreateRecord}
+                className="px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Plus className="w-4 h-4" />
+                New Record
+              </button>
+            </div>
+          )}
 
           {/* Second row: Field configuration */}
-          <div className="flex items-center justify-center">
-            <GanttFieldConfiguration
-              columns={processedData.columns}
-              startDateField={processedData.startDateField}
-              endDateField={processedData.endDateField}
-              progressField={processedData.progressField}
-              completionField={processedData.completionField}
-              onStartDateFieldChange={handleStartDateFieldChange}
-              onEndDateFieldChange={handleEndDateFieldChange}
-              onProgressFieldChange={handleProgressFieldChange}
-              onCompletionFieldChange={handleCompletionFieldChange}
-            />
-          </div>
+          {!isReadOnly && (
+            <div className="flex items-center justify-center">
+              <GanttFieldConfiguration
+                columns={processedData.columns}
+                startDateField={processedData.startDateField}
+                endDateField={processedData.endDateField}
+                progressField={processedData.progressField}
+                completionField={processedData.completionField}
+                onStartDateFieldChange={handleStartDateFieldChange}
+                onEndDateFieldChange={handleEndDateFieldChange}
+                onProgressFieldChange={handleProgressFieldChange}
+                onCompletionFieldChange={handleCompletionFieldChange}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -608,11 +626,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
                 {hasMore && ` (${formatCompactNumber(paginatedTasks.length)} loaded)`}
               </span>
             </div>
-            <SortPopover
-              columns={sortPopoverColumns}
-              sorts={sorts}
-              onChange={handleSortChange}
-            />
+            {handleSortChange && (
+              <SortPopover
+                columns={sortPopoverColumns}
+                sorts={sorts}
+                onChange={handleSortChange}
+              />
+            )}
           </div>
 
           {/* Task List */}
@@ -635,11 +655,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
                     <TaskCard
                       key={task.id}
                       task={task}
-                      onEdit={() => handleEditTask(task)}
-                      onDelete={(e) => {
+                      onEdit={isReadOnly ? undefined : (canUpdateRecord() ? () => handleEditTask(task) : undefined)}
+                      onDelete={isReadOnly ? undefined : (canDeleteRecord() ? (e) => {
                         e.stopPropagation();
                         handleDeleteTask(task);
-                      }}
+                      } : undefined)}
                     />
                   ))}
                 </div>
@@ -707,7 +727,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
                   task={task}
                   position={position}
                   rowTop={rowTop}
-                  onEdit={() => handleEditTask(task)}
+                  onEdit={isReadOnly ? undefined : (canUpdateRecord() ? () => handleEditTask(task) : undefined)}
                   onMouseEnter={() => handleTaskMouseEnter(task)}
                   onMouseLeave={handleTaskMouseLeave}
                   showTooltip={showTooltip}
@@ -768,8 +788,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
           title="Edit record"
           submitLabel="Update record"
           onSuccess={handleEditSuccess}
-          onDelete={handleDeleteRecord}
-          onDuplicate={handleDuplicateRecord}
+          onDelete={isReadOnly ? undefined : (canDeleteRecord() ? handleDeleteRecord : undefined)}
+          onDuplicate={isReadOnly ? undefined : handleDuplicateRecord}
           initialValues={getEditInitialValues()}
         />
       )}

@@ -508,7 +508,9 @@ class TableService {
      */
     import(params, extra) {
         const formData = new FormData();
-        formData.append('base_id', params.base_id);
+        if (params.base_id) {
+            formData.append('base_id', params.base_id);
+        }
         formData.append('workspace_id', params.workspace_id);
         formData.append('title', params.title);
         formData.append('description', params.description);
@@ -527,20 +529,6 @@ class TableService {
             config.onUploadProgress = extra;
         }
         return this.http.post(`/table/import`, formData, config);
-    }
-    /**
-     * Import AI table
-     * POST /table/import/ai
-     */
-    importAiTable(params) {
-        return this.http.post(`/table/import/ai`, params);
-    }
-    /**
-     * Apply AI table import
-     * POST /table/import/ai/apply
-     */
-    applyImportAiTable(params, schema) {
-        return this.http.post(`/table/import/ai/apply`, params);
     }
     // ============ COLUMN ENDPOINTS ============
     /**

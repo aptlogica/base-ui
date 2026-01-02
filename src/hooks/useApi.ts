@@ -666,7 +666,7 @@ export const useImportTable = () => {
       file,
       onProgress,
     }: {
-      base_id: string;
+      base_id?: string; // Optional: required from sidebar, optional from home page
       workspace_id: string;
       title: string;
       description: string;
@@ -676,7 +676,7 @@ export const useImportTable = () => {
     }) => {
       return importTableService(
         {
-          base_id,
+          ...(base_id && { base_id }), // Only include base_id if provided
           workspace_id,
           title,
           description,
@@ -687,8 +687,10 @@ export const useImportTable = () => {
       );
     },
     onSuccess: (_, { base_id }) => {
-      // Invalidate the specific base's tables query
-      queryClient.invalidateQueries({ queryKey: queryKeys.tables(base_id) });
+      // Invalidate the specific base's tables query if base_id is provided
+      if (base_id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.tables(base_id) });
+      }
       // Also invalidate workspaces to update any workspace-level data
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },

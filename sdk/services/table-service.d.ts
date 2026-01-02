@@ -37,16 +37,6 @@ export declare class TableService {
      */
     import(params: types.ImportTable, extra?: (progressEvent: ProgressEvent) => void): Promise<import("..").StandardResponse<any>>;
     /**
-     * Import AI table
-     * POST /table/import/ai
-     */
-    importAiTable(params: types.ImportAiTable): Promise<import("..").StandardResponse<any>>;
-    /**
-     * Apply AI table import
-     * POST /table/import/ai/apply
-     */
-    applyImportAiTable(params: types.ApplyImportAiTable, schema: string): Promise<import("..").StandardResponse<any>>;
-    /**
      * Get all columns in table
      * GET /table/:id/columns
      */

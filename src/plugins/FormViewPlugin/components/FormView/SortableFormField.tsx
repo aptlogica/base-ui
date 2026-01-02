@@ -74,6 +74,7 @@ interface SortableFormFieldProps {
   column_id?: string;
   row_id?: number;
   onEdit?: (fieldId: string) => void;
+  isReadOnly?: boolean;
 }
 
 
@@ -95,7 +96,8 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
   model_id,
   column_id,
   row_id,
-  onEdit
+  onEdit,
+  isReadOnly = false
 }) => {
   // Apply appearance settings
   const labelPosition = appearance.labelPosition === 'left' ? 'flex-row items-center' : 'flex-col';
@@ -183,54 +185,53 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
 
   return (
     <div
-      onDragOver={e => { e.preventDefault(); onDragOver(); }}
-      onDrop={e => { e.preventDefault(); onDrop(); }}
+      onDragOver={onDragOver !== undefined ? (e => { e.preventDefault(); onDragOver(); }) : undefined}
+      onDrop={onDrop !== undefined ? (e => { e.preventDefault(); onDrop(); }) : undefined}
       className={`relative group space-y-2 p-4 rounded-xl transition-all select-none
         ${isSelected ? 'bg-[var(--color-utility-brand-50)] border-2 border-[var(--color-brand-200)] shadow-sm' : 'hover:bg-gray-100'}
         ${isDragging ? 'opacity-50 border-dashed border-2  border-[var(--color-brand-400)]' : ''}
         ${isDragOver ? 'ring-2 ring-[var(--ring-color-primary)]' : ''}`}
     // onClick={() => onSelect?.(field.id)}
     >
-      {/* Drag Handle (optional, can be removed if not needed) */}
-      <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {
-          !field.isSystem && (
+      {/* Drag Handle and Action Buttons - hide when handlers are undefined */}
+      {(onEdit || onDelete || onDragStart) && (
+        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {!field.isSystem && onEdit && (
             <button className='p-1 text-gray-400 hover:text-gray-600 bg-[var(--color-alpha-white)] rounded shadow-sm'
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                onEdit?.(field.id);
+                onEdit(field.id);
               }}
             >
               <SquarePen className="w-4 h-4" />
             </button>
-          )
-        }
-        <div
-          className="p-1 text-gray-400 hover:text-gray-600 bg-[var(--color-alpha-white)] rounded shadow-sm cursor-grab active:cursor-grabbing"
-          draggable={draggable}
-          onDragStart={e => { e.stopPropagation(); onDragStart(); }}
-          onDragEnd={e => { e.stopPropagation(); onDragEnd(); }}
-        >
-          <GripVertical className="w-4 h-4 " />
-        </div>
-        {
-          !field.isSystem && (
+          )}
+          {onDragStart && (
+            <div
+              className="p-1 text-gray-400 hover:text-gray-600 bg-[var(--color-alpha-white)] rounded shadow-sm cursor-grab active:cursor-grabbing"
+              draggable={draggable}
+              onDragStart={e => { e.stopPropagation(); onDragStart(); }}
+              onDragEnd={e => { e.stopPropagation(); onDragEnd(); }}
+            >
+              <GripVertical className="w-4 h-4 " />
+            </div>
+          )}
+          {!field.isSystem && onDelete && (
             <button
               type='button'
               className=" p-1 text-red-500 hover:text-red-700 bg-[var(--color-alpha-white)] rounded shadow-sm cursor-pointer"
               title="Delete field"
               onClick={e => {
                 e.stopPropagation();
-                onDelete?.(field.id);
+                onDelete(field.id);
               }}
             >
               <Trash className="w-4 h-4 " />
             </button>
-          )
-        }
-
-      </div>
+          )}
+        </div>
+      )}
 
       <div className={`flex gap-4 ${labelPosition}`}>
         <label

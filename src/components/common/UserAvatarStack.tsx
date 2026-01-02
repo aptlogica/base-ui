@@ -144,6 +144,7 @@ export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({
           )}
         </div>
       </div>
+      <div className="h-6 w-px bg-gray-300"></div>
 
       {/* Dropdown */}
       {shouldShowDropdown && isDropdownOpen && (

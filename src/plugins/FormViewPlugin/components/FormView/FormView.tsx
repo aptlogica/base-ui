@@ -95,6 +95,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
   
   // Check permissions for read-only access
   const { isBaseReadOnly, canCreateColumn } = useBaseAccess(baseId || undefined);
+  const isReadOnly = isBaseReadOnly();
   
   // Use actions passed from hook (no need to re-instantiate)
   const toast = useToast();
@@ -570,7 +571,7 @@ const handleConfirmUpdateField = async () => {
           
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Inline Add Field Button - only show if user can create columns and not read-only */}
-            {canCreateColumn() && !isBaseReadOnly() && (
+            {canCreateColumn() && !isReadOnly && (
               <button
                 ref={addFieldButtonRef}
                 onClick={handleAddField}
@@ -581,18 +582,20 @@ const handleConfirmUpdateField = async () => {
               </button>
             )}
             
-            {/* Sidebar Toggle Button */}
-            <button
-              onClick={toggleSidebar}
-              className="p-2 border rounded-xl hover:bg-[var(--color-bg-brand-primary)] outline-none hover:text-black transition-all duration-200 hover:scale-105"
-              title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-            >
-              {sidebarOpen ? (
-                <PanelRightClose className="w-5 h-5" />
-              ) : (
-                <PanelRight className="w-5 h-5" />
-              )}
-            </button>
+            {/* Sidebar Toggle Button - hide for read-only users */}
+            {!isReadOnly && (
+              <button
+                onClick={toggleSidebar}
+                className="p-2 border rounded-xl hover:bg-[var(--color-bg-brand-primary)] outline-none hover:text-black transition-all duration-200 hover:scale-105"
+                title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+              >
+                {sidebarOpen ? (
+                  <PanelRightClose className="w-5 h-5" />
+                ) : (
+                  <PanelRight className="w-5 h-5" />
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -603,25 +606,25 @@ const handleConfirmUpdateField = async () => {
         <div className="flex-1 overflow-y-auto bg-background">
           <FormPreview
             config={formConfig}
-            onClear={clearFormData}
+            onClear={isReadOnly ? undefined : clearFormData}
             selectedFieldId={selectedFieldId}
             onFieldSelect={setSelectedFieldId}
             rowData={rowData}
             onRowDataChange={handleRowDataChange}
-            onFieldOrderChange={handleFieldOrderChange}
-            onSubmit={(e) => {
+            onFieldOrderChange={isReadOnly ? undefined : handleFieldOrderChange}
+            onSubmit={isReadOnly ? undefined : (e) => {
               e.preventDefault(); // Prevent default form submission
               handleFormSubmit(e);
             }}
-            onDeleteField={handleDeleteField}
+            onDeleteField={isReadOnly ? undefined : handleDeleteField}
             formError={formError}
-            onResetSuccess={resetSuccess}
             // Pass attachment-specific props
             model_id={tableData?.model?.id}
             column_id={undefined} // Will be set per field in SortableFormField
             row_id={record?.id ? Number(record.id) : undefined}
-            onEdit={handleFieldEdit}
-            onConfigChange={handleConfigChange}
+            onEdit={isReadOnly ? undefined : handleFieldEdit}
+            onConfigChange={isReadOnly ? undefined : handleConfigChange}
+            isReadOnly={isReadOnly}
           />
         </div>
 
@@ -635,14 +638,14 @@ const handleConfirmUpdateField = async () => {
               selectedFieldId={selectedFieldId}
               editingFieldId={selectedFieldId}
               onFieldSelect={setSelectedFieldId}
-              onFieldToggle={handleFieldToggle}
-              onAddField={handleAddField}
-              onConfigChange={handleConfigChange}
-              onFieldUpdate={handleFieldUpdate}
+              onFieldToggle={isReadOnly ? undefined : handleFieldToggle}
+              onAddField={isReadOnly ? undefined : handleAddField}
+              onConfigChange={isReadOnly ? undefined : handleConfigChange}
+              onFieldUpdate={isReadOnly ? undefined : handleFieldUpdate}
               onBackToFieldsList={handleBackToFieldsList}
-              onDeleteField={handleDeleteField}
-              setVisibleAllFields={handleSetVisibleAllFields}
-              onFieldOrderChange={handleFieldOrderChange}
+              onDeleteField={isReadOnly ? undefined : handleDeleteField}
+              setVisibleAllFields={isReadOnly ? undefined : handleSetVisibleAllFields}
+              onFieldOrderChange={isReadOnly ? undefined : handleFieldOrderChange}
             />
           )}
         </div>

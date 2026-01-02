@@ -205,10 +205,10 @@ const EventChip: React.FC<EventChipProps> = ({
   return (
     <div className="relative" ref={chipRef}>
       <div
-        onClick={handleClick}
+        onClick={onClick ? handleClick : undefined}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`py-0 bg-background border rounded-xl rounded-tl-lg rounded-bl-lg hover:bg-gray-50 cursor-pointer transition-colors group ${className}`}
+        className={`py-0 bg-background border rounded-xl rounded-tl-lg rounded-bl-lg transition-colors group ${onClick ? 'hover:bg-gray-50 cursor-pointer' : ''} ${className}`}
       >
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-2 flex-1 min-w-0">

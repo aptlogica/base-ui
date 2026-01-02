@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Maximize2, Info, X, ChevronRight, ChevronDown, FileJson } from 'lucide-react';
 
@@ -454,7 +454,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
         </span>
         <button
           type="button"
-          className="absolute right-2 text-gray-400 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-xl border shadow-md bg-card hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-all z-0"
+          className="absolute right-2 text-gray-400 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg border shadow-md bg-card hover:bg-gray-200 transition-all z-0"
           onClick={e => { e.stopPropagation(); setIsModalOpen(true); }}
           tabIndex={0}
           aria-label="Expand JSON editor"
@@ -477,8 +477,8 @@ export const JSONField: React.FC<JSONFieldProps> = ({
                 <button
                   onClick={() => setViewMode('tree')}
                   className={`px-3 py-1 text-xs rounded-xl transition-colors ${viewMode === 'tree'
-                      ? 'bg-[var(--color-brand-600)] text-black'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'bg-[var(--color-brand-600)] text-black'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                 >
                   Tree
@@ -486,8 +486,8 @@ export const JSONField: React.FC<JSONFieldProps> = ({
                 <button
                   onClick={() => setViewMode('text')}
                   className={`px-3 py-1 text-xs rounded-xl transition-colors ${viewMode === 'text'
-                      ? 'bg-[var(--color-brand-600)] text-black'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'bg-[var(--color-brand-600)] text-black'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                 >
                   Text

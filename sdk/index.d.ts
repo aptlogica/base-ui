@@ -549,31 +549,12 @@ interface UpdateAsset$1 {
     title?: string;
 }
 interface ImportTable {
-    base_id: string;
+    base_id?: string;
     workspace_id: string;
     title: string;
     description: string;
     order_index: number;
     file: File;
-}
-interface ImportAiTable {
-    prompt: string;
-}
-interface AiTableField {
-    name: string;
-    type: string;
-    constraints?: Record<string, any>;
-}
-interface AiTable {
-    name: string;
-    fields: AiTableField[];
-}
-interface ApplyImportAiTable {
-    base_id: string;
-    workspace_id: string;
-    tables: AiTable[];
-    sample_data: boolean;
-    row: number;
 }
 
 declare class TableService {
@@ -612,16 +593,6 @@ declare class TableService {
      * POST /table/import
      */
     import(params: ImportTable, extra?: (progressEvent: ProgressEvent) => void): Promise<StandardResponse<any>>;
-    /**
-     * Import AI table
-     * POST /table/import/ai
-     */
-    importAiTable(params: ImportAiTable): Promise<StandardResponse<any>>;
-    /**
-     * Apply AI table import
-     * POST /table/import/ai/apply
-     */
-    applyImportAiTable(params: ApplyImportAiTable, schema: string): Promise<StandardResponse<any>>;
     /**
      * Get all columns in table
      * GET /table/:id/columns

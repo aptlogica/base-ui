@@ -9,7 +9,7 @@ import type { BaseColumn } from '../../../types/column.types';
 interface KanbanFieldConfigurationProps {
   columns: BaseColumn[];
   groupByField?: BaseColumn;
-  onGroupByFieldChange: (field: BaseColumn | undefined) => void;
+  onGroupByFieldChange?: (field: BaseColumn | undefined) => void;
   className?: string;
 }
 
@@ -46,6 +46,11 @@ export const KanbanFieldConfiguration: React.FC<KanbanFieldConfigurationProps> =
     if (isOpen) document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [isOpen]);
+
+  // Hide button if handler is not provided (read-only)
+  if (!onGroupByFieldChange) {
+    return null;
+  }
 
   return (
     <div className={`relative ${className}`}>

@@ -269,23 +269,12 @@ export const Attachment: React.FC<AttachmentProps> = ({
               </div>
             );
           })}
-
-          {/* Show "+X more" indicator if there are more than 3 files */}
-          {/* {attachmentArray.length > 3 && (
-              <div 
-                className="w-8 h-8 rounded-md bg-gray-100 border border-gray-200 flex items-center justify-center text-xs text-gray-600 font-medium cursor-pointer hover:bg-gray-200 transition-colors flex-shrink-0"
-                title={`${attachmentArray.slice(3).map(f => f.title || f.name).join(', ')}`}
-                onClick={() => setIsModalOpen(true)}
-              >
-                +{attachmentArray.length - 3}
-              </div>
-            )} */}
         </div>
         {/* Floating action buttons */}
         <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1 z-10">
           <button
             type="button"
-            className="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 text-blue-400 shadow hover:bg-gray-200 hover:text-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-7 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => setIsModalOpen(true)}
             disabled={disabled || attachmentArray.length >= maxFiles || isUploading}
             title={
@@ -299,7 +288,7 @@ export const Attachment: React.FC<AttachmentProps> = ({
             {isUploading ? (
               <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
             ) : (
-              <Paperclip className="w-4 h-4 text-gray-600" />
+              <Paperclip className="w-4 h-4" />
             )}
           </button>
           {
@@ -307,14 +296,14 @@ export const Attachment: React.FC<AttachmentProps> = ({
             <>
               <button
                 type="button"
-                className="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 shadow hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-7 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => setIsPreviewModalOpen(true)}
                 disabled={disabled || isUploading}
                 tabIndex={0}
                 aria-label="Preview attachments"
                 title={disabled ? "Preview disabled" : isUploading ? "Preview unavailable during upload" : "Preview attachments"}
               >
-                <Maximize2 className="w-4 h-4 text-gray-600" />
+                <Maximize2 className="w-4 h-4" />
               </button>
             </>
           }

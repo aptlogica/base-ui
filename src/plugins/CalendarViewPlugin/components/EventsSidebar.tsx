@@ -216,13 +216,15 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
               onChange={onSortChange}
             />
           )}
-          <button 
-            onClick={onCreateRecord}
-            className="px-3 py-1.5 flex items-center gap-2 rounded-xl btn-primary"
-          >
-            <Plus className="w-4 h-4" />
-            Record
-          </button>
+          {onCreateRecord && (
+            <button 
+              onClick={onCreateRecord}
+              className="px-3 py-1.5 flex items-center gap-2 rounded-xl btn-primary"
+            >
+              <Plus className="w-4 h-4" />
+              Record
+            </button>
+          )}
         </div>
       </div>
 
@@ -242,8 +244,8 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
               {paginatedEvents.map((event) => (
                 <div
                   key={event.id}
-                  onClick={() => onEventClick(event)}
-                  className="bg-background border rounded-xl hover:bg-gray-50 cursor-pointer transition-colors group"
+                  onClick={onEventClick ? () => onEventClick(event) : undefined}
+                  className={`bg-background border rounded-xl transition-colors group ${onEventClick ? 'hover:bg-gray-50 cursor-pointer' : ''}`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-2 flex-1 min-w-0">

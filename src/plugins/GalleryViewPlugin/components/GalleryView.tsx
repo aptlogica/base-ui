@@ -45,7 +45,8 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
   
   // Check permissions for read-only access
-  const { isBaseReadOnly, canCreateRecord } = useBaseAccess(baseId || undefined);
+  const { isBaseReadOnly, canCreateRecord, canUpdateRecord, canDeleteRecord } = useBaseAccess(baseId || undefined);
+  const isReadOnly = isBaseReadOnly();
 
   // Use the useGalleryData hook for consistent data processing
   const galleryData = useGalleryData({ 
@@ -85,6 +86,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     columns: galleryData.columns,
     updateView: galleryData.updateView,
     searchableColumns,
+    isReadOnly,
   });
 
   // Modal management hook
@@ -307,16 +309,15 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         itemCount={totalItems}
         loadedCount={paginatedItems.length}
         hasMore={hasMore}
-        onAddRecord={handleCreateRecord}
-        canCreateRecord={canCreateRecord() && !isBaseReadOnly()}
+        onAddRecord={isReadOnly ? undefined : handleCreateRecord}
         attachmentField={galleryData.attachmentField}
         attachmentFields={galleryData.attachmentFields}
-        onAttachmentFieldChange={handleAttachmentFieldChange}
+        onAttachmentFieldChange={isReadOnly ? undefined : handleAttachmentFieldChange}
         columns={galleryData.columns}
         sortableColumns={sortableColumns}
         fieldConfig={localFieldConfig}
-        onFieldToggle={handleFieldToggle}
-        onFieldOrderChange={handleFieldOrderChange}
+        onFieldToggle={isReadOnly ? undefined : handleFieldToggle}
+        onFieldOrderChange={isReadOnly ? undefined : handleFieldOrderChange}
         filters={filters}
         onAddFilter={handleAddFilter}
         onRemoveFilter={handleRemoveFilter}
@@ -341,7 +342,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
               <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No items in gallery</h3>
               <p className="text-gray-500 mb-4">Start by adding some records with attachments</p>
-              {canCreateRecord() && !isBaseReadOnly() && (
+              {!isReadOnly && canCreateRecord() && (
                 <button
                   onClick={handleCreateRecord}
                   className="px-4 py-2 btn-primary rounded-xl flex items-center gap-2 mx-auto"
@@ -359,7 +360,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                 <MemoizedGalleryCard
                   key={item.id}
                   item={item}
-                  onEdit={() => handleEditRecord(item.rawData)}
+                  onEdit={isReadOnly ? undefined : () => handleEditRecord(item.rawData)}
                   visibleColumns={visibleColumns}
                 />
               ))}
@@ -404,7 +405,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         table={tableData?.model}
         fields={galleryData.columns}
         initialValues={getEditInitialValues()}
-        onDelete={handleDeleteFromModal}
+        onDelete={isReadOnly ? undefined : handleDeleteFromModal}
         title="Edit record"
         submitLabel="Update record"
       />

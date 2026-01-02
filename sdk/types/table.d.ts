@@ -98,30 +98,11 @@ export interface AddImage {
     files: File[];
 }
 export interface ImportTable {
-    base_id: string;
+    base_id?: string;
     workspace_id: string;
     title: string;
     description: string;
     order_index: number;
     file: File;
-}
-export interface ImportAiTable {
-    prompt: string;
-}
-export interface AiTableField {
-    name: string;
-    type: string;
-    constraints?: Record<string, any>;
-}
-export interface AiTable {
-    name: string;
-    fields: AiTableField[];
-}
-export interface ApplyImportAiTable {
-    base_id: string;
-    workspace_id: string;
-    tables: AiTable[];
-    sample_data: boolean;
-    row: number;
 }
 //# sourceMappingURL=table.d.ts.map

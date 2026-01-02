@@ -64,7 +64,6 @@ const HeaderMembers: React.FC = () => {
             </button>
           )
         )}
-        <div className="h-6 w-px bg-gray-300"></div>
         <UserAvatarStack
           users={members}
           maxVisible={3}

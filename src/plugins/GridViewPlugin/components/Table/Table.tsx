@@ -236,6 +236,7 @@ export const Table: React.FC<TableProps> = ({
     columns,
     updateViewMutation: actions?.updateView,
     searchableColumns,
+    isReadOnly: isBaseReadOnly(),
   });
 
   // Memoized filter update handler to prevent recreation
@@ -646,15 +647,17 @@ export const Table: React.FC<TableProps> = ({
           {/* Desktop Layout - Hidden on mobile */}
           <div className="hidden md:flex items-center justify-between w-full">
             <div className='flex items-center gap-2'>
-              <FieldsPopover
-                columns={columns as any}
-                fieldConfig={localFieldConfig}
-                onFieldToggle={handleFieldToggle}
-                onEnsureAllFieldsRegistered={handleEnsureAllFieldsRegistered}
-                tableId={String(tableId || '')}
-                label="Fields"
-                iconComponent={List}
-              />
+              {!isBaseReadOnly() && (
+                <FieldsPopover
+                  columns={columns as any}
+                  fieldConfig={localFieldConfig}
+                  onFieldToggle={handleFieldToggle}
+                  onEnsureAllFieldsRegistered={handleEnsureAllFieldsRegistered}
+                  tableId={String(tableId || '')}
+                  label="Fields"
+                  iconComponent={List}
+                />
+              )}
               <FilterPopover
                 columns={columns}
                 filters={viewConfigState.filters}
@@ -663,11 +666,13 @@ export const Table: React.FC<TableProps> = ({
                 onUpdateFilter={handleUpdateFilter}
                 onRealTimeFilter={handleRealTimeFilter}
               />
-              <GroupPopover
-                columns={columns}
-                groupBy={viewConfigState.groupBy}
-                setGroupBy={handleGroupByChange}
-              />
+              {!isBaseReadOnly() && (
+                <GroupPopover
+                  columns={columns}
+                  groupBy={viewConfigState.groupBy}
+                  setGroupBy={handleGroupByChange}
+                />
+              )}
               <SortPopover
                 columns={columns}
                 sorts={viewConfigState.sorts}

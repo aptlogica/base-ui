@@ -7,8 +7,8 @@ import { CalendarEvent } from "../hooks/useCalendarData";
 interface MonthViewProps {
   currentDate: Date;
   events: CalendarEvent[];
-  onEventClick: (event: CalendarEvent) => void;
-  onDateClick: (date: Date) => void;
+  onEventClick?: (event: CalendarEvent) => void;
+  onDateClick?: (date: Date) => void;
   onDateSelect: (date: Date) => void;
   columns?: any[];
   fieldConfig?: any[];
@@ -135,7 +135,7 @@ const MonthView: React.FC<MonthViewProps> = ({
                   {date.getDate()}
                 </span>
 
-                {isCurrentMonthDay && (
+                {isCurrentMonthDay && onDateClick && (
                   <button
                     onClick={() => onDateClick(date)}
                     className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded"
@@ -155,7 +155,7 @@ const MonthView: React.FC<MonthViewProps> = ({
                         <EventChip
                           key={event.id}
                           event={event}
-                          onClick={() => onEventClick(event)}
+                          onClick={onEventClick ? () => onEventClick(event) : undefined}
                           columns={columns}
                           fieldConfig={fieldConfig}
                         />

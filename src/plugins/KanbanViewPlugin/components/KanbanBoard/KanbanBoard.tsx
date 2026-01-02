@@ -82,6 +82,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   // Check permissions for read-only access
   const { isBaseReadOnly, canCreateRecord, canDeleteRecord, canUpdateRecord } = useBaseAccess(baseId || undefined);
   
+  // Safe handlers pattern: Check read-only once at top level
+  const isReadOnly = isBaseReadOnly();
+  
   // Transform API data to UI-ready format (similar to Table and FormView components)
   const columns = useMemo(() => {
     if (!tableData?.columns || !Array.isArray(tableData.columns)) return [];
@@ -222,6 +225,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     view,
     columns,
     updateViewConfig: onUpdateView,
+    isReadOnly,
   });
 
   // Modals hook
@@ -980,29 +984,35 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             <KanbanFieldConfiguration
               columns={columns}
               groupByField={groupCol || undefined}
-              onGroupByFieldChange={handleGroupByChange}
+              onGroupByFieldChange={isReadOnly ? undefined : handleGroupByChange}
             />
-            <FieldsPopover
-              columns={columns}
-              fieldConfig={localFieldConfig}
-              onFieldToggle={handleFieldToggle}
-              tableId={String(tableId || '')}
-              label="Fields"
-              iconComponent={List}
-            />
-            <FilterPopover
-              columns={sortableColumns}
-              filters={filters}
-              onAddFilter={handleAddFilter}
-              onRemoveFilter={handleRemoveFilter}
-              onUpdateFilter={handleUpdateFilter}
-              onRealTimeFilter={handleRealTimeFilter}
-            />
-            <SortPopover
-              columns={sortableColumns}
-              sorts={sorts}
-              onChange={handleSortChange}
-            />
+            {!isReadOnly && handleFieldToggle && (
+              <FieldsPopover
+                columns={columns}
+                fieldConfig={localFieldConfig}
+                onFieldToggle={handleFieldToggle}
+                tableId={String(tableId || '')}
+                label="Fields"
+                iconComponent={List}
+              />
+            )}
+            {handleAddFilter && (
+              <FilterPopover
+                columns={sortableColumns}
+                filters={filters}
+                onAddFilter={handleAddFilter}
+                onRemoveFilter={handleRemoveFilter}
+                onUpdateFilter={handleUpdateFilter}
+                onRealTimeFilter={handleRealTimeFilter}
+              />
+            )}
+            {handleSortChange && (
+              <SortPopover
+                columns={sortableColumns}
+                sorts={sorts}
+                onChange={handleSortChange}
+              />
+            )}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -1039,31 +1049,32 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               fieldConfig={localFieldConfig}
               groupCol={groupCol}
               groupFieldTitle={(groupCol?.title as string) || (groupCol?.key as string) || 'Status'}
-              onCardMove={handleCardMove}
-              onCardCreate={canCreateRecord() && !isBaseReadOnly() ? handleOpenCreateRecord : undefined}
-              onCardEdit={canUpdateRecord() && !isBaseReadOnly() ? handleOpenEditRecord : undefined}
-              onCardDelete={canDeleteRecord() ? handleOpenDeleteRecord : undefined}
-              onDuplicate={handleDuplicateCard}
+              onCardMove={isReadOnly ? undefined : handleCardMove}
+              onCardCreate={isReadOnly ? undefined : (canCreateRecord() ? handleOpenCreateRecord : undefined)}
+              onCardEdit={isReadOnly ? undefined : (canUpdateRecord() ? handleOpenEditRecord : undefined)}
+              onCardDelete={isReadOnly ? undefined : (canDeleteRecord() ? handleOpenDeleteRecord : undefined)}
+              onDuplicate={isReadOnly ? undefined : handleDuplicateCard}
               onStackCollapse={handleStackCollapse}
-              onStackEdit={handleStackEdit}
-              onStackDragStart={handleStackDragStart}
-              onStackDrop={handleStackDropWithPersistence}
-              onStackDelete={handleStackDelete}
+              onStackEdit={isReadOnly ? undefined : handleStackEdit}
+              onStackDragStart={isReadOnly ? undefined : handleStackDragStart}
+              onStackDrop={isReadOnly ? undefined : handleStackDropWithPersistence}
+              onStackDelete={isReadOnly ? undefined : handleStackDelete}
               index={idx}
             />
           ))}
 
           {/* Add New Stack */}
-          <div className="w-full md:w-80 md:flex-shrink-0">
-            {!uiState.isCreateStack ? (
-              <button
-                onClick={handleCreateStackClick}
-                className="w-full h-14 border border-dashed rounded text-gray-500 hover:text-gray-700 hover:border-gray-400 transition-colors flex items-center justify-center gap-2 text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                New stack
-              </button>
-            ) : (
+          {!isReadOnly && (
+            <div className="w-full md:w-80 md:flex-shrink-0">
+              {!uiState.isCreateStack ? (
+                <button
+                  onClick={handleCreateStackClick}
+                  className="w-full h-14 border border-dashed rounded text-gray-500 hover:text-gray-700 hover:border-gray-400 transition-colors flex items-center justify-center gap-2 text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  New stack
+                </button>
+              ) : (
               <div className="p-1.5 border border-dashed rounded-xl flex items-center justify-between gap-2" ref={dropdownRef}>
                 <input
                   className="flex-1 p-2 border border-primary bg-[var(--color-alpha-white)] text-primary rounded-xl text-sm outline-none field-component-focus"
@@ -1081,7 +1092,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 </button>
               </div>
             )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1108,8 +1120,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           title="Edit record"
           submitLabel="Update record"
           onSuccess={handleEditSuccess}
-          onDelete={handleDeleteRecordFromModal}
-          onDuplicate={onDuplicateCard}
+          onDelete={isReadOnly ? undefined : handleDeleteRecordFromModal}
+          onDuplicate={isReadOnly ? undefined : onDuplicateCard}
           initialValues={getEditInitialValues()}
         />
       )}

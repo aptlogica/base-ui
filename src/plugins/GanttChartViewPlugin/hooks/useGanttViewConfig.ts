@@ -14,6 +14,7 @@ interface UseGanttViewConfigOptions {
   columns: any[];
   updateView?: any;
   tasks?: GanttTask[];
+  isReadOnly?: boolean;
 }
 
 export function useGanttViewConfig({
@@ -21,6 +22,7 @@ export function useGanttViewConfig({
   columns,
   updateView,
   tasks = [],
+  isReadOnly = false,
 }: UseGanttViewConfigOptions) {
   // Filters state
   const [filters, setFilters] = useState<FilterType[]>([]);
@@ -161,13 +163,14 @@ export function useGanttViewConfig({
     setDraftFilter(filter);
   }, []);
 
-  // Add a filter and persist view config
+  // Add a filter and persist view config (only if not read-only)
   const handleAddFilter = useCallback(async (filter: FilterType) => {
     const newFilters = [...filters, filter];
-    setFilters(newFilters);
+    setFilters(newFilters); // Always update local state
     setDraftFilter(null);
 
-    if (updateView && view?.id) {
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateView && view?.id) {
       await updateView(view.id, {
         meta: {
           ...view.meta,
@@ -175,14 +178,15 @@ export function useGanttViewConfig({
         }
       });
     }
-  }, [filters, updateView, view]);
+  }, [filters, updateView, view, isReadOnly]);
 
-  // Remove a filter and persist view config
+  // Remove a filter and persist view config (only if not read-only)
   const handleRemoveFilter = useCallback(async (index: number) => {
     const newFilters = filters.filter((_, i) => i !== index);
-    setFilters(newFilters);
+    setFilters(newFilters); // Always update local state
 
-    if (updateView && view?.id) {
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateView && view?.id) {
       await updateView(view.id, {
         meta: {
           ...view.meta,
@@ -190,16 +194,17 @@ export function useGanttViewConfig({
         }
       });
     }
-  }, [filters, updateView, view]);
+  }, [filters, updateView, view, isReadOnly]);
 
-  // Update a filter at given index and persist view config
+  // Update a filter at given index and persist view config (only if not read-only)
   const handleUpdateFilter = useCallback(async (index: number, updates: Partial<FilterType>) => {
     const newFilters = [...filters];
     if (newFilters[index]) {
       newFilters[index] = { ...newFilters[index], ...updates };
-      setFilters(newFilters);
+      setFilters(newFilters); // Always update local state
 
-      if (updateView && view?.id) {
+      // Only persist to backend if NOT read-only
+      if (!isReadOnly && updateView && view?.id) {
         await updateView(view.id, {
           meta: {
             ...view.meta,
@@ -208,13 +213,14 @@ export function useGanttViewConfig({
         });
       }
     }
-  }, [filters, updateView, view]);
+  }, [filters, updateView, view, isReadOnly]);
 
-  // Handle sort change and persist view config
+  // Handle sort change and persist view config (only if not read-only)
   const handleSortChange = useCallback(async (newSorts: SortItem[]) => {
-    setSorts(newSorts);
+    setSorts(newSorts); // Always update local state
 
-    if (updateView && view?.id) {
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateView && view?.id) {
       await updateView(view.id, {
         meta: {
           ...view.meta,
@@ -222,7 +228,7 @@ export function useGanttViewConfig({
         }
       });
     }
-  }, [updateView, view]);
+  }, [updateView, view, isReadOnly]);
 
   // Handle field toggle with debounced persistence
   const handleFieldToggle = useCallback(async (fieldId: string) => {

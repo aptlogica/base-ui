@@ -48,8 +48,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   onRefresh,
   actions,
 }) => {
+  // Extract base ID for permission checks
+  const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
+  
+  // Check permissions for read-only access
+  const { isBaseReadOnly, canCreateRecord, canDeleteRecord, canUpdateRecord } = useBaseAccess(baseId || undefined);
+  
+  // Safe handlers pattern: Check read-only once at top level
+  const isReadOnly = isBaseReadOnly();
+
   // Process raw tableData into calendar-specific data
-  const { uiColumns, uiData, uiTableId, uiBaseId, events, dateField, dateFields, view } = useMemo(() => {
+  const { uiColumns, uiData, uiTableId, events, dateField, dateFields, view } = useMemo(() => {
     const model = tableData.model || ({} as any);
     const rawColumns = Array.isArray(tableData.columns) ? tableData.columns : [];
     const rawRecords = Array.isArray(tableData.records) ? tableData.records : [];
@@ -227,7 +236,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       uiColumns: cols,
       uiData: rawRecords,
       uiTableId: String(model?.id ?? ''),
-      uiBaseId: String(model?.base_id ?? ''),
       view: currentView,
       dateField: currentDateField,
       dateFields: availableDateFields,
@@ -285,6 +293,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     columns: uiColumns,
     updateView,
     updateViewConfig,
+    isReadOnly,
   });
 
   // Modal management hook
@@ -453,18 +462,18 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         dateFields={dateFields}
         onDateFieldChange={handleDateFieldChange}
         onExport={handleOpenExportModal}
-        onCreateRecord={canCreateRecord() && !isBaseReadOnly() ? () => handleOpenCreateModal(currentDate) : undefined}
+        onCreateRecord={isReadOnly ? undefined : (canCreateRecord() ? () => handleOpenCreateModal(currentDate) : undefined)}
         sidebarCollapsed={sidebarCollapsed}
         onToggleSidebar={toggleSidebar}
         columns={visibleColumns as GridColumn[]}
         fieldConfig={localFieldConfig}
         filters={filters}
-        onFieldToggle={handleFieldToggle}
+        onFieldToggle={isReadOnly ? undefined : handleFieldToggle}
         onAddFilter={handleAddFilter}
         onRemoveFilter={handleRemoveFilter}
         onUpdateFilter={handleUpdateFilter}
         onRealTimeFilter={handleRealTimeFilter}
-        onGroupByChange={handleGroupByChange}
+        onGroupByChange={isReadOnly ? undefined : handleGroupByChange}
         tableId={uiTableId}
         events={sortedEvents.map(e => ({ ...e, id: String(e.id) }))}
       />
@@ -477,8 +486,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             <MonthView
               currentDate={currentDate}
               events={sortedEvents}
-              onEventClick={handleOpenEditModal}
-              onDateClick={handleOpenCreateModal}
+              onEventClick={isReadOnly ? undefined : (canUpdateRecord() ? handleOpenEditModal : undefined)}
+              onDateClick={isReadOnly ? undefined : (canCreateRecord() ? handleOpenCreateModal : undefined)}
               onDateSelect={setSelectedDate}
               columns={visibleColumns}
               fieldConfig={localFieldConfig}
@@ -488,8 +497,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             <WeekView
               currentDate={currentDate}
               events={sortedEvents}
-              onEventClick={handleOpenEditModal}
-              onDateClick={handleOpenCreateModal}
+              onEventClick={isReadOnly ? undefined : (canUpdateRecord() ? handleOpenEditModal : undefined)}
+              onDateClick={isReadOnly ? undefined : (canCreateRecord() ? handleOpenCreateModal : undefined)}
               onDateSelect={setSelectedDate}
               dateField={dateField}
               columns={visibleColumns}
@@ -500,8 +509,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             <DayView
               currentDate={currentDate}
               events={sortedEvents}
-              onEventClick={handleOpenEditModal}
-              onDateClick={handleOpenCreateModal}
+              onEventClick={isReadOnly ? undefined : (canUpdateRecord() ? handleOpenEditModal : undefined)}
+              onDateClick={isReadOnly ? undefined : (canCreateRecord() ? handleOpenCreateModal : undefined)}
               onDateSelect={setSelectedDate}
               dateField={dateField}
               columns={visibleColumns}
@@ -512,8 +521,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             <YearView
                   currentDate={currentDate}
               events={sortedEvents}
-              onEventClick={handleOpenEditModal}
-              onDateClick={handleOpenCreateModal}
+              onEventClick={isReadOnly ? undefined : (canUpdateRecord() ? handleOpenEditModal : undefined)}
+              onDateClick={isReadOnly ? undefined : (canCreateRecord() ? handleOpenCreateModal : undefined)}
               onDateSelect={setSelectedDate}
               onViewChange={handleViewChange}
             />
@@ -532,7 +541,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                 currentDate={currentDate}
                 columns={visibleColumns}
                 sorts={sorts}
-                onCreateRecord={canCreateRecord() && !isBaseReadOnly() ? () => handleOpenCreateModal(currentDate) : undefined}
+                onCreateRecord={isReadOnly ? undefined : (canCreateRecord() ? () => handleOpenCreateModal(currentDate) : undefined)}
                 onSortChange={handleSortChange}
             />
           </div>
@@ -563,8 +572,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           title="Edit Record"
           submitLabel="Update record"
           onSuccess={() => handleEditSuccess(onRefresh)}
-          onDelete={handleDeleteFromModal}
-          onDuplicate={onDuplicateCard}
+          onDelete={isReadOnly ? undefined : (canDeleteRecord() ? handleDeleteFromModal : undefined)}
+          onDuplicate={isReadOnly ? undefined : onDuplicateCard}
           initialValues={getEditInitialValues()}
         />
       )}

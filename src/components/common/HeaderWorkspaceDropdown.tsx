@@ -268,7 +268,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
 
                         {/* Workspace Name */}
                         <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                          <span className="font-semibold text-gray-900 truncate">
+                          <span className="font-semibold text-primary truncate">
                             {workspace.title || workspace.name || workspace.slug || 'Untitled Workspace'}
                           </span>
                           

@@ -247,29 +247,34 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
     onDelete?.(card._meta.id);
   };
 
+  // Check if card is editable (for drag and click)
+  const isEditable = onEdit !== undefined;
+  
   return (
-    <div className={`kanban-card bg-card rounded-2xl border shadow-sm p-4 pt-0 hover:border-[var(--color-bg-brand-primary)] group transition-all duration-200 hover:shadow-lg cursor-default relative ${isDragging ? 'opacity-50 rotate-2 shadow-lg' : ''}`}
-      draggable
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
+    <div className={`kanban-card bg-card rounded-2xl border shadow-sm p-4 pt-0 ${isEditable ? 'hover:border-[var(--color-bg-brand-primary)] group' : ''} transition-all duration-200 ${isEditable ? 'hover:shadow-lg' : ''} cursor-default relative ${isDragging ? 'opacity-50 rotate-2 shadow-lg' : ''}`}
+      draggable={isEditable}
+      onDragStart={isEditable ? handleDragStart : undefined}
+      onDragEnd={isEditable ? handleDragEnd : undefined}
       style={{ position: 'relative' }}
     >
-      {/* Transparent overlay for whole card */}
-      <div
-        className="absolute inset-0 z-10 bg-transparent cursor-pointer"
-        onClick={e => {
-          if (
-            (menuRef.current && menuRef.current.contains(e.target as Node)) ||
-            (e.target instanceof HTMLElement && e.target.closest('[aria-label="Card menu"]'))
-          ) {
-            return;
-          }
-          e.stopPropagation();
-          onEdit?.(card._meta.id);
-        }}
-        tabIndex={0}
-        aria-label="Edit record"
-      />
+      {/* Transparent overlay for whole card - only if editable */}
+      {onEdit && (
+        <div
+          className="absolute inset-0 z-10 bg-transparent cursor-pointer"
+          onClick={e => {
+            if (
+              (menuRef.current && menuRef.current.contains(e.target as Node)) ||
+              (e.target instanceof HTMLElement && e.target.closest('[aria-label="Card menu"]'))
+            ) {
+              return;
+            }
+            e.stopPropagation();
+            onEdit(card._meta.id);
+          }}
+          tabIndex={0}
+          aria-label="Edit record"
+        />
+      )}
 
       {/* Card Image - Always show at top: images if available, otherwise placeholder */}
       <div className="mb-3 -mx-4 border-b relative">
@@ -284,8 +289,8 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
               }}
             />
 
-            {/* Carousel Navigation Arrows - Only show if multiple images */}
-            {hasMultipleImages && (
+            {/* Carousel Navigation Arrows - Only show if multiple images and editable */}
+            {hasMultipleImages && onEdit && (
               <div className='opacity-0 group-hover:opacity-100 transition-opacity duration-200'>
                 <button
                   onClick={(e) => {
@@ -319,8 +324,8 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
               </div>
             )}
 
-            {/* Navigation Dots - Only show if multiple images */}
-            {hasMultipleImages && (
+            {/* Navigation Dots - Only show if multiple images and editable */}
+            {hasMultipleImages && onEdit && (
               <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10 bg-black/40 backdrop-blur-sm px-2 py-1.5 rounded-full">
                 {allImages.map((_, index) => (
                   <button

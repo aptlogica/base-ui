@@ -14,24 +14,23 @@ interface GalleryHeaderProps {
   itemCount: number;
   loadedCount?: number;
   hasMore?: boolean;
-  onAddRecord: () => void;
-  canCreateRecord?: boolean; // Permission to create records
+  onAddRecord?: () => void;
   attachmentField?: BaseColumn;
   attachmentFields: BaseColumn[];
-  onAttachmentFieldChange: (field: BaseColumn) => void;
+  onAttachmentFieldChange?: (field: BaseColumn) => void;
   // New props for popover functionality
   columns: BaseColumn[];
   sortableColumns?: any[]; // Filtered columns for sort/filter popovers
   fieldConfig: Array<{ id: string; position: number; isHidden: boolean }>;
-  onFieldToggle: (fieldId: string) => void;
-  onFieldOrderChange: (newColumns: BaseColumn[]) => void;
+  onFieldToggle?: (fieldId: string) => void;
+  onFieldOrderChange?: (newColumns: BaseColumn[]) => void;
   filters: { column: string; operator: string; value: string }[];
-  onAddFilter: (filter: { column: string; operator: string; value: string }) => void;
-  onRemoveFilter: (index: number) => void;
-  onUpdateFilter: (index: number, updates: Partial<{ column: string; operator: string; value: string }>) => void;
+  onAddFilter?: (filter: { column: string; operator: string; value: string }) => void;
+  onRemoveFilter?: (index: number) => void;
+  onUpdateFilter?: (index: number, updates: Partial<{ column: string; operator: string; value: string }>) => void;
   onRealTimeFilter?: (filter: { column: string; operator: string; value: string } | null) => void;
   sorts: SortItem[];
-  onSortChange: (newSorts: SortItem[]) => void;
+  onSortChange?: (newSorts: SortItem[]) => void;
   tableId: string;
   // Search props
   searchTerm: string;
@@ -44,7 +43,6 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
   loadedCount,
   hasMore,
   onAddRecord,
-  canCreateRecord = true,
   attachmentField,
   attachmentFields,
   onAttachmentFieldChange,
@@ -81,34 +79,40 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
       {/* Desktop Layout - Hidden on mobile */}
       <div className="hidden md:flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {attachmentFields.length > 0 && (
+          {attachmentFields.length > 0 && onAttachmentFieldChange && (
             <GalleryFieldConfiguration
               columns={columns}
               attachmentField={attachmentField}
               onAttachmentFieldChange={(field) => field && onAttachmentFieldChange(field)}
             />
           )}
-          <FieldsPopover
-            columns={columns}
-            fieldConfig={fieldConfig}
-            onFieldToggle={onFieldToggle}
-            tableId={tableId}
-            label="Fields"
-            iconComponent={List}
-          />
-          <FilterPopover
-            columns={sortableColumns}
-            filters={filters}
-            onAddFilter={onAddFilter}
-            onRemoveFilter={onRemoveFilter}
-            onUpdateFilter={onUpdateFilter}
-            onRealTimeFilter={onRealTimeFilter}
-          />
-          <SortPopover
-            columns={sortableColumns}
-            sorts={sorts}
-            onChange={onSortChange}
-          />
+          {onFieldToggle && (
+            <FieldsPopover
+              columns={columns}
+              fieldConfig={fieldConfig}
+              onFieldToggle={onFieldToggle}
+              tableId={tableId}
+              label="Fields"
+              iconComponent={List}
+            />
+          )}
+          {onAddFilter && (
+            <FilterPopover
+              columns={sortableColumns}
+              filters={filters}
+              onAddFilter={onAddFilter}
+              onRemoveFilter={onRemoveFilter}
+              onUpdateFilter={onUpdateFilter}
+              onRealTimeFilter={onRealTimeFilter}
+            />
+          )}
+          {onSortChange && (
+            <SortPopover
+              columns={sortableColumns}
+              sorts={sorts}
+              onChange={onSortChange}
+            />
+          )}
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -119,8 +123,8 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
           />
           </div>
 
-          {/* Add Record Button - only show if user can create records */}
-          {canCreateRecord && (
+          {/* Add Record Button - hide when handler is undefined */}
+          {onAddRecord && (
             <button
               onClick={onAddRecord}
               className="px-6 py-2 rounded-xl btn-primary text-[var(--color-text-primary)] font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -147,7 +151,7 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
 
         {/* Middle row: Attachment field selector and Search */}
         <div className="flex items-center justify-center gap-3">
-          {attachmentFields.length > 0 && (
+          {attachmentFields.length > 0 && onAttachmentFieldChange && (
             <GalleryFieldConfiguration
               columns={columns}
               attachmentField={attachmentField}

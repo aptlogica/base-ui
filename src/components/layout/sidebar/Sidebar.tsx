@@ -1,11 +1,14 @@
 import React, { useRef, useEffect, useMemo, useState, Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom';
-import { ChevronDown, Sheet, Plus } from 'lucide-react';
+import { ChevronDown, Sheet, Plus, Upload } from 'lucide-react';
 import { Pin } from 'lucide-react';
 import { useToast } from '../../common/Toast';
 
 const CreateTableModal = lazy(() =>
   import('../../modals/CreateTableModal').then(m => ({ default: m.CreateTableModal }))
+);
+const ImportModal = lazy(() =>
+  import('../../modals/ImportModal').then(m => ({ default: m.ImportModal }))
 );
 import { CreateBaseModal } from '../../modals/CreateBaseModal';
 import TableOptionsMenu from '../../tables/TableOptionsMenu';
@@ -16,7 +19,6 @@ import { CreateViewModalWrapper } from './components/CreateViewModalWrapper';
 import { useWorkspaceBusinessLogic } from '../../../hooks/workspace/useWorkspaceBusinessLogic';
 import { Loader } from '../../ui/Loader';
 import { SidebarSkeleton } from '../../common/Skeleton/SidebarSkeleton';
-import { useWorkspaceAccess } from '../../../hooks/useWorkspaceAccess';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
 import { useUpdateBase } from '../../../hooks/useApi';
 
@@ -29,20 +31,18 @@ const Sidebar: React.FC<SidebarProps> = ({
   sidebarPosition = 'left',
   sidebarWidth = 56,
   selectedWorkspace: propSelectedWorkspace, // Renamed to avoid conflict
-  onWorkspaceUpdate
+  onWorkspaceUpdate: _onWorkspaceUpdate // Prefixed with _ to indicate intentionally unused
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const toast = useToast();
   const {
     // Data
     currentWorkspace,
-    workspaceBases,
     selectedBase,
     baseTables,
     // Loading & Error
     loading,
     error,
-    basesLoading,
     // State & Actions
     selectedWorkspaceId,
     selectedBaseId,
@@ -50,13 +50,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     showCreateBaseWorkspaceId, setShowCreateBaseWorkspaceId,
     showCreateTableBaseId, setShowCreateTableBaseId,
     showCreateViewModal, setShowCreateViewModal,
-    editingTableId, setEditingTableId,
-    editingViewId, setEditingViewId,
     popoverRef, setPopoverRef,
     // Actions
     toggleTableExpansion,
-    setBase,
-    navigateToBase,
     navigateToTable,
     navigateToView,
     handleCreateBaseForWorkspace,
@@ -76,6 +72,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   const effectiveSelectedWorkspace = propSelectedWorkspace || currentWorkspace;
   const { canCreateTable } = useBaseAccess(selectedBase?.id);
   const updateBaseMutation = useUpdateBase();
+  
+  // Import table modal state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [selectedImportType, setSelectedImportType] = useState<'csv' | 'excel' | 'sql' | 'json' | 'airtable' | 'nocodb' | null>(null);
 
   // Pinned tables state - stored in base.meta.pinnedTables
   const [pinnedTables, setPinnedTables] = useState<PinnedTables>(() => {
@@ -99,9 +99,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Clean up orphaned pinned table IDs when tables change
   useEffect(() => {
-    if (!selectedBase || !baseTables?.data) return;
+    if (!selectedBase || !baseTables || typeof baseTables !== 'object' || !('data' in baseTables) || !Array.isArray((baseTables as any).data)) return;
 
-    const tableIds = new Set(baseTables.data.map((item: any) => item.model.id));
+    const tableIds = new Set((baseTables as any).data.map((item: any) => item.model.id));
     const currentPinnedIds = Object.keys(pinnedTablesRef.current);
 
     // Only proceed if there are pinned tables to check
@@ -131,7 +131,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         },
       });
     }
-  }, [baseTables?.data, selectedBase?.id, selectedBase?.meta, updateBaseMutation]);
+  }, [baseTables, selectedBase?.id, selectedBase?.meta, updateBaseMutation]);
 
   // Handle pin toggle
   const handlePinToggle = async (tableId: string, newStatus: boolean) => {
@@ -162,9 +162,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Sort tables to show pinned first - memoized for performance
   const sortedTables = useMemo(() => {
-    if (!baseTables?.data) return [];
+    if (!baseTables || typeof baseTables !== 'object' || !('data' in baseTables) || !Array.isArray((baseTables as any).data)) return [];
 
-    return [...baseTables.data].sort((a, b) => {
+    return [...(baseTables as any).data].sort((a: any, b: any) => {
       const aPinned = pinnedTables[a.model.id] || false;
       const bPinned = pinnedTables[b.model.id] || false;
 
@@ -172,7 +172,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       if (!aPinned && bPinned) return 1;  // b comes first
       return 0; // Keep original order if both pinned or both unpinned
     });
-  }, [baseTables?.data, pinnedTables]);
+  }, [baseTables, pinnedTables]);
 
   // Check if we're in layout mode (no onClose function means layout mode)
   const isLayoutMode = !onClose;
@@ -249,7 +249,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             );
           }
-          return sortedTables.map((item: any, index: number) => {
+          return (sortedTables as any[]).map((item: any, index: number) => {
             const table = item.model;
             return (
               <div key={table.id}>
@@ -329,8 +329,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                           console.error('Failed to delete table:', err);
                         }
                       }}
-                      onEditingChange={(isEditing) => {
-                        setEditingTableId(isEditing ? table.id : null);
+                      onEditingChange={(_isEditing) => {
+                        // Editing state is handled internally by TableOptionsMenu
                       }}
                       portaled={true}
                     />
@@ -345,7 +345,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     isViewActive={isViewActive}
                     handleViewDeletion={handleDeleteView}
                     setShowCreateViewModal={setShowCreateViewModal}
-                    setEditingViewId={setEditingViewId}
+                    setEditingViewId={() => {}}
                     setPopoverRef={setPopoverRef}
                     setViewsRefetchTrigger={setViewsRefetchTrigger}
                   />
@@ -364,21 +364,39 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Fixed Footer - Non-scrollable */}
       <div className="sidebar-flyout-footer flex flex-col items-start gap-2 p-2 bg-card">
         {canCreateTable() && (
-          <button
-            className="w-full flex items-center justify-center gap-2 btn-primary p-2 rounded transition"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (selectedBase?.id) {
-                setShowCreateTableBaseId(selectedBase.id);
-              } else {
-                console.warn('No base selected. Cannot open Create Table modal.');
-              }
-            }}
-            title={selectedBase ? "Create Table" : "Select a base to create a table"}
-            disabled={!selectedBase}
-          >
-            <Plus size={16} /> Create Table
-          </button>
+          <>
+            <button
+              className="w-full flex items-center justify-center gap-2 btn-secondary p-2 rounded transition"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (selectedBase?.id && effectiveSelectedWorkspace?.id) {
+                  setSelectedImportType('csv');
+                  setShowImportModal(true);
+                } else {
+                  console.warn('No base or workspace selected. Cannot open Import Table modal.');
+                }
+              }}
+              title={selectedBase && effectiveSelectedWorkspace ? "Import Table" : "Select a base to import a table"}
+              disabled={!selectedBase || !effectiveSelectedWorkspace}
+            >
+              <Upload size={16} /> Import Table
+            </button>
+            <button
+              className="w-full flex items-center justify-center gap-2 btn-primary p-2 rounded transition"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (selectedBase?.id) {
+                  setShowCreateTableBaseId(selectedBase.id);
+                } else {
+                  console.warn('No base selected. Cannot open Create Table modal.');
+                }
+              }}
+              title={selectedBase ? "Create Table" : "Select a base to create a table"}
+              disabled={!selectedBase}
+            >
+              <Plus size={16} /> Create Table
+            </button>
+          </>
         )}
       </div>
     </>
@@ -450,11 +468,11 @@ const Sidebar: React.FC<SidebarProps> = ({
             isOpen={!!showCreateTableBaseId}
             onClose={() => setShowCreateTableBaseId(null)}
             baseId={showCreateTableBaseId}
-            existingTables={baseTables?.data || []}
+            existingTables={(baseTables && typeof baseTables === 'object' && 'data' in baseTables && Array.isArray((baseTables as any).data)) ? (baseTables as any).data : []}
             onCreate={async ({ name, description }) => {
               try {
                 // Get the count of existing tables to set order_index
-                const existingTables = baseTables?.data || [];
+                const existingTables = (baseTables && typeof baseTables === 'object' && 'data' in baseTables && Array.isArray((baseTables as any).data)) ? (baseTables as any).data : [];
                 const order_index = existingTables.length;
 
                 const newTable = await createTableMutation.mutateAsync({
@@ -468,9 +486,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                 // Persist navigation and navigate to the newly created table
                 try {
                   const workspaceId = selectedWorkspaceId || effectiveSelectedWorkspace?.id || '';
-                  if (workspaceId && showCreateTableBaseId && newTable?.data?.id) {
+                  if (workspaceId && showCreateTableBaseId && newTable && typeof newTable === 'object' && 'data' in newTable && (newTable as any).data?.id) {
                     // Use the provided navigation function to update URL
-                    navigateToTable(workspaceId, showCreateTableBaseId, newTable.data.id);
+                    navigateToTable(workspaceId, showCreateTableBaseId, (newTable as any).data.id);
                   }
                 } catch (navErr) {
                   console.warn('Navigation after table create failed', navErr);
@@ -491,7 +509,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         const tableId = showCreateViewModal.tableId;
 
         // Find the table to get its fields
-        const tables = baseTables?.data || [];
+        const tables = (baseTables && typeof baseTables === 'object' && 'data' in baseTables && Array.isArray((baseTables as any).data)) ? (baseTables as any).data : [];
         const tableEntry = tables.find((t: any) =>
           (t?.model?.id === tableId) || (t?.id === tableId)
         );
@@ -506,7 +524,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             onClose={() => setShowCreateViewModal(null)}
             onCreate={async ({ name, description, type, fieldId, startDateFieldId, endDateFieldId }) => {
               // Find base_id for the selected table
-              const tableObj = baseTables?.data?.find((t: any) => t.model.id === showCreateViewModal.tableId);
+              const tables = (baseTables && typeof baseTables === 'object' && 'data' in baseTables && Array.isArray((baseTables as any).data)) ? (baseTables as any).data : [];
+              const tableObj = tables.find((t: any) => t.model.id === showCreateViewModal.tableId);
               const base_id = tableObj?.model?.base_id || selectedBaseId;
               const payload: any = {
                 model_id: showCreateViewModal.tableId,
@@ -549,6 +568,33 @@ const Sidebar: React.FC<SidebarProps> = ({
           document.body
         );
       })()}
+
+      {/* Import Table Modal */}
+      {showImportModal && selectedImportType && selectedBase?.id && effectiveSelectedWorkspace?.id && ReactDOM.createPortal(
+        <Suspense fallback={
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]">
+            <Loader />
+          </div>
+        }>
+          <ImportModal
+            isOpen={showImportModal}
+            onClose={() => {
+              setShowImportModal(false);
+              setSelectedImportType(null);
+            }}
+            importType={selectedImportType}
+            baseId={selectedBase.id}
+            workspaceId={effectiveSelectedWorkspace.id}
+            existingTables={(baseTables && typeof baseTables === 'object' && 'data' in baseTables && Array.isArray((baseTables as any).data)) ? (baseTables as any).data : []}
+            onSuccess={() => {
+              setShowImportModal(false);
+              setSelectedImportType(null);
+              toast.success('Table imported successfully');
+            }}
+          />
+        </Suspense>,
+        document.body
+      )}
     </>
   );
 };
