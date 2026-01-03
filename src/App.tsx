@@ -8,7 +8,6 @@ import { PrivateRoute } from './auth/PrivateRoute';
 import { RoleBasedRoute } from './auth/RoleBasedRoute';
 import { AccessLevelRoute } from './auth/AccessLevelRoute';
 import { PluginFrameworkProvider } from './core/PluginFrameworkContext';
-import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { AnnouncementBar, AnnouncementBarProps } from './components/AnnouncementBar';
 import { NavigationRecovery } from './components/ZustandNavigationRecovery';
 import { NavigationResolver } from './components/NavigationResolver';
@@ -24,7 +23,6 @@ import { ExtensionPoint } from './core/ExtensionPoint';
 import { ToastProvider } from './components/common/Toast';
 import Sidebar from './components/layout/sidebar/Sidebar';
 import { Loader } from './components/ui/Loader';
-import { useQueryClient } from '@tanstack/react-query';
 import AdministratorPage from './pages/AdministratorPage';
 import WorkspaceSettingsPage from './pages/WorkspaceSettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -41,16 +39,18 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
-      retry: (failureCount, error: any) => {
-        if (error?.message?.includes('Token expired') || error?.response?.status === 401 || error?.response?.status === 403) {
+      retry: (failureCount, error: unknown) => {
+        const err = error as { message?: string; response?: { status?: number } };
+        if (err?.message?.includes('Token expired') || err?.response?.status === 401 || err?.response?.status === 403) {
           return false;
         }
         return failureCount < 1;
       },
     },
     mutations: {
-      retry: (failureCount, error: any) => {
-        if (error?.message?.includes('Token expired') || error?.response?.status === 401 || error?.response?.status === 403) {
+      retry: (failureCount, error: unknown) => {
+        const err = error as { message?: string; response?: { status?: number } };
+        if (err?.message?.includes('Token expired') || err?.response?.status === 401 || err?.response?.status === 403) {
           return false;
         }
         return failureCount < 1;
@@ -59,10 +59,11 @@ const queryClient = new QueryClient({
   },
 });
 
-// Add this at the top for TypeScript compatibility with import.meta.glob
-// @ts-ignore
-interface ImportMeta {
-  glob: (pattern: string) => Record<string, () => Promise<any>>;
+// TypeScript compatibility with import.meta.glob
+declare global {
+  interface ImportMeta {
+    glob: (pattern: string) => Record<string, () => Promise<{ default: unknown }>>;
+  }
 }
 
 const Layout = () => {
@@ -86,7 +87,7 @@ const Layout = () => {
 
   useEffect(() => {
     const getSidebarConfig = () => {
-      const config = (window as any).__workspaceConfig || {};
+      const config = (window as Window & { __workspaceConfig?: { sidebarPosition?: string; sidebarWidth?: number } }).__workspaceConfig || {};
       return {
         position: config.sidebarPosition || 'left',
         width: config.sidebarWidth || 50,
@@ -198,12 +199,12 @@ const TableViewRouteWrapper: React.FC = () => {
   // PAGINATION DISABLED - Uncomment below to re-enable pagination (30 records per page)
   // const { data: response, isLoading, error, refetch } = useTable(tableId, { pageNumber: 1, pageLimit: 30 });
   // PERFORMANCE: Use cached data immediately if available (placeholderData handles this)
-  const { data: response, isLoading, error, refetch, isFetching } = useTable(tableId); // No pagination - fetches all records
+  const { data: response, isLoading, error, refetch } = useTable(tableId); // No pagination - fetches all records
 
   // Only show loader on initial load (no cached data)
   // If we have cached data, show it immediately even if refetching
   // This provides instant navigation between views when data is cached
-  const hasCachedData = response?.data;
+  const hasCachedData = response && typeof response === 'object' && 'data' in response;
   const isInitialLoad = isLoading && !hasCachedData;
 
   if (isInitialLoad) {
@@ -226,16 +227,16 @@ const TableViewRouteWrapper: React.FC = () => {
     );
   }
 
-  const tableResponse = response?.data;
-  const allViews: any[] = Array.isArray(tableResponse?.views) ? tableResponse.views : [];
-  const requestedView = allViews.find((v: any) => String(v.id) === String(viewId));
+  const tableResponse = response && typeof response === 'object' && 'data' in response ? (response as { data?: { views?: Array<{ id: string | number; type?: string }> } }).data : null;
+  const allViews = Array.isArray(tableResponse?.views) ? tableResponse.views : [];
+  const requestedView = allViews.find((v) => String(v.id) === String(viewId));
 
   // Support URL slugs like /grid, /kanban, etc. as view type selectors
   const slug = (viewId || '').toLowerCase();
   const knownTypeSlugs = ['grid', 'form', 'gallery', 'kanban', 'calendar', 'gantt'];
   const isTypeSlug = knownTypeSlugs.includes(slug);
   const typeMatchedView = isTypeSlug
-    ? allViews.find((v: any) => (String(v.type || '').toLowerCase() === slug))
+    ? allViews.find((v) => (String(v.type || '').toLowerCase() === slug))
     : undefined;
 
   // Determine effective viewType and view object passed to plugins
@@ -278,13 +279,13 @@ const TableViewRouteWrapper: React.FC = () => {
   );
 };
 
-const AppRoutes = ({ loading }: { loading: boolean }) => {
+const AppRoutes = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
   // Listen for auth_token_expired event and navigate using React Router (prevents page refresh)
   useEffect(() => {
-    const handleAuthTokenExpired = (event: Event) => {
+    const handleAuthTokenExpired = () => {
       // Only navigate if we're not already on the login page
       if (location.pathname !== '/login' && !location.pathname.startsWith('/login')) {
         navigate('/login', { replace: true });
@@ -350,15 +351,21 @@ const AppRoutes = ({ loading }: { loading: boolean }) => {
 };
 
 //loads plugins from plugins.json dynamically loaded and registered at runtime
-const pluginModules = (import.meta as any).glob('./plugins/*/index.tsx');
+const pluginModules = import.meta.glob('./plugins/*/index.tsx');
 
-const loadEnabledPlugins = async () => {
-  const config = await import('./config/plugins.json');
+interface PluginConfig {
+  id: string;
+  path: string;
+  enabled?: boolean;
+}
+
+const loadEnabledPlugins = async (): Promise<unknown[]> => {
+  const config = await import('./config/plugins.json') as { plugins?: { builtin?: PluginConfig[] } };
   const builtin = config.plugins?.builtin || [];
-  const enabled = builtin.filter((p: any) => p.enabled);
+  const enabled = builtin.filter((p) => p.enabled);
   // Build a map of plugin id to expected path
   const idToPath: Record<string, string> = {};
-  enabled.forEach((p: any) => {
+  enabled.forEach((p) => {
     // Normalize path to match import.meta.glob keys
     let path = p.path;
     if (!path.startsWith('./')) path = './' + path;
@@ -367,7 +374,7 @@ const loadEnabledPlugins = async () => {
     idToPath[p.id] = path;
   });
   // Load plugins using import.meta.glob
-  const pluginPromises = enabled.map(async (p: any) => {
+  const pluginPromises = enabled.map(async (p) => {
     const importFn = pluginModules[idToPath[p.id]];
     if (!importFn) {
       console.error('Plugin not found:', idToPath[p.id]);
@@ -383,7 +390,11 @@ const loadEnabledPlugins = async () => {
   });
   const plugins = (await Promise.all(pluginPromises)).filter(Boolean);
   // Register each plugin so getRegisteredPlugins() works
-  plugins.forEach(registerPlugin);
+  plugins.forEach((plugin) => {
+    if (plugin) {
+      registerPlugin(plugin as Parameters<typeof registerPlugin>[0]);
+    }
+  });
   return plugins;
 };
 
@@ -403,7 +414,7 @@ const App: React.FC = () => {
       { label: "Remind me later", onClick: () => setAnnouncement(null) }
     ]
   });
-  const [plugins, setPlugins] = useState<any[]>([]);
+  const [plugins, setPlugins] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
 
@@ -437,7 +448,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <PluginFrameworkProvider plugins={plugins} defaultConfig={{}}>
+    <PluginFrameworkProvider plugins={plugins as Parameters<typeof PluginFrameworkProvider>[0]['plugins']} defaultConfig={{}}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <AuthProviderChooser>
@@ -446,7 +457,7 @@ const App: React.FC = () => {
               <WorkspacesGuard>
                 <NavigationResolver />
                 <NavigationRecovery />
-                <AppRoutes loading={loading} />
+                <AppRoutes />
               </WorkspacesGuard>
             </Router>
           </AuthProviderChooser>
@@ -461,7 +472,6 @@ export default App;
 // Guard that ensures workspaces are fetched once before rendering private routes
 const WorkspacesGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
-  const qc = useQueryClient();
 
   // Public routes that don't need workspace data
   const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
@@ -473,7 +483,8 @@ const WorkspacesGuard: React.FC<{ children: React.ReactNode }> = ({ children }) 
   // Handle 401/403 errors by forcing logout
   React.useEffect(() => {
     if (error && !isPublicRoute) {
-      const errorStatus = (error as any)?.response?.status || (error as any)?.status;
+      const err = error as { response?: { status?: number }; status?: number };
+      const errorStatus = err?.response?.status || err?.status;
       if (errorStatus === 401 || errorStatus === 403) {
         // Import and call forceLogout
         import('./service/clientService').then(({ forceLogout }) => {
@@ -513,7 +524,10 @@ const BaseGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const params = useParams();
   const baseId = String(params.baseId || '');
   const { data: baseResp, isLoading: baseLoading } = useBaseById(baseId);
-  const workspaceId = (baseResp as any)?.data?.workspace_id || (baseResp as any)?.workspace_id;
+  const baseData = baseResp && typeof baseResp === 'object' && 'data' in baseResp 
+    ? (baseResp as { data?: { workspace_id?: string }; workspace_id?: string })
+    : null;
+  const workspaceId = baseData?.data?.workspace_id || (baseResp as { workspace_id?: string })?.workspace_id;
   const { isLoading: basesLoading } = useWorkspaceBases(String(workspaceId || ''));
 
   if (baseLoading || (workspaceId && basesLoading)) {

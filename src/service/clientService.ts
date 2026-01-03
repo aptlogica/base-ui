@@ -11,17 +11,25 @@ interface TokenData {
   refresh_expires_at?: number;
 }
 
-// Secure token storage using sessionStorage with encryption-like obfuscation
+// Secure token storage using sessionStorage.
+// Note: Obfuscation is NOT security. For production-grade security,
+// prefer storing the refresh token in an HttpOnly, Secure, SameSite cookie
+// set by the server, and keep the access token in memory. This file supports
+// a lightweight obfuscation toggle for development/demo builds only.
 const STORAGE_KEY = '_st_'; // Shortened key name
 const REFRESH_KEY = '_rt_';
 
-// Simple obfuscation (not real encryption - for production use proper encryption)
+// Lightweight obfuscation (optional, NOT encryption). Controlled via Vite env:
+// VITE_TOKEN_OBFUSCATE=true → apply base64+reverse, otherwise store plain.
+const OBFUSCATE_TOKENS: boolean = Boolean((import.meta as any).env?.VITE_TOKEN_OBFUSCATE);
 const obfuscate = (data: string): string => {
+  if (!OBFUSCATE_TOKENS) return data;
   return btoa(data).split('').reverse().join('');
 };
 
 const deobfuscate = (data: string): string => {
   try {
+    if (!OBFUSCATE_TOKENS) return data;
     return atob(data.split('').reverse().join(''));
   } catch {
     return '';
