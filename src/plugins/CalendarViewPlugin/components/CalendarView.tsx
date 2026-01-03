@@ -534,7 +534,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           <div className="w-80 border-l flex flex-col bg-card">
               <EventsSidebar
               events={sortedEvents}
-              onEventClick={handleOpenEditModal}
+              onEventClick={isReadOnly ? undefined : (canUpdateRecord() ? handleOpenEditModal : undefined)}
               onDateSelect={setSelectedDate}
               selectedDate={selectedDate}
                 currentView={currentView}

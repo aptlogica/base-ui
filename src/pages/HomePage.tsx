@@ -10,6 +10,15 @@ import { ImportModal } from '../components/modals/ImportModal';
 import { EditItemModal } from '../components/modals/EditItemModal';
 import { AddBaseMembersModal } from '../components/modals/AddBaseMembersModal';
 import { BaseMenu } from '../components/common/BaseMenu';
+import { useToast } from '../components/common/Toast';
+import { useWorkspaceAccess } from '../hooks/useWorkspaceAccess';
+import { useBaseAccess } from '../hooks/useBaseAccess';
+import { formatRelativeDate } from '../utils/dateUtils';
+import { getRoleLabel } from '../types/roles';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCurrentUser, getUserDisplayName } from '../auth/useCurrentUser';
+import { useNavigateToBaseFirstView } from '../hooks/useNavigateToBaseFirstView';
+import { getInitials } from '../utils/helpers';
 
 // Wrapper component to handle hooks properly
 const BaseMenuWrapper: React.FC<{
@@ -47,15 +56,6 @@ const BaseMenuWrapper: React.FC<{
     </div>
   );
 };
-import { useToast } from '../components/common/Toast';
-import { useWorkspaceAccess } from '../hooks/useWorkspaceAccess';
-import { useBaseAccess } from '../hooks/useBaseAccess';
-import { formatRelativeDate } from '../utils/dateUtils';
-import { getRoleLabel } from '../types/roles';
-import { useQueryClient } from '@tanstack/react-query';
-import { useCurrentUser, getUserDisplayName } from '../auth/useCurrentUser';
-import { useNavigateToBaseFirstView } from '../hooks/useNavigateToBaseFirstView';
-import { getInitials } from '../utils/helpers';
 
 const HomePage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -594,7 +594,7 @@ const HomePage: React.FC = () => {
                       </h3>
                       {/* Show badge in place of menu for read-only access, otherwise show menu */}
                       {base.access_level && (base.access_level === 'workspace-read' || base.access_level === 'base-read') ? (
-                        <span className="px-2 py-0.5 text-xs font-medium rounded-full border flex-shrink-0 text-gray-700">
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-lg border flex-shrink-0 text-gray-700">
                           {getRoleLabel(base.access_level)}
                         </span>
                       ) : (

@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigationStore } from '../stores/navigationStore';
-import { isAuthenticated, logout as clientLogout, getStoredAccessToken } from '../service/clientService';
+import { isAuthenticated, logout as clientLogout } from '../service/clientService';
 import { clearAllLastNavigation, cleanupOldTokenKeys } from '../utils/navigationPersistence';
-import { decodeJwt } from 'jose';
 
 interface AuthUser {
   id?: string;

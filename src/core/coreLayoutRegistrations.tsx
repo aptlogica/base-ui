@@ -59,6 +59,6 @@ export const registerCoreLayoutComponents = (api: PluginAPI, config: any = {}) =
     order: 1,
     render: () => <HomePage />
   });
-  
+
 };
 

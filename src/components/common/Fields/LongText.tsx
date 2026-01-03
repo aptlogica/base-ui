@@ -14,7 +14,8 @@ interface LongTextProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean;
+  allowEdit?: boolean; // true = single click, false = double click
+  readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;
   config?: {
@@ -37,6 +38,7 @@ export const LongText: React.FC<LongTextProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
   config = {}
@@ -170,6 +172,7 @@ export const LongText: React.FC<LongTextProps> = ({
 
   // Modal handlers
   const openModal = () => {
+    if (readOnly) return;
     setIsModalOpen(true);
     // Reset link popup when opening main modal
     if (isLinkPopupOpen) {
@@ -531,20 +534,22 @@ export const LongText: React.FC<LongTextProps> = ({
           maxLength={configMaxLength}
           disabled={false}
           className={`field-component ${error ? 'border-red-500 bg-red-50' : ''
-            } ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'} truncate`}
+            } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'} truncate`}
           readOnly
-          style={{ cursor: 'pointer' }}
-          onDoubleClick={openModal}
+          style={readOnly ? { cursor: 'default' } : { cursor: 'pointer' }}
+          onDoubleClick={!readOnly ? openModal : undefined}
         />
-        <button
-          type="button"
-          onClick={openModal}
-          className="mx-2 w-8 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-colors z-0"
-          tabIndex={-1}
-          disabled={disabled}
-        >
-          <Maximize2 className="w-4 h-4" />
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={openModal}
+            className="mx-2 w-8 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-colors z-0"
+            tabIndex={-1}
+            disabled={disabled}
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
 
@@ -570,7 +575,7 @@ export const LongText: React.FC<LongTextProps> = ({
             <div className="flex items-center mb-4 flex-shrink-0">
               <AlignLeft className="w-8 h-8 rounded icon-primary p-1 mr-2" />
               <span className="text-lg font-medium text-muted-foreground">Long Text</span>
-              {richText && (
+              {richText && !readOnly && (
                 <div className="flex items-center gap-1 ml-4 px-2 py-1 bg-gray-100 rounded-xl">
                   <button
                     type="button"
@@ -653,10 +658,10 @@ export const LongText: React.FC<LongTextProps> = ({
               <div className="w-full flex-1 flex flex-col min-h-[400px]">
                 <div
                   ref={richTextEditorRef}
-                  contentEditable
+                  contentEditable={!readOnly}
                   suppressContentEditableWarning
-                  onInput={handleRichTextChange}
-                  onPaste={handlePaste}
+                  onInput={!readOnly ? handleRichTextChange : undefined}
+                  onPaste={!readOnly ? handlePaste : undefined}
                   onKeyDown={(e) => {
                     // Handle keyboard shortcuts
                     if (e.ctrlKey || e.metaKey) {
@@ -731,7 +736,7 @@ export const LongText: React.FC<LongTextProps> = ({
                 rows={20}
                 className="w-full flex-1 bg-[var(--background)] border rounded-xl p-3 text-sm text-muted-foreground focus:outline-none focus:border-[var(--color-brand-600)] transition-all resize-vertical min-h-[400px]"
                 placeholder={placeholder}
-                disabled={disabled}
+                disabled={disabled || readOnly}
               />
             )}
             <div className="flex justify-end mt-4 flex-shrink-0">

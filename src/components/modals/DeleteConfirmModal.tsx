@@ -23,14 +23,14 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({ isOpen, title, 
         <div className="flex justify-end gap-2 flex-shrink-0">
           <button
             type="button"
-            className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-800"
+            className="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800"
             onClick={onClose}
           >
             Cancel
           </button>
           <button
             type="button"
-            className="px-4 py-2 rounded bg-red-600 text-primary font-semibold"
+            className="px-4 py-2 rounded-xl bg-red-600 text-white font-semibold"
             onClick={onConfirm}
           >
             Delete

@@ -89,7 +89,7 @@ export const Table: React.FC<TableProps> = ({
   const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
   
   // Check permissions for read-only access
-  const { isBaseReadOnly, canCreateColumn, canDeleteRecord, canUpdateRecord } = useBaseAccess(baseId || undefined);
+  const { isBaseReadOnly, canCreateColumn, canDeleteRecord, canUpdateRecord, canCreateRecord, canUpdateColumn, canDeleteColumn } = useBaseAccess(baseId || undefined);
 
   // Resolve current view and base meta from tableData; allow override via viewConfig
   const currentView = useMemo(() => {
@@ -253,12 +253,20 @@ export const Table: React.FC<TableProps> = ({
   // Table modals hook
   const {
     contextMenu,
-    handleContextMenu,
+    handleContextMenu: originalHandleContextMenu,
     handleCloseContextMenu,
     colMenu,
     handleColContextMenu,
     handleCloseColMenu,
   } = useTableModals();
+
+  // Wrap handleContextMenu to prevent opening for readonly users
+  const handleContextMenu = useCallback((e: React.MouseEvent, rowId: string) => {
+    if (isBaseReadOnly() || !canCreateRecord()) {
+      return; // Don't show context menu for readonly users
+    }
+    originalHandleContextMenu(e, rowId);
+  }, [isBaseReadOnly, canCreateRecord, originalHandleContextMenu]);
 
   // Column management hook
   const {
@@ -550,8 +558,7 @@ export const Table: React.FC<TableProps> = ({
       try {
         toast.success('Row added', { title: 'Success', duration: 3000 });
       } catch (err) {
-        // If toast context isn't available for some reason, fallback to console
-        console.log('Row added');
+        // If toast context isn't available, silently fail
       }
       // Ensure fresh data (will merge with optimistic update)
       try { onRefresh?.(); } catch { }
@@ -742,7 +749,7 @@ export const Table: React.FC<TableProps> = ({
                     <div
                       key={column.key}
                       role="columnheader"
-                      className={`relative flex-shrink-0 bg-sidebar-menu border-b group ${!isLast ? 'border-r border-border/30' : ''} ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${typeof (column as any).isNew !== 'undefined' && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
+                      className={`relative flex-shrink-0 bg-sidebar-menu border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${typeof (column as any).isNew !== 'undefined' && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
                       style={{
                         width: `${columnWidths[index]}px`,
                         minWidth: '80px',
@@ -783,8 +790,8 @@ export const Table: React.FC<TableProps> = ({
                             )}
                           </span>
                         </div>
-                        {/* Column dropdown */}
-                        {!column.isSystem && (
+                        {/* Column dropdown - hide for readonly users */}
+                        {!column.isSystem && !isBaseReadOnly() && (canUpdateColumn() || canDeleteColumn()) && (
                           <ColumnDropdown
                             column={{
                               id: column.id,
@@ -805,7 +812,7 @@ export const Table: React.FC<TableProps> = ({
 
                 {/* Add column button - only show if user can create columns and not read-only */}
                 {canCreateColumn() && !isBaseReadOnly() && (
-                  <div className="flex-shrink-0 bg-[var(--color-hover-bg)] flex items-center justify-center h-[35px] border-r border-b border-l relative">
+                  <div className="flex-shrink-0 bg-[var(--color-hover-bg)] flex items-center justify-center h-[35px] border-r border-b relative">
                     <button
                       ref={addColumnButtonRef}
                       className="p-1 rounded hover:bg-muted/70 transition-colors duration-200"
@@ -878,12 +885,15 @@ export const Table: React.FC<TableProps> = ({
               })()}
 
               {/* FRONTEND PAGINATION: Add row button with optional loading indicator */}
-              <div className="relative w-full" style={{ height: '40px' }}>
-                <div className="flex-shrink-0 w-[48px] h-10 border-r border-b border-border/30 flex items-center justify-center bg-[var(--color-hover-bg)]" style={{ height: '40px', position: 'sticky', left: 0, zIndex: 2, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)' }}>
-                  <button className="p-1 rounded hover:bg-muted/50 transition-colors" title="Add row" onClick={() => { setActiveCell(null); addNewRow(); }}>
-                    <Plus className="w-5 h-5 text-muted-foreground" />
-                  </button>
+              {!isBaseReadOnly() && canCreateRecord() && (
+                <div className="relative w-full" style={{ height: '40px' }}>
+                  <div className="flex-shrink-0 w-[48px] h-10 border-r border-b border-border/30 flex items-center justify-center bg-[var(--color-hover-bg)]" style={{ height: '40px', position: 'sticky', left: 0, zIndex: 2, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)' }}>
+                    <button className="p-1 rounded hover:bg-muted/50 transition-colors" title="Add row" onClick={() => { setActiveCell(null); addNewRow(); }}>
+                      <Plus className="w-5 h-5 text-muted-foreground" />
+                    </button>
+                  </div>
                 </div>
+              )}
 
                 {/* Optional: Show subtle indicator when more data available */}
                 {hasMore && (
@@ -896,18 +906,19 @@ export const Table: React.FC<TableProps> = ({
             </div>
           </div>
         </div>
-      </div>
 
       {/* Fixed Footer */}
       <div className="sticky bottom-0 z-30 bg-card border-t flex items-center px-4 h-12">
-        <button
-          onClick={() => { setActiveCell(null); addNewRow(); }}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded btn-primary text-primary-brand bg-[var(--color-brand-300)] text-[var(--color-brand-600)] hover:text-[var(--color-brand-900)] hover:bg-[var(--color-brand-600)] transition-colors duration-200"
-          title="Add new row"
-        >
-          <Plus className="w-4 h-4" />
-          Add Row
-        </button>
+        {!isBaseReadOnly() && canCreateRecord() && (
+          <button
+            onClick={() => { setActiveCell(null); addNewRow(); }}
+            className="flex items-center gap-2 px-5 py-1.5 text-sm font-medium btn-primary !rounded-lg transition-colors duration-200"
+            title="Add new row"
+          >
+            <Plus className="w-5 h-5" />
+            Add Row
+          </button>
+        )}
         <div className="ml-auto flex items-center gap-3 text-sm">
           {/* Virtualization is always enabled - indicator removed to reduce UI clutter */}
           <div className="text-muted-foreground">
@@ -917,8 +928,8 @@ export const Table: React.FC<TableProps> = ({
       </div>
 
 
-      {/* Context menu for row actions */}
-      {contextMenu.open && contextMenu.rowId !== null && (
+      {/* Context menu for row actions - hide for readonly users */}
+      {contextMenu.open && contextMenu.rowId !== null && !isBaseReadOnly() && canCreateRecord() && (
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
@@ -940,8 +951,8 @@ export const Table: React.FC<TableProps> = ({
         />
       )}
 
-      {/* Column context menu */}
-      {colMenu.open && colMenu.colIndex !== null && (
+      {/* Column context menu - hide for readonly users */}
+      {colMenu.open && colMenu.colIndex !== null && !isBaseReadOnly() && (canUpdateColumn() || canDeleteColumn()) && (
         <>
           {/* Overlay to close menu on click outside */}
           <div
@@ -952,16 +963,20 @@ export const Table: React.FC<TableProps> = ({
             style={{ position: 'fixed', left: colMenu.x, top: colMenu.y, zIndex: 1000 }}
             className="bg-background border p-1 space-y-1 rounded-xl shadow-lg w-48"
           >
-            <button
-              className="w-full text-left px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
-              onClick={(e) => {
-                handleEditColumn(visibleColumns[colMenu.colIndex!], colMenu.colIndex!, { target: e.currentTarget });
-                handleCloseColMenu();
-              }}
-            >
-              Edit column
-            </button>
-            <button className="w-full text-left px-4 py-2 text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors" onClick={() => { handleDeleteColumn(visibleColumns[colMenu.colIndex!].id!); handleCloseColMenu(); }}>Delete column</button>
+            {canUpdateColumn() && (
+              <button
+                className="w-full text-left px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+                onClick={(e) => {
+                  handleEditColumn(visibleColumns[colMenu.colIndex!], colMenu.colIndex!, { target: e.currentTarget });
+                  handleCloseColMenu();
+                }}
+              >
+                Edit column
+              </button>
+            )}
+            {canDeleteColumn() && (
+              <button className="w-full text-left px-4 py-2 text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors" onClick={() => { handleDeleteColumn(visibleColumns[colMenu.colIndex!].id!); handleCloseColMenu(); }}>Delete column</button>
+            )}
           </div>
         </>
       )}
@@ -1020,5 +1035,6 @@ export const Table: React.FC<TableProps> = ({
         />
       }
     </div>
+    
   );
 };

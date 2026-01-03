@@ -200,10 +200,17 @@ export const useWorkspaceById = (workspaceId: string) => {
 };
 
 export const useWorkspaceBases = (workspaceId: string) => {
+  const { user } = useAuth();
+  const location = useLocation();
+  
+  // Public routes that don't need workspace data
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
+  const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
+
   return useQuery({
     queryKey: queryKeys.bases(workspaceId),
     queryFn: () => getBasesByWorkspaceIdService(workspaceId),
-    enabled: !!workspaceId,
+    enabled: !!workspaceId && !!user && !isPublicRoute, // Only fetch if user is authenticated and not on public routes
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
   });
@@ -320,6 +327,13 @@ export const useBaseMembers = (baseId: string) => {
 };
 
 export const useBaseTables = (baseId: string) => {
+  const { user } = useAuth();
+  const location = useLocation();
+  
+  // Public routes that don't need base data
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
+  const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
+  
   // Check if workspaces are available before making base API calls
   // This prevents 401 errors when user has no workspaces but baseId is still set
   const { data: workspacesData } = useWorkspaces();
@@ -329,7 +343,7 @@ export const useBaseTables = (baseId: string) => {
   return useQuery({
     queryKey: queryKeys.tables(baseId),
     queryFn: () => getTablesByBaseIdService(baseId),
-    enabled: !!baseId && hasWorkspaces,
+    enabled: !!baseId && !!user && hasWorkspaces && !isPublicRoute, // Only fetch if user is authenticated and not on public routes
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
   });
@@ -460,10 +474,17 @@ export const useTable = (tableId: string, options?: any) => {
 };
 
 export const useTableViews = (tableId: string) => {
+  const { user } = useAuth();
+  const location = useLocation();
+  
+  // Public routes that don't need view data
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
+  const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
+
   return useQuery({
     queryKey: queryKeys.views(tableId),
     queryFn: () => getViewsByModelIdService(tableId),
-    enabled: !!tableId,
+    enabled: !!tableId && !!user && !isPublicRoute, // Only fetch if user is authenticated and not on public routes
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,

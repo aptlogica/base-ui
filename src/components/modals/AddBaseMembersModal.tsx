@@ -64,26 +64,22 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
     { label: 'Base Read Only', value: 'base-read' },
   ];
 
-  // Get existing member user IDs to filter them out
+  // Get existing member user IDs to mark them as disabled
   const existingMemberUserIds = useMemo(() => {
     return Array.isArray(baseMembers)
       ? baseMembers.map((member: any) => member.user_id || member.id).filter(Boolean)
       : [];
   }, [baseMembers]);
 
-  // Filter out existing members from available users
-  const availableUsers = useMemo(() => {
-    return tenantUsers.filter((user: any) => !existingMemberUserIds.includes(user.id));
-  }, [tenantUsers, existingMemberUserIds]);
-
-  // User dropdown options
+  // User dropdown options - include all users, but mark existing members as disabled
   const userDropdownOptions: MultiSelectTagsOption[] = useMemo(() => {
     return tenantUsers.map((user: any) => ({
       label: user.display_name || user.email || 'Unknown User',
       value: user.id,
       description: user.email,
+      disabled: existingMemberUserIds.includes(user.id), // Disable existing members
     }));
-  }, [availableUsers]);
+  }, [tenantUsers, existingMemberUserIds]);
 
   // Reset form and refetch members when modal opens
   useEffect(() => {
@@ -193,9 +189,62 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
       toast.success('Roles updated successfully');
       setPendingRoleChanges({});
       baseMembersQuery.refetch();
-      onSuccess?.();
     } catch (error: any) {
       const errorMsg = error?.response?.data?.message || error?.message || 'Failed to update roles';
+      toast.error(errorMsg);
+      throw error; // Re-throw to allow caller to handle
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Combined handler for both adding members and updating roles
+  const handleSaveAll = async () => {
+    setIsSubmitting(true);
+    
+    try {
+      // First update roles if there are pending changes
+      if (Object.keys(pendingRoleChanges).length > 0) {
+        const roleChangeEntries = Object.entries(pendingRoleChanges);
+        const members = roleChangeEntries.map(([userId, role]) => ({
+          user_id: userId,
+          role: role,
+        }));
+
+        await bulkAddBaseMembersMutation.mutateAsync({
+          baseId,
+          workspaceId,
+          members
+        });
+
+        toast.success('Roles updated successfully');
+        setPendingRoleChanges({});
+        baseMembersQuery.refetch();
+      }
+      
+      // Then add new members if any are selected
+      if (isValid) {
+        const members = selectedUserIds.map((user_id) => ({
+          user_id,
+          role: selectedRole,
+        }));
+
+        await bulkAddBaseMembersMutation.mutateAsync({
+          baseId,
+          workspaceId,
+          members,
+        });
+
+        toast.success('Members added successfully');
+        setSelectedUserIds([]);
+        setSelectedRole('base-member');
+        baseMembersQuery.refetch();
+      }
+      
+      onSuccess?.();
+      onClose();
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.message || error?.message || 'Failed to save changes';
       toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
@@ -304,6 +353,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
                     placeholder="Select users to assign"
                     searchPlaceholder="Search users..."
                     disabled={isSubmitting || bulkAddBaseMembersMutation.isPending}
+                    showDisabledAsSelected={true}
                   />
                 </div>
 
@@ -426,40 +476,36 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
           >
             Cancel
           </button>
-          {/* Update button for pending role changes */}
-          {Object.keys(pendingRoleChanges).length > 0 && (
+          {/* Combined Save button - handles both adding new members and updating roles */}
+          {(isValid || Object.keys(pendingRoleChanges).length > 0) && (
             <button
               type="button"
-              onClick={handleUpdateRoles}
-              disabled={isSubmitting || bulkAddBaseMembersMutation.isPending}
+              onClick={handleSaveAll}
+              disabled={
+                isSubmitting || 
+                bulkAddBaseMembersMutation.isPending ||
+                (!isValid && Object.keys(pendingRoleChanges).length === 0)
+              }
               className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {(isSubmitting || bulkAddBaseMembersMutation.isPending) ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Updating...
+                  {(isValid && Object.keys(pendingRoleChanges).length > 0) 
+                    ? 'Saving...' 
+                    : isValid 
+                      ? 'Adding...' 
+                      : 'Updating...'}
                 </>
               ) : (
-                'Update'
+                (isValid && Object.keys(pendingRoleChanges).length > 0) 
+                  ? 'Save Changes' 
+                  : isValid 
+                    ? 'Add' 
+                    : 'Update'
               )}
             </button>
           )}
-          {/* Add button for new members */}
-          <button
-            type="submit"
-            form="add-base-members-form"
-            disabled={!isValid || isSubmitting || bulkAddBaseMembersMutation.isPending}
-            className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
-          >
-            {(isSubmitting || bulkAddBaseMembersMutation.isPending) ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Adding...
-              </>
-            ) : (
-              'Add'
-            )}
-          </button>
         </div>
       </div>
     </div>

@@ -1087,7 +1087,17 @@ export const UserTable: React.FC<UserTableProps> = ({
 
       {/* Footer with Pagination */}
       {totalPages > 1 && (
-        <div className="px-6 py-4 bg-gray-50 border-t flex items-center justify-center">
+        <div className="px-6 py-4 bg-gray-50 border-t flex items-center justify-between">
+          {/* Previous Button - Left */}
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 text-sm border rounded-lg text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+          >
+            ← Previous
+          </button>
+
+          {/* Page Numbers - Center */}
           <div className="flex items-center gap-2">
             {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
               if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
@@ -1108,14 +1118,16 @@ export const UserTable: React.FC<UserTableProps> = ({
               }
               return null;
             })}
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-1 text-sm border rounded-lg text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-            >
-              Next →
-            </button>
           </div>
+
+          {/* Next Button - Right */}
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 text-sm border rounded-lg text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+          >
+            Next →
+          </button>
         </div>
       )}
 

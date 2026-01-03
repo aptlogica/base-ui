@@ -17,7 +17,8 @@ interface DurationProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean;
+  allowEdit?: boolean; // true = single click, false = double click
+  readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;
 }
@@ -40,6 +41,7 @@ export const Duration: React.FC<DurationProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
 }) => {
@@ -173,6 +175,13 @@ export const Duration: React.FC<DurationProps> = ({
     }
   }, [value, durationFormat]);
 
+  // Exit edit mode if readOnly becomes true
+  useEffect(() => {
+    if (readOnly && isEditing) {
+      setIsEditing(false);
+    }
+  }, [readOnly, isEditing]);
+
   const validate = (val: string) => {
     if (required && !val.trim()) return "This field is required";
     if (val.trim() && parseDuration(val) === 0 && val.trim() !== "0") {
@@ -232,9 +241,11 @@ export const Duration: React.FC<DurationProps> = ({
     setIsEditing(false);
   };
 
+  // allowEdit controls single vs double-click behavior
+  // readOnly completely prevents editing
   const handleClick = useClickHandler(
-    () => allowEdit && !disabled && setIsEditing(true),
-    () => !allowEdit && !disabled && setIsEditing(true)
+    () => !readOnly && allowEdit && !disabled && setIsEditing(true), // Single click when allowEdit=true
+    () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // Double click when allowEdit=false
   );
 
   return (
@@ -250,7 +261,8 @@ export const Duration: React.FC<DurationProps> = ({
       {/* Input or Display */}
       <div
         className={`relative ${className} ${isBorder ? "field-component-border" : ""}`}
-        onClick={handleClick}
+        onClick={!readOnly ? handleClick : undefined}
+        style={readOnly ? { cursor: 'default' } : undefined}
       >
         {isEditing ? (
           <input
@@ -267,14 +279,14 @@ export const Duration: React.FC<DurationProps> = ({
             }}
             autoFocus
             placeholder={durationFormat}
-            disabled={disabled}
+            disabled={disabled || readOnly}
             className={`field-component ${isBorder ? "field-component-focus" : ""} ${error ? "border-red-500 bg-red-50" : "border-gray-300"
-              } ${disabled ? "cursor-not-allowed" : ""}`}
+              } ${disabled || readOnly ? "cursor-not-allowed" : ""}`}
           />
         ) : (
           <div
             className={`field-component ${localValue !== null && localValue !== undefined ? "text-gray-800" : ""
-              } ${disabled ? "text-gray-400 cursor-not-allowed" : ""}`}
+              } ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
           >
             {localValue !== null && localValue !== undefined
               ? formatDuration(localValue)

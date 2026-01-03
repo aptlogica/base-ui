@@ -49,7 +49,8 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
 
   // Get base_id from table (could be table.base_id or table.model.base_id)
   const baseId = table?.base_id || table?.model?.base_id;
-  const { canUpdateRecord, canDeleteRecord } = useBaseAccess(baseId);
+  const { canUpdateRecord, canDeleteRecord, isBaseReadOnly } = useBaseAccess(baseId);
+  const isReadOnly = isBaseReadOnly();
 
   const insertValueMutation = useInsertRowData();
   
@@ -249,9 +250,11 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     const fieldRendererProps = createFieldRendererProps(
       field,
       value, 
-      (v: any) => handleFieldChange(field, v),
+      isReadOnly ? undefined : (v: any) => handleFieldChange(field, v),
       { 
         isBorder: true,
+        readOnly: isReadOnly,
+        allowEdit: !isReadOnly,
       }
     );
     
@@ -261,7 +264,9 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
       column_id: field.id,
       row_id: Number(recordId),
       showPreview: false,
-      persistImmediately: true // Edit modal has row_id, so upload immediately
+      persistImmediately: true, // Edit modal has row_id, so upload immediately
+      readOnly: isReadOnly,
+      allowEdit: !isReadOnly
     } : {};
     
     // For links fields, pass the field object and context
@@ -274,7 +279,8 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
       currentRowId: Number(recordId),
       currentTableId: String(table.id),
       persistImmediately: false, // Don't persist immediately in modal
-      isBorder: true
+      isBorder: true,
+      disabled: isReadOnly
     } : {};
     
     return (

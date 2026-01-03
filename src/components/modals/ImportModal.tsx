@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, X, Loader2, FileText } from 'lucide-react';
 import { useImportTable } from '../../hooks/useApi';
 import { useToast } from '../common/Toast';
-import { useAuth } from '../../auth/AuthContext';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -253,7 +252,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         <div className="flex items-center justify-between mb-6 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center">
-              <Upload size={20} className="icon-primary" />
+              <Upload size={16} className="text-green-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-primary">Import {config.label}</h2>

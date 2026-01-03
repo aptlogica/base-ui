@@ -10,6 +10,8 @@ interface AttachmentPreviewModalProps {
   attachments: any[];
   onAttachFile?: () => void;
   onAttachmentsChange?: (attachments: any[]) => void;
+  allowEdit?: boolean;
+  readOnly?: boolean; // true = completely prevent editing
   // API parameters for attachment operations
   model_id?: string;
   column_id?: string;
@@ -22,6 +24,8 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
   attachments,
   onAttachFile,
   onAttachmentsChange,
+  allowEdit = true,
+  readOnly = false,
   model_id,
   column_id,
   row_id
@@ -83,6 +87,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
 
   const handleEditAttachment = (attachment: any, index: number, event: React.MouseEvent) => {
     event.stopPropagation();
+    if (readOnly) return;
     setEditingIndex(index);
     setEditingTitle(attachment.title || attachment.name || '');
   };
@@ -131,6 +136,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
 
   const handleDeleteAttachment = async (attachment: any, index: number, event: React.MouseEvent) => {
     event.stopPropagation();
+    if (readOnly) return;
     try {
       // Remove via API if we have the required parameters
       if (model_id && column_id && row_id && attachment.id) {
@@ -183,6 +189,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {!readOnly && allowEdit && onAttachFile && (
               <button
                 type="button"
                 onClick={onAttachFile}
@@ -191,6 +198,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                 <Paperclip size={16} />
                 Attach File
               </button>
+              )}
               <button
                 type="button"
                 onClick={onClose}
@@ -371,7 +379,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
 
                     {/* File Name - Inline Editable with Action Icons */}
                     <div className="text-xs font-medium w-full">
-                      {editingIndex === index ? (
+                      {!readOnly && editingIndex === index ? (
                         <div className="flex items-center gap-1 border rounded-[var(--radius-lg)] bg-[--color-alpha-white] focus:border focus:border-[--color-brand-600] px-2 py-1 w-full min-w-0">
                           <input
                             type="text"
@@ -400,7 +408,8 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                         >
                           {file.title || file.name || "Unknown file"}
                             </div>
-                            {/* Action Buttons - Visible only on hover of this card */}
+                            {/* Action Buttons - Visible only on hover of this card and when allowEdit is true and not readOnly */}
+                            {!readOnly && allowEdit && (
                             <div className={`flex items-center gap-1 transition-all duration-200 ${isHovered ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
                             <button
                               type="button"
@@ -451,6 +460,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                               <Trash2 size={10} />
                             </button>
                           </div>
+                          )}
                         </div>
                         {/* File Size */}
                         {file.size && (

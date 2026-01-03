@@ -7,6 +7,7 @@ import { useNavigationStore } from '../../stores/navigationStore';
 import { useNavigation } from '../../hooks/useNavigation';
 import { CreateWorkspaceModal } from '../modals/CreateWorkspaceModal';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
+import { useBaseAccess } from '../../hooks/useBaseAccess';
 import { getRoleLabel } from '../../types/roles';
 import { getInitials } from '../../utils/helpers';
 
@@ -16,9 +17,8 @@ const HeaderWorkspaceDropdown: React.FC = () => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const logoButtonRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { setWorkspace } = useNavigationStore();
+  const { setWorkspace, selectedBaseId } = useNavigationStore();
   const { navigateToWorkspace } = useNavigation();
-  const { canCreateWorkspace } = useWorkspaceAccess();
 
   // Route-based visibility check
   const isRouteVisible = useComponentVisibility(COMPONENT_IDS.WORKSPACE_DROPDOWN);
@@ -73,6 +73,10 @@ const HeaderWorkspaceDropdown: React.FC = () => {
     workspaceError,
     handleFormSubmit,
   } = useWorkspaceBusinessLogic();
+
+  // Access hooks after selectedWorkspaceId is available
+  const { canCreateWorkspace, isWorkspaceReadOnly } = useWorkspaceAccess(selectedWorkspaceId || undefined);
+  const { isBaseReadOnly } = useBaseAccess(selectedBaseId || undefined);
 
   // Derive the selected workspace immediately from selectedWorkspaceId and workspaces
   // This ensures we show the workspace name even before selectedWorkspace state is set
@@ -187,7 +191,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
             e.stopPropagation();
             setWorkspaceDropdownOpen(!workspaceDropdownOpen);
           }}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl border max-w-64 min-w-64 truncate bg-card hover:bg-muted/30 transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl border truncate bg-card hover:bg-gray-100 transition-colors"
         >
           {/* Workspace Icon */}
           {displayWorkspace ? (
@@ -203,12 +207,19 @@ const HeaderWorkspaceDropdown: React.FC = () => {
           )}
 
           {/* Workspace Name */}
-          <span className="text-sm font-medium text-left text-primary min-w-40 truncate">
+          <span className="text-sm font-medium text-left text-primary max-w-44 truncate">
             {displayWorkspace?.title || displayWorkspace?.name || 'Select Workspace'}
           </span>
 
+          {/* Read Only Tag */}
+          {(isWorkspaceReadOnly() || isBaseReadOnly()) && (
+            <span className="inline-block px-2 py-0.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 border flex-shrink-0">
+              Read only
+            </span>
+          )}
+
           {/* Dropdown Icon - chevron up when open */}
-          <ChevronsUpDown className="w-4 h-4 text-gray-400 transition-transform flex-shrink-0" />
+          <ChevronsUpDown className="w-4 h-4 text-tertiary transition-transform flex-shrink-0" />
         </button>
 
         {/* Workspace Dropdown */}
@@ -223,11 +234,11 @@ const HeaderWorkspaceDropdown: React.FC = () => {
           <div className="flex flex-col" style={{ minHeight: '200px', maxHeight: '384px' }}>
             {/* Workspaces Header */}
             <div className="px-4 py-2 flex-shrink-0">
-              <div className="text-xs font-semibold text-gray-900 tracking-wide">Workspaces</div>
+              <div className="text-xs font-semibold text-primary tracking-wide">Workspaces</div>
             </div>
 
             {/* Workspaces Section - scrollable */}
-            <div className="overflow-y-auto flex-1 min-h-0 p-2" style={{ maxHeight: 'calc(384px - 120px)' }}>
+            <div className="overflow-y-auto flex-1 min-h-0 p-2" >
               {workspaces && Array.isArray(workspaces) && workspaces.length > 0 ? (
                 workspaces.map((workspace: any, index: number) => {
                   const isSelected = (displayWorkspace?.id || selectedWorkspaceId) === workspace.id;
@@ -255,12 +266,12 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                   return (
                     <div
                       key={workspace.id}
-                      className="w-full rounded-lg text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
+                      className="w-full rounded-lg text-left p-1.5 hover:bg-gray-100 text-sm transition-all duration-200 cursor-pointer"
                       onClick={() => handleWorkspaceClick(workspace)}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         {/* Workspace Icon */}
-                        <div className={`w-8 h-8 ${iconColor} rounded-full flex items-center justify-center flex-shrink-0`}>
+                        <div className={`w-10 h-10 ${iconColor} rounded-full flex items-center justify-center flex-shrink-0`}>
                           <span className={`${textColor} text-center font-semibold text-[10px] text-base`}>
                             {workspaceInitials}
                           </span>
@@ -268,7 +279,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
 
                         {/* Workspace Name */}
                         <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                          <span className="font-semibold text-primary truncate">
+                          <span className="font-semibold text-primary truncate flex-1 min-w-0">
                             {workspace.title || workspace.name || workspace.slug || 'Untitled Workspace'}
                           </span>
                           
@@ -300,7 +311,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                   );
                 })
               ) : (
-                <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                <div className="px-4 py-8 text-center text-secondary text-sm">
                   {workspaces === null ? (
                     <div>Loading workspaces...</div>
                   ) : (
@@ -319,7 +330,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
             {canCreateWorkspace() && (
               <div className="p-2 flex-shrink-0">
                 <button
-                  className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-muted/30 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1"
+                  className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-gray-100 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1"
                   onClick={() => {
                     setShowCreateWorkspace(true);
                     setWorkspaceDropdownOpen(false);

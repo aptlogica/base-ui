@@ -19,7 +19,8 @@ interface SingleSelectProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean;
+  allowEdit?: boolean; // true = single click opens dropdown, false = double click for manual edit
+  readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;
   config?: {
@@ -42,6 +43,7 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
   config = {}
@@ -112,6 +114,8 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
     }
   }, [isOpen, calculateDropdownPosition]);
 
+  // Note: We allow dropdown to open in read-only mode, but prevent selections
+
   useClickOutside({
     isOpen,
     onClose: () => setIsOpen(false),
@@ -152,6 +156,7 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
   };
 
   const handleSelect = (option: string) => {
+    if (readOnly) return;
     onChange(option);
     setIsOpen(false);
 
@@ -161,6 +166,7 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (readOnly) return;
     onChange('');
     setError(null);
   };
@@ -195,10 +201,10 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
         <button
           ref={buttonRef}
           type="button"
-          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onClick={() => !disabled && allowEdit && setIsOpen(!isOpen)}
           disabled={disabled}
           className={`field-component ${error ? 'border-red-500 bg-red-50' : ''
-            } ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900 cursor-pointer'}`}
+            } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900 cursor-pointer'}`}
         >
           <div className="flex items-center flex-1 truncate overflow-hidden whitespace-nowrap">
             {displayValue ? (
@@ -217,7 +223,7 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           </div>
         </button>
-        {displayValue && !disabled && (
+        {displayValue && !disabled && !readOnly && (
           <button
             ref={clearButtonRef}
             type="button"
@@ -251,7 +257,8 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
                 <button
                   key={`${label}-${index}`}
                   onClick={() => handleSelect(label)}
-                  className={`w-full text-left text-sm rounded-xl focus:bg-[var(--color-bg-brand-secondary)] transition-colors flex items-center justify-between`}
+                  disabled={readOnly}
+                  className={`w-full text-left text-sm rounded-xl focus:bg-[var(--color-bg-brand-secondary)] transition-colors flex items-center justify-between ${readOnly ? 'cursor-default opacity-75' : 'cursor-pointer'}`}
                 >
                   <div
                     className={`inline-flex justify-between items-center w-full p-1 px-2 rounded-full text-xs min-w-0 ${opt.color ? '' : getOptionColor(label, index)}`}

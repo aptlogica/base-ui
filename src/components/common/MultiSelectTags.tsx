@@ -20,6 +20,7 @@ export interface MultiSelectTagsProps {
   className?: string;
   getOptionLabel?: (option: MultiSelectTagsOption) => string;
   getOptionValue?: (option: MultiSelectTagsOption) => string | number;
+  showDisabledAsSelected?: boolean; // Show disabled options as selected tags in input
 }
 
 export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
@@ -33,6 +34,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
   className = '',
   getOptionLabel = (option) => option.label,
   getOptionValue = (option) => option.value,
+  showDisabledAsSelected = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,10 +45,16 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Get selected options
+  // Get selected options (including disabled ones if showDisabledAsSelected is true)
   const selectedOptions = useMemo(() => {
-    return options.filter(opt => value.includes(getOptionValue(opt)));
-  }, [options, value, getOptionValue]);
+    const selected = options.filter(opt => value.includes(getOptionValue(opt)));
+    if (showDisabledAsSelected) {
+      // Also include disabled options that aren't in value but should be shown as selected
+      const disabledSelected = options.filter(opt => opt.disabled && !value.includes(getOptionValue(opt)));
+      return [...selected, ...disabledSelected];
+    }
+    return selected;
+  }, [options, value, getOptionValue, showDisabledAsSelected]);
 
   // Filter options based on search query
   const filteredOptions = useMemo(() => {
@@ -235,13 +243,21 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
               {selectedOptions.map((option) => {
                 const optionValue = getOptionValue(option);
                 const label = getOptionLabel(option);
+                const isDisabled = option.disabled;
                 return (
                   <div
                     key={optionValue}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full text-sm flex-shrink-0"
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm flex-shrink-0 ${
+                      isDisabled 
+                        ? 'bg-gray-200 text-gray-500 border border-gray-300' 
+                        : 'bg-gray-100 text-gray-700'
+                    }`}
                   >
                     <span className="truncate max-w-[150px]">{label}</span>
-                    {!disabled && (
+                    {isDisabled && (
+                      <span className="text-xs text-gray-400 italic ml-1">(Member)</span>
+                    )}
+                    {!disabled && !isDisabled && (
                       <button
                         type="button"
                         onClick={(e) => handleRemoveTag(optionValue, e)}
@@ -331,17 +347,28 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
                           transition-colors
                           ${isFocused ? 'bg-gray-100' : ''}
                           ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 cursor-pointer'}
+                          ${option.disabled && !isSelected ? 'bg-gray-50' : ''}
                         `}
                         onMouseEnter={() => setFocusedIndex(index)}
                       >
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-gray-900 truncate">{label}</div>
+                          <div className={`font-medium truncate ${option.disabled && !isSelected ? 'text-gray-500' : 'text-gray-900'}`}>
+                            {label}
+                            {option.disabled && !isSelected && (
+                              <span className="ml-2 text-xs text-gray-400 italic">(Already a member)</span>
+                            )}
+                          </div>
                           {option.description && (
-                            <div className="text-xs text-gray-500 truncate mt-0.5">{option.description}</div>
+                            <div className={`text-xs truncate mt-0.5 ${option.disabled && !isSelected ? 'text-gray-400' : 'text-gray-500'}`}>
+                              {option.description}
+                            </div>
                           )}
                         </div>
                         {isSelected && (
                           <Check className="w-4 h-4 text-green-600 flex-shrink-0 ml-2" />
+                        )}
+                        {option.disabled && !isSelected && (
+                          <span className="text-xs text-gray-400 flex-shrink-0 ml-2">Member</span>
                         )}
                       </button>
                     </li>

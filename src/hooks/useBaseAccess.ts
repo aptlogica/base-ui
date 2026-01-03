@@ -3,15 +3,6 @@ import { useWorkspaceAccess } from './useWorkspaceAccess';
 import { useWorkspaceBases } from './useApi';
 import { useNavigationStore } from '../stores/navigationStore';
 
-/**
- * Hook to determine user's access level for a specific base
- * Handles base-level permissions when workspace access_level is "base"
- * 
- * Base access_level values from API:
- * - "owner" - Full access to base (create/delete base, manage members, CRUD on tables/views/records/columns)
- * - "base-member" - Can CRUD on tables/views/records/columns, but cannot manage base or members
- * - "base-read" - Read-only (hold for now, everything restricted)
- */
 export function useBaseAccess(baseId?: string) {
   const { wsAccess, hasFullWorkspaceAccess, isBaseLevelAccess, currentWorkspace } = useWorkspaceAccess();
   const { selectedBaseId, selectedWorkspaceId } = useNavigationStore();
@@ -45,7 +36,7 @@ export function useBaseAccess(baseId?: string) {
   // If user has full workspace access (owner/co-owner/maintainer), they have full access to all bases
   const hasFullBaseAccess = React.useMemo(() => {
     if (hasFullWorkspaceAccess) return true;
-    if (isBaseLevelAccess && baseAccess === 'owner') return true;
+    if (isBaseLevelAccess() && baseAccess === 'owner') return true;
     return false;
   }, [hasFullWorkspaceAccess, isBaseLevelAccess, baseAccess]);
   
@@ -54,7 +45,7 @@ export function useBaseAccess(baseId?: string) {
     // Full workspace access means access to all bases
     if (hasFullWorkspaceAccess) return true;
     // If workspace access is "base", check if user has access to this specific base
-    if (isBaseLevelAccess && currentBase) {
+    if (isBaseLevelAccess() && currentBase) {
       // Include all valid base access levels
       return baseAccess === 'owner' || 
              baseAccess === 'maintainer' || 
@@ -72,20 +63,20 @@ export function useBaseAccess(baseId?: string) {
   
   const canUpdateBase = React.useCallback(() => {
     if (hasFullWorkspaceAccess) return true;
-    if (isBaseLevelAccess && baseAccess === 'owner') return true;
+    if (isBaseLevelAccess() && baseAccess === 'owner') return true;
     return false;
   }, [hasFullWorkspaceAccess, isBaseLevelAccess, baseAccess]);
   
   const canDeleteBase = React.useCallback(() => {
     if (hasFullWorkspaceAccess) return true;
-    if (isBaseLevelAccess && baseAccess === 'owner') return true;
+    if (isBaseLevelAccess() && baseAccess === 'owner') return true;
     return false;
   }, [hasFullWorkspaceAccess, isBaseLevelAccess, baseAccess]);
   
   // Base member management (only base owner, or workspace owner/co-owner/maintainer)
   const canManageBaseMembers = React.useCallback(() => {
     if (hasFullWorkspaceAccess) return true;
-    if (isBaseLevelAccess && baseAccess === 'owner') return true;
+    if (isBaseLevelAccess() && baseAccess === 'owner') return true;
     return false;
   }, [hasFullWorkspaceAccess, isBaseLevelAccess, baseAccess]);
   
@@ -103,7 +94,7 @@ export function useBaseAccess(baseId?: string) {
     if (hasFullWorkspaceAccess) return true;
     
     // If workspace access is "base", check base-level access
-    if (isBaseLevelAccess) {
+    if (isBaseLevelAccess()) {
       // Base read-only and workspace-read users cannot create tables
       if (baseAccess === 'base-read' || baseAccess === 'workspace-read') return false;
       // Base owner, maintainer, and base-member can create tables
@@ -116,7 +107,7 @@ export function useBaseAccess(baseId?: string) {
   const canUpdateTable = React.useCallback(() => {
     if (wsAccess === 'workspace-read') return false;
     if (hasFullWorkspaceAccess) return true;
-    if (isBaseLevelAccess) {
+    if (isBaseLevelAccess()) {
       if (baseAccess === 'base-read' || baseAccess === 'workspace-read') return false;
       return baseAccess === 'owner' || baseAccess === 'maintainer' || baseAccess === 'base-member';
     }
@@ -126,7 +117,7 @@ export function useBaseAccess(baseId?: string) {
   const canDeleteTable = React.useCallback(() => {
     if (wsAccess === 'workspace-read') return false;
     if (hasFullWorkspaceAccess) return true;
-    if (isBaseLevelAccess) {
+    if (isBaseLevelAccess()) {
       if (baseAccess === 'base-read' || baseAccess === 'workspace-read') return false;
       return baseAccess === 'owner' || baseAccess === 'maintainer' || baseAccess === 'base-member';
     }
@@ -136,7 +127,7 @@ export function useBaseAccess(baseId?: string) {
   const canCreateView = React.useCallback(() => {
     if (wsAccess === 'workspace-read') return false;
     if (hasFullWorkspaceAccess) return true;
-    if (isBaseLevelAccess) {
+    if (isBaseLevelAccess()) {
       if (baseAccess === 'base-read' || baseAccess === 'workspace-read') return false;
       return baseAccess === 'owner' || baseAccess === 'maintainer' || baseAccess === 'base-member';
     }
@@ -146,7 +137,7 @@ export function useBaseAccess(baseId?: string) {
   const canUpdateView = React.useCallback(() => {
     if (wsAccess === 'workspace-read') return false;
     if (hasFullWorkspaceAccess) return true;
-    if (isBaseLevelAccess) {
+    if (isBaseLevelAccess()) {
       if (baseAccess === 'base-read' || baseAccess === 'workspace-read') return false;
       return baseAccess === 'owner' || baseAccess === 'maintainer' || baseAccess === 'base-member';
     }
@@ -156,7 +147,7 @@ export function useBaseAccess(baseId?: string) {
   const canDeleteView = React.useCallback(() => {
     if (wsAccess === 'workspace-read') return false;
     if (hasFullWorkspaceAccess) return true;
-    if (isBaseLevelAccess) {
+    if (isBaseLevelAccess()) {
       if (baseAccess === 'base-read' || baseAccess === 'workspace-read') return false;
       return baseAccess === 'owner' || baseAccess === 'maintainer' || baseAccess === 'base-member';
     }
@@ -166,7 +157,7 @@ export function useBaseAccess(baseId?: string) {
   const canCreateRecord = React.useCallback(() => {
     if (wsAccess === 'workspace-read') return false;
     if (hasFullWorkspaceAccess) return true;
-    if (isBaseLevelAccess) {
+    if (isBaseLevelAccess()) {
       if (baseAccess === 'base-read' || baseAccess === 'workspace-read') return false;
       return baseAccess === 'owner' || baseAccess === 'maintainer' || baseAccess === 'base-member';
     }
@@ -176,7 +167,7 @@ export function useBaseAccess(baseId?: string) {
   const canUpdateRecord = React.useCallback(() => {
     if (wsAccess === 'workspace-read') return false;
     if (hasFullWorkspaceAccess) return true;
-    if (isBaseLevelAccess) {
+    if (isBaseLevelAccess()) {
       if (baseAccess === 'base-read' || baseAccess === 'workspace-read') return false;
       return baseAccess === 'owner' || baseAccess === 'maintainer' || baseAccess === 'base-member';
     }
@@ -186,7 +177,7 @@ export function useBaseAccess(baseId?: string) {
   const canDeleteRecord = React.useCallback(() => {
     if (wsAccess === 'workspace-read') return false;
     if (hasFullWorkspaceAccess) return true;
-    if (isBaseLevelAccess) {
+    if (isBaseLevelAccess()) {
       if (baseAccess === 'base-read' || baseAccess === 'workspace-read') return false;
       return baseAccess === 'owner' || baseAccess === 'maintainer' || baseAccess === 'base-member';
     }
@@ -196,7 +187,7 @@ export function useBaseAccess(baseId?: string) {
   const canCreateColumn = React.useCallback(() => {
     if (wsAccess === 'workspace-read') return false;
     if (hasFullWorkspaceAccess) return true;
-    if (isBaseLevelAccess) {
+    if (isBaseLevelAccess()) {
       if (baseAccess === 'base-read' || baseAccess === 'workspace-read') return false;
       return baseAccess === 'owner' || baseAccess === 'maintainer' || baseAccess === 'base-member';
     }
@@ -206,7 +197,7 @@ export function useBaseAccess(baseId?: string) {
   const canUpdateColumn = React.useCallback(() => {
     if (wsAccess === 'workspace-read') return false;
     if (hasFullWorkspaceAccess) return true;
-    if (isBaseLevelAccess) {
+    if (isBaseLevelAccess()) {
       if (baseAccess === 'base-read' || baseAccess === 'workspace-read') return false;
       return baseAccess === 'owner' || baseAccess === 'maintainer' || baseAccess === 'base-member';
     }
@@ -216,7 +207,7 @@ export function useBaseAccess(baseId?: string) {
   const canDeleteColumn = React.useCallback(() => {
     if (wsAccess === 'workspace-read') return false;
     if (hasFullWorkspaceAccess) return true;
-    if (isBaseLevelAccess) {
+    if (isBaseLevelAccess()) {
       if (baseAccess === 'base-read' || baseAccess === 'workspace-read') return false;
       return baseAccess === 'owner' || baseAccess === 'maintainer' || baseAccess === 'base-member';
     }

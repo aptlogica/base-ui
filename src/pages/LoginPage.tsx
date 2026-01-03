@@ -148,27 +148,6 @@ const LogIn: React.FC = () => {
     }
   };
 
-  const handleOAuthLogin = async (provider: 'google' | 'github') => {
-    try {
-      setIsOAuthLoading(prev => ({ ...prev, [provider]: true }));
-      setError('');
-
-      await loginByIdentityProvider(provider);
-
-      // Note: With popup mode, the promise resolves when popup closes
-      // The actual login processing happens via postMessage listener above
-    } catch (err: any) {
-      const errorMessage = err?.message || `${provider === 'google' ? 'Google' : 'GitHub'} login failed. Please try again.`;
-
-      if (err?.message?.includes('Popup blocked')) {
-        setError('Popup blocked. Please allow popups for this site to sign in.');
-      } else {
-        setError(errorMessage);
-      }
-
-      setIsOAuthLoading(prev => ({ ...prev, [provider]: false }));
-    }
-  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 h-screen overflow-hidden">
@@ -177,11 +156,11 @@ const LogIn: React.FC = () => {
         <div className="w-full max-w-md space-y-6">
           {/* Logo and Brand Name */}
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center flex-shrink-0 shadow-sm border">
+            <div className="w-10 h-10 flex items-center justify-center flex-shrink-0 border rounded-lg shadow-xs">
               <img 
-                src="/assets/logo.png" 
+                src="/assets/logo.svg" 
                 alt="Sereni Base Logo" 
-                className="w-full h-full object-contain rounded-lg"
+                className="w-full h-full object-cover rounded-xl"
               />
             </div>
             <span className="text-xl font-semibold text-gray-900">Sereni Base</span>

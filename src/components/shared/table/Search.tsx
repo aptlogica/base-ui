@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Search as SearchIcon, ChevronUp, Hash } from 'lucide-react';
+import { Search as SearchIcon, ChevronUp, ChevronDown, Hash } from 'lucide-react';
 import { BaseColumn as ColumnConfig } from '../../../types/column.types';
 import { FIELD_TYPES } from '../../../types/fieldTypes';
 import { useClickOutside } from '../../../hooks/useClickOutside';
@@ -188,10 +188,14 @@ export const Search: React.FC<SearchProps> = ({
           type="button"
           onClick={handleDropdownToggle}
           disabled={disabled}
-          className="flex items-center gap-3 px-2 py-1 rounded btn-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-3 px-2 py-1 btn-primary !rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span className='flex items-center gap-1 text-sm '>{getFieldIcon(selectedField?.type || '')} {selectedField?.title}</span>
-          <ChevronUp className={`w-3 h-3 transition-transform ${!isDropdownOpen ? 'rotate-180' : ''}`} />
+          {isDropdownOpen ? (
+            <ChevronUp className="w-3 h-3 transition-transform" />
+          ):(
+            <ChevronDown className="w-3 h-3 transition-transform" />
+          )}
         </button>
 
         {/* Search Input */}

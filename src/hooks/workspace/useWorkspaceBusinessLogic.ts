@@ -1,6 +1,6 @@
 import { useWorkspaceDataService } from './useWorkspaceDataService';
 import { useWorkspaceStateManager } from './useWorkspaceStateManager';
-import { useMemo, useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useToast } from '../../components/common/Toast';
 import { useNavigation } from '../../hooks/useNavigation';
 import { useNavigationActions } from '../../hooks/useNavigationActions';

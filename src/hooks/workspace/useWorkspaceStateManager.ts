@@ -3,7 +3,7 @@ import { useNavigationStore } from '../../stores/navigationStore';
 import { useAuth } from '../../auth/AuthContext';
 import { useCurrentUser } from '../../auth/useCurrentUser';
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 export const useWorkspaceStateManager = () => {
   const navigate = useNavigate();

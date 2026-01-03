@@ -5,6 +5,7 @@ import { useBaseMembers } from '../../hooks/useApi';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { AssignUserToWorkspaceModal } from '../modals/AssignUserToWorkspaceModal';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
+import { useBaseAccess } from '../../hooks/useBaseAccess';
 import { useComponentVisibility, COMPONENT_IDS } from '../../contexts/RouteContext';
 
 const HeaderMembers: React.FC = () => {
@@ -12,6 +13,7 @@ const HeaderMembers: React.FC = () => {
   const { selectedBaseId, selectedWorkspaceId } = useNavigationStore();
   const baseMembersQuery = useBaseMembers(selectedBaseId || '');
   const { canAssignUsers, isWorkspaceReadOnly } = useWorkspaceAccess(selectedWorkspaceId || '');
+  const { isBaseReadOnly } = useBaseAccess(selectedBaseId || undefined);
 
   // Route-based visibility check
   const isRouteVisible = useComponentVisibility(COMPONENT_IDS.HEADER_MEMBERS);
@@ -51,8 +53,8 @@ const HeaderMembers: React.FC = () => {
   return (
     <>
       <div className="flex items-center gap-3">
-        {isWorkspaceReadOnly() ? (
-          <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border">Read Only</span>
+        {(isWorkspaceReadOnly() || isBaseReadOnly()) ? (
+          <span className="inline-block px-2 py-0.5 rounded-xl text-xs font-medium bg-gray-100 text-gray-700 border">Read only</span>
         ) : (
           canAssignUsers() && (
             <button
@@ -72,7 +74,7 @@ const HeaderMembers: React.FC = () => {
       </div>
 
       {/* Add Member Modal */}
-      {!isWorkspaceReadOnly() && showAddMemberModal && selectedBaseId && selectedWorkspaceId && (
+      {!(isWorkspaceReadOnly() || isBaseReadOnly()) && showAddMemberModal && selectedBaseId && selectedWorkspaceId && (
         <AssignUserToWorkspaceModal
           isOpen={showAddMemberModal}
           onClose={() => setShowAddMemberModal(false)}

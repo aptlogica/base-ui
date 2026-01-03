@@ -43,7 +43,8 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
 
     // Get base_id from table (could be table.base_id or table.model.base_id)
     const baseId = table?.base_id || table?.model?.base_id;
-    const { canCreateRecord } = useBaseAccess(baseId);
+    const { canCreateRecord, isBaseReadOnly } = useBaseAccess(baseId);
+    const isReadOnly = isBaseReadOnly();
 
     const addRowMutation = useAddRow();
     const insertValueMutation = useInsertRowData();
@@ -260,10 +261,12 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         const rendererProps = createFieldRendererProps(
             field,
             value,
-            (v: any) => handleFieldChange(field, v),
+            isReadOnly ? undefined : (v: any) => handleFieldChange(field, v),
             {
                 isBorder: true,
                 required: field.required,
+                readOnly: isReadOnly,
+                allowEdit: !isReadOnly,
             }
         );
         
@@ -273,7 +276,9 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             model_id: String(table.id),
             column_id: field.id,
             row_id: createdRecordId ? Number(createdRecordId) : undefined,
-            persistImmediately: false // Don't persist immediately in modal (will upload on save)
+            persistImmediately: false, // Don't persist immediately in modal (will upload on save)
+            readOnly: isReadOnly,
+            allowEdit: !isReadOnly
         } : {};
         
         // For links fields, pass the field object and context
@@ -286,7 +291,8 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             currentRowId: createdRecordId ? Number(createdRecordId) : undefined,
             currentTableId: String(table.id),
             persistImmediately: false, // Don't persist immediately in modal
-            isBorder: true
+            isBorder: true,
+            disabled: isReadOnly
         } : {};
         
         return <FieldRenderer key={field.id} {...rendererProps} {...attachmentProps} {...linksProps} />;

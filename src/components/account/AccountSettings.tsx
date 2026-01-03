@@ -13,8 +13,6 @@ const FooterButtonContext = createContext<FooterButtonContextType | null>(null);
 export const useFooterButtons = (): FooterButtonContextType => {
   const context = useContext(FooterButtonContext);
   if (!context) {
-    // Return a no-op function instead of throwing to prevent crashes
-    // This allows components to work outside the context (e.g., in tests)
     return {
       registerFooter: () => {},
       clearFooter: () => {},
@@ -39,7 +37,6 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
     { key: 'security', label: 'Security', icon: 'Shield' },
   ];
 
-  // Update ref when section changes
   useEffect(() => {
     activeSectionRef.current = activeSection;
   }, [activeSection]);

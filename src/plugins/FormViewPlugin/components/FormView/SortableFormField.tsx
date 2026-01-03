@@ -188,13 +188,13 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
       onDragOver={onDragOver !== undefined ? (e => { e.preventDefault(); onDragOver(); }) : undefined}
       onDrop={onDrop !== undefined ? (e => { e.preventDefault(); onDrop(); }) : undefined}
       className={`relative group space-y-2 p-4 rounded-xl transition-all select-none
-        ${isSelected ? 'bg-[var(--color-utility-brand-50)] border-2 border-[var(--color-brand-200)] shadow-sm' : 'hover:bg-gray-100'}
+        ${isSelected ? 'bg-[var(--color-utility-brand-50)] border-2 border-[var(--color-brand-200)] shadow-sm' : 'hover:bg-gray-50'}
         ${isDragging ? 'opacity-50 border-dashed border-2  border-[var(--color-brand-400)]' : ''}
         ${isDragOver ? 'ring-2 ring-[var(--ring-color-primary)]' : ''}`}
     // onClick={() => onSelect?.(field.id)}
     >
-      {/* Drag Handle and Action Buttons - hide when handlers are undefined */}
-      {(onEdit || onDelete || onDragStart) && (
+      {/* Drag Handle and Action Buttons - hide when handlers are undefined or read-only */}
+      {!isReadOnly && (onEdit || onDelete || onDragStart) && (
         <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {!field.isSystem && onEdit && (
             <button className='p-1 text-gray-400 hover:text-gray-600 bg-[var(--color-alpha-white)] rounded shadow-sm'
@@ -262,16 +262,20 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
               // For other fields, use existing logic
               return value ? value : getFieldDefaultValue(field);
             })()}
-            onChange={onChange}
+            onChange={isReadOnly ? undefined : onChange}
             config={mapFieldConfig(field)}
             style={inputStyle}
+            readOnly={isReadOnly}
+            allowEdit={!isReadOnly}
             // Pass attachment-specific props for attachment fields
             {...(field.type === 'attachment' || field.uidt === 'attachment' ? {
               model_id,
               column_id: field.id,
               row_id,
               isBorder: true, // Form view: show border like other fields
-              persistImmediately: false // Form view: don't persist immediately, use form state
+              persistImmediately: false, // Form view: don't persist immediately, use form state
+              readOnly: isReadOnly,
+              allowEdit: !isReadOnly
             } : {})}
             // Pass links-specific props for links fields
             {...(field.type === 'links' || field.uidt === 'links' ? {
@@ -283,7 +287,8 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
               currentRowId: row_id,
               currentTableId: model_id,
               persistImmediately: false, // Form view: don't persist immediately, use form state
-              isBorder: true // Form view: show border like other fields
+              isBorder: true, // Form view: show border like other fields
+              disabled: isReadOnly
             } : {})}
             // Pass isBorder for all other field types
             {...(!(field.type === 'attachment' || field.uidt === 'attachment' || field.type === 'links' || field.uidt === 'links') ? {

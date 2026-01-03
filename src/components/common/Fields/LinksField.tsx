@@ -211,7 +211,6 @@ export const LinksField: React.FC<LinksFieldProps> = ({
     //             setHasMore(false);
     //         }
     //     } catch (error) {
-    //         console.error('Error fetching more records:', error);
     //         setHasMore(false);
     //     } finally {
     //         setIsLoadingMore(false);

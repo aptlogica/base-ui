@@ -127,7 +127,6 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
 
   const handleRoleChange = (memberId: string, newRole: AccessRole) => {
     // TODO: Implement API call to update member role
-    console.log(`Change role for ${memberId} to ${newRole}`);
     toast.info('Role change functionality coming soon');
   };
 

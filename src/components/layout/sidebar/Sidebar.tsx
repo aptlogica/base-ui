@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useMemo, useState, Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom';
-import { ChevronDown, Sheet, Plus, Upload } from 'lucide-react';
+import { ChevronDown, Sheet, Plus, Download } from 'lucide-react';
 import { Pin } from 'lucide-react';
 import { useToast } from '../../common/Toast';
 
@@ -254,7 +254,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             return (
               <div key={table.id}>
                 <div
-                  className={`flex items-center gap-3 py-1.5 pr-3 mb-1 hover:bg-[var(--color-gray-100)] rounded-xl ${isTableActive(table.base_id, table.id) ? 'bg-background' : ''
+                  className={`flex items-center gap-3 py-1.5 px-3 mb-1 hover:bg-[var(--color-gray-100)] rounded-xl ${isTableActive(table.base_id, table.id) ? 'bg-background' : ''
                     } relative hover:shadow-xs transition-all ease-in duration-200`}
                 >
                   {/* Expand/collapse chevron */}
@@ -379,7 +379,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               title={selectedBase && effectiveSelectedWorkspace ? "Import Table" : "Select a base to import a table"}
               disabled={!selectedBase || !effectiveSelectedWorkspace}
             >
-              <Upload size={16} /> Import Table
+              <Download size={16} /> Import Table
             </button>
             <button
               className="w-full flex items-center justify-center gap-2 btn-primary p-2 rounded transition"

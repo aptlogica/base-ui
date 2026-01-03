@@ -11,7 +11,7 @@ import { Loader } from "../../../components/ui/Loader";
 
 interface EventsSidebarProps {
   events: CalendarEvent[];
-  onEventClick: (event: CalendarEvent) => void;
+  onEventClick?: (event: CalendarEvent) => void; // Optional - only provided if user has permission
   onDateSelect: (date: Date) => void;
   selectedDate: Date | null;
   currentView: string;

@@ -27,6 +27,7 @@ import { Loader } from './components/ui/Loader';
 import { useQueryClient } from '@tanstack/react-query';
 import AdministratorPage from './pages/AdministratorPage';
 import WorkspaceSettingsPage from './pages/WorkspaceSettingsPage';
+import NotFoundPage from './pages/NotFoundPage';
 import { useClientHeaders } from './hooks/useClientHeaders';
 import { RouteContextProvider } from './contexts/RouteContext';
 
@@ -189,7 +190,7 @@ const TableViewRouteWrapper: React.FC = () => {
   const { baseId, tableId, viewId } = useParams();
 
   if (!tableId) {
-    console.log('❌ TableViewRouteWrapper: Table ID is required');
+    console.error('❌ TableViewRouteWrapper: Table ID is required');
     return <div className="p-8 text-red-600">Table ID is required</div>;
   }
 
@@ -341,8 +342,8 @@ const AppRoutes = ({ loading }: { loading: boolean }) => {
             </RoleBasedRoute>
           }
         />
-        {/* Fallback: Use pluggable 404 page for unmatched routes */}
-        <Route path="*" element={<ExtensionPoint id="page:notfound" />} />
+        {/* Fallback: 404 page for unmatched routes */}
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
   );

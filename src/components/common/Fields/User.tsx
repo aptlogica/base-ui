@@ -24,6 +24,7 @@ interface UserProps {
   config?: UserConfig;
   placeholder?: string;
   disabled?: boolean;
+  readOnly?: boolean; // true = completely prevent editing
   isBorder?: boolean;
 }
 
@@ -33,6 +34,7 @@ export const User: React.FC<UserProps> = ({
   config = {},
   placeholder = 'Select user...',
   disabled = false,
+  readOnly = false,
   isBorder = false
 }) => {
   const { allowMultiple = false, defaultUser, defaultValue } = config;
@@ -142,6 +144,15 @@ export const User: React.FC<UserProps> = ({
     excludeRefs: [buttonRef, userDropdownRef, dropdownRef, searchRef]
   });
 
+  // Close dropdown if readOnly becomes true
+  useEffect(() => {
+    if (readOnly && isOpen) {
+      setIsOpen(false);
+      setSearchTerm('');
+      setFocusedUserIndex(-1);
+    }
+  }, [readOnly, isOpen]);
+
   // Update selected value when value or defaultValue changes
   // Handle both array format and comma-separated string format (for allowMultiple)
   useEffect(() => {
@@ -221,6 +232,7 @@ export const User: React.FC<UserProps> = ({
   }, [activeUsers, searchTerm]);
 
   const handleSelect = useCallback((user: UserOption) => {
+    if (readOnly) return;
     if (allowMultiple) {
       setSelectedValue(prev => {
         const currentSelected = prev ? (isArrayValue(prev) ? prev : [prev]) : [];
@@ -246,7 +258,7 @@ export const User: React.FC<UserProps> = ({
       setSearchTerm('');
       setFocusedUserIndex(-1);
     }
-  }, [allowMultiple, onChange, selectedUserIds]);
+  }, [allowMultiple, onChange, selectedUserIds, readOnly]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -295,6 +307,7 @@ export const User: React.FC<UserProps> = ({
   };
 
   const handleRemoveUser = useCallback((userId: string) => {
+    if (readOnly) return;
     if (allowMultiple) {
       setSelectedValue(prev => {
         const currentSelected = prev ? (isArrayValue(prev) ? prev : [prev]) : [];
@@ -316,9 +329,9 @@ export const User: React.FC<UserProps> = ({
       <button
         ref={buttonRef}
         type="button"
-        className={`w-full field-component ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900 cursor-pointer'}`}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-        disabled={disabled || loading}
+        className={`w-full field-component ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900 cursor-pointer'}`}
+        onClick={() => !disabled && !readOnly && setIsOpen(!isOpen)}
+        disabled={disabled || readOnly || loading}
       >
         {selectedUsers.length > 0 ? (
           <div className="flex items-center gap-1 min-w-0">
@@ -337,12 +350,14 @@ export const User: React.FC<UserProps> = ({
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => {
+                      if (readOnly) return;
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         handleRemoveUser(user.id);
                       }
                     }}
                     onClick={(e) => {
+                      if (readOnly) return;
                       e.stopPropagation();
                       if (allowMultiple) {
                         handleRemoveUser(user.id);
@@ -374,7 +389,7 @@ export const User: React.FC<UserProps> = ({
         )}
       </button>
       {/* User Dropdown Portal */}
-      {isOpen && calculatedPosition && createPortal(
+      {!readOnly && isOpen && calculatedPosition && createPortal(
         <div
           ref={dropdownRef}
           className="fixed z-[9999] border bg-card rounded-xl shadow-xl max-h-64 w-80 overflow-hidden flex flex-col"
@@ -396,6 +411,7 @@ export const User: React.FC<UserProps> = ({
                 <button
                   type="button"
                   onClick={(e) => {
+                    if (readOnly) return;
                     e.stopPropagation();
                     setSelectedValue(null);
                     onChange(null);
@@ -403,6 +419,7 @@ export const User: React.FC<UserProps> = ({
                       setIsOpen(false);
                     }
                   }}
+                  disabled={readOnly}
                   className="text-xs text-red-600 hover:text-red-800 hover:underline"
                 >
                   Clear
@@ -478,13 +495,15 @@ export const User: React.FC<UserProps> = ({
                       role="option"
                       aria-selected={isSelected}
                       tabIndex={-1}
-                      className={`px-3 py-2 border-b hover:bg-gray-50 cursor-pointer bg-card transition-colors ${isSelected ? 'bg-blue-50 border-l-2 border-l-green-500' : ''
+                      className={`px-3 py-2 border-b ${readOnly ? 'cursor-default' : 'hover:bg-gray-50 cursor-pointer'} bg-card transition-colors ${isSelected ? 'bg-blue-50 border-l-2 border-l-green-500' : ''
                         } ${isFocused ? 'bg-[var(--color-bg-brand-secondary)] text-black' : ''
                         }`}
                       onClick={() => {
+                        if (readOnly) return;
                         setFocusedUserIndex(index);
                         handleSelect(user);
                       }}
+                      style={readOnly ? { cursor: 'default' } : undefined}
                       onMouseEnter={() => setFocusedUserIndex(index)}
                     >
                       <div className="flex items-center gap-2 flex-1 min-w-0">

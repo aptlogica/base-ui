@@ -500,8 +500,8 @@ const Breadcrumb: React.FC = () => {
         </div>
       ) : (
         <div className={`w-8 h-8 ${icon.color} rounded-md flex items-center justify-center text-white text-sm font-semibold flex-shrink-0`}>
-          {icon.letter}
-        </div>
+            {icon.letter}
+          </div>
       );
       
       return {
@@ -710,7 +710,7 @@ const Breadcrumb: React.FC = () => {
                       (item.type === 'view' && canCreateView())) && (
                         <div className="p-2 flex-shrink-0">
                           <button
-                            className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-muted/30 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-gray-100 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={(e) => {
                               e.stopPropagation();
 
@@ -743,7 +743,7 @@ const Breadcrumb: React.FC = () => {
                     {item.type === 'base' && canCreateBase() && (
                       <div className="p-2 flex-shrink-0">
                         <button
-                          className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-muted/30 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-gray-100 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                           onClick={(e) => {
                             e.stopPropagation();
 

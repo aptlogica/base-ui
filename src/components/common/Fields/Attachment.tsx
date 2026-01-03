@@ -17,6 +17,8 @@ interface AttachmentProps {
   config?: AttachmentConfig;
   required?: boolean;
   disabled?: boolean;
+  allowEdit?: boolean; // Controls whether attachment actions are visible
+  readOnly?: boolean; // true = completely prevent editing
   // API parameters for attachment operations
   model_id?: string;
   column_id?: string;
@@ -33,6 +35,8 @@ export const Attachment: React.FC<AttachmentProps> = ({
   config = {},
   required = false,
   disabled = false,
+  allowEdit = true,
+  readOnly = false,
   model_id,
   column_id,
   row_id,
@@ -235,7 +239,6 @@ export const Attachment: React.FC<AttachmentProps> = ({
         <div className="flex items-center gap-1 min-h-8 overflow-hidden flex-wrap">
           {attachmentArray?.slice(0, 3).map((file, idx) => {
             const isImage = file.mime_type?.startsWith('image/');
-            const isPdf = file.mime_type?.startsWith('application/pdf');
             return (
               <div
                 className="w-8 h-8 rounded-lg bg-card flex items-center justify-center overflow-hidden cursor-pointer transition-all hover:border-[var(--color-brand-600)] focus:outline-none flex-shrink-0 shadow-md"
@@ -272,11 +275,12 @@ export const Attachment: React.FC<AttachmentProps> = ({
         </div>
         {/* Floating action buttons */}
         <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1 z-10">
+        {!readOnly && 
           <button
             type="button"
             className="w-7 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={() => setIsModalOpen(true)}
-            disabled={disabled || attachmentArray.length >= maxFiles || isUploading}
+            onClick={() => !readOnly && setIsModalOpen(true)}
+            disabled={disabled || readOnly || attachmentArray.length >= maxFiles || isUploading}
             title={
               isUploading
                 ? "Upload in progress..."
@@ -291,6 +295,7 @@ export const Attachment: React.FC<AttachmentProps> = ({
               <Paperclip className="w-4 h-4" />
             )}
           </button>
+          }
           {
             showPreview &&
             <>
@@ -423,6 +428,8 @@ export const Attachment: React.FC<AttachmentProps> = ({
         model_id={model_id}
         column_id={column_id}
         row_id={row_id}
+        allowEdit={allowEdit && !readOnly}
+        readOnly={readOnly}
       />
 
       {/* Error display */}

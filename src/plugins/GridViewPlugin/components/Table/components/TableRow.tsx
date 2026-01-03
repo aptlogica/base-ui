@@ -79,7 +79,7 @@ export const TableRow: React.FC<TableRowProps> = ({
 
   return (
     <div
-      className="group grid hover:bg-muted/30 transition-colors min-w-full"
+      className="group grid hover:bg-gray-100 transition-colors min-w-full"
       style={{ gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`, height: '40px', minHeight: '40px', maxHeight: '40px' }}
       onContextMenu={onContextMenu}
       onClick={() => setActiveCell?.(null)}
