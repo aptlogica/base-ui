@@ -11,7 +11,8 @@ interface TimeProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean;
+  allowEdit?: boolean; // true = single click opens dropdown, false = double click for manual edit
+  readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;
   config?: {
@@ -52,6 +53,7 @@ export const Time: React.FC<TimeProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
   config = {}
@@ -74,6 +76,13 @@ export const Time: React.FC<TimeProps> = ({
   useEffect(() => {
     setLocalValue(value || '');
   }, [value]);
+
+  // Close dropdown if readOnly becomes true
+  useEffect(() => {
+    if (readOnly) {
+      setIsOpen(false);
+    }
+  }, [readOnly]);
 
   // Calculate dropdown position for portal rendering
   const calculateDropdownPosition = useCallback(() => {
@@ -146,6 +155,7 @@ export const Time: React.FC<TimeProps> = ({
   };
 
   const handleSelect = (option: string) => {
+    if (readOnly) return;
     // Convert 12-hour format to 24-hour format for storage
     let timeValue = option;
     if (hourFormat === '12' && option.includes(' ')) {
@@ -164,6 +174,7 @@ export const Time: React.FC<TimeProps> = ({
   };
 
   const handleNow = () => {
+    if (readOnly) return;
     const now = new Date();
     const option = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
     handleSelect(option);
@@ -199,8 +210,8 @@ export const Time: React.FC<TimeProps> = ({
           type="button"
           className={`field-component flex items-center justify-between ${errorMsg ? 'border-red-500 bg-red-50' : ''
             } ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
-          onClick={() => !disabled && setIsOpen(v => !v)}
-          disabled={disabled}
+          onClick={() => !disabled && !readOnly && allowEdit && setIsOpen(v => !v)}
+          disabled={disabled || readOnly}
         >
           <span>{displayValue || <span className="text-gray-400">{placeholder}</span>}</span>
           {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
@@ -210,7 +221,7 @@ export const Time: React.FC<TimeProps> = ({
         {isOpen && calculatedPosition && createPortal(
           <div
             ref={dropdownRef}
-            className="fixed z-[9999] border bg-background rounded-lg shadow-lg max-h-80 animate-fade-in flex flex-col"
+            className="fixed z-[9999] border bg-background rounded-xl shadow-lg max-h-80 animate-fade-in flex flex-col"
             style={{
               ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
               ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),
@@ -224,8 +235,9 @@ export const Time: React.FC<TimeProps> = ({
                 <button
                   key={option}
                   type="button"
-                  className={`w-full px-4 py-2 text-md text-left text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors ${displayValue === option ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
-                  onClick={() => handleSelect(option)}
+                  className={`w-full px-4 py-2 text-md text-left text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors ${displayValue === option ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
+                  onClick={() => !readOnly && handleSelect(option)}
+                  disabled={readOnly}
                 >
                   {option}
                 </button>
@@ -235,8 +247,9 @@ export const Time: React.FC<TimeProps> = ({
             <div className="border-t border-gray-100 px-2 py-2 flex justify-center bg-background flex-shrink-0 rounded-bl-lg rounded-br-lg">
               <button
                 type="button"
-                className="px-4 py-2 rounded-lg bg-[var(--color-bg-brand-primary)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
-                onClick={handleNow}
+                className="px-4 py-2 rounded-xl bg-[var(--color-bg-brand-primary)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
+                onClick={() => !readOnly && handleNow()}
+                disabled={readOnly}
               >
                 Now
               </button>

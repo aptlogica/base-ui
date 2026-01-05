@@ -3,6 +3,7 @@ import { Plugin, PluginManifest, PluginAPI } from '../../core/types';
 import { matchesViewType } from '../../utils/viewType';
 import { useGalleryData } from './hooks/useGalleryData';
 import { GalleryView } from './components/GalleryView';
+import { Loader } from '../../components/ui/Loader';
 
 const manifest: PluginManifest = {
   id: 'gallery-view-plugin',
@@ -29,8 +30,6 @@ const GalleryViewPlugin: Plugin = {
         updateViewConfig 
       } = useGalleryData({ tableId, viewId });
 
-      if (isLoading) return <div className="h-full flex items-center justify-center">Loading gallery view…</div>;
-      
       if (error) {
         return (
           <div className="h-full flex items-center justify-center">
@@ -43,20 +42,11 @@ const GalleryViewPlugin: Plugin = {
         );
       }
       
-      if (!tableData || !tableData.model || !tableData.columns) {
-        console.log('🔍 Gallery Debug - No data:', {
-          hasTableData: !!tableData,
-          hasModel: !!tableData?.model,
-          hasColumns: !!tableData?.columns,
-          tableData: tableData
-        });
+      // Show loading state while data is being fetched
+      if (isLoading || !tableData || !tableData.model) {
         return (
           <div className="h-full flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-muted-foreground text-lg mb-2">🖼️ No Gallery Data</div>
-              <p className="text-muted-foreground mb-4">Gallery view could not be loaded</p>
-              <button onClick={() => refresh()} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">🔄 Retry Loading</button>
-            </div>
+            <Loader size={10} />
           </div>
         );
       }

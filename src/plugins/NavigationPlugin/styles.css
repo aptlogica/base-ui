@@ -103,31 +103,6 @@
   font-size: 14px;
 }
 
-/* src/plugins/DashboardWidgetsPlugin/styles.css */
-.dashboard-grid {
-  display: grid;
-  gap: 16px;
-  padding: 16px;
-  min-height: 100vh;
-  background: var(--dashboard-bg, #f5f5f5);
-}
-
-.dashboard-widget {
-  background: var(--widget-bg, #ffffff);
-  border-radius: var(--border-radius, 8px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.dashboard-widget:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-}
-
-.dashboard-widget.animated {
-  animation: fadeInUp 0.5s ease-out;
-}
 
 @keyframes fadeInUp {
   from {
@@ -247,32 +222,6 @@
   --border-radius: 4px;
   --base-font-size: 16px;
 }
-
-/* [data-theme="dark"] {
-  --bg-color: #1a1a1a;
-  --text-color: #ffffff;
-  --card-bg: #2d2d2d;
-  --border-color: #404040;
-  --nav-bg: #2d2d2d;
-  --nav-text: #ffffff;
-  --nav-hover-bg: #404040;
-  --widget-bg: #2d2d2d;
-  --widget-border: #404040;
-  --dashboard-bg: #1a1a1a;
-}
-
-[data-theme="light"] {
-  --bg-color: #ffffff;
-  --text-color: #333333;
-  --card-bg: #ffffff;
-  --border-color: #e0e0e0;
-  --nav-bg: #ffffff;
-  --nav-text: #333333;
-  --nav-hover-bg: #f5f5f5;
-  --widget-bg: #ffffff;
-  --widget-border: #e0e0e0;
-  --dashboard-bg: #f5f5f5;
-} */
 
 body {
   font-size: var(--base-font-size);

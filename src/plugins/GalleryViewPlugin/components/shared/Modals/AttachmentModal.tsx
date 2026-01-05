@@ -353,8 +353,6 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
           const percent = Math.round(
             (progressEvent.loaded * 100) / progressEvent.total
           );
-          console.log(`Upload progress: ${percent}%`);
-
           // Update progress for all files
           selectedFiles.forEach((_, index) => {
             setUploadProgress(prev => ({
@@ -447,7 +445,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 icon-primary rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center">
               <Upload size={20} className="icon-primary" />
             </div>
             <div>
@@ -458,7 +456,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
           >
             <X size={16} className="text-[var(--text-color-tertiary)]" />
           </button>
@@ -472,7 +470,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-all mb-6 ${isDragOver
+            className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all mb-6 ${isDragOver
                 ? 'border-blue-500 bg-blue-50'
                 : selectedFiles.length >= maxFiles
                   ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-50'
@@ -496,7 +494,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
 
           {/* Error Message */}
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
               {error}
             </div>
           )}
@@ -515,13 +513,13 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
                   return (
                     <div
                       key={index}
-                      className={`flex gap-3 p-3 rounded-lg border transition-all ${isUploading ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'
+                      className={`flex gap-3 p-3 rounded-xl border transition-all ${isUploading ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'
                         }`}
                     >
                       {/* Image Preview or File Icon */}
                       <div className="flex-shrink-0 relative">
                         {file.type?.startsWith('image/') ? (
-                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
+                          <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-200 flex items-center justify-center">
                             <img
                               src={file.url}
                               alt={file.name}
@@ -538,7 +536,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
                             )}
                           </div>
                         ) : (
-                          <div className="w-16 h-16 rounded-lg bg-gray-200 flex items-center justify-center relative">
+                          <div className="w-16 h-16 rounded-xl bg-gray-200 flex items-center justify-center relative">
                             {isUploading ? (
                               <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
                             ) : (
@@ -668,7 +666,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
           <button
             type="button"
             onClick={handleCancel}
-            className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
+            className="px-4 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
           >
             Cancel
           </button>

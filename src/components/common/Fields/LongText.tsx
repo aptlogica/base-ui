@@ -14,7 +14,8 @@ interface LongTextProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean;
+  allowEdit?: boolean; // true = single click, false = double click
+  readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;
   config?: {
@@ -37,6 +38,7 @@ export const LongText: React.FC<LongTextProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
   config = {}
@@ -170,6 +172,7 @@ export const LongText: React.FC<LongTextProps> = ({
 
   // Modal handlers
   const openModal = () => {
+    if (readOnly) return;
     setIsModalOpen(true);
     // Reset link popup when opening main modal
     if (isLinkPopupOpen) {
@@ -531,20 +534,22 @@ export const LongText: React.FC<LongTextProps> = ({
           maxLength={configMaxLength}
           disabled={false}
           className={`field-component ${error ? 'border-red-500 bg-red-50' : ''
-            } ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'} truncate`}
+            } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'} truncate`}
           readOnly
-          style={{ cursor: 'pointer' }}
-          onDoubleClick={openModal}
+          style={readOnly ? { cursor: 'default' } : { cursor: 'pointer' }}
+          onDoubleClick={!readOnly ? openModal : undefined}
         />
-        <button
-          type="button"
-          onClick={openModal}
-          className="mx-2 w-8 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors z-0"
-          tabIndex={-1}
-          disabled={disabled}
-        >
-          <Maximize2 className="w-4 h-4" />
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={openModal}
+            className="mx-2 w-8 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-colors z-0"
+            tabIndex={-1}
+            disabled={disabled}
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
 
@@ -570,8 +575,8 @@ export const LongText: React.FC<LongTextProps> = ({
             <div className="flex items-center mb-4 flex-shrink-0">
               <AlignLeft className="w-8 h-8 rounded icon-primary p-1 mr-2" />
               <span className="text-lg font-medium text-muted-foreground">Long Text</span>
-              {richText && (
-                <div className="flex items-center gap-1 ml-4 px-2 py-1 bg-gray-100 rounded-lg">
+              {richText && !readOnly && (
+                <div className="flex items-center gap-1 ml-4 px-2 py-1 bg-gray-100 rounded-xl">
                   <button
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); execCommand('bold', null, e); }}
@@ -653,10 +658,10 @@ export const LongText: React.FC<LongTextProps> = ({
               <div className="w-full flex-1 flex flex-col min-h-[400px]">
                 <div
                   ref={richTextEditorRef}
-                  contentEditable
+                  contentEditable={!readOnly}
                   suppressContentEditableWarning
-                  onInput={handleRichTextChange}
-                  onPaste={handlePaste}
+                  onInput={!readOnly ? handleRichTextChange : undefined}
+                  onPaste={!readOnly ? handlePaste : undefined}
                   onKeyDown={(e) => {
                     // Handle keyboard shortcuts
                     if (e.ctrlKey || e.metaKey) {
@@ -701,12 +706,12 @@ export const LongText: React.FC<LongTextProps> = ({
                 <style>{`
                   [contenteditable][data-placeholder]:empty:before {
                     content: attr(data-placeholder);
-                    color: #9ca3af;
+                    color: var(--color-gray-400);
                     pointer-events: none;
                   }
                   [contenteditable][data-placeholder]:focus:empty:before {
                     content: attr(data-placeholder);
-                    color: #9ca3af;
+                    color: var(--color-gray-400);
                     pointer-events: none;
                   }
                   [contenteditable] a {
@@ -731,7 +736,7 @@ export const LongText: React.FC<LongTextProps> = ({
                 rows={20}
                 className="w-full flex-1 bg-[var(--background)] border rounded-xl p-3 text-sm text-muted-foreground focus:outline-none focus:border-[var(--color-brand-600)] transition-all resize-vertical min-h-[400px]"
                 placeholder={placeholder}
-                disabled={disabled}
+                disabled={disabled || readOnly}
               />
             )}
             <div className="flex justify-end mt-4 flex-shrink-0">
@@ -759,7 +764,7 @@ export const LongText: React.FC<LongTextProps> = ({
           {/* Popup */}
           <div
             ref={linkPopupRef}
-            className="fixed z-[10000] bg-white border border-gray-200 rounded-lg shadow-xl p-3 min-w-[280px] max-w-[400px]"
+            className="fixed z-[10000] bg-card border rounded-xl shadow-xl p-3 min-w-[280px] max-w-[400px]"
             style={{
               top: `${linkPopupPosition.top}px`,
               left: `${linkPopupPosition.left}px`
@@ -774,7 +779,7 @@ export const LongText: React.FC<LongTextProps> = ({
                     type="text"
                     value={linkEditData.text}
                     onChange={(e) => setLinkEditData({ ...linkEditData, text: e.target.value })}
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
+                    className="w-full px-2 py-1.5 border rounded text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
                     placeholder="Link text"
                     autoFocus
                     onKeyDown={(e) => {
@@ -792,7 +797,7 @@ export const LongText: React.FC<LongTextProps> = ({
                     type="text"
                     value={linkEditData.url}
                     onChange={(e) => setLinkEditData({ ...linkEditData, url: e.target.value })}
-                    className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
+                    className="flex-1 px-2 py-1.5 border rounded text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
                     placeholder="https://example.com"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -805,7 +810,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   />
                   <button
                     onClick={handleLinkSave}
-                    className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+                    className="px-3 py-1.5 bg-blue-600 text-primary rounded text-sm hover:bg-blue-700 transition-colors"
                   >
                     {linkEditData.link ? 'Save' : 'Insert'}
                   </button>

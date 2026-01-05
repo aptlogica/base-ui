@@ -127,7 +127,7 @@ const ExportModal: React.FC<ExportModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
             aria-label="Close"
           >
             <X className="w-5 h-5 text-primary" />
@@ -144,7 +144,7 @@ const ExportModal: React.FC<ExportModalProps> = ({
                   onClick={option.onClick}
                   className="group relative flex flex-col items-center justify-center p-5 rounded-xl border hover:border-[var(--color-bg-brand-primary)] transition-all hover:shadow-md bg-card"
                 >
-                  <div className="w-12 h-12 rounded-lg bg-card flex items-center justify-center mb-3 group-hover:scale-110 transition-transform p-2">
+                  <div className="w-12 h-12 rounded-xl bg-card flex items-center justify-center mb-3 group-hover:scale-110 transition-transform p-2">
                     <img
                       src={option.iconPath}
                       alt={option.label}

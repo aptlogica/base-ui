@@ -1,37 +1,77 @@
+import { ROLES } from '../types/roles';
+
 /**
  * Hook to check user roles from JWT token
- * Roles are stored in sessionStorage after login
+ * Token contains roles field (string) that we parse
+ * 
+ * Role values from JWT token:
+ * - "owner" (ROLES.Owner)
+ * - "co-owner" (ROLES.CoOwner)
+ * - "maintainer" (ROLES.WorkspaceMaintainer)
+ * - "workspace-read" (ROLES.WorkspaceMaintainerRO)
+ * - "base-member" (ROLES.BaseMember)
+ * - "base-read" (ROLES.BaseMemberReadOnly)
+ * - "user" (ROLES.NoAccess)
  */
 export function useUserRole() {
-  const getRoles = (): string[] => {
-    const roles = sessionStorage.getItem('user_roles');
-    return roles ? JSON.parse(roles) : [];
+  const getRole = (): string | null => {
+    // Try to get from decoded token in sessionStorage
+    try {
+      const tokenData = sessionStorage.getItem('user_token_data');
+      if (tokenData) {
+        const parsed = JSON.parse(tokenData);
+        return parsed.roles || null;
+      }
+    } catch {}
+    
+    // Fallback: check if role stored directly
+    const role = sessionStorage.getItem('user_role');
+    return role || null;
   };
 
   const hasRole = (role: string): boolean => {
-    const roles = getRoles();
-    return roles.includes(role);
+    const userRole = getRole();
+    return userRole === role;
   };
 
-  const hasAnyRole = (rolesArray: string[]): boolean => {
-    const userRoles = getRoles();
-    return rolesArray.some(role => userRoles.includes(role));
+  const isOwner = (): boolean => {
+    return hasRole(ROLES.Owner);
   };
 
-  const hasAllRoles = (rolesArray: string[]): boolean => {
-    const userRoles = getRoles();
-    return rolesArray.every(role => userRoles.includes(role));
+  const isCoOwner = (): boolean => {
+    return hasRole(ROLES.CoOwner);
   };
 
+  const isMaintainer = (): boolean => {
+    return hasRole(ROLES.WorkspaceMaintainer);
+  };
+
+  const isBaseMember = (): boolean => {
+    return hasRole(ROLES.BaseMember);
+  };
+
+  const hasAdminRole = (): boolean => {
+    return isOwner() || isCoOwner();
+  };
+
+  const hasFullAccessRole = (): boolean => {
+    return hasAdminRole() || isMaintainer();
+  };
+
+  // Keep isAdmin for backward compatibility (maps to owner or co-owner)
   const isAdmin = (): boolean => {
-    return hasRole('Admin');
+    return hasAdminRole();
   };
 
   return {
-    getRoles,
+    getRole,
     hasRole,
-    hasAnyRole,
-    hasAllRoles,
-    isAdmin
+    isOwner,
+    isCoOwner,
+    isMaintainer,
+    isBaseMember,
+    hasAdminRole,
+    hasFullAccessRole,
+    isAdmin, // Backward compatibility
   };
 }

@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 import {
   // New workspace API services
   createWorkspaceService,
-  getAllWorkspacesService,
   getWorkspaceByIdService,
   updateWorkspaceService,
   deleteWorkspaceService,
@@ -16,6 +16,8 @@ import {
   deleteBaseService,
   getAllBasesService,
   getBaseMembersService,
+  removeBaseAccessMemberService,
+  removeUserFromBaseService,
   // New table API services
   createTableService,
   getTableByIdService,
@@ -43,17 +45,21 @@ import {
   addOrUpdateAvatarService,
   removeAvatarService,
   assignUserToWorkspaceService,
+  bulkAddMembersService,
   removeUserFromWorkspaceService,
+  bulkAddBaseMembersService,
+  
+  removeAccessMemberService,
   getUserAccessDetailsService,
+  getUserRolesAndAccessService,
   // Tenant API services
   getTenantUsersService,
-  addTenantUserService,
-  removeTenantUserService,
+  getUsersForAssignService,
+  addUserService,
+  editUserService,
   activateTenantUserService,
   deactivateTenantUserService,
-  getTenantService,
-  updateTenantService,
-  // Legacy APIs (to be replaced gradually)
+  removeUserService,
   addRow,
   deleteRowService,
   insertRowDataService,
@@ -66,8 +72,11 @@ import {
   reorderColumnService,
   getAllRecordsService,
   getWorkspacesByUser,
+  //Organization Services 
+  getOrganizationService,
+  getOrganizationServiceById,
+  updateOrganizationService
 } from '../service/clientService';
-import { isTenantSchemaAvailable } from '../service/clientService';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
 
 // Query Keys
@@ -96,9 +105,10 @@ export const queryKeys = {
 
 export const useWorkspaces = () => {
   const location = useLocation();
+  const { user } = useAuth();
 
   // Public routes that don't need workspace data
-  const publicRoutes = ['/login', '/register', '/registervalidation', '/forgot-password', '/reset-password', '/auth/callback'];
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
   const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
 
   return useQuery({
@@ -153,7 +163,7 @@ export const useWorkspaces = () => {
       }
       return failureCount < 2;
     },
-    enabled: isTenantSchemaAvailable() && !isPublicRoute, // Don't fetch on public routes
+    enabled: !!user && !isPublicRoute, // Only fetch if user is authenticated and not on public routes
   });
 };
 
@@ -163,11 +173,16 @@ export const useAddRow = () => {
   return useMutation({
     mutationFn: ({ model_id }: { model_id: string }) => addRow(model_id),
     onSuccess: (_, { model_id }) => {
-      // Ensure both record lists and table metadata are refreshed.
-      // Some components fetch records directly (['tables', modelId, 'records'])
-      // while others fetch the whole table object (['tables', modelId]).
-      queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id) });
-      queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)] });
+      // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
+      // This ensures UI updates instantly after adding a row, regardless of cache age
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.views(model_id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
@@ -185,10 +200,17 @@ export const useWorkspaceById = (workspaceId: string) => {
 };
 
 export const useWorkspaceBases = (workspaceId: string) => {
+  const { user } = useAuth();
+  const location = useLocation();
+  
+  // Public routes that don't need workspace data
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
+  const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
+
   return useQuery({
     queryKey: queryKeys.bases(workspaceId),
     queryFn: () => getBasesByWorkspaceIdService(workspaceId),
-    enabled: !!workspaceId && isTenantSchemaAvailable(),
+    enabled: !!workspaceId && !!user && !isPublicRoute, // Only fetch if user is authenticated and not on public routes
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
   });
@@ -201,9 +223,87 @@ export const useWorkspaceMembers = (workspaceId: string) => {
       const result = await getWorkspaceMembersService(workspaceId);
       return result;
     },
-    enabled: !!workspaceId && isTenantSchemaAvailable(),
+    enabled: !!workspaceId,
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
+  });
+};
+
+export const useBulkAddBaseMembers = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      baseId: string;
+      workspaceId: string;
+      members: Array<{
+        user_id: string;
+        role: string;
+      }>;
+    }) => {
+      return await bulkAddBaseMembersService(params.baseId, { workspaceId: params.workspaceId, members: params.members });
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate base members query to refresh the list
+      queryClient.invalidateQueries({
+        queryKey: ['base', variables.baseId, 'members']
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['bases']
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['workspaces']
+      });
+    },
+  });
+};
+
+export const useRemoveBaseAccessMember = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      baseId: string;
+      accessId: string;
+    }) => {
+      return await removeBaseAccessMemberService(params.baseId, params.accessId);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate base members query to refresh the list
+      queryClient.invalidateQueries({
+        queryKey: ['base', variables.baseId, 'members']
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['bases']
+      });
+    },
+  });
+};
+
+export const useRemoveUserFromBase = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      baseId: string;
+      user_id: string;
+    }) => {
+      return await removeUserFromBaseService(params.baseId, { user_id: params.user_id });
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate userRolesAndAccess queries to refresh role display in MembersTable
+      queryClient.invalidateQueries({
+        queryKey: ['userRolesAndAccess', variables.user_id],
+        exact: false
+      });
+      // Invalidate base members query to refresh the list
+      queryClient.invalidateQueries({
+        queryKey: ['base', variables.baseId, 'members']
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['bases']
+      });
+    },
   });
 };
 
@@ -220,13 +320,20 @@ export const useBaseMembers = (baseId: string) => {
       const result = await getBaseMembersService(baseId);
       return result;
     },
-    enabled: !!baseId && hasWorkspaces && isTenantSchemaAvailable(),
+    enabled: !!baseId && hasWorkspaces,
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
   });
 };
 
 export const useBaseTables = (baseId: string) => {
+  const { user } = useAuth();
+  const location = useLocation();
+  
+  // Public routes that don't need base data
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
+  const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
+  
   // Check if workspaces are available before making base API calls
   // This prevents 401 errors when user has no workspaces but baseId is still set
   const { data: workspacesData } = useWorkspaces();
@@ -236,7 +343,7 @@ export const useBaseTables = (baseId: string) => {
   return useQuery({
     queryKey: queryKeys.tables(baseId),
     queryFn: () => getTablesByBaseIdService(baseId),
-    enabled: !!baseId && hasWorkspaces && isTenantSchemaAvailable(),
+    enabled: !!baseId && !!user && hasWorkspaces && !isPublicRoute, // Only fetch if user is authenticated and not on public routes
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
   });
@@ -251,7 +358,7 @@ export const useAllBases = () => {
     queryKey: queryKeys.allBases,
     queryFn: async () => {
       try {
-        const result = await getAllBasesService();
+        const result = await getAllBasesService() as any;
         // Ensure we return the data in the expected format
         if (result && result.data) {
           return Array.isArray(result.data) ? result.data : [];
@@ -262,7 +369,7 @@ export const useAllBases = () => {
         return [];
       }
     },
-    enabled: isTenantSchemaAvailable(),
+    enabled: true,
     staleTime: 30 * 1000, // Cache for 30 seconds
     gcTime: 5 * 60 * 1000,
   });
@@ -273,7 +380,7 @@ export const useAllTables = () => {
     queryKey: queryKeys.allTables,
     queryFn: async () => {
       try {
-        const result = await getAllTablesService();
+        const result = await getAllTablesService() as any;
         // Ensure we return the data in the expected format
         if (result && result.data) {
           return Array.isArray(result.data) ? result.data : [];
@@ -284,7 +391,7 @@ export const useAllTables = () => {
         return [];
       }
     },
-    enabled: isTenantSchemaAvailable(),
+    enabled: true,
     staleTime: 30 * 1000, // Cache for 30 seconds
     gcTime: 5 * 60 * 1000,
   });
@@ -295,7 +402,7 @@ export const useAllFields = () => {
     queryKey: queryKeys.allFields,
     queryFn: async () => {
       try {
-        const result = await getAllFieldsService();
+        const result = await getAllFieldsService() as any;
         // Ensure we return the data in the expected format
         if (result && result.data) {
           return Array.isArray(result.data) ? result.data : [];
@@ -306,7 +413,7 @@ export const useAllFields = () => {
         return [];
       }
     },
-    enabled: isTenantSchemaAvailable(),
+    enabled: true,
     staleTime: 30 * 1000, // Cache for 30 seconds
     gcTime: 5 * 60 * 1000,
   });
@@ -317,7 +424,7 @@ export const useAllViews = () => {
     queryKey: queryKeys.allViews,
     queryFn: async () => {
       try {
-        const result = await getAllViewsService();
+        const result = await getAllViewsService() as any;
         // Ensure we return the data in the expected format
         if (result && result.data) {
           return Array.isArray(result.data) ? result.data : [];
@@ -328,7 +435,7 @@ export const useAllViews = () => {
         return [];
       }
     },
-    enabled: isTenantSchemaAvailable(),
+    enabled: true,
     staleTime: 30 * 1000, // Cache for 30 seconds
     gcTime: 5 * 60 * 1000,
   });
@@ -344,7 +451,7 @@ export const useBaseById = (baseId: string) => {
   return useQuery({
     queryKey: ['bases', baseId],
     queryFn: () => getBaseByIdService(baseId),
-    enabled: !!baseId && hasWorkspaces && isTenantSchemaAvailable(),
+    enabled: !!baseId && hasWorkspaces,
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
   });
@@ -354,20 +461,30 @@ export const useTable = (tableId: string, options?: any) => {
   return useQuery({
     queryKey: ['tables', tableId],
     queryFn: () => getTableByIdService(tableId, options),
-    enabled: !!tableId && isTenantSchemaAvailable(),
-    staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    enabled: !!tableId,
+    staleTime: 5 * 60 * 1000, // Increased from 2 to 5 minutes - faster navigation between views
+    gcTime: 15 * 60 * 1000, // Increased from 10 to 15 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
+    // Show cached data immediately while refetching (for background updates)
+    // This ensures instant UI when navigating between views if data is cached
+    placeholderData: (previousData) => previousData,
   });
 };
 
 export const useTableViews = (tableId: string) => {
+  const { user } = useAuth();
+  const location = useLocation();
+  
+  // Public routes that don't need view data
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
+  const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
+
   return useQuery({
     queryKey: queryKeys.views(tableId),
     queryFn: () => getViewsByModelIdService(tableId),
-    enabled: !!tableId && isTenantSchemaAvailable(),
+    enabled: !!tableId && !!user && !isPublicRoute, // Only fetch if user is authenticated and not on public routes
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -393,8 +510,8 @@ export const useViewById = (viewId: string) => {
   return useQuery({
     queryKey: ['view', viewId],
     queryFn: async () => {
-      const result = await getViewByIdService(viewId);
-      return result.data;
+      const result = await getViewByIdService(viewId) as any;
+      return result?.data;
     },
     enabled: !!viewId && !isSlug && looksLikeId,
     staleTime: 0,
@@ -409,8 +526,18 @@ export const useCreateWorkspace = () => {
   return useMutation({
     mutationFn: ({ workspace }: { workspace: WorkspaceBaseInput }) =>
       createWorkspaceService(workspace),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      // Invalidate workspaces list
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      
+      // If the new workspace has an ID, invalidate its bases query
+      const newWorkspaceId = data?.data?.id || data?.id;
+      if (newWorkspaceId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.bases(newWorkspaceId) });
+      }
+      
+      // Also invalidate all workspace-related queries to ensure bases are refreshed
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
     },
   });
 };
@@ -450,9 +577,9 @@ export const useCreateBase = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ title, description, workspace_id }: { title: string; description: string; workspace_id: string }) => {
+    mutationFn: ({ title, description, workspace_id, image }: { title: string; description: string; workspace_id: string; image?: File | Blob | null }) => {
       // Directly pass the SDK CreateBase interface
-      return createBaseService({ title, description, workspace_id });
+      return createBaseService({ title, description, workspace_id, image: image || undefined });
     },
     onSuccess: (_, { workspace_id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bases(workspace_id) });
@@ -560,7 +687,7 @@ export const useImportTable = () => {
       file,
       onProgress,
     }: {
-      base_id: string;
+      base_id?: string; // Optional: required from sidebar, optional from home page
       workspace_id: string;
       title: string;
       description: string;
@@ -570,7 +697,7 @@ export const useImportTable = () => {
     }) => {
       return importTableService(
         {
-          base_id,
+          ...(base_id && { base_id }), // Only include base_id if provided
           workspace_id,
           title,
           description,
@@ -581,8 +708,10 @@ export const useImportTable = () => {
       );
     },
     onSuccess: (_, { base_id }) => {
-      // Invalidate the specific base's tables query
-      queryClient.invalidateQueries({ queryKey: queryKeys.tables(base_id) });
+      // Invalidate the specific base's tables query if base_id is provided
+      if (base_id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.tables(base_id) });
+      }
       // Also invalidate workspaces to update any workspace-level data
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
@@ -787,6 +916,64 @@ export const useUpdateViewAppearance = () => {
 };
 
 /**
+ * Optimized hook for updating view meta only (cardOrder, appearance, etc.)
+ * Uses optimistic cache updates and minimal invalidation for performance.
+ * 
+ * This should be used for meta-only updates (like Kanban cardOrder) to avoid triggering
+ * unnecessary refetches of all tables, bases, and workspaces.
+ */
+export const useUpdateViewMeta = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ viewId, meta, currentMeta }: { viewId: string; meta: any; currentMeta?: any }) => {
+      // Merge meta into existing meta (from parameter or cache)
+      const existingMeta = currentMeta || (queryClient.getQueryData(['view', String(viewId)]) as any)?.meta || {};
+      const newMeta = {
+        ...existingMeta,
+        ...meta
+      };
+      return updateViewService(viewId, { meta: newMeta });
+    },
+    onMutate: async ({ viewId, meta }) => {
+      // Cancel outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['view', String(viewId)] });
+
+      // Snapshot previous value for rollback
+      const previousView = queryClient.getQueryData(['view', String(viewId)]);
+
+      // Optimistically update the view cache
+      queryClient.setQueryData(['view', String(viewId)], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          meta: {
+            ...old.meta,
+            ...meta
+          }
+        };
+      });
+
+      return { previousView };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousView) {
+        queryClient.setQueryData(['view', String(variables.viewId)], context.previousView);
+      }
+    },
+    onSuccess: (_, { viewId }) => {
+      // Only invalidate the specific view query to ensure consistency
+      // No need to invalidate all views, tables, bases, or workspaces for meta changes
+      queryClient.invalidateQueries({ 
+        queryKey: ['view', String(viewId)],
+        refetchType: 'none' // Don't refetch, we already updated optimistically
+      });
+    },
+  });
+};
+
+/**
  * Hook for updating view structure (title, description, type, fieldConfig, etc.)
  * This triggers full invalidation as structural changes affect multiple components.
  */
@@ -851,10 +1038,16 @@ export const useInsertRowData = () => {
     mutationFn: ({ model_id, column_id, row_id, value }: { model_id: string; column_id: string; row_id: number; value: any }) =>
       insertRowDataService({ model_id, column_id, row_id, value }),
     onSuccess: (_, vars) => {
-      // Invalidate both the records list and the full table object so callers
-      // that read the whole table (useTable -> ['tables', modelId]) get fresh data.
-      queryClient.invalidateQueries({ queryKey: queryKeys.records(vars.model_id) });
-      queryClient.invalidateQueries({ queryKey: ['tables', String(vars.model_id)] });
+      // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
+      // This ensures UI updates instantly after cell edits, regardless of cache age
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.records(vars.model_id),
+        refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['tables', String(vars.model_id)],
+        refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
@@ -868,9 +1061,16 @@ export const useDeleteRecord = () => {
     mutationFn: ({ model_id, row_id }: { model_id: string; row_id: number }) =>
       deleteRowService({ model_id, row_id }),
     onSuccess: (_, { model_id }) => {
-      // Make sure both records and the cached table object are refreshed
-      queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id) });
-      queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)] });
+      // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
+      // This ensures UI updates instantly after record deletion, regardless of cache age
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
@@ -1041,7 +1241,23 @@ export const useUserAccessDetails = (userId: string | null, workspaceId?: string
     queryKey: ['userAccessDetails', userId, workspaceId],
     queryFn: async () => {
       if (!userId) return null;
-      const result = await getUserAccessDetailsService(userId, workspaceId);
+      const result = await getUserAccessDetailsService(userId, workspaceId) as any;
+      // Extract the data from StandardResponse structure
+      return result?.data || null;
+    },
+    enabled: !!userId,
+    staleTime: 0, // Always consider data stale to allow refetching when invalidated
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: 'always', // Always refetch when component mounts
+  });
+};
+
+export const useUserRolesAndAccess = (userId: string | null, scopeId?: string) => {
+  return useQuery({
+    queryKey: ['userRolesAndAccess', userId, scopeId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const result = await getUserRolesAndAccessService(userId, scopeId) as any;
       // Extract the data from StandardResponse structure
       return result?.data || null;
     },
@@ -1106,8 +1322,8 @@ export const useGetTenantUsers = () => {
     queryKey: queryKeys.users,
     queryFn: async () => {
       try {
-        const result = await getTenantUsersService();
-        const data = result?.data as any;
+        const result = await getTenantUsersService() as any;
+        const data = result?.data;
         if (data) {
           return Array.isArray(data) ? data : [];
         }
@@ -1117,9 +1333,31 @@ export const useGetTenantUsers = () => {
         throw error;
       }
     },
-    enabled: isTenantSchemaAvailable(),
+    enabled: true,
     staleTime: 0, // Always consider data stale to allow refetching
     refetchOnMount: 'always', // Always refetch when component mounts (e.g., when navigating to user tab)
+  });
+};
+
+export const useGetUsersForAssign = () => {
+  return useQuery({
+    queryKey: ['usersForAssign'],
+    queryFn: async () => {
+      try {
+        const result = await getUsersForAssignService() as any;
+        const data = result?.data;
+        if (data) {
+          return Array.isArray(data) ? data : [];
+        }
+        return [];
+      } catch (error: any) {
+        console.error('❌ Users for assign query failed:', error);
+        throw error;
+      }
+    },
+    enabled: true,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
 
@@ -1128,36 +1366,20 @@ export const useGetTenant = () => {
     queryKey: ['tenant'],
     queryFn: async () => {
       try {
-        const result = await getTenantService();
-        return result?.data;
+        // TODO: Implement getTenantService if needed
+        // const result = await getTenantService();
+        // return (result as any)?.data;
+        return null;
       } catch (error: any) {
         console.error('❌ Get tenant failed:', error);
         throw error;
       }
     },
-    enabled: isTenantSchemaAvailable(),
+    enabled: false, // Disabled until service is implemented
   });
 };
 
-export const useUpdateTenant = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (updateData: { name: string }) => {
-      const result = await updateTenantService(updateData);
-      return result;
-    },
-    onSuccess: () => {
-      // Invalidate tenant query to refetch updated data
-      queryClient.invalidateQueries({ queryKey: ['tenant'] });
-    },
-    onError: (error: any) => {
-      console.error('❌ Update tenant failed:', error);
-    }
-  });
-};
-
-export const useAddTenantUser = () => {
+export const useAddUser = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -1166,7 +1388,7 @@ export const useAddTenantUser = () => {
       lastname: string;
       email: string;
     }) => {
-      const result = await addTenantUserService(userData);
+      const result = await addUserService(userData);
       return result;
     },
     onSuccess: () => {
@@ -1179,12 +1401,45 @@ export const useAddTenantUser = () => {
   });
 };
 
+export const useEditUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userData: {
+      user_id: string;
+      firstname?: string;
+      lastname?: string;
+      profile_pic?: File;
+      is_coowner?: boolean;
+      membership?: Array<{
+        workspace_id: string;
+        role: string;
+        bases?: Array<{
+          base_id: string;
+          role: string;
+        }>;
+      }>;
+    }) => {
+      const result = await editUserService(userData);
+      return result;
+    },
+    onSuccess: () => {
+      // Invalidate tenant users query to refetch the list
+      queryClient.invalidateQueries({ queryKey: queryKeys.users });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+    onError: (error: any) => {
+      console.error('❌ Edit user failed:', error);
+    }
+  });
+};
+
 export const useRemoveTenantUser = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (userId: string) => {
-      const result = await removeTenantUserService(userId);
+      const result = await removeUserService(userId);
       return result;
     },
     onSuccess: () => {
@@ -1273,17 +1528,85 @@ export const useAssignUserToWorkspace = () => {
   });
 };
 
+export const useBulkAddMembers = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      workspaceId: string;
+      members: Array<{
+        user_id: string;
+        memberships: Array<{
+          workspace_id: string;
+          role: string;
+          bases?: Array<{
+            base_id: string;
+            role: string;
+          }>;
+        }>;
+      }>;
+    }) => {
+      const result = await bulkAddMembersService(params.workspaceId, { members: params.members });
+      return result;
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate user access details for all assigned users
+      variables.members.forEach(member => {
+        queryClient.invalidateQueries({
+          queryKey: ['userAccessDetails', member.user_id],
+          exact: false
+        });
+        // Invalidate userRolesAndAccess queries to refresh role display in MembersTable
+        queryClient.invalidateQueries({
+          queryKey: ['userRolesAndAccess', member.user_id],
+          exact: false
+        });
+      });
+
+      // Invalidate workspaces query to refresh workspace members
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      // Invalidate workspace members query
+      queryClient.invalidateQueries({ queryKey: ['workspaceMembers', variables.workspaceId] });
+      // Invalidate tenant users query in case it affects user data
+      queryClient.invalidateQueries({ queryKey: queryKeys.users });
+    },
+    onError: (error: any) => {
+      console.error('❌ Bulk add members failed:', error);
+    }
+  });
+};
+
+export const useRemoveAccessMember = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      workspaceId: string;
+      accessId: string;
+    }) => {
+      return await removeAccessMemberService(params.workspaceId, params.accessId);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate workspace members query to refresh the list
+      queryClient.invalidateQueries({
+        queryKey: ['workspaceMembers', variables.workspaceId]
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['workspaces']
+      });
+    },
+  });
+};
+
 export const useRemoveUserFromWorkspace = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (params: {
       workspaceId: string;
-      workspace_id: string;
       user_id: string;
     }) => {
       const result = await removeUserFromWorkspaceService(params.workspaceId, {
-        workspace_id: params.workspace_id,
         user_id: params.user_id
       });
       return result;
@@ -1295,6 +1618,11 @@ export const useRemoveUserFromWorkspace = () => {
         queryKey: ['userAccessDetails', variables.user_id],
         exact: false // Match all queries starting with ['userAccessDetails', userId]
       });
+      // Invalidate userRolesAndAccess queries to refresh role display in MembersTable
+      queryClient.invalidateQueries({
+        queryKey: ['userRolesAndAccess', variables.user_id],
+        exact: false
+      });
 
       // Invalidate workspace members query to refresh the list
       queryClient.invalidateQueries({ queryKey: ['workspace', variables.workspaceId, 'members'] });
@@ -1305,6 +1633,61 @@ export const useRemoveUserFromWorkspace = () => {
     },
     onError: (error: any) => {
       console.error('❌ Remove user from workspace failed:', error);
+    }
+  });
+};
+
+export const useGetOrganization = () => {
+  return useQuery({
+    queryKey: ['organization'], 
+    queryFn: async () => {
+     try{
+      const result = await getOrganizationService() as any;
+      return result?.data;
+     } catch (error: any) {
+      console.error('❌ Get organization failed:', error);
+      throw error;
+     }
+    },
+    enabled: true,
+    
+  });
+}
+
+export const useGetOrganizationById = (organizationId: string) => {
+  return useQuery({
+    queryKey: ['organization', organizationId],
+    queryFn: async () => {
+     try{
+      const result = await getOrganizationServiceById(organizationId) as any;
+      return result?.data;
+     } catch (error: any) {
+      console.error('❌ Get organization by ID failed:', error);
+      throw error;
+     }
+    },
+    enabled: !!organizationId,
+  });
+}
+
+export const useUpdateOrganization = (organizationId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (updateData: { name?: string; description?: string; }) => {
+      // Build payload with only provided fields, ensuring required fields are present
+      const payload: { name: string; description: string } = {
+        name: updateData.name || '',
+        description: updateData.description || ''
+      };
+      const result = await updateOrganizationService(organizationId, payload);
+      return result;
+    },
+    onSuccess: () => {
+      // Invalidate organization query to refetch updated data
+      queryClient.invalidateQueries({ queryKey: ['organization'] });
+    },
+    onError: (error: any) => {
+      console.error('❌ Update organization failed:', error);
     }
   });
 };

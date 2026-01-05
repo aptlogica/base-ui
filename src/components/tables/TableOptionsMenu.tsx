@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { PopoverMenu } from '../common/PopoverMenu';
-import { Ellipsis, Edit, Trash2, Copy, Table2, Pin } from 'lucide-react';
+import { Ellipsis, Edit, Trash2, Table2, Pin } from 'lucide-react';
 import { EditItemModal } from '../modals/EditItemModal';
 import DeleteConfirmModal from '../modals/DeleteConfirmModal';
 import { useUpdateTable, useDeleteTable } from '../../hooks/useApi';
 import { useNavigationActions } from '../../hooks/useNavigationActions';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
+import { useBaseAccess } from '../../hooks/useBaseAccess';
 
 import { ExistingItem } from '../../utils/nameValidation';
 
@@ -27,19 +28,12 @@ interface TableOptionsMenuProps {
 const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, onEditDescription, onDelete, onEditingChange, portaled = false, align = 'auto', onPinToggle, isPinned = false, baseId, existingTables = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
-  const [showIdCopied, setShowIdCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   // TanStack Query mutations
   const updateTableMutation = useUpdateTable();
   const deleteTableMutation = useDeleteTable();
   const { handleTableDeletion } = useNavigationActions();
-  const { canDeleteTable } = useWorkspaceAccess(table?.workspace_id);
-
-  const handleCopyId = () => {
-    navigator.clipboard.writeText(table.id);
-    setShowIdCopied(true);
-    setTimeout(() => setShowIdCopied(false), 1200);
-  };
+  const { canDeleteTable, isBaseReadOnly, canUpdateTable } = useBaseAccess(table?.base_id);
 
   const handleEditTable = async ({ name, description }: { name: string; description: string }) => {
     try {
@@ -85,26 +79,41 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
     if (onPinToggle) onPinToggle(table.id, !isPinned);
   };
 
+  // Build menu items based on permissions
+  const menuItems = [
+    // Pin table - only show if not read-only
+    ...(onPinToggle && !isBaseReadOnly() ? [{ 
+      label: isPinned ? 'Unpin table' : 'Pin table', 
+      icon: <Pin className="w-5 h-5 text-gray-400" />, 
+      onClick: handlePinClick
+    }] : []),
+    // Edit table - only show if user can update table and not read-only
+    ...(canUpdateTable() && !isBaseReadOnly() ? [{ 
+      label: 'Edit table', 
+      icon: <Edit className="w-5 h-5 text-gray-400" />, 
+      onClick: () => setShowEditModal(true) 
+    }] : []),
+    // Delete table - only show if user can delete
+    ...(canDeleteTable() ? [{ 
+      label: 'Delete table', 
+      icon: <Trash2 className="w-5 h-5 text-gray-400" />, 
+      onClick: () => setShowDelete(true), 
+      danger: true 
+    }] : []),
+  ];
+
+  // Don't render menu if no actions are available
+  if (menuItems.length === 0) {
+    return null;
+  }
+
   return (
     <>
       <PopoverMenu
         align={align}
         portaled={portaled}
         trigger={<Ellipsis className="w-4 h-4 text-gray-500 hover:text-gray-600" />}
-        items={[
-          {
-            label: `TABLE ID: ${table.id}`,
-            icon: <Copy className="w-4 h-4" />,
-            onClick: () => handleCopyId(),
-          },
-          ...(onPinToggle ? [{ 
-            label: isPinned ? 'Unpin table' : 'Pin table', 
-            icon: <Pin className="w-4 h-4" />, 
-            onClick: handlePinClick
-          }] : []),
-          { label: 'Edit table', icon: <Edit className="w-4 h-4" />, onClick: () => setShowEditModal(true) },
-          ...(canDeleteTable() ? [{ label: 'Delete table', icon: <Trash2 className="w-4 h-4" />, onClick: () => setShowDelete(true), danger: true }] : []),
-        ]}
+        items={menuItems}
       />
       {showEditModal && ReactDOM.createPortal(
         // Add a key so the modal remounts when a different table is edited (avoids stale props in portaled contexts)

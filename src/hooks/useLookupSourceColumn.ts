@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { getFieldByIdService } from '../service/clientService';
-import { isTenantSchemaAvailable } from '../service/clientService';
 
 /**
  * Hook to fetch the source column configuration for a lookup field
@@ -32,7 +31,7 @@ export const useLookupSourceColumn = (lookupColumnId: string | undefined) => {
         return null;
       }
     },
-    enabled: !!lookupColumnId && isTenantSchemaAvailable(),
+    enabled: !!lookupColumnId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false,

@@ -26,7 +26,6 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
     setIsLeaving(true);
     try {
       // TODO: Implement leave workspace logic
-      console.log('Leaving workspace:', workspaceId);
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
       setShowLeaveConfirm(false);
     } catch (error) {
@@ -40,7 +39,6 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
     setIsDeleting(true);
     try {
       const result = await deleteWorkspaceMutation.mutateAsync(workspaceId);
-      console.log('Workspace deletion result:', result);
       // Use the navigation handler to properly clean up localStorage and navigate
       handleWorkspaceDeletion(workspaceId);
       setShowDeleteConfirm(false);
@@ -55,12 +53,12 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
   return (
     <div className="space-y-0">
       {/* Danger Zone Card */}
-      <div className="bg-sidebar rounded-lg border p-6">
+      <div className="bg-sidebar rounded-xl border p-6">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Danger Zone</h2>
         
         <div className="space-y-6">
           {/* Leave Workspace */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
             <div className="flex-1">
               <h3 className="text-sm font-medium text-gray-900">Leave this workspace.</h3>
               <p className="text-sm text-gray-600 mt-1">
@@ -78,7 +76,7 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
 
           {/* Delete Workspace - only show for admin users */}
           {canDeleteWorkspace() && (
-            <div className="flex items-center justify-between p-4 bg-error rounded-lg border border-red-400">
+            <div className="flex items-center justify-between p-4 bg-error rounded-xl border border-red-400">
               <div className="flex-1">
                 <h3 className="text-sm font-medium text-gray-900">Delete this workspace and all it's contents.</h3>
                 <p className="text-sm text-gray-600 mt-1">
@@ -99,7 +97,7 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
       {/* Leave Workspace Confirmation Modal */}
       {showLeaveConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-sidebar rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-sidebar rounded-xl p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Leave Workspace</h3>
             <p className="text-sm text-gray-600 mb-6">
               Are you sure you want to leave this workspace? You will no longer have access to it unless you are re-invited.

@@ -1,20 +1,26 @@
+import { MembershipRequest } from "./user";
 export interface CreateBase {
     title: string;
     description: string;
     workspace_id: string;
+    image?: File | Blob;
 }
 export interface UpdateBase {
     title?: string;
     description?: string;
-    type?: string;
-    config?: any;
-    settings?: any;
-    meta?: any;
+    icon?: string;
     status?: string;
     visibility?: string;
-    table_count?: number;
-    row_count?: number;
-    storage_used_bytes?: number;
-    updated_at?: string;
+    image?: File | Blob;
+}
+export interface BulkAddMembersRequest {
+    user_id: string;
+    memberships: MembershipRequest[];
+}
+export interface BulkAddBaseMembersRequest {
+    members: BulkAddMembersRequest[];
+}
+export interface RemoveUserFromBase {
+    user_id: string;
 }
 //# sourceMappingURL=base.d.ts.map

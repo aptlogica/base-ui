@@ -21,7 +21,7 @@ interface PluginState {
 export const usePluginStore = create<PluginState>((set, get) => ({
   flyoutOpen: false,
   flyoutMode: 'layout',
-  flyoutWidth: 280,
+  flyoutWidth: 272,
   currentPlugin: null,
   isTransitioning: false,
   selectedWorkspace: null,

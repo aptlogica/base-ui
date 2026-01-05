@@ -5,7 +5,6 @@ import {
   Ellipsis,
   Edit,
   Trash2,
-  Copy,
   Eye,
   Pin,
 } from 'lucide-react';
@@ -13,6 +12,7 @@ import { EditItemModal } from '../modals/EditItemModal';
 import DeleteConfirmModal from '../modals/DeleteConfirmModal';
 import { useUpdateView, useDeleteView } from '../../hooks/useApi';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
+import { useBaseAccess } from '../../hooks/useBaseAccess';
 
 interface ViewOptionsMenuProps {
   view: any;
@@ -30,20 +30,13 @@ interface ViewOptionsMenuProps {
 const ViewOptionsMenu: React.FC<ViewOptionsMenuProps> = ({ view, onRename, onEditDescription, onDelete, onEditingChange, portaled = false, align = 'auto', onPinToggle, isPinned = false, workspaceId: propWorkspaceId }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
-  const [showIdCopied, setShowIdCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const updateViewMutation = useUpdateView();
   const deleteViewMutation = useDeleteView();
-  // Get workspace_id from prop, view, or nested table
-  const workspaceId = propWorkspaceId || view?.workspace_id || view?.table?.workspace_id;
-  const { canDeleteView } = useWorkspaceAccess(workspaceId);
-
-  const handleCopyId = () => {
-    navigator.clipboard.writeText(view.id);
-    setShowIdCopied(true);
-    setTimeout(() => setShowIdCopied(false), 1200);
-  };
+  // Get base_id from view or nested table
+  const baseId = view?.base_id || view?.table?.base_id;
+  const { canDeleteView, isBaseReadOnly, canUpdateView } = useBaseAccess(baseId);
 
   const handleEditView = async ({ name, description }: { name: string; description: string }) => {
     try {
@@ -84,26 +77,41 @@ const ViewOptionsMenu: React.FC<ViewOptionsMenuProps> = ({ view, onRename, onEdi
     if (onPinToggle) onPinToggle(view.id, !isPinned);
   };
 
+  // Build menu items based on permissions
+  const menuItems = [
+    // Pin view - only show if not read-only
+    ...(onPinToggle && !isBaseReadOnly() ? [{
+      label: isPinned ? 'Unpin view' : 'Pin view',
+      icon: <Pin className="w-5 h-5 text-gray-400" />,
+      onClick: handlePinClick
+    }] : []),
+    // Edit view - only show if user can update view and not read-only
+    ...(canUpdateView() && !isBaseReadOnly() ? [{ 
+      label: 'Edit view', 
+      icon: <Edit className="w-5 h-5 text-gray-400" />, 
+      onClick: () => setShowEditModal(true) 
+    }] : []),
+    // Delete view - only show if user can delete
+    ...(canDeleteView() ? [{ 
+      label: 'Delete view', 
+      icon: <Trash2 className="w-5 h-5 text-gray-400" />, 
+      onClick: () => setShowDelete(true), 
+      danger: true 
+    }] : []),
+  ];
+
+  // Don't render menu if no actions are available
+  if (menuItems.length === 0) {
+    return null;
+  }
+
   return (
     <>
       <PopoverMenu
         align={align}
         portaled={portaled}
         trigger={<Ellipsis className="w-4 h-4 text-gray-500" />}
-        items={[
-          {
-            label: `VIEW ID: ${view.id}`,
-            icon: <Copy className="w-4 h-4" />,
-            onClick: () => handleCopyId(),
-          },
-          ...(onPinToggle ? [{
-            label: isPinned ? 'Unpin view' : 'Pin view',
-            icon: <Pin className="w-4 h-4" />,
-            onClick: handlePinClick
-          }] : []),
-          { label: 'Edit view', icon: <Edit className="w-4 h-4" />, onClick: () => setShowEditModal(true) },
-          ...(canDeleteView() ? [{ label: 'Delete view', icon: <Trash2 className="w-4 h-4" />, onClick: () => setShowDelete(true), danger: true }] : []),
-        ]}
+        items={menuItems}
       />
 
       {showEditModal &&

@@ -17,6 +17,8 @@ interface AttachmentProps {
   config?: AttachmentConfig;
   required?: boolean;
   disabled?: boolean;
+  allowEdit?: boolean; // Controls whether attachment actions are visible
+  readOnly?: boolean; // true = completely prevent editing
   // API parameters for attachment operations
   model_id?: string;
   column_id?: string;
@@ -33,6 +35,8 @@ export const Attachment: React.FC<AttachmentProps> = ({
   config = {},
   required = false,
   disabled = false,
+  allowEdit = true,
+  readOnly = false,
   model_id,
   column_id,
   row_id,
@@ -232,10 +236,9 @@ export const Attachment: React.FC<AttachmentProps> = ({
     return (
       <div className={`relative flex items-center px-2 pr-20 ${isBorder ? "field-component-border" : ""}`}>
         {/* Thumbnails row - Show only first 3 images */}
-        <div className="flex items-center gap-1 min-h-[32px] overflow-hidden flex-wrap">
+        <div className="flex items-center gap-1 min-h-8 overflow-hidden flex-wrap">
           {attachmentArray?.slice(0, 3).map((file, idx) => {
             const isImage = file.mime_type?.startsWith('image/');
-            const isPdf = file.mime_type?.startsWith('application/pdf');
             return (
               <div
                 className="w-8 h-8 rounded-lg bg-card flex items-center justify-center overflow-hidden cursor-pointer transition-all hover:border-[var(--color-brand-600)] focus:outline-none flex-shrink-0 shadow-md"
@@ -269,25 +272,15 @@ export const Attachment: React.FC<AttachmentProps> = ({
               </div>
             );
           })}
-
-          {/* Show "+X more" indicator if there are more than 3 files */}
-          {/* {attachmentArray.length > 3 && (
-              <div 
-                className="w-8 h-8 rounded-md bg-gray-100 border border-gray-200 flex items-center justify-center text-xs text-gray-600 font-medium cursor-pointer hover:bg-gray-200 transition-colors flex-shrink-0"
-                title={`${attachmentArray.slice(3).map(f => f.title || f.name).join(', ')}`}
-                onClick={() => setIsModalOpen(true)}
-              >
-                +{attachmentArray.length - 3}
-              </div>
-            )} */}
         </div>
         {/* Floating action buttons */}
         <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1 z-10">
+        {!readOnly && 
           <button
             type="button"
-            className="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 text-blue-400 shadow hover:bg-gray-200 hover:text-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={() => setIsModalOpen(true)}
-            disabled={disabled || attachmentArray.length >= maxFiles || isUploading}
+            className="w-7 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => !readOnly && setIsModalOpen(true)}
+            disabled={disabled || readOnly || attachmentArray.length >= maxFiles || isUploading}
             title={
               isUploading
                 ? "Upload in progress..."
@@ -299,22 +292,23 @@ export const Attachment: React.FC<AttachmentProps> = ({
             {isUploading ? (
               <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
             ) : (
-              <Paperclip className="w-4 h-4 text-gray-600" />
+              <Paperclip className="w-4 h-4" />
             )}
           </button>
+          }
           {
             showPreview &&
             <>
               <button
                 type="button"
-                className="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 shadow hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-7 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => setIsPreviewModalOpen(true)}
                 disabled={disabled || isUploading}
                 tabIndex={0}
                 aria-label="Preview attachments"
                 title={disabled ? "Preview disabled" : isUploading ? "Preview unavailable during upload" : "Preview attachments"}
               >
-                <Maximize2 className="w-4 h-4 text-gray-600" />
+                <Maximize2 className="w-4 h-4" />
               </button>
             </>
           }
@@ -370,13 +364,6 @@ export const Attachment: React.FC<AttachmentProps> = ({
               const percent = Math.round(
                 (progressEvent.loaded * 100) / progressEvent.total
               );
-              console.log(`Upload progress: ${percent}%`);
-
-              // You can add UI updates here, for example:
-              // - Update a progress bar
-              // - Show percentage in UI
-              // - Update loading states
-              // - Send progress to parent components
             }
           });
         } else {
@@ -441,6 +428,8 @@ export const Attachment: React.FC<AttachmentProps> = ({
         model_id={model_id}
         column_id={column_id}
         row_id={row_id}
+        allowEdit={allowEdit && !readOnly}
+        readOnly={readOnly}
       />
 
       {/* Error display */}

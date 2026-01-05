@@ -580,7 +580,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = ({ field, fields, onField
   };
 
   return (
-    <div className="bg-white border rounded-lg p-4">
+    <div className="bg-white border rounded-xl p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           {selectedFieldType && getFieldTypeIconWithMargin(selectedFieldType.key)}
@@ -592,7 +592,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = ({ field, fields, onField
 
       <div className="space-y-4">
         {isSystemField && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4">
             <p className="text-sm text-yellow-800">
               <strong>System Field:</strong> This field is managed by the system and cannot be edited.
             </p>
@@ -610,7 +610,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = ({ field, fields, onField
             onChange={handleNameChange}
             onBlur={handleNameBlur}
             disabled={isSystemField}
-            className={`w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-1 focus:ring-blue-500 ${
+            className={`w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-1 focus:ring-blue-500 ${
               nameError ? 'border-red-500' : 'border-gray-300'
             } ${isSystemField ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
             placeholder="Enter field name"

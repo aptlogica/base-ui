@@ -1,5 +1,6 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, Suspense } from 'react';
 import { useExtensions } from './PluginFrameworkContext';
+import { Loader } from '../components/ui/Loader';
 
 // Simple inline error boundary for extension points
 const ExtensionErrorBoundary: React.FC<{ 
@@ -38,13 +39,25 @@ export const ExtensionPoint: React.FC<ExtensionPointProps> = ({ id, render, prop
   // Removed route extension point handling - route system was unnecessary
 
   // Special handling for 'view' extension point - select first renderer that returns content
+  // REACT CONCURRENT: Wrap view rendering in Suspense for better loading states
   if (id === 'view') {
     const sortedExtensions = extensions.sort((a: any, b: any) => (a.order || 100) - (b.order || 100));
     for (const ext of sortedExtensions) {
       if (ext.render) {
         const rendered = ext.render(props);
         if (rendered) {
-          return <React.Fragment key={ext.id}>{rendered}</React.Fragment>;
+          return (
+            <Suspense 
+              key={ext.id}
+              fallback={
+                <div className="h-full flex items-center justify-center">
+                  <Loader size={10} />
+                </div>
+              }
+            >
+              {rendered}
+            </Suspense>
+          );
         }
       }
     }

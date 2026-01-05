@@ -13,6 +13,7 @@ interface DecimalProps {
   isBorder?: boolean;
   className?: string;
   allowEdit?: boolean; // true = single click, false = double click
+  readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;
   config?: {
@@ -36,6 +37,7 @@ export const Decimal: React.FC<DecimalProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
   config = {},
@@ -102,6 +104,13 @@ export const Decimal: React.FC<DecimalProps> = ({
     }
   }, [value, defaultValue, formatValue, isEditing]);
 
+  // Exit edit mode if readOnly becomes true
+  useEffect(() => {
+    if (readOnly && isEditing) {
+      setIsEditing(false);
+    }
+  }, [readOnly, isEditing]);
+
   // --- Handlers ---
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
@@ -155,10 +164,11 @@ export const Decimal: React.FC<DecimalProps> = ({
     }
   };
 
-  // unified single/double click handling
+  // allowEdit controls single vs double-click behavior
+  // readOnly completely prevents editing
   const handleClick = useClickHandler(
-    () => allowEdit && !disabled && setIsEditing(true),
-    () => !allowEdit && !disabled && setIsEditing(true)
+    () => !readOnly && allowEdit && !disabled && setIsEditing(true), // Single click when allowEdit=true
+    () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // Double click when allowEdit=false
   );
 
   return (
@@ -170,7 +180,11 @@ export const Decimal: React.FC<DecimalProps> = ({
         </label>
       )}
 
-      <div className={`relative ${className} ${isBorder ? "field-component-border" : ""}`} onClick={handleClick}>
+      <div 
+        className={`relative ${className} ${isBorder ? "field-component-border" : ""}`} 
+        onClick={!readOnly ? handleClick : undefined}
+        style={readOnly ? { cursor: 'default' } : undefined}
+      >
         {isEditing ? (
           <div className="relative">
             <input
@@ -181,14 +195,14 @@ export const Decimal: React.FC<DecimalProps> = ({
               onKeyDown={handleKeyDown}
               autoFocus
               placeholder={placeholder}
-              disabled={disabled}
-              className={`field-component ${disabled ? "text-gray-400 cursor-not-allowed" : "text-gray-900"}`}
+              disabled={disabled || readOnly}
+              className={`field-component ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : "text-gray-900"}`}
             />
           </div>
         ) : (
           <div
             className={`field-component
-            ${disabled ? "text-gray-400 cursor-not-allowed" : "text-gray-900"}`}
+            ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : "text-gray-900"}`}
           >
             {localValue || <div className="text-gray-400">{placeholder}</div>}
           </div>

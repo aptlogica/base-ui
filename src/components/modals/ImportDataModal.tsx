@@ -96,7 +96,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 icon-primary rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center">
               <Download size={20} className="icon-primary" />
             </div>
             <div>
@@ -105,14 +105,14 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
           >
             <X size={16} className="text-[var(--text-color-tertiary)]" />
           </button>
         </div>
 
         {/* Options List */}
-        <div className="space-y-1 border rounded-lg">
+        <div className="space-y-1 border rounded-xl">
           {IMPORT_OPTIONS.map((option) => {
             const isDisabled = isOptionDisabled(option.id);
             return (
@@ -126,7 +126,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
                     : 'hover:bg-gray-50 cursor-pointer'
                 }`}
               >
-                <div className={`w-10 h-10 rounded-lg ${option.bgColor} border flex items-center justify-center p-2`}>
+                <div className={`w-10 h-10 rounded-xl ${option.bgColor} border flex items-center justify-center p-2`}>
                   <img 
                     src={option.iconPath} 
                     alt={option.label}
@@ -166,7 +166,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
                         : 'hover:bg-gray-50 cursor-pointer'
                     }`}
                   >
-                    <div className={`w-10 h-10 rounded-lg ${option.bgColor} border flex items-center justify-center p-2`}>
+                    <div className={`w-10 h-10 rounded-xl ${option.bgColor} border flex items-center justify-center p-2`}>
                       <img 
                         src={option.iconPath} 
                         alt={option.label}

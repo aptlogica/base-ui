@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Search as SearchIcon, ChevronUp, Hash } from 'lucide-react';
+import { Search as SearchIcon, ChevronUp, ChevronDown, Hash } from 'lucide-react';
 import { BaseColumn as ColumnConfig } from '../../../types/column.types';
 import { FIELD_TYPES } from '../../../types/fieldTypes';
 import { useClickOutside } from '../../../hooks/useClickOutside';
@@ -180,7 +180,7 @@ export const Search: React.FC<SearchProps> = ({
 
   return (
     <div className={`relative ${className} ${columns.length === 0 ? "opacity-[0.5] pointer-events-none" : ""}`}>
-      <div className="flex items-center bg-gray-50 border rounded-lg px-2 py-1 focus-within:outline-none focus-within:ring-1 focus-within:ring-[var(--color-focus-ring)] outline-none transition-all">
+      <div className="flex items-center bg-gray-50 border rounded-xl px-2 py-1 focus-within:outline-none focus-within:ring-1 focus-within:ring-[var(--color-focus-ring)] outline-none transition-all">
         <SearchIcon className="w-4 h-4 text-gray-400 mr-2" />
 
         <button
@@ -188,10 +188,14 @@ export const Search: React.FC<SearchProps> = ({
           type="button"
           onClick={handleDropdownToggle}
           disabled={disabled}
-          className="flex items-center gap-3 px-2 py-1 rounded btn-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-3 px-2 py-1 btn-primary !rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span className='flex items-center gap-1 text-sm '>{getFieldIcon(selectedField?.type || '')} {selectedField?.title}</span>
-          <ChevronUp className={`w-3 h-3 transition-transform ${!isDropdownOpen ? 'rotate-180' : ''}`} />
+          {isDropdownOpen ? (
+            <ChevronUp className="w-3 h-3 transition-transform" />
+          ):(
+            <ChevronDown className="w-3 h-3 transition-transform" />
+          )}
         </button>
 
         {/* Search Input */}
@@ -210,7 +214,7 @@ export const Search: React.FC<SearchProps> = ({
       {isDropdownOpen && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-40 max-h-80 overflow-hidden"
+          className="absolute left-0 right-0 mt-1 bg-background border rounded-xl shadow-lg z-40 max-h-80 overflow-hidden"
         >
           {/* Internal Search Bar */}
           <div className="p-2 border-b border-gray-100">
@@ -240,7 +244,7 @@ export const Search: React.FC<SearchProps> = ({
                     key={field.key}
                     type="button"
                     onClick={() => handleFieldSelect(field)}
-                    className={`w-full px-3 py-2 text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] rounded-lg flex items-center gap-2 ${selectedField?.key === field.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''
+                    className={`w-full px-3 py-2 text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] rounded-xl flex items-center gap-2 ${selectedField?.key === field.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''
                       }`}
                   >
                     <span className='text-gray-400'> {getFieldIcon(field.type)}</span>

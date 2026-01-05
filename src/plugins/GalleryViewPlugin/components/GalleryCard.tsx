@@ -6,7 +6,7 @@ import { FieldDisplay } from '../../../components/shared/FieldDisplay';
 
 interface GalleryCardProps {
   item: GalleryItem;
-  onEdit: () => void;
+  onEdit?: () => void;
   visibleColumns?: any[];
 }
 
@@ -294,7 +294,7 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
 
   return (
     <div 
-      className="group relative bg-card rounded-2xl border shadow-sm overflow-hidden hover:border-[var(--color-bg-brand-primary)] transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
+      className={`group relative bg-card rounded-2xl border shadow-sm overflow-hidden transition-all duration-300 transform ${onEdit ? 'hover:border-[var(--color-bg-brand-primary)] cursor-pointer hover:-translate-y-1' : ''}`}
       onClick={onEdit}
     >
       {/* Image Section with Carousel - Only show if we have image files */}

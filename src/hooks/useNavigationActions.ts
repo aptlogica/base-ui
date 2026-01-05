@@ -61,8 +61,8 @@ export const useNavigationActions = () => {
         // Update session cache (backend sync happens on logout)
         saveUserNavigation(user.id);
       } else {
-        // No workspaces available - go to workspace page
-        replaceNavigate(navigate, '/workspace');
+        // No workspaces available - go to homepage
+        replaceNavigate(navigate, '/homepage');
       }
     }
   };
@@ -94,8 +94,8 @@ export const useNavigationActions = () => {
         // Update session cache
         saveUserNavigation(user.id);
       } else {
-        // No bases available - go to workspace page
-        replaceNavigate(navigate, '/workspace');
+        // No bases available - go to homepage
+        replaceNavigate(navigate, '/homepage');
       }
     }
   };
@@ -126,8 +126,8 @@ export const useNavigationActions = () => {
         // Update session cache
         saveUserNavigation(user.id);
       } else {
-        // No tables available - navigate to workspace page
-        replaceNavigate(navigate, '/workspace');
+        // No tables available - navigate to homepage
+        replaceNavigate(navigate, '/homepage');
       }
     }
   };
@@ -183,7 +183,7 @@ export const useNavigationActions = () => {
         replaceNavigate(navigate, targetPath);
         saveUserNavigation(user.id);
       } else {
-        replaceNavigate(navigate, '/workspace');
+        replaceNavigate(navigate, '/homepage');
       }
     }
   };

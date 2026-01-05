@@ -17,7 +17,8 @@ interface NumberProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean;
+  allowEdit?: boolean; // true = single click, false = double click
+  readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;
 }
@@ -33,6 +34,7 @@ export const Number: React.FC<NumberProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
 }) => {
@@ -66,6 +68,13 @@ export const Number: React.FC<NumberProps> = ({
       setLocalValue(displayValue);
     // }
   }, [value, defaultValue, showThousands]);
+
+  // Exit edit mode if readOnly becomes true
+  useEffect(() => {
+    if (readOnly && isEditing) {
+      setIsEditing(false);
+    }
+  }, [readOnly, isEditing]);
 
   const validate = (val: string) => {
     if (required && !val.trim()) return "This field is required";
@@ -132,9 +141,11 @@ export const Number: React.FC<NumberProps> = ({
   };
 
   
+  // allowEdit controls single vs double-click behavior
+  // readOnly completely prevents editing
   const handleClick = useClickHandler(
-    () => allowEdit && !disabled && setIsEditing(true),
-    () => !allowEdit && !disabled && setIsEditing(true)
+    () => !readOnly && allowEdit && !disabled && setIsEditing(true), // Single click when allowEdit=true
+    () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // Double click when allowEdit=false
   );
 
   // Get display value with thousands separator if enabled
@@ -158,7 +169,8 @@ export const Number: React.FC<NumberProps> = ({
         className={`relative ${className} ${
           isBorder ? "field-component-border" : ""
         }`}
-        onClick={handleClick}
+        onClick={!readOnly ? handleClick : undefined}
+        style={readOnly ? { cursor: 'default' } : undefined}
       >
         {isEditing ? (
           <input
@@ -168,14 +180,14 @@ export const Number: React.FC<NumberProps> = ({
             onBlur={handleBlur}
             autoFocus
             placeholder={placeholder}
-            disabled={disabled}
-            className={`field-component ${disabled ? "text-gray-400 cursor-not-allowed" : "text-gray-900"}`}
+            disabled={disabled || readOnly}
+            className={`field-component ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : "text-gray-900"}`}
           />
         ) : (
           <div
             className={`field-component ${
               localValue ? "text-gray-800" : "text-gray-400"
-            } ${disabled ? "text-gray-400 cursor-not-allowed" : ""}`}
+            } ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
           >
             {getDisplayValue() || placeholder}
           </div>

@@ -1,173 +1,117 @@
 import { useMemo } from 'react';
-import { GanttTask } from './useGanttData';
-import type { TableResponse, Column } from '../types/api.types';
+import type { TableResponse } from '../types/api.types';
+import { fieldsToFilter } from '../../../types/constants';
+import type { GanttTask } from './useGanttData';
+import type { Column, View } from '../types/api.types';
 
-interface UseGanttTaskProcessingOptions {
-  tableData?: TableResponse;
-}
-
-interface ProcessedData {
+interface UseGanttTaskProcessingReturn {
   tasks: GanttTask[];
   columns: Column[];
-  currentView?: any;
-  viewConfig: {
-    filters: any[];
-    sorts: any[];
-    fieldConfig: any[];
-  };
+  currentView?: View;
   startDateField?: Column;
   endDateField?: Column;
   titleField?: Column;
   progressField?: Column;
   completionField?: Column;
-  groupByField?: Column;
 }
 
-export function useGanttTaskProcessing({ tableData }: UseGanttTaskProcessingOptions): ProcessedData {
-  const processedData = useMemo(() => {
+export function useGanttTaskProcessing({ tableData }: { tableData?: TableResponse }): UseGanttTaskProcessingReturn {
+  return useMemo(() => {
     if (!tableData?.data) {
       return {
         tasks: [],
         columns: [],
         currentView: undefined,
-        viewConfig: { filters: [], sorts: [], fieldConfig: [] },
         startDateField: undefined,
         endDateField: undefined,
         titleField: undefined,
         progressField: undefined,
         completionField: undefined,
-        groupByField: undefined
       };
     }
 
     const { model, columns, records, views } = tableData.data;
-    const currentView = views?.find(v => v.type === 'ganttChart') || views?.[0];
+
+    // Filter out unwanted columns
+    const filteredColumns = columns.filter(
+      (col: any) => !fieldsToFilter.includes(col.uidt)
+    );
+
+    // Find current view
+    const currentView = views?.find((v: any) => v.type === 'ganttChart') || views?.[0];
     const viewMeta = currentView?.meta || {};
 
     // Create a Map for O(1) column lookups instead of O(n) find() calls
-    const columnMap = new Map<string, Column>();
-    const columnNameMap = new Map<string, Column>();
-    columns.forEach(col => {
+    const columnMap = new Map<string, any>();
+    const columnNameMap = new Map<string, any>();
+    filteredColumns.forEach((col: any) => {
       columnMap.set(String(col.id), col);
       if (col.column_name) {
         columnNameMap.set(col.column_name.toLowerCase(), col);
       }
     });
 
-    // Find field columns - use Map for O(1) lookups
-    let startDateField = viewMeta.start_date_field_id ?
-      columnMap.get(String(viewMeta.start_date_field_id)) : undefined;
-    let endDateField = viewMeta.end_date_field_id ?
-      columnMap.get(String(viewMeta.end_date_field_id)) : undefined;
-    const titleField = columnNameMap.get('title');
+    // Find field columns using Map for O(1) lookups
+    const startDateField = viewMeta.start_date_field_id
+      ? columnMap.get(String(viewMeta.start_date_field_id))
+      : undefined;
+    const endDateField = viewMeta.end_date_field_id
+      ? columnMap.get(String(viewMeta.end_date_field_id))
+      : undefined;
+    const titleField = viewMeta.title_field_id
+      ? columnMap.get(String(viewMeta.title_field_id))
+      : columnNameMap.get('title');
+    const progressField = viewMeta.progress_field_id
+      ? columnMap.get(String(viewMeta.progress_field_id))
+      : undefined;
+    const completionField = viewMeta.completion_field_id
+      ? columnMap.get(String(viewMeta.completion_field_id))
+      : undefined;
 
-    // Auto-detect date fields if not configured (using array filter for pattern matching)
-    if (!startDateField) {
-      startDateField = columns.find(c =>
-        c.uidt === 'Date' ||
-        c.uidt === 'DateTime' ||
-        c.column_name?.toLowerCase().includes('start') ||
-        c.column_name?.toLowerCase().includes('date')
-      );
-    }
-    if (!endDateField) {
-      endDateField = columns.find(c =>
-        (c.uidt === 'Date' || c.uidt === 'DateTime') &&
-        c.id !== startDateField?.id &&
-        (c.column_name?.toLowerCase().includes('end') ||
-          c.column_name?.toLowerCase().includes('finish'))
-      );
-    }
-    // Use Map for O(1) lookups
-    const progressField = viewMeta.progress_field_id ?
-      columnMap.get(String(viewMeta.progress_field_id)) : undefined;
-    const completionField = viewMeta.completion_field_id ?
-      columnMap.get(String(viewMeta.completion_field_id)) : undefined;
-    const groupByField = viewMeta.groupBy?.column ?
-      columnMap.get(String(viewMeta.groupBy.column)) : undefined;
-
-    // Process tasks
+    // Process tasks from records
     const tasks: GanttTask[] = records.map((record: any, idx: number) => {
-      // Extract rowData similar to Calendar view - handle both record.data and record directly
-      const rowData = record?.data || record;
-      const startDateValue = rowData?.[startDateField?.column_name || ''];
-      const endDateValue = rowData?.[endDateField?.column_name || ''];
-      const titleValue = rowData?.[titleField?.column_name || ''] || rowData?.title || `Task ${idx + 1}`;
-      const progressValue = rowData?.[progressField?.column_name || ''] || 0;
-      const completionValue = completionField ? rowData?.[completionField.column_name || ''] : null;
+      const startDateValue = record?.[startDateField?.column_name || ''];
+      const endDateValue = record?.[endDateField?.column_name || ''];
+      const titleValue = record?.[titleField?.column_name || ''] || record?.title || `Task ${idx + 1}`;
+      const progressValue = record?.[progressField?.column_name || ''] || 0;
 
-      // Parse dates properly, handle both string and Date objects
-      const parseDate = (dateValue: any): Date => {
-        if (!dateValue) return new Date();
-        if (dateValue instanceof Date) return dateValue;
-        if (typeof dateValue === 'string') {
-          const parsed = new Date(dateValue);
-          return isNaN(parsed.getTime()) ? new Date() : parsed;
-        }
-        return new Date();
-      };
+      // Parse dates
+      const startDate = startDateValue ? new Date(startDateValue) : new Date();
+      const endDate = endDateValue ? new Date(endDateValue) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-      const startDate = startDateValue ? parseDate(startDateValue) : new Date();
-      const endDate = endDateValue ? parseDate(endDateValue) : new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
-      
-      // Check if task is completed based on completion field (date only)
-      let isCompleted = false;
-      if (completionField && completionField.uidt === 'date') {
-        // Date field: if completion date exists, task is completed
-        isCompleted = !!completionValue;
-      }
-      
-      // Determine status and color
+      // Determine status
       const now = new Date();
       let status: 'active' | 'completed' | 'overdue' | 'pending' = 'active';
-      let statusColor = `hsl(${(idx * 137.5) % 360}, 70%, 50%)`;
-
-      // Check completion first (completed tasks are never overdue)
-      if (isCompleted || progressValue >= 100) {
-        status = 'completed';
-        statusColor = '#10b981'; // Green for completed
-      } else if (endDate < now) {
-        // Only mark as overdue if not completed
+      if (endDate < now) {
         status = 'overdue';
-        statusColor = '#ef4444'; // Red for overdue
+      } else if (progressValue >= 100) {
+        status = 'completed';
       } else if (!startDateValue && !endDateValue) {
         status = 'pending';
-        statusColor = '#6b7280'; // Gray for pending
       }
 
-      const finalProgress = Number(progressValue) || 0;
-
       return {
-        id: record.id || record._meta?.id || idx,
+        id: record?.id || idx,
         name: String(titleValue),
         startDate,
         endDate,
-        color: statusColor,
-        progress: finalProgress,
+        color: `hsl(${(idx * 137.5) % 360}, 70%, 50%)`,
+        progress: Number(progressValue) || 0,
         status,
-        rawData: record, // Store full record object (with id and data) for buildInitialValuesForEdit
-        rowData: rowData // Also store extracted rowData for direct access
+        rawData: record,
       };
     });
 
     return {
       tasks,
-      columns,
+      columns: filteredColumns,
       currentView,
-      viewConfig: {
-        filters: viewMeta.filters || [],
-        sorts: viewMeta.sorts || [],
-        fieldConfig: viewMeta.fieldConfig || []
-      },
       startDateField,
       endDateField,
       titleField,
       progressField,
       completionField,
-      groupByField
     };
   }, [tableData]);
-
-  return processedData;
 }
 

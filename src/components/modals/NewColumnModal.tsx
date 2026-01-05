@@ -74,8 +74,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     // Fallback to filtered allViews
     if (currentTableId && allViews && allViews.length > 0) {
       const filtered = allViews.filter((view: any) =>
-        String(view.model_id || view.modelId || '') === String(currentTableId)
-      );
+      String(view.model_id || view.modelId || '') === String(currentTableId)
+    );
       return filtered;
     }
 
@@ -515,12 +515,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         if (fieldType === 'multiSelect') {
           setMultiDefault(Array.isArray(config.defaultValue) ? config.defaultValue : (config.multiDefault || []));
         } else {
-          setMultiDefault(config.multiDefault || []);
+        setMultiDefault(config.multiDefault || []);
         }
         if (fieldType === 'select') {
           setSingleDefault(typeof config.defaultValue === 'string' && config.defaultValue ? config.defaultValue : (config.singleDefault || ''));
         } else {
-          setSingleDefault(config.singleDefault || '');
+        setSingleDefault(config.singleDefault || '');
         }
         setRatingIcon(config.ratingIcon || 'star');
         setRatingColor(config.ratingColor || 'yellow');
@@ -539,26 +539,26 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         if (fieldType === 'datetime') {
           setDateTimeDefault(config.defaultValue || config.dateTimeDefault || '');
         } else {
-          setDateTimeDefault(config.dateTimeDefault || '');
+        setDateTimeDefault(config.dateTimeDefault || '');
         }
         setShowDateTimeDefault(false);
         // For year: check defaultValue first (where it's saved), then fallback to yearDefault
         if (fieldType === 'year') {
           setYearDefault(config.defaultValue !== undefined && config.defaultValue !== null ? config.defaultValue : (config.yearDefault || null));
         } else {
-          setYearDefault(config.yearDefault || null);
+        setYearDefault(config.yearDefault || null);
         }
         // For date: check defaultValue first (where it's saved), then fallback to dateDefault
         if (fieldType === 'date') {
           setDateDefault(config.defaultValue || config.dateDefault || '');
         } else {
-          setDateDefault(config.dateDefault || '');
+        setDateDefault(config.dateDefault || '');
         }
         // For time: check defaultValue first (where it's saved), then fallback to timeDefault
         if (fieldType === 'time') {
           setTimeDefault(config.defaultValue || config.timeDefault || '');
         } else {
-          setTimeDefault(config.timeDefault || '');
+        setTimeDefault(config.timeDefault || '');
         }
         setShowTimeDefault(false);
         setPhoneValid(!!config.phoneValid);
@@ -566,7 +566,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         if (fieldType === 'phoneNumber') {
           setPhoneDefault(config.defaultValue || config.phoneDefault || '');
         } else {
-          setPhoneDefault(config.phoneDefault || '');
+        setPhoneDefault(config.phoneDefault || '');
         }
         setShowPhoneDefault(false);
         setEmailValid(!!config.emailValid);
@@ -574,7 +574,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         if (fieldType === 'email') {
           setEmailDefault(config.defaultValue || config.emailDefault || '');
         } else {
-          setEmailDefault(config.emailDefault || '');
+        setEmailDefault(config.emailDefault || '');
         }
         setShowEmailDefault(false);
         setUrlValid(!!config.urlValid);
@@ -582,7 +582,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         if (fieldType === 'url') {
           setUrlDefault(config.defaultValue || config.urlDefault || '');
         } else {
-          setUrlDefault(config.urlDefault || '');
+        setUrlDefault(config.urlDefault || '');
         }
         setShowUrlDefault(false);
 
@@ -595,14 +595,14 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         if (fieldType === 'percent') {
           setPercentDefault(config.defaultValue !== undefined && config.defaultValue !== null ? config.defaultValue : (config.percentDefault || null));
         } else {
-          setPercentDefault(config.percentDefault || null);
+        setPercentDefault(config.percentDefault || null);
         }
         setDurationFormat(config.durationFormat || 'h:mm');
         // For duration: check defaultValue first (where it's saved), then fallback to durationDefault
         if (fieldType === 'duration') {
           setDurationDefault(config.defaultValue !== undefined && config.defaultValue !== null ? config.defaultValue : (config.durationDefault || 0));
         } else {
-          setDurationDefault(config.durationDefault || 0);
+        setDurationDefault(config.durationDefault || 0);
         }
         setCurrencyType(config.currencyType || 'USD');
         setCurrencyLocale(config.currencyLocale || 'en-US');
@@ -610,7 +610,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         if (fieldType === 'currency') {
           setCurrencyDefault(config.defaultValue !== undefined && config.defaultValue !== null ? config.defaultValue : (config.currencyDefault || null));
         } else {
-          setCurrencyDefault(config.currencyDefault || null);
+        setCurrencyDefault(config.currencyDefault || null);
         }
         setShowCurrencyDefault(false);
         // Initialize Links field configuration
@@ -1519,7 +1519,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             label: 'Check',
             checkedIcon: (
               <div className="w-4 h-4 rounded flex items-center justify-center bg-green-500 border-green-500">
-                <Check className="w-2.5 h-2.5 text-white" />
+                <Check className="w-2.5 h-2.5 text-primary" />
               </div>
             ),
             uncheckedIcon: (
@@ -1533,7 +1533,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             label: 'Circle',
             checkedIcon: (
               <div className="w-4 h-4 rounded-full flex items-center justify-center bg-green-500 border-green-500">
-                <Check className="w-2.5 h-2.5 text-white" />
+                <Check className="w-2.5 h-2.5 text-primary" />
               </div>
             ),
             uncheckedIcon: (
@@ -1650,7 +1650,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 <div className="relative icon-dropdown">
                   <button
                     type="button"
-                    className="w-full px-3 py-2 border rounded-lg text-sm text-[var(--color-text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--ring-color-brand)] flex items-center justify-between"
+                    className="w-full px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] flex items-center justify-between"
                     onClick={() => setShowIconDropdown(v => !v)}
                   >
                     <div className="flex items-center gap-2">
@@ -1662,12 +1662,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                   </button>
 
                   {showIconDropdown && (
-                    <div className="absolute p-2 space-y-1 top-full left-0 right-0 mt-1 bg-[var(--color-alpha-white)] text-[var(--color-text-secondary)] border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                    <div className="absolute p-2 space-y-1 top-full left-0 right-0 mt-1 bg-[var(--color-alpha-white)] text-[var(--color-text-secondary)] border rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
                       {iconOptions.map((option) => (
                         <button
                           key={option.key}
                           type="button"
-                          className={`w-full px-3 py-2 rounded-lg text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${checkboxIcon === option.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
+                          className={`w-full px-3 py-2 rounded-xl text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${checkboxIcon === option.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
                             }`}
                           onClick={() => {
                             setCheckboxIcon(option.key);
@@ -1693,7 +1693,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 <div className="relative color-dropdown">
                   <button
                     type="button"
-                    className="w-full px-3 py-2 border rounded-lg text-sm text-[var(--color-text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--ring-color-brand)] flex items-center justify-between"
+                    className="w-full px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] flex items-center justify-between"
                     onClick={() => setShowColorDropdown(v => !v)}
                   >
                     <div className="flex items-center gap-2">
@@ -1709,7 +1709,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                         <button
                           key={color.key}
                           type="button"
-                          className={`w-full px-3 py-2 rounded-lg text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${checkboxColor === color.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
+                          className={`w-full px-3 py-2 rounded-xl text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${checkboxColor === color.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
                             }`}
                           onClick={() => {
                             setCheckboxColor(color.key);
@@ -1735,8 +1735,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className={`px-3 py-2 border rounded-lg text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${checkboxDefault
-                    ? 'border-[var(--ring-color-brand)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
+                  className={`px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${checkboxDefault
+                    ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
                     : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'
                     }`}
                   onClick={() => setCheckboxDefault(true)}
@@ -1746,8 +1746,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 </button>
                 <button
                   type="button"
-                  className={`px-3 py-2 border rounded-lg text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${!checkboxDefault
-                    ? 'border-[var(--ring-color-brand)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
+                  className={`px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${!checkboxDefault
+                    ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
                     : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'
                     }`}
                   onClick={() => setCheckboxDefault(false)}
@@ -1782,7 +1782,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Options</div>
             <div className="flex gap-2 mb-3">
               <input
-                className="flex-1 px-3 py-2 border border-[var(--color-gray-300)] bg-[var(--color-alpha-white)] text-[var(--color-gray-900)] rounded-lg text-sm outline-none field-component-focus"
+                className="flex-1 px-3 py-2 border border-[var(--color-gray-300)] bg-[var(--color-alpha-white)] text-[var(--color-gray-900)] rounded-xl text-sm outline-none field-component-focus"
                 placeholder="Add option"
                 value={newOption}
                 onChange={e => {
@@ -1811,7 +1811,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 type="color"
                 value={color || '#cccccc'}
                 onChange={(e) => setColor(e.target.value)}
-                className="flex-shrink-0 inline-flex items-center justify-center px-2 h-9 border border-[var(--color-gray-300)] text-[var(--color-text-tertiary)] rounded-lg hover:bg-[var(--color-hover-bg)] focus:outline-none focus:ring-1 focus:ring-[var(--ring-color-brand)]"
+                className="flex-shrink-0 inline-flex items-center justify-center px-2 h-9 border border-[var(--color-gray-300)] text-[var(--color-text-tertiary)] rounded-xl hover:bg-[var(--color-hover-bg)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]"
                 style={{ cursor: 'pointer' }}
               /> */}
               <button
@@ -1843,9 +1843,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             {selectOptions.length > 0 &&
               <>
                 <span className='text-primary'>Select Default Value</span>
-                <div className="flex flex-col gap-1 my-2 max-w-full border border-primary rounded-lg p-2 group max-h-48 overflow-auto">
+                <div className="flex flex-col gap-1 my-2 max-w-full border border-primary rounded-xl p-2 group max-h-48 overflow-auto">
                   {selectOptions.map((opt, idx) => (
-                    <div key={idx} className="relative flex items-center gap-2 min-w-0 hover:bg-[var(--color-hover-bg)] rounded-lg px-1">
+                    <div key={idx} className="relative flex items-center gap-2 min-w-0 hover:bg-[var(--color-hover-bg)] rounded-xl px-1">
                       <input
                         type="checkbox"
                         checked={multiDefault.includes(opt.option)}
@@ -1873,7 +1873,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       {editingOptionIndex === idx ? (
                         <input
                           ref={editInputRef}
-                          className='flex-1 px-2 py-2.5 rounded-lg text-[var(--color-text-secondary)] border border-[var(--color-gray-300)] text-xs min-w-0 focus:outline-none focus:ring-1 focus:ring-[var(--ring-color-brand)]'
+                          className='flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] border border-[var(--color-gray-300)] text-xs min-w-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]'
                           value={editingOptionValue}
                           onChange={(e) => setEditingOptionValue(e.target.value)}
                           onBlur={() => {
@@ -1903,7 +1903,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                         />
                       ) : (
                         <span
-                          className="flex-1 px-2 py-2.5 rounded-lg text-[var(--color-text-secondary)] text-xs truncate min-w-0 cursor-pointer"
+                          className="flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] text-xs truncate min-w-0 cursor-pointer"
                           onClick={() => {
                             setEditingOptionIndex(idx);
                             setEditingOptionValue(opt.option);
@@ -1964,7 +1964,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
           <>
             <div className="flex gap-2 mb-3 w-full">
               <input
-                className="flex-1 px-3 py-2 border border-[var(--color-gray-300)] bg-[var(--color-alpha-white)] text-[var(--color-gray-900)] rounded-lg text-sm outline-none field-component-focus"
+                className="flex-1 px-3 py-2 border border-[var(--color-gray-300)] bg-[var(--color-alpha-white)] text-[var(--color-gray-900)] rounded-xl text-sm outline-none field-component-focus"
                 placeholder="Add option"
                 value={newOption}
                 onChange={e => {
@@ -1993,7 +1993,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 type="color"
                 value={color || '#cccccc'}
                 onChange={(e) => setColor(e.target.value)}
-                className="flex-shrink-0 inline-flex items-center justify-center px-2 h-9 border border-[var(--color-gray-300)] text-[var(--color-text-tertiary)] rounded-lg hover:bg-[var(--color-hover-bg)] focus:outline-none focus:ring-1 focus:ring-[var(--ring-color-brand)]"
+                className="flex-shrink-0 inline-flex items-center justify-center px-2 h-9 border border-[var(--color-gray-300)] text-[var(--color-text-tertiary)] rounded-xl hover:bg-[var(--color-hover-bg)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]"
                 style={{ cursor: 'pointer' }}
               /> */}
 
@@ -2026,9 +2026,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             {selectOptions.length > 0 &&
               <>
                 <div className="m-2 text-sm font-medium text-[var(--color-text-tertiary)]">Select Default value</div>
-                <div className="flex flex-col gap-1 mb-2 max-w-full border border-primary rounded-lg p-2 group max-h-48 overflow-auto">
+                <div className="flex flex-col gap-1 mb-2 max-w-full border border-primary rounded-xl p-2 group max-h-48 overflow-auto">
                   {selectOptions.map((opt, idx) => (
-                    <div key={idx} className="relative flex items-center gap-2 min-w-0 hover:bg-[var(--color-hover-bg)] rounded-lg px-1">
+                    <div key={idx} className="relative flex items-center gap-2 min-w-0 hover:bg-[var(--color-hover-bg)] rounded-xl px-1">
                       <label key={idx} className="inline-flex items-center gap-1 text-[var(--color-gray-700)] cursor-pointer max-w-[200px] min-w-0">
                         <input
                           type="radio"
@@ -2053,7 +2053,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       {editingOptionIndex === idx ? (
                         <input
                           ref={editInputRef}
-                          className='flex-1 px-2 py-2.5 rounded-lg text-[var(--color-text-secondary)] border border-[var(--color-gray-300)] text-xs min-w-0 focus:outline-none focus:ring-1 focus:ring-[var(--ring-color-brand)]'
+                          className='flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] border border-[var(--color-gray-300)] text-xs min-w-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]'
                           value={editingOptionValue}
                           onChange={(e) => setEditingOptionValue(e.target.value)}
                           onBlur={() => {
@@ -2083,7 +2083,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                         />
                       ) : (
                         <span
-                          className="flex-1 px-2 py-2.5 rounded-lg text-[var(--color-text-secondary)] text-xs truncate min-w-0 cursor-pointer"
+                          className="flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] text-xs truncate min-w-0 cursor-pointer"
                           onClick={() => {
                             setEditingOptionIndex(idx);
                             setEditingOptionValue(opt.option);
@@ -2256,8 +2256,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               <div>
                 <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Time Display</div>
                 <div className="grid grid-cols-2 gap-4 mb-2">
-                  <label className={`flex items-center px-3 py-2 border rounded-lg text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '12' ?
-                    'border-[var(--ring-color-brand)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
+                  <label className={`flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '12' ?
+                    'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
                     <input
                       type="radio"
                       className="hidden"
@@ -2266,8 +2266,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     />
                     12 Hrs
                   </label>
-                  <label className={`flex items-center px-3 py-2 border rounded-lg text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '24' ?
-                    'border-[var(--ring-color-brand)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
+                  <label className={`flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '24' ?
+                    'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
                     <input
                       type="radio"
                       className="hidden"
@@ -2344,7 +2344,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     className="sr-only peer"
                   />
                   <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                  <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+                  <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
                 </label>
                 <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Accept only valid phone numbers</span>
               </div>
@@ -2412,7 +2412,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
               </label>
               <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Email validation</span>
             </div>
@@ -2483,7 +2483,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
               </label>
               <span className="text-sm font-medium text-[var(--color-text-tertiary)]">URL validation</span>
             </div>
@@ -2500,7 +2500,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     className="sr-only peer"
                   />
                   <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                  <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+                  <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
                 </label>
                 <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Show link icon</span>
               </div>
@@ -2577,7 +2577,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
               </label>
               <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Display as progress</span>
             </div>
@@ -2653,14 +2653,14 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 />
               </div>
               <div className='flex-1'>
-                <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Currency Code</div>
-                <AdvancedDropdown
-                  options={currencyOptions}
-                  value={currencyType}
-                  onChange={(val) => setCurrencyType(val as string)}
-                  placeholder="Select Currency"
+              <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Currency Code</div>
+              <AdvancedDropdown
+                options={currencyOptions}
+                value={currencyType}
+                onChange={(val) => setCurrencyType(val as string)}
+                placeholder="Select Currency"
                   searchable={true}
-                />
+              />
               </div>
             </div>
             <div className="mb-4 text-xs text-gray-600">
@@ -2805,7 +2805,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             className: "w-5 h-5",
             fill: isFilled ? "currentColor" : "none",
           };
-
+          
           const iconMap: Record<string, React.ReactNode> = {
             star: <Star {...iconProps} />,
             heart: <Heart {...iconProps} />,
@@ -2851,7 +2851,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                         <button
                           key={option.key}
                           type="button"
-                          className={`w-full px-3 py-2 text-left rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${ratingIcon === option.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
+                          className={`w-full px-3 py-2 text-left rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${ratingIcon === option.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
                           onClick={() => {
                             setRatingIcon(option.key);
                             setShowRatingIconDropdown(false);
@@ -2891,7 +2891,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                         <button
                           key={color.key}
                           type="button"
-                          className={`w-full px-3 py-2 text-left rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${ratingColor === color.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
+                          className={`w-full px-3 py-2 text-left rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${ratingColor === color.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
                             }`}
                           onClick={() => {
                             setRatingColor(color.key);
@@ -2930,7 +2930,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               </button>
 
               {showRatingDefault && (
-                <div
+                <div 
                   className="flex items-center gap-2"
                   onMouseLeave={() => setRatingDefaultHover(null)}
                 >
@@ -3039,8 +3039,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             <div className="mb-3">
               <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Time Display</label>
               <div className="flex items-center gap-2">
-                <label className={`flex items-center px-3 py-1.5 border rounded-lg text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '12'
-                  ? 'border-[var(--ring-color-brand)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
+                <label className={`flex items-center px-3 py-1.5 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '12'
+                  ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
                   <input
                     type="radio"
                     className="hidden"
@@ -3049,8 +3049,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                   />
                   12 Hrs
                 </label>
-                <label className={`flex items-center px-3 py-1.5 border rounded-lg text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '24' ?
-                  'border-[var(--ring-color-brand)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
+                <label className={`flex items-center px-3 py-1.5 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '24' ?
+                  'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
                   <input
                     type="radio"
                     className="hidden"
@@ -3074,7 +3074,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       className="sr-only peer"
                     />
                     <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                    <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+                    <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
                   </div>
                   <span className="text-sm text-[var(--color-text-tertiary)]">Display time zone</span>
                 </label>
@@ -3088,7 +3088,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       className="sr-only peer"
                     />
                     <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                    <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+                    <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
                   </div>
                   <span className="text-sm text-[var(--color-text-tertiary)]">Use same timezone for all members</span>
                 </label>
@@ -3179,7 +3179,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
               </label>
               <span className="text-sm text-gray-600">When enabled, users can select multiple users</span>
             </div>
@@ -3258,7 +3258,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Relation Type</span>
                 </div>
-                <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-md p-2 mb-2">
+                <div className="text-xs text-gray-500 bg-gray-50 border border rounded-md p-2 mb-2">
                   <span className="font-medium text-gray-700">What is a Link?</span> A link creates a relationship between tables to reference related records.
                   Example: link "Orders" to "Customers" to see which customer placed each order.
                 </div>
@@ -3267,12 +3267,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 <button
                   type="button"
                   disabled={isLinksFieldEditing}
-                  className={`p-3 rounded-lg border-2 transition-all ${isLinksFieldEditing
+                  className={`p-3 rounded-xl border-2 transition-all ${isLinksFieldEditing
                     ? 'opacity-50 cursor-not-allowed'
                     : 'hover:bg-gray-50'
                     } ${relationType === 'one-to-one'
-                      ? 'text-[var(--color-text-primary)] rounded-lg border-[var(--color-border-brand)]'
-                      : 'text-[var(--color-text-primary)] border'
+                      ? 'text-[var(--color-text-primary)] rounded-xl border-[var(--color-border-brand)]'
+                    : 'text-[var(--color-text-primary)] border'
                     }`}
                   onClick={() => !isLinksFieldEditing && setRelationType('one-to-one')}
                   title="Each record in this table links to exactly one record in the target table, and vice versa"
@@ -3294,12 +3294,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 <button
                   type="button"
                   disabled={isLinksFieldEditing}
-                  className={`p-3 rounded-lg border-2 transition-all ${isLinksFieldEditing
+                  className={`p-3 rounded-xl border-2 transition-all ${isLinksFieldEditing
                     ? 'opacity-50 cursor-not-allowed'
                     : 'hover:bg-gray-50'
                     } ${relationType === 'has-many'
-                      ? 'text-[var(--color-text-primary)] rounded-lg border-[var(--color-border-brand)]'
-                      : 'text-[var(--color-text-primary)] border'
+                      ? 'text-[var(--color-text-primary)] rounded-xl border-[var(--color-border-brand)]'
+                    : 'text-[var(--color-text-primary)] border'
                     }`}
                   onClick={() => !isLinksFieldEditing && setRelationType('has-many')}
                   title="Each record in this table can link to multiple records in the target table"
@@ -3327,12 +3327,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 <button
                   type="button"
                   disabled={isLinksFieldEditing}
-                  className={`p-3 rounded-lg border-2 transition-all ${isLinksFieldEditing
+                  className={`p-3 rounded-xl border-2 transition-all ${isLinksFieldEditing
                     ? 'opacity-50 cursor-not-allowed'
                     : 'hover:bg-gray-50'
                     } ${relationType === 'many-to-many'
-                      ? 'text-[var(--color-text-primary)] rounded-lg border-[var(--color-border-brand)]'
-                      : 'text-[var(--color-text-primary)] border'
+                      ? 'text-[var(--color-text-primary)] rounded-xl border-[var(--color-border-brand)]'
+                    : 'text-[var(--color-text-primary)] border'
                     }`}
                   onClick={() => !isLinksFieldEditing && setRelationType('many-to-many')}
                   title="Records in both tables can link to multiple records in the other table"
@@ -3369,9 +3369,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 value={selectedTableId}
                 onChange={(value) => {
                   if (!isLinksFieldEditing) {
-                    setSelectedTableId(value as string);
-                    const table = Array.isArray(tables) ? tables.find(t => t.id === value) : null;
-                    setSelectedTable(table);
+                  setSelectedTableId(value as string);
+                  const table = Array.isArray(tables) ? tables.find(t => t.id === value) : null;
+                  setSelectedTable(table);
                   }
                 }}
                 placeholder="Select table to link"
@@ -3471,7 +3471,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             </div>
 
             {selectedRelationId && selectedLookupColumnId && (
-              <div className="mb-4 p-3 bg-gray-50 border rounded-lg">
+              <div className="mb-4 p-3 bg-gray-50 border rounded-xl">
                 <div className="text-sm text-secondary">
                   This field will display the <span className="font-semibold">{targetTableFields.find(f => f.id === selectedLookupColumnId)?.title || selectedLookupColumnId} </span>
                   from the linked record via <span className="font-semibold">{linkFields.find(f => f.id === selectedRelationId)?.title || selectedRelationId}</span>
@@ -3661,33 +3661,33 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       case 'formula':
         return (
           <>
-            <Formula
-              label="Formula"
-              value={formulaText}
-              config={{
-                formula: formulaText,
-                formatting: {
-                  type: formulaFormatting.type,
-                  precision: formulaFormatting.precision,
-                  currency: formulaFormatting.currency,
-                  dateFormat: formulaFormatting.dateFormat
-                }
-              }}
-              columns={fields.map(field => ({
-                id: field.id,
-                name: field.title || field.column_name || field.key,
+              <Formula
+                label="Formula"
+                value={formulaText}
+                config={{
+                  formula: formulaText,
+                  formatting: {
+                    type: formulaFormatting.type,
+                    precision: formulaFormatting.precision,
+                    currency: formulaFormatting.currency,
+                    dateFormat: formulaFormatting.dateFormat
+                  }
+                }}
+                columns={fields.map(field => ({
+                  id: field.id,
+                  name: field.title || field.column_name || field.key,
                 title: field.title || field.column_name || field.key,
                 column_name: field.column_name,
                 key: field.key || field.column_name,
                 type: field.type || field.uidt,
                 system: field.system || field.isSystem
-              }))}
-              onFormulaChange={(formula) => setFormulaText(formula)}
+                }))}
+                onFormulaChange={(formula) => setFormulaText(formula)}
               onErrorChange={(error) => setFormulaError(error)}
-              isBorder={true}
-              allowEdit={true}
+                isBorder={true}
+                allowEdit={true}
               helperText="Use {FieldName} to reference other fields."
-            />
+              />
             <div className="relative mt-3">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3" onClick={() => setShowDescription(v => !v)}>
                 <Plus className="w-4 h-4" />
@@ -3728,7 +3728,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       {/* {isAddNewField && (
         <div className="absolute bg-modal" onClick={onClose} />
       )} */}
-      <div className={`relative bg-[var(--color-alpha-white)] min-h-[400px] max-h-[max(70vh,400px)] ${selectedType?.key === 'formula' ? 'w-[500px]' : 'w-[416px]'}  shadow-lg shadow-gray-300 border rounded-lg p-3.5 flex flex-col overflow-hidden`} >
+      <div className={`relative bg-[var(--color-alpha-white)] min-h-[400px] max-h-[max(70vh,400px)] ${selectedType?.key === 'formula' ? 'w-[500px]' : 'w-[416px]'}  shadow-lg shadow-gray-300 border rounded-xl p-3.5 flex flex-col overflow-hidden`} >
         <div className="flex items-center mb-4">
           <span className="text-lg font-semibold text-gray-900 flex-1">
             {initialValues ? 'Edit Field' : 'New Field'}
@@ -3743,7 +3743,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             <>
               <input
                 ref={fieldNameInputRef}
-                className={`w-full px-3 py-2 bg-[var(--color-alpha-white)] border border-[var(--border-color-primary)] rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[var(--ring-color-brand)] text-[var(--text-color-primary)] placeholder:text-[var(--text-color-placeholder)] ${!nameError ? "mb-2" : ""}`}
+                className={`w-full px-3 py-2 bg-[var(--color-alpha-white)] border border-[var(--color-border-primary)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-[var(--text-color-primary)] placeholder:text-[var(--color-text-placeholder)] ${!nameError ? "mb-2" : ""}`}
                 placeholder="Enter Field name"
                 value={fieldName}
                 // onChange={e => setFieldName(e.target.value)}
@@ -3762,7 +3762,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     <Search className="w-4 h-4" />
                   </span>
                   <input
-                    className="w-full pl-10 pr-3 py-2 text-sm text-[var(--text-color-primary)] border border-b-0 border-[var(--border-color-primary)] rounded-tl-lg rounded-tr-lg focus:outline-none bg-[var(--color-alpha-white)]"
+                    className="w-full pl-10 pr-3 py-2 text-sm text-[var(--text-color-primary)] border border-b-0 border-[var(--color-border-primary)] rounded-tl-lg rounded-tr-lg focus:outline-none bg-[var(--color-alpha-white)]"
                     placeholder="Search field type"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
@@ -3772,21 +3772,21 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               {/* Scrollable area for filtered types */}
               {filteredTypes.length > 0 && (
                 <div className={`max-h-[230px] p-2 space-y-1 overflow-y-auto rounded-bl-lg rounded-br-lg border bg-[var(--color-alpha-white)] text-[var(--text-color-tertiary)]`}>
-                  {filteredTypes.map((type: FieldType) => (
-                    <button
-                      key={type.key}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors ${selectedType?.key === type.key ? 'bg-blue-100' : ''}`}
-                      onClick={() => handleTypeSelect(type)}
-                      style={{ fontWeight: 500, fontSize: 14 }}
-                    >
-                      {(() => {
-                        const IconComponent = type.icon;
-                        return <IconComponent className="w-4 h-4 text-gray-400" />;
-                      })()}
-                      <span className="text-xs">{type.label}</span>
-                    </button>
-                  ))}
-                </div>
+                {filteredTypes.map((type: FieldType) => (
+                  <button
+                    key={type.key}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors ${selectedType?.key === type.key ? 'bg-blue-100' : ''}`}
+                    onClick={() => handleTypeSelect(type)}
+                    style={{ fontWeight: 500, fontSize: 14 }}
+                  >
+                    {(() => {
+                      const IconComponent = type.icon;
+                      return <IconComponent className="w-4 h-4 text-gray-400" />;
+                    })()}
+                    <span className="text-xs">{type.label}</span>
+                  </button>
+                ))}
+              </div>
               )}
             </>
           )}
@@ -3795,7 +3795,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             <>
               <input
                 ref={fieldNameInputRef}
-                className={`w-full px-3 py-2 bg-[var(--color-alpha-white)] border border-[var(--border-color-primary)] rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[var(--ring-color-brand)] text-[var(--text-color-primary)] placeholder:text-[var(--text-color-placeholder)] ${!nameError ? "mb-2" : ""}`}
+                className={`w-full px-3 py-2 bg-[var(--color-alpha-white)] border border-[var(--color-border-primary)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-[var(--text-color-primary)] placeholder:text-[var(--color-text-placeholder)] ${!nameError ? "mb-2" : ""}`}
                 placeholder="Enter Field name"
                 value={fieldName}
                 onChange={e => {

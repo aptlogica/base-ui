@@ -42,6 +42,7 @@ export const Checkbox: React.FC<CheckboxProps> = ({
   onChange,
   label,
   disabled = false,
+  readOnly = false,
   icon = 'check',
   color = 'green',
   config = {}
@@ -202,7 +203,7 @@ export const Checkbox: React.FC<CheckboxProps> = ({
   const displayValue = normalizeToBoolean(value);
 
   const handleClick = () => {
-    if (!disabled) {
+    if (!disabled && !readOnly) {
       onChange(!displayValue);
     }
   };
@@ -212,9 +213,9 @@ export const Checkbox: React.FC<CheckboxProps> = ({
       <button
         type="button"
         onClick={handleClick}
-        disabled={disabled}
+        disabled={disabled || readOnly}
         className={`flex items-center justify-center transition-all ${
-          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+          disabled || readOnly ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
         }`}
       >
         {renderIcon()}

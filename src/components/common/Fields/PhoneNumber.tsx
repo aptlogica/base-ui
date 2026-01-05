@@ -12,7 +12,8 @@ interface PhoneNumberProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean;
+  allowEdit?: boolean; // true = single click, false = double click
+  readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;
   config?: {
@@ -37,6 +38,7 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
   config = {},
@@ -62,6 +64,13 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
       prevValueRef.current = value;
     }
   }, [value]);
+
+  // Exit edit mode if readOnly becomes true
+  useEffect(() => {
+    if (readOnly && isEditing) {
+      setIsEditing(false);
+    }
+  }, [readOnly, isEditing]);
 
   const validatePhone = (phone: string) => {
     const phoneStr = String(phone ?? "");
@@ -101,9 +110,11 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
     return phoneStr;
   };
 
+  // allowEdit controls single vs double-click behavior
+  // readOnly completely prevents editing
   const handleClick = useClickHandler(
-    () => allowEdit && !disabled && setIsEditing(true),
-    () => !allowEdit && !disabled && setIsEditing(true)
+    () => !readOnly && allowEdit && !disabled && setIsEditing(true), // Single click when allowEdit=true
+    () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // Double click when allowEdit=false
   );
 
   return (
@@ -119,7 +130,8 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
       {/* Input or Display */}
       <div
         className={`relative ${className} ${isBorder ? "field-component-border" : ""}`}
-        onClick={handleClick}
+        onClick={!readOnly ? handleClick : undefined}
+        style={readOnly ? { cursor: 'default' } : undefined}
       >
         {isEditing ? (
           <input
@@ -145,16 +157,16 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
             }}
             autoFocus
             placeholder={configPlaceholder}
-            disabled={disabled}
+            disabled={disabled || readOnly}
             className={`field-component ${isBorder ? "field-component-focus" : ""} ${
               error ? "border-red-500 bg-red-50" : "border-gray-300"
-            } ${disabled ? "cursor-not-allowed" : ""}`}
+            } ${disabled || readOnly ? "cursor-not-allowed" : ""}`}
           />
         ) : (
           <div
             className={`field-component ${
               localValue ? "text-gray-800" : "text-gray-400"
-            } ${disabled ? "text-gray-400 cursor-not-allowed" : ""} max-w-full overflow-hidden`}
+            } ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""} max-w-full overflow-hidden`}
             style={{ textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
             {formatDisplay ? formatPhoneNumber(localValue) : localValue || configPlaceholder}

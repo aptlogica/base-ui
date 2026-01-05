@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams, Outlet, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTable, useWorkspaceBases, useBaseTables, useBaseById } from './hooks/useApi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useWorkspaces } from './hooks/useApi';
@@ -8,33 +8,26 @@ import { PrivateRoute } from './auth/PrivateRoute';
 import { RoleBasedRoute } from './auth/RoleBasedRoute';
 import { AccessLevelRoute } from './auth/AccessLevelRoute';
 import { PluginFrameworkProvider } from './core/PluginFrameworkContext';
-import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { AnnouncementBar, AnnouncementBarProps } from './components/AnnouncementBar';
 import { NavigationRecovery } from './components/ZustandNavigationRecovery';
 import { NavigationResolver } from './components/NavigationResolver';
 import { initializeClientToken } from './service/clientService';
-import { ViewType } from './types/viewTypes';
 import { useExtensions } from './core/PluginFrameworkContext';
 import { registerPlugin } from './core/PluginRegistry';
-import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import LoginPage from './pages/LoginPage';
-import RegistrationPage from './pages/RegistrationPage';
-import RegisterValidation from './pages/RegisterValidation';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-import OAuthCallbackPage from './pages/OAuthCallbackPage';
-import SettingsPageRoute from './pages/SettingsPage';
 import { usePluginStore } from './stores/pluginStore';
 import { ExtensionPoint } from './core/ExtensionPoint';
 import { ToastProvider } from './components/common/Toast';
-import SidebarFlyoutMenu from './plugins/WorkspacePlugin/components/refactored/SidebarFlyoutMenu';
+import Sidebar from './components/layout/sidebar/Sidebar';
 import { Loader } from './components/ui/Loader';
-import { useQueryClient } from '@tanstack/react-query';
 import AdministratorPage from './pages/AdministratorPage';
 import WorkspaceSettingsPage from './pages/WorkspaceSettingsPage';
-import {useNavigationStore} from './stores/navigationStore';
+import NotFoundPage from './pages/NotFoundPage';
 import { useClientHeaders } from './hooks/useClientHeaders';
+import { RouteContextProvider } from './contexts/RouteContext';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -46,16 +39,18 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
-      retry: (failureCount, error: any) => {
-        if (error?.message?.includes('Token expired') || error?.response?.status === 401 || error?.response?.status === 403) {
+      retry: (failureCount, error: unknown) => {
+        const err = error as { message?: string; response?: { status?: number } };
+        if (err?.message?.includes('Token expired') || err?.response?.status === 401 || err?.response?.status === 403) {
           return false;
         }
         return failureCount < 1;
       },
     },
     mutations: {
-      retry: (failureCount, error: any) => {
-        if (error?.message?.includes('Token expired') || error?.response?.status === 401 || error?.response?.status === 403) {
+      retry: (failureCount, error: unknown) => {
+        const err = error as { message?: string; response?: { status?: number } };
+        if (err?.message?.includes('Token expired') || err?.response?.status === 401 || err?.response?.status === 403) {
           return false;
         }
         return failureCount < 1;
@@ -64,24 +59,24 @@ const queryClient = new QueryClient({
   },
 });
 
-// Add this at the top for TypeScript compatibility with import.meta.glob
-// @ts-ignore
-interface ImportMeta {
-  glob: (pattern: string) => Record<string, () => Promise<any>>;
+// TypeScript compatibility with import.meta.glob
+declare global {
+  interface ImportMeta {
+    glob: (pattern: string) => Record<string, () => Promise<{ default: unknown }>>;
+  }
 }
 
 const Layout = () => {
-  const { saving, logout } = useAuth();
-  const { flyoutOpen, flyoutMode, flyoutWidth, setFlyoutMode, isTransitioning, selectedWorkspace } = usePluginStore();
-  const navigate = useNavigate();
-  
+  const { saving } = useAuth();
+  const { flyoutOpen, flyoutMode, flyoutWidth, setFlyoutMode, selectedWorkspace, openFlyout, closeFlyout, currentPlugin } = usePluginStore();
+  const location = useLocation();
+
   // Update client headers when workspace/base changes
   useClientHeaders();
 
-  // Track sidebar position, width, and visibility from workspace config
+  // Track sidebar position and width from workspace config (for flyout menu)
   const [sidebarPosition, setSidebarPosition] = useState('left');
   const [sidebarWidth, setSidebarWidth] = useState(56);
-  const [showSidebar, setShowSidebar] = useState(true);
 
   // Force layout mode only (disable floating mode entirely)
   useEffect(() => {
@@ -92,55 +87,45 @@ const Layout = () => {
 
   useEffect(() => {
     const getSidebarConfig = () => {
-      const config = (window as any).__workspaceConfig || {};
+      const config = (window as Window & { __workspaceConfig?: { sidebarPosition?: string; sidebarWidth?: number } }).__workspaceConfig || {};
       return {
         position: config.sidebarPosition || 'left',
         width: config.sidebarWidth || 50,
-        show: config.showSidebar !== false,
       };
     };
     const updateSidebar = () => {
-      const { position, width, show } = getSidebarConfig();
+      const { position, width } = getSidebarConfig();
       setSidebarPosition(position);
       setSidebarWidth(width);
-      setShowSidebar(show);
     };
     updateSidebar();
     window.addEventListener('workspace-config-changed', updateSidebar);
     return () => window.removeEventListener('workspace-config-changed', updateSidebar);
   }, []);
 
-  // Layout: sidebar on left or right, with dynamic width and visibility
+  // Auto-open flyout menu when on base/table/view routes
+  useEffect(() => {
+    const isBaseRoute = location.pathname.startsWith('/base/');
+
+    if (isBaseRoute) {
+      // Auto-open flyout menu for workspace navigation
+      if (!flyoutOpen || currentPlugin !== 'workspace-flyout-menu') {
+        openFlyout('workspace-flyout-menu');
+      }
+    } else {
+      // Close flyout on homepage and other routes
+      if (flyoutOpen && currentPlugin === 'workspace-flyout-menu') {
+        closeFlyout();
+      }
+    }
+  }, [location.pathname, flyoutOpen, currentPlugin, openFlyout, closeFlyout]);
+
+  // Layout: header on top, then sidebar on left and view on right
   return (
-    <div className="min-h-screen w-screen h-screen flex bg-background">
-      {showSidebar && sidebarPosition === 'left' && (
-        <>
-          <aside
-            style={{ width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
-            className="sidebar-flyout-bg border-r flex-shrink-0 shadow-sm"
-          >
-            <ExtensionPoint id="layout:sidebar" />
-          </aside>
-
-          {/* Layout-Integrated Flyout Menu - Left Side */}
-          {flyoutMode === 'layout' && flyoutOpen && (
-            <aside
-              style={{ width: flyoutWidth, minWidth: flyoutWidth, maxWidth: flyoutWidth }}
-              className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner"
-            >
-              <SidebarFlyoutMenu
-                sidebarPosition={sidebarPosition}
-                sidebarWidth={sidebarWidth}
-                selectedWorkspace={selectedWorkspace}
-              />
-            </aside>
-          )}
-        </>
-      )}
-
-      <div className="flex-1 flex flex-col min-h-0 overflow-auto">
-        {/* header */}
-        <header className="flex items-center justify-between bg-card border-b border-primary shadow-sm">
+    <RouteContextProvider>
+      <div className="min-h-screen w-screen h-screen flex flex-col bg-background">
+        {/* Header - full width at top */}
+        <header className="flex items-center justify-between bg-card px-6 py-2 border-b shadow-sm flex-shrink-0">
           <div className="flex items-center gap-2">
             <ExtensionPoint id="layout:header-left" />
           </div>
@@ -155,23 +140,16 @@ const Layout = () => {
             {/* <SettingsButton /> */}
           </div>
         </header>
-        {/* main content */}
-        <main className="flex-1 p-0 overflow-y-auto bg-main text-text">
-          <Outlet />
-        </main>
-        {/* overlays */}
-        <ExtensionPoint id="layout:overlay" />
-      </div>
 
-      {showSidebar && sidebarPosition === 'right' && (
-        <>
-          {/* Layout-Integrated Flyout Menu - Right Side */}
-          {flyoutMode === 'layout' && flyoutOpen && (
+        {/* Below header: Sidebar on left, View on right */}
+        <div className="flex-1 flex min-h-0 overflow-hidden">
+          {/* Layout-Integrated Flyout Menu - Left Side */}
+          {sidebarPosition === 'left' && flyoutMode === 'layout' && flyoutOpen && (
             <aside
               style={{ width: flyoutWidth, minWidth: flyoutWidth, maxWidth: flyoutWidth }}
-              className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner"
+              className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner overflow-y-auto"
             >
-              <SidebarFlyoutMenu
+              <Sidebar
                 sidebarPosition={sidebarPosition}
                 sidebarWidth={sidebarWidth}
                 selectedWorkspace={selectedWorkspace}
@@ -179,17 +157,32 @@ const Layout = () => {
             </aside>
           )}
 
-          <aside
-            style={{ width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
-            className="sidebar-flyout-bg border-l flex-shrink-0 order-last shadow-sm"
-          >
-            <ExtensionPoint id="layout:sidebar" />
-          </aside>
-        </>
-      )}
+          {/* Main content area */}
+          <main className="flex-1 p-0 overflow-y-auto bg-main text-text min-w-0">
+            <Outlet />
+          </main>
 
-      {/* Floating mode disabled intentionally */}
-    </div>
+          {/* Layout-Integrated Flyout Menu - Right Side */}
+          {sidebarPosition === 'right' && flyoutMode === 'layout' && flyoutOpen && (
+            <aside
+              style={{ width: flyoutWidth, minWidth: flyoutWidth, maxWidth: flyoutWidth }}
+              className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner overflow-y-auto"
+            >
+              <Sidebar
+                sidebarPosition={sidebarPosition}
+                sidebarWidth={sidebarWidth}
+                selectedWorkspace={selectedWorkspace}
+              />
+            </aside>
+          )}
+        </div>
+
+        {/* Overlays */}
+        <ExtensionPoint id="layout:overlay" />
+
+        {/* Floating mode disabled intentionally */}
+      </div>
+    </RouteContextProvider>
   );
 };
 
@@ -198,14 +191,23 @@ const TableViewRouteWrapper: React.FC = () => {
   const { baseId, tableId, viewId } = useParams();
 
   if (!tableId) {
-    console.log('❌ TableViewRouteWrapper: Table ID is required');
+    console.error('❌ TableViewRouteWrapper: Table ID is required');
     return <div className="p-8 text-red-600">Table ID is required</div>;
   }
 
   // Centralized table fetch so only one plugin renders and we can determine view type
-  const { data: response, isLoading, error, refetch } = useTable(tableId, { pageNumber: 1, pageLimit: 30 });
+  // PAGINATION DISABLED - Uncomment below to re-enable pagination (30 records per page)
+  // const { data: response, isLoading, error, refetch } = useTable(tableId, { pageNumber: 1, pageLimit: 30 });
+  // PERFORMANCE: Use cached data immediately if available (placeholderData handles this)
+  const { data: response, isLoading, error, refetch } = useTable(tableId); // No pagination - fetches all records
 
-  if (isLoading) {
+  // Only show loader on initial load (no cached data)
+  // If we have cached data, show it immediately even if refetching
+  // This provides instant navigation between views when data is cached
+  const hasCachedData = response && typeof response === 'object' && 'data' in response;
+  const isInitialLoad = isLoading && !hasCachedData;
+
+  if (isInitialLoad) {
     return (
       <div className="h-full flex items-center justify-center">
         <Loader />
@@ -225,16 +227,16 @@ const TableViewRouteWrapper: React.FC = () => {
     );
   }
 
-  const tableResponse = response?.data;
-  const allViews: any[] = Array.isArray(tableResponse?.views) ? tableResponse.views : [];
-  const requestedView = allViews.find((v: any) => String(v.id) === String(viewId));
+  const tableResponse = response && typeof response === 'object' && 'data' in response ? (response as { data?: { views?: Array<{ id: string | number; type?: string }> } }).data : null;
+  const allViews = Array.isArray(tableResponse?.views) ? tableResponse.views : [];
+  const requestedView = allViews.find((v) => String(v.id) === String(viewId));
 
   // Support URL slugs like /grid, /kanban, etc. as view type selectors
   const slug = (viewId || '').toLowerCase();
   const knownTypeSlugs = ['grid', 'form', 'gallery', 'kanban', 'calendar', 'gantt'];
   const isTypeSlug = knownTypeSlugs.includes(slug);
   const typeMatchedView = isTypeSlug
-    ? allViews.find((v: any) => (String(v.type || '').toLowerCase() === slug))
+    ? allViews.find((v) => (String(v.type || '').toLowerCase() === slug))
     : undefined;
 
   // Determine effective viewType and view object passed to plugins
@@ -277,74 +279,93 @@ const TableViewRouteWrapper: React.FC = () => {
   );
 };
 
-const AppRoutes = ({ loading }: { loading: boolean }) => {
+const AppRoutes = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Listen for auth_token_expired event and navigate using React Router (prevents page refresh)
+  useEffect(() => {
+    const handleAuthTokenExpired = () => {
+      // Only navigate if we're not already on the login page
+      if (location.pathname !== '/login' && !location.pathname.startsWith('/login')) {
+        navigate('/login', { replace: true });
+      }
+    };
+
+    window.addEventListener('auth_token_expired', handleAuthTokenExpired);
+    return () => {
+      window.removeEventListener('auth_token_expired', handleAuthTokenExpired);
+    };
+  }, [navigate, location.pathname]);
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegistrationPage />} />
-      <Route path="/registervalidation" element={<RegisterValidation />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-      <Route path="/auth/callback" element={<OAuthCallbackPage />} />
       <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
-        <Route path="/" element={<Navigate to="/workspace" replace />} />
-        <Route path="/workspace" element={<ExtensionPoint id="page:workspace" />} />
-        {/* <Route path="/dashboard" element={<ExtensionPoint id="page:dashboard" />} /> */}
+        <Route path="/" element={<Navigate to="/homepage" replace />} />
+        <Route path="/homepage" element={<ExtensionPoint id="page:homepage" />} />
         <Route path="/projects" element={<ExtensionPoint id="page:projects" />} />
-        <Route path="/workspace/:workspaceId/settings" element={<SettingsPageRoute />} />
-        <Route 
-          path="/workspace/:workspaceId/administrator" 
+        <Route
+          path="/workspace/:workspaceId/administrator"
           element={
             <PrivateRoute>
               <AccessLevelRoute>
                 <AdministratorPage />
               </AccessLevelRoute>
             </PrivateRoute>
-          } 
+          }
         />
-        <Route 
-          path="/workspace/:workspaceId/workspace-settings" 
+        <Route
+          path="/workspace/:workspaceId/workspace-settings"
           element={
             <PrivateRoute>
               <WorkspaceSettingsPage />
             </PrivateRoute>
-          } 
+          }
         />
         {/* Add pluggable table view route with baseId (guarded) */}
         <Route path="/base/:baseId/table/:tableId/:viewId" element={<TableGuard><TableViewRouteWrapper /></TableGuard>} />
-        {/* Add workspace route for a specific base (guarded) */}
-        <Route path="/base/:baseId" element={<BaseGuard><ExtensionPoint id="page:workspace" /></BaseGuard>} />
+        {/* Base route redirects to homepage - base details are now on homepage */}
+        <Route path="/base/:baseId" element={<BaseGuard><Navigate to="/homepage" replace /></BaseGuard>} />
         {/* (Legacy) Old table view route for backward compatibility (guarded) */}
         <Route path="/table/:tableId/:viewId" element={<TableGuard><TableViewRouteWrapper /></TableGuard>} />
         {/* Administrator page */}
-        <Route 
-          path="/administrator" 
+        <Route
+          path="/administrator"
           element={
-            <RoleBasedRoute requiredRoles={['Admin']}>
+            <RoleBasedRoute requiredRoles={['owner']}>
               <PrivateRoute>
                 <AdministratorPage />
               </PrivateRoute>
             </RoleBasedRoute>
-          } 
+          }
         />
-        {/* Fallback: Use pluggable 404 page for unmatched routes */}
-        <Route path="*" element={<ExtensionPoint id="page:notfound" />} />
+        {/* Fallback: 404 page for unmatched routes */}
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
   );
 };
 
 //loads plugins from plugins.json dynamically loaded and registered at runtime
-const pluginModules = (import.meta as any).glob('./plugins/*/index.tsx');
+const pluginModules = import.meta.glob('./plugins/*/index.tsx');
 
-const loadEnabledPlugins = async () => {
-  const config = await import('./config/plugins.json');
+interface PluginConfig {
+  id: string;
+  path: string;
+  enabled?: boolean;
+}
+
+const loadEnabledPlugins = async (): Promise<unknown[]> => {
+  const config = await import('./config/plugins.json') as { plugins?: { builtin?: PluginConfig[] } };
   const builtin = config.plugins?.builtin || [];
-  const enabled = builtin.filter((p: any) => p.enabled);
+  const enabled = builtin.filter((p) => p.enabled);
   // Build a map of plugin id to expected path
   const idToPath: Record<string, string> = {};
-  enabled.forEach((p: any) => {
+  enabled.forEach((p) => {
     // Normalize path to match import.meta.glob keys
     let path = p.path;
     if (!path.startsWith('./')) path = './' + path;
@@ -353,7 +374,7 @@ const loadEnabledPlugins = async () => {
     idToPath[p.id] = path;
   });
   // Load plugins using import.meta.glob
-  const pluginPromises = enabled.map(async (p: any) => {
+  const pluginPromises = enabled.map(async (p) => {
     const importFn = pluginModules[idToPath[p.id]];
     if (!importFn) {
       console.error('Plugin not found:', idToPath[p.id]);
@@ -369,7 +390,11 @@ const loadEnabledPlugins = async () => {
   });
   const plugins = (await Promise.all(pluginPromises)).filter(Boolean);
   // Register each plugin so getRegisteredPlugins() works
-  plugins.forEach(registerPlugin);
+  plugins.forEach((plugin) => {
+    if (plugin) {
+      registerPlugin(plugin as Parameters<typeof registerPlugin>[0]);
+    }
+  });
   return plugins;
 };
 
@@ -389,7 +414,7 @@ const App: React.FC = () => {
       { label: "Remind me later", onClick: () => setAnnouncement(null) }
     ]
   });
-  const [plugins, setPlugins] = useState<any[]>([]);
+  const [plugins, setPlugins] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
 
@@ -423,7 +448,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <PluginFrameworkProvider plugins={plugins} defaultConfig={{}}>
+    <PluginFrameworkProvider plugins={plugins as Parameters<typeof PluginFrameworkProvider>[0]['plugins']} defaultConfig={{}}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <AuthProviderChooser>
@@ -432,7 +457,7 @@ const App: React.FC = () => {
               <WorkspacesGuard>
                 <NavigationResolver />
                 <NavigationRecovery />
-                <AppRoutes loading={loading} />
+                <AppRoutes />
               </WorkspacesGuard>
             </Router>
           </AuthProviderChooser>
@@ -447,19 +472,19 @@ export default App;
 // Guard that ensures workspaces are fetched once before rendering private routes
 const WorkspacesGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
-  const qc = useQueryClient();
-  
+
   // Public routes that don't need workspace data
-  const publicRoutes = ['/login', '/register', '/registervalidation', '/forgot-password', '/reset-password', '/auth/callback'];
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
   const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
-  
+
   // Only fetch workspaces if not on a public route
   const { isLoading, error } = useWorkspaces();
-  
+
   // Handle 401/403 errors by forcing logout
   React.useEffect(() => {
     if (error && !isPublicRoute) {
-      const errorStatus = (error as any)?.response?.status || (error as any)?.status;
+      const err = error as { response?: { status?: number }; status?: number };
+      const errorStatus = err?.response?.status || err?.status;
       if (errorStatus === 401 || errorStatus === 403) {
         // Import and call forceLogout
         import('./service/clientService').then(({ forceLogout }) => {
@@ -499,7 +524,10 @@ const BaseGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const params = useParams();
   const baseId = String(params.baseId || '');
   const { data: baseResp, isLoading: baseLoading } = useBaseById(baseId);
-  const workspaceId = (baseResp as any)?.data?.workspace_id || (baseResp as any)?.workspace_id;
+  const baseData = baseResp && typeof baseResp === 'object' && 'data' in baseResp 
+    ? (baseResp as { data?: { workspace_id?: string }; workspace_id?: string })
+    : null;
+  const workspaceId = baseData?.data?.workspace_id || (baseResp as { workspace_id?: string })?.workspace_id;
   const { isLoading: basesLoading } = useWorkspaceBases(String(workspaceId || ''));
 
   if (baseLoading || (workspaceId && basesLoading)) {
@@ -523,7 +551,7 @@ const TableGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   if (tablesLoading || tableLoading) {
     return (
       <div className="w-full h-[30vh] flex items-center justify-center">
-       <Loader size={10}/>
+        <Loader size={10} />
       </div>
     );
   }

@@ -18,6 +18,7 @@ interface TableRowProps {
   tableId?: string;
   displayRowNumber?: number; // Optional: override the displayed row number (for grouped rows)
   allColumns?: ColumnConfig[]; // All columns for formula field name mapping
+  canEdit?: boolean; // Permission to edit cells
 }
 
 export const TableRow: React.FC<TableRowProps> = ({
@@ -34,7 +35,8 @@ export const TableRow: React.FC<TableRowProps> = ({
   setActiveCell,
   tableId,
   displayRowNumber,
-  allColumns
+  allColumns,
+  canEdit = true
 }) => {
   // Memoize rowId to avoid recalculating on every render
   const rowId = useMemo(() => 
@@ -77,7 +79,7 @@ export const TableRow: React.FC<TableRowProps> = ({
 
   return (
     <div
-      className="group grid hover:bg-muted/30 transition-colors min-w-full"
+      className="group grid hover:bg-gray-100 transition-colors min-w-full"
       style={{ gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`, height: '40px', minHeight: '40px', maxHeight: '40px' }}
       onContextMenu={onContextMenu}
       onClick={() => setActiveCell?.(null)}
@@ -120,7 +122,7 @@ export const TableRow: React.FC<TableRowProps> = ({
               width={props.width}
               isLast={props.isLast}
               isSystemField={props.isSystemField}
-            allowEdit={true}
+            allowEdit={canEdit}
               currentRowId={props.currentRowId}
               rowData={row as any} // Pass entire row object for formula evaluation
               allColumns={allColumns || columns} // Pass all columns for formula field name mapping

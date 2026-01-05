@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Info, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { useClickHandler } from '../../../utils/helpers';
 
 interface URLProps {
@@ -11,7 +11,8 @@ interface URLProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean;
+  allowEdit?: boolean; // true = single click, false = double click
+  readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;
   config?: {
@@ -34,8 +35,8 @@ export const URL: React.FC<URLProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
-  icon = "",
   config = {}
 }) => {
   const { urlValid = false, defaultValue = '', openInNewTab = true, showIcon = true } = config;
@@ -52,11 +53,15 @@ export const URL: React.FC<URLProps> = ({
     setLocalValue(displayValue);
   }, [value, defaultValue]);
 
-  // console.log('value----->', value);
-  
+  // Exit edit mode if readOnly becomes true
+  useEffect(() => {
+    if (readOnly && isEditing) {
+      setIsEditing(false);
+    }
+  }, [readOnly, isEditing]);
+
 
   const validateURL = (url: string) => {
-    console.log('url----->', url);
     if (!url.trim()) return true;
     const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
     return urlPattern.test(url);
@@ -96,7 +101,7 @@ export const URL: React.FC<URLProps> = ({
       } else {
         triggerOnChange(localValue);
       }
-    }else{
+    } else {
       setLocalValue(prevValueRef.current);
     }
     setIsEditing(false);
@@ -122,9 +127,11 @@ export const URL: React.FC<URLProps> = ({
     }
   };
 
+  // allowEdit controls single vs double-click behavior
+  // readOnly completely prevents editing
   const handleClick = useClickHandler(
-    () => allowEdit && !disabled && setIsEditing(true),
-    () => !allowEdit && !disabled && setIsEditing(true)
+    () => !readOnly && allowEdit && !disabled && setIsEditing(true), // Single click when allowEdit=true
+    () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // Double click when allowEdit=false
   );
 
 
@@ -137,57 +144,66 @@ export const URL: React.FC<URLProps> = ({
           {required && <span className="field-component-required">*</span>}
         </label>
       )}
-      <div className={`relative ${className} ${isBorder ? "field-component-border" : ""}`} onClick={handleClick}>
-
+      <div
+        className={`w-full min-w-0 ${className} ${isBorder ? "field-component-border" : ""}`}
+        role={!readOnly ? "button" : undefined}
+        tabIndex={disabled || readOnly ? -1 : 0}
+        aria-disabled={disabled || readOnly}
+        onClick={!readOnly ? handleClick : undefined}
+        onKeyDown={!readOnly ? (e) => {
+          if (disabled) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsEditing(true);
+          }
+        } : undefined}
+        style={readOnly ? { cursor: 'default' } : undefined}
+      >
         {isEditing ? (
-          <input
-            type="text"
-            value={localValue}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            autoFocus
-            placeholder={placeholder}
-            disabled={disabled}
-            className={`field-component
-              ${localValue ? "text-gray-900" : "text-gray-400"}
-              ${disabled ? "text-gray-400 cursor-not-allowed" : ""}`}
-          />
+          <div className="flex items-center gap-2 min-w-0">
+            <input
+              type="text"
+              value={localValue}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              autoFocus
+              placeholder={placeholder}
+              disabled={disabled || readOnly}
+              className={`field-component flex-1 min-w-0
+                ${localValue ? "text-gray-900" : "text-gray-400"}
+                ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
+            />
+            {!error && localValue && showIcon && (
+              <div className="flex-shrink-0 w-7 h-7 bg-card flex items-center justify-center rounded-lg border shadow-lg hover:bg-gray-200 transition-all">
+                <ExternalLink
+                  className="w-4 h-4 cursor-pointer text-gray-400"
+                  onClick={handleURLClick}
+                />
+              </div>
+            )}
+          </div>
         ) : (
-          <div className={`field-component cursor-default
-              ${localValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400"}
-              ${disabled ? "text-gray-400 cursor-not-allowed" : ""} max-w-full overflow-hidden`}
-            style={{ textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {localValue || placeholder}
+          <div className="flex items-center min-w-0">
+            <div
+              className={`field-component flex-1 min-w-0 overflow-hidden cursor-default
+                ${localValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400"}
+                ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
+            >
+              <span className="block w-full min-w-0 truncate whitespace-nowrap">
+                {localValue || placeholder}
+              </span>
+            </div>
+            {!error && localValue && showIcon && (
+              <div className="flex-shrink-0 w-7 h-7 bg-card mr-3 flex items-center justify-center rounded-lg border shadow-lg hover:bg-gray-200 transition-all">
+                <ExternalLink
+                  className="w-4 h-4 cursor-pointer text-gray-400"
+                  onClick={handleURLClick}
+                />
+              </div>
+            )}
           </div>
         )}
-
-        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-          {/* {error && (
-            <div className="group relative">
-              <Info className="w-4 h-4 text-red-500 cursor-pointer" />
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-50 px-2 py-1 text-xs text-white bg-red-600 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">
-                {error}
-              </div>
-            </div>
-          )} */}
-          {!error && localValue && showIcon && (
-            <div className="absolute text-gray-400 right-1 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg border shadow-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-all z-0">
-              <ExternalLink
-                className="w-4 h-4 cursor-pointer"
-                onClick={handleURLClick}
-              />
-            </div>
-          )}
-        </div>
       </div>
-
-      {/* Error Text */}
-      {/* {error && allowEdit && (
-        <div className="mt-1.5 text-red-500 cursor-default">
-          {error}
-        </div>
-      )} */}
-      
       {helperText && (
         <p className="text-xs text-gray-500 mt-1">{helperText}</p>
       )}

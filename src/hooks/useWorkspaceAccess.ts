@@ -3,14 +3,22 @@ import { useUserRole } from './useUserRole';
 import { useWorkspaces } from './useApi';
 import { useNavigationStore } from '../stores/navigationStore';
 
-export type AccessLevel = 'admin' | 'full_access' | 'limited_access';
-
 /**
  * Hook to determine user's access level for a specific workspace
- * Combines global admin role with workspace-specific access_level
+ * Uses actual access_level values directly instead of abstraction layer
+ * 
+ * Workspace access_level values from API:
+ * - "owner" - Full access to everything
+ * - "co-owner" - Full access to everything (except cannot delete owner)
+ * - "maintainer" - Everything below workspace level (bases, tables, views, records, columns)
+ * - "base" - Can only access specific bases (check base-level access_level)
+ * - "workspace-read" - Read-only (hold for now, everything restricted)
+ * - "base-member" - Base-level member (when workspace access is "base")
+ * - "base-read" - Base-level read-only (hold for now, everything restricted)
+ * - "user" - No access
  */
 export function useWorkspaceAccess(workspaceId?: string) {
-  const { isAdmin } = useUserRole();
+  const { hasAdminRole, isMaintainer } = useUserRole();
   const { data: workspaces = [] } = useWorkspaces();
   const { selectedWorkspaceId } = useNavigationStore();
   
@@ -25,97 +33,105 @@ export function useWorkspaceAccess(workspaceId?: string) {
     return workspaces.find((ws: any) => ws.id === effectiveWorkspaceId) || null;
   }, [effectiveWorkspaceId, workspaces]);
   
-  // Determine access level
-  const accessLevel: AccessLevel = React.useMemo(() => {
-    // Check global admin role first
-    if (isAdmin()) {
-      return 'admin';
+  // Get workspace access_level directly
+  const wsAccess = React.useMemo(() => {
+    if (currentWorkspace?.access_level) {
+      return currentWorkspace.access_level.toLowerCase();
     }
-    
-    // If no workspace found, return limited_access as default (most restrictive)
-    if (!currentWorkspace) {
-      return 'limited_access';
+    // Fallback to global role if no workspace-specific access_level
+    if (hasAdminRole()) {
+      return 'owner'; // Default to owner if admin role
     }
-    
-    // Return the workspace's access_level from server response
-    return currentWorkspace.access_level === 'full_access' 
-      ? 'full_access' 
-      : 'limited_access';
-  }, [isAdmin, currentWorkspace]);
+    if (isMaintainer()) {
+      return 'maintainer';
+    }
+    return null;
+  }, [currentWorkspace, hasAdminRole, isMaintainer]);
   
-  // Check if user has any workspace with full_access (for Settings menu visibility)
-  const hasAnyFullAccessWorkspace = React.useMemo(() => {
-    if (isAdmin()) return true;
-    if (!workspaces || workspaces.length === 0) return false;
-    return workspaces.some((ws: any) => ws.access_level === 'full_access');
-  }, [isAdmin, workspaces]);
+  // Check if user has full workspace access (owner, co-owner, or maintainer)
+  const hasFullWorkspaceAccess = React.useMemo(() => {
+    return wsAccess === 'owner' || wsAccess === 'co-owner' || wsAccess === 'maintainer';
+  }, [wsAccess]);
   
-  // Permission helper functions
+  // Permission helper functions based on actual access_level
+  
+  // Workspace-level operations (only owner/co-owner)
   const canCreateWorkspace = React.useCallback(() => {
-    return accessLevel === 'admin';
-  }, [accessLevel]);
-  
-  const canCreateBase = React.useCallback(() => {
-    return accessLevel === 'admin' || accessLevel === 'full_access';
-  }, [accessLevel]);
-  
-  const canCreateTable = React.useCallback(() => {
-    return accessLevel === 'admin' || accessLevel === 'full_access' || accessLevel === 'limited_access';
-  }, [accessLevel]);
-  
-  const canCreateView = React.useCallback(() => {
-    return accessLevel === 'admin' || accessLevel === 'full_access' || accessLevel === 'limited_access';
-  }, [accessLevel]);
+    return wsAccess === 'owner' || wsAccess === 'co-owner';
+  }, [wsAccess]);
   
   const canDeleteWorkspace = React.useCallback(() => {
-    return accessLevel === 'admin';
-  }, [accessLevel]);
+    return wsAccess === 'owner' || wsAccess === 'co-owner';
+  }, [wsAccess]);
   
-  const canDeleteBase = React.useCallback(() => {
-    return accessLevel === 'admin' || accessLevel === 'full_access';
-  }, [accessLevel]);
+  // Base-level operations (owner, co-owner, maintainer)
+  const canCreateBase = React.useCallback(() => {
+    return wsAccess === 'owner' || wsAccess === 'co-owner' || wsAccess === 'maintainer';
+  }, [wsAccess]);
   
   const canUpdateBase = React.useCallback(() => {
-    return accessLevel === 'admin' || accessLevel === 'full_access';
-  }, [accessLevel]);
+    return wsAccess === 'owner' || wsAccess === 'co-owner' || wsAccess === 'maintainer';
+  }, [wsAccess]);
   
-  const canDeleteTable = React.useCallback(() => {
-    return accessLevel === 'admin' || accessLevel === 'full_access' || accessLevel === 'limited_access';
-  }, [accessLevel]);
+  const canDeleteBase = React.useCallback(() => {
+    return wsAccess === 'owner' || wsAccess === 'co-owner' || wsAccess === 'maintainer';
+  }, [wsAccess]);
   
-  const canDeleteView = React.useCallback(() => {
-    return accessLevel === 'admin' || accessLevel === 'full_access' || accessLevel === 'limited_access';
-  }, [accessLevel]);
+  // Note: Table/View/Record/Column operations are handled in useBaseAccess.ts
+  // This hook only handles workspace-level operations
   
+  // User management (owner, co-owner, maintainer)
   const canAssignUsers = React.useCallback(() => {
-    return accessLevel === 'admin' || accessLevel === 'full_access';
-  }, [accessLevel]);
+    return wsAccess === 'owner' || wsAccess === 'co-owner' || wsAccess === 'maintainer';
+  }, [wsAccess]);
   
+  // Settings access
   const canAccessSettings = React.useCallback(() => {
-    return accessLevel === 'admin' || accessLevel === 'full_access';
-  }, [accessLevel]);
+    // Owner, co-owner, maintainer, and workspace-read can access settings
+    return hasFullWorkspaceAccess || wsAccess === 'workspace-read';
+  }, [hasFullWorkspaceAccess, wsAccess]);
   
   const canAccessAllSettingsTabs = React.useCallback(() => {
-    return accessLevel === 'admin';
-  }, [accessLevel]);
+    // Only owner and co-owner can access all settings tabs
+    return wsAccess === 'owner' || wsAccess === 'co-owner';
+  }, [wsAccess]);
+  
+  // Check if user has workspace-read access (read-only at workspace level)
+  const isWorkspaceReadOnly = React.useCallback(() => {
+    return wsAccess === 'workspace-read';
+  }, [wsAccess]);
+  
+  // Check if workspace access is "base" (user can only access specific bases)
+  const isBaseLevelAccess = React.useCallback(() => {
+    return wsAccess === 'base';
+  }, [wsAccess]);
+  
+  // Backward compatibility: Keep accessLevel for components that still use it
+  // But map to actual values for clarity
+  const accessLevel = React.useMemo(() => {
+    if (wsAccess === 'owner' || wsAccess === 'co-owner') return 'admin';
+    if (wsAccess === 'maintainer') return 'full_access';
+    return 'limited_access';
+  }, [wsAccess]);
   
   return {
+    // Actual access_level value
+    wsAccess,
+    hasFullWorkspaceAccess,
+    isBaseLevelAccess,
+    // Backward compatibility
     accessLevel,
-    isAdmin: accessLevel === 'admin',
-    isFullAccess: accessLevel === 'full_access',
-    isLimitedAccess: accessLevel === 'limited_access',
+    isAdmin: wsAccess === 'owner' || wsAccess === 'co-owner',
+    isFullAccess: wsAccess === 'maintainer',
+    isLimitedAccess: !hasFullWorkspaceAccess,
     currentWorkspace,
-    hasAnyFullAccessWorkspace,
+    isWorkspaceReadOnly,
     // Permission helpers
     canCreateWorkspace,
-    canCreateBase,
-    canCreateTable,
-    canCreateView,
     canDeleteWorkspace,
-    canDeleteBase,
+    canCreateBase,
     canUpdateBase,
-    canDeleteTable,
-    canDeleteView,
+    canDeleteBase,
     canAssignUsers,
     canAccessSettings,
     canAccessAllSettingsTabs,

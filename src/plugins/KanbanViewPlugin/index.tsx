@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { lazy, Suspense} from 'react';
 import { Plugin, PluginManifest, PluginAPI } from '../../core/types';
 import { matchesViewType } from '../../utils/viewType';
 import { useKanbanData } from './hooks/useKanbanData';
-import { KanbanBoard } from './components';
+// LAZY LOAD: KanbanBoard component - only load when KanbanView is actually rendered
+const KanbanBoard = lazy(() => 
+  import('./components').then(m => ({ default: m.KanbanBoard }))
+);
+import { Loader } from '../../components/ui/Loader';
 
 const manifest: PluginManifest = {
   id: 'kanban-view-plugin',
@@ -16,7 +20,7 @@ const KanbanViewPlugin: Plugin = {
   initialize: async (api: PluginAPI, config: any) => {
     // Single component: fetch and render KanbanBoard directly (no extra wrappers)
     const KanbanView: React.FC<{ tableId: string; viewId?: string }> = ({ tableId, viewId }) => {
-      const { tableData, isLoading, error, refresh, addRow, insertRowData, deleteRecord, updateField, updateView, moveCard, createCard, duplicateCard, deleteCard, updateFieldOptions, persistStackOrder, changeGroupByColumn, updateViewConfig } = useKanbanData({ tableId, viewId });
+      const { tableData, isLoading, error, refresh, addRow, insertRowData, deleteRecord, updateField, updateView, updateViewMeta, moveCard, createCard, duplicateCard, deleteCard, updateFieldOptions, persistStackOrder, changeGroupByColumn, updateViewConfig } = useKanbanData({ tableId, viewId });
 
       if (isLoading) return <div className="h-full flex items-center justify-center">Loading kanban…</div>;
       
@@ -45,12 +49,18 @@ const KanbanViewPlugin: Plugin = {
       }
 
       return (
-        <KanbanBoard
-          tableData={tableData!}
-          viewId={viewId}
-          onRefresh={() => refresh()}
-          actions={{ addRow, insertRowData, deleteRecord, updateField, updateView, moveCard, createCard, duplicateCard, deleteCard, updateFieldOptions, persistStackOrder, changeGroupByColumn, updateViewConfig }}
-        />
+        <Suspense fallback={
+          <div className="h-full flex items-center justify-center">
+            <Loader size={10} />
+          </div>
+        }>
+          <KanbanBoard
+            tableData={tableData!}
+            viewId={viewId}
+            onRefresh={() => refresh()}
+            actions={{ addRow, insertRowData, deleteRecord, updateField, updateView, updateViewMeta, moveCard, createCard, duplicateCard, deleteCard, updateFieldOptions, persistStackOrder, changeGroupByColumn, updateViewConfig }}
+          />
+        </Suspense>
       );
     };
 

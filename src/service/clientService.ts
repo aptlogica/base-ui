@@ -1,7 +1,8 @@
-import { SereniBaseClient } from "../../sdk/index.esm.js";
+// @ts-ignore - SDK module does not have type declarations
+import { SereniBaseClient } from '../../sdk/index.esm.js';
 import { WorkspaceBaseInput } from "../types/interfaces/workspace.interface.js";
 import { decodeJwt } from 'jose';
-import { LoginParams, RegisterParams, VerifyOtpParams, ResendOtpParams } from '../types/interfaces/auth.js';
+import { LoginParams, VerifyOtpParams, ResendOtpParams } from '../types/interfaces/auth.js';
 
 interface TokenData {
   access_token: string;
@@ -10,17 +11,25 @@ interface TokenData {
   refresh_expires_at?: number;
 }
 
-// Secure token storage using sessionStorage with encryption-like obfuscation
+// Secure token storage using sessionStorage.
+// Note: Obfuscation is NOT security. For production-grade security,
+// prefer storing the refresh token in an HttpOnly, Secure, SameSite cookie
+// set by the server, and keep the access token in memory. This file supports
+// a lightweight obfuscation toggle for development/demo builds only.
 const STORAGE_KEY = '_st_'; // Shortened key name
 const REFRESH_KEY = '_rt_';
 
-// Simple obfuscation (not real encryption - for production use proper encryption)
+// Lightweight obfuscation (optional, NOT encryption). Controlled via Vite env:
+// VITE_TOKEN_OBFUSCATE=true → apply base64+reverse, otherwise store plain.
+const OBFUSCATE_TOKENS: boolean = Boolean((import.meta as any).env?.VITE_TOKEN_OBFUSCATE);
 const obfuscate = (data: string): string => {
+  if (!OBFUSCATE_TOKENS) return data;
   return btoa(data).split('').reverse().join('');
 };
 
 const deobfuscate = (data: string): string => {
   try {
+    if (!OBFUSCATE_TOKENS) return data;
     return atob(data.split('').reverse().join(''));
   } catch {
     return '';
@@ -311,42 +320,32 @@ export const updateClientToken = (token: string) => {
 /**
  * Forces logout by clearing all tokens and user data, then redirects to login
  * Dispatches 'auth_token_expired' event for components to handle
+ * Uses custom event for navigation to avoid full page refresh
  */
 export const forceLogout = async (): Promise<void> => {
   clearTokens();
   updateClientToken('');
 
-  window.dispatchEvent(new CustomEvent('auth_token_expired'));
-
   // Clear all stored user and tenant data (only what we actually store)
-  const keys = ['user_id', 'user_email', 'user_display_name', 'user_avatar', 'tenant_schema', 'user_roles'];
+  const keys = ['user_id', 'user_email', 'user_display_name', 'user_avatar', 'user_role', 'user_token_data'];
   keys.forEach(k => {
     sessionStorage.removeItem(k);
     localStorage.removeItem(k);
   });
 
+  // Dispatch custom event for React Router navigation (prevents page refresh)
+  window.dispatchEvent(new CustomEvent('auth_token_expired', { detail: { navigate: true } }));
+
+  // Fallback: Only use window.location if no component handles the event within 100ms
+  // This ensures we still redirect even if no component is listening
   setTimeout(() => {
-    window.location.href = '/login';
+    // Check if we're still on a non-login page (event wasn't handled)
+    if (window.location.pathname !== '/login' && !window.location.pathname.startsWith('/login')) {
+      window.location.href = '/login';
+    }
   }, 100);
 };
 
-/**
- * Retrieves the tenant schema from storage (sessionStorage preferred, falls back to localStorage)
- * @returns The tenant schema string, or empty string if not found
- */
-export const getTenantSchema = () => {
-  const schema = sessionStorage.getItem('tenant_schema') || localStorage.getItem('tenant_schema') || '';
-  return schema;
-};
-
-/**
- * Checks if tenant schema is available in storage
- * Used by hooks to determine if tenant info is ready
- * @returns True if tenant schema exists, false otherwise
- */
-export const isTenantSchemaAvailable = (): boolean => {
-  return !!getTenantSchema();
-};
 
 /**
  * Validates that all required authentication data is present in storage
@@ -354,9 +353,7 @@ export const isTenantSchemaAvailable = (): boolean => {
  */
 export const validateAuthData = (): { isValid: boolean; missing: string[] } => {
   const requiredFields = [
-    { key: 'user_id', name: 'User ID' },
-    { key: 'tenant_schema', name: 'Tenant Schema' },
-    { key: 'tenant_id', name: 'Tenant ID' }
+    { key: 'user_id', name: 'User ID' }
   ];
 
   const missing: string[] = [];
@@ -383,7 +380,7 @@ export const client = new SereniBaseClient({
     type: 'bearer',
     token: '' // Will be updated after login
   },
-  headers: { 'schema': '', 'workspace': '', 'base': '' },
+  headers: { 'workspace': '', 'base': '' },
 });
 
 /**
@@ -486,7 +483,7 @@ const makeAuthenticatedCall = async <T>(apiCall: () => Promise<T>): Promise<T> =
 };
 
 /**
- * Initializes the client with token and schema from storage on startup
+ * Initializes the client with token from storage on startup
  * Called automatically when the module loads
  */
 const initializeClient = async () => {
@@ -494,12 +491,6 @@ const initializeClient = async () => {
     const token = await getStoredToken();
     if (token) {
       updateClientToken(token);
-    }
-
-    // Initialize schema header if available
-    const schema = getTenantSchema();
-    if (schema) {
-      updateClientHeaders(schema);
     }
 
     // Initialize workspace and base from navigation store if available
@@ -523,8 +514,8 @@ initializeClient().catch(console.warn);
 
 /**
  * Authenticates a user with email and password
- * Stores tokens, user info, and tenant info in sessionStorage
- * Updates client with access token and schema header
+ * Stores tokens and user info in sessionStorage
+ * Updates client with access token
  * @param params - Login credentials (email and password)
  * @returns The login response containing user and tenant data
  */
@@ -570,29 +561,22 @@ export async function login(params: LoginParams) {
       }
     }
 
-    // Store roles from decoded token (needed for RBAC)
+    // Store role from decoded token (single string, not array)
     if (accessDecoded?.roles) {
-      const roles = Array.isArray(accessDecoded.roles)
+      const role = typeof accessDecoded.roles === 'string'
         ? accessDecoded.roles
-        : [accessDecoded.roles];
-      sessionStorage.setItem('user_roles', JSON.stringify(roles));
-    }
+        : (Array.isArray(accessDecoded.roles) ? accessDecoded.roles[0] : null);
 
-    // Extract tenant_schema from decoded access token
-    const schemaName = String(accessDecoded?.tenant_id ||
-      accessDecoded?.tenant_schema ||
-      accessDecoded?.schema ||
-      accessDecoded?.schema_name ||
-      accessDecoded?.tenantSchema ||
-      '').trim();
-
-    if (schemaName) {
-      sessionStorage.setItem('tenant_schema', schemaName);
-      // Keep in localStorage as fallback only
-      localStorage.setItem('tenant_schema', schemaName);
-      updateClientHeaders(schemaName);
-    } else {
-      console.warn('No tenant schema found in access token');
+      if (role) {
+        sessionStorage.setItem('user_role', role);
+        // Also store full token data for reference
+        sessionStorage.setItem('user_token_data', JSON.stringify({
+          user_id: accessDecoded.user_id,
+          email: accessDecoded.email,
+          roles: role,
+          email_verified: accessDecoded.email_verified,
+        }));
+      }
     }
 
     // Validate that all required auth data is present
@@ -632,11 +616,6 @@ export const logout = async (): Promise<void> => {
   }
 };
 
-
-export async function register(params: RegisterParams) {
-  const response = await client.auth.register(params);
-  return response;
-}
 
 /**
  * Initiates OAuth login with an identity provider (e.g., Google, GitHub)
@@ -801,7 +780,9 @@ export async function getAllWorkspacesService() {
   }
 
   try {
-    const result = await makeAuthenticatedCall(() => client.workspace.getAll());
+    // Use userService.getWorkspaces() instead of workspace.getAll()
+    // This gets workspaces for the current user
+    const result = await makeAuthenticatedCall(() => client.userService.getWorkspaces());
     return result;
   } catch (error: any) {
     // Check if it's a schema-related error
@@ -814,102 +795,144 @@ export async function getAllWorkspacesService() {
 }
 
 export async function getWorkspaceByIdService(id: string) {
-  return await client.workspace.getById(id);
+  return await makeAuthenticatedCall(() => client.workspace.getById(id));
 }
 
 export async function getWorkspacesByUser() {
-  return await client.userService.getWorkspaces();
+  return await makeAuthenticatedCall(() => client.userService.getWorkspaces());
 }
 
 export async function getTablesByWorkspaceIdService(id: string) {
-  return await client.workspace.getTablesByWorkspaceId(id);
+  return await makeAuthenticatedCall(() => client.workspace.getTablesByWorkspaceId(id));
 }
 
 export async function updateWorkspaceService(id: string, params: any) {
-  return await client.workspace.update(id, params);
+  return await makeAuthenticatedCall(() => client.workspace.update(id, params));
 }
 
 export async function deleteWorkspaceService(id: string) {
-  return await client.workspace.delete(id);
+  return await makeAuthenticatedCall(() => client.workspace.delete(id));
 }
 
 export async function getBasesByWorkspaceIdService(id: string) {
-  return await client.workspace.getBasesByWorkspaceId(id);
+  return await makeAuthenticatedCall(() => client.workspace.getBasesByWorkspaceId(id));
 }
 
 export async function getWorkspaceMembersService(workspaceId: string) {
-  return await client.workspace.getMembers(workspaceId);
+  return await makeAuthenticatedCall(() => client.workspace.getMembersWithRoles(workspaceId));
 }
 
-export async function removeUserFromWorkspaceService(workspaceId: string, params: { workspace_id: string; user_id: string }) {
-  return await client.userService.removeFromWorkspace(workspaceId, params);
+export async function removeAccessMemberService(workspaceId: string, accessId: string) {
+  return await makeAuthenticatedCall(() => client.workspace.removeAccessMember(workspaceId, accessId));
+}
+
+export async function removeUserFromWorkspaceService(workspaceId: string, params: { user_id: string }) {
+  return await makeAuthenticatedCall(() => client.workspace.removeUserFromWorkspace(workspaceId, params));
 }
 
 // BaseService wrappers with auth/tenant headers
 export async function createBaseService(params: any) {
-  return await client.baseService.create(params);
+  return await makeAuthenticatedCall(() => client.baseService.create(params));
 }
 
 export async function getBaseByIdService(id: string) {
-  return await client.baseService.getById(id);
+  return await makeAuthenticatedCall(() => client.baseService.getById(id));
 }
 
 export async function getTablesByBaseIdService(id: string) {
-  return await client.baseService.getTablesByBaseId(id);
+  return await makeAuthenticatedCall(() => client.baseService.getTablesByBaseId(id));
 }
 
 export async function getAllBasesService() {
-  return await client.baseService.getAll();
+  return await makeAuthenticatedCall(() => client.baseService.getAll());
 }
 
 export async function updateBaseService(id: string, params: any) {
-  return await client.baseService.update(id, params);
+  return await makeAuthenticatedCall(() => client.baseService.update(id, params));
 }
 
 export async function deleteBaseService(id: string) {
-  return await client.baseService.delete(id);
+  return await makeAuthenticatedCall(() => client.baseService.delete(id));
 }
 
 export async function getBaseMembersService(baseId: string) {
-  return await client.baseService.getMembers(baseId);
+  return await makeAuthenticatedCall(() => client.baseService.getMembersWithRoles(baseId));
+}
+
+export async function bulkAddBaseMembersService(baseId: string, params: {
+  workspaceId: string;
+  members: Array<{
+    user_id: string;
+    role: string;
+  }>;
+}) {
+  // Transform to BulkAddBaseMembersRequest format
+  // When bases are provided, role should be empty string
+  const bulkRequest = {
+    members: params.members.map(m => ({
+      user_id: m.user_id,
+      memberships: [{
+        workspace_id: params.workspaceId,
+        role: '', // Empty when bases are provided
+        bases: [{
+          base_id: baseId,
+          role: m.role // base-member or base-read
+        }]
+      }]
+    }))
+  };
+  return await makeAuthenticatedCall(() => client.baseService.bulkAddMembers(baseId, bulkRequest));
+}
+
+export async function removeBaseAccessMemberService(_baseId: string, accessId: string) {
+  // Note: baseId is no longer needed in the API path, but kept for backward compatibility
+  return await makeAuthenticatedCall(() => client.baseService.removeAccessMember(accessId));
+}
+
+export async function removeUserFromBaseService(baseId: string, params: { user_id: string }) {
+  return await makeAuthenticatedCall(() => client.baseService.removeUserFromBase(baseId, params));
 }
 
 // TableService wrappers with auth/tenant headers
 export async function createTableService(params: any) {
-  return await client.tableService.create(params);
+  return await makeAuthenticatedCall(() => client.tableService.create(params));
 }
 
 export async function getTableByIdService(id: string, options?: any) {
-  return await client.tableService.getById(id, options);
+  return await makeAuthenticatedCall(() => client.tableService.getById(id, options));
 }
 
 export async function getAllTablesService() {
-  return await client.tableService.getAll();
+  return await makeAuthenticatedCall(() => client.tableService.getAll());
 }
 
 // User Profile Services
 export async function getUserProfileByIDService(id: string) {
-  return await client.userService.getProfile(id);
+  return await makeAuthenticatedCall(() => client.userService.getProfile(id));
 }
 
 export async function updateUserProfileService(id: string, params: any) {
-  return await client.userService.updateProfile(id, params);
+  return await makeAuthenticatedCall(() => client.userService.updateProfile(id, params));
 }
 
 export async function getUserAccessDetailsService(userId: string, workspaceId?: string) {
-  return await client.userService.getUserAccessDetails(userId, workspaceId);
+  return await makeAuthenticatedCall(() => client.userService.getUserAccessDetails(userId, workspaceId));
+}
+
+export async function getUserRolesAndAccessService(userId: string, scopeId?: string) {
+  return await makeAuthenticatedCall(() => client.userService.getUserRolesAndAccess(userId, scopeId));
 }
 
 export async function changePasswordService(id: string, params: any) {
-  return await client.userService.changePassword(id, params);
+  return await makeAuthenticatedCall(() => client.userService.changePassword(id, params));
 }
 
 export async function addOrUpdateAvatarService(id: string, avatarFile: File) {
-  return await client.userService.addOrUpdateAvatar(id, avatarFile);
+  return await makeAuthenticatedCall(() => client.userService.addOrUpdateAvatar(id, avatarFile));
 }
 
 export async function removeAvatarService(id: string) {
-  return await client.userService.removeAvatar(id);
+  return await makeAuthenticatedCall(() => client.userService.removeAvatar(id));
 }
 
 export async function assignUserToWorkspaceService(params: {
@@ -918,89 +941,105 @@ export async function assignUserToWorkspaceService(params: {
   access_level: string;
   bases_ids: string;
 }) {
-  return await client.workspace.inviteUser(params.workspace_id, params);
+  return await makeAuthenticatedCall(() => client.workspace.inviteUser(params.workspace_id, params));
+}
+
+export async function bulkAddMembersService(workspaceId: string, params: {
+  members: Array<{
+    user_id: string;
+    memberships: Array<{
+      workspace_id: string;
+      role: string;
+      bases?: Array<{
+        base_id: string;
+        role: string;
+      }>;
+    }>;
+  }>;
+}) {
+  return await makeAuthenticatedCall(() => client.workspace.bulkAddMembers(workspaceId, params));
 }
 
 export async function updateTableService(id: string, params: any) {
-  return await client.tableService.update(id, params);
+  return await makeAuthenticatedCall(() => client.tableService.update(id, params));
 }
 
 export async function deleteTableService(id: string) {
-  return await client.tableService.delete(id);
+  return await makeAuthenticatedCall(() => client.tableService.delete(id));
 }
 
 export async function getColumnsByTableIdService(id: string) {
-  return await client.tableService.getColumnsByTableId(id);
+  return await makeAuthenticatedCall(() => client.tableService.getColumnsByTableId(id));
 }
 
 // Field/Column Service wrappers
 export async function createFieldService(params: any) {
-  return await client.tableService.addColumn(params);
+  return await makeAuthenticatedCall(() => client.tableService.addColumn(params));
 }
 
 export async function getFieldByIdService(id: string) {
-  return await client.tableService.getColumnById(id);
+  return await makeAuthenticatedCall(() => client.tableService.getColumnById(id));
 }
 
 export async function getAllFieldsService() {
-  return await client.tableService.getAllColumns();
+  return await makeAuthenticatedCall(() => client.tableService.getAllColumns());
 }
 
 export async function updateFieldService(id: string, params: any) {
-  return await client.tableService.updateColumn(id, params);
+  return await makeAuthenticatedCall(() => client.tableService.updateColumn(id, params));
 }
 
 export async function deleteFieldService(id: string) {
-  return await client.tableService.deleteColumn(id);
+  return await makeAuthenticatedCall(() => client.tableService.deleteColumn(id));
 }
 
 export async function reorderColumnService(params: { source_column_id: string; target_column_id: string }) {
-  return await client.tableService.reorderColumn(params);
+  return await makeAuthenticatedCall(() => client.tableService.reorderColumn(params));
 }
 
 // View Service wrappers
 export async function createViewService(params: any) {
-  return await client.tableService.createView(params);
+  return await makeAuthenticatedCall(() => client.tableService.createView(params));
 }
 
 export async function getViewByIdService(id: string) {
-  return await client.tableService.getViewById(id);
+  return await makeAuthenticatedCall(() => client.tableService.getViewById(id));
 }
 
 export async function getAllViewsService() {
-  return await client.tableService.getAllViews();
+  return await makeAuthenticatedCall(() => client.tableService.getAllViews());
 }
 
 export async function updateViewService(id: string, params: any) {
-  return await client.tableService.updateView(id, params);
+  return await makeAuthenticatedCall(() => client.tableService.updateView(id, params));
 }
 
 export async function deleteViewService(id: string) {
-  return await client.tableService.deleteView(id);
+  return await makeAuthenticatedCall(() => client.tableService.deleteView(id));
 }
 
 export async function getViewsByModelIdService(id: string) {
-  return await client.tableService.getViewsByModelId(id);
+  return await makeAuthenticatedCall(() => client.tableService.getViewsByModelId(id));
 }
 
 export async function addRow(model_id: string): Promise<any> {
-  return await client.tableService.createRow({ model_id });
+  return await makeAuthenticatedCall(() => client.tableService.createRow({ model_id }));
 }
 
 export async function deleteRowService(params: { model_id: string; row_id: number }) {
-  return await client.tableService.deleteRow(params);
+  return await makeAuthenticatedCall(() => client.tableService.deleteRow(params));
 }
 
 export async function insertRowDataService(params: { model_id: string; column_id: string; row_id: number; value: any }) {
-  return await client.tableService.insertRowData(params);
+  return await makeAuthenticatedCall(() => client.tableService.insertRowData(params));
 }
 
 export async function getAllRecordsService(id: string, options?: { pageNumber?: number; pageLimit?: number }) {
-  return await client.tableService.getAllRecords(id, options);
+  return await makeAuthenticatedCall(() => client.tableService.getAllRecords(id, options));
 }
 
 export async function insertRelationDataService(params: { model_id: string; column_id: string; source_row_id: number; target_row_id: number; action: 'link' | 'unlink' }) {
-  return await client.tableService.insertRelationData(params);
+  return await makeAuthenticatedCall(() => client.tableService.insertRelationData(params));
 }
 
 export async function addAttachmentService(params: {
@@ -1010,24 +1049,24 @@ export async function addAttachmentService(params: {
   files: File[];
   onProgress?: (progressEvent: ProgressEvent) => void;
 }) {
-  return await client.tableService.addAttachment(params, params.onProgress);
+  return await makeAuthenticatedCall(() => client.tableService.addAttachment(params, params.onProgress));
 }
 
 export async function removeAttachmentsService(params: { model_id: string; column_id: string; row_id: number; attachments: string[] }) {
-  return await client.tableService.removeAttachments(params);
+  return await makeAuthenticatedCall(() => client.tableService.removeAttachments(params));
 }
 
 export async function updateAssetByIdService(id: string, params: { title?: string }) {
-  return await client.tableService.updateAssetById(id, params);
+  return await makeAuthenticatedCall(() => client.tableService.updateAssetById(id, params));
 }
 
 export async function addImageService(files: File[], onProgress?: (progressEvent: ProgressEvent) => void) {
-  return await client.assetService.addImage({ files }, onProgress);
+  return await makeAuthenticatedCall(() => client.assetService.addImage({ files }, onProgress));
 }
 
 export async function importTableService(
   params: {
-    base_id: string;
+    base_id?: string; // Optional: required from sidebar, optional from home page
     workspace_id: string;
     title: string;
     description: string;
@@ -1036,15 +1075,12 @@ export async function importTableService(
   },
   onProgress?: (progressEvent: ProgressEvent) => void
 ) {
-  return await client.tableService.import(params, onProgress);
+  return await makeAuthenticatedCall(() => client.tableService.import(params, onProgress));
 }
 
-const updateClientHeaders = (schema?: string, workspaceId?: string | null, baseId?: string | null) => {
+const updateClientHeaders = (workspaceId?: string | null, baseId?: string | null) => {
   const headers: Record<string, string> = {};
 
-  if (schema !== undefined) {
-    headers['schema'] = schema;
-  }
   if (workspaceId !== undefined) {
     headers['workspace'] = workspaceId || '';
   }
@@ -1056,12 +1092,8 @@ const updateClientHeaders = (schema?: string, workspaceId?: string | null, baseI
   client.setHeaders(headers);
 };
 
-export const updateClientSchema = (schema: string) => {
-  updateClientHeaders(schema);
-};
-
 export const updateClientWorkspaceAndBase = (workspaceId: string | null, baseId: string | null) => {
-  updateClientHeaders(undefined, workspaceId, baseId);
+  updateClientHeaders(workspaceId, baseId);
 };
 
 export const initializeClientToken = async () => {
@@ -1069,12 +1101,6 @@ export const initializeClientToken = async () => {
     const token = await getStoredToken();
     if (token) {
       updateClientToken(token);
-    }
-
-    // Initialize schema header if available
-    const schema = getTenantSchema();
-    if (schema) {
-      updateClientHeaders(schema);
     }
 
     // Initialize workspace and base from navigation store if available
@@ -1100,33 +1126,69 @@ export const isAuthenticated = async (): Promise<boolean> => {
 };
 
 export async function getTenantUsersService() {
-  return await client.tenantService.getUsers();
+  return await makeAuthenticatedCall(() => client.userService.listUsers());
 }
 
-export async function getTenantService() {
-  return await client.tenantService.getTenant();
+export async function getUsersForAssignService() {
+  return await makeAuthenticatedCall(() => client.userService.listUsersForAssign());
 }
 
-export async function updateTenantService(updateData: { name: string }) {
-  return await client.tenantService.updateTenant(updateData);
-}
-
-export async function addTenantUserService(userData: {
+export async function addUserService(userData: {
   firstname: string;
   lastname: string;
   email: string;
+  profile_pic?: File;
+  is_coowner?: boolean;
+  membership?: Array<{
+    workspace_id: string;
+    role: string;
+    bases?: Array<{
+      base_id: string;
+      role: string;
+    }>;
+  }>;
 }) {
-  return await client.tenantService.addUser(userData);
+  return await makeAuthenticatedCall(() => client.userService.addUser(userData));
 }
 
-export async function removeTenantUserService(userId: string) {
-  return await client.tenantService.removeUser({ user_id: userId });
+export async function editUserService(userData: {
+  user_id: string;
+  firstname?: string;
+  lastname?: string;
+  profile_pic?: File;
+  is_coowner?: boolean;
+  membership?: Array<{
+    workspace_id: string;
+    role: string;
+    bases?: Array<{
+      base_id: string;
+      role: string;
+    }>;
+  }>;
+}) {
+  return await makeAuthenticatedCall(() => client.userService.editUser(userData));
 }
 
 export async function deactivateTenantUserService(userId: string) {
-  return await client.tenantService.deactivateUser({ user_id: userId });
+  return await makeAuthenticatedCall(() => client.userService.deactivateUser({ user_id: userId }));
 }
 
 export async function activateTenantUserService(userId: string) {
-  return await client.tenantService.activateUser({ user_id: userId });
+  return await makeAuthenticatedCall(() => client.userService.activateUser({ user_id: userId }));
+}
+
+export async function removeUserService(userId: string) {
+  return await makeAuthenticatedCall(() => client.userService.removeUser({ user_id: userId }));
+}
+
+export async function getOrganizationService() {
+  return await makeAuthenticatedCall(() => client.organization.getAll());
+}
+
+export async function updateOrganizationService(orgId: string, updateData: { name: string, description: string }) {
+  return await makeAuthenticatedCall(() => client.organization.update(orgId, updateData));
+}
+
+export async function getOrganizationServiceById(orgId: string) {
+  return await makeAuthenticatedCall(() => client.organization.getById(orgId));
 }

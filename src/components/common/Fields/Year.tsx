@@ -32,6 +32,7 @@ export const Year: React.FC<YearProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
   config = {}
@@ -42,6 +43,14 @@ export const Year: React.FC<YearProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState("");
+
+  // Exit edit mode and close dropdown if readOnly becomes true
+  useEffect(() => {
+    if (readOnly) {
+      setIsEditing(false);
+      setIsOpen(false);
+    }
+  }, [readOnly]);
   const [dropdownPosition, setDropdownPosition] = useState<'below' | 'above'>('below');
   const [calculatedPosition, setCalculatedPosition] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const [selectedYear, setSelectedYear] = useState<number>(
@@ -134,6 +143,14 @@ export const Year: React.FC<YearProps> = ({
     }
   }, [isEditing]);
 
+  // Exit edit mode and close dropdown if readOnly becomes true
+  useEffect(() => {
+    if (readOnly) {
+      setIsEditing(false);
+      setIsOpen(false);
+    }
+  }, [readOnly]);
+
   useEffect(() => {
     prevValueRef.current = value;
   }, [value]);
@@ -156,6 +173,7 @@ export const Year: React.FC<YearProps> = ({
   };
 
   const handleYearSelect = (year: number) => {
+    if (readOnly) return;
     setIsOpen(false);
     setSelectedYear(year);
     setInputValue(year.toString());
@@ -242,7 +260,7 @@ export const Year: React.FC<YearProps> = ({
             onBlur={handleInputBlur}
             onKeyDown={handleInputKeyDown}
             placeholder="YYYY"
-            disabled={disabled}
+            disabled={disabled || readOnly}
             className={`field-component ${disabled ? "text-gray-400 cursor-not-allowed" : "text-gray-900"
               }`}
           />
@@ -251,13 +269,13 @@ export const Year: React.FC<YearProps> = ({
         <div
           ref={buttonRef}
           tabIndex={0}
-          className={`field-component flex items-center justify-between ${disabled ? "text-gray-400 cursor-not-allowed" : "text-gray-900"
+          className={`field-component flex items-center justify-between ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : "text-gray-900"
             }`}
           onClick={() => {
-            if (!disabled) setIsOpen((v) => !v);
+            if (!disabled && !readOnly && allowEdit) setIsOpen((v) => !v);
           }}
           onDoubleClick={(e) => {
-            if (!disabled) {
+            if (!disabled && !readOnly) {
               e.stopPropagation();
               setIsEditing(true);
               setInputValue(displayValue ? String(displayValue) : "");
@@ -295,7 +313,7 @@ export const Year: React.FC<YearProps> = ({
       {isOpen && calculatedPosition && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] left-0 border bg-background rounded-lg shadow-lg p-0 select-none"
+          className="fixed z-[9999] left-0 border bg-background rounded-xl shadow-lg p-0 select-none"
           style={{
             ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
             ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),
@@ -339,14 +357,15 @@ export const Year: React.FC<YearProps> = ({
                 <button
                   key={year}
                   type="button"
-                  className={`py-2 rounded-lg text-center text-sm font-medium transition-colors ${
+                  className={`py-2 rounded-xl text-center text-sm font-medium transition-colors ${
                     isSelected
                       ? "bg-[var(--color-bg-brand-primary)] text-black font-bold"
                       : "text-gray-900 hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)]"
                   } ${
                     isCurrentYear ? "border" : ""
                   }`}
-                  onClick={() => handleYearSelect(year)}
+                  onClick={() => !readOnly && handleYearSelect(year)}
+                  disabled={readOnly}
                   tabIndex={-1}
                 >
                   {year}

@@ -128,8 +128,6 @@ export const matchesFilter = (card: any, f: any, columns: any): boolean => {
     case 'email':
     case 'longText': {
       const s = raw == null ? '' : String(raw);
-      // console.log('s------>',s);
-      // console.log('val------>',val);
       if (op === 'is equal') return s === String(val);
       if (op === 'is not equal') return s !== String(val);
       if (op === 'contains') return s.toLowerCase().includes(String(val).toLowerCase());

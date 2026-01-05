@@ -11,7 +11,8 @@ interface DateTimeProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean;
+  allowEdit?: boolean; // true = single click opens dropdown, false = double click for manual edit
+  readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;
   config?: {
@@ -227,6 +228,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
   config = {}
@@ -251,6 +253,13 @@ export const DateTime: React.FC<DateTimeProps> = ({
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showQuickSelect, setShowQuickSelect] = useState(false);
+
+  // Exit edit mode if readOnly becomes true
+  useEffect(() => {
+    if (readOnly && isEditing) {
+      setIsEditing(false);
+    }
+  }, [readOnly, isEditing]);
   const [dateDropdownPosition, setDateDropdownPosition] = useState<'below' | 'above'>('below');
   const [timeDropdownPosition, setTimeDropdownPosition] = useState<'below' | 'above'>('below');
   const [displayOriginalTime, setDisplayOriginalTime] = useState('');
@@ -596,7 +605,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    // console.log('changing values----->', newValue)
     setInputValue(newValue);
 
     // Don't save immediately - only update display
@@ -636,7 +644,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
       const parts = raw.split(' ');
       if (parts.length === 1) {
         const datePartOnly = parts[0];
-        console.log('datePartOnly----->', datePartOnly);
 
         let dateOnlyValid = false;
         switch (dateFormat) {
@@ -693,17 +700,17 @@ export const DateTime: React.FC<DateTimeProps> = ({
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
-    if (!disabled) {
+    if (!disabled && !readOnly) {
       setIsEditing(true);
       // Set input value to current display value
       const displayValue = `${displayDate} ${displayTime}`;
-      console.log('displayDate----->', displayDate);
       setInputValue(displayValue);
       e.stopPropagation();
     }
   };
 
   const handleDateSelect = (selected: string) => {
+    if (readOnly) return;
     let newTime = displayOriginalTime;
     if (!newTime) {
       newTime = '00:00';
@@ -718,7 +725,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
     // Get timezone - use config timezone or fallback to browser timezone
     const tz = config?.timeZoneLabel || config?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
     const newValue = zonedToUtcISO(selected, normalizedTime, tz);
-    console.log('newValue----->', newValue)
     setError(validate(selected, normalizedTime));
     onChange(newValue);
   };
@@ -742,6 +748,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
   };
 
   const handleTimeSelect = (selected: string) => {
+    if (readOnly) return;
     // Convert 12-hour format to 24-hour format for storage
     let timeValue = selected;
     if (hourFormat === '12' && selected.includes(' ')) {
@@ -752,7 +759,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
       if (period === 'AM' && hour === 12) hour = 0;
       timeValue = `${pad(hour)}:${minutes}`;
     }
-    console.log('timeValue---->', timeValue)
     let newDate = displayOriginalDate;
     if (!newDate) {
       // Set to today in correct format
@@ -760,7 +766,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
       newDate = formatDate(todayISO, dateFormat);
       setDate(newDate);
     }
-    console.log('newDate----->', newDate)
     const isoDate = parseDate(newDate, dateFormat);
     timeValue = toHHmm(timeValue, hourFormat, timeFormat);
     setTime(timeValue);
@@ -768,7 +773,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
     // Get timezone - use config timezone or fallback to browser timezone
     const tz = config?.timeZoneLabel || config?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
     const newValue = zonedToUtcISO(isoDate, timeValue, tz);
-    console.log('newValue----->', newValue)
     setError(validate(isoDate, timeValue));
     onChange(newValue);
   };
@@ -867,13 +871,13 @@ export const DateTime: React.FC<DateTimeProps> = ({
       weeks.push(week);
     }
     return (
-      <div className="p-2 bg-background rounded-lg">
+      <div className="p-2 bg-background rounded-xl">
         {/* Header with navigation and quick actions */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex w-full items-center justify-between">
             <button
               type="button"
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
               onClick={() => setCalendarMonth(new Date(year, month - 1, 1))}
             >
               <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
@@ -900,7 +904,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                       <button
                         type="button"
                         onClick={goPrevMonthYear}
-                        className="h-8 w-8 grid place-items-center rounded-lg hover:bg-gray-100 transition-colors"
+                        className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100 transition-colors"
                       >
                         <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
                       </button>
@@ -910,7 +914,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                       <button
                         type="button"
                         onClick={goNextMonthYear}
-                        className="h-8 w-8 grid place-items-center rounded-lg hover:bg-gray-100 transition-colors"
+                        className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100 transition-colors"
                       >
                         <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
                       </button>
@@ -921,7 +925,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                         <button
                           key={index}
                           className={[
-                            "w-full py-2 rounded-lg text-sm text-center transition-colors",
+                            "w-full py-2 rounded-xl text-sm text-center transition-colors",
                             "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black",
                             index === month
                               ? "bg-[var(--color-bg-brand-secondary)] text-black font-semibold"
@@ -960,7 +964,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                       <button
                         type="button"
                         onClick={goPrev}
-                        className="h-8 w-8 grid place-items-center rounded-lg hover:bg-gray-100"
+                        className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100"
                       >
                         <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
                       </button>
@@ -970,7 +974,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                       <button
                         type="button"
                         onClick={goNext}
-                        className="h-8 w-8 grid place-items-center rounded-lg hover:bg-gray-100"
+                        className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100"
                       >
                         <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
                       </button>
@@ -1004,7 +1008,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
             </div>
 
             <button
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
               onClick={() => setCalendarMonth(new Date(year, month + 1, 1))}
             >
               <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
@@ -1027,8 +1031,8 @@ export const DateTime: React.FC<DateTimeProps> = ({
                 day === todayISO ? 'border border-[var(--color-bg-brand-primary)] text-primary' :
                   'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)]'
                 } ${!day ? 'opacity-0 pointer-events-none' : ''}`}
-              onClick={() => day && handleDateSelect(day)}
-              disabled={!day}
+              onClick={() => day && !readOnly && handleDateSelect(day)}
+              disabled={!day || readOnly}
             >
               {day ? Number(day.split('-')[2]) : ''}
             </button>
@@ -1038,8 +1042,9 @@ export const DateTime: React.FC<DateTimeProps> = ({
         {/* Footer with Today button */}
         <div className="flex justify-center mt-4 pt-3 border-t border-gray-100">
           <button
-            className="px-4 py-2 rounded-lg bg-[var(--color-bg-brand-primary)] text-black hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
-            onClick={() => handleDateSelect(todayISO)}
+            className="px-4 py-2 rounded-xl bg-[var(--color-bg-brand-primary)] text-black hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
+            onClick={() => !readOnly && handleDateSelect(todayISO)}
+            disabled={readOnly}
           >
             Today
           </button>
@@ -1083,7 +1088,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
 
 
   return (
-    <div className={`w-full relative ${className} ${isBorder ? "field-component-border" : ""}`} onDoubleClick={handleDoubleClick}>
+    <div className={`w-full relative ${className} ${isBorder ? "field-component-border" : ""}`} onDoubleClick={!readOnly ? handleDoubleClick : undefined}>
       {/* Label */}
       {label && (
         <label className="field-component-label">
@@ -1101,9 +1106,9 @@ export const DateTime: React.FC<DateTimeProps> = ({
             onChange={handleInputChange}
             onBlur={handleInputBlur}
             placeholder={getDateTimePlaceholder(dateFormat, hourFormat, timeFormat)}
-            disabled={disabled}
+            disabled={disabled || readOnly}
             className={`field-component min-w-max ${error ? 'border-red-500 bg-red-50' : ''
-              } ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
+              } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
           />
         </div>
       ) : (
@@ -1115,8 +1120,8 @@ export const DateTime: React.FC<DateTimeProps> = ({
               type="button"
               className={`field-component min-w-max ${error ? 'border-red-500 bg-red-50' : ''
                 } ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
-              onClick={() => !disabled && setDateOpen(v => !v)}
-              disabled={disabled}
+              onClick={() => !disabled && !readOnly && allowEdit && setDateOpen(v => !v)}
+              disabled={disabled || readOnly}
             >
               {displayOriginalDate || <span className="text-gray-400 min-w-max">{dateFormat}</span>}
             </button>
@@ -1125,7 +1130,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
           {dateOpen && dateCalculatedPosition && createPortal(
             <div
               ref={dateDropdownRef}
-              className="fixed z-[9999] border rounded-lg shadow-lg w-80 animate-fade-in bg-background"
+              className="fixed z-[9999] border rounded-xl shadow-lg w-80 animate-fade-in bg-background"
               style={{
                 ...(dateCalculatedPosition.top !== undefined && { top: `${dateCalculatedPosition.top}px` }),
                 ...(dateCalculatedPosition.bottom !== undefined && { bottom: `${dateCalculatedPosition.bottom}px` }),
@@ -1144,8 +1149,8 @@ export const DateTime: React.FC<DateTimeProps> = ({
               type="button"
               className={`field-component min-w-max ${error ? 'border-red-500 bg-red-50' : ''
                 } ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
-              onClick={() => !disabled && setTimeOpen(v => !v)}
-              disabled={disabled}
+              onClick={() => !disabled && !readOnly && allowEdit && setTimeOpen(v => !v)}
+              disabled={disabled || readOnly}
             >
               {displayOriginalTime ||
                 <span className="text-gray-400">  {/* hello2 */}
@@ -1158,7 +1163,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
           {timeOpen && timeCalculatedPosition && createPortal(
             <div
               ref={timeDropdownRef}
-              className="fixed z-[9999] border bg-background rounded-lg shadow-lg w-36 animate-fade-in"
+              className="fixed z-[9999] border bg-background rounded-xl shadow-lg w-36 animate-fade-in"
               style={{
                 ...(timeCalculatedPosition.top !== undefined && { top: `${timeCalculatedPosition.top}px` }),
                 ...(timeCalculatedPosition.bottom !== undefined && { bottom: `${timeCalculatedPosition.bottom}px` }),
@@ -1173,11 +1178,12 @@ export const DateTime: React.FC<DateTimeProps> = ({
                     <button
                       key={option}
                       type="button"
-                      className={`w-full px-4 py-2 text-sm text-[var(--color-text-primary)] rounded-lg text-left 
+                      className={`w-full px-4 py-2 text-sm text-[var(--color-text-primary)] rounded-xl text-left 
               hover:bg-[var(--color-bg-brand-primary)] hover:text-black 
               focus:bg-[var(--color-bg-brand-secondary)] transition-colors 
               ${displayTime === option ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
-                      onClick={() => handleTimeSelect(option)}
+                      onClick={() => !readOnly && handleTimeSelect(option)}
+                      disabled={readOnly}
                     >
                       {option}
                     </button>

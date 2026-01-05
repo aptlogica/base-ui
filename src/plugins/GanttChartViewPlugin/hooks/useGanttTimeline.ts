@@ -6,9 +6,10 @@ import type { Column } from '../types/api.types';
 interface UseGanttTimelineOptions {
   filteredTasks: GanttTask[];
   columns: Column[];
+  fieldConfig?: Array<{ id: string; isHidden?: boolean; position?: number }>;
 }
 
-export function useGanttTimeline({ filteredTasks, columns }: UseGanttTimelineOptions) {
+export function useGanttTimeline({ filteredTasks, columns, fieldConfig }: UseGanttTimelineOptions) {
   // Timeline state
   const [timelineStart, setTimelineStart] = useState<Date>(() => {
     const now = new Date();
@@ -115,7 +116,10 @@ export function useGanttTimeline({ filteredTasks, columns }: UseGanttTimelineOpt
 
   // Tooltip helper functions
   const getTooltipClasses = useCallback(() => {
-    const baseClasses = "absolute z-[99999] bg-card text-primary text-xs rounded-xl p-3 shadow-2xl max-w-md whitespace-nowrap pointer-events-none";
+    // Allow long content (URLs, attachments) to wrap instead of overflowing
+    const baseClasses =
+      "absolute z-[99999] bg-card text-primary text-xs rounded-xl p-3 shadow-2xl " +
+      "max-w-xl whitespace-normal break-words pointer-events-none";
 
     switch (tooltipPosition) {
       case 'top':
@@ -163,12 +167,10 @@ export function useGanttTimeline({ filteredTasks, columns }: UseGanttTimelineOpt
           const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
           return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
         },
-        formatDate: (date: Date) => {
-          return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        }
+        fieldConfig,
       }
     });
-  }, [tooltipTask, columns]);
+  }, [tooltipTask, columns, fieldConfig]);
 
   return {
     // State

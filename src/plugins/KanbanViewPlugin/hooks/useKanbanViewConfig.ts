@@ -10,12 +10,14 @@ interface UseKanbanViewConfigOptions {
   view?: any;
   columns: any[];
   updateViewConfig?: (viewId: string, updates: Record<string, unknown>) => Promise<void>;
+  isReadOnly?: boolean;
 }
 
 export function useKanbanViewConfig({
   view,
   columns,
   updateViewConfig,
+  isReadOnly = false,
 }: UseKanbanViewConfigOptions) {
   // Search state
   const [searchTerm, setSearchTerm] = useState('');
@@ -135,57 +137,61 @@ export function useKanbanViewConfig({
     setDraftFilter(filter);
   }, []);
 
-  // Add a filter and persist view config
+  // Add a filter and persist view config (only if not read-only)
   const handleAddFilter = useCallback(async (filter: FilterType) => {
     const newFilters = [...filters, filter];
-    setFilters(newFilters);
+    setFilters(newFilters); // Always update local state
     setDraftFilter(null);
 
-    if (updateViewConfig && view?.id) {
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateViewConfig && view?.id) {
       await updateViewConfig(view.id, {
         filters: newFilters
       });
     }
-  }, [filters, updateViewConfig, view]);
+  }, [filters, updateViewConfig, view, isReadOnly]);
 
-  // Remove a filter and persist view config
+  // Remove a filter and persist view config (only if not read-only)
   const handleRemoveFilter = useCallback(async (index: number) => {
     const newFilters = filters.filter((_, i) => i !== index);
-    setFilters(newFilters);
+    setFilters(newFilters); // Always update local state
 
-    if (updateViewConfig && view?.id) {
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateViewConfig && view?.id) {
       await updateViewConfig(view.id, {
         filters: newFilters
       });
     }
-  }, [filters, updateViewConfig, view]);
+  }, [filters, updateViewConfig, view, isReadOnly]);
 
-  // Update a filter at given index and persist view config
+  // Update a filter at given index and persist view config (only if not read-only)
   const handleUpdateFilter = useCallback(async (index: number, updates: Partial<FilterType>) => {
     const newFilters = [...filters];
     if (newFilters[index]) {
       newFilters[index] = { ...newFilters[index], ...updates };
-      setFilters(newFilters);
+      setFilters(newFilters); // Always update local state
 
-      if (updateViewConfig && view?.id) {
+      // Only persist to backend if NOT read-only
+      if (!isReadOnly && updateViewConfig && view?.id) {
         await updateViewConfig(view.id, {
           filters: newFilters
         });
       }
     }
-  }, [filters, updateViewConfig, view]);
+  }, [filters, updateViewConfig, view, isReadOnly]);
 
-  // Handle sort change and persist view config
+  // Handle sort change and persist view config (only if not read-only)
   const handleSortChange = useCallback(async (newSorts: SortItem[]) => {
     const validSorts = filterValidSorts(newSorts);
-    setSorts(validSorts);
+    setSorts(validSorts); // Always update local state
 
-    if (updateViewConfig && view?.id) {
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateViewConfig && view?.id) {
       await updateViewConfig(view.id, {
         sorts: validSorts
       });
     }
-  }, [updateViewConfig, view]);
+  }, [updateViewConfig, view, isReadOnly]);
 
   // Handle field toggle with debounced persistence
   const handleFieldToggle = useCallback(async (fieldId: string) => {

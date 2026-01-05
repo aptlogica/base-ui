@@ -163,7 +163,7 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
       {open && position && createPortal(
         <div
           ref={panelRef}
-          className="w-[350px] bg-card border rounded-lg shadow-lg z-50 p-0"
+          className="w-[350px] bg-card border rounded-xl shadow-lg z-50 p-0"
           style={{ position: 'fixed', top: position.top, left: position.left }}
         >
           <div className="p-3">
@@ -176,7 +176,7 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
                   <div className="relative flex-1">
                     <button
                       type="button"
-                      className="w-full px-3 py-2 text-left bg-background border rounded-lg shadow-xs
+                      className="w-full px-3 py-2 text-left bg-background border rounded-xl shadow-xs
                       cursor-pointer transition-all duration-200 ease-in-out
                       focus:outline-none focus:border-[--color-brand-600]
                       flex items-center justify-between"
@@ -203,11 +203,11 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
                       )}
                     </button>
                     {fieldDropdownOpen === idx && (
-                      <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full bg-background border text-primary rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                      <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full bg-background border text-primary rounded-xl shadow-lg max-h-64 overflow-y-auto">
                         {availableColumns.map((c) => (
                           <button
                             key={c.column_name || c.key}
-                            className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg  hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${sort.column === (c.column_name || c.key) ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''}`}
+                            className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl  hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${sort.column === (c.column_name || c.key) ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''}`}
                             onClick={() => {
                               const isPendingSort = idx >= sorts.length;
                               
@@ -250,7 +250,7 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
                   <div className="relative w-28">
                     <button
                       type="button"
-                      className="w-full px-3 py-2 text-left bg-background border rounded-lg shadow-xs
+                      className="w-full px-3 py-2 text-left bg-background border rounded-xl shadow-xs
                         cursor-pointer transition-all duration-200 ease-in-out
                         focus:outline-none focus:border-[--color-brand-600]
                         flex items-center justify-between"
@@ -268,11 +268,11 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
                       )}
                     </button>
                     {dirDropdownOpen === idx && (
-                      <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-32 text-primary bg-background border rounded-lg shadow-lg max-h-32 overflow-y-auto">
+                      <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-32 text-primary bg-background border rounded-xl shadow-lg max-h-32 overflow-y-auto">
                         {['asc', 'desc'].map((dir) => (
                           <button
                             key={dir}
-                            className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg  hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${sort.direction === dir ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''}`}
+                            className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl  hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${sort.direction === dir ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''}`}
                             onClick={() => {
                               const isPendingSort = idx >= sorts.length;
                               
@@ -324,7 +324,7 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
             })}
             {availableColumns.length > 0 && (
               <button
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-primary text-sm hover:bg-[var(--color-bg-brand-primary)] hover:text-black font-medium mt-2"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-primary text-sm hover:bg-[var(--color-bg-brand-primary)] hover:text-black font-medium mt-2"
                 onClick={() => {
                   const newIndex = displaySorts.length;
                   // Add new sort to pending sorts (local state only, no onChange call)

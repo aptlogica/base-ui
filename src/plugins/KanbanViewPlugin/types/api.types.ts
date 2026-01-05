@@ -1,6 +1,3 @@
-// Shared API types for KanbanViewPlugin
-// This file contains the same types as GridViewPlugin for consistency
-
 export interface TableModel {
   id: string;
   title: string;

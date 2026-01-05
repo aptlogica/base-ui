@@ -107,11 +107,11 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, tableId, la
       {open && position && createPortal(
         <div
           ref={panelRef}
-          className="w-72 bg-card border rounded-lg shadow-lg z-50 p-0"
+          className="w-72 bg-card border rounded-xl shadow-lg z-50 p-0"
           style={{ position: 'fixed', top: position.top, left: position.left }}
         >
           {/* Search bar */}
-          <div className="p-2 border-b border-gray-100 flex items-center gap-2">
+          <div className="p-2 border-b flex items-center gap-2">
             <input
               className="field-component field-component-focus field-component-border"
               placeholder="Search fields"
@@ -173,12 +173,12 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, tableId, la
               </>
             )}
           </div>
-          <div className="flex items-center justify-between border-t border-gray-100 px-3 py-2 bg-card">
+          <div className="flex items-center justify-between border-t rounded-bl-xl rounded-br-xl px-3 py-2 bg-card">
             <button
               className="flex items-center gap-1 text-gray-600 text-xs font-medium hover:text-gray-800"
               onClick={() => setShowSystemFields(!showSystemFields)}
             >
-              {showSystemFields ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+              {showSystemFields ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               System fields
             </button>
           </div>

@@ -55,6 +55,11 @@ export const useNavigation = () => {
           if (match.length === 4) {
             // View route: /base/{baseId}/table/{tableId}/{viewId}
             const [, baseId, tableId, viewId] = match;
+            
+            // Check if viewId is a slug (not a real view ID)
+            const viewTypeSlugs = ['grid', 'form', 'gallery', 'kanban', 'calendar', 'gantt'];
+            const isViewSlug = viewTypeSlugs.includes(viewId.toLowerCase());
+            
             if (selectedBaseId !== baseId || selectedTableId !== tableId || selectedViewId !== viewId) {
               // Ensure we have a workspaceId. If missing, resolve from baseId (prefer O(1) index)
               const effectiveWorkspaceId = selectedWorkspaceId || workspaceIndex.baseToWorkspace.get(baseId) || resolveWorkspaceIdFromBaseId(baseId, workspacesList) || '';
@@ -63,7 +68,15 @@ export const useNavigation = () => {
                 try { toast.error('Unable to resolve workspace for this base.'); } catch {}
                 return;
               }
-              navigateToView(effectiveWorkspaceId, baseId, tableId, viewId);
+              
+              if (isViewSlug) {
+                // Don't save slug as selectedViewId - only update table/base
+                // This prevents "grid" from being saved and causing redirects
+                navigateToTable(effectiveWorkspaceId, baseId, tableId);
+              } else {
+                // Real view ID - save it
+                navigateToView(effectiveWorkspaceId, baseId, tableId, viewId);
+              }
             }
           } else if (match.length === 3) {
             // Table route: /base/{baseId}/table/{tableId}

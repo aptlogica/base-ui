@@ -23,7 +23,7 @@ const WorkspaceSettingsPage: React.FC = () => {
 
   // Redirect if user doesn't have access (not full_access)
   if (!canAccessSettings() || accessLevel !== 'full_access') {
-    return <Navigate to="/workspace" replace />;
+    return <Navigate to="/homepage" replace />;
   }
 
   const workspacesQuery = useWorkspaces();
@@ -83,13 +83,13 @@ const WorkspaceSettingsPage: React.FC = () => {
         dateJoined: member.created_time ? new Date(member.created_time).toLocaleDateString() : '-',
         avatar: member.avatar || undefined,
         access_level: member.access_level, // Pass raw access_level from API
+        roles: member.roles || undefined, // Pass roles array from API (same structure as UserTable)
       };
     });
   }, [workspaceMembersQuery.data]);
 
   const handleRoleChange = (memberId: string, newRole: AccessRole) => {
     // TODO: Implement API call to update member role
-    console.log(`Change role for ${memberId} to ${newRole}`);
     toast.info('Role change functionality coming soon');
   };
 
@@ -114,7 +114,6 @@ const WorkspaceSettingsPage: React.FC = () => {
     try {
       await removeUserFromWorkspaceMutation.mutateAsync({
         workspaceId: effectiveWorkspaceId,
-        workspace_id: effectiveWorkspaceId,
         user_id: member.userId
       });
       toast.success('Member removed successfully');
@@ -142,7 +141,7 @@ const WorkspaceSettingsPage: React.FC = () => {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-full mx-auto px-6 py-8 bg-alpha-white space-y-4">
           {/* Workspace Selector + Information Card */}
-          <div className="bg-card rounded-lg border shadow-sm p-4">
+          <div className="bg-card rounded-xl border shadow-sm p-4">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <h3 className="text-lg font-semibold text-primary mb-3">Select Workspace</h3>
@@ -185,7 +184,7 @@ const WorkspaceSettingsPage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Left Column: Bases List */}
               <div className="lg:col-span-1">
-                <div className="bg-card rounded-lg border shadow-sm p-4 h-full">
+                <div className="bg-card rounded-xl border shadow-sm p-4 h-full">
                   <h3 className="text-lg font-semibold text-primary mb-4">Bases</h3>
                   {workspaceBasesQuery.isLoading ? (
                     <div className="text-center py-8">
@@ -193,11 +192,11 @@ const WorkspaceSettingsPage: React.FC = () => {
                       <p className="text-sm text-secondary">Loading bases...</p>
                     </div>
                   ) : workspaceBasesQuery.error ? (
-                    <div className="text-center py-8 border border-dashed border-red-200 rounded-lg bg-red-50">
+                    <div className="text-center py-8 border border-dashed border-red-200 rounded-xl bg-red-50">
                       <p className="text-sm text-red-600 font-medium">Failed to load bases</p>
                     </div>
                   ) : bases.length === 0 ? (
-                    <div className="text-center py-8 border border-dashed rounded-lg bg-alpha-white">
+                    <div className="text-center py-8 border border-dashed rounded-xl bg-alpha-white">
                       <p className="text-sm text-secondary">No bases found</p>
                     </div>
                   ) : (
@@ -205,7 +204,7 @@ const WorkspaceSettingsPage: React.FC = () => {
                       {bases.map((base: any) => (
                         <div
                           key={base.id}
-                          className="p-3 border rounded-lg hover:bg-alpha-white hover:border-primary/30 transition-all"
+                          className="p-3 border rounded-xl hover:bg-alpha-white hover:border-primary/30 transition-all"
                         >
                           <div className="font-medium text-primary text-sm truncate">
                             {base.title || 'Untitled Base'}
@@ -222,7 +221,7 @@ const WorkspaceSettingsPage: React.FC = () => {
 
               {/* Right Column: Members */}
               <div className="lg:col-span-2">
-                <div className="bg-card rounded-lg border shadow-sm p-4">
+                <div className="bg-card rounded-xl border shadow-sm p-4">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-primary">Workspace Members</h3>
                     {canAssignUsers() && (
@@ -242,7 +241,7 @@ const WorkspaceSettingsPage: React.FC = () => {
                       <p className="text-primary font-medium">Loading members...</p>
                     </div>
                   ) : workspaceMembersQuery.error ? (
-                    <div className="text-center py-12 border border-dashed border-red-200 rounded-lg bg-red-50">
+                    <div className="text-center py-12 border border-dashed border-red-200 rounded-xl bg-red-50">
                       <p className="text-red-600 font-medium">Failed to load members</p>
                       <p className="text-sm text-red-500 mt-1">
                         {workspaceMembersQuery.error instanceof Error
@@ -251,7 +250,7 @@ const WorkspaceSettingsPage: React.FC = () => {
                       </p>
                     </div>
                   ) : members.length === 0 ? (
-                    <div className="text-center py-12 border border-dashed rounded-lg bg-alpha-white">
+                    <div className="text-center py-12 border border-dashed rounded-xl bg-alpha-white">
                       <p className="text-primary font-medium">No members found</p>
                       <p className="text-sm text-secondary mt-1">Assign users to this workspace to see them here</p>
                     </div>
@@ -263,6 +262,7 @@ const WorkspaceSettingsPage: React.FC = () => {
                       onCopyUserId={handleCopyUserId}
                       onRemoveMember={handleRemoveMember}
                       showSearch={true}
+                      workspaceId={effectiveWorkspaceId}
                     />
                   )}
                 </div>

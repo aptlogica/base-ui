@@ -73,6 +73,7 @@ export interface CreateView {
     description?: string;
     meta: Record<string, any>;
     type: string;
+    order_index: number;
 }
 export interface UpdateView {
     view_id: string;
@@ -97,7 +98,7 @@ export interface AddImage {
     files: File[];
 }
 export interface ImportTable {
-    base_id: string;
+    base_id?: string;
     workspace_id: string;
     title: string;
     description: string;

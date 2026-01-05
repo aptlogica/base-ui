@@ -9,6 +9,7 @@ interface RatingProps {
   max?: number;
   required?: boolean;
   disabled?: boolean;
+  readOnly?: boolean; // true = completely prevent editing
   config?: {
     ratingMax?: number;
     ratingDefault?: number;
@@ -25,6 +26,7 @@ export const Rating: React.FC<RatingProps> = ({
   max = 5,
   required = false,
   disabled = false,
+  readOnly = false,
   config = {}
 }) => {
   const { ratingMax = max, ratingDefault = 0, ratingIcon = 'star', ratingColor = 'yellow', description = '' } = config;
@@ -91,7 +93,7 @@ export const Rating: React.FC<RatingProps> = ({
   };
 
   const handleStarClick = (starValue: number) => {
-    if (disabled) return;
+    if (disabled || readOnly) return;
     let newValue = starValue;
     // If clicking the same star that's already selected, toggle it off
     if (displayValue === starValue) {
@@ -103,7 +105,7 @@ export const Rating: React.FC<RatingProps> = ({
   };
 
   const handleStarHover = (starValue: number) => {
-    if (!disabled) {
+    if (!disabled && !readOnly) {
       setHoverValue(starValue);
     }
   };
@@ -130,9 +132,9 @@ export const Rating: React.FC<RatingProps> = ({
         type="button"
         onClick={() => handleStarClick(starIndex)}
         onMouseEnter={() => handleStarHover(starIndex)}
-        disabled={disabled}
+        disabled={disabled || readOnly}
         className={`transition-all duration-150 ${
-          disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-110'
+          disabled || readOnly ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-110'
         }`}
       >
         <span className={`transition-colors ${getColorClass(ratingColor, isFilled)}`}>

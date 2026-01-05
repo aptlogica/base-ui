@@ -327,7 +327,7 @@ export const Lookup: React.FC<LookupProps> = ({
       {isDropdownOpen && hiddenItems.length > 0 && (
         <div 
           ref={dropdownRef}
-          className="absolute z-50 top-full left-0 mt-1 bg-card border rounded-lg shadow-lg min-w-[300px] max-w-[500px]"
+          className="absolute z-50 top-full left-0 mt-1 bg-card border rounded-xl shadow-lg min-w-[300px] max-w-[500px]"
         >
           {/* Search Input */}
           <div className="p-2 border-b">
@@ -338,7 +338,7 @@ export const Lookup: React.FC<LookupProps> = ({
                 placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 text-sm border rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)] bg-[--color-alpha-white] outline-none transition-all duration-200"
+                className="w-full pl-8 pr-3 py-2 text-sm border rounded-xl text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)] bg-[--color-alpha-white] outline-none transition-all duration-200"
                 autoFocus
               />
             </div>

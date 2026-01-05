@@ -3,14 +3,6 @@ export type LoginForm = {
   password: string;
 };
 
-export type RegistrationForm = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-};
-
 export const validateEmail = (value: string): string | null => {
   if (!value || !value.trim()) return 'This field is required';
   const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
@@ -149,50 +141,10 @@ export const validateLogin = (form: LoginForm) => {
   return errors;
 };
 
-export const validateRegistration = (form: RegistrationForm) => {
-  const errors: { [k: string]: string } = {};
-  
-  // Validate required fields
-  const fnErr = validateRequired(form.firstName);
-  if (fnErr) errors.firstName = fnErr;
-  
-  const lnErr = validateRequired(form.lastName);
-  if (lnErr) errors.lastName = lnErr;
-  
-  const emailErr = validateEmail(form.email);
-  if (emailErr) errors.email = emailErr;
-
-  // Validate password using the same logic as UI feedback
-  if (!form.password || !form.password.trim()) {
-    errors.password = 'This field is required';
-  } else {
-    const passwordValidation = validatePasswordStrength(
-      form.password,
-      form.firstName,
-      form.lastName,
-      form.email
-    );
-    
-    if (!passwordValidation.isValid && passwordValidation.errorMessage) {
-      errors.password = passwordValidation.errorMessage;
-    }
-  }
-
-  // Validate confirm password
-  if (!form.confirmPassword || !form.confirmPassword.trim()) {
-    errors.confirmPassword = 'This field is required';
-  } else if (form.confirmPassword !== form.password) {
-    errors.confirmPassword = 'Passwords do not match';
-  }
-  
-  return errors;
-};
-
 export default {
   validateEmail,
   validatePassword,
   validateRequired,
   validateLogin,
-  validateRegistration,
   validatePasswordStrength,
 };

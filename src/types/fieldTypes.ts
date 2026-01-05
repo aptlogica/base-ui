@@ -80,11 +80,11 @@ export const FIELD_TYPES = [
   { key: 'user', label: 'User', icon: User },
   // { key: 'button', label: 'Button', icon: Plus },
   { key: 'json', label: 'JSON', icon: Braces },
-  { key: 'uuid', label: 'UUID', icon: Hash, hidden: true },
+  // { key: 'uuid', label: 'UUID', icon: Hash, hidden: true },
   // { key: 'createdTime', label: 'Created Time', icon: ClockArrowUpIcon },
   // { key: 'lastModifiedTime', label: 'Last Modified Time', icon: ClockArrowDownIcon },
-  { key: 'createdBy', label: 'Created By', icon: UserRound },
-  { key: 'lastModifiedBy', label: 'Last Modified By', icon: UserRoundPen },
+  // { key: 'createdBy', label: 'Created By', icon: UserRound },
+  // { key: 'lastModifiedBy', label: 'Last Modified By', icon: UserRoundPen },
 ];
 
 // Field type enum for type safety
@@ -110,14 +110,14 @@ export enum FieldType {
   User = 'user',
   Button = 'button',
   JSON = 'json',
-  UUID = 'uuid',
+  // UUID = 'uuid',
   Attachment = 'attachment',
   Links = 'links',
   Lookup = 'lookup',
-  CreatedTime = 'createdTime',
-  LastModifiedTime = 'lastModifiedTime',
-  CreatedBy = 'createdBy',
-  LastModifiedBy = 'lastModifiedBy',
+  // CreatedTime = 'createdTime',
+  // LastModifiedTime = 'lastModifiedTime',
+  // CreatedBy = 'createdBy',
+  // LastModifiedBy = 'lastModifiedBy',
   Formula = 'formula',
 }
 

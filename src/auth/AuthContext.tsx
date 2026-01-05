@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigationStore } from '../stores/navigationStore';
-import { isAuthenticated, logout as clientLogout, getStoredAccessToken } from '../service/clientService';
+import { isAuthenticated, logout as clientLogout } from '../service/clientService';
 import { clearAllLastNavigation, cleanupOldTokenKeys } from '../utils/navigationPersistence';
-import { decodeJwt } from 'jose';
 
 interface AuthUser {
   id?: string;
@@ -27,7 +26,7 @@ interface AuthContextType {
   loading: boolean;
   saving: boolean;
   restoreCompleted: boolean;
-  userRoles: string[];
+  userRole: string | null;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -40,21 +39,25 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const lastUserIdRef = useRef<string | null>(null);
 
-  // Get user roles from sessionStorage or user object
-  const userRoles = React.useMemo(() => {
+  // Get user role from sessionStorage or user object
+  const userRole = React.useMemo(() => {
     try {
-      const storedRoles = sessionStorage.getItem('user_roles');
-      if (storedRoles) {
-        const parsed = JSON.parse(storedRoles);
-        return Array.isArray(parsed) ? parsed : [];
+      // Try to get from token data
+      const tokenData = sessionStorage.getItem('user_token_data');
+      if (tokenData) {
+        const parsed = JSON.parse(tokenData);
+        return parsed.roles || null;
       }
+      // Fallback: check if role stored directly
+      const role = sessionStorage.getItem('user_role');
+      if (role) return role;
       // Fallback to user.roles if available
       if (user?.roles) {
-        return Array.isArray(user.roles) ? user.roles : [];
+        return typeof user.roles === 'string' ? user.roles : null;
       }
-      return [];
+      return null;
     } catch {
-      return [];
+      return null;
     }
   }, [user]);
 
@@ -95,7 +98,7 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
         }
         
         // Remove known keys (only what we actually store)
-        const keys = ['user_id','user_email','user_display_name','user_avatar','tenant_schema','user_roles'];
+        const keys = ['user_id','user_email','user_display_name','user_avatar','user_role','user_token_data'];
         keys.forEach(k => { sessionStorage.removeItem(k); localStorage.removeItem(k); });
         // Clear navigation for current user if any
         const remoteUserId = sessionStorage.getItem('user_id') || localStorage.getItem('user_id');
@@ -141,9 +144,6 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
         const user_email = sessionStorage.getItem('user_email');
         const user_display_name = sessionStorage.getItem('user_display_name');
         const user_avatar = sessionStorage.getItem('user_avatar');
-        
-        // Validate tenant schema is present for workspace API calls
-        const tenant_schema = sessionStorage.getItem('tenant_schema') || localStorage.getItem('tenant_schema');
         
         if (user_id) {
           // Clear cache if user changed (e.g., different user logged in this session)
@@ -225,44 +225,6 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
         if (userInfo.email) sessionStorage.setItem('user_email', userInfo.email);
         if (userInfo.display_name) sessionStorage.setItem('user_display_name', userInfo.display_name);
         if (userInfo.avatar) sessionStorage.setItem('user_avatar', userInfo.avatar);
-        
-        // Extract tenant_schema from decoded access token (preferred) or fallback to userInfo
-        let schema: string | undefined;
-        try {
-          const accessToken = getStoredAccessToken();
-          if (accessToken) {
-            const decoded = decodeJwt(accessToken);
-            const schemaValue = decoded?.tenant_id || 
-              decoded?.tenant_schema || 
-              decoded?.schema || 
-              decoded?.schema_name || 
-              decoded?.tenantSchema ||
-              userInfo?.tenant?.schema_name || 
-              userInfo?.tenant?.schema || 
-              userInfo?.schema_name;
-            schema = schemaValue ? String(schemaValue).trim() : undefined;
-          } else {
-            // Fallback to userInfo if token not available
-            const schemaValue = userInfo?.tenant?.schema_name || 
-              userInfo?.tenant?.schema || 
-              userInfo?.schema_name;
-            schema = schemaValue ? String(schemaValue).trim() : undefined;
-          }
-        } catch (error) {
-          // Fallback to userInfo if token decode fails
-          const schemaValue = userInfo?.tenant?.schema_name || 
-            userInfo?.tenant?.schema || 
-            userInfo?.schema_name;
-          schema = schemaValue ? String(schemaValue).trim() : undefined;
-        }
-        
-        if (schema) {
-          try {
-            sessionStorage.setItem('tenant_schema', schema);
-            // Keep in localStorage as fallback only
-            localStorage.setItem('tenant_schema', schema);
-          } catch {}
-        }
       }
       
       // Set minimal user state - full profile will be fetched via useUserProfile hook
@@ -387,14 +349,22 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
       // Continue with logout even if save fails
     }
 
-    // STEP 2: Clear React Query cache (before API call to prevent refetch attempts)
+    // STEP 2: Cancel all pending queries and clear React Query cache (before API call to prevent refetch attempts)
     try {
+      // Cancel all pending queries first to prevent them from completing
+      queryClient.cancelQueries();
+      // Then clear the cache
       queryClient.clear(); // Use clear() instead of invalidateQueries() to prevent refetch attempts
     } catch (err) {
       debug('Failed to clear React Query cache on logout', err);
     }
 
-    // STEP 3: Clean up old token keys and navigation entries
+    // STEP 3: Clear user ref and state IMMEDIATELY to disable all queries
+    // This must happen before navigation to prevent queries from running
+    lastUserIdRef.current = null;
+    setUser(null);
+
+    // STEP 4: Clean up old token keys and navigation entries
     try {
       cleanupOldTokenKeys();
       clearAllLastNavigation();
@@ -402,16 +372,16 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
       // Ignore cleanup errors
     }
 
-    // STEP 4: Call logout API to expire token on backend (this will also clear local tokens)
+    // STEP 5: Call logout API to expire token on backend (this will also clear local tokens)
     try {
       await clientLogout(); // This now calls the logout API before clearing tokens
     } catch (err) {
       // Continue with cleanup even if API call fails
     }
 
-    // STEP 5: Remove user & tenant data from storage
+    // STEP 6: Remove user & tenant data from storage
     try {
-      const keysToRemove = ['user_id','user_email','user_display_name','user_avatar','tenant_schema','user_roles'];
+      const keysToRemove = ['user_id','user_email','user_display_name','user_avatar','tenant_schema','user_role','user_token_data'];
       keysToRemove.forEach(k => {
         try { sessionStorage.removeItem(k); } catch {}
         try { localStorage.removeItem(k); } catch {}
@@ -420,7 +390,7 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
       // Ignore storage errors
     }
 
-    // STEP 6: Clear user navigation persistence for this user (if any)
+    // STEP 7: Clear user navigation persistence for this user (if any)
     try {
       const uid = sessionStorage.getItem('user_id') || localStorage.getItem('user_id') || undefined;
       if (uid) clearUserNavigation(uid);
@@ -428,21 +398,17 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
       // Ignore navigation cleanup errors
     }
 
-    // STEP 7: Broadcast sign-out to other tabs (write-then-remove to trigger storage event)
+    // STEP 8: Broadcast sign-out to other tabs (write-then-remove to trigger storage event)
     try {
       localStorage.setItem('sb_signout', Date.now().toString());
       localStorage.removeItem('sb_signout');
     } catch (err) {
       // ignore
     }
-
-    // STEP 8: Clear user ref and state
-    lastUserIdRef.current = null;
-    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, saving, restoreCompleted, userRoles }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, saving, restoreCompleted, userRole }}>
       {children}
     </AuthContext.Provider>
   );

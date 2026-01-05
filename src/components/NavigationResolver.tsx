@@ -67,7 +67,7 @@ export const NavigationResolver: React.FC = () => {
     }
     
     // Only resolve on private routes after login completes
-    const publicRoutes = ['/login', '/register', '/registervalidation', '/forgot-password', '/reset-password', '/auth/callback'];
+    const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
     const isPublicRoute = publicRoutes.some(route => 
       location.pathname === route || location.pathname.startsWith(route + '/')
     );
@@ -96,7 +96,11 @@ export const NavigationResolver: React.FC = () => {
     const currentExcluded = isExcludedRoute(location.pathname);
     const currentPath = location.pathname;
     
-    const hasNavigationState = !!(selectedBaseId && selectedTableId && selectedViewId);
+    // Check if selectedViewId is a slug (not a real view ID)
+    // Slugs like "grid" should not be treated as navigation state
+    const viewTypeSlugs = ['grid', 'form', 'gallery', 'kanban', 'calendar', 'gantt'];
+    const isViewSlug = selectedViewId && viewTypeSlugs.includes(selectedViewId.toLowerCase());
+    const hasNavigationState = !!(selectedBaseId && selectedTableId && selectedViewId && !isViewSlug);
     const expectedPath = hasNavigationState
       ? `/base/${selectedBaseId}/table/${selectedTableId}/${selectedViewId}`
       : null;
@@ -429,11 +433,11 @@ export const NavigationResolver: React.FC = () => {
         workspacesCount: workspaces.length
       });
       
-      // If user has no saved view, navigate to workspace page
-      // But also auto-select first base so workspace page has something to show
-      if (currentPath !== '/workspace') {
-        debug('NavigationResolver: No saved view - navigating to workspace');
-        replaceNavigate(navigate, '/workspace');
+      // If user has no saved view, navigate to homepage
+      // But also auto-select first base so homepage has something to show
+      if (currentPath !== '/homepage') {
+        debug('NavigationResolver: No saved view - navigating to homepage');
+        replaceNavigate(navigate, '/homepage');
       }
       
       // Auto-select first workspace and base for new users (helps workspace page show content)
@@ -574,10 +578,10 @@ export const NavigationResolver: React.FC = () => {
     const isExcluded = excludedRoutes.some(route => currentPath.includes(route));
     if (isExcluded) return;
     
-    // If no workspaces at all, redirect to /workspace (shows "Welcome to your Workspace" message)
+    // If no workspaces at all, redirect to /homepage (shows "Welcome" message)
     if (workspaces.length === 0) {
-      debug('NavigationResolver: No workspaces available, redirecting to /workspace');
-      replaceNavigate(navigate, '/workspace');
+      debug('NavigationResolver: No workspaces available, redirecting to /homepage');
+      replaceNavigate(navigate, '/homepage');
       // Clear any invalid navigation state
       const { setWorkspace, setBase, setTable, setView } = useNavigationStore.getState();
       setWorkspace(null);
@@ -601,14 +605,14 @@ export const NavigationResolver: React.FC = () => {
           const firstWorkspace = workspaces[0];
           const { setWorkspace } = useNavigationStore.getState();
           setWorkspace(firstWorkspace.id);
-          replaceNavigate(navigate, '/workspace');
+          replaceNavigate(navigate, '/homepage');
         }
       }
     }
   }, [workspacesData, workspacesLoading, selectedWorkspaceId, user?.id, restoreCompleted, location.pathname, navigate, isResolving]);
   
   // Show loading state while resolving (only on private routes)
-  const publicRoutes = ['/login', '/register', '/registervalidation', '/forgot-password', '/reset-password'];
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password'];
   const isPublicRoute = publicRoutes.some(route =>
     location.pathname === route || location.pathname.startsWith(route + '/')
   );

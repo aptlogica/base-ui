@@ -132,7 +132,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
         : (localFilterValues[filterIndex] !== undefined ? localFilterValues[filterIndex] : filter.value);
       return (
         <input
-          className="flex-1 min-w-0 px-3 py-1.5 text-sm border rounded-lg bg-background text-primary placeholder-gray-400 focus:outline-none focus:border-[--color-brand-600]"
+          className="flex-1 min-w-0 px-3 py-1.5 text-sm border rounded-xl bg-background text-primary placeholder-gray-400 focus:outline-none focus:border-[--color-brand-600]"
           placeholder="Enter a value"
           value={currentValue}
           onChange={e => {
@@ -295,7 +295,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
       return (
         <input
           type="number"
-          className="flex-1 min-w-0 px-3 py-1.5 text-sm border rounded-lg bg-background text-primary placeholder-gray-400 focus:outline-none focus:border-[--color-brand-600]"
+          className="flex-1 min-w-0 px-3 py-1.5 text-sm border rounded-xl bg-background text-primary placeholder-gray-400 focus:outline-none focus:border-[--color-brand-600]"
           placeholder="Enter a value"
           value={currentValue}
           onChange={e => {
@@ -424,7 +424,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
       const ratingValue = filter.value && filter.value.trim() ? Number(filter.value) : undefined;
       if (hasValue && ratingValue !== undefined) {
         return (
-          <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm">
+          <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-xl text-sm">
             <Rating
               value={ratingValue}
               onChange={() => { }}
@@ -551,7 +551,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
       : (localFilterValues[filterIndex] !== undefined ? localFilterValues[filterIndex] : filter.value);
     return (
       <input
-        className="flex-1 min-w-0 px-3 py-1.5 text-sm border rounded-lg bg-background text-primary placeholder-gray-400 focus:outline-none focus:border-[--color-brand-600]"
+        className="flex-1 min-w-0 px-3 py-1.5 text-sm border rounded-xl bg-background text-primary placeholder-gray-400 focus:outline-none focus:border-[--color-brand-600]"
         placeholder="Enter a value"
         value={currentValue}
         onChange={e => {
@@ -605,7 +605,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
       {open && position && createPortal(
         <div
           ref={panelRef}
-          className="w-auto bg-background border border-gray-200 rounded-lg shadow-lg z-50 p-4"
+          className="w-auto bg-background border border-gray-200 rounded-xl shadow-lg z-50 p-4"
           style={{ position: 'fixed', top: position.top, left: position.left }}
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
@@ -624,7 +624,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                   {idx === 0 ? (
                     <button
                       type="button"
-                      className="px-3 py-1.5 text-sm text-gray-600 bg-gray-100 border rounded-lg hover:bg-gray-200"
+                      className="px-3 py-1.5 text-sm text-gray-600 bg-gray-100 border rounded-xl hover:bg-gray-200"
                     >
                       Where
                     </button>
@@ -632,7 +632,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                     <>
                       <button
                         type="button"
-                        className="px-3 py-1.5 text-sm text-primary bg-background border rounded-lg hover:bg-gray-50 flex items-center gap-1"
+                        className="px-3 py-1.5 text-sm text-primary bg-background border rounded-xl hover:bg-gray-50 flex items-center gap-1"
                         onClick={() => {
                           setLogicDropdownOpen(logicDropdownOpen === idx ? null : idx);
                           setFieldDropdownOpen(null);
@@ -644,7 +644,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                       </button>
                       {logicDropdownOpen === idx && (
                         <div
-                          className="absolute z-50 mt-1 p-1 left-0 w-20 bg-background border rounded-lg shadow-lg"
+                          className="absolute z-50 mt-1 p-1 left-0 w-20 bg-background border rounded-xl shadow-lg"
                           onMouseLeave={() => setLogicDropdownOpen(null)}
                         >
                           {['AND', 'OR'].map((logic) => (
@@ -671,7 +671,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                 <div className="relative flex-1 min-w-[200px]">
                   <button
                     type="button"
-                    className="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-between"
+                    className="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-between"
                     onClick={() => {
                       setFieldDropdownOpen(fieldDropdownOpen === idx ? null : idx);
                       setOperatorDropdownOpen(null);
@@ -691,11 +691,11 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                     <ChevronDown className="h-4 w-4 text-gray-400" />
                   </button>
                   {fieldDropdownOpen === idx && (
-                    <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                    <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
                       {visibleColumns.map((col) => (
                         <button
                           key={col.column_name}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap ${filter.column === col.column_name ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
+                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap ${filter.column === col.column_name ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
                             }`}
                           onClick={() => {
                             // Reset operator and value when field changes
@@ -721,7 +721,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                 <div className="relative">
                   <button
                     type="button"
-                    className="px-3 py-1.5 text-sm text-primary bg-background border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-1"
+                    className="px-3 py-1.5 text-sm text-primary bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-1"
                     onClick={() => {
                       setOperatorDropdownOpen(operatorDropdownOpen === idx ? null : idx);
                       setFieldDropdownOpen(null);
@@ -732,11 +732,11 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                     <ChevronDown className="h-3 w-3" />
                   </button>
                   {operatorDropdownOpen === idx && (
-                    <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-max bg-background border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto">
+                    <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-max bg-background border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
                       {filterOperatorOptions.map((op) => (
                         <button
                           key={op.value}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${filter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
+                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${filter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
                             }`}
                           onClick={() => {
                             onUpdateFilter(idx, { operator: op.value });
@@ -782,7 +782,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                 {filters.length === 0 ? (
                   <button
                     type="button"
-                    className="px-3 py-1.5 text-sm text-gray-600 bg-gray-100 border border-gray-200 rounded-lg"
+                    className="px-3 py-1.5 text-sm text-gray-600 bg-gray-100 border border-gray-200 rounded-xl"
                   >
                     Where
                   </button>
@@ -790,7 +790,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                   <>
                     <button
                       type="button"
-                      className="px-3 py-1.5 text-sm text-primary bg-background border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-1"
+                      className="px-3 py-1.5 text-sm text-primary bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-1"
                       onClick={() => {
                         setLogicDropdownOpen(logicDropdownOpen === -1 ? null : -1);
                         setFieldDropdownOpen(null);
@@ -802,7 +802,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                     </button>
                     {logicDropdownOpen === -1 && (
                       <div
-                        className="absolute z-50 mt-1 p-1 left-0 w-20 bg-background border border-gray-200 rounded-lg shadow-lg"
+                        className="absolute z-50 mt-1 p-1 left-0 w-20 bg-background border border-gray-200 rounded-xl shadow-lg"
                         onMouseLeave={() => setLogicDropdownOpen(null)}
                       >
                         {['AND', 'OR'].map((logic) => (
@@ -829,7 +829,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
               <div className="relative flex-1 min-w-[200px]">
                 <button
                   type="button"
-                  className="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-between"
+                  className="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-between"
                   onClick={() => {
                     setFieldDropdownOpen(fieldDropdownOpen === -1 ? null : -1);
                     setOperatorDropdownOpen(null);
@@ -856,11 +856,11 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                   <ChevronDown className="h-4 w-4 text-gray-400" />
                 </button>
                 {fieldDropdownOpen === -1 && (
-                  <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-primary rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                  <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-primary rounded-xl shadow-lg max-h-64 overflow-y-auto">
                     {visibleColumns.map((col) => (
                       <button
                         key={col.column_name}
-                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap group ${newFilter.column === col.column_name ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap group ${newFilter.column === col.column_name ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
                           }`}
                         onClick={() => {
                           // Reset operator and value when field changes
@@ -890,7 +890,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                     <>
                       <button
                         type="button"
-                        className="px-3 py-1.5 text-sm text-primary bg-background border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-1"
+                        className="px-3 py-1.5 text-sm text-primary bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-1"
                         onClick={() => {
                           setOperatorDropdownOpen(operatorDropdownOpen === -1 ? null : -1);
                           setFieldDropdownOpen(null);
@@ -901,11 +901,11 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                         <ChevronDown className="h-3 w-3" />
                       </button>
                       {operatorDropdownOpen === -1 && (
-                        <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-max bg-background border border-primary rounded-lg shadow-lg max-h-72 overflow-y-auto">
+                        <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-max bg-background border border-primary rounded-xl shadow-lg max-h-72 overflow-y-auto">
                           {operatorOptions.map((op) => (
                             <button
                               key={op.value}
-                              className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors group ${newFilter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors group ${newFilter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
                                 }`}
                               onClick={() => {
                                 setNewFilter(f => ({ ...f, operator: op.value }));
@@ -936,7 +936,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                 return isComplete ? (
                   <button
                     type="button"
-                    className="p-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
+                    className="p-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-xl transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleAdd();
@@ -955,7 +955,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
             {!showNewFilterRow && (
               <button
                 type="button"
-                className="flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-lg"
+                className="flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-xl"
                 onClick={() => {
                   setShowNewFilterRow(true);
                   setHasUserInteracted(false);
@@ -971,7 +971,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
             {showNewFilterRow && (
               <button
                 type="button"
-                className="flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-lg"
+                className="flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-xl"
                 onClick={handleAdd}
               >
                 <Plus className="w-4 h-4" />
