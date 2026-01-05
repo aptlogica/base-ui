@@ -211,13 +211,13 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
       <div className="flex flex-col gap-2 px-2 justify-center items-center py-2 bg-transparent">
         
       {/* Zoom Controls */}
-      <div className=" flex items-center justify-center w-fit gap-4 bg-white/70 dark:bg-[var(--color-gray-50)] backdrop-blur-sm rounded-full px-4 py-2">
+      <div className=" flex items-center justify-center border w-fit gap-4 bg-white/70 backdrop-blur-sm rounded-full px-4 py-2">
         <button
           onClick={(e) => {
             e.stopPropagation();
             setZoom((z) => Math.max(z - 25, 50));
           }}
-          className="text-secondary hover:text-black"
+          className="text-secondary hover:text-gray-500"
         >
           <ZoomOut size={18} />
         </button>
@@ -227,7 +227,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
             e.stopPropagation();
             setZoom((z) => Math.min(z + 25, 300));
           }}
-          className="text-secondary hover:text-black"
+          className="text-secondary hover:text-gray-500"
         >
           <ZoomIn size={18} />
         </button>

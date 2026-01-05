@@ -7,8 +7,8 @@ import { CalendarEvent } from "../hooks/useCalendarData";
 interface DayViewProps {
   currentDate: Date;
   events: CalendarEvent[];
-  onEventClick: (event: CalendarEvent) => void;
-  onDateClick: (date: Date) => void;
+  onEventClick?: (event: CalendarEvent) => void;
+  onDateClick?: (date: Date) => void;
   onDateSelect: (date: Date) => void;
   dateField?: any;
   columns?: any[];
@@ -124,7 +124,7 @@ const DayView: React.FC<DayViewProps> = ({
                     className="h-12 border-b border-gray-100 relative group overflow-visible"
                     onClick={() => {
                       // Only trigger date click if clicking on empty space (not on events)
-                      if (!hasEvents) {
+                      if (!hasEvents && onDateClick) {
                         const dateWithTime = new Date(currentDate);
                         dateWithTime.setHours(slot.hour, 0, 0, 0);
                         onDateClick(dateWithTime);
@@ -141,7 +141,7 @@ const DayView: React.FC<DayViewProps> = ({
                               <EventChip
                                 key={event.id}
                                 event={event}
-                                onClick={onEventClick}
+                                onClick={onEventClick || undefined}
                                 columns={columns}
                                 fieldConfig={fieldConfig}
                               />
@@ -165,25 +165,27 @@ const DayView: React.FC<DayViewProps> = ({
                           )}
                           
                           {/* Add event button on the right side when there are events */}
-                          <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const dateWithTime = new Date(currentDate);
-                                dateWithTime.setHours(slot.hour, 0, 0, 0);
-                                onDateClick(dateWithTime);
-                              }}
-                              className="p-1 hover:bg-gray-200 rounded"
-                            >
-                              <Plus className="w-4 h-4 text-gray-500" />
-                            </button>
-                          </div>
+                          {onDateClick && (
+                            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const dateWithTime = new Date(currentDate);
+                                  dateWithTime.setHours(slot.hour, 0, 0, 0);
+                                  onDateClick(dateWithTime);
+                                }}
+                                className="p-1 hover:bg-gray-200 rounded"
+                              >
+                                <Plus className="w-4 h-4 text-gray-500" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
                     
                     {/* Add event button - only show when no events and on hover */}
-                    {!hasEvents && (
+                    {!hasEvents && onDateClick && (
                       <div className="opacity-0 group-hover:opacity-100 absolute inset-0 flex items-center justify-center pointer-events-none">
                         <button
                           onClick={(e) => {
@@ -224,12 +226,14 @@ const DayView: React.FC<DayViewProps> = ({
               <div className="text-center text-gray-500 py-8">
                 <div className="text-4xl mb-2"><CalendarIcon className="w-8 h-8 mx-auto mb-2" /></div>
                 <p>No events scheduled for this day</p>
-                <button
-                  onClick={() => onDateClick(currentDate)}
-                  className="mt-4 px-4 py-2 btn-primary"
-                >
-                  Add Event
-                </button>
+                {onDateClick && (
+                  <button
+                    onClick={() => onDateClick(currentDate)}
+                    className="mt-4 px-4 py-2 btn-primary"
+                  >
+                    Add Event
+                  </button>
+                )}
               </div>
             ) : (
               <div className="space-y-2">
@@ -237,7 +241,7 @@ const DayView: React.FC<DayViewProps> = ({
                   <EventChip
                     key={event.id}
                     event={event}
-                    onClick={() => onEventClick(event)}
+                    onClick={onEventClick ? () => onEventClick(event) : undefined}
                     className="mb-2"
                     columns={columns}
                     fieldConfig={fieldConfig}
@@ -245,17 +249,19 @@ const DayView: React.FC<DayViewProps> = ({
                 ))}
                 
                 {/* Add event button */}
-                <div className="pt-4">
-                  <button
-                    onClick={() => onDateClick(currentDate)}
-                    className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <div className="flex items-center justify-center space-x-2">
-                      <Plus className="w-4 h-4" />
-                      <span>Add Event</span>
-                    </div>
-                  </button>
-                </div>
+                {onDateClick && (
+                  <div className="pt-4">
+                    <button
+                      onClick={() => onDateClick(currentDate)}
+                      className="w-full p-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <div className="flex items-center justify-center space-x-2">
+                        <Plus className="w-4 h-4" />
+                        <span>Add Event</span>
+                      </div>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

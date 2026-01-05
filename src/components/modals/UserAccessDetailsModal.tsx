@@ -116,7 +116,7 @@ export const UserAccessDetailsModal: React.FC<UserAccessDetailsModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between flex-shrink-0 px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 icon-primary rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center">
               <Info className="w-5 h-5" />
             </div>
             <div>
@@ -126,7 +126,7 @@ export const UserAccessDetailsModal: React.FC<UserAccessDetailsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
             aria-label="Close"
           >
             <X size={16} className="text-primary" />
@@ -229,11 +229,11 @@ const WorkspaceCard: React.FC<{
   getAccessLevelBadge: (accessLevel: string) => React.ReactNode;
 }> = ({ workspace, getAccessLevelBadge }) => {
   return (
-    <div className="border rounded-lg p-4 hover:border-gray-300 transition-colors bg-card">
+    <div className="border rounded-xl p-4 hover:border-gray-300 transition-colors bg-card">
       {/* Workspace Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3 flex-1">
-          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
             <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>

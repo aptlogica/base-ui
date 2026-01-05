@@ -56,7 +56,6 @@ export const NavigationMenu: React.FC<NavigationMenuProps> = ({
 
   // Debug: Log config and computed className on each render
   const navClassName = `navigation-menu position-${localConfig.menuPosition} theme-${getThemeClass()}`;
-  console.log('[NavigationMenu] Render', { localConfig, navClassName });
 
   return (
     <nav className={navClassName}>

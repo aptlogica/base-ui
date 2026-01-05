@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { SingleLineText } from '../common/Fields/SingleLineText';
 import { MultiLineText } from '../common/Fields/MultiLineText';
-import { X } from 'lucide-react';
+import { X, HelpCircle, PencilLine, CloudUpload } from 'lucide-react';
 import { validateTableName, validateViewName, validateBaseName, ExistingItem } from '../../utils/nameValidation';
 
 interface EditItemModalProps {
@@ -16,6 +15,7 @@ interface EditItemModalProps {
   itemType: 'table' | 'view' | 'base' | 'workspace';
   existingItems?: ExistingItem[];
   currentItemId?: string;
+  initialImage?: string | null;
 }
 
 export const EditItemModal: React.FC<EditItemModalProps> = ({
@@ -24,16 +24,19 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
   onSave,
   title,
   subtitle,
-  icon,
+  icon: _icon, // Keep in props for backward compatibility but not used
   initialName,
   initialDescription,
   itemType,
   existingItems = [],
   currentItemId,
+  initialImage = null,
 }) => {
   // Ensure local state is always a string so calls to `trim()` are safe
   const [name, setName] = useState(initialName ?? '');
   const [description, setDescription] = useState(initialDescription ?? '');
+  const [_image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initialImage);
   const [error, setError] = useState('');
   const [validationError, setValidationError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,11 +46,13 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
       // Use nullish coalescing to avoid setting `undefined` which would break `trim()`
       setName(initialName ?? '');
       setDescription(initialDescription ?? '');
+      setImage(null);
+      setImagePreview(initialImage);
       setError('');
       setValidationError('');
       setIsSubmitting(false);
     }
-  }, [isOpen, initialName, initialDescription]);
+  }, [isOpen, initialName, initialDescription, initialImage]);
 
   // Real-time validation on name change
   useEffect(() => {
@@ -72,6 +77,61 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
     }
   }, [name, existingItems, currentItemId, itemType, isOpen]);
 
+  // Image upload handlers (only for base type)
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        setError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
+        return;
+      }
+      
+      // Validate dimensions (max 800x400)
+      const img = new Image();
+      img.onload = () => {
+        if (img.width > 800 || img.height > 400) {
+          setError('Image dimensions must be max 800 x 400px');
+          return;
+        }
+        setImage(file);
+        setImagePreview(URL.createObjectURL(file));
+        setError('');
+      };
+      img.src = URL.createObjectURL(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const validTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
+      if (validTypes.includes(file.type)) {
+        const img = new Image();
+        img.onload = () => {
+          if (img.width <= 800 && img.height <= 400) {
+            setImage(file);
+            setImagePreview(URL.createObjectURL(file));
+            setError('');
+          } else {
+            setError('Image dimensions must be max 800 x 400px');
+          }
+        };
+        img.src = URL.createObjectURL(file);
+      } else {
+        setError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,8 +202,8 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 icon-primary rounded-lg flex items-center justify-center">
-              {icon}
+            <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
+              <PencilLine size={16} className="text-green-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-primary">{title}</h2>
@@ -152,60 +212,168 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
           >
-            <X size={16} className="text-primary" />
+            <X size={16} className="text-[var(--text-color-tertiary)]" />
           </button>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <SingleLineText
-              label={`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} Name`}
-              value={name}
-              onChange={setName}
-              placeholder={`Enter ${itemType} name...`}
-              required
-              isBorder={true}
-            />
+          <div className="space-y-1">
+            <label htmlFor="itemName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
+              {itemType.charAt(0).toUpperCase() + itemType.slice(1)} Name <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                id="itemName"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={`Enter ${itemType} name`}
+                className={`field-component field-component-border field-component-focus ${error || validationError ? 'border-red-500' : 'border'}`}
+                required
+                minLength={3}
+                maxLength={50}
+                autoFocus
+              />
+              <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
+                <span className="relative inline-block group">
+                  <HelpCircle className={`w-4 h-4 ${validationError ? 'text-red-500' : name.trim().length >= 3 ? 'text-green-600' : 'text-gray-400'
+                    } cursor-help`} />
+                  <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
+                    <h4 className="font-medium mb-2">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} name requirements:</h4>
+                    <ul className="space-y-1">
+                      <li className={`flex items-center ${name.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
+                        • Minimum 3 characters
+                      </li>
+                    </ul>
+                  </div>
+                </span>
+              </div>
+            </div>
+            {/* Validation Error */}
             {(error || validationError) && (
-              <div className="text-sm mt-2 flex items-center gap-1 text-[var(--text-color-error-primary)]">
-                <div className="w-1 h-1 rounded-full bg-[var(--text-color-error-primary)]"></div>
-                {error || validationError}
+              <div className="mt-1 text-sm text-red-600">
+                <span>{validationError || error}</span>
               </div>
             )}
+            <p className="mt-1 text-xs text-gray-500">
+              {name.length}/50 characters
+            </p>
           </div>
           <MultiLineText
             label="Description"
-            placeholder={`Describe what this ${itemType} is for...`}
+            placeholder={`Enter ${itemType} description`}
             value={description}
             onChange={value => setDescription(value)}
             rows={5}
             isBorder={true}
           />
+
+          {/* Image Upload Section - Only for base type */}
+          {itemType === 'base' && (
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
+                Image
+              </label>
+              {imagePreview ? (
+                <div className="flex gap-4">
+                  {/* Image Preview - Left Side */}
+                  <div className="relative flex-shrink-0">
+                    <div className="w-32 h-32 bg-green-100 rounded-xl flex items-center justify-center overflow-hidden">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setImage(null);
+                        setImagePreview(null);
+                        const input = document.getElementById('edit-image-upload') as HTMLInputElement;
+                        if (input) input.value = '';
+                      }}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-primary rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                  
+                  {/* Upload Area - Right Side */}
+                  <div
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    className="flex-1 relative border-2 border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                    onClick={() => document.getElementById('edit-image-upload')?.click()}
+                  >
+                    <input
+                      type="file"
+                      id="edit-image-upload"
+                      accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                    <CloudUpload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-sm text-gray-600 mb-1">
+                      <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      SVG, PNG, JPG or GIF (max. 800 x 400px)
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  className="relative border-2 border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                  onClick={() => document.getElementById('edit-image-upload')?.click()}
+                >
+                  <input
+                    type="file"
+                    id="edit-image-upload"
+                    accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                  <CloudUpload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-sm text-gray-600 mb-1">
+                    <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    SVG, PNG, JPG or GIF (max. 800 x 400px)
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-primary"
+              className="px-4 py-2 rounded-xl border hover:bg-gray-100 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !name.trim() || !!validationError}
-              className="px-6 py-2 rounded-lg btn-primary text-white font-medium focus:ring-1 focus:ring-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              disabled={isSubmitting || !name.trim() || name.trim().length < 3 || !!validationError}
+              className="flex items-center gap-2 px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {isSubmitting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Saving...
+                  <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"></div>
+                  Updating...
                 </>
               ) : (
-                'Save Changes'
+                'Update'
               )}
             </button>
           </div>

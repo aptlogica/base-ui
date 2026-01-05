@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Plugin, PluginManifest, PluginAPI } from '../../core/types';
 import { matchesViewType } from '../../utils/viewType';
 import { useFormData } from './hooks/useFormData';
-import { FormView } from './components/FormView';
+// LAZY LOAD: FormView component - only load when FormView is actually rendered
+const FormView = lazy(() => 
+  import('./components/FormView').then(m => ({ default: m.FormView }))
+);
+import { Loader } from '../../components/ui/Loader';
 
 const manifest: PluginManifest = {
   id: 'form-view-plugin',
@@ -47,13 +51,19 @@ const FormViewPlugin: Plugin = {
       // Form view should work even with no records (for creating new records)
 
       return (
-        <FormView
-          tableData={tableData!}
-          viewId={viewId}
-          recordId={recordId}
-          onRefresh={() => refresh()}
-          actions={{ addRow, insertRowData, deleteRecord, updateField, deleteColumn, createField, updateView, submitForm, createNewField, updateFieldData, toggleFieldVisibility, setAllFieldsVisibility, updateFieldOrder, updateAppearance, deleteFieldData }}
-        />
+        <Suspense fallback={
+          <div className="h-full flex items-center justify-center">
+            <Loader size={10} />
+          </div>
+        }>
+          <FormView
+            tableData={tableData!}
+            viewId={viewId}
+            recordId={recordId}
+            onRefresh={() => refresh()}
+            actions={{ addRow, insertRowData, deleteRecord, updateField, deleteColumn, createField, updateView, submitForm, createNewField, updateFieldData, toggleFieldVisibility, setAllFieldsVisibility, updateFieldOrder, updateAppearance, deleteFieldData }}
+          />
+        </Suspense>
       );
     };
 

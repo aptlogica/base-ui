@@ -231,7 +231,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                 <button
                   key={color}
                   onClick={() => handleColorChange(color)}
-                  className={`w-10 h-10 rounded-lg border-2 transition-all ${
+                  className={`w-10 h-10 rounded-xl border-2 transition-all ${
                     ap.backgroundColor === color
                       ? 'border scale-110'
                       :  'border-gray-300 hover:border-gray-400'
@@ -293,7 +293,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowLogoUrlInput(true)}
-                    className="px-3 py-2 flex-1 border border-gray-300 rounded-lg text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 flex items-center gap-2"
+                    className="px-3 py-2 flex-1 border border-gray-300 rounded-xl text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 flex items-center gap-2"
                   >
                     <Link2  size={16} />
                     <span>Insert via URL</span>
@@ -335,7 +335,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                     type="button"
                     onClick={() => logoFileInputRef.current?.click()}
                     disabled={uploadingLogo}
-                    className="px-3 py-2 border border-gray-300 flex-1 rounded-lg text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-3 py-2 border border-gray-300 flex-1 rounded-xl text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     {uploadingLogo ? (
                       <>
@@ -354,7 +354,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
             )}
             {logoError && <p className="text-xs text-red-600 mt-1">{logoError}</p>}
             {ap.logoUrl && !logoError && (
-              <div className="mt-2 bg-card rounded-lg p-1.5 border flex items-center gap-3">
+              <div className="mt-2 bg-card rounded-xl p-1.5 border flex items-center gap-3">
                 <img src={String(ap.logoUrl)} alt="Logo preview" className="h-12 w-12 object-contain rounded" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">Logo</p>
@@ -424,7 +424,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowBannerUrlInput(true)}
-                    className="px-3 py-2 flex-1 border border-gray-300 rounded-lg text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 flex items-center gap-2"
+                    className="px-3 py-2 flex-1 border border-gray-300 rounded-xl text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 flex items-center gap-2"
                   >
                     <Link2 size={16} />
                     <span>Insert via URL</span>
@@ -463,7 +463,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                     type="button"
                     onClick={() => bannerFileInputRef.current?.click()}
                     disabled={uploadingBanner}
-                    className="px-3 py-2 flex-1 border border-gray-300 rounded-lg text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-3 py-2 flex-1 border border-gray-300 rounded-xl text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     {uploadingBanner ? (
                       <>
@@ -482,7 +482,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
             )}
             {bannerError && <p className="text-xs text-red-600 mt-1">{bannerError}</p>}
             {ap.bannerUrl && !bannerError && (
-              <div className="mt-2 bg-card border rounded-lg p-1.5 flex items-center gap-3">
+              <div className="mt-2 bg-card border rounded-xl p-1.5 flex items-center gap-3">
                 <img src={String(ap.bannerUrl)} alt="Banner preview" className="h-12 w-20 object-cover rounded" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">Banner</p>

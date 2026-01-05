@@ -12,6 +12,7 @@ import {
     createFieldRendererProps
 } from '../../utils/standardFieldUtils';
 import { isFormulaField } from '../../utils/fieldUtils';
+import { useBaseAccess } from '../../hooks/useBaseAccess';
 
 type CreateRecordModalProps = {
     isOpen: boolean;
@@ -39,6 +40,11 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const [formError, setFormError] = useState<string | null>(null);
     const [rowData, setRowData] = useState<Record<string, any>>({});
     const [createdRecordId, setCreatedRecordId] = useState<string | null>(null);
+
+    // Get base_id from table (could be table.base_id or table.model.base_id)
+    const baseId = table?.base_id || table?.model?.base_id;
+    const { canCreateRecord, isBaseReadOnly } = useBaseAccess(baseId);
+    const isReadOnly = isBaseReadOnly();
 
     const addRowMutation = useAddRow();
     const insertValueMutation = useInsertRowData();
@@ -127,6 +133,12 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
 
 
     const handleSave = async () => {
+        // Check permission before saving
+        if (!canCreateRecord()) {
+            setFormError('You do not have permission to create records.');
+            return;
+        }
+
         setFormError(null);
         const missing = validateRequired();
         if (missing.length) {
@@ -217,7 +229,6 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             if (attachmentPromises.length > 0) {
                 try {
                     await Promise.all(attachmentPromises);
-                    console.log(`Successfully uploaded ${attachmentPromises.length} attachment fields`);
                 } catch (error) {
                     console.error('Some attachment uploads failed:', error);
                     // Don't block form submission if attachment uploads fail
@@ -250,10 +261,12 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         const rendererProps = createFieldRendererProps(
             field,
             value,
-            (v: any) => handleFieldChange(field, v),
+            isReadOnly ? undefined : (v: any) => handleFieldChange(field, v),
             {
                 isBorder: true,
                 required: field.required,
+                readOnly: isReadOnly,
+                allowEdit: !isReadOnly,
             }
         );
         
@@ -263,7 +276,9 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             model_id: String(table.id),
             column_id: field.id,
             row_id: createdRecordId ? Number(createdRecordId) : undefined,
-            persistImmediately: false // Don't persist immediately in modal (will upload on save)
+            persistImmediately: false, // Don't persist immediately in modal (will upload on save)
+            readOnly: isReadOnly,
+            allowEdit: !isReadOnly
         } : {};
         
         // For links fields, pass the field object and context
@@ -276,7 +291,8 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             currentRowId: createdRecordId ? Number(createdRecordId) : undefined,
             currentTableId: String(table.id),
             persistImmediately: false, // Don't persist immediately in modal
-            isBorder: true
+            isBorder: true,
+            disabled: isReadOnly
         } : {};
         
         return <FieldRenderer key={field.id} {...rendererProps} {...attachmentProps} {...linksProps} />;
@@ -295,15 +311,16 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            disabled={submitting}
-                            onClick={handleSave}
-                            className={`px-3 py-1.5 rounded btn-primary ${submitting ? 'opacity-60 cursor-not-allowed' : ''
-                                }`}
-                        >
-                            {submitLabel}
-                        </button>
+                        {canCreateRecord() && (
+                            <button
+                                type="button"
+                                disabled={submitting}
+                                onClick={handleSave}
+                                className={`px-3 py-1.5 rounded btn-primary ${submitting ? 'opacity-60 cursor-not-allowed' : ''}`}
+                            >
+                                {submitLabel}
+                            </button>
+                        )}
                         <button type="button" className="p-2" onClick={onClose} aria-label="Close">
                             <X className="w-5 h-5 text-gray-500" />
                         </button>

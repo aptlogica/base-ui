@@ -19,7 +19,8 @@ interface MultiSelectProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean;
+  allowEdit?: boolean; // true = single click opens dropdown, false = double click for manual edit
+  readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;
   config?: {
@@ -42,6 +43,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
   config = {}
@@ -114,6 +116,8 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
     }
   }, [isOpen, calculateDropdownPosition]);
 
+  // Note: We allow dropdown to open in read-only mode, but prevent selections
+
   useClickOutside({
     isOpen,
     onClose: () => setIsOpen(false),
@@ -156,6 +160,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
 
   const handleRemoveOption = (option: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (readOnly) return;
     const newValue = displayValue.filter(v => v !== option);
     onChange(newValue);
 
@@ -207,7 +212,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
           className={`field-component ${error ? 'border-red-500 bg-red-50' : ''
-            } ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900 cursor-pointer'}`}
+            } ${disabled || readOnly ? 'text-gray-400' : 'text-gray-900'} ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
         >
           <div className="w-full flex items-center justify-between min-w-0">
             <div className="flex gap-1 min-w-0 flex-1 overflow-hidden max-h-20 overflow-y-auto">
@@ -227,7 +232,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                       title={item}
                     >
                       <span className="truncate">{item}</span>
-                      {!disabled && (
+                      {!disabled && !readOnly && (
                         <span
                           onClick={(e) => handleRemoveOption(item, e)}
                           className="transition-colors p-0.5 cursor-pointer flex-shrink-0"
@@ -249,7 +254,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
         {isOpen && calculatedPosition && createPortal(
           <div
             ref={dropdownRef}
-            className="fixed z-[9999] p-1.5 space-y-1.5 border bg-background rounded-lg shadow-lg max-h-56 overflow-y-auto"
+            className="fixed z-[9999] p-1.5 space-y-1.5 border bg-background rounded-xl shadow-lg max-h-56 overflow-y-auto"
             style={{
               ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
               ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),
@@ -269,9 +274,9 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                   <button
                     type="button"
                     key={`${label}-${index}`}
-                    onClick={() => !isDisabled && handleToggleOption(label)}
-                    disabled={disabled}
-                    className={`w-full text-left text-sm rounded-lg flex items-center justify-between ${isDisabled
+                    onClick={() => !isDisabled && !readOnly && handleToggleOption(label)}
+                    disabled={disabled || readOnly}
+                    className={`w-full text-left text-sm rounded-xl flex items-center justify-between ${isDisabled || readOnly
                       ? 'text-gray-400 cursor-not-allowed'
                       : 'cursor-pointer'
                       } ${isSelected ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}

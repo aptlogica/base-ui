@@ -25,21 +25,21 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({ workspaceId }) => {
   return (
     <div className="space-y-6">
       {/* Profile Information Card */}
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border p-6">
         <h2 className="text-xl font-medium text-primary mb-4">Profile Information</h2>
         
         <div className="flex items-start space-x-4">
           {/* User Avatar */}
           <div className="flex-shrink-0">
-            <div className="w-16 h-16 bg-purple-600 rounded-lg flex items-center justify-center">
+            <div className="w-16 h-16 bg-purple-600 rounded-xl flex items-center justify-center">
               {userAvatar ? (
                 <img 
                   src={userAvatar} 
                   alt="Profile" 
-                  className="w-16 h-16 rounded-lg object-cover"
+                  className="w-16 h-16 rounded-xl object-cover"
                 />
               ) : (
-                <span className="text-white font-semibold text-xl">
+                <span className="text-primary font-semibold text-xl">
                   {getUserInitials(currentUser)}
                 </span>
               )}
@@ -53,7 +53,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({ workspaceId }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Full Name
                 </label>
-                <div className="px-3 py-2 bg-[var(--color-muted-bg)] border border-gray-200 rounded-md text-gray-900">
+                <div className="px-3 py-2 bg-[var(--color-muted-bg)] border border rounded-md text-gray-900">
                   {userName}
                 </div>
               </div>
@@ -62,7 +62,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({ workspaceId }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   User ID
                 </label>
-                <div className="px-3 py-2 bg-[var(--color-muted-bg)] border border-gray-200 rounded-md text-gray-900 font-mono text-sm">
+                <div className="px-3 py-2 bg-[var(--color-muted-bg)] border border rounded-md text-gray-900 font-mono text-sm">
                   {authUser?.id || 'Not available'}
                 </div>
               </div>
@@ -72,7 +72,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({ workspaceId }) => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Email
               </label>
-              <div className="px-3 py-2 bg-[var(--color-muted-bg)] border border-gray-200 rounded-md text-gray-900">
+              <div className="px-3 py-2 bg-[var(--color-muted-bg)] border border rounded-md text-gray-900">
                 {userEmail}
               </div>
             </div>
@@ -81,7 +81,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({ workspaceId }) => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 User Initials
               </label>
-              <div className="px-3 py-2 bg-[var(--color-muted-bg)] border border-gray-200 rounded-md text-gray-900 font-mono text-sm">
+              <div className="px-3 py-2 bg-[var(--color-muted-bg)] border border rounded-md text-gray-900 font-mono text-sm">
                 {getUserInitials(currentUser)}
               </div>
             </div>
@@ -90,7 +90,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({ workspaceId }) => {
       </div>
 
       {/* Account Settings */}
-      <div className="bg-card rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border p-6">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Account Settings</h2>
         
         <div className="space-y-4">
@@ -99,7 +99,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({ workspaceId }) => {
               <h3 className="text-sm font-medium text-gray-900">Email Notifications</h3>
               <p className="text-sm text-gray-500">Receive email notifications for workspace updates</p>
             </div>
-            <button className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-1 focus:ring-blue-500 focus:ring-offset-2 bg-blue-600">
+            <button className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] focus:ring-offset-2 bg-blue-600">
               <span className="translate-x-5 inline-block h-5 w-5 transform rounded-full bg-card shadow ring-0 transition duration-200 ease-in-out"></span>
             </button>
           </div>
@@ -109,7 +109,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({ workspaceId }) => {
               <h3 className="text-sm font-medium text-gray-900">Two-Factor Authentication</h3>
               <p className="text-sm text-gray-500">Add an extra layer of security to your account</p>
             </div>
-            <button className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-1 focus:ring-blue-500 focus:ring-offset-2 bg-gray-200">
+            <button className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] focus:ring-offset-2 bg-gray-200">
               <span className="translate-x-0 inline-block h-5 w-5 transform rounded-full bg-card shadow ring-0 transition duration-200 ease-in-out"></span>
             </button>
           </div>

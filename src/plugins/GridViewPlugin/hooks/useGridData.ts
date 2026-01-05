@@ -27,7 +27,10 @@ export interface UseGridDataReturn {
 }
 
 export function useGridData({ tableId, viewId }: UseGridDataOptions): UseGridDataReturn {
-  const tableQuery = useTable(String(tableId), {pageNumber:1, pageLimit: 30});
+  // PAGINATION DISABLED - Uncomment below to re-enable pagination (30 records per page)
+  // const tableQuery = useTable(String(tableId), {pageNumber:1, pageLimit: 30});
+  const tableQuery = useTable(String(tableId)); // No pagination - fetches all records
+
   
   // Transform API response to TableData format
   // Include dataUpdatedAt to force recalculation when query is refetched

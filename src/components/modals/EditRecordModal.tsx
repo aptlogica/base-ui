@@ -10,6 +10,7 @@ import {
   getStandardFieldType 
 } from '../../utils/standardFieldUtils';
 import { isFormulaField } from '../../utils/fieldUtils';
+import { useBaseAccess } from '../../hooks/useBaseAccess';
 
 type EditRecordModalProps = {
   isOpen: boolean;
@@ -45,6 +46,11 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   const [originalData, setOriginalData] = useState<Record<string, any>>({});
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Get base_id from table (could be table.base_id or table.model.base_id)
+  const baseId = table?.base_id || table?.model?.base_id;
+  const { canUpdateRecord, canDeleteRecord, isBaseReadOnly } = useBaseAccess(baseId);
+  const isReadOnly = isBaseReadOnly();
 
   const insertValueMutation = useInsertRowData();
   
@@ -180,6 +186,12 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   };
 
   const handleSave = async () => {
+    // Check permission before saving
+    if (!canUpdateRecord()) {
+      setFormError('You do not have permission to edit records.');
+      return;
+    }
+
     setFormError(null);
     const missing = validateRequired();
     if (missing.length) {
@@ -193,7 +205,6 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
         .filter(f => {
           // Skip attachment fields - they handle their own API calls
           if (f.type === 'attachment' || f.uidt === 'attachment') {
-            console.log('Skipping attachment field from normal insertRowData:', f.id);
             return false;
           }
           return !valuesEqual(f, originalData[f.id], rowData[f.id]);
@@ -239,9 +250,11 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     const fieldRendererProps = createFieldRendererProps(
       field,
       value, 
-      (v: any) => handleFieldChange(field, v),
+      isReadOnly ? undefined : (v: any) => handleFieldChange(field, v),
       { 
         isBorder: true,
+        readOnly: isReadOnly,
+        allowEdit: !isReadOnly,
       }
     );
     
@@ -251,7 +264,9 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
       column_id: field.id,
       row_id: Number(recordId),
       showPreview: false,
-      persistImmediately: true // Edit modal has row_id, so upload immediately
+      persistImmediately: true, // Edit modal has row_id, so upload immediately
+      readOnly: isReadOnly,
+      allowEdit: !isReadOnly
     } : {};
     
     // For links fields, pass the field object and context
@@ -264,7 +279,8 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
       currentRowId: Number(recordId),
       currentTableId: String(table.id),
       persistImmediately: false, // Don't persist immediately in modal
-      isBorder: true
+      isBorder: true,
+      disabled: isReadOnly
     } : {};
     
     return (
@@ -285,16 +301,18 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2 relative">
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={handleSave}
-              className={`px-3 py-1.5 rounded btn-primary ${
-                submitting ? 'opacity-60 cursor-not-allowed' : ''
-              }`}
-            >
-              {submitLabel}
-            </button>
+            {canUpdateRecord() && (
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={handleSave}
+                className={`px-3 py-1.5 rounded btn-primary ${
+                  submitting ? 'opacity-60 cursor-not-allowed' : ''
+                }`}
+              >
+                {submitLabel}
+              </button>
+            )}
             {/* Menu button for duplicate/delete */}
             <div className="relative" ref={menuRef}>
               <button
@@ -328,25 +346,27 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                 >
                   {/* Duplicate functionality disabled for now */}
                   {/* <button
-                    className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors text-sm"
+                    className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors text-sm"
                     onClick={() => { onDuplicate?.(recordId); setMenuOpen(false); }}
                   >
                     <Copy className="w-4 h-4" /> Duplicate record
                   </button>
                   <div className="border-t my-1" /> */}
-                  <button
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-lg hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
-                    onClick={(e) => { 
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (onDelete && recordId) {
-                        onDelete(recordId);
-                      }
-                      setMenuOpen(false); 
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" /> Delete record
-                  </button>
+                  {canDeleteRecord() && onDelete && (
+                    <button
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+                      onClick={(e) => { 
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (onDelete && recordId) {
+                          onDelete(recordId);
+                        }
+                        setMenuOpen(false); 
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete record
+                    </button>
+                  )}
                 </div>
               )}
             </div>

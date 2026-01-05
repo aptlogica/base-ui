@@ -11,14 +11,14 @@ interface RightPanelProps {
   selectedFieldId: string | null;
   editingFieldId: string | null;
   onFieldSelect: (fieldId: string) => void;
-  onAddField: () => void;
-  onConfigChange: (config: FormConfig) => void;
-  onFieldUpdate: (fieldId: string, updates: Partial<FormField>) => void;
+  onAddField?: () => void;
+  onConfigChange?: (config: FormConfig) => void;
+  onFieldUpdate?: (fieldId: string, updates: Partial<FormField>) => void;
   onBackToFieldsList: () => void;
-  onDeleteField: (fieldId: string) => void;
-  onFieldToggle: (fieldId: string) => void;
-  onFieldOrderChange: (fields: any[]) => void;
-  setVisibleAllFields: (newState: boolean) => void;
+  onDeleteField?: (fieldId: string) => void;
+  onFieldToggle?: (fieldId: string) => void;
+  onFieldOrderChange?: (fields: any[]) => void;
+  setVisibleAllFields?: (newState: boolean) => void;
 }
 
 export const RightPanel: React.FC<RightPanelProps> = ({
@@ -57,11 +57,13 @@ export const RightPanel: React.FC<RightPanelProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <FieldEditor
-            field={editingField}
-            fields={config.fields}
-            onFieldUpdate={(updates) => onFieldUpdate(editingField.id, updates)}
-          />
+          {onFieldUpdate && (
+            <FieldEditor
+              field={editingField}
+              fields={config.fields}
+              onFieldUpdate={(updates) => onFieldUpdate(editingField.id, updates)}
+            />
+          )}
         </div>
       </div>
     );
@@ -77,7 +79,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       </div>
 
       <div className="p-4 border-b flex-shrink-0 bg-sidebar">
-        <div className="flex space-x-1 bg-[var(--color-gray-100)] rounded-lg p-1">
+        <div className="flex space-x-1 bg-[var(--color-gray-100)] rounded-xl p-1">
           <button
             onClick={() => setActiveTab('fields')}
             className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
@@ -110,7 +112,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             selectedFieldId={selectedFieldId}
             onFieldSelect={onFieldSelect}
             onFieldOrderChange={onFieldOrderChange}
-            onFieldToggle={(fieldId: string) => onFieldToggle(fieldId)}
+            onFieldToggle={onFieldToggle ? (fieldId: string) => onFieldToggle(fieldId) : undefined}
             onDeleteField={onDeleteField}
             setVisibleAllFields={setVisibleAllFields}
           />
@@ -118,10 +120,12 @@ export const RightPanel: React.FC<RightPanelProps> = ({
 
         {activeTab === 'appearance' && (
           <div className="p-4 overflow-y-auto h-full">
-            <AppearanceSettings
-              appearance={config.appearance}
-              onChange={(appearance) => onConfigChange({ appearance })}
-            />
+            {onConfigChange && (
+              <AppearanceSettings
+                appearance={config.appearance}
+                onChange={(appearance) => onConfigChange({ appearance })}
+              />
+            )}
           </div>
         )}
       </div>

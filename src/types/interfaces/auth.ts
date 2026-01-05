@@ -3,16 +3,6 @@ export interface LoginParams {
   password: string;
 }
 
-export interface RegisterParams {
-  first_name: string;
-  last_name: string;
-  email: string;
-  password: string;
-  country?: string;
-  dob?: string;
-  timezone?: string;
-}
-
 export interface VerifyOtpParams {
   token: string;
   otp: string;

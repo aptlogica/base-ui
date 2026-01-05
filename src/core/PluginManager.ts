@@ -53,6 +53,11 @@ export class PluginManagerImpl implements PluginManager {
       order: { type: 'number', default: 1000 }
     });
     
+    this.extensionPoints.set('page:homepage', {
+      description: 'Homepage content area',
+      order: { type: 'number', default: 100 }
+    });
+
     this.extensionPoints.set('page:dashboard', {
       description: 'Dashboard page content area',
       order: { type: 'number', default: 100 }
@@ -153,7 +158,6 @@ export class PluginManagerImpl implements PluginManager {
         };
         
         this.extensions.get(fullPointId)!.push(extensionWithId);
-        // console.log('[PluginManager] registerExtension', { fullPointId, extensionWithId, allExtensions: this.extensions });
         this.notifyExtensionListeners(fullPointId);
       },
       getPlugin: (id) => this.getPlugin(id),

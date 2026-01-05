@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { initializeClientToken, getTenantSchema, isAuthenticated } from '../service/clientService';
+import { initializeClientToken, isAuthenticated } from '../service/clientService';
 
 export const useClientInitialization = () => {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -32,7 +32,6 @@ export const useClientInitialization = () => {
 
   return {
     isInitialized,
-    isLoading,
-    tenantSchema: getTenantSchema()
+    isLoading
   };
 };

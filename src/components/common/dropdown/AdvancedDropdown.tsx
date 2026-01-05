@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronDown, X, Check, Search, Loader2, ChevronUp, Info } from 'lucide-react';
+import { ChevronDown, X, Check, Search, Loader2, Info } from 'lucide-react';
 
 interface DropdownOption<T = string | number> {
   label: string;
@@ -330,7 +330,7 @@ export function AdvancedDropdown<T extends string | number>({
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          className={`absolute z-40 w-full bg-background border rounded-lg shadow-lg transition-all duration-200 ${dropdownPosition === 'above'
+          className={`absolute z-40 w-full bg-background border rounded-xl shadow-lg transition-all duration-200 ${dropdownPosition === 'above'
             ? 'bottom-full mb-1'
             : 'top-full mt-1'
             }`}
@@ -423,16 +423,16 @@ const DropdownTrigger = React.forwardRef<HTMLButtonElement, {
 }, ref) => {
 
   const baseClasses = `
-    relative w-full px-3 py-2.5 text-left bg-background border rounded-lg shadow-xs text-primary
+    relative w-full px-3 py-2.5 text-left bg-background border rounded-xl shadow-xs text-primary
     cursor-pointer transition-all duration-200 ease-in-out
     focus:outline-none focus:border-[--color-brand-600]
     flex items-center justify-between
   `;
 
   const stateClasses = `
-    ${disabled ? 'bg-gray-50 cursor-not-allowed opacity-60' : 'hover:border-gray-400'}
-    ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'}
-    ${isOpen ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-20' : ''}
+    ${disabled ? 'bg-gray-50 cursor-not-allowed opacity-60' : 'hover:border'}
+    ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border'}
+    ${isOpen ? 'border-[var(--color-brand-600)] ring-1 ring-[var(--color-focus-ring)] ring-opacity-20' : ''}
   `;
 
   return (
@@ -501,7 +501,7 @@ const DropdownSearch = React.forwardRef<HTMLInputElement, {
   }, [value, onChange]);
 
   return (
-    <div className="p-3 border-b border-gray-200">
+    <div className="p-3 border-b border">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
@@ -555,7 +555,7 @@ function DropdownOptionItem<T>({
 
   return (
     <li
-      className={`${baseClasses} ${stateClasses} rounded-lg`}
+      className={`${baseClasses} ${stateClasses} rounded-xl`}
       onClick={option.disabled ? undefined : onClick}
       role="option"
       aria-selected={isSelected}
@@ -601,7 +601,7 @@ function DropdownOptionItem<T>({
           {multiple ? (
             <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${isSelected
                 ? 'bg-[var(--color-bg-brand-primary)] border-[var(--color-bg-brand-primary)]'
-                : 'border-gray-300 bg-black'
+                : 'border bg-black'
               }`}>
               <Check className="w-3 h-3 text-black" />
             </div>

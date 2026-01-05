@@ -14,6 +14,7 @@ interface UseGalleryViewConfigOptions {
   columns: BaseColumn[];
   updateView?: (viewId: string, updates: Record<string, unknown>) => Promise<void>;
   searchableColumns: BaseColumn[];
+  isReadOnly?: boolean;
 }
 
 export function useGalleryViewConfig({
@@ -21,6 +22,7 @@ export function useGalleryViewConfig({
   columns,
   updateView,
   searchableColumns,
+  isReadOnly = false,
 }: UseGalleryViewConfigOptions) {
   // Filters state
   const [filters, setFilters] = useState<FilterType[]>([]);
@@ -175,7 +177,7 @@ export function useGalleryViewConfig({
     setDraftFilter(filter);
   }, []);
 
-  // Add a filter and persist view config
+  // Add a filter and persist view config (only if not read-only)
   const handleAddFilter = useCallback(async (filter: FilterType) => {
     const newFilters = [...filters, filter];
     // Update local state immediately for optimistic UI
@@ -183,29 +185,29 @@ export function useGalleryViewConfig({
     // Clear draft filter when filter is saved
     setDraftFilter(null);
 
-    // Persist to backend - pass filters directly, updateView will merge it into meta
-    if (updateView && view?.id) {
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateView && view?.id) {
       await updateView(view.id, {
         filters: newFilters
       });
     }
-  }, [filters, updateView, view]);
+  }, [filters, updateView, view, isReadOnly]);
 
-  // Remove a filter at given index and persist view config
+  // Remove a filter at given index and persist view config (only if not read-only)
   const handleRemoveFilter = useCallback(async (index: number) => {
     const newFilters = filters.filter((_, i) => i !== index);
     // Update local state immediately for optimistic UI
     setFilters(newFilters);
 
-    // Persist to backend - pass filters directly, updateView will merge it into meta
-    if (updateView && view?.id) {
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateView && view?.id) {
       await updateView(view.id, {
         filters: newFilters
       });
     }
-  }, [filters, updateView, view]);
+  }, [filters, updateView, view, isReadOnly]);
 
-  // Update a filter at given index and persist view config
+  // Update a filter at given index and persist view config (only if not read-only)
   const handleUpdateFilter = useCallback(async (index: number, updates: Partial<FilterType>) => {
     const newFilters = [...filters];
     if (newFilters[index]) {
@@ -213,16 +215,16 @@ export function useGalleryViewConfig({
       // Update local state immediately for optimistic UI
       setFilters(newFilters);
 
-      // Persist to backend - pass filters directly, updateView will merge it into meta
-      if (updateView && view?.id) {
+      // Only persist to backend if NOT read-only
+      if (!isReadOnly && updateView && view?.id) {
         await updateView(view.id, {
           filters: newFilters
         });
       }
     }
-  }, [filters, updateView, view]);
+  }, [filters, updateView, view, isReadOnly]);
 
-  // Change sorts and persist view config
+  // Change sorts and persist view config (only if not read-only)
   const handleSortChange = useCallback(async (newSorts: SortItem[]) => {
     // Filter out empty sorts (with empty column) before saving
     const validSorts = filterValidSorts(newSorts);
@@ -230,11 +232,11 @@ export function useGalleryViewConfig({
     // Update local state immediately for optimistic UI
     setSorts(validSorts);
 
-    // Persist to backend
-    if (updateView && view?.id) {
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateView && view?.id) {
       await updateView(view.id, { sorts: validSorts });
     }
-  }, [updateView, view]);
+  }, [updateView, view, isReadOnly]);
 
   // Field toggle handler for FieldsPopover
   const handleFieldToggle = useCallback(async (fieldId: string) => {

@@ -954,7 +954,7 @@ export const Formula: React.FC<FormulaProps> = ({
                   <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
                   {tooltipPosition && createPortal(
                     <div 
-                      className="fixed w-80 bg-card border rounded-lg shadow-lg p-4 text-sm z-[10000]"
+                      className="fixed w-80 bg-card border rounded-xl shadow-lg p-4 text-sm z-[10000]"
                       style={{ top: `${tooltipPosition.top}px`, left: `${tooltipPosition.left}px` }}
                     >
                       <h4 className="mb-3 text-primary font-semibold">How to use formulas:</h4>
@@ -1114,7 +1114,7 @@ export const Formula: React.FC<FormulaProps> = ({
                     </button>
                     {hoveredFunctionButton === func.name && quickFunctionTooltipPosition && createPortal(
                       <div
-                        className="fixed z-[10000] bg-card rounded-lg shadow-lg px-3 py-2.5 text-sm max-w-xs"
+                        className="fixed z-[10000] bg-card rounded-xl shadow-lg px-3 py-2.5 text-sm max-w-xs"
                         style={{
                           top: `${quickFunctionTooltipPosition.top}px`,
                           left: `${quickFunctionTooltipPosition.left}px`,
@@ -1141,7 +1141,7 @@ export const Formula: React.FC<FormulaProps> = ({
                             </div>
                           )}
                           {example && (
-                            <div className="bg-gray-50 px-2 mb-2 font-mono rounded-lg text-gray-500 mt-1">
+                            <div className="bg-gray-50 px-2 mb-2 font-mono rounded-xl text-gray-500 mt-1">
                               Example: <span className="font-mono text-gray-700">{example}</span>
                             </div>
                           )}
@@ -1159,7 +1159,7 @@ export const Formula: React.FC<FormulaProps> = ({
         {/* Select Field - Dropdown below cursor when '{' is typed */}
         {showFieldDropdown && isTextareaFocused && filteredColumns.length > 0 && cursorPosition && createPortal(
           <div 
-            className="field-dropdown fixed z-[10000] bg-white dark:bg-[var(--color-utility-bg)] shadow-lg rounded-lg border min-w-[150px] max-w-[200px] max-h-[200px] overflow-hidden"
+            className="field-dropdown fixed z-[10000] bg-white dark:bg-[var(--color-utility-bg)] shadow-lg rounded-xl border min-w-[150px] max-w-[200px] max-h-[200px] overflow-hidden"
             style={{ 
               top: `${cursorPosition.top}px`, 
               left: `${cursorPosition.left}px` 
@@ -1202,7 +1202,7 @@ export const Formula: React.FC<FormulaProps> = ({
         {/* All Functions Modal - Fixed position, aligned with NewColumnModal */}
         {showAllFunctions && allFunctionsModalPosition && createPortal(
           <div 
-            className="all-functions-modal fixed z-[10000] bg-[var(--color-alpha-white)] shadow-lg border rounded-lg w-[350px] overflow-hidden flex flex-col"
+            className="all-functions-modal fixed z-[10000] bg-[var(--color-alpha-white)] shadow-lg border rounded-xl w-[350px] overflow-hidden flex flex-col"
             style={{ 
               top: `${allFunctionsModalPosition.top}px`, 
               left: `${allFunctionsModalPosition.left}px`,
@@ -1290,7 +1290,7 @@ export const Formula: React.FC<FormulaProps> = ({
                                     setSelectedFunction(functionKey);
                                     insertFunction(func.name);
                                   }}
-                                  className={`w-full px-3 text-primary py-2 text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] rounded-lg flex items-center gap-2 ${selectedFunction === functionKey ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''} truncate`}
+                                  className={`w-full px-3 text-primary py-2 text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] rounded-xl flex items-center gap-2 ${selectedFunction === functionKey ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''} truncate`}
                                   title={func.description || func.name}
                                 >
                                   {func.name.replace(/[()]/g, '')}

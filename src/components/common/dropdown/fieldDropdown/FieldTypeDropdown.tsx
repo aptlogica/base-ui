@@ -32,7 +32,7 @@ export function FieldTypeDropdown({ selectedType, setSelectedType, fieldTypes, d
             <button
                 type="button"
                 disabled={disabled}
-                className={`w-full flex items-center gap-2 px-3 py-2 border rounded-lg text-sm focus:outline-none ${disabled
+                className={`w-full flex items-center gap-2 px-3 py-2 border rounded-xl text-sm focus:outline-none ${disabled
                     ? 'btn-disabled'
                     : 'bg-[var(--color-alpha-white)] text-[var(--text-color-primary)] focus:ring-1 focus:ring-[var(--ring-color-brand)]'
                 }`}
@@ -50,11 +50,11 @@ export function FieldTypeDropdown({ selectedType, setSelectedType, fieldTypes, d
                 {!open ? <ChevronDown className="h-4 w-4 ml-auto" /> : <ChevronUp className="h-4 w-4 ml-auto" />}
             </button>
             {open && !disabled && (
-                <div className="absolute z-50 mt-1 left-0 p-2 space-y-1 w-full bg-[var(--color-alpha-white)] text-[var(--text-color-tertiary)] border rounded-lg shadow-lg max-h-72 overflow-y-auto transition-all ease">
+                <div className="absolute z-50 mt-1 left-0 p-2 space-y-1 w-full bg-[var(--color-alpha-white)] text-[var(--text-color-tertiary)] border rounded-xl shadow-lg max-h-72 overflow-y-auto transition-all ease">
                     {fieldTypes.map((type) => (
                         <button
                             key={type.key}
-                            className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] rounded-lg ${selectedType?.key === type.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''}`}
+                            className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] rounded-xl ${selectedType?.key === type.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''}`}
                             onClick={() => {
                                 setSelectedType(type);
                                 setOpen(false);

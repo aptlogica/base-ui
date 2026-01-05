@@ -135,7 +135,6 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
         if (match?.label) return match.label;
       }
       const fallback = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      // console.log('zone----->', fallback)
       return fallback;
     } catch {
       return undefined;
@@ -289,12 +288,12 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
       disabled: isSystemField,
     };
     switch (fieldType) {
-      case 'text': return <SingleLineText {...commonProps} maxLength={255} config={parsedConfig} allowEdit={allowEdit} isBorder={isBorder} />;
-      case 'longText': return <LongText {...commonProps} maxLength={1000} minRows={2} maxRows={4} config={parsedConfig} allowEdit={allowEdit} isBorder={isBorder} />;
+      case 'text': return <SingleLineText {...commonProps} maxLength={255} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+      case 'longText': return <LongText {...commonProps} maxLength={1000} minRows={2} maxRows={4} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       case 'number': {
         // Normalize value to numeric string - handle old text values when field type was changed
         const normalizedValue = normalizeNumericValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
-        return <Number value={normalizedValue} onChange={onChange} config={parsedConfig} allowEdit={allowEdit} isBorder={isBorder} />;
+        return <Number value={normalizedValue} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       }
       case 'decimal': {
         // Normalize value to numeric - handle old text values when field type was changed
@@ -313,7 +312,8 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
           decimals={precision} 
           showThousands={parsedConfig?.showThousands} 
           config={{ ...parsedConfig, precision }} 
-          allowEdit={allowEdit} 
+          allowEdit={true}
+          readOnly={!allowEdit}
           isBorder={isBorder} 
         />;
       }
@@ -338,7 +338,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
         } else {
           normalizedValue = Boolean(value);
         }
-        return <Checkbox value={normalizedValue} onChange={onChange} icon={parsedConfig?.checkboxIcon} color={parsedConfig?.checkboxColor} config={{ ...parsedConfig, defaultValue: getDefaultValueFromConfig(parsedConfig, fieldType) }} />;
+        return <Checkbox value={normalizedValue} onChange={onChange} icon={parsedConfig?.checkboxIcon} color={parsedConfig?.checkboxColor} readOnly={!allowEdit} config={{ ...parsedConfig, defaultValue: getDefaultValueFromConfig(parsedConfig, fieldType) }} />;
       }
       case 'currency': {
         // Normalize value to numeric - handle old text values when field type was changed
@@ -350,25 +350,25 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
           const parts = parsedConfig.precision.split('.');
           precision = parts[1] ? parts[1].length : 2;
         }
-        return <Currency value={numValue} onChange={onChange} config={{ ...parsedConfig, precision }} allowEdit={allowEdit} isBorder={isBorder} />;
+        return <Currency value={numValue} onChange={onChange} config={{ ...parsedConfig, precision }} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       }
       case 'percent': {
         // Normalize value to numeric - handle old text values when field type was changed
         const normalizedValue = normalizeNumericValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
         // Convert to number for Percent component (it expects number | null)
         const numValue = normalizedValue ? parseFloat(normalizedValue) : null;
-        return <Percent value={numValue} onChange={onChange} config={parsedConfig} allowEdit={allowEdit} isBorder={isBorder} />;
+        return <Percent value={numValue} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       }
-      case 'duration': return <Duration value={value} onChange={onChange} config={parsedConfig} allowEdit={allowEdit} isBorder={isBorder} />;
+      case 'duration': return <Duration value={value} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       case 'year': {
         // Normalize value to year number - handle old text values when field type was changed
         const normalizedValue = normalizeYearValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
-        return <Year value={normalizedValue} onChange={onChange} config={parsedConfig} allowEdit={allowEdit} isBorder={isBorder} />;
+        return <Year value={normalizedValue} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       }
       case 'date': {
         // Normalize value to date string - handle old text values when field type was changed
         const normalizedValue = normalizeDateValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
-        return <DateField value={normalizedValue} onChange={onChange} format={parsedConfig?.dateFormat || 'YYYY-MM-DD'} config={parsedConfig} allowEdit={allowEdit} isBorder={isBorder} />;
+        return <DateField value={normalizedValue} onChange={onChange} format={parsedConfig?.dateFormat || 'YYYY-MM-DD'} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       }
       case 'datetime': {
         if (isSystemField) {
@@ -377,20 +377,20 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
         }
         // Normalize value to date string - handle old text values when field type was changed
         const normalizedValue = normalizeDateValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
-        return <DateTime {...commonProps} value={normalizedValue} config={parsedConfig} allowEdit={allowEdit} isBorder={isBorder} />;
+        return <DateTime {...commonProps} value={normalizedValue} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       }
       case 'time': {
         // Normalize value to time string - handle old text values when field type was changed
         const normalizedValue = normalizeTimeValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
-        return <Time {...commonProps} value={normalizedValue} config={parsedConfig} allowEdit={allowEdit} isBorder={isBorder} />;
+        return <Time {...commonProps} value={normalizedValue} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       }
-      case 'email': return <Email {...commonProps} value={value} config={parsedConfig} allowEdit={allowEdit} isBorder={isBorder} />;
-      case 'phoneNumber': return <PhoneNumber {...commonProps} value={value} config={parsedConfig} allowEdit={allowEdit} isBorder={isBorder} />;
-      case 'url': return <URL {...commonProps} value={value} config={parsedConfig} allowEdit={allowEdit} isBorder={isBorder} />;
-      case 'select': return <SingleSelect {...commonProps} options={parsedConfig?.options || []} config={parsedConfig} allowEdit={allowEdit} isBorder={isBorder} />;
-      case 'multiSelect': return <MultiSelect value={Array.isArray(value) ? value : (typeof value === 'string' ? JSON.parse(value || '[]') : [])} onChange={(newValue) => onChange(newValue)} options={parsedConfig?.options || []} maxSelections={10} config={parsedConfig} allowEdit={allowEdit} isBorder={isBorder} />;
-      case 'rating': return <Rating {...commonProps} value={value} max={parsedConfig?.ratingMax || 5} config={parsedConfig} />;
-      case 'user': return <User {...commonProps} config={parsedConfig} />;
+      case 'email': return <Email {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+      case 'phoneNumber': return <PhoneNumber {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+      case 'url': return <URL {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+      case 'select': return <SingleSelect {...commonProps} options={parsedConfig?.options || []} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+      case 'multiSelect': return <MultiSelect value={Array.isArray(value) ? value : (typeof value === 'string' ? JSON.parse(value || '[]') : [])} onChange={(newValue) => onChange(newValue)} options={parsedConfig?.options || []} maxSelections={10} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+      case 'rating': return <Rating {...commonProps} value={value} max={parsedConfig?.ratingMax || 5} readOnly={!allowEdit} config={parsedConfig} />;
+      case 'user': return <User {...commonProps} readOnly={!allowEdit} config={parsedConfig} />;
       case 'button': return <Button value={value} onChange={onChange} config={parsedConfig} />;
       case 'json': return <JSONField {...commonProps} value={value} config={parsedConfig} />;
       case 'createdTime': {
@@ -422,6 +422,8 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
         column_id={column.id}
         row_id={currentRowId}
         isBorder={isBorder}
+        allowEdit={allowEdit}
+        readOnly={!allowEdit}
       />;
       case 'lookup': return <Lookup value={value} isBorder={isBorder} field={column} />;
       case 'formula': return <Formula 
@@ -434,7 +436,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
         rowData={rowData} // Pass row data for formula evaluation
         allColumns={allColumns} // Pass all columns for field name mapping
       />;
-      default: return <SingleLineText {...commonProps} allowEdit={allowEdit} isBorder={isBorder} />;
+      default: return <SingleLineText {...commonProps} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
     }
     }
 

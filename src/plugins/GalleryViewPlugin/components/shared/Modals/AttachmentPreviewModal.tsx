@@ -10,6 +10,8 @@ interface AttachmentPreviewModalProps {
   attachments: any[];
   onAttachFile?: () => void;
   onAttachmentsChange?: (attachments: any[]) => void;
+  allowEdit?: boolean;
+  readOnly?: boolean; // true = completely prevent editing
   // API parameters for attachment operations
   model_id?: string;
   column_id?: string;
@@ -22,6 +24,8 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
   attachments,
   onAttachFile,
   onAttachmentsChange,
+  allowEdit = true,
+  readOnly = false,
   model_id,
   column_id,
   row_id
@@ -83,6 +87,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
 
   const handleEditAttachment = (attachment: any, index: number, event: React.MouseEvent) => {
     event.stopPropagation();
+    if (readOnly) return;
     setEditingIndex(index);
     setEditingTitle(attachment.title || attachment.name || '');
   };
@@ -131,6 +136,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
 
   const handleDeleteAttachment = async (attachment: any, index: number, event: React.MouseEvent) => {
     event.stopPropagation();
+    if (readOnly) return;
     try {
       // Remove via API if we have the required parameters
       if (model_id && column_id && row_id && attachment.id) {
@@ -172,7 +178,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center">
                 <Image size={16} className="text-green-600" />
               </div>
               <div>
@@ -183,6 +189,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {!readOnly && allowEdit && onAttachFile && (
               <button
                 type="button"
                 onClick={onAttachFile}
@@ -191,10 +198,11 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                 <Paperclip size={16} />
                 Attach File
               </button>
+              )}
               <button
                 type="button"
                 onClick={onClose}
-                className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+                className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
               >
                 <X size={16} className="text-gray-500" />
               </button>
@@ -210,13 +218,13 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                   return (
                   <div
                     key={file.id || file.url || index}
-                    className="relative bg-card border rounded-lg p-2 hover:shadow-md transition-all cursor-pointer"
+                    className="relative bg-card border rounded-xl p-2 hover:shadow-md transition-all cursor-pointer"
                     onClick={() => handleImageClick(index)}
                     onMouseEnter={() => setHoveredCardIndex(index)}
                     onMouseLeave={() => setHoveredCardIndex(null)}
                   >
                     {/* File Preview */}
-                    <div className="relative aspect-square mb-3 rounded-lg overflow-hidden bg-gray-50">
+                    <div className="relative aspect-square mb-3 rounded-xl overflow-hidden bg-gray-50">
                       {file.mime_type?.startsWith("image/") ? (
                         <img
                           src={file.thumbnail_url || file.url}
@@ -234,7 +242,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
 
                           if (mimeType.startsWith('application/pdf') || ext === 'pdf') {
                             return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-lg">
+                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
                                 <img
                                   src="/assets/pdf.png"
                                   alt="PDF"
@@ -245,7 +253,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                           }
                           if (mimeType.includes('msword') || mimeType.includes('officedocument.word') || ext === 'doc' || ext === 'docx') {
                             return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-lg">
+                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
                                 <img
                                   src="/assets/docx.png"
                                   alt="DOC"
@@ -256,7 +264,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                           }
                           if (mimeType.includes('excel') || mimeType.includes('spreadsheet') || ext === 'xls' || ext === 'xlsx') {
                             return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-lg">
+                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
                                 <img
                                   src="/assets/csv.png"
                                   alt="Excel"
@@ -267,7 +275,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                           }
                           if (mimeType.includes('powerpoint') || mimeType.includes('presentation') || ext === 'ppt' || ext === 'pptx') {
                             return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-lg">
+                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
                                 <img
                                   src="/assets/ppt.png"
                                   alt="PPT"
@@ -278,7 +286,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                           }
                           if (ext === 'csv') {
                             return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-lg">
+                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
                                 <img
                                   src="/assets/csv.png"
                                   alt="CSV"
@@ -289,7 +297,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                           }
                           if (ext === 'txt') {
                             return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-lg">
+                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
                                 <img
                                   src="/assets/txt.png"
                                   alt="TXT"
@@ -300,7 +308,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                           }
                           if (ext === 'zip' || ext === 'rar' || ext === '7z') {
                             return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-lg">
+                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
                                 <img
                                   src="/assets/zip.png"
                                   alt="ZIP"
@@ -311,7 +319,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                           }
                           if (ext === 'exe') {
                             return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-lg">
+                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
                                 <img
                                   src="/assets/exe-file.png"
                                   alt="EXE"
@@ -322,7 +330,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                           }
                           if (mimeType.startsWith('audio/') || ext === 'mp3' || ext === 'wav' || ext === 'flac' || ext === 'aac') {
                             return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-lg">
+                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
                                 <img
                                   src="/assets/audio.png"
                                   alt="Audio"
@@ -333,7 +341,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                           }
                           if (mimeType.startsWith('video/') || ext === 'mp4' || ext === 'avi' || ext === 'mov' || ext === 'wmv') {
                             return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-lg">
+                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
                                 <img
                                   src="/assets/video.png"
                                   alt="Video"
@@ -344,7 +352,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                           }
                           if (ext === 'tiff' || ext === 'tif') {
                             return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-lg">
+                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
                                 <img
                                   src="/assets/tiff.png"
                                   alt="TIFF"
@@ -355,7 +363,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                           }
 
                           return (
-                            <div className="w-full h-full flex items-center justify-center bg-card rounded-lg">
+                            <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
                               <img
                                 src="/assets/txt.png"
                                 alt="FILE"
@@ -371,7 +379,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
 
                     {/* File Name - Inline Editable with Action Icons */}
                     <div className="text-xs font-medium w-full">
-                      {editingIndex === index ? (
+                      {!readOnly && editingIndex === index ? (
                         <div className="flex items-center gap-1 border rounded-[var(--radius-lg)] bg-[--color-alpha-white] focus:border focus:border-[--color-brand-600] px-2 py-1 w-full min-w-0">
                           <input
                             type="text"
@@ -400,7 +408,8 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                         >
                           {file.title || file.name || "Unknown file"}
                             </div>
-                            {/* Action Buttons - Visible only on hover of this card */}
+                            {/* Action Buttons - Visible only on hover of this card and when allowEdit is true and not readOnly */}
+                            {!readOnly && allowEdit && (
                             <div className={`flex items-center gap-1 transition-all duration-200 ${isHovered ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
                             <button
                               type="button"
@@ -451,6 +460,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                               <Trash2 size={10} />
                             </button>
                           </div>
+                          )}
                         </div>
                         {/* File Size */}
                         {file.size && (

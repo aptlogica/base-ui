@@ -13,6 +13,7 @@ interface UseCalendarViewConfigOptions {
   columns: GridColumn[];
   updateView?: any; // Mutation object with mutateAsync
   updateViewConfig?: (viewId: string, updates: any) => Promise<void>;
+  isReadOnly?: boolean;
 }
 
 export function useCalendarViewConfig({
@@ -20,6 +21,7 @@ export function useCalendarViewConfig({
   columns,
   updateView,
   updateViewConfig,
+  isReadOnly = false,
 }: UseCalendarViewConfigOptions) {
   // Filters state
   const [filters, setFilters] = useState<FilterType[]>([]);
@@ -40,12 +42,27 @@ export function useCalendarViewConfig({
   // Track if we've initialized to prevent resetting user changes
   const initializedRef = useRef(false);
   const lastBackendConfigRef = useRef<string>('');
+  const lastBackendFiltersRef = useRef<string>('');
+  const lastBackendSortsRef = useRef<string>('');
 
-  // Initialize filters and sorts from view meta
+  // Initialize filters and sorts from view meta (only on first load or when backend actually changes)
   useEffect(() => {
-    if (view?.meta) {
-      setFilters(view.meta.filters || []);
-      setSorts(view.meta.sorts || []);
+    if (!view?.meta) return;
+
+    const backendFilters = view.meta.filters || [];
+    const backendSorts = view.meta.sorts || [];
+    const backendFiltersStr = JSON.stringify(backendFilters);
+    const backendSortsStr = JSON.stringify(backendSorts);
+
+    // Only update if backend config actually changed (prevents resetting on refetch after our own save)
+    if (backendFiltersStr !== lastBackendFiltersRef.current) {
+      setFilters(backendFilters);
+      lastBackendFiltersRef.current = backendFiltersStr;
+    }
+
+    if (backendSortsStr !== lastBackendSortsRef.current) {
+      setSorts(backendSorts);
+      lastBackendSortsRef.current = backendSortsStr;
     }
   }, [view?.meta]);
 
@@ -106,24 +123,21 @@ export function useCalendarViewConfig({
   }, [view?.meta, columns]);
 
   // Store current values in refs to avoid recreating debounced function
-  const updateViewRef = useRef(updateView);
+  const updateViewConfigRef = useRef(updateViewConfig);
   const viewRef = useRef(view);
   
   useEffect(() => {
-    updateViewRef.current = updateView;
+    updateViewConfigRef.current = updateViewConfig;
     viewRef.current = view;
-  }, [updateView, view]);
+  }, [updateViewConfig, view]);
 
   // Debounced API call for field config updates
   const debouncedUpdateFieldConfig = useDebounce(async (fieldConfig: any[]) => {
-    if (updateViewRef.current && viewRef.current?.id) {
+    if (updateViewConfigRef.current && viewRef.current?.id) {
       try {
-        // Pass fieldConfig directly - updateView will merge it into meta
-        await updateViewRef.current.mutateAsync({
-          viewId: String(viewRef.current.id),
-          view: {
-            fieldConfig
-          }
+        // Use updateViewConfig which properly merges into meta
+        await updateViewConfigRef.current(String(viewRef.current.id), {
+          fieldConfig
         });
         // Update ref after successful save so we know the backend has the new config
         lastBackendConfigRef.current = JSON.stringify(fieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
@@ -169,7 +183,7 @@ export function useCalendarViewConfig({
     setDraftFilter(filter);
   }, []);
 
-  // Add a filter and persist view config
+  // Add a filter and persist view config (only if not read-only)
   const handleAddFilter = useCallback(async (filter: FilterType) => {
     const newFilters = [...filters, filter];
     // Update local state immediately for optimistic UI
@@ -177,35 +191,64 @@ export function useCalendarViewConfig({
     // Clear draft filter when filter is saved
     setDraftFilter(null);
 
-    // Persist to backend - pass filters directly, updateView will merge it into meta
-    if (updateView) {
-      await updateView.mutateAsync({
-        viewId: String(view?.id),
-        view: {
-          filters: newFilters
-        }
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateViewConfig && view?.id) {
+      await updateViewConfig(String(view.id), {
+        filters: newFilters
       });
+      // Update ref after successful save
+      lastBackendFiltersRef.current = JSON.stringify(newFilters);
     }
-  }, [filters, updateView, view]);
+  }, [filters, updateViewConfig, view, isReadOnly]);
 
-  // Remove a filter at given index and persist view config
+  // Remove a filter at given index and persist view config (only if not read-only)
   const handleRemoveFilter = useCallback(async (index: number) => {
     const newFilters = filters.filter((_, i) => i !== index);
     // Update local state immediately for optimistic UI
     setFilters(newFilters);
 
-    // Persist to backend - pass filters directly, updateView will merge it into meta
-    if (updateView) {
-      await updateView.mutateAsync({
-        viewId: String(view?.id),
-        view: {
-          filters: newFilters
-        }
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateViewConfig && view?.id) {
+      await updateViewConfig(String(view.id), {
+        filters: newFilters
       });
+      // Update ref after successful save
+      lastBackendFiltersRef.current = JSON.stringify(newFilters);
     }
-  }, [filters, updateView, view]);
+  }, [filters, updateViewConfig, view, isReadOnly]);
 
-  // Change sorts and persist view config
+  // Update a filter at given index and persist view config (only if not read-only)
+  const handleUpdateFilter = useCallback(async (index: number, updates: Partial<FilterType>) => {
+    if (index < 0 || index >= filters.length) return;
+
+    // Create the updated filter
+    const updatedFilter = { ...filters[index], ...updates };
+
+    // If the value is being cleared (empty string), remove the filter entirely
+    if (updates.value === '' && !updatedFilter.value) {
+      await handleRemoveFilter(index);
+      return;
+    }
+
+    // Update the filter in place
+    const newFilters = filters.map((filter, i) => 
+      i === index ? updatedFilter : filter
+    );
+    
+    // Update local state immediately for optimistic UI
+    setFilters(newFilters);
+
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateViewConfig && view?.id) {
+      await updateViewConfig(String(view.id), {
+        filters: newFilters
+      });
+      // Update ref after successful save
+      lastBackendFiltersRef.current = JSON.stringify(newFilters);
+    }
+  }, [filters, updateViewConfig, view, handleRemoveFilter, isReadOnly]);
+
+  // Change sorts and persist view config (only if not read-only)
   const handleSortChange = useCallback(async (newSorts: SortItem[]) => {
     // Filter out empty sorts (with empty column) before saving
     const validSorts = filterValidSorts(newSorts);
@@ -213,17 +256,19 @@ export function useCalendarViewConfig({
     // Update local state immediately for optimistic UI
     setSorts(validSorts);
 
-    // Persist to backend - pass sorts directly, updateViewConfig will merge it into meta
-    if (updateViewConfig && view?.id) {
+    // Only persist to backend if NOT read-only
+    if (!isReadOnly && updateViewConfig && view?.id) {
       await updateViewConfig(String(view.id), {
         sorts: validSorts
       });
+      // Update ref after successful save
+      lastBackendSortsRef.current = JSON.stringify(validSorts);
     }
-  }, [updateViewConfig, view]);
+  }, [updateViewConfig, view, isReadOnly]);
 
   // Field toggle handler for FieldsPopover
   const handleFieldToggle = useCallback(async (fieldId: string) => {
-    if (!updateView) return;
+    if (!updateViewConfig) return;
 
     // Use functional update to avoid dependency on localFieldConfig
     setLocalFieldConfig(prevConfig => {
@@ -242,11 +287,11 @@ export function useCalendarViewConfig({
 
       return updatedFieldConfig;
     });
-  }, [updateView, debouncedUpdateFieldConfig, columns]);
+  }, [updateViewConfig, debouncedUpdateFieldConfig, columns]);
 
   // Field order change handler for FieldsPopover
   const handleFieldOrderChange = useCallback(async (newColumns: GridColumn[]) => {
-    if (!updateView || !view?.id) return;
+    if (!updateViewConfig || !view?.id) return;
 
     // Get existing fieldConfig from view meta
     const existingFieldConfig = (view?.meta?.fieldConfig || []) as any[];
@@ -312,14 +357,13 @@ export function useCalendarViewConfig({
     // Update local state immediately for optimistic UI
     setLocalFieldConfig(finalFieldConfig);
 
-    // Persist to backend - pass fieldConfig directly (not nested in meta)
-    await updateView.mutateAsync({
-      viewId: String(view.id),
-      view: {
-        fieldConfig: finalFieldConfig
-      }
+    // Persist to backend - use updateViewConfig which properly merges into meta
+    await updateViewConfig(String(view.id), {
+      fieldConfig: finalFieldConfig
     });
-  }, [updateView, view]);
+    // Update ref after successful save
+    lastBackendConfigRef.current = JSON.stringify(finalFieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+  }, [updateViewConfig, view]);
 
   return {
     // State
@@ -334,6 +378,7 @@ export function useCalendarViewConfig({
     handleRealTimeFilter,
     handleAddFilter,
     handleRemoveFilter,
+    handleUpdateFilter,
     handleSortChange,
     handleFieldToggle,
     handleFieldOrderChange,

@@ -1,5 +1,3 @@
-import type React from 'react';
-
 type Column = {
   id?: string;
   name?: string;
@@ -52,7 +50,8 @@ function cleanRichTextContent(content: string): string {
 }
 
 function formatValue(col: Column, raw: any, formatTime: (t: string) => string): string | null {
-  if (!isTruthy(raw)) return null;
+  // If value is null/undefined/empty, show hyphen instead of hiding the field
+  if (!isTruthy(raw)) return '-';
   const t = String(col?.type || col?.uidt || '').toLowerCase();
   
   try {
@@ -65,16 +64,37 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
     if (t === 'currency') {
       const num = Number(raw);
       if (!Number.isNaN(num)) {
-        // Get currency config from column meta
-        const meta = col?.meta || {};
-        const currencyType = meta.currencyType || 'USD';
-        const currencyLocale = meta.currencyLocale || 'en-US';
-        return new Intl.NumberFormat(currencyLocale, { style: 'currency', currency: currencyType }).format(num);
+        // Calendar's Column type doesn't expose meta; use default currency formatting
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+        }).format(num);
       }
+      return '-';
     }
     if (t === 'percent') {
       const num = Number(raw);
       if (!Number.isNaN(num)) return `${num}%`;
+      return '-';
+    }
+    if (t === 'email') {
+      return String(raw);
+    }
+    if (t === 'phone') {
+      return String(raw);
+    }
+    if (t === 'url') {
+      return String(raw);
+    }
+    if (t === 'number') {
+      const num = Number(raw);
+      if (!Number.isNaN(num)) return num.toLocaleString('en-US');
+      return '-';
+    }
+    if (t === 'decimal') {
+      const num = Number(raw);
+      if (!Number.isNaN(num)) return num.toFixed(2);
+      return '-';
     }
     if (t === 'date' || t === 'datetime' || t === 'createdtime' || t === 'lastmodifiedtime') {
       const d = new Date(raw);
@@ -107,35 +127,31 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
       if (Array.isArray(raw)) return raw.map(v => String((v as any)?.label ?? v)).join(', ');
       try { const parsed = JSON.parse(String(raw)); if (Array.isArray(parsed)) return parsed.join(', '); } catch {}
     }
-    if (Array.isArray(raw)) return raw.map(v => (v?.name || v?.filename || v?.fileName || String(v))).join(', ');
+    if (Array.isArray(raw)) {
+      // Handle links / attachments similar to Gantt
+      if (raw.length > 0 && typeof raw[0] === 'object' && (raw[0] as any).title) {
+        return raw
+          .map((v: any) => v?.title || v?.name || String(v))
+          .join(', ');
+      }
+      return raw
+        .map(v => (v?.name || v?.filename || v?.fileName || String(v)))
+        .join(', ');
+    }
     if (typeof raw === 'object') {
       const name = (raw as any)?.name || (raw as any)?.label || (raw as any)?.title;
       if (name) return String(name);
-      return JSON.stringify(raw);
+      // Unknown object shape – show hyphen instead of JSON noise
+      return '-';
     }
     
     // Truncate very long strings
     const str = String(raw);
     return str.length > 50 ? str.substring(0, 50) + '...' : str;
   } catch {
-    return String(raw);
+    // On any formatting error, show hyphen
+    return '-';
   }
-}
-
-// Get a user-friendly label for a column
-function getColumnLabel(col: Column): string {
-  const title = col?.title || col?.name || col?.key || col?.columnName || '';
-  if (!title) return '';
-  
-  // Convert camelCase/snake_case to readable format
-  return title
-    .replace(/([A-Z])/g, ' $1') // Add space before capital letters
-    .replace(/_/g, ' ') // Replace underscores with spaces
-    .replace(/\s+/g, ' ') // Normalize spaces
-    .trim()
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Capitalize each word
-    .join(' ');
 }
 
 export function buildEventTooltipLines(args: {
@@ -169,25 +185,32 @@ export function buildEventTooltipLines(args: {
     lines.push(titleLine.join(' • '));
   }
 
-  // Collect all essential fields
-  const essentialFields: Array<{col: Column, value: string, priority: number}> = [];
+  // Collect all visible, non-empty fields
+  // We use "priority" only for ordering (essential types first), not for exclusion
+  const visibleFields: Array<{ col: Column; value: string; priority: number }> = [];
   
   (columns || []).forEach(col => {
     const key = String(col?.columnName ?? col?.name ?? col?.key ?? col?.title ?? '');
     if (!key) return;
-    
-    // Skip title, system fields, and very long content
+
+    // Respect fieldConfig visibility if provided
+    if (options.fieldConfig && col.id) {
+      const fc = options.fieldConfig.find(fc => String(fc.id) === String(col.id));
+      if (fc?.isHidden) return;
+    }
+
+    // Skip title, system fields, and category/tag/type fields (already reflected in title)
     if (key.toLowerCase() === 'title' || col?.system) return;
-    if (key.toLowerCase().includes('category') || key.toLowerCase().includes('tag') || key.toLowerCase().includes('type')) return; // Skip category already shown in title
-    
+    if (key.toLowerCase().includes('category') || key.toLowerCase().includes('tag') || key.toLowerCase().includes('type')) return;
+
     const raw = event?.data?.[key] ?? event?.[key];
     const formatted = formatValue(col, raw, options.formatTime);
-    
+
     if (formatted) {
       const colType = String(col?.type || col?.uidt || '').toLowerCase();
-      let priority = 10; // Default low priority
-      
-      // Show the most important field types
+      let priority = 20; // Default medium/low priority
+
+      // Essential types first (lower number = earlier)
       if (colType === 'currency') priority = 1;
       else if (colType === 'percent') priority = 2;
       else if (colType === 'email') priority = 3;
@@ -197,20 +220,17 @@ export function buildEventTooltipLines(args: {
       else if (colType === 'decimal') priority = 7;
       else if (colType === 'rating') priority = 8;
       else if (colType === 'boolean') priority = 9;
-      // Skip dates, long text, and other verbose fields
-      
-      if (priority < 10) {
-        essentialFields.push({
-          col,
-          value: formatted,
-          priority
-        });
-      }
+
+      visibleFields.push({
+        col,
+        value: formatted,
+        priority,
+      });
     }
   });
 
   // Create horizontal bullet-separated lines (like NocoDB)
-  const sortedFields = essentialFields.sort((a, b) => a.priority - b.priority);
+  const sortedFields = visibleFields.sort((a, b) => a.priority - b.priority);
   
   // Group fields into lines (up to 3-4 fields per line max)
   const fieldsPerLine = 3;

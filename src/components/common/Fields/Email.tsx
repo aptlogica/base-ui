@@ -10,7 +10,8 @@ interface EmailProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean;
+  allowEdit?: boolean; // true = single click, false = double click
+  readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;
   config?: {
@@ -30,6 +31,7 @@ export const Email: React.FC<EmailProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
   config = {},
@@ -45,6 +47,13 @@ export const Email: React.FC<EmailProps> = ({
     setLocalValue(displayValue);
     setCommittedValue(displayValue);
   }, [value, defaultValue]);
+
+  // Exit edit mode if readOnly becomes true
+  useEffect(() => {
+    if (readOnly && isEditing) {
+      setIsEditing(false);
+    }
+  }, [readOnly, isEditing]);
 
   const validateEmail = (email: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -85,9 +94,11 @@ export const Email: React.FC<EmailProps> = ({
     setIsEditing(false);
   };
 
+  // allowEdit controls single vs double-click behavior
+  // readOnly completely prevents editing
   const handleClick = useClickHandler(
-    () => allowEdit && !disabled && setIsEditing(true),
-    () => !allowEdit && !disabled && setIsEditing(true)
+    () => !readOnly && allowEdit && !disabled && setIsEditing(true), // Single click when allowEdit=true
+    () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // Double click when allowEdit=false
   );
 
   return (
@@ -101,8 +112,10 @@ export const Email: React.FC<EmailProps> = ({
       )}
 
       {/* Input or Display */}
-      <div className={`relative ${className} ${isBorder ? "field-component-border" : ""}`}
-        onClick={handleClick}
+      <div 
+        className={`relative ${className} ${isBorder ? "field-component-border" : ""}`}
+        onClick={!readOnly ? handleClick : undefined}
+        style={readOnly ? { cursor: 'default' } : undefined}
       >
         {isEditing ? (
           <input
@@ -121,11 +134,11 @@ export const Email: React.FC<EmailProps> = ({
             }}
             autoFocus
             placeholder={placeholder}
-            disabled={disabled}
-            className={`field-component ${isBorder && 'field-component-focus'}`}
+            disabled={disabled || readOnly}
+            className={`field-component ${isBorder && 'field-component-focus'} ${disabled || readOnly ? 'cursor-not-allowed' : ''}`}
           />
         ) : (
-          <div className={`field-component ${localValue ? "text-grey-800" : "text-gray-400"} ${disabled ? "text-gray-400 cursor-not-allowed" : ""} max-w-full overflow-hidden`}
+          <div className={`field-component ${localValue ? "text-grey-800" : "text-gray-400"} ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""} max-w-full overflow-hidden`}
             style={{ textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
             {localValue || placeholder}

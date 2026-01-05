@@ -22,7 +22,7 @@ const EditDescriptionModal: React.FC<EditDescriptionModalProps> = ({ isOpen, ini
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+      <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
         <div className="flex items-center gap-2 mb-4">
           <Table2 size={20} color="#3b82f6" />
           <span className="text-lg font-semibold">{desc ? 'Edit Description' : 'Add Description'}</span>

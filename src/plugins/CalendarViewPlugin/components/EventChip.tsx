@@ -165,7 +165,10 @@ const EventChip: React.FC<EventChipProps> = ({
 
   // Memoize tooltip classes to avoid recalculation
   const tooltipClasses = useMemo(() => {
-    const baseClasses = "fixed z-[9999] bg-card text-secondary text-sm rounded-xl p-3 shadow-2xl max-w-md whitespace-nowrap";
+    // Allow long content (URLs, attachments) to wrap instead of overflowing
+    const baseClasses =
+      "fixed z-[9999] bg-card text-secondary text-sm rounded-xl p-3 shadow-2xl border " +
+      "max-w-xl whitespace-normal break-words";
 
     switch (tooltipPosition) {
       case 'top':
@@ -202,14 +205,14 @@ const EventChip: React.FC<EventChipProps> = ({
   return (
     <div className="relative" ref={chipRef}>
       <div
-        onClick={handleClick}
+        onClick={onClick ? handleClick : undefined}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`py-0 bg-background border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors group ${className}`}
+        className={`py-0 bg-background border rounded-xl rounded-tl-lg rounded-bl-lg transition-colors group ${onClick ? 'hover:bg-gray-50 cursor-pointer' : ''} ${className}`}
       >
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-2 flex-1 min-w-0">
-            <div className="w-1 h-8 bg-gray-300 rounded-tl rounded-bl flex-shrink-0"></div>
+            <div className="w-1 h-8 bg-gray-300 rounded-tl-xl rounded-bl-xl flex-shrink-0"></div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
                 {displayTime && `${displayTime} `}{event.title}

@@ -1,8 +1,7 @@
-import React from 'react';
-import { Plus, Loader2, Edit2 } from 'lucide-react';
-import { useUpdateWorkspace, useWorkspaces, useWorkspaceMembers, useRemoveUserFromWorkspace, useWorkspaceBases } from '../../../hooks/useApi';
+import React, { useRef, useEffect } from 'react';
+import { Plus, Loader2, Edit2, ChevronsUpDown } from 'lucide-react';
+import { useUpdateWorkspace, useWorkspaces, useWorkspaceMembers, useRemoveUserFromWorkspace } from '../../../hooks/useApi';
 import { useToast } from '../../common/Toast';
-import { AdvancedDropdown } from '../../common/dropdown/AdvancedDropdown';
 import { CreateWorkspaceModal } from '../../modals/CreateWorkspaceModal';
 import { AssignUserToWorkspaceModal } from '../../modals/AssignUserToWorkspaceModal';
 import { MembersTable, Member } from '../../shared/MembersTable';
@@ -10,6 +9,8 @@ import { AccessRole } from '../../shared/AccessRoleSelector';
 import { defaultRoleConfig } from '../../shared/roleConfig';
 import { useWorkspaceAccess } from '../../../hooks/useWorkspaceAccess';
 import { useUserRole } from '../../../hooks/useUserRole';
+import { getRoleLabel } from '../../../types/roles';
+import { getInitials } from '../../../utils/helpers';
 
 interface WorkspaceTabProps {
   workspaceId: string;
@@ -17,7 +18,7 @@ interface WorkspaceTabProps {
   workspaceDescription?: string;
 }
 
-export const WorkspaceTab: React.FC<WorkspaceTabProps> = ({ workspaceId, workspaceTitle = 'My Workspace', workspaceDescription = '' }) => {
+export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = React.useState<string>('');
   const [editWorkspaceName, setEditWorkspaceName] = React.useState('');
   const [editDescription, setEditDescription] = React.useState('');
@@ -25,23 +26,19 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = ({ workspaceId, workspa
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [isAssignUserModalOpen, setIsAssignUserModalOpen] = React.useState(false);
   const [editingMemberId, setEditingMemberId] = React.useState<string | null>(null);
+  const [workspaceDropdownOpen, setWorkspaceDropdownOpen] = React.useState(false);
+  const workspaceDropdownRef = useRef<HTMLDivElement>(null);
+  const workspaceButtonRef = useRef<HTMLButtonElement>(null);
 
   const updateWorkspaceMutation = useUpdateWorkspace();
   const workspacesQuery = useWorkspaces();
   const workspaceMembersQuery = useWorkspaceMembers(selectedWorkspaceId);
-  const workspaceBasesQuery = useWorkspaceBases(selectedWorkspaceId);
   const removeUserFromWorkspaceMutation = useRemoveUserFromWorkspace();
   const toast = useToast();
-  const { canCreateWorkspace, canAssignUsers } = useWorkspaceAccess(selectedWorkspaceId);
+  const { canCreateWorkspace, canAssignUsers, isFullAccess, isWorkspaceReadOnly } = useWorkspaceAccess(selectedWorkspaceId);
   const { isAdmin } = useUserRole();
 
   const workspaces = workspacesQuery.data || [];
-
-  // Create dropdown options from workspaces
-  const workspaceDropdownOptions = workspaces.map((ws: any) => ({
-    label: ws.title || 'Untitled Workspace',
-    value: ws.id,
-  }));
 
   // Get selected workspace details from workspaces list
   const selectedWorkspace = workspaces.find((ws: any) => ws.id === selectedWorkspaceId);
@@ -96,10 +93,11 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = ({ workspaceId, workspa
 
   // Map API response to Member interface
   const members: Member[] = React.useMemo(() => {
-    if (!workspaceMembersQuery.data?.data) return [];
+    const queryData = workspaceMembersQuery.data as any;
+    if (!queryData?.data) return [];
 
-    const membersData = Array.isArray(workspaceMembersQuery.data.data)
-      ? workspaceMembersQuery.data.data
+    const membersData = Array.isArray(queryData.data)
+      ? queryData.data
       : [];
 
     return membersData.map((member: any) => {
@@ -117,16 +115,18 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = ({ workspaceId, workspa
         name: member.display_name || member.name || member.email || 'Unknown User',
         email: member.email || '',
         role: role,
-        dateJoined: member.created_time ? new Date(member.created_time).toLocaleDateString() : '-',
+        dateJoined: member.created_time || member.created_at || '',
         avatar: member.avatar || undefined,
         access_level: member.access_level, // Pass raw access_level from API
+        last_active_at: member.last_active_at || undefined,
+        last_login_at: member.last_login_at || undefined,
+        roles: member.roles || undefined, // Pass roles array from API (same structure as UserTable)
       };
     });
   }, [workspaceMembersQuery.data]);
 
   const handleRoleChange = (memberId: string, newRole: AccessRole) => {
     // TODO: Implement API call to update member role
-    console.log(`Change role for ${memberId} to ${newRole}`);
     toast.info('Role change functionality coming soon');
   };
 
@@ -148,10 +148,10 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = ({ workspaceId, workspa
       return;
     }
 
+    // Use user_id instead of accessId for removeUserFromWorkspace API
     try {
       await removeUserFromWorkspaceMutation.mutateAsync({
         workspaceId: selectedWorkspaceId,
-        workspace_id: selectedWorkspaceId,
         user_id: member.userId
       });
       toast.success('Member removed successfully');
@@ -171,159 +171,196 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = ({ workspaceId, workspa
     setIsAssignUserModalOpen(true);
   };
 
-  // Get bases data
-  const basesData = workspaceBasesQuery.data?.data || workspaceBasesQuery.data || [];
-  const bases = Array.isArray(basesData) ? basesData : [];
+  // Get workspace icon
+  const getWorkspaceIcon = (workspace: any) => {
+    if (!workspace) return { initials: 'WS', color: 'bg-purple-400' };
+    const initials = getInitials(workspace.title || workspace.name || 'W', 'WS');
+    const colors = ['bg-purple-400', 'bg-red-400', 'bg-orange-400', 'bg-blue-400', 'bg-green-400'];
+    const hash = workspace.id ? workspace.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) : 0;
+    return { initials, color: colors[hash % colors.length] };
+  };
+
+  const workspaceIcon = getWorkspaceIcon(selectedWorkspace);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!workspaceDropdownOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      if (workspaceDropdownRef.current && !workspaceDropdownRef.current.contains(target) &&
+        workspaceButtonRef.current && !workspaceButtonRef.current.contains(target)) {
+        setWorkspaceDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [workspaceDropdownOpen]);
 
   return (
     <div className="space-y-0">
-      {/* Workspace Selector + Information Card */}
-      <div className="bg-card rounded-lg border shadow-sm p-4 mb-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-primary mb-3">Select Workspace</h3>
-            <AdvancedDropdown
-              label=""
-              options={workspaceDropdownOptions}
-              value={selectedWorkspaceId}
-              onChange={(value) => setSelectedWorkspaceId(value as string)}
-              placeholder="Select a workspace"
-              searchable
-            />
-          </div>
-          {canCreateWorkspace() && (
+      {/* Header with Workspace Dropdown, Edit Details, and Create Workspace */}
+      <div className="flex items-center justify-between gap-4 mb-6">
+        {/* Workspace Dropdown */}
+        <div className="relative" ref={workspaceDropdownRef}>
+          <button
+            ref={workspaceButtonRef}
+            onClick={() => setWorkspaceDropdownOpen(!workspaceDropdownOpen)}
+            className="flex items-center gap-2 px-3 py-2 border border-transparent rounded-xl hover:bg-gray-100 hover:border transition-colors"
+          >
+            {selectedWorkspace ? (
+              <>
+                <div className={`w-10 h-10 ${workspaceIcon.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                  <span className="text-white text-sm">
+                    {workspaceIcon.initials}
+                  </span>
+                </div>
+                <span className="text-sm font-medium text-primary">
+                  {selectedWorkspace.title || selectedWorkspace.name || 'Untitled Workspace'}
+                </span>
+              </>
+            ) : (
+              <>
+                <div className="w-8 h-8 bg-gray-400 border rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-sm">W</span>
+                </div>
+                <span className="text-sm font-medium text-gray-500">Select Workspace</span>
+              </>
+            )}
+            <ChevronsUpDown className="w-4 h-4 text-gray-400 transition-transform flex-shrink-0" />
+          </button>
+
+          {/* Workspace Dropdown Menu */}
+          {workspaceDropdownOpen && (
+            <div className="absolute top-full left-0 mt-2 w-80 bg-card border rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
+              <div className="p-2 space-y-1">
+                {workspaces.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                    No workspaces found
+                  </div>
+                ) : (
+                  workspaces.map((ws: any) => {
+                    const icon = getWorkspaceIcon(ws);
+                    const isSelected = ws.id === selectedWorkspaceId;
+                    return (
+                      <button
+                        key={ws.id}
+                        onClick={() => {
+                          setSelectedWorkspaceId(ws.id);
+                          setWorkspaceDropdownOpen(false);
+                        }}
+                        className={`w-full space-y-1 flex items-center gap-3 px-3 py-2 rounded-xl text-left hover:bg-gray-100 transition-colors ${isSelected ? 'bg-gray-50' : ''
+                          }`}
+                      >
+                        <div className={`w-8 h-8 ${icon.color} rounded-full flex items-center justify-center flex-shrink-0`}>
+                          <span className="text-white text-sm">
+                            {icon.initials}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900 truncate">
+                              {ws.title || ws.name || 'Untitled Workspace'}
+                            </span>
+                            
+                            {/* Access Level Badge - Don't show for owner/co-owner */}
+                            {ws.access_level && ws.access_level !== 'owner' && ws.access_level !== 'co-owner' && (
+                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full border flex-shrink-0 ${
+                                ws.access_level === 'workspace-read' || ws.access_level === 'base-read'
+                                  ? 'bg-green-50 text-green-700 border-green-200'
+                                  : ws.access_level === 'base'
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                  : ws.access_level === 'maintainer'
+                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                  : 'bg-gray-50 text-gray-700 border-gray-200'
+                              }`}>
+                                {getRoleLabel(ws.access_level)}
+                              </span>
+                            )}
+                            
+                            {isSelected && (
+                              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0 ml-auto"></div>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Edit Details and Create Workspace Buttons */}
+        <div className="flex items-center gap-3">
+          {selectedWorkspaceId && selectedWorkspace && (isAdmin() || isFullAccess) && !isWorkspaceReadOnly() && (
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm border rounded-xl text-primary hover:bg-gray-100 transition-colors"
+            >
+              <Edit2 size={14} />
+              Edit Details
+            </button>
+          )}
+          {canCreateWorkspace() && !isWorkspaceReadOnly() && (
             <button
               onClick={() => setIsCreateWorkspaceModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 btn-primary whitespace-nowrap flex-shrink-0 mt-9"
+              className="flex items-center gap-2 px-4 py-2 btn-primary text-sm"
             >
               <Plus size={14} />
               Create Workspace
             </button>
           )}
         </div>
-
-        {selectedWorkspaceId && selectedWorkspace && (
-          <div className="mt-6 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-secondary mb-1.5">Workspace Name</label>
-                <div className="text-sm text-primary">
-                  {selectedWorkspace.title || 'Untitled Workspace'}
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-medium text-secondary">Description</label>
-                  {isAdmin() && (
-                    <button
-                      onClick={() => setIsEditModalOpen(true)}
-                      className="p-1.5 hover:bg-alpha-white rounded transition-colors"
-                      title="Edit workspace"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 text-secondary hover:text-primary" />
-                    </button>
-                  )}
-                </div>
-                <div className="text-sm text-primary">
-                  {selectedWorkspace.description || 'No description'}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
+      {/* Members Table */}
       {selectedWorkspaceId && (
-        <>
-          {/* Two Column Layout: Bases + Members */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Left Column: Bases List */}
-            <div className="lg:col-span-1">
-              <div className="bg-card rounded-lg border shadow-sm p-4 h-full">
-                <h3 className="text-lg font-semibold text-primary mb-4">Bases</h3>
-                {workspaceBasesQuery.isLoading ? (
-                  <div className="text-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto mb-2" />
-                    <p className="text-sm text-secondary">Loading bases...</p>
-                  </div>
-                ) : workspaceBasesQuery.error ? (
-                  <div className="text-center py-8 border border-dashed border-red-200 rounded-lg bg-red-50">
-                    <p className="text-sm text-red-600 font-medium">Failed to load bases</p>
-                  </div>
-                ) : bases.length === 0 ? (
-                  <div className="text-center py-8 border border-dashed rounded-lg bg-alpha-white">
-                    <p className="text-sm text-secondary">No bases found</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                    {bases.map((base: any) => (
-                      <div
-                        key={base.id}
-                        className="p-3 border rounded-lg hover:bg-alpha-white hover:border-primary/30 transition-all"
-                      >
-                        <div className="font-medium text-primary text-sm truncate">
-                          {base.title || 'Untitled Base'}
-                        </div>
-                        {/* <div className="text-xs text-secondary font-mono truncate mt-1">
-                          {base.id}
-                        </div> */}
-                      </div>
-                    ))}
-                  </div>
-                )}
+        <div>
+          {workspaceMembersQuery.isLoading ? (
+            <div className="bg-card rounded-xl border p-12">
+              <div className="text-center">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
+                <p className="text-primary font-medium">Loading members...</p>
               </div>
             </div>
-
-            {/* Right Column: Members */}
-            <div className="lg:col-span-2">
-              <div className="bg-card rounded-lg border shadow-sm p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-primary">Members</h3>
-                  {canAssignUsers() && (
-                    <button
-                      onClick={() => setIsAssignUserModalOpen(true)}
-                      className="flex items-center gap-2 px-4 py-2 btn-primary text-sm"
-                    >
-                      <Plus size={14} />
-                      Add Member
-                    </button>
-                  )}
-                </div>
-
-                {workspaceMembersQuery.isLoading ? (
-                  <div className="text-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
-                    <p className="text-primary font-medium">Loading members...</p>
-                  </div>
-                ) : workspaceMembersQuery.error ? (
-                  <div className="text-center py-12 border border-dashed border-red-200 rounded-lg bg-red-50">
-                    <p className="text-red-600 font-medium">Failed to load members</p>
-                    <p className="text-sm text-red-500 mt-1">
-                      {workspaceMembersQuery.error instanceof Error
-                        ? workspaceMembersQuery.error.message
-                        : 'An error occurred'}
-                    </p>
-                  </div>
-                ) : members.length === 0 ? (
-                  <div className="text-center py-12 border border-dashed rounded-lg bg-alpha-white">
-                    <p className="text-primary font-medium">No members found</p>
-                    <p className="text-sm text-secondary mt-1">Assign users to this workspace to see them here</p>
-                  </div>
-                ) : (
-                  <MembersTable
-                    members={members}
-                    roleConfig={defaultRoleConfig}
-                    onRoleChange={handleRoleChange}
-                    onCopyUserId={handleCopyUserId}
-                    onRemoveMember={canAssignUsers() ? handleRemoveMember : undefined}
-                    onEditMember={canAssignUsers() ? handleEditMember : undefined}
-                    showSearch={true}
-                  />
-                )}
+          ) : workspaceMembersQuery.error ? (
+            <div className="bg-card rounded-xl border p-12">
+              <div className="text-center border border-dashed border-red-200 rounded-xl bg-red-50 py-8">
+                <p className="text-red-600 font-medium">Failed to load members</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {workspaceMembersQuery.error instanceof Error
+                    ? workspaceMembersQuery.error.message
+                    : 'An error occurred'}
+                </p>
               </div>
             </div>
-          </div>
-        </>
+          ) : (
+            <MembersTable
+              members={members}
+              roleConfig={defaultRoleConfig}
+              onRoleChange={handleRoleChange}
+              onCopyUserId={handleCopyUserId}
+              onRemoveMember={canAssignUsers() && !isWorkspaceReadOnly() ? handleRemoveMember : undefined}
+              workspaceId={selectedWorkspaceId}
+              onEditMember={canAssignUsers() && !isWorkspaceReadOnly() ? handleEditMember : undefined}
+              showSearch={true}
+              headerActions={
+                canAssignUsers() && !isWorkspaceReadOnly() ? (
+                  <button
+                    onClick={() => setIsAssignUserModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 btn-primary text-sm"
+                  >
+                    <Plus size={14} />
+                    Add Member
+                  </button>
+                ) : undefined
+              }
+            />
+          )}
+        </div>
       )}
 
       {/* Create Workspace Modal */}

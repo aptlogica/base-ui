@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, HelpCircle } from 'lucide-react';
+import { X, Loader2, HelpCircle, Plus } from 'lucide-react';
 import { useCreateWorkspace } from '../../hooks/useApi';
 import { useToast } from '../common/Toast';
 import { MultiLineText } from '../common/Fields';
@@ -139,10 +139,8 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 icon-primary rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
+            <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
+              <Plus size={16} className="text-green-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-primary">{title}</h2>
@@ -151,14 +149,14 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
             aria-label="Close"
           >
             <X size={16} className="text-[var(--text-color-tertiary)]" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 font-normal text-xs">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
             <label htmlFor="workspaceName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
               Workspace Name <span className="text-red-500">*</span>
@@ -170,7 +168,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
                 value={isControlled ? (controlledName || '') : name}
                 onChange={(e) => (isControlled ? setControlledName?.(e.target.value) : setName(e.target.value))}
                 placeholder="Enter workspace name"
-                className={`field-component field-component-border field-component-focus ${(!isControlled && error) || (isControlled && controlledError) ? 'border-red-500' : 'border-gray-300'}`}
+                className={`field-component field-component-border field-component-focus ${(!isControlled && error) || (isControlled && controlledError) ? 'border-red-500' : 'border'}`}
                 required
                 minLength={3}
                 maxLength={50}
@@ -179,10 +177,10 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
               <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
                 <span className="relative inline-block group">
                   <HelpCircle className={`w-4 h-4 ${( (!isControlled && error) || (isControlled && controlledError) ) ? 'text-red-500' : ( (isControlled ? (controlledName || '').trim().length >=3 : name.trim().length >=3) ? 'text-green-600' : 'text-gray-400' )} cursor-help`} />
-                  <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-card border rounded-lg shadow-lg p-3 text-sm z-50">
-                    <h4 className="mb-2 text-primary">Workspace name requirements:</h4>
+                  <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
+                    <h4 className="font-medium mb-2">Workspace name requirements:</h4>
                     <ul className="space-y-1">
-                      <li className={`${(isControlled ? (controlledName || '').trim().length >= 3 : name.trim().length >= 3) ? 'text-primary-brand' : 'text-gray-500'}`}>
+                      <li className={`flex items-center ${(isControlled ? (controlledName || '').trim().length >= 3 : name.trim().length >= 3) ? 'text-green-600' : 'text-gray-500'}`}>
                         • Minimum 3 characters
                       </li>
                     </ul>
@@ -217,14 +215,14 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="px-4 py-2 rounded-lg border hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
+              className="px-16 py-2 rounded-xl border hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting || !(isControlled ? (controlledName || '').trim().length >= 3 : name.trim().length >= 3)}
-              className="flex items-center gap-2 px-6 py-2 rounded-lg btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {submitting && <Loader2 size={16} className="animate-spin" />}
               {submitting ? (submitButtonText.includes('Save') ? 'Saving...' : 'Creating...') : submitButtonText}

@@ -4,8 +4,8 @@ import { CalendarEvent } from "../hooks/useCalendarData";
 interface YearViewProps {
   currentDate: Date;
   events: CalendarEvent[];
-  onEventClick: (event: CalendarEvent) => void;
-  onDateClick: (date: Date) => void;
+  onEventClick?: (event: CalendarEvent) => void;
+  onDateClick?: (date: Date) => void;
   onDateSelect: (date: Date) => void;
   onViewChange?: (view: string) => void;
 }
@@ -87,7 +87,7 @@ const YearView: React.FC<YearViewProps> = ({
       <div className="flex-1 overflow-y-auto p-4 min-h-0">
         <div className="grid grid-cols-3 gap-6">
           {monthCalendars.map(({ monthName, monthIndex, days, firstDay, lastDay }) => (
-            <div key={monthIndex} className="bg-card border border-gray-200 rounded-lg p-4">
+            <div key={monthIndex} className="bg-card border border-gray-200 rounded-xl p-4">
               {/* Month header */}
               <div className="text-center mb-3">
                 <h3 className="text-lg font-semibold text-gray-900">{monthName}</h3>

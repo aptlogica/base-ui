@@ -1,8 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, Suspense, lazy } from 'react';
 import { Plugin, PluginManifest, PluginAPI } from '../../core/types';
 import { matchesViewType } from '../../utils/viewType';
 import { useGridData } from './hooks/useGridData';
-import { Table } from './components/Table/Table';
+// LAZY LOAD: Table component is huge - only load when GridView is actually rendered
+const Table = lazy(() => 
+  import('./components/Table/Table').then(m => ({ default: m.Table }))
+);
 import { Loader } from '../../components/ui/Loader';
 
 const manifest: PluginManifest = {
@@ -40,13 +43,19 @@ const GridViewPlugin: Plugin = {
       const enableVirtualization = undefined;
 
       return (
-        <Table
-          tableData={tableData!}
-          viewId={viewId}
-          onRefresh={() => refresh()}
-          enableVirtualization={enableVirtualization} // Virtualization control (separate from view metadata)
-          actions={{ addRow, insertRowData, deleteRecord, updateField, deleteColumn, createField, updateView, updateRowOrder }}
-        />
+        <Suspense fallback={
+          <div className="h-full flex items-center justify-center">
+            <Loader size={10} />
+          </div>
+        }>
+          <Table
+            tableData={tableData!}
+            viewId={viewId}
+            onRefresh={() => refresh()}
+            enableVirtualization={enableVirtualization} // Virtualization control (separate from view metadata)
+            actions={{ addRow, insertRowData, deleteRecord, updateField, deleteColumn, createField, updateView, updateRowOrder }}
+          />
+        </Suspense>
       );
     };
 

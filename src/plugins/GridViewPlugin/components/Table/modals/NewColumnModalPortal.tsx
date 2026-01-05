@@ -1,6 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
-import { NewColumnModal } from '../../../../../components/modals/NewColumnModal';
+// LAZY LOAD: NewColumnModal is huge (3862 lines) - only load when modal opens
+const NewColumnModal = lazy(() => 
+  import('../../../../../components/modals/NewColumnModal').then(m => ({ default: m.NewColumnModal }))
+);
+import { Loader } from '../../../../../components/ui/Loader';
 
 interface Props {
   isOpen: boolean;
@@ -52,15 +56,21 @@ export const NewColumnModalPortal = React.forwardRef<HTMLDivElement, Props>(({ i
       className="absolute z-50"
       style={{ top: position.top, left: position.left, width: 420 }}
     >
-      <NewColumnModal
-        isOpen={isOpen}
-        onClose={onClose}
-        onSave={onAddColumn || (() => {})}
-        fields={fields}
-        isAddNewColumn={isAddNewColumn}
-        excludeRefs={excludeRefs}
-        currentTableId={props.tableId}
-      />
+      <Suspense fallback={
+        <div className="bg-background border border-border rounded-xl shadow-lg p-8 min-w-[400px]">
+          <Loader size={8} />
+        </div>
+      }>
+        <NewColumnModal
+          isOpen={isOpen}
+          onClose={onClose}
+          onSave={onAddColumn || (() => {})}
+          fields={fields}
+          isAddNewColumn={isAddNewColumn}
+          excludeRefs={excludeRefs}
+          currentTableId={props.tableId}
+        />
+      </Suspense>
     </div>,
     document.body
   );

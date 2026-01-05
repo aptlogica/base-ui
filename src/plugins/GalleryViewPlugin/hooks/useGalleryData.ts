@@ -231,7 +231,6 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
   };
 
   const updateViewConfig = async (viewId: string, updates: any) => {
-    console.log('Gallery updateViewConfig:', viewId, updates);
     try {
       // Get current view to merge with updates
       const currentView = processedData.view;

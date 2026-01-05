@@ -12,7 +12,8 @@ interface SingleLineTextProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean;
+  allowEdit?: boolean; // true = single click, false = double click
+  readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;
   updateOnType?: boolean;
@@ -35,6 +36,7 @@ export const SingleLineText: React.FC<SingleLineTextProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
   updateOnType = false,
@@ -59,6 +61,13 @@ export const SingleLineText: React.FC<SingleLineTextProps> = ({
     }
   }, [value]);
 
+  // Exit edit mode if readOnly becomes true
+  useEffect(() => {
+    if (readOnly && isEditing) {
+      setIsEditing(false);
+    }
+  }, [readOnly, isEditing]);
+
   const validate = (val: string) => {
     if (required && !val.trim()) return "This field is required";
     if (val.length > configMaxLength) return `Max ${configMaxLength} characters allowed`;
@@ -76,9 +85,11 @@ export const SingleLineText: React.FC<SingleLineTextProps> = ({
     setIsEditing(false);
   };
 
+  // allowEdit controls single vs double-click behavior
+  // readOnly completely prevents editing
   const handleClick = useClickHandler(
-    () => allowEdit && !disabled && setIsEditing(true),
-    () => !allowEdit && !disabled && setIsEditing(true)
+    () => !readOnly && allowEdit && !disabled && setIsEditing(true), // Single click when allowEdit=true
+    () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // Double click when allowEdit=false
   );
 
   return (
@@ -92,7 +103,11 @@ export const SingleLineText: React.FC<SingleLineTextProps> = ({
       )}
 
       {/* Input or Display */}
-      <div className={`relative ${className} ${isBorder && !isEditing ? "field-component-border" : ""}`} onClick={handleClick}>
+      <div 
+        className={`relative ${className} ${isBorder && !isEditing ? "field-component-border" : ""}`} 
+        onClick={!readOnly ? handleClick : undefined}
+        style={readOnly ? { cursor: 'default' } : undefined}
+      >
         {isEditing ? (
           <input
             type="text"
@@ -116,14 +131,14 @@ export const SingleLineText: React.FC<SingleLineTextProps> = ({
             }}
             autoFocus
             placeholder={configPlaceholder}
-            disabled={disabled}
+            disabled={disabled || readOnly}
             maxLength={configMaxLength}
             className={`field-component ${isBorder ? "field-component-focus" : ""} ${error ? "border-red-500 bg-red-50" : "border-gray-300"
-              } ${disabled ? "cursor-not-allowed" : ""}`}
+              } ${disabled || readOnly ? "cursor-not-allowed" : ""}`}
           />
         ) : (
           <div
-            className={`field-component ${localValue ? "text-gray-800" : "text-gray-400"} ${disabled ? "text-gray-400 cursor-not-allowed" : ""}`}
+            className={`field-component ${localValue ? "text-gray-800" : "text-gray-400"} ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
             title={localValue || configPlaceholder}
           >
             <span

@@ -120,7 +120,6 @@ export class PluginConfigManager {
     try {
       // In a real app, this would save to a backend API
       localStorage.setItem('pluginConfig', JSON.stringify(this.config));
-      console.log('Plugin configuration saved');
     } catch (error) {
       console.error('Failed to save plugin configuration:', error);
     }

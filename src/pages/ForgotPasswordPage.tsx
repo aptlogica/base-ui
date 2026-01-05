@@ -130,7 +130,7 @@ const ForgotPasswordPage: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full btn-primary py-2 px-4 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full btn-primary py-2 px-4 rounded-xl font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? "Sending..." : "Send Reset Link"}
           </button>

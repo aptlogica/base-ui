@@ -18,7 +18,8 @@ interface CurrencyProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean; // single click (true) vs double click (false)
+  allowEdit?: boolean; // true = single click, false = double click
+  readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;
 }
@@ -34,6 +35,7 @@ export const Currency: React.FC<CurrencyProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
 }) => {
@@ -67,6 +69,13 @@ export const Currency: React.FC<CurrencyProps> = ({
     setCommittedValue(displayValue);
   }, [value, defaultValue]);
 
+  // Exit edit mode if readOnly becomes true
+  useEffect(() => {
+    if (readOnly && isEditing) {
+      setIsEditing(false);
+    }
+  }, [readOnly, isEditing]);
+
   const validate = (val: string) => {
     if (required && !val.trim()) return "This field is required";
     if (val.trim() === "") return null;
@@ -99,9 +108,11 @@ export const Currency: React.FC<CurrencyProps> = ({
     setIsEditing(false);
   };
 
+  // allowEdit controls single vs double-click behavior
+  // readOnly completely prevents editing
   const handleClick = useClickHandler(
-    () => allowEdit && !disabled && setIsEditing(true),
-    () => !allowEdit && !disabled && setIsEditing(true)
+    () => !readOnly && allowEdit && !disabled && setIsEditing(true), // Single click when allowEdit=true
+    () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // Double click when allowEdit=false
   );
 
 
@@ -116,7 +127,11 @@ export const Currency: React.FC<CurrencyProps> = ({
       )}
 
       {/* Input or Display */}
-      <div className={`relative ${className} ${isBorder ? "field-component-border" : ""}`} onClick={handleClick}>
+      <div 
+        className={`relative ${className} ${isBorder ? "field-component-border" : ""}`} 
+        onClick={!readOnly ? handleClick : undefined}
+        style={readOnly ? { cursor: 'default' } : undefined}
+      >
         {/* Currency Type Display */}
         {/* <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
           {currencyType === "USD" ? "$" : currencyType}
@@ -139,12 +154,12 @@ export const Currency: React.FC<CurrencyProps> = ({
               }
             }}
             placeholder={placeholder}
-            disabled={disabled}
-            className={`field-component pl-8 ${isBorder ? "field-component-focus" : ""}`}
+            disabled={disabled || readOnly}
+            className={`field-component pl-8 ${isBorder ? "field-component-focus" : ""} ${disabled || readOnly ? 'cursor-not-allowed' : ''}`}
           />
         ) : (
           <div
-            className={`field-component pl-8 ${localValue ? "text-gray-800" : "text-gray-400"} ${disabled ? "text-gray-400 cursor-not-allowed" : ""}`}
+            className={`field-component pl-8 ${localValue ? "text-gray-800" : "text-gray-400"} ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
           >
             {localValue && !isNaN(parseFloat(localValue))
               ? formatCurrency(parseFloat(localValue))

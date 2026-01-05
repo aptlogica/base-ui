@@ -1,8 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, Suspense, lazy } from 'react';
 import { FormPreview } from './FormPreview';
 import { RightPanel } from './RightPanel';
 import { useToast } from '../../../../components/common/Toast';
-import { NewColumnModal } from '../../../../components/modals/NewColumnModal';
+// LAZY LOAD: NewColumnModal is huge (3862 lines) - only load when needed
+const NewColumnModal = lazy(() => 
+  import('../../../../components/modals/NewColumnModal').then(m => ({ default: m.NewColumnModal }))
+);
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
 import { normalizeFieldType } from '../../../../utils/fieldType';
 import { parseApiColumnMeta } from '../../../../components/shared/table/tableUtils';
@@ -12,6 +15,8 @@ import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../..
 import { useAllViews } from '../../../../hooks/useApi';
 import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldConfirmModal';
 import { isFormulaField } from '../../../../utils/fieldUtils';
+import { Loader } from '../../../../components/ui/Loader';
+import { useBaseAccess } from '../../../../hooks/useBaseAccess';
 // Custom hooks
 import { useFormDataState } from '../../hooks/useFormDataState';
 import { useFormModals } from '../../hooks/useFormModals';
@@ -87,6 +92,10 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
   // Extract IDs from tableData.model
   const tableId = useMemo(() => String(tableData?.model?.id ?? ''), [tableData?.model?.id]);
   const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
+  
+  // Check permissions for read-only access
+  const { isBaseReadOnly, canCreateColumn } = useBaseAccess(baseId || undefined);
+  const isReadOnly = isBaseReadOnly();
   
   // Use actions passed from hook (no need to re-instantiate)
   const toast = useToast();
@@ -561,28 +570,32 @@ const handleConfirmUpdateField = async () => {
           </div>
           
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Inline Add Field Button */}
-            <button
-              ref={addFieldButtonRef}
-              onClick={handleAddField}
-              className="flex items-center gap-1 btn-primary p-2 rounded transition"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add Field</span>
-            </button>
+            {/* Inline Add Field Button - only show if user can create columns and not read-only */}
+            {canCreateColumn() && !isReadOnly && (
+              <button
+                ref={addFieldButtonRef}
+                onClick={handleAddField}
+                className="flex items-center gap-1 btn-primary p-2 rounded transition"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Add Field</span>
+              </button>
+            )}
             
-            {/* Sidebar Toggle Button */}
-            <button
-              onClick={toggleSidebar}
-              className="p-2 border rounded-lg hover:bg-[var(--color-bg-brand-primary)] outline-none hover:text-black transition-all duration-200 hover:scale-105"
-              title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-            >
-              {sidebarOpen ? (
-                <PanelRightClose className="w-5 h-5" />
-              ) : (
-                <PanelRight className="w-5 h-5" />
-              )}
-            </button>
+            {/* Sidebar Toggle Button - hide for read-only users */}
+            {!isReadOnly && (
+              <button
+                onClick={toggleSidebar}
+                className="p-2 border rounded-xl hover:bg-[var(--color-bg-brand-primary)] outline-none hover:text-black transition-all duration-200 hover:scale-105"
+                title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+              >
+                {sidebarOpen ? (
+                  <PanelRightClose className="w-5 h-5" />
+                ) : (
+                  <PanelRight className="w-5 h-5" />
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -593,25 +606,25 @@ const handleConfirmUpdateField = async () => {
         <div className="flex-1 overflow-y-auto bg-background">
           <FormPreview
             config={formConfig}
-            onClear={clearFormData}
+            onClear={isReadOnly ? undefined : clearFormData}
             selectedFieldId={selectedFieldId}
             onFieldSelect={setSelectedFieldId}
             rowData={rowData}
             onRowDataChange={handleRowDataChange}
-            onFieldOrderChange={handleFieldOrderChange}
-            onSubmit={(e) => {
+            onFieldOrderChange={isReadOnly ? undefined : handleFieldOrderChange}
+            onSubmit={isReadOnly ? undefined : (e) => {
               e.preventDefault(); // Prevent default form submission
               handleFormSubmit(e);
             }}
-            onDeleteField={handleDeleteField}
+            onDeleteField={isReadOnly ? undefined : handleDeleteField}
             formError={formError}
-            onResetSuccess={resetSuccess}
             // Pass attachment-specific props
             model_id={tableData?.model?.id}
             column_id={undefined} // Will be set per field in SortableFormField
             row_id={record?.id ? Number(record.id) : undefined}
-            onEdit={handleFieldEdit}
-            onConfigChange={handleConfigChange}
+            onEdit={isReadOnly ? undefined : handleFieldEdit}
+            onConfigChange={isReadOnly ? undefined : handleConfigChange}
+            isReadOnly={isReadOnly}
           />
         </div>
 
@@ -625,14 +638,14 @@ const handleConfirmUpdateField = async () => {
               selectedFieldId={selectedFieldId}
               editingFieldId={selectedFieldId}
               onFieldSelect={setSelectedFieldId}
-              onFieldToggle={handleFieldToggle}
-              onAddField={handleAddField}
-              onConfigChange={handleConfigChange}
-              onFieldUpdate={handleFieldUpdate}
+              onFieldToggle={isReadOnly ? undefined : handleFieldToggle}
+              onAddField={isReadOnly ? undefined : handleAddField}
+              onConfigChange={isReadOnly ? undefined : handleConfigChange}
+              onFieldUpdate={isReadOnly ? undefined : handleFieldUpdate}
               onBackToFieldsList={handleBackToFieldsList}
-              onDeleteField={handleDeleteField}
-              setVisibleAllFields={handleSetVisibleAllFields}
-              onFieldOrderChange={handleFieldOrderChange}
+              onDeleteField={isReadOnly ? undefined : handleDeleteField}
+              setVisibleAllFields={isReadOnly ? undefined : handleSetVisibleAllFields}
+              onFieldOrderChange={isReadOnly ? undefined : handleFieldOrderChange}
             />
           )}
         </div>
@@ -643,15 +656,23 @@ const handleConfirmUpdateField = async () => {
         <div className="fixed inset-0 z-50 bg-modal-backdrop" onClick={handleCloseNewColumnModal} />
       )}
       {isNewColumnModalOpen && modalPosition && (
-        <div className="fixed z-50" style={{ top: modalPosition.top, left: modalPosition.left }}>
-          <NewColumnModal
-            isOpen={isNewColumnModalOpen}
-            onClose={handleCloseNewColumnModal}
-            onSave={handleCreateNewField}
-            isAddNewField={true}
-            fields={formFields}
-          />
-        </div>
+        <Suspense fallback={
+          <div className="fixed z-50" style={{ top: modalPosition.top, left: modalPosition.left }}>
+            <div className="bg-background border border-border rounded-xl shadow-lg p-8 min-w-[400px]">
+              <Loader size={8} />
+            </div>
+          </div>
+        }>
+          <div className="fixed z-50" style={{ top: modalPosition.top, left: modalPosition.left }}>
+            <NewColumnModal
+              isOpen={isNewColumnModalOpen}
+              onClose={handleCloseNewColumnModal}
+              onSave={handleCreateNewField}
+              isAddNewField={true}
+              fields={formFields}
+            />
+          </div>
+        </Suspense>
       )}
 
       {/* Delete Confirmation Modal */}
@@ -671,20 +692,28 @@ const handleConfirmUpdateField = async () => {
             className="fixed inset-0 z-50 bg-modal-backdrop"
             onClick={handleCloseEditModal}
           />
-          <div
-            className="fixed z-50"
-          >
-            <NewColumnModal
-              isOpen={editModalOpen}
-              onClose={handleCloseEditModal}
-              onSave={handleEditModalSave}
-              initialValues={editColumn}
-              fields={formFields}
-              isAddNewColumn={false}
-              isAddNewField={true}
-              currentTableId={tableId}
-            />
-          </div>
+          <Suspense fallback={
+            <div className="fixed z-50">
+              <div className="bg-background border border-border rounded-xl shadow-lg p-8 min-w-[400px]">
+                <Loader size={8} />
+              </div>
+            </div>
+          }>
+            <div
+              className="fixed z-50"
+            >
+              <NewColumnModal
+                isOpen={editModalOpen}
+                onClose={handleCloseEditModal}
+                onSave={handleEditModalSave}
+                initialValues={editColumn}
+                fields={formFields}
+                isAddNewColumn={false}
+                isAddNewField={true}
+                currentTableId={tableId}
+              />
+            </div>
+          </Suspense>
         </>
       )}
 

@@ -1,5 +1,5 @@
 import { decodeJwt } from 'jose';
-import { updateClientToken, updateClientSchema, validateAuthData } from '../service/clientService';
+import { updateClientToken, validateAuthData } from '../service/clientService';
 
 interface TokenData {
   access_token: string;
@@ -69,28 +69,10 @@ const storeUserInfo = (user: any): void => {
 };
 
 /**
- * Store tenant schema in sessionStorage and localStorage (as fallback)
- * Only store schema, not tenant_id or tenant_name (not used)
+ * Store tenant info (placeholder - no schema storage needed)
  */
 const storeTenantInfo = (tenant: any, accessDecoded?: any): void => {
-  // Extract tenant_schema from decoded access token (preferred) or fallback to tenant object
-  const schemaName = String(accessDecoded?.tenant_id || 
-    accessDecoded?.tenant_schema || 
-    accessDecoded?.schema || 
-    accessDecoded?.schema_name || 
-    accessDecoded?.tenantSchema ||
-    tenant?.schema_name || 
-    tenant?.schema || 
-    tenant?.schemaName || 
-    '').trim();
-
-  if (schemaName) {
-    sessionStorage.setItem('tenant_schema', schemaName);
-    // Keep in localStorage as fallback only
-    localStorage.setItem('tenant_schema', schemaName);
-    // Update client schema if available
-    updateClientSchema(schemaName);
-  }
+  // No schema storage needed
 };
 
 /**
@@ -129,12 +111,22 @@ export const processOAuthResponse = async (response: OAuthResponse): Promise<{
   storeUserInfo(user);
   storeTenantInfo(tenant, accessDecoded);
 
-  // Store roles from decoded token (needed for RBAC)
+  // Store role from decoded token (single string, not array)
   if (accessDecoded?.roles) {
-    const roles = Array.isArray(accessDecoded.roles) 
+    const role = typeof accessDecoded.roles === 'string' 
       ? accessDecoded.roles 
-      : [accessDecoded.roles];
-    sessionStorage.setItem('user_roles', JSON.stringify(roles));
+      : (Array.isArray(accessDecoded.roles) ? accessDecoded.roles[0] : null);
+    
+    if (role) {
+      sessionStorage.setItem('user_role', role);
+      // Also store full token data for reference
+      sessionStorage.setItem('user_token_data', JSON.stringify({
+        user_id: accessDecoded.user_id,
+        email: accessDecoded.email,
+        roles: role,
+        email_verified: accessDecoded.email_verified,
+      }));
+    }
   }
 
   // Validate that all required auth data is present

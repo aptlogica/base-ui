@@ -120,3 +120,54 @@ export function convertDateFormat(date: string, fromFormat: string, toFormat: st
       return isoDate;
   }
 }
+
+/**
+ * Formats a number to a compact, human-readable string
+ * Examples: 8778 -> "8.8K", 1234567 -> "1.2M", 500 -> "500"
+ */
+export function formatCompactNumber(num: number): string {
+  if (num < 1000) {
+    return num.toString();
+  }
+  
+  if (num < 1000000) {
+    // Thousands: 8778 -> 8.8K
+    const thousands = num / 1000;
+    // Round to 1 decimal place, but show as integer if it's a whole number
+    const rounded = Math.round(thousands * 10) / 10;
+    return rounded % 1 === 0 ? `${rounded}K` : `${rounded.toFixed(1)}K`;
+  }
+  
+  if (num < 1000000000) {
+    // Millions: 1234567 -> 1.2M
+    const millions = num / 1000000;
+    const rounded = Math.round(millions * 10) / 10;
+    return rounded % 1 === 0 ? `${rounded}M` : `${rounded.toFixed(1)}M`;
+  }
+  
+  // Billions: 1234567890 -> 1.2B
+  const billions = num / 1000000000;
+  const rounded = Math.round(billions * 10) / 10;
+  return rounded % 1 === 0 ? `${rounded}B` : `${rounded.toFixed(1)}B`;
+}
+
+/**
+ * Gets initials from a name string (2 letters when possible)
+ * Examples: "Movies Base" -> "MB", "Base" -> "BA", "New" -> "NE"
+ * @param name - The name string to get initials from
+ * @param fallback - Fallback initial if name is empty (default: 'U')
+ * @returns 2-letter initials when possible, or 1-2 characters
+ */
+export function getInitials(name: string, fallback: string = 'U'): string {
+  if (!name || !name.trim()) return fallback;
+  
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    // If multiple words, take first letter of first two words
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  
+  // If single word, take first 2 characters (or first if only 1 char)
+  const result = name.substring(0, 2).toUpperCase();
+  return result || name.charAt(0).toUpperCase() || fallback;
+}

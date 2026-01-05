@@ -1,11 +1,4 @@
-/**
- * Standardized field type utilities
- * Use these instead of directly accessing field.type, field.uidt, etc.
- */
-
 import { normalizeFieldType } from './fieldType';
-import type { NormalizedField } from '../hooks/useNormalizedTableData';
-
 /**
  * Get the standardized field type from any field object
  */

@@ -12,14 +12,15 @@ interface UserSettingsTabProps {
 export const UserSettingsTab: React.FC<UserSettingsTabProps> = ({ workspaceId }) => {
   const { data: tenantUsers = [], isLoading, error } = useGetTenantUsers();
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<TenantUser | null>(null);
   const toast = useToast();
   const removeTenantUserMutation = useRemoveTenantUser();
   const activateTenantUserMutation = useActivateTenantUser();
   const deactivateTenantUserMutation = useDeactivateTenantUser();
 
-  // Filter out admin users
-  const nonAdminUsers = useMemo(() => {
-    return (tenantUsers as any[]).filter((u: any) => u.roles !== 'Admin');
+  // Filter out owner users
+  const nonOwnerUsers = useMemo(() => {
+    return (tenantUsers as any[]).filter((u: any) => u.roles !== 'owner');
   }, [tenantUsers]);
 
   const handleRemoveUser = async (userId: string) => {
@@ -32,8 +33,13 @@ export const UserSettingsTab: React.FC<UserSettingsTabProps> = ({ workspaceId })
   };
 
   const handleEditUser = (user: TenantUser) => {
-    // TODO: Implement edit functionality
-    console.log('Edit user:', user);
+    setEditingUser(user);
+    setIsAddUserModalOpen(true);
+  };
+  
+  const handleCloseModal = () => {
+    setIsAddUserModalOpen(false);
+    setEditingUser(null);
   };
 
   const handleActivateUser = async (userId: string) => {
@@ -80,7 +86,7 @@ export const UserSettingsTab: React.FC<UserSettingsTabProps> = ({ workspaceId })
     <div className="space-y-0">
       {/* User Table */}
       <UserTable
-        users={nonAdminUsers as TenantUser[]}
+        users={nonOwnerUsers as TenantUser[]}
         onRemoveUser={handleRemoveUser}
         onEditUser={handleEditUser}
         onActivateUser={handleActivateUser}
@@ -88,7 +94,10 @@ export const UserSettingsTab: React.FC<UserSettingsTabProps> = ({ workspaceId })
         showSearch={true}
         headerActions={
           <button
-            onClick={() => setIsAddUserModalOpen(true)}
+            onClick={() => {
+              setEditingUser(null);
+              setIsAddUserModalOpen(true);
+            }}
             className="px-4 py-2 btn-primary flex items-center gap-1 transition font-medium whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
@@ -97,10 +106,11 @@ export const UserSettingsTab: React.FC<UserSettingsTabProps> = ({ workspaceId })
         }
       />
 
-      {/* Add User Modal */}
+      {/* Add/Edit User Modal */}
       <AddUserModal
         isOpen={isAddUserModalOpen}
-        onClose={() => setIsAddUserModalOpen(false)}
+        onClose={handleCloseModal}
+        editUser={editingUser}
       />
     </div>
   );

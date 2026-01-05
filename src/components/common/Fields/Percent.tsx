@@ -33,6 +33,7 @@ export const Percent: React.FC<PercentProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
 }) => {
@@ -76,6 +77,13 @@ export const Percent: React.FC<PercentProps> = ({
       inputRef.current.select();
     }
   }, [isEditing]);
+
+  // Exit edit mode if readOnly becomes true
+  useEffect(() => {
+    if (readOnly && isEditing) {
+      setIsEditing(false);
+    }
+  }, [readOnly, isEditing]);
 
   const validate = (val: string) => {
     if (required ) return 'This field is required';
@@ -137,16 +145,17 @@ export const Percent: React.FC<PercentProps> = ({
 
   // 🟢 Special case: double-click only when showing progress bar
   const handleDoubleClick = (e: React.MouseEvent) => {
-    if (displayAsProgress && !disabled) {
+    if (displayAsProgress && !disabled && !readOnly) {
       setIsEditing(true);
       e.stopPropagation();
     }
   };
 
-  // 🟢 Otherwise, use generic click handler logic
+  // allowEdit controls single vs double-click behavior
+  // readOnly completely prevents editing
   const handleClick = useClickHandler(
-    () => allowEdit && !disabled && setIsEditing(true), // single click
-    () => !allowEdit && !disabled && setIsEditing(true) // double click
+    () => !readOnly && allowEdit && !disabled && setIsEditing(true), // single click
+    () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // double click
   );
 
   const error = validate(localValue);
@@ -172,8 +181,8 @@ export const Percent: React.FC<PercentProps> = ({
     return (
       <div
         className={`w-full relative ${isBorder ? "field-component-border" : ""}`}
-        onDoubleClick={handleDoubleClick}
-        style={{ cursor: !isEditing && !disabled ? 'pointer' : undefined }}
+        onDoubleClick={!readOnly ? handleDoubleClick : undefined}
+        style={{ cursor: !isEditing && !disabled && !readOnly ? 'pointer' : 'default' }}
       >
         {isEditing ? (
           <div className="relative group mb-2">
@@ -184,9 +193,9 @@ export const Percent: React.FC<PercentProps> = ({
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder={placeholder}
-              disabled={disabled}
+              disabled={disabled || readOnly}
               className={`field-component ${error && showError ? 'border-red-500 bg-red-50' : ''
-                } ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
+                } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
             />
             <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
               <PercentageIcon className="w-4 h-4 text-gray-500" />
@@ -228,7 +237,8 @@ export const Percent: React.FC<PercentProps> = ({
   return (
     <div
       className={`w-full relative ${isBorder ? "field-component-border" : ""}`}
-      onClick={handleClick}
+      onClick={!readOnly ? handleClick : undefined}
+      style={readOnly ? { cursor: 'default' } : undefined}
     >
       {isEditing ? (
 
@@ -241,9 +251,9 @@ export const Percent: React.FC<PercentProps> = ({
             onBlur={handleBlur}
             placeholder=""
             autoFocus
-            disabled={disabled}
+            disabled={disabled || readOnly}
             className={`field-component ${error && showError ? 'border-red-500 bg-red-50' : ''
-              } ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
+              } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
           />
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
             <PercentageIcon className="w-4 h-4 text-gray-500" />
@@ -253,7 +263,7 @@ export const Percent: React.FC<PercentProps> = ({
       ) : (
         <div
           className={`field-component ${localValue ? "text-gray-800" : "text-gray-400"
-            } ${disabled ? "text-gray-400 cursor-not-allowed" : ""}`}
+            } ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
         >
           {localValue || placeholder}
         </div>

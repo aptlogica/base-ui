@@ -7,10 +7,10 @@ interface FieldsListProps {
   fields: FormField[];
   selectedFieldId: string | null;
   onFieldSelect: (fieldId: string) => void;
-  onFieldToggle: (fieldId: string) => void;
-  onFieldOrderChange: (newFields: FormField[]) => void;
-  onDeleteField: (fieldId: string) => void;
-  setVisibleAllFields: (newState: boolean) => void;
+  onFieldToggle?: (fieldId: string) => void;
+  onFieldOrderChange?: (newFields: FormField[]) => void;
+  onDeleteField?: (fieldId: string) => void;
+  setVisibleAllFields?: (newState: boolean) => void;
 }
 
 export const FieldsList: React.FC<FieldsListProps> = ({
@@ -32,10 +32,11 @@ export const FieldsList: React.FC<FieldsListProps> = ({
   const allFieldsEnabled = selectedCount === totalCount;
   
   const handleSelectAllToggle = () => {
+    if (!setVisibleAllFields) return;
     const newState = !allFieldsEnabled;
     // Instead of toggling one by one, update all at once
   //   const updatedFields = fields.map(field => ({ ...field, is_hidden: !newState }));
-  //   onFieldOrderChange(updatedFields);
+  //   onFieldOrderChange?.(updatedFields);
     setVisibleAllFields(newState);
   };
 
@@ -48,6 +49,7 @@ export const FieldsList: React.FC<FieldsListProps> = ({
   };
 
   const handleDrop = (fieldId: string) => {
+    if (!onFieldOrderChange) return;
     if (draggedFieldId && draggedFieldId !== fieldId) {
       const oldIndex = fields.findIndex(f => f.id === draggedFieldId);
       const newIndex = fields.findIndex(f => f.id === fieldId);
@@ -86,21 +88,22 @@ export const FieldsList: React.FC<FieldsListProps> = ({
             placeholder="Search fields..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg text-sm bg-background border outline-none focus:ring-1 focus:ring-[var(--ring-color-brand)] text-[var(--text-color-primary)] placeholder:text-[var(--text-color-placeholder)] transition-colors"
+            className="w-full pl-10 pr-4 py-2 rounded-xl text-sm bg-background border outline-none focus:ring-1 focus:ring-[var(--ring-color-brand)] text-[var(--text-color-primary)] placeholder:text-[var(--text-color-placeholder)] transition-colors"
           />
         </div>
       </div>
 
       {/* Select All Fields - Separate scrollable section */}
       <div className="px-4 pb-2 flex-shrink-0">
-        <div className="rounded-lg p-3 bg-muted/50">
+        <div className="rounded-xl p-3 bg-muted/50">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">Selected fields {selectedCount}/{totalCount}</span>
-            <label className="inline-flex items-center gap-2 cursor-pointer">
+            <label className={`inline-flex items-center gap-2 ${setVisibleAllFields ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
               <input
                 type="checkbox"
                 checked={allFieldsEnabled}
                 onChange={handleSelectAllToggle}
+                disabled={!setVisibleAllFields}
                 className="checkbox-primary-brand "
               />
                {/* <div className={`w-11 h-6 rounded-full transition-colors ${
@@ -126,14 +129,14 @@ export const FieldsList: React.FC<FieldsListProps> = ({
               field={field}
               isSelected={selectedFieldId === field.id}
               onSelect={onFieldSelect}
-              onToggle={() => onFieldToggle(field.id)}
-              draggable
+              onToggle={onFieldToggle ? () => onFieldToggle(field.id) : undefined}
+              draggable={onFieldOrderChange !== undefined}
               isDragging={draggedFieldId === field.id}
               isDragOver={dragOverFieldId === field.id}
-              onDragStart={() => handleDragStart(field.id)}
-              onDragOver={() => handleDragOver(field.id)}
-              onDrop={() => handleDrop(field.id)}
-              onDragEnd={handleDragEnd}
+              onDragStart={onFieldOrderChange !== undefined ? () => handleDragStart(field.id) : undefined}
+              onDragOver={onFieldOrderChange !== undefined ? () => handleDragOver(field.id) : undefined}
+              onDrop={onFieldOrderChange !== undefined ? () => handleDrop(field.id) : undefined}
+              onDragEnd={onFieldOrderChange !== undefined ? handleDragEnd : undefined}
               onDelete={onDeleteField}
             />
           ))}
