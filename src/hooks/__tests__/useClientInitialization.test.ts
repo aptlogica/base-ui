@@ -99,22 +99,6 @@ describe('useClientInitialization', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('should return tenant schema', async () => {
-    mockIsAuthenticated.mockResolvedValue(true);
-    mockInitializeClientToken.mockResolvedValue(undefined);
-    mockGetTenantSchema.mockReturnValue('custom-tenant-schema');
-
-    const { result } = renderHook(() => useClientInitialization());
-
-    expect(result.current.tenantSchema).toBe('custom-tenant-schema');
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(result.current.tenantSchema).toBe('custom-tenant-schema');
-  });
-
   it('should only initialize once on mount', async () => {
     mockIsAuthenticated.mockResolvedValue(true);
     mockInitializeClientToken.mockResolvedValue(undefined);

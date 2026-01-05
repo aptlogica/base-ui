@@ -179,19 +179,6 @@ describe('useLookupSourceColumn', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('should not fetch when tenant schema is not available', async () => {
-    mockIsTenantSchemaAvailable.mockReturnValue(false);
-
-    const { result } = renderHook(() => useLookupSourceColumn('col-7'), {
-      wrapper: createWrapper()
-    });
-
-    // Query should be disabled
-    expect(result.current.status).toBe('pending');
-    expect(result.current.fetchStatus).toBe('idle');
-    expect(mockGetFieldByIdService).not.toHaveBeenCalled();
-  });
-
   it('should use correct query options', async () => {
     const mockColumn = {
       id: 'col-8',

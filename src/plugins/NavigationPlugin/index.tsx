@@ -104,14 +104,6 @@ const NavigationPlugin: Plugin = {
       icon: 'Settings',
       order: 2
     });
-    
-    // navigationService.addMenuItem({
-    //   id: 'projects',
-    //   title: 'Projects',
-    //   path: '/projects',
-    //   icon: 'Folder',
-    //   order: 3
-    // });
   },
 
 

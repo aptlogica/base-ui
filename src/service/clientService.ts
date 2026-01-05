@@ -495,9 +495,14 @@ const initializeClient = async () => {
 
     // Initialize workspace and base from navigation store if available
     try {
-      const { useNavigationStore } = await import('../stores/navigationStore');
-      const navState = useNavigationStore.getState();
-      if (navState.selectedWorkspaceId || navState.selectedBaseId) {
+      const mod = await import('../stores/navigationStore');
+      const navStore = (mod as any)?.useNavigationStore;
+      if (!navStore || typeof navStore.getState !== 'function') {
+        return;
+      }
+
+      const navState = navStore.getState();
+      if (navState?.selectedWorkspaceId || navState?.selectedBaseId) {
         updateClientWorkspaceAndBase(navState.selectedWorkspaceId, navState.selectedBaseId);
       }
     } catch (navError) {
@@ -616,121 +621,6 @@ export const logout = async (): Promise<void> => {
   }
 };
 
-
-/**
- * Initiates OAuth login with an identity provider (e.g., Google, GitHub)
- * Opens a popup window for OAuth authentication
- * @param provider - The identity provider name (e.g., 'google', 'github')
- * @returns Promise that resolves with the OAuth redirect URL
- * @throws Error if popup is blocked or OAuth fails
- */
-export async function loginByIdentityProvider(provider: string): Promise<{ data: { redirect_url: string } }> {
-  try {
-    const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '';
-
-    // Frontend callback URL - Keycloak will redirect here after OAuth
-    const FRONTEND_CALLBACK_URL = `${window.location.origin}/auth/callback`;
-
-    // Build the API URL
-    const apiUrl = `${API_BASE_URL}/api/v1/auth/login/${provider}?redirect_uri=${encodeURIComponent(FRONTEND_CALLBACK_URL)}`;
-
-    // Store the provider in sessionStorage so we can handle the callback
-    sessionStorage.setItem('oauth_provider', provider);
-    sessionStorage.setItem('oauth_redirect_url', window.location.href);
-    sessionStorage.setItem('oauth_use_popup', 'true');
-
-    return new Promise((resolve, reject) => {
-      const width = 500;
-      const height = 600;
-      const left = window.screen.width / 2 - width / 2;
-      const top = window.screen.height / 2 - height / 2;
-
-      // Open popup directly to the API endpoint
-      // The server should redirect to the OAuth provider
-      // Browser will follow redirects in popups without CORS restrictions
-      const popup = window.open(
-        apiUrl,
-        'oauth-login',
-        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-      );
-
-      if (!popup) {
-        reject(new Error('Popup blocked. Please allow popups for this site to sign in with OAuth.'));
-        return;
-      }
-
-      // Optimized popup management with proper cleanup
-      let isResolved = false;
-      let checkClosedInterval: NodeJS.Timeout | null = null;
-
-      const cleanup = () => {
-        if (checkClosedInterval) {
-          clearInterval(checkClosedInterval);
-          checkClosedInterval = null;
-        }
-        window.removeEventListener('message', messageListener);
-      };
-
-      const messageListener = (event: MessageEvent) => {
-        // Verify origin for security
-        if (event.origin !== window.location.origin) {
-          return;
-        }
-
-        if (isResolved) {
-          return;
-        }
-
-        if (event.data.type === 'OAUTH_SUCCESS') {
-          isResolved = true;
-          cleanup();
-          try {
-            popup.close();
-          } catch (e) {
-            // Popup may already be closed
-          }
-          resolve({ data: { redirect_url: apiUrl } });
-        } else if (event.data.type === 'OAUTH_ERROR') {
-          isResolved = true;
-          cleanup();
-          try {
-            popup.close();
-          } catch (e) {
-            // Popup may already be closed
-          }
-          reject(new Error(event.data.error || 'OAuth authentication failed'));
-        }
-      };
-
-      window.addEventListener('message', messageListener);
-
-      // Check if popup was closed manually
-      checkClosedInterval = setInterval(() => {
-        if (popup.closed && !isResolved) {
-          isResolved = true;
-          cleanup();
-          reject(new Error('OAuth popup was closed'));
-        }
-      }, 500);
-
-      // Timeout safety - reject after 5 minutes if no response
-      setTimeout(() => {
-        if (!isResolved) {
-          isResolved = true;
-          cleanup();
-          try {
-            popup.close();
-          } catch (e) {
-            // Popup may already be closed
-          }
-          reject(new Error('OAuth authentication timeout'));
-        }
-      }, 5 * 60 * 1000); // 5 minutes
-    });
-  } catch (error: any) {
-    throw new Error(error?.message || `OAuth login with ${provider} failed`);
-  }
-}
 
 export async function verifyOtp(params: VerifyOtpParams) {
   try {
