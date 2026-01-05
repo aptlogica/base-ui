@@ -232,9 +232,9 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
       {items.map((item) => (
         <button
           key={item.label}
-          className={`w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 rounded-xl hover:bg-gray-100 focus:bg-[var(--color-bg-brand-secondary)] ${item.label.toLowerCase().includes('delete') || item.label.toLowerCase().includes('remove') && "text-red-600 hover:bg-red-200"} transition-colors duration-200 ${item.danger
-            ? 'text-red-600 hover:bg-red-200'
-            : 'text-gray-700'
+          className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-xl ${item.label.toLowerCase().includes('delete') || item.label.toLowerCase().includes('remove') ? "text-red-600 hover:bg-red-50" : "text-gray-700 hover:bg-gray-100"} transition-colors duration-200 ${item.danger
+            ? 'text-red-600 hover:bg-red-50'
+            : 'text-gray-700 hover:bg-gray-100'
             } ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           onClick={() => {
             if (!item.disabled) {
@@ -246,7 +246,7 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
           tabIndex={0}
         >
           {item.icon && <span className="w-5 h-5 flex items-center justify-center text-gray-400">{item.icon}</span>}
-          <span className="text-sm text-[var(--color-text-primary)]">{item.label}</span>
+          <span className="text-sm">{item.label}</span>
         </button>
       ))}
     </div>

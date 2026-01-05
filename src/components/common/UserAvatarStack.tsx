@@ -153,7 +153,7 @@ export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({
           className="fixed z-50 w-72 bg-card border rounded-xl shadow-lg overflow-hidden"
           style={{ maxHeight: '400px' }}
         >
-          <div className="p-3 text-xs font-semibold text-gray-500 tracking-wide">
+          <div className="p-3 pb-1 text-xs font-semibold text-gray-500 tracking-wide">
             Members ({users.length})
           </div>
           <div className="max-h-80 p-2 pt-0 overflow-y-auto">
