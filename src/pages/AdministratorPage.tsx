@@ -25,8 +25,8 @@ const AdministratorPage: React.FC = () => {
   const tabs = isWorkspaceReadOnly()
     ? allTabs.filter(tab => tab.key === 'workspaces')
     : canAccessAllSettingsTabs()
-    ? allTabs
-    : allTabs.filter(tab => tab.key === 'workspaces');
+      ? allTabs
+      : allTabs.filter(tab => tab.key === 'workspaces');
 
   // Get valid tab keys (memoized)
   const validTabKeys = useMemo(() => tabs.map(tab => tab.key), [tabs]);

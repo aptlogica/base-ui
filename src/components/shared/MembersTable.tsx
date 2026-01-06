@@ -533,17 +533,6 @@ export const MembersTable: React.FC<MembersTableProps> = ({
     });
   };
 
-  const handleRoleChange = (memberId: string, newRole: AccessRole) => {
-    setMemberRoleDropdowns(prev => ({ ...prev, [memberId]: newRole }));
-    onRoleChange?.(memberId, newRole);
-  };
-
-  const handleCopyUserId = (userId: string) => {
-    navigator.clipboard.writeText(userId);
-    setOpenActionsMenu(null);
-    onCopyUserId?.(userId);
-  };
-
   const handleRemoveMember = (memberId: string) => {
     setOpenActionsMenu(null);
     setMenuPosition(null);

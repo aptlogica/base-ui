@@ -96,22 +96,7 @@ const NavigationPlugin: Plugin = {
       order: 1
     });
     
-    // Settings menu item - visible to full_access users (not admins)
-    navigationService.addMenuItem({
-      id: 'settings',
-      title: 'Settings',
-      path: '/workspace/:workspaceId/workspace-settings',
-      icon: 'Settings',
-      order: 2
-    });
-    
-    // navigationService.addMenuItem({
-    //   id: 'projects',
-    //   title: 'Projects',
-    //   path: '/projects',
-    //   icon: 'Folder',
-    //   order: 3
-    // });
+    // Settings menu item removed (workspace settings route removed)
   },
 
 

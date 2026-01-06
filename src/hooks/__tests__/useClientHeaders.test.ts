@@ -9,9 +9,14 @@ vi.mock('../../service/clientService', () => ({
   updateClientWorkspaceAndBase: vi.fn()
 }));
 
-vi.mock('../../stores/navigationStore', () => ({
-  useNavigationStore: vi.fn()
-}));
+vi.mock('../../stores/navigationStore', () => {
+  const useNavigationStore = vi.fn();
+  (useNavigationStore as any).getState = vi.fn(() => ({
+    selectedWorkspaceId: null,
+    selectedBaseId: null,
+  }));
+  return { useNavigationStore };
+});
 
 describe('useClientHeaders', () => {
   const mockUpdateClientWorkspaceAndBase = vi.mocked(clientService.updateClientWorkspaceAndBase);

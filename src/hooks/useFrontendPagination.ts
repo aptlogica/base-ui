@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 
 interface UseFrontendPaginationOptions<T> {
   data: T[];
@@ -16,6 +16,9 @@ interface UseFrontendPaginationReturn<T> {
   totalItems: number;
   hasMore: boolean;
   hasPrev: boolean;
+
+  // Loading state for infinite scroll UX
+  isLoadingMore: boolean;
   
   // Actions
   loadNextPage: () => void;
@@ -37,10 +40,12 @@ export function useFrontendPagination<T>({
   initialPage = 1,
 }: UseFrontendPaginationOptions<T>): UseFrontendPaginationReturn<T> {
   const [currentPage, setCurrentPage] = useState(initialPage);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   // Reset to page 1 when data changes (new filter/search)
   useEffect(() => {
     setCurrentPage(1);
+    setIsLoadingMore(false);
   }, [data.length]); // Reset when dataset size changes
   
   const totalPages = Math.ceil(data.length / pageSize);
@@ -61,12 +66,23 @@ export function useFrontendPagination<T>({
   
   const hasMore = currentPage < totalPages;
   const hasPrev = currentPage > 1;
+
+  // When the page changes (after a load), clear the loading flag.
+  useEffect(() => {
+    if (isLoadingMore) {
+      setIsLoadingMore(false);
+    }
+  }, [currentPage, isLoadingMore]);
   
   const loadNextPage = useCallback(() => {
-    if (hasMore) {
+    if (!hasMore || isLoadingMore) return;
+    setIsLoadingMore(true);
+    // Defer page increment so the UI has a chance to paint the loading state.
+    // This improves infinite-scroll UX even though paging is computed locally.
+    requestAnimationFrame(() => {
       setCurrentPage(prev => prev + 1);
-    }
-  }, [hasMore]);
+    });
+  }, [hasMore, isLoadingMore]);
   
   const loadPrevPage = useCallback(() => {
     if (hasPrev) {
@@ -90,6 +106,7 @@ export function useFrontendPagination<T>({
     totalItems,
     hasMore,
     hasPrev,
+    isLoadingMore,
     loadNextPage,
     loadPrevPage,
     goToPage,

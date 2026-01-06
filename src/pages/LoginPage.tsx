@@ -1,11 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import { Info, Eye, EyeOff } from "lucide-react";
-import { validateLogin } from "../utils/validation";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from '../auth/AuthContext';
 import formText from '../config/formText';
-import { login as apiLogin, resendOtp, loginByIdentityProvider } from '../service/clientService';
-import { processOAuthResponse, clearOAuthSession } from '../utils/oauthUtils';
+import { login as apiLogin, resendOtp } from '../service/clientService';
 import { useToast } from "../components/common/Toast";
 
 interface FormData {
@@ -22,7 +20,6 @@ const LogIn: React.FC = () => {
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const toast = useToast();
-  const [isOAuthLoading, setIsOAuthLoading] = useState<{ google: boolean; github: boolean }>({ google: false, github: false });
   const navigate = useNavigate();
   const auth = useAuth();
   const login = typeof auth?.login === 'function' ? auth.login : () => { };
@@ -30,54 +27,6 @@ const LogIn: React.FC = () => {
   const validateEmail = (value: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   };
-
-  // Process OAuth data from popup using shared utility
-  const processOAuthData = useCallback(async (data: { token: any; user: any; tenant: any }) => {
-    try {
-      const { userWithTenant } = await processOAuthResponse(data);
-
-      // Update auth context
-      await login(userWithTenant);
-
-      // Small delay for state propagation
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      // Clear OAuth sessionStorage
-      clearOAuthSession();
-
-      // Navigate to homepage
-      navigate('/homepage', { replace: true });
-    } catch (err: any) {
-      setError(err?.message || 'Failed to complete OAuth login');
-      throw err;
-    }
-  }, [login, navigate]);
-
-  // Listen for messages from OAuth popup
-  useEffect(() => {
-    const messageListener = (event: MessageEvent) => {
-      // Verify origin for security
-      if (event.origin !== window.location.origin) {
-        return;
-      }
-
-      if (event.data.type === 'OAUTH_SUCCESS') {
-        setIsOAuthLoading({ google: false, github: false });
-        processOAuthData(event.data.data).catch((err: any) => {
-          setError(err?.message || 'Failed to complete OAuth login');
-        });
-      } else if (event.data.type === 'OAUTH_ERROR') {
-        setIsOAuthLoading({ google: false, github: false });
-        setError(event.data.error || 'OAuth authentication failed');
-      }
-    };
-
-    window.addEventListener('message', messageListener);
-    
-    return () => {
-      window.removeEventListener('message', messageListener);
-    };
-  }, [processOAuthData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

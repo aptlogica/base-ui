@@ -4,27 +4,99 @@ import { useCurrentUser } from '../../auth/useCurrentUser';
 import { useUserProfile, useUpdateUserProfile, useAddOrUpdateAvatar, useRemoveAvatar } from '../../hooks/useApi';
 import { UserProfile } from '../../types/userProfile';
 import { useToast } from '../common/Toast';
-import { Loader2, CheckCircle, CloudUpload } from 'lucide-react';
+import { Loader2, CheckCircle, CloudUpload,X } from 'lucide-react';
 import { AdvancedDropdown } from '../common/dropdown/AdvancedDropdown';
 import { timeZoneOptions } from '../../types/constants';
 import { useFooterButtons } from './AccountSettings';
 import { DateField } from '../common/Fields/DateField';
 import { validateDOB, getYesterdayISO, convertDateToFormat } from '../../utils/dateValidation';
 
-export const ProfileSection: React.FC = () => {
+type ProfileFormData = {
+  first_name?: string;
+  last_name?: string;
+  display_name?: string;
+  country?: string;
+  dob?: string;
+  timezone?: string;
+  locale?: string;
+};
+
+const buildFormDataFromProfile = (userProfile: UserProfile): ProfileFormData => ({
+  first_name: userProfile.first_name || '',
+  last_name: userProfile.last_name || '',
+  display_name: userProfile.display_name || '',
+  country: userProfile.country || '',
+  dob: userProfile.dob || '',
+  locale: userProfile.locale || '',
+  timezone: userProfile.timezone || '',
+});
+
+const safeSessionStorageSet = (key: string, value: string) => {
+  try {
+    if (typeof sessionStorage === 'undefined') return false;
+    sessionStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const PROFILE_UPDATE_FIELDS: Array<keyof ProfileFormData> = [
+  'first_name',
+  'last_name',
+  'display_name',
+  'country',
+  'dob',
+  'timezone',
+  'locale',
+];
+
+const buildProfileUpdatePayload = (formData: ProfileFormData, userProfile: UserProfile | null): Record<string, string> => {
+  const payload: Record<string, string> = {};
+
+  if (userProfile) {
+    for (const field of PROFILE_UPDATE_FIELDS) {
+      const nextVal = formData[field] ?? '';
+      const prevVal = (userProfile as any)[field] ?? '';
+      if (nextVal !== prevVal) {
+        payload[field] = nextVal;
+      }
+    }
+    return payload;
+  }
+
+  for (const field of PROFILE_UPDATE_FIELDS) {
+    const nextVal = formData[field];
+    if (typeof nextVal === 'string') {
+      payload[field] = nextVal;
+    }
+  }
+  return payload;
+};
+
+const persistProfilePayloadToSessionStorage = (payload: Record<string, string>) => {
+  const country = payload['country'];
+  const timezone = payload['timezone'];
+
+  if (typeof country === 'string') {
+    safeSessionStorageSet('country', country);
+  }
+  if (typeof timezone === 'string') {
+    safeSessionStorageSet('timezone', timezone);
+  }
+};
+
+const getTimeZonesForCountry = (country?: string) => {
+  if (!country) return [];
+  return timeZoneOptions.filter(t => t.country === country);
+};
+
+export const ProfileSection: React.FC = () => { // NOSONAR
   const { user: authUser } = useAuth();
   const currentUser = useCurrentUser();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState<{
-    first_name?: string;
-    last_name?: string;
-    display_name?: string;
-    country?: string;
-    dob?: string;
-    timezone?: string;
-    locale?: string;
-  }>({});
+  const [formData, setFormData] = useState<ProfileFormData>({});
 
   const [hasChanges, setHasChanges] = useState(false);
   const [dobError, setDobError] = useState<string | null>(null);
@@ -43,6 +115,8 @@ export const ProfileSection: React.FC = () => {
   // Avatar states
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
 
   // Get user ID from auth user
   const userId = authUser?.id;
@@ -55,49 +129,39 @@ export const ProfileSection: React.FC = () => {
     refetch
   } = useUserProfile(userId || '');
 
-  const userProfile: UserProfile | null = profileResponse?.data || null;
+  const userProfile: UserProfile | null = (profileResponse as any)?.data || null;
 
 
 
   // Initialize form data when profile loads
   useEffect(() => {
-    if (userProfile && !isEditing) {
-      setFormData({
-        first_name: userProfile.first_name || '',
-        last_name: userProfile.last_name || '',
-        display_name: userProfile.display_name || '',
-        country: userProfile.country || '',
-        dob: userProfile.dob || '',
-        locale: userProfile.locale || '',
-        // Store IANA label in form state for timezone (UI value). Convert from short code if needed.
-        timezone:
-          (userProfile.timezone
-            ? (timeZoneOptions.find(t => t.value === userProfile.timezone)?.label || userProfile.timezone)
-            : ''),
-      });
+    const isFormEmpty = Object.keys(formData || {}).length === 0;
+    // If user clicks Edit before profile loads, formData stays empty; hydrate it once profile arrives.
+    if (userProfile && (!isEditing || isFormEmpty)) {
+      setFormData(buildFormDataFromProfile(userProfile));
 
       // Store timezone and country in sessionStorage when profile loads
-      try {
-        if (typeof sessionStorage !== 'undefined') {
-          if (userProfile.timezone) {
-            sessionStorage.setItem('timezone', userProfile.timezone);
-          }
-          if (userProfile.country) {
-            sessionStorage.setItem('country', userProfile.country);
-          }
-        }
-      } catch (error) {
-        // Silently fail if sessionStorage is not available
+      if (userProfile.timezone) {
+        safeSessionStorageSet('timezone', userProfile.timezone);
+      }
+      if (userProfile.country) {
+        safeSessionStorageSet('country', userProfile.country);
       }
     }
   }, [userProfile, isEditing]);
 
+  // Clean up preview URL when component unmounts or preview changes
+  useEffect(() => {
+    return () => {
+      if (avatarPreviewUrl) {
+        URL.revokeObjectURL(avatarPreviewUrl);
+      }
+    };
+  }, [avatarPreviewUrl]);
+
   // Check for changes
   useEffect(() => {
     if (userProfile && isEditing) {
-      const formTzShort = formData.timezone
-        ? (timeZoneOptions.find(t => t.label === formData.timezone)?.value || formData.timezone)
-        : '';
       const hasFormChanges =
         formData.first_name !== userProfile.first_name ||
         formData.last_name !== userProfile.last_name ||
@@ -105,10 +169,11 @@ export const ProfileSection: React.FC = () => {
         formData.country !== (userProfile.country || '') ||
         formData.dob !== (userProfile.dob || '') ||
         formData.locale !== (userProfile.locale || '') ||
-        formTzShort !== (userProfile.timezone || '');
+        formData.timezone !== (userProfile.timezone || '') ||
+        selectedAvatarFile !== null;
       setHasChanges(hasFormChanges);
     }
-  }, [formData, userProfile, isEditing]);
+  }, [formData, userProfile, isEditing, selectedAvatarFile]);
 
   // Register footer buttons with cleanup
   useEffect(() => {
@@ -117,16 +182,7 @@ export const ProfileSection: React.FC = () => {
       return;
     }
 
-    const footerContent = !isEditing ? (
-      <div className="flex items-center justify-end gap-3">
-        <button
-          onClick={() => setIsEditing(true)}
-          className="flex items-center gap-2 px-6 py-2.5 text-sm btn-primary transition-colors rounded-xl text-primary"
-        >
-          Edit
-        </button>
-      </div>
-    ) : (
+    const footerContent = isEditing ? (
       <div className="flex items-center justify-end gap-3 w-full">
         <button
           onClick={handleCancel}
@@ -146,6 +202,20 @@ export const ProfileSection: React.FC = () => {
           {(isSaving || updateProfileMutation.isPending) ? 'Saving...' : 'Update'}
         </button>
       </div>
+    ) : (
+      <div className="flex items-center justify-end gap-3">
+        <button
+          onClick={() => {
+            if (userProfile) {
+              setFormData(buildFormDataFromProfile(userProfile));
+            }
+            setIsEditing(true);
+          }}
+          className="flex items-center gap-2 px-6 py-2.5 text-sm btn-primary transition-colors rounded-xl text-primary"
+        >
+          Edit
+        </button>
+      </div>
     );
     registerFooter(footerContent, 'profile');
     
@@ -161,11 +231,11 @@ export const ProfileSection: React.FC = () => {
   const handleInputChange = (field: 'first_name' | 'last_name' | 'display_name' | 'country' | 'dob' | 'timezone' | 'locale', value: string) => {
     if (field === 'country') {
       const country = value;
-      const tzEntries = timeZoneOptions.filter(t => t.country === country);
-      const tzLabels = tzEntries.map(t => t.label);
+      const tzEntries = getTimeZonesForCountry(country);
+      const tzValues = tzEntries.map(t => t.value);
       setFormData(prev => {
         const prevTz = prev.timezone || '';
-        const nextTz = tzLabels.includes(prevTz) ? prevTz : (tzLabels[0] || '');
+        const nextTz = tzValues.includes(prevTz) ? prevTz : (tzValues[0] || '');
         return {
           ...prev,
           country,
@@ -180,7 +250,7 @@ export const ProfileSection: React.FC = () => {
     }));
   };
 
-  const handleSave = async () => {
+  const handleSave = async () => { // NOSONAR
     if (!hasChanges) return;
 
     // Validate DOB before saving
@@ -195,32 +265,36 @@ export const ProfileSection: React.FC = () => {
 
     setIsSaving(true);
     try {
-      // Convert IANA label (form value) to short code for API if applicable
-      const tzShort = formData.timezone
-        ? (timeZoneOptions.find(t => t.label === formData.timezone)?.value || formData.timezone)
-        : undefined;
-      const payload = {
-        ...formData,
-        timezone: tzShort,
-      };
+      // Upload avatar if selected
+      if (selectedAvatarFile) {
+        try {
+          await addOrUpdateAvatarMutation.mutateAsync(selectedAvatarFile);
+        } catch (error: any) {
+          console.error('Failed to upload avatar:', error);
+          toast.error(error?.message || 'Failed to upload avatar. Please try again.', { title: 'Avatar Upload Failed' });
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      const payload = buildProfileUpdatePayload(formData, userProfile);
       await updateProfileMutation.mutateAsync(payload);
 
       // Persist updated country and timezone to sessionStorage
-      try {
-        if (typeof sessionStorage !== 'undefined') {
-          if (typeof payload.country === 'string') {
-            sessionStorage.setItem('country', payload.country);
-          }
-          if (typeof payload.timezone === 'string') {
-            sessionStorage.setItem('timezone', payload.timezone);
-          }
-        }
-      } catch { }
+      persistProfilePayloadToSessionStorage(payload);
+
+      // Clear avatar selection and preview
+      setSelectedAvatarFile(null);
+      if (avatarPreviewUrl) {
+        URL.revokeObjectURL(avatarPreviewUrl);
+        setAvatarPreviewUrl(null);
+      }
 
       setIsEditing(false);
       setHasChanges(false);
       setFormData({});
       setDobError(null);
+      toast.success('Profile updated successfully!', { title: 'Success' });
     } catch (error: any) {
       console.error('Failed to save profile:', error);
       toast.error(error?.message || 'Failed to save profile. Please try again.', { title: 'Save Failed' });
@@ -231,22 +305,18 @@ export const ProfileSection: React.FC = () => {
 
   const handleCancel = () => {
     if (userProfile) {
-      setFormData({
-        first_name: userProfile.first_name || '',
-        last_name: userProfile.last_name || '',
-        display_name: userProfile.display_name || '',
-        country: userProfile.country || '',
-        dob: userProfile.dob || '',
-        locale: userProfile.locale || '',
-        timezone:
-          (userProfile.timezone
-            ? (timeZoneOptions.find(t => t.value === userProfile.timezone)?.label || userProfile.timezone)
-            : ''),
-      });
+      setFormData(buildFormDataFromProfile(userProfile));
     }
     setDobError(null);
     setIsEditing(false);
     setHasChanges(false);
+    
+    // Clear avatar selection and preview
+    setSelectedAvatarFile(null);
+    if (avatarPreviewUrl) {
+      URL.revokeObjectURL(avatarPreviewUrl);
+      setAvatarPreviewUrl(null);
+    }
   };
 
 
@@ -264,16 +334,15 @@ export const ProfileSection: React.FC = () => {
       return;
     }
 
-    setIsUploadingAvatar(true);
-    try {
-      await addOrUpdateAvatarMutation.mutateAsync(file);
-      toast.success('Avatar updated successfully!', { title: 'Success' });
-    } catch (error: any) {
-      console.error('Failed to upload avatar:', error);
-      toast.error(error?.message || 'Failed to upload avatar. Please try again.', { title: 'Upload Failed' });
-    } finally {
-      setIsUploadingAvatar(false);
+    // Clean up previous preview URL if exists
+    if (avatarPreviewUrl) {
+      URL.revokeObjectURL(avatarPreviewUrl);
     }
+
+    // Create preview URL and store file
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarPreviewUrl(previewUrl);
+    setSelectedAvatarFile(file);
   };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -282,7 +351,7 @@ export const ProfileSection: React.FC = () => {
     await processFile(file);
   };
 
-  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (e: React.DragEvent<HTMLElement>) => {
     e.preventDefault();
     setIsDragging(false);
     
@@ -292,12 +361,12 @@ export const ProfileSection: React.FC = () => {
     }
   };
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragOver = (e: React.DragEvent<HTMLElement>) => {
     e.preventDefault();
     setIsDragging(true);
   };
 
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragLeave = (e: React.DragEvent<HTMLElement>) => {
     e.preventDefault();
     setIsDragging(false);
   };
@@ -352,6 +421,35 @@ export const ProfileSection: React.FC = () => {
     );
   }
 
+  const displayAvatarUrl = avatarPreviewUrl || userProfile?.avatar || currentUser?.avatar;
+  let avatarUploadStateClass = 'border bg-gray-50 cursor-not-allowed opacity-60';
+  if (isEditing) {
+    if (isDragging) {
+      avatarUploadStateClass = 'border-[var(--color-brand-600)] bg-[var(--color-brand-50)] cursor-pointer';
+    } else {
+      avatarUploadStateClass = 'border hover:border-green-500 bg-gray-50 cursor-pointer';
+    }
+  }
+  const avatarUploadBusyClass = (isUploadingAvatar || addOrUpdateAvatarMutation.isPending) ? 'opacity-50 cursor-not-allowed' : '';
+
+  const activeCountry = isEditing ? (formData.country || '') : (userProfile.country || '');
+  const tzDropdownOptions = getTimeZonesForCountry(activeCountry)
+    .map((t) => ({ label: `${t.label} (${t.value})`, value: t.value }));
+  const tzDropdownValue = isEditing ? (formData.timezone || '') : (userProfile.timezone || '');
+  let tzDropdownPlaceholder = 'Not set';
+  if (isEditing) {
+    if (activeCountry) {
+      tzDropdownPlaceholder = 'Select Time Zone';
+    } else {
+      tzDropdownPlaceholder = 'Select Country first';
+    }
+  }
+
+  const triggerAvatarInput = () => {
+    if (!isEditing || isUploadingAvatar || addOrUpdateAvatarMutation.isPending) return;
+    document.getElementById('avatar-upload-input')?.click();
+  };
+
 
 
   return (
@@ -363,54 +461,54 @@ export const ProfileSection: React.FC = () => {
           {/* First Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              First Name
+              <span>First Name</span>
+              <input
+                type="text"
+                value={isEditing ? (formData.first_name || '') : (userProfile.first_name || '')}
+                onChange={(e) => handleInputChange('first_name', e.target.value)}
+                disabled={isEditing === false}
+                className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+                placeholder="Enter first name"
+              />
             </label>
-            <input
-              type="text"
-              value={isEditing ? (formData.first_name || '') : (userProfile.first_name || '')}
-              onChange={(e) => handleInputChange('first_name', e.target.value)}
-              disabled={!isEditing}
-              className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
-              placeholder="Enter first name"
-            />
           </div>
 
           {/* Last Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Last Name
+              <span>Last Name</span>
+              <input
+                type="text"
+                value={isEditing ? (formData.last_name || '') : (userProfile.last_name || '')}
+                onChange={(e) => handleInputChange('last_name', e.target.value)}
+                disabled={isEditing === false}
+                className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+                placeholder="Enter last name"
+              />
             </label>
-            <input
-              type="text"
-              value={isEditing ? (formData.last_name || '') : (userProfile.last_name || '')}
-              onChange={(e) => handleInputChange('last_name', e.target.value)}
-              disabled={!isEditing}
-              className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
-              placeholder="Enter last name"
-            />
           </div>
         </div>
 
         {/* Display Name - Full Width */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Display Name
+            <span>Display Name</span>
+            <input
+              type="text"
+              value={isEditing ? (formData.display_name || '') : (userProfile.display_name || '')}
+              onChange={(e) => handleInputChange('display_name', e.target.value)}
+              disabled={isEditing === false}
+              className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+              placeholder="Enter display name"
+            />
           </label>
-          <input
-            type="text"
-            value={isEditing ? (formData.display_name || '') : (userProfile.display_name || '')}
-            onChange={(e) => handleInputChange('display_name', e.target.value)}
-            disabled={!isEditing}
-            className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
-            placeholder="Enter display name"
-          />
         </div>
 
         {/* Email Address */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="block text-sm font-medium text-gray-700 mb-2">
             Email address
-          </label>
+          </div>
           <div className="px-4 py-3 bg-gray-50 border rounded-xl text-gray-500 flex items-center justify-between gap-2 disabled:cursor-not-allowed">
             <span>{userProfile.email}</span>
             {userProfile.email_verified && (
@@ -424,16 +522,16 @@ export const ProfileSection: React.FC = () => {
 
         {/* Profile Image */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="block text-sm font-medium text-gray-700 mb-2">
             Profile Image
-          </label>
-          <div className="flex items-start gap-4">
-            {/* Small Profile Picture - Left Side */}
-            {(userProfile?.avatar || currentUser?.avatar) && (
-              <div className="flex-shrink-0">
-                <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center shadow-md relative overflow-hidden">
+          </div>
+          {displayAvatarUrl ? (
+            <div className="flex gap-4">
+              {/* Image Preview - Left Side */}
+              <div className="relative flex-shrink-0">
+                <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center overflow-hidden">
                   <img
-                    src={userProfile?.avatar || currentUser?.avatar}
+                    src={displayAvatarUrl}
                     alt="Profile"
                     className="w-full h-full object-cover"
                   />
@@ -443,68 +541,90 @@ export const ProfileSection: React.FC = () => {
                     </div>
                   )}
                 </div>
+                {isEditing && !isUploadingAvatar && !addOrUpdateAvatarMutation.isPending && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (selectedAvatarFile) {
+                        // Just clear the preview if it's a pending upload
+                        setSelectedAvatarFile(null);
+                        if (avatarPreviewUrl) {
+                          URL.revokeObjectURL(avatarPreviewUrl);
+                          setAvatarPreviewUrl(null);
+                        }
+                      } else {
+                        // Remove existing avatar
+                        handleRemoveAvatar();
+                      }
+                    }}
+                    disabled={removeAvatarMutation.isPending}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-primary rounded-full flex items-center justify-center hover:bg-red-600 transition-colors disabled:opacity-50"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
               </div>
-            )}
-
-            {/* Upload Area - Right Side or Full Width if no image */}
-            <div className={userProfile?.avatar || currentUser?.avatar ? "flex-1" : "w-full"}>
-              <div
-                onDrop={isEditing ? handleDrop : undefined}
-                onDragOver={isEditing ? handleDragOver : undefined}
-                onDragLeave={isEditing ? handleDragLeave : undefined}
-                className={`
-                  border-2 border-dashed rounded-xl p-8 text-center transition-colors
-                  ${!isEditing 
-                    ? 'border bg-gray-50 cursor-not-allowed opacity-60' 
-                    : isDragging 
-                      ? 'border-[var(--color-brand-600)] bg-[var(--color-brand-50)] cursor-pointer' 
-                      : 'border hover:border bg-gray-50 cursor-pointer'
-                  }
-                  ${isUploadingAvatar || addOrUpdateAvatarMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''}
-                `}
-                onClick={() => isEditing && !isUploadingAvatar && !addOrUpdateAvatarMutation.isPending && document.getElementById('avatar-upload-input')?.click()}
-              >
-                <input
-                  id="avatar-upload-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                  disabled={isUploadingAvatar || addOrUpdateAvatarMutation.isPending}
-                  className="hidden"
-                />
-                <div className="flex flex-col items-center gap-3">
-                  <CloudUpload className={`w-12 h-12 ${isDragging ? 'text-[var(--color-brand-600)]' : 'text-gray-400'}`} />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 mb-1">
-                      <span className="text-green-500">Click to upload</span> or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      SVG, PNG, JPG or GIF (max. 800 x 400px)
-                    </p>
-                  </div>
+              
+              {/* Upload Area - Right Side */}
+              <div className="flex-1">
+                <div
+                  onDragOver={isEditing ? handleDragOver : undefined}
+                  onDrop={isEditing ? handleDrop : undefined}
+                  onDragLeave={isEditing ? handleDragLeave : undefined}
+                  className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${avatarUploadStateClass} ${avatarUploadBusyClass}`}
+                  onClick={isEditing ? triggerAvatarInput : undefined}
+                >
+                  <input
+                    id="avatar-upload-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    disabled={isUploadingAvatar || addOrUpdateAvatarMutation.isPending}
+                    className="hidden"
+                  />
+                  <CloudUpload className={`w-12 h-12 ${isDragging ? 'text-[var(--color-brand-600)]' : 'text-gray-400'} mx-auto mb-3`} />
+                  <p className="text-sm text-gray-600 mb-1">
+                    <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    SVG, PNG, JPG or GIF (max. 800 x 400px)
+                  </p>
                 </div>
               </div>
-              {(userProfile?.avatar || currentUser?.avatar) && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveAvatar();
-                  }}
-                  disabled={isUploadingAvatar || removeAvatarMutation.isPending}
-                  className="mt-3 text-sm text-red-600 hover:text-red-800 font-medium transition-colors disabled:opacity-50"
-                >
-                  {removeAvatarMutation.isPending ? 'Removing...' : 'Remove image'}
-                </button>
-              )}
             </div>
-          </div>
+          ) : (
+            <div
+              onDragOver={isEditing ? handleDragOver : undefined}
+              onDrop={isEditing ? handleDrop : undefined}
+              onDragLeave={isEditing ? handleDragLeave : undefined}
+              className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${avatarUploadStateClass} ${avatarUploadBusyClass}`}
+              onClick={isEditing ? triggerAvatarInput : undefined}
+            >
+              <input
+                id="avatar-upload-input"
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                disabled={isUploadingAvatar || addOrUpdateAvatarMutation.isPending}
+                className="hidden"
+              />
+              <CloudUpload className={`w-12 h-12 ${isDragging ? 'text-[var(--color-brand-600)]' : 'text-gray-400'} mx-auto mb-3`} />
+              <p className="text-sm text-gray-600 mb-1">
+                <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
+              </p>
+              <p className="text-xs text-gray-500">
+                SVG, PNG, JPG or GIF (max. 800 x 400px)
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Country */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="block text-sm font-medium text-gray-700 mb-2">
             Country
-          </label>
+          </div>
           <AdvancedDropdown
             options={Array.from(new Set(timeZoneOptions.map(t => t.country)))
               .sort((a: string, b: string) => a.localeCompare(b))
@@ -521,15 +641,14 @@ export const ProfileSection: React.FC = () => {
 
         {/* Time Zone */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="block text-sm font-medium text-gray-700 mb-2">
             Time Zone
-          </label>
+          </div>
           <AdvancedDropdown
-            options={(isEditing ? (formData.country ? timeZoneOptions.filter(t => t.country === formData.country) : []) : (userProfile.country ? timeZoneOptions.filter(t => t.country === userProfile.country) : []))
-              .map((t) => ({ label: `${t.label} (${t.value})`, value: t.label }))}
-            value={isEditing ? (formData.timezone || '') : (userProfile.timezone ? (timeZoneOptions.find(t => t.value === userProfile.timezone)?.label || userProfile.timezone) : '')}
+            options={tzDropdownOptions}
+            value={tzDropdownValue}
             onChange={(val) => handleInputChange('timezone', (val as string) || '')}
-            placeholder={isEditing ? (formData.country ? 'Select Time Zone' : 'Select Country first') : 'Not set'}
+            placeholder={tzDropdownPlaceholder}
             searchable
             clearable
             disabled={!isEditing}
@@ -539,9 +658,9 @@ export const ProfileSection: React.FC = () => {
 
         {/* Language */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="block text-sm font-medium text-gray-700 mb-2">
             Language
-          </label>
+          </div>
           <AdvancedDropdown
             options={[
               { label: 'English (US)', value: 'en-US' },
@@ -565,9 +684,9 @@ export const ProfileSection: React.FC = () => {
 
         {/* Date of Birth */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="block text-sm font-medium text-gray-700 mb-2">
             Date of Birth
-          </label>
+          </div>
           {isEditing ? (
             <>
               <DateField

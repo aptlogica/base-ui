@@ -196,6 +196,7 @@ interface AddUserRequest {
     profile_pic?: File;
     is_coowner?: boolean;
     membership?: MembershipRequest[];
+    locale?: string;
 }
 interface EditUserRequest {
     user_id: string;

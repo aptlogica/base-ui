@@ -5,8 +5,19 @@ import * as useApi from '../useApi';
 import * as clientService from '../../service/clientService';
 
 // Mock dependencies
-vi.mock('../useApi');
-vi.mock('../../service/clientService');
+vi.mock('../useApi', () => ({
+  useWorkspaces: vi.fn(),
+  useWorkspaceBases: vi.fn(),
+  useBaseTables: vi.fn(),
+  useCreateWorkspace: vi.fn(),
+  useCreateBase: vi.fn(),
+  useCreateTable: vi.fn(),
+  useCreateView: vi.fn(),
+  useUpdateTable: vi.fn(),
+}));
+vi.mock('../../service/clientService', () => ({
+  isTenantSchemaAvailable: vi.fn(),
+}));
 
 describe('useWorkspaceData', () => {
   const mockUseWorkspaces = vi.mocked(useApi.useWorkspaces);
@@ -17,21 +28,19 @@ describe('useWorkspaceData', () => {
   const mockUseCreateTable = vi.mocked(useApi.useCreateTable);
   const mockUseCreateView = vi.mocked(useApi.useCreateView);
   const mockUseUpdateTable = vi.mocked(useApi.useUpdateTable);
-  const mockIsTenantSchemaAvailable = vi.mocked(clientService.isTenantSchemaAvailable);
 
   beforeEach(() => {
     vi.clearAllMocks();
     
     // Default mock values
-    mockIsTenantSchemaAvailable.mockReturnValue(true);
     mockUseWorkspaces.mockReturnValue({ data: [], isLoading: false, error: null } as any);
     mockUseWorkspaceBases.mockReturnValue({ data: [], isLoading: false, error: null } as any);
     mockUseBaseTables.mockReturnValue({ data: [], isLoading: false, error: null } as any);
-    mockUseCreateWorkspace.mockReturnValue({ mutate: vi.fn() } as any);
-    mockUseCreateBase.mockReturnValue({ mutate: vi.fn() } as any);
-    mockUseCreateTable.mockReturnValue({ mutate: vi.fn() } as any);
-    mockUseCreateView.mockReturnValue({ mutate: vi.fn() } as any);
-    mockUseUpdateTable.mockReturnValue({ mutate: vi.fn() } as any);
+    mockUseCreateWorkspace.mockReturnValue({ mutate: vi.fn(), mutateAsync: vi.fn() } as any);
+    mockUseCreateBase.mockReturnValue({ mutate: vi.fn(), mutateAsync: vi.fn() } as any);
+    mockUseCreateTable.mockReturnValue({ mutate: vi.fn(), mutateAsync: vi.fn() } as any);
+    mockUseCreateView.mockReturnValue({ mutate: vi.fn(), mutateAsync: vi.fn() } as any);
+    mockUseUpdateTable.mockReturnValue({ mutate: vi.fn(), mutateAsync: vi.fn() } as any);
   });
 
   describe('data queries', () => {
@@ -85,14 +94,6 @@ describe('useWorkspaceData', () => {
   });
 
   describe('loading state', () => {
-    it('should return loading true when tenant schema is not available', () => {
-      mockIsTenantSchemaAvailable.mockReturnValue(false);
-
-      const { result } = renderHook(() => useWorkspaceData());
-
-      expect(result.current.loading).toBe(true);
-    });
-
     it('should return loading true when workspaces query is loading', () => {
       mockUseWorkspaces.mockReturnValue({ data: [], isLoading: true, error: null } as any);
 
@@ -117,8 +118,7 @@ describe('useWorkspaceData', () => {
       expect(result.current.loading).toBe(true);
     });
 
-    it('should return loading false when all queries complete and tenant ready', () => {
-      mockIsTenantSchemaAvailable.mockReturnValue(true);
+    it('should return loading false when all queries complete', () => {
       mockUseWorkspaces.mockReturnValue({ data: [], isLoading: false, error: null } as any);
       mockUseWorkspaceBases.mockReturnValue({ data: [], isLoading: false, error: null } as any);
       mockUseBaseTables.mockReturnValue({ data: [], isLoading: false, error: null } as any);

@@ -112,28 +112,18 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
       return {
         id: member.id || member.user_id || '',
         userId: member.user_id || member.id || '',
-        name: member.display_name || member.name || member.email || 'Unknown User',
+        name: `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.email || 'Unknown User',
         email: member.email || '',
         role: role,
         dateJoined: member.created_time || member.created_at || '',
         avatar: member.avatar || undefined,
         access_level: member.access_level, // Pass raw access_level from API
-        last_active_at: member.last_active_at || undefined,
+        last_active_at: member.last_modified_time || undefined,
         last_login_at: member.last_login_at || undefined,
         roles: member.roles || undefined, // Pass roles array from API (same structure as UserTable)
       };
     });
   }, [workspaceMembersQuery.data]);
-
-  const handleRoleChange = (memberId: string, newRole: AccessRole) => {
-    // TODO: Implement API call to update member role
-    toast.info('Role change functionality coming soon');
-  };
-
-  const handleCopyUserId = (userId: string) => {
-    navigator.clipboard.writeText(userId);
-    toast.success('User ID copied to clipboard');
-  };
 
   const handleRemoveMember = async (memberId: string) => {
     if (!selectedWorkspaceId) {
@@ -341,8 +331,6 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
             <MembersTable
               members={members}
               roleConfig={defaultRoleConfig}
-              onRoleChange={handleRoleChange}
-              onCopyUserId={handleCopyUserId}
               onRemoveMember={canAssignUsers() && !isWorkspaceReadOnly() ? handleRemoveMember : undefined}
               workspaceId={selectedWorkspaceId}
               onEditMember={canAssignUsers() && !isWorkspaceReadOnly() ? handleEditMember : undefined}
