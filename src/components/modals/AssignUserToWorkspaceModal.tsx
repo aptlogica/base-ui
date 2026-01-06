@@ -5,6 +5,7 @@ import { useToast } from '../common/Toast';
 import { AdvancedDropdown } from '../common/dropdown/AdvancedDropdown';
 import { useAuth } from '../../auth/AuthContext';
 import { MultiSelectTags, MultiSelectTagsOption } from '../common/MultiSelectTags';
+import { useUserRole } from '../../hooks/useUserRole';
 
 interface AssignUserToWorkspaceModalProps {
   isOpen: boolean;
@@ -25,8 +26,31 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   editMode = false,
   memberToEdit,
 }) => {
+  const userRole = useUserRole();
+  const { user: currentUser } = useAuth();
+  const currentUserId = currentUser?.id || sessionStorage.getItem('user_id') || localStorage.getItem('user_id');
+  
+  // Fetch current user's workspace access to determine their role in THIS workspace
+  const { data: currentUserWorkspaceAccess } = useUserRolesAndAccess(currentUserId || null);
+  
+  // Check if current user is maintainer in this workspace (not owner/coowner at system level)
+  const isMaintainerOnly = React.useMemo(() => {
+    // If system owner or co-owner, they can assign any role
+    if (userRole.hasAdminRole()) return false;
+    
+    // Check workspace-specific role
+    if (currentUserWorkspaceAccess && Array.isArray(currentUserWorkspaceAccess) && workspaceId) {
+      const workspace = currentUserWorkspaceAccess.find((ws: any) => ws.workspace_id === workspaceId);
+      if (workspace && workspace.access === 'maintainer') {
+        return true; // User is maintainer in this workspace
+      }
+    }
+    return false;
+  }, [userRole, currentUserWorkspaceAccess, workspaceId]);
+  
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [selectedRole, setSelectedRole] = useState<string>('maintainer');
+  const defaultRole = isMaintainerOnly ? 'base-member' : 'maintainer';
+  const [selectedRole, setSelectedRole] = useState<string>(defaultRole);
   const [selectedBases, setSelectedBases] = useState<string[]>([]);
   const [baseSelectionType, setBaseSelectionType] = useState<'all_bases' | 'specific_base'>('all_bases');
   // State to track individual base roles in edit mode
@@ -46,7 +70,6 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   const baseMembersQuery = useBaseMembers(baseId || '');
 
   const toast = useToast();
-  const { user: currentUser } = useAuth();
 
   const tenantUsers = tenantUsersQuery.data || [];
   const basesData = (workspaceBasesQuery.data as any)?.data || (workspaceBasesQuery.data as any) || [];
@@ -75,7 +98,6 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   }, [baseId, baseMembersQuery.data, workspaceMembersQuery.data]);
 
   // Create dropdown options from users, showing only active users and excluding current user, admin users, and existing members
-  const currentUserId = currentUser?.id || sessionStorage.getItem('user_id') || localStorage.getItem('user_id');
   const userDropdownOptions: MultiSelectTagsOption[] = useMemo(() => {
     return tenantUsers
       .filter((user: any) => {
@@ -100,21 +122,28 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
 
   // Role options - workspace-related only for workspace context
   const roleOptions = React.useMemo(() => {
-    // In edit mode for workspace, show only workspace-level roles
+    // If current user is maintainer only, they can only assign base-level roles
+    if (isMaintainerOnly) {
+      return [
+        { label: 'Base Member', value: 'base-member' },
+        { label: 'Base Read Only', value: 'base-read' },
+      ];
+    }
+    // In edit mode for admin, show only workspace-level roles
     if (editMode) {
       return [
         { label: 'Workspace Maintainer', value: 'maintainer' },
         { label: 'Workspace Read Only', value: 'workspace-read' },
       ];
     }
-    // In add mode, show all roles - workspace roles first, then base roles
+    // In add mode for admin, show all roles - workspace roles first, then base roles
     return [
       { label: 'Workspace Maintainer', value: 'maintainer' },
       { label: 'Workspace Read Only', value: 'workspace-read' },
       { label: 'Base Member', value: 'base-member' },
       { label: 'Base Read Only', value: 'base-read' },
     ];
-  }, [editMode]);
+  }, [editMode, isMaintainerOnly]);
 
   // Base role options - constant to avoid recreating
   const baseRoleOptions = React.useMemo(() => [
@@ -178,13 +207,13 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
       } else {
         // Add mode: Reset form
         setSelectedUserIds([]);
-        // Default to workspace-level role (maintainer) for workspace context
-        setSelectedRole('maintainer');
+        // Default to workspace-level role (maintainer) for admin, base-member for maintainer
+        setSelectedRole(isMaintainerOnly ? 'base-member' : 'maintainer');
         setSelectedBases([]);
         setBaseSelectionType('all_bases');
       }
     }
-  }, [isOpen, editMode, memberToEdit, userRolesAndAccessData, workspaceId]);
+  }, [isOpen, editMode, memberToEdit, userRolesAndAccessData, workspaceId, isMaintainerOnly]);
 
   // Handle updating roles in edit mode (called when Update button is clicked)
   const handleUpdateRoles = async () => {

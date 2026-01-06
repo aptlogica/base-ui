@@ -1361,23 +1361,6 @@ export const useGetUsersForAssign = () => {
   });
 };
 
-export const useGetTenant = () => {
-  return useQuery({
-    queryKey: ['tenant'],
-    queryFn: async () => {
-      try {
-        // TODO: Implement getTenantService if needed
-        // const result = await getTenantService();
-        // return (result as any)?.data;
-        return null;
-      } catch (error: any) {
-        console.error('❌ Get tenant failed:', error);
-        throw error;
-      }
-    },
-    enabled: false, // Disabled until service is implemented
-  });
-};
 
 export const useAddUser = () => {
   const queryClient = useQueryClient();

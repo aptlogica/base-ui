@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useGetOrganization, useUpdateOrganization } from '../../../hooks/useApi';
 import { useToast } from '../../common/Toast';
 import { MultiLineText } from '../../common/Fields';
+import { Loader } from '../../ui/Loader';
 
 interface TenantSettingsTabProps {
   workspaceId: string;
@@ -91,10 +92,7 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-secondary">Loading admin data...</p>
-        </div>
+       <Loader size={6} text='Loading Information' textPosition='bottom'/>
       </div>
     );
   }

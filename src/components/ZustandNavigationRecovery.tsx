@@ -89,8 +89,8 @@ export const NavigationRecovery: React.FC = () => {
 
   // Check if current path should be excluded from redirects
   const isExcludedRoute = (path: string): boolean => {
-    // Exclude settings, administrator, and workspace-settings pages (can have dynamic segments)
-    if (path.includes('/settings') || path.includes('/administrator') || path.includes('/workspace-settings')) {
+    // Exclude settings and administrator pages (can have dynamic segments)
+    if (path.includes('/settings') || path.includes('/administrator')) {
       return true;
     }
     return excludedRoutes.some(route => path === route || path.startsWith(route + '/'));

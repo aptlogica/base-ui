@@ -24,7 +24,6 @@ import { ToastProvider } from './components/common/Toast';
 import Sidebar from './components/layout/sidebar/Sidebar';
 import { Loader } from './components/ui/Loader';
 import AdministratorPage from './pages/AdministratorPage';
-import WorkspaceSettingsPage from './pages/WorkspaceSettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { useClientHeaders } from './hooks/useClientHeaders';
 import { RouteContextProvider } from './contexts/RouteContext';
@@ -137,7 +136,6 @@ const Layout = () => {
                 <span>Saving workspace data...</span>
               </div>
             )}
-            {/* <SettingsButton /> */}
           </div>
         </header>
 
@@ -315,14 +313,6 @@ const AppRoutes = () => {
               <AccessLevelRoute>
                 <AdministratorPage />
               </AccessLevelRoute>
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/workspace/:workspaceId/workspace-settings"
-          element={
-            <PrivateRoute>
-              <WorkspaceSettingsPage />
             </PrivateRoute>
           }
         />

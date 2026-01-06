@@ -3,7 +3,6 @@ import { useLocation, matchPath } from 'react-router-dom';
 
 export type RouteType = 
   | 'homepage' 
-  | 'settings' 
   | 'administrator' 
   | 'view' 
   | 'public'
@@ -19,7 +18,6 @@ export interface RouteContextValue {
 // Component IDs for type safety
 export const COMPONENT_IDS = {
   HEADER_MEMBERS: 'header-members',
-  WORKSPACE_SETTINGS_BUTTON: 'workspace-settings-button',
   WORKSPACE_DROPDOWN: 'workspace-dropdown',
   BREADCRUMB: 'breadcrumb',
   ADMINISTRATOR_SETTINGS_BUTTON: 'administrator-settings-button',
@@ -28,6 +26,12 @@ export const COMPONENT_IDS = {
 
 const RouteContext = createContext<RouteContextValue | null>(null);
 
+function normalizeParams(params: Record<string, string | undefined>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(params).filter(([, value]) => typeof value === 'string')
+  ) as Record<string, string>;
+}
+
 // Route patterns configuration
 const ROUTE_PATTERNS = {
   homepage: [
@@ -35,9 +39,6 @@ const ROUTE_PATTERNS = {
     '/',
     '/workspace',
     { path: '/workspace/:workspaceId', exact: true }, // Exact match only (no sub-routes)
-  ],
-  settings: [
-    { path: '/workspace/:workspaceId/workspace-settings' },
   ],
   administrator: [
     { path: '/workspace/:workspaceId/administrator' },
@@ -55,24 +56,20 @@ const VISIBILITY_RULES: Record<RouteType, {
   hidden: string[];
 }> = {
   homepage: {
-    visible: ['workspace-settings-button', 'workspace-dropdown', 'administrator-settings-button'],
+    visible: ['workspace-dropdown', 'administrator-settings-button'],
     hidden: ['header-members', 'breadcrumb'],
   },
-  settings: {
-    visible: [],
-    hidden: ['header-members', 'workspace-settings-button', 'workspace-dropdown', 'breadcrumb', 'administrator-settings-button'],
-  },
   administrator: {
-    visible: ['workspace-settings-button', 'administrator-settings-button'],
+    visible: ['administrator-settings-button'],
     hidden: ['header-members', 'workspace-dropdown', 'breadcrumb'],
   },
   view: {
     visible: ['header-members', 'breadcrumb'],
-    hidden: ['workspace-settings-button', 'workspace-dropdown', 'administrator-settings-button'],
+    hidden: ['workspace-dropdown', 'administrator-settings-button'],
   },
   public: {
     visible: [],
-    hidden: ['header-members', 'workspace-settings-button', 'workspace-dropdown', 'breadcrumb', 'administrator-settings-button'],
+    hidden: ['header-members', 'workspace-dropdown', 'breadcrumb', 'administrator-settings-button'],
   },
   unknown: {
     visible: [],
@@ -85,15 +82,6 @@ const VISIBILITY_RULES: Record<RouteType, {
  */
 function determineRouteType(pathname: string): RouteType {
   // Check in priority order (most specific first)
-  
-  // Settings pages
-  for (const pattern of ROUTE_PATTERNS.settings) {
-    const match = matchPath(
-      typeof pattern === 'string' ? { path: pattern } : pattern,
-      pathname
-    );
-    if (match) return 'settings';
-  }
   
   // Administrator pages
   for (const pattern of ROUTE_PATTERNS.administrator) {
@@ -136,7 +124,6 @@ export const RouteContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const params = useMemo(() => {
     const allPatterns = [
       ...ROUTE_PATTERNS.view,
-      ...ROUTE_PATTERNS.settings,
       ...ROUTE_PATTERNS.administrator,
       ...ROUTE_PATTERNS.homepage.filter(p => typeof p !== 'string'),
     ];
@@ -147,7 +134,7 @@ export const RouteContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
         location.pathname
       );
       if (match?.params) {
-        return match.params;
+        return normalizeParams(match.params);
       }
     }
     return {};

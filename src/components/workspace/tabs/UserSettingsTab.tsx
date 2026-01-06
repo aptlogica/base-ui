@@ -4,6 +4,7 @@ import { useToast } from '../../common/Toast';
 import { useGetTenantUsers, useRemoveTenantUser, useActivateTenantUser, useDeactivateTenantUser } from '../../../hooks/useApi';
 import { UserTable, TenantUser } from '../../shared/UserTable';
 import { Plus } from 'lucide-react';
+import { Loader } from '@/components/ui/Loader';
 
 interface UserSettingsTabProps {
   workspaceId: string;
@@ -36,7 +37,7 @@ export const UserSettingsTab: React.FC<UserSettingsTabProps> = ({ workspaceId })
     setEditingUser(user);
     setIsAddUserModalOpen(true);
   };
-  
+
   const handleCloseModal = () => {
     setIsAddUserModalOpen(false);
     setEditingUser(null);
@@ -63,10 +64,7 @@ export const UserSettingsTab: React.FC<UserSettingsTabProps> = ({ workspaceId })
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-secondary">Loading users...</p>
-        </div>
+        <Loader size={6} text='Loading users' textPosition='bottom' />
       </div>
     );
   }

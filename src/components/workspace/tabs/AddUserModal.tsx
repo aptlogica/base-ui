@@ -18,6 +18,73 @@ interface AddUserModalProps {
   editUser?: TenantUser | null;
 }
 
+type MembershipItem = {
+  workspace_id: string;
+  role: string;
+  bases?: Array<{ base_id: string; role: string }>;
+};
+
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+const validateEmailValue = (emailValue: string): boolean => {
+  return EMAIL_REGEX.test(emailValue.trim());
+};
+
+const getUserFormErrors = (params: {
+  firstName: string;
+  lastName: string;
+  email: string;
+}) => {
+  const newErrors: Record<string, string> = {};
+  const { firstName, lastName, email } = params;
+
+  if (!firstName.trim()) {
+    newErrors.firstName = 'First name is required';
+  } else if (!/^[a-zA-Z\s]+$/.test(firstName.trim())) {
+    newErrors.firstName = 'First name must contain only letters and spaces';
+  }
+
+  if (!lastName.trim()) {
+    newErrors.lastName = 'Last name is required';
+  } else if (!/^[a-zA-Z\s]+$/.test(lastName.trim())) {
+    newErrors.lastName = 'Last name must contain only letters and spaces';
+  }
+
+  if (!email.trim()) {
+    newErrors.email = 'Email is required';
+  } else if (!validateEmailValue(email)) {
+    newErrors.email = 'Please enter a valid email address';
+  }
+
+  return newErrors;
+};
+
+const buildMembershipFromAssignments = (
+  workspaceAssignments: Record<string, WorkspaceAssignment>
+): MembershipItem[] => {
+  return Object.values(workspaceAssignments).map((assignment) => {
+    const membershipItem: MembershipItem = {
+      workspace_id: assignment.workspaceId,
+      role: '',
+      bases: []
+    };
+
+    if (assignment.role === 'base_specific' && assignment.bases && assignment.bases.length > 0) {
+      membershipItem.bases = assignment.bases.map((base) => ({
+        base_id: base.baseId,
+        role: base.role
+      }));
+    } else if (assignment.role === 'maintainer' || assignment.role === 'workspace-read') {
+      membershipItem.role = assignment.role;
+    } else {
+      membershipItem.role = assignment.role || 'base-member';
+    }
+
+    return membershipItem;
+  });
+};
+
+// eslint-disable-next-line sonarjs/cognitive-complexity
 export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, editUser = null }) => {
   const isEditMode = !!editUser;
 
@@ -39,7 +106,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
   
   // Get current user info for role-based access control
   const currentUser = useCurrentUser();
-  const { isOwner: currentUserIsOwner, isCoOwner: currentUserIsCoOwner } = useUserRole();
+  const { isOwner: currentUserIsOwner } = useUserRole();
 
   // Edit mode hooks
   const { data: userAccessData } = useUserRolesAndAccess(editUser?.id || null);
@@ -50,11 +117,12 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
     // Check for Owner or Co-owner roles
     if (Array.isArray(editUser.roles)) {
-      return editUser.roles.some(role => 
-        role.scope_level === 'system' &&role.name === 'owner'
+      return editUser.roles.some((role) =>
+        role.scope_level === 'system' &&
+        (role.name === 'owner' || role.name === 'co-owner' || role.name === 'co_owner')
       );
     } else if (typeof editUser.roles === 'string') {
-      return editUser.roles === 'owner';
+      return editUser.roles === 'owner' || editUser.roles === 'co-owner' || editUser.roles === 'co_owner';
     }
 
     return false;
@@ -67,46 +135,44 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
   // Load user data when in edit mode
   useEffect(() => {
-    if (isOpen) {
-      if (isEditMode && editUser) {
-        // EDIT MODE: Pre-populate form with user data
-        setFirstName(editUser.first_name || '');
-        setLastName(editUser.last_name || '');
-        setEmail(editUser.email || '');
+    if (!isOpen || !isEditMode || !editUser) return;
 
-        // Check if user is co-owner
-        const roles = Array.isArray(editUser.roles) ? editUser.roles : [];
-        const isCoOwnerRole = roles.some((r: any) =>
-          r.name === 'co-owner' || r.name === 'Co-owner' || r.name === 'co_owner'
-        );
-        setIsCoOwner(isCoOwnerRole);
+    // EDIT MODE: Pre-populate form with user data
+    setFirstName(editUser.first_name || '');
+    setLastName(editUser.last_name || '');
+    setEmail(editUser.email || '');
 
-        // Load avatar preview if exists
-        if (editUser.avatar) {
-          setAvatarPreview(editUser.avatar);
-        } else {
-          setAvatarPreview(null);
-        }
-        setAvatar(null); // Reset file input
+    // Check if user is co-owner
+    const roles = Array.isArray(editUser.roles) ? editUser.roles : [];
+    const isCoOwnerRole = roles.some((r: any) =>
+      r.name === 'co-owner' || r.name === 'Co-owner' || r.name === 'co_owner'
+    );
+    setIsCoOwner(isCoOwnerRole);
 
-        setErrors({});
-        setSearchTerm('');
-        setIsSubmitting(false);
-      } else {
-        // ADD MODE: Reset form
-        setFirstName('');
-        setLastName('');
-        setEmail('');
-        setAvatar(null);
-        setAvatarPreview(null);
-        setIsCoOwner(false);
-        setErrors({});
-        setWorkspaceAssignments({});
-        setSearchTerm('');
-        setIsSubmitting(false);
-      }
-    }
+    // Load avatar preview if exists
+    setAvatarPreview(editUser.avatar || null);
+    setAvatar(null); // Reset file input
+
+    setErrors({});
+    setSearchTerm('');
+    setIsSubmitting(false);
   }, [isOpen, isEditMode, editUser]);
+
+  // Reset form when in add mode
+  useEffect(() => {
+    if (!isOpen || isEditMode) return;
+
+    setFirstName('');
+    setLastName('');
+    setEmail('');
+    setAvatar(null);
+    setAvatarPreview(null);
+    setIsCoOwner(false);
+    setErrors({});
+    setWorkspaceAssignments({});
+    setSearchTerm('');
+    setIsSubmitting(false);
+  }, [isOpen, isEditMode]);
 
   // Load workspace assignments when userAccessData is available
   useEffect(() => {
@@ -117,17 +183,11 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
         const workspaceId = workspaceAccess.workspace_id;
         const workspaceAccessLevel = workspaceAccess.access || '';
 
-        // Determine role based on access data
-        // If access is empty string and bases exist, it's base_specific
-        // If access has a value, it's a workspace-level role
         let role: 'maintainer' | 'workspace-read' | 'base_specific' = 'base_specific';
         if (workspaceAccessLevel === 'maintainer') {
           role = 'maintainer';
         } else if (workspaceAccessLevel === 'workspace-read') {
           role = 'workspace-read';
-        } else if (workspaceAccess.bases && workspaceAccess.bases.length > 0) {
-          // Empty access string with bases means base-specific role
-          role = 'base_specific';
         }
 
         assignments[workspaceId] = {
@@ -144,6 +204,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
     }
   }, [isEditMode, userAccessData]);
 
+
   const workspaces = workspacesQuery.data || [];
 
   // Filter workspaces based on search term
@@ -155,33 +216,8 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
     );
   }, [workspaces, searchTerm]);
 
-  // Validate email
-  const validateEmail = (emailValue: string): boolean => {
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    return emailRegex.test(emailValue.trim());
-  };
-
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!firstName.trim()) {
-      newErrors.firstName = 'First name is required';
-    } else if (!/^[a-zA-Z\s]+$/.test(firstName.trim())) {
-      newErrors.firstName = 'First name must contain only letters and spaces';
-    }
-
-    if (!lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
-    } else if (!/^[a-zA-Z\s]+$/.test(lastName.trim())) {
-      newErrors.lastName = 'Last name must contain only letters and spaces';
-    }
-
-    if (!email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!validateEmail(email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-
+    const newErrors = getUserFormErrors({ firstName, lastName, email });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -196,21 +232,21 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
         return;
       }
 
-      const img = new Image();
+      const img = new globalThis.Image();
       img.onload = () => {
         if (img.width > 800 || img.height > 400) {
           setErrors(prev => ({ ...prev, avatar: 'Image dimensions must be max 800 x 400px' }));
           return;
         }
         setAvatar(file);
-        setAvatarPreview(URL.createObjectURL(file));
+        setAvatarPreview(globalThis.URL.createObjectURL(file));
         setErrors(prev => {
           const newErrors = { ...prev };
           delete newErrors.avatar;
           return newErrors;
         });
       };
-      img.src = URL.createObjectURL(file);
+      img.src = globalThis.URL.createObjectURL(file);
     }
   };
 
@@ -224,14 +260,14 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
     e.stopPropagation();
 
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file?.type?.startsWith('image/')) {
       const validTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
       if (validTypes.includes(file.type)) {
-        const img = new Image();
+        const img = new globalThis.Image();
         img.onload = () => {
           if (img.width <= 800 && img.height <= 400) {
             setAvatar(file);
-            setAvatarPreview(URL.createObjectURL(file));
+            setAvatarPreview(globalThis.URL.createObjectURL(file));
             setErrors(prev => {
               const newErrors = { ...prev };
               delete newErrors.avatar;
@@ -241,7 +277,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
             setErrors(prev => ({ ...prev, avatar: 'Image dimensions must be max 800 x 400px' }));
           }
         };
-        img.src = URL.createObjectURL(file);
+        img.src = globalThis.URL.createObjectURL(file);
       } else {
         setErrors(prev => ({ ...prev, avatar: 'Please upload a valid image file (SVG, PNG, JPG, or GIF)' }));
       }
@@ -334,39 +370,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
     try {
       if (isEditMode && editUser) {
-        // EDIT MODE: Update existing user using editUser API
-        // Build membership array from workspace assignments
-        const membership = Object.values(workspaceAssignments).map(assignment => {
-          const membershipItem: {
-            workspace_id: string;
-            role: string;
-            bases?: Array<{ base_id: string; role: string }>;
-          } = {
-            workspace_id: assignment.workspaceId,
-            role: '',
-            bases: []
-          };
-
-          // If bases are provided, set bases and leave role as empty string
-          if (assignment.role === 'base_specific' && assignment.bases && assignment.bases.length > 0) {
-            membershipItem.bases = assignment.bases.map(base => ({
-              base_id: base.baseId,
-              role: base.role // base-member or base-read
-            }));
-            // role remains empty string when bases are provided
-          }
-          // If workspace-level role is assigned, set role and leave bases as empty array
-          else if (assignment.role === 'maintainer' || assignment.role === 'workspace-read') {
-            membershipItem.role = assignment.role;
-            // bases remains empty array when workspace role is assigned
-          }
-          // Fallback: default to base-member role with empty bases
-          else {
-            membershipItem.role = assignment.role || 'base-member';
-          }
-
-          return membershipItem;
-        });
+        const membership = buildMembershipFromAssignments(workspaceAssignments);
 
         // Prepare edit user data
         const editUserData: {
@@ -402,39 +406,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
         await editUserMutation.mutateAsync(editUserData);
         toast.success(`User ${firstName} ${lastName} updated successfully`);
       } else {
-        // ADD MODE: Create new user
-        // Build membership array from workspace assignments
-        const membership = Object.values(workspaceAssignments).map(assignment => {
-          const membershipItem: {
-            workspace_id: string;
-            role: string;
-            bases: Array<{ base_id: string; role: string }>;
-          } = {
-            workspace_id: assignment.workspaceId,
-            role: '',
-            bases: []
-          };
-
-          // If bases are provided, set bases and leave role as empty string
-          if (assignment.role === 'base_specific' && assignment.bases && assignment.bases.length > 0) {
-            membershipItem.bases = assignment.bases.map(base => ({
-              base_id: base.baseId,
-              role: base.role // base-member or base-read
-            }));
-            // role remains empty string when bases are provided
-          }
-          // If workspace-level role is assigned, set role and leave bases as empty array
-          else if (assignment.role === 'maintainer' || assignment.role === 'workspace-read') {
-            membershipItem.role = assignment.role;
-            // bases remains empty array when workspace role is assigned
-          }
-          // Fallback: default to base-member role with empty bases
-          else {
-            membershipItem.role = assignment.role || 'base-member';
-          }
-
-          return membershipItem;
-        });
+        const membership = buildMembershipFromAssignments(workspaceAssignments);
 
         // Create user with all data in one call
         const userPayload = {
@@ -477,27 +449,57 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  };
-
   if (!isOpen) return null;
 
-  const isEmailValid = email.trim() ? validateEmail(email) : false;
+  const isEmailValid = email.trim() ? validateEmailValue(email) : false;
   const isValid = firstName.trim() && lastName.trim() && email.trim() && isEmailValid && Object.keys(errors).length === 0;
 
+  const showCoOwnerToggle =
+    !isEditMode || (currentUserIsOwner() && !editedUserIsOwnerOrCoOwner && !isEditingSelf);
+
+  const showWorkspaceBasePanel =
+    (!isEditMode && !isCoOwner) || (isEditMode && !isCoOwner && !editedUserIsOwnerOrCoOwner && !isEditingSelf);
+
+  let workspacesListContent: React.ReactNode;
+  if (workspacesQuery.isLoading) {
+    workspacesListContent = (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+      </div>
+    );
+  } else if (filteredWorkspaces.length === 0) {
+    workspacesListContent = (
+      <div className="text-center py-8 text-sm text-gray-500">
+        {searchTerm ? 'No workspaces found' : 'No workspaces available'}
+      </div>
+    );
+  } else {
+    workspacesListContent = filteredWorkspaces.map((workspace: any) => (
+      <WorkspaceItem
+        key={workspace.id}
+        workspace={workspace}
+        assignment={workspaceAssignments[workspace.id]}
+        onRoleChange={handleWorkspaceRoleChange}
+        onBaseRoleChange={handleBaseRoleChange}
+        onToggleBase={toggleBaseSelection}
+      />
+    ));
+  }
+
+  const isBusy = isSubmitting || isAddingUser || editUserMutation.isPending;
+  const submitLabel = isEditMode ? 'Update' : 'Add';
+  const submitBusyLabel = isEditMode ? 'Updating...' : 'Adding...';
+
   return (
-    <div
-      className="bg-modal-backdrop"
-      onClick={onClose}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="bg-modal-backdrop relative">
+      <button
+        type="button"
+        aria-label="Close modal"
+        className="absolute inset-0"
+        onClick={onClose}
+      />
       <div
-        className="bg-modal !max-w-7xl !p-0 flex flex-col h-[90vh] max-h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={handleKeyDown}
+        className="bg-modal !max-w-7xl !p-0 flex flex-col h-[90vh] max-h-[90vh] relative"
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
@@ -529,17 +531,18 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
         {/* Scrollable Content Area */}
         <form id="add-user-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto min-h-0">
           <div className="p-0 h-full">
-            <div className={`grid grid-cols-1 ${!isCoOwner && !(isEditMode && editedUserIsOwnerOrCoOwner) ? 'lg:grid-cols-2' : ''} gap-6 h-full`}>
+            <div className="grid grid-cols-2 gap-6 h-full">
               {/* Left Column - User Details */}
               <div className="space-y-4 bg-card p-4 lg:p-6">
                 {/* First Name and Last Name - Side by Side */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* First Name */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="first-name" className="block text-sm font-medium text-gray-700 mb-1">
                       First Name <span className="text-red-500">*</span>
                     </label>
                     <input
+                      id="first-name"
                       type="text"
                       value={firstName}
                       onChange={(e) => {
@@ -563,10 +566,11 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
                   {/* Last Name */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="last-name" className="block text-sm font-medium text-gray-700 mb-1">
                       Last Name <span className="text-red-500">*</span>
                     </label>
                     <input
+                      id="last-name"
                       type="text"
                       value={lastName}
                       onChange={(e) => {
@@ -591,10 +595,11 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
                 {/* Email */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                     Email address <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="email"
                     type="email"
                     value={email}
                     onChange={(e) => {
@@ -610,7 +615,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                       }
                     }}
                     onBlur={() => {
-                      if (email.trim() && !validateEmail(email)) {
+                      if (email.trim() && !validateEmailValue(email)) {
                         setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
                       }
                     }}
@@ -626,7 +631,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
                 {/* Profile Image */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="avatar-upload" className="block text-sm font-medium text-gray-700 mb-1">
                     Profile Image
                   </label>
                   {avatarPreview ? (
@@ -646,7 +651,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                             e.stopPropagation();
                             setAvatar(null);
                             setAvatarPreview(null);
-                            const input = document.getElementById('avatar-upload') as HTMLInputElement;
+                            const input = globalThis.document.getElementById('avatar-upload') as HTMLInputElement;
                             if (input) input.value = '';
                           }}
                           className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-primary rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
@@ -656,11 +661,12 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                       </div>
 
                       {/* Upload Area - Right Side */}
-                      <div
+                      <button
+                        type="button"
                         onDragOver={handleDragOver}
                         onDrop={handleDrop}
-                        className="flex-1 relative border-2 border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
-                        onClick={() => document.getElementById('avatar-upload')?.click()}
+                        className="flex-1 relative border-2 border-dashed rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                        onClick={() => globalThis.document.getElementById('avatar-upload')?.click()}
                       >
                         <input
                           type="file"
@@ -676,14 +682,15 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                         <p className="text-xs text-gray-500">
                           SVG, PNG, JPG or GIF (max. 800 x 400px)
                         </p>
-                      </div>
+                      </button>
                     </div>
                   ) : (
-                    <div
+                    <button
+                      type="button"
                       onDragOver={handleDragOver}
                       onDrop={handleDrop}
-                      className="relative border-2 border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
-                      onClick={() => document.getElementById('avatar-upload')?.click()}
+                      className="relative border-2 w-full border-dashed rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                      onClick={() => globalThis.document.getElementById('avatar-upload')?.click()}
                     >
                       <input
                         type="file"
@@ -699,7 +706,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                       <p className="text-xs text-gray-500">
                         SVG, PNG, JPG or GIF (max. 800 x 400px)
                       </p>
-                    </div>
+                    </button>
                   )}
                   {errors.avatar && (
                     <p className="mt-1 text-xs text-red-500">{errors.avatar}</p>
@@ -707,77 +714,27 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                 </div>
 
                 {/* Co-owner Toggle */}
-                {(() => {
-                  // When creating a new user: Both Owner and Co-owner can see and use the toggle (no restrictions)
-                  if (!isEditMode) {
-                    return (
-                      <div className="flex items-center justify-start gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setIsCoOwner(!isCoOwner)}
-                          className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors ${isCoOwner ? 'bg-brand-600' : 'bg-gray-300'
-                            }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${isCoOwner ? 'translate-x-5' : 'translate-x-1'
-                              }`}
-                          />
-                        </button>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Set as Co-owner
-                        </label>
-                      </div>
-                    );
-                  }
-                  
-                  // When editing: Only Owner can see and use the co-owner toggle
-                  // Co-owner cannot see the toggle when editing (including themselves)
-                  if (!currentUserIsOwner()) {
-                    return null;
-                  }
-                  
-                  // Don't show toggle if editing Owner or Co-owner (they can't be changed)
-                  if (editedUserIsOwnerOrCoOwner) {
-                    return null;
-                  }
-                  
-                  // Don't show toggle if Owner is editing themselves
-                  if (isEditingSelf) {
-                    return null;
-                  }
-                  
-                  // Show toggle for Owner when editing non-owner/co-owner users
-                  return (
-                    <div className="flex items-center justify-start gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setIsCoOwner(!isCoOwner)}
-                        className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors ${isCoOwner ? 'bg-brand-600' : 'bg-gray-300'
+                {showCoOwnerToggle && (
+                  <div className="flex items-center justify-start gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsCoOwner(!isCoOwner)}
+                      aria-pressed={isCoOwner}
+                      className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors ${isCoOwner ? 'bg-brand-600' : 'bg-gray-300'
+                        }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${isCoOwner ? 'translate-x-5' : 'translate-x-1'
                           }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${isCoOwner ? 'translate-x-5' : 'translate-x-1'
-                            }`}
-                        />
-                      </button>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Set as Co-owner
-                      </label>
-                    </div>
-                  );
-                })()}
+                      />
+                    </button>
+                    <span className="block text-sm font-medium text-gray-700">Set as Co-owner</span>
+                  </div>
+                )}
               </div>
 
               {/* Right Column - Workspace/Base Selection */}
-              {(() => {
-                // When creating: Both Owner and Co-owner can assign workspaces/bases (no restrictions)
-                if (!isEditMode) {
-                  return !isCoOwner;
-                }
-                
-                // When editing: Hide if co-owner toggle is on, or if editing Owner/Co-owner, or if Co-owner is editing
-                return !isCoOwner && !editedUserIsOwnerOrCoOwner && !currentUserIsCoOwner();
-              })() && (
+              {showWorkspaceBasePanel && (
                 <div className="flex flex-col h-full min-h-0 bg-gray-50 p-4 lg:p-6">
                   <h3 className="text-sm font-semibold text-primary flex-shrink-0 mb-4">Select Workspace(s) & Base(s)</h3>
 
@@ -796,26 +753,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                   {/* Workspaces List - Scrollable */}
                   <div className="flex-1 min-h-0 overflow-y-auto pr-2">
                     <div className="space-y-3">
-                      {workspacesQuery.isLoading ? (
-                        <div className="flex items-center justify-center py-8">
-                          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                        </div>
-                      ) : filteredWorkspaces.length === 0 ? (
-                        <div className="text-center py-8 text-sm text-gray-500">
-                          {searchTerm ? 'No workspaces found' : 'No workspaces available'}
-                        </div>
-                      ) : (
-                        filteredWorkspaces.map((workspace: any) => (
-                          <WorkspaceItem
-                            key={workspace.id}
-                            workspace={workspace}
-                            assignment={workspaceAssignments[workspace.id]}
-                            onRoleChange={handleWorkspaceRoleChange}
-                            onBaseRoleChange={handleBaseRoleChange}
-                            onToggleBase={toggleBaseSelection}
-                          />
-                        ))
-                      )}
+                      {workspacesListContent}
                     </div>
                   </div>
                 </div>
@@ -829,7 +767,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
           <button
             type="button"
             onClick={onClose}
-            disabled={isSubmitting || isAddingUser || editUserMutation.isPending}
+            disabled={isBusy}
             className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
           >
             Cancel
@@ -837,16 +775,16 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
           <button
             type="submit"
             form="add-user-form"
-            disabled={!isValid || isSubmitting || isAddingUser || editUserMutation.isPending}
+            disabled={!isValid || isBusy}
             className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
-            {(isSubmitting || isAddingUser || editUserMutation.isPending) ? (
+            {isBusy ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                {isEditMode ? 'Updating...' : 'Adding...'}
+                {submitBusyLabel}
               </>
             ) : (
-              isEditMode ? 'Update' : 'Add'
+              submitLabel
             )}
           </button>
         </div>

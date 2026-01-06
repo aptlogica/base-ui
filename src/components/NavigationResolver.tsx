@@ -80,10 +80,10 @@ export const NavigationResolver: React.FC = () => {
     ];
     
     const isExcludedRoute = (path: string): boolean => {
-      // Exclude settings, administrator, and workspace-settings pages (can have dynamic segments)
-      // Check for /settings, /administrator, or /workspace-settings in the path
-      // (matches /workspace/:id/settings, /workspace/:id/administrator, /workspace/:id/workspace-settings, /administrator)
-      if (path.includes('/settings') || path.includes('/administrator') || path.includes('/workspace-settings')) {
+      // Exclude settings and administrator pages (can have dynamic segments)
+      // Check for /settings or /administrator in the path
+      // (matches /workspace/:id/settings, /workspace/:id/administrator, /administrator)
+      if (path.includes('/settings') || path.includes('/administrator')) {
         return true;
       }
       // Check exact matches or workspace root (not workspace/:id paths)
@@ -574,7 +574,7 @@ export const NavigationResolver: React.FC = () => {
     const currentPath = location.pathname;
     
     // Skip validation on excluded routes (settings, etc.)
-    const excludedRoutes = ['/workspace', '/projects', '/settings', '/administrator', '/workspace-settings'];
+    const excludedRoutes = ['/workspace', '/projects', '/settings', '/administrator'];
     const isExcluded = excludedRoutes.some(route => currentPath.includes(route));
     if (isExcluded) return;
     

@@ -88,20 +88,15 @@ const getStatusBadge = (status: string, emailVerified: boolean) => {
   }
 };
 
-const getTimezoneName = (timezone: string, activityData?: TenantUser['activity_data']): string => {
-  // First try to get timezone from login_sessions
-  if (activityData?.login_sessions && activityData.login_sessions.length > 0) {
-    const tz = activityData.login_sessions[0].timezone;
-    if (tz) {
-      return tz;
-    }
-  }
+import { timeZoneOptions } from '../../types/constants';
 
-  // Fallback to timezone field
+const getTimezoneName = (timezone: string, _activityData?: TenantUser['activity_data']): string => {
   if (!timezone || timezone.trim() === '') {
     return '-';
   }
-  return timezone;
+  // Try to find a readable label for the short code
+  const tzObj = timeZoneOptions.find(tz => tz.value === timezone);
+  return tzObj ? tzObj.label : timezone;
 };
 
 const formatCreatedTime = (createdTime?: string) => {
@@ -968,7 +963,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                               <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
                                 <img
                                   src={user.avatar}
-                                  alt={user.display_name || `${user.first_name} ${user.last_name}`}
+                                  alt={`${user.first_name} ${user.last_name}`}
                                   className="w-full h-full object-cover"
                                 />
                               </div>
@@ -978,7 +973,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                               </div>
                             )}
                             <div>
-                              <p className="text-sm font-medium text-gray-900">{user.display_name || `${user.first_name} ${user.last_name}`}</p>
+                              <p className="text-sm font-medium text-gray-900">{`${user.first_name} ${user.last_name}`}</p>
                               <p className="text-xs text-gray-500">{user.email}</p>
                             </div>
                           </div>
@@ -1037,14 +1032,17 @@ export const UserTable: React.FC<UserTableProps> = ({
 
                         {/* Actions */}
                         {(() => {
-                          // Check if user is Owner
+                          // Check if user is Owner or Co-owner
                           const roles = getOverallRoles(user);
                           const userIsOwner = roles.some(role =>
                             role.toLowerCase() === 'owner'
                           );
+                          const userIsCoOwner = roles.some(role =>
+                            role.toLowerCase() === 'co-owner'
+                          );
                           
-                          // Co-owner cannot see action button for Owner users
-                          if (isCoOwner() && userIsOwner) {
+                          // Co-owner cannot see action button for Owner users or other Co-owners
+                          if (isCoOwner() && (userIsOwner || userIsCoOwner)) {
                             return null;
                           }
                           
@@ -1160,14 +1158,18 @@ export const UserTable: React.FC<UserTableProps> = ({
             const user = paginatedUsers.find(u => u.id === openActionMenu);
             if (!user) return null;
 
-            // Check if user is Owner or Co-owner - don't show deactivate option
-            const roles = getOverallRoles(user);
-            const isOwnerOrCoOwner = roles.some(role =>
-              role.toLowerCase() === 'owner' || role.toLowerCase() === 'co-owner'
-            );
 
-            // Don't show deactivate/activate options for owners or co-owners
-            if (isOwnerOrCoOwner) {
+            // Determine target user's roles
+            const roles = getOverallRoles(user);
+            const targetIsOwner = roles.some(role => role.toLowerCase() === 'owner');
+            const targetIsCoOwner = roles.some(role => role.toLowerCase() === 'co-owner');
+
+            // Only Owner can deactivate Co-owner; nobody can deactivate Owner
+            if (targetIsOwner) {
+              return null;
+            }
+            // Co-owner cannot deactivate another co-owner
+            if (targetIsCoOwner && !isOwner()) {
               return null;
             }
 

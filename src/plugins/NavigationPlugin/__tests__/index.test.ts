@@ -81,10 +81,10 @@ describe('NavigationPlugin', () => {
       expect((window as any).__navigationConfig).toEqual(config);
 
       const defaultIds = svc.getMenuItems().map(i => i.id);
-      expect(defaultIds).toEqual(['database', 'administrator', 'settings']);
+      expect(defaultIds).toEqual(['database', 'administrator']);
 
       const orders = svc.getMenuItems().map(i => i.order);
-      expect(orders).toEqual([0, 1, 2]);
+      expect(orders).toEqual([0, 1]);
     });
   });
 

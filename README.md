@@ -26,6 +26,7 @@ git clone <repository-url>
 cd base-ui
 ```
 
+
 2. Install dependencies:
 ```bash
 npm install
@@ -151,7 +152,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ## 📄 License
 
-**Note**: License file needs to be added. See [OPEN_SOURCE_READINESS.md](OPEN_SOURCE_READINESS.md) for details.
+**Note**: License file needs to be added.
 
 ## 💬 Support
 
@@ -161,5 +162,3 @@ For questions, issues, or contributions:
 - Contact: support@serenibase.com
 
 ---
-
-For detailed code review and improvement checklist, see [OPEN_SOURCE_READINESS.md](OPEN_SOURCE_READINESS.md).

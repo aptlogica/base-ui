@@ -436,8 +436,7 @@ export const Table: React.FC<TableProps> = ({
     allLoadedData: paginatedData,
     loadNextPage,
     hasMore,
-    currentPage,
-    totalPages,
+    isLoadingMore,
   } = useFrontendPagination({
     data: filteredAndSortedData,
     pageSize: 30,
@@ -895,13 +894,12 @@ export const Table: React.FC<TableProps> = ({
                 </div>
               )}
 
-                {/* Optional: Show subtle indicator when more data available */}
-                {hasMore && (
-                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 px-3 py-1 whitespace-nowrap z-10 opacity-50">
-                    <Loader size={4} />
-                    {/* <span className="text-xs text-gray-500">Scroll for more...</span> */}
-                  </div>
-                )}
+              {/* Infinite scroll: show loading indicator at the bottom while paging */}
+              {isLoadingMore && (
+                <div className="w-full flex items-center justify-center py-2 opacity-60">
+                  <Loader size={4} />
+                </div>
+              )}
               </div>
             </div>
           </div>

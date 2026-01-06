@@ -1,18 +1,5 @@
 import { ROLES } from '../types/roles';
 
-/**
- * Hook to check user roles from JWT token
- * Token contains roles field (string) that we parse
- * 
- * Role values from JWT token:
- * - "owner" (ROLES.Owner)
- * - "co-owner" (ROLES.CoOwner)
- * - "maintainer" (ROLES.WorkspaceMaintainer)
- * - "workspace-read" (ROLES.WorkspaceMaintainerRO)
- * - "base-member" (ROLES.BaseMember)
- * - "base-read" (ROLES.BaseMemberReadOnly)
- * - "user" (ROLES.NoAccess)
- */
 export function useUserRole() {
   const getRole = (): string | null => {
     // Try to get from decoded token in sessionStorage
