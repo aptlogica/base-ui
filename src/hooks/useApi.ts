@@ -204,7 +204,7 @@ export const useWorkspaceBases = (workspaceId: string) => {
   const location = useLocation();
   
   // Public routes that don't need workspace data
-  const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password'];
   const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
 
   return useQuery({

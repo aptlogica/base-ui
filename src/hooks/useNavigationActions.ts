@@ -87,8 +87,24 @@ export const useNavigationActions = () => {
       current.setBase(null);
       current.setTable(null);
       current.setView(null);
-      // Navigate to safe location (first available base/table/view)
-      const targetPath = getSafeNavigationTarget(workspacesList);
+      
+      // Don't use stale workspacesList - it still contains the deleted base
+      // Instead, create updated workspace data with deleted base filtered out
+      const selectedWorkspaceId = current.selectedWorkspaceId;
+      const updatedWorkspacesList = Array.isArray(workspacesList)
+        ? workspacesList.map((workspace: any) => {
+            if (workspace.id === selectedWorkspaceId && workspace.bases) {
+              return {
+                ...workspace,
+                bases: workspace.bases.filter((base: any) => base.id !== deletedBaseId)
+              };
+            }
+            return workspace;
+          })
+        : [];
+      
+      // Navigate to safe location using updated data
+      const targetPath = getSafeNavigationTarget(updatedWorkspacesList);
       if (targetPath) {
         replaceNavigate(navigate, targetPath);
         // Update session cache

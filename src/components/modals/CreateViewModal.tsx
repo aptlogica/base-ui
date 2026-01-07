@@ -451,7 +451,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl border hover:bg-gray-100 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
+              className="px-16 py-2 rounded-xl border hover:bg-gray-100 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
             >
               Cancel
             </button>
@@ -470,7 +470,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
                     startDateField === endDateField
                   ) : !selectedField)))
               }
-              className="px-6 py-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-16 py-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>

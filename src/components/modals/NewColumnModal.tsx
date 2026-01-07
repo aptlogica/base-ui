@@ -1924,7 +1924,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                           }
                         }}
                       >
-                        <Trash2 className='w-4 h-4 text-[var(--color-utility-error-400)]' />
+                        <Trash2 className='w-4 h-4 text-[var(--color-error-400)]' />
                       </button>
                     </div>
                   ))}
@@ -2104,7 +2104,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                           }
                         }}
                       >
-                        <Trash2 className='w-4 h-4 text-[var(--color-utility-error-400)]' />
+                        <Trash2 className='w-4 h-4 text-[var(--color-error-400)]' />
                       </button>
                     </div>
                   ))}
@@ -3836,13 +3836,13 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         {/* Buttons at the bottom */}
         <div className="mt-auto pt-3 flex gap-2">
           <button
-            className="flex-1 px-4 py-2 rounded-xl border text-[var(--color-text-tertiary)] bg-[var(--color-alpha-white)] hover:bg-gray-100"
+            className="flex-1 px-16 py-2 rounded-xl border text-[var(--color-text-tertiary)] bg-[var(--color-alpha-white)] hover:bg-gray-100"
             onClick={onClose}
           >
             Cancel
           </button>
           <button
-            className={`flex-1 px-4 py-2 btn-primary !rounded-xl flex items-center justify-center gap-2 ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
+            className={`flex-1 px-16 py-2 btn-primary !rounded-xl flex items-center justify-center gap-2 ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
             onClick={handleSave}
             disabled={isSaving}
           >

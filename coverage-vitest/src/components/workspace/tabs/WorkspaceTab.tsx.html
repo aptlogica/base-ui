@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/314</span>
+                <span class='fraction'>0/305</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/314</span>
+                <span class='fraction'>0/305</span>
             </div>
         
             
@@ -462,19 +462,7 @@
 <a name='L397'></a><a href='#L397'>397</a>
 <a name='L398'></a><a href='#L398'>398</a>
 <a name='L399'></a><a href='#L399'>399</a>
-<a name='L400'></a><a href='#L400'>400</a>
-<a name='L401'></a><a href='#L401'>401</a>
-<a name='L402'></a><a href='#L402'>402</a>
-<a name='L403'></a><a href='#L403'>403</a>
-<a name='L404'></a><a href='#L404'>404</a>
-<a name='L405'></a><a href='#L405'>405</a>
-<a name='L406'></a><a href='#L406'>406</a>
-<a name='L407'></a><a href='#L407'>407</a>
-<a name='L408'></a><a href='#L408'>408</a>
-<a name='L409'></a><a href='#L409'>409</a>
-<a name='L410'></a><a href='#L410'>410</a>
-<a name='L411'></a><a href='#L411'>411</a>
-<a name='L412'></a><a href='#L412'>412</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L400'></a><a href='#L400'>400</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -602,20 +590,10 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -814,8 +792,6 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -999,28 +975,18 @@ interface WorkspaceTabProps {
 <span class="cstat-no" title="statement not covered" >      return {</span>
 <span class="cstat-no" title="statement not covered" >        id: member.id || member.user_id || '',</span>
 <span class="cstat-no" title="statement not covered" >        userId: member.user_id || member.id || '',</span>
-<span class="cstat-no" title="statement not covered" >        name: member.display_name || member.name || member.email || 'Unknown User',</span>
+<span class="cstat-no" title="statement not covered" >        name: `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.email || 'Unknown User',</span>
 <span class="cstat-no" title="statement not covered" >        email: member.email || '',</span>
 <span class="cstat-no" title="statement not covered" >        role: role,</span>
 <span class="cstat-no" title="statement not covered" >        dateJoined: member.created_time || member.created_at || '',</span>
 <span class="cstat-no" title="statement not covered" >        avatar: member.avatar || undefined,</span>
 <span class="cstat-no" title="statement not covered" >        access_level: member.access_level, // Pass raw access_level from API</span>
-<span class="cstat-no" title="statement not covered" >        last_active_at: member.last_active_at || undefined,</span>
+<span class="cstat-no" title="statement not covered" >        last_active_at: member.last_modified_time || undefined,</span>
 <span class="cstat-no" title="statement not covered" >        last_login_at: member.last_login_at || undefined,</span>
 <span class="cstat-no" title="statement not covered" >        roles: member.roles || undefined, // Pass roles array from API (same structure as UserTable)</span>
 <span class="cstat-no" title="statement not covered" >      };</span>
 <span class="cstat-no" title="statement not covered" >    });</span>
 <span class="cstat-no" title="statement not covered" >  }, [workspaceMembersQuery.data]);</span>
-&nbsp;
-<span class="cstat-no" title="statement not covered" >  const handleRoleChange = (memberId: string, newRole: AccessRole) =&gt; {</span>
-    // TODO: Implement API call to update member role
-<span class="cstat-no" title="statement not covered" >    toast.info('Role change functionality coming soon');</span>
-<span class="cstat-no" title="statement not covered" >  };</span>
-&nbsp;
-<span class="cstat-no" title="statement not covered" >  const handleCopyUserId = (userId: string) =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >    navigator.clipboard.writeText(userId);</span>
-<span class="cstat-no" title="statement not covered" >    toast.success('User ID copied to clipboard');</span>
-<span class="cstat-no" title="statement not covered" >  };</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  const handleRemoveMember = async (memberId: string) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >    if (!selectedWorkspaceId) {</span>
@@ -1228,8 +1194,6 @@ interface WorkspaceTabProps {
 <span class="cstat-no" title="statement not covered" >            &lt;MembersTable</span>
 <span class="cstat-no" title="statement not covered" >              members={members}</span>
 <span class="cstat-no" title="statement not covered" >              roleConfig={defaultRoleConfig}</span>
-<span class="cstat-no" title="statement not covered" >              onRoleChange={handleRoleChange}</span>
-<span class="cstat-no" title="statement not covered" >              onCopyUserId={handleCopyUserId}</span>
 <span class="cstat-no" title="statement not covered" >              onRemoveMember={canAssignUsers() &amp;&amp; !isWorkspaceReadOnly() ? handleRemoveMember : undefined}</span>
 <span class="cstat-no" title="statement not covered" >              workspaceId={selectedWorkspaceId}</span>
 <span class="cstat-no" title="statement not covered" >              onEditMember={canAssignUsers() &amp;&amp; !isWorkspaceReadOnly() ? handleEditMember : undefined}</span>
@@ -1303,7 +1267,7 @@ interface WorkspaceTabProps {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-01-05T10:35:13.827Z
+                at 2026-01-07T06:22:17.156Z
             </div>
         <script src="../../../../prettify.js"></script>
         <script>

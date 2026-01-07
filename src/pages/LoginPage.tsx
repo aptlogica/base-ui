@@ -213,7 +213,7 @@ const LogIn: React.FC = () => {
           {/* Promotional Text - Top Left, Consistent Alignment */}
           <div className="pl-8 md:pl-12 lg:pl-16 xl:pl-20 pr-8 md:pr-12 lg:pr-16 mb-10 md:mb-14 lg:mb-16 xl:mb-20">
             <div className="space-y-4 text-left max-w-xl lg:max-w-2xl">
-              <h1 className="text-3xl lg:text-4xl xl:text-5xl 2xl:text-6xl font-bold text-black leading-tight">{formText.login.subtitle}</h1>
+              <h1 className="text-3xl lg:text-4xl xl:text-4xl 2xl:text-6xl font-bold text-black leading-tight">{formText.login.subtitle}</h1>
               <p className="text-base lg:text-lg xl:text-xl text-black leading-relaxed">{formText.login.description3}</p>
             </div>
           </div>
@@ -222,7 +222,7 @@ const LogIn: React.FC = () => {
           <div className="pl-8 md:pl-12 lg:pl-16 xl:pl-20 flex-1 min-h-0 overflow-hidden">
             <div className="bg-white rounded-tl-2xl shadow-2xl overflow-hidden w-[115%] lg:w-[120%] xl:w-[125%] 2xl:w-[130%] h-full">
               <img
-                src="/assets/CalendarVIewImage.png"
+                src="/assets/login-image.png"
                 alt="Calendar View Preview"
                 className="w-full h-full object-cover object-left-top"
               />

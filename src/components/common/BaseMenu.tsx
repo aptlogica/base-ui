@@ -39,7 +39,7 @@ export const BaseMenu: React.FC<BaseMenuProps> = ({
       onClick: () => onAddMembers(base),
     }] : []),
     ...(canDelete ? [{
-      label: 'Remove',
+      label: 'Delete',
       icon: <Trash2 className="w-4 h-4 text-red-600" />,
       onClick: () => onDelete(base),
       danger: true,
