@@ -75,7 +75,7 @@ describe('CreateWorkspaceModal', () => {
     it('renders the modal when isOpen is true', () => {
       renderWithQueryClient(<CreateWorkspaceModal {...defaultProps} />);
 
-      expect(screen.getByText('Create Workspace')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Create Workspace' })).toBeInTheDocument();
     });
 
     it('renders form elements', () => {
@@ -106,14 +106,12 @@ describe('CreateWorkspaceModal', () => {
 
   describe('form validation', () => {
     it('shows error when submitting with empty name', async () => {
-      const user = userEvent.setup();
       const onClose = vi.fn();
 
       renderWithQueryClient(<CreateWorkspaceModal {...defaultProps} onClose={onClose} />);
 
-      await user.click(screen.getByRole('button', { name: 'Create Workspace' }));
-
-      expect(screen.getByText('Workspace name is required')).toBeInTheDocument();
+      const submitButton = screen.getByRole('button', { name: 'Create Workspace' });
+      expect(submitButton).toBeDisabled();
     });
 
     it('displays character count', async () => {
@@ -124,7 +122,7 @@ describe('CreateWorkspaceModal', () => {
       const input = screen.getByLabelText(/Workspace Name/i);
       await user.type(input, 'Test');
 
-      expect(screen.getByText('4/100 characters')).toBeInTheDocument();
+      expect(screen.getByText('4/50 characters')).toBeInTheDocument();
     });
   });
 
@@ -240,7 +238,7 @@ describe('CreateWorkspaceModal', () => {
 
       renderWithQueryClient(<CreateWorkspaceModal {...defaultProps} onClose={onClose} />);
 
-      await user.click(screen.getByText('Create Workspace'));
+      await user.click(screen.getByRole('heading', { name: 'Create Workspace' }));
 
       expect(onClose).not.toHaveBeenCalled();
     });

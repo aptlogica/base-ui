@@ -267,7 +267,7 @@ describe('CreateViewModal', () => {
 
     it('trims whitespace from name and description', async () => {
       const user = userEvent.setup();
-      const onCreate = vi.fn();
+      const onCreate = vi.fn().mockResolvedValueOnce(undefined);
 
       renderWithQueryClient(
         <CreateViewModal {...defaultProps} onCreate={onCreate} defaultName="" />
@@ -276,6 +276,7 @@ describe('CreateViewModal', () => {
       const nameInput = screen.getByLabelText(/View Name/i);
       const descInput = screen.getByTestId('description-input');
 
+      await user.clear(nameInput);
       await user.type(nameInput, '  New View  ');
       await user.type(descInput, '  Description  ');
       await user.click(screen.getByRole('button', { name: 'Create View' }));
@@ -285,6 +286,8 @@ describe('CreateViewModal', () => {
           expect.objectContaining({
             name: 'New View',
             description: 'Description',
+            type: 'grid',
+            fieldId: null,
           })
         );
       });
@@ -324,8 +327,8 @@ describe('CreateViewModal', () => {
         <CreateViewModal {...defaultProps} onClose={onClose} />
       );
 
-      const backdrop = container.querySelector('.bg-modal-backdrop');
-      fireEvent.keyDown(backdrop!, { key: 'Escape' });
+      const modal = container.querySelector('.bg-modal');
+      fireEvent.keyDown(modal!, { key: 'Escape' });
 
       expect(onClose).toHaveBeenCalledTimes(1);
     });

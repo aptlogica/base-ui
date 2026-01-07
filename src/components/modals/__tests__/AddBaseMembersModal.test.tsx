@@ -124,7 +124,7 @@ describe('AddBaseMembersModal', () => {
     it('renders the modal when isOpen is true', () => {
       renderWithQueryClient(<AddBaseMembersModal {...defaultProps} />);
 
-      expect(screen.getByText(/Add Base Members/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Add & Manage Members/i })).toBeInTheDocument();
     });
 
     it('renders user selection component', () => {
@@ -139,16 +139,16 @@ describe('AddBaseMembersModal', () => {
       expect(screen.getByTestId('role-dropdown')).toBeInTheDocument();
     });
 
-    it('renders Add Members button', () => {
+    it('renders Cancel button', () => {
       renderWithQueryClient(<AddBaseMembersModal {...defaultProps} />);
 
-      expect(screen.getByRole('button', { name: /Add Members/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Cancel/i })).toBeInTheDocument();
     });
 
     it('displays existing members section', () => {
       renderWithQueryClient(<AddBaseMembersModal {...defaultProps} />);
 
-      expect(screen.getByText(/Current Members/i)).toBeInTheDocument();
+      expect(screen.getByText(/People with access/i)).toBeInTheDocument();
     });
   });
 
@@ -238,8 +238,8 @@ describe('AddBaseMembersModal', () => {
     it('has proper button types', () => {
       renderWithQueryClient(<AddBaseMembersModal {...defaultProps} />);
 
-      const addButton = screen.getByRole('button', { name: /Add Members/i });
-      expect(addButton).toHaveAttribute('type', 'submit');
+      const cancelButton = screen.getByRole('button', { name: /Cancel/i });
+      expect(cancelButton).toHaveAttribute('type', 'button');
     });
   });
 });

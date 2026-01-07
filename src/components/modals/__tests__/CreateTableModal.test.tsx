@@ -78,7 +78,7 @@ describe('CreateTableModal', () => {
     it('renders the modal when isOpen is true', () => {
       render(<CreateTableModal {...defaultProps} />);
 
-      expect(screen.getByText('Create Table')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Create Table' })).toBeInTheDocument();
       expect(screen.getByText('Add a new table to your base')).toBeInTheDocument();
     });
 
@@ -108,18 +108,16 @@ describe('CreateTableModal', () => {
 
   describe('form validation', () => {
     it('shows error when submitting with empty name', async () => {
-      const user = userEvent.setup();
       const onCreate = vi.fn();
 
       render(<CreateTableModal {...defaultProps} onCreate={onCreate} defaultName="" />);
 
-      // Clear the default name first
+      // Clear the default name
       const input = screen.getByLabelText(/Table Name/i);
-      await user.clear(input);
+      await userEvent.setup().clear(input);
 
-      await user.click(screen.getByRole('button', { name: 'Create Table' }));
-
-      expect(screen.getByText('Table name is required')).toBeInTheDocument();
+      const submitButton = screen.getByRole('button', { name: 'Create Table' });
+      expect(submitButton).toBeDisabled();
       expect(onCreate).not.toHaveBeenCalled();
     });
 
@@ -129,11 +127,15 @@ describe('CreateTableModal', () => {
       render(<CreateTableModal {...defaultProps} defaultName="" />);
 
       const input = screen.getByLabelText(/Table Name/i);
+      await user.clear(input);
       await user.type(input, 'AB');
 
       await waitFor(() => {
-        expect(screen.getByText(/at least 3 characters/i)).toBeInTheDocument();
+        expect(screen.getByText('Table name must be at least 3 characters')).toBeInTheDocument();
       });
+
+      const submitButton = screen.getByRole('button', { name: 'Create Table' });
+      expect(submitButton).toBeDisabled();
     });
 
     it('shows validation error for duplicate name', async () => {
@@ -143,10 +145,11 @@ describe('CreateTableModal', () => {
       render(<CreateTableModal {...defaultProps} existingTables={existingTables} defaultName="" />);
 
       const input = screen.getByLabelText(/Table Name/i);
+      await user.clear(input);
       await user.type(input, 'Existing Table');
 
       await waitFor(() => {
-        expect(screen.getByText(/already exists/i)).toBeInTheDocument();
+        expect(screen.getByText('A table with this name already exists')).toBeInTheDocument();
       });
     });
 
@@ -156,6 +159,7 @@ describe('CreateTableModal', () => {
       render(<CreateTableModal {...defaultProps} defaultName="" />);
 
       const input = screen.getByLabelText(/Table Name/i);
+      await user.clear(input);
       await user.type(input, 'Test');
 
       expect(screen.getByText('4/50 characters')).toBeInTheDocument();
@@ -172,13 +176,14 @@ describe('CreateTableModal', () => {
   describe('form submission', () => {
     it('calls onCreate with form data on valid submission', async () => {
       const user = userEvent.setup();
-      const onCreate = vi.fn();
+      const onCreate = vi.fn().mockResolvedValueOnce(undefined);
 
       render(<CreateTableModal {...defaultProps} onCreate={onCreate} defaultName="" />);
 
       const nameInput = screen.getByLabelText(/Table Name/i);
       const descInput = screen.getByTestId('description-input');
 
+      await user.clear(nameInput);
       await user.type(nameInput, 'New Table');
       await user.type(descInput, 'Table description');
       await user.click(screen.getByRole('button', { name: 'Create Table' }));
@@ -193,7 +198,7 @@ describe('CreateTableModal', () => {
 
     it('shows loading state while submitting', async () => {
       const user = userEvent.setup();
-      const onCreate = vi.fn(() => new Promise((resolve) => setTimeout(resolve, 100)));
+      const onCreate = vi.fn().mockImplementationOnce(() => new Promise((resolve) => setTimeout(resolve, 100)));
 
       render(<CreateTableModal {...defaultProps} onCreate={onCreate} defaultName="Valid Name" />);
 
@@ -206,13 +211,14 @@ describe('CreateTableModal', () => {
 
     it('trims whitespace from name and description', async () => {
       const user = userEvent.setup();
-      const onCreate = vi.fn();
+      const onCreate = vi.fn().mockResolvedValueOnce(undefined);
 
       render(<CreateTableModal {...defaultProps} onCreate={onCreate} defaultName="" />);
 
       const nameInput = screen.getByLabelText(/Table Name/i);
       const descInput = screen.getByTestId('description-input');
 
+      await user.clear(nameInput);
       await user.type(nameInput, '  New Table  ');
       await user.type(descInput, '  Description  ');
       await user.click(screen.getByRole('button', { name: 'Create Table' }));
@@ -227,7 +233,7 @@ describe('CreateTableModal', () => {
 
     it('shows error message when onCreate fails', async () => {
       const user = userEvent.setup();
-      const onCreate = vi.fn(() => Promise.reject(new Error('API Error')));
+      const onCreate = vi.fn().mockRejectedValueOnce(new Error('API Error'));
 
       render(<CreateTableModal {...defaultProps} onCreate={onCreate} defaultName="Valid Name" />);
 
@@ -270,8 +276,8 @@ describe('CreateTableModal', () => {
         <CreateTableModal {...defaultProps} onClose={onClose} />
       );
 
-      const backdrop = container.querySelector('.bg-modal-backdrop');
-      fireEvent.keyDown(backdrop!, { key: 'Escape' });
+      const modal = container.querySelector('.bg-modal');
+      fireEvent.keyDown(modal!, { key: 'Escape' });
 
       expect(onClose).toHaveBeenCalledTimes(1);
     });
@@ -282,7 +288,7 @@ describe('CreateTableModal', () => {
 
       render(<CreateTableModal {...defaultProps} onClose={onClose} />);
 
-      await user.click(screen.getByText('Create Table'));
+      await user.click(screen.getByRole('heading', { name: 'Create Table' }));
 
       expect(onClose).not.toHaveBeenCalled();
     });
