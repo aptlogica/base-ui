@@ -84,19 +84,19 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
     // Pin table - only show if not read-only
     ...(onPinToggle && !isBaseReadOnly() ? [{ 
       label: isPinned ? 'Unpin table' : 'Pin table', 
-      icon: <Pin className="w-5 h-5 text-gray-400" />, 
+      icon: <Pin className="w-4 h-4 text-gray-500" />, 
       onClick: handlePinClick
     }] : []),
     // Edit table - only show if user can update table and not read-only
     ...(canUpdateTable() && !isBaseReadOnly() ? [{ 
       label: 'Edit table', 
-      icon: <Edit className="w-5 h-5 text-gray-400" />, 
+      icon: <Edit className="w-4 h-4 text-gray-500" />, 
       onClick: () => setShowEditModal(true) 
     }] : []),
     // Delete table - only show if user can delete
     ...(canDeleteTable() ? [{ 
       label: 'Delete table', 
-      icon: <Trash2 className="w-5 h-5 text-gray-400" />, 
+      icon: <Trash2 className="w-4 h-4 text-red-600" />, 
       onClick: () => setShowDelete(true), 
       danger: true 
     }] : []),

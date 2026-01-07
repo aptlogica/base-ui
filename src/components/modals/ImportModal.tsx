@@ -18,37 +18,37 @@ const IMPORT_CONFIG = {
     label: 'CSV',
     accept: '.csv',
     mimeTypes: ['text/csv', 'application/csv'],
-    maxSize: 1 * 1024 * 1024, // 10MB
+    maxSize: 10 * 1024 * 1024, // 10MB
   },
   excel: {
     label: 'Excel',
     accept: '.xlsx,.xls',
     mimeTypes: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'],
-    maxSize: 1 * 1024 * 1024, // 10MB
+    maxSize: 10 * 1024 * 1024, // 10MB
   },
   sql: {
     label: 'SQL',
     accept: '.sql',
     mimeTypes: ['application/sql', 'text/sql'],
-    maxSize: 1 * 1024 * 1024, // 10MB
+    maxSize: 10 * 1024 * 1024, // 10MB
   },
   json: {
     label: 'JSON',
     accept: '.json',
     mimeTypes: ['application/json'],
-    maxSize: 1 * 1024 * 1024, // 10MB
+    maxSize: 10 * 1024 * 1024, // 10MB
   },
   airtable: {
     label: 'Airtable',
     accept: '.csv,.json',
     mimeTypes: ['text/csv', 'application/json'],
-    maxSize: 1 * 1024 * 1024, // 10MB
+    maxSize: 10 * 1024 * 1024, // 10MB
   },
   nocodb: {
     label: 'NocoDB',
     accept: '.csv,.json',
     mimeTypes: ['text/csv', 'application/json'],
-    maxSize: 1 * 1024 * 1024, // 10MB
+    maxSize: 10 * 1024 * 1024, // 10MB
   },
 };
 

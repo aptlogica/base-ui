@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, X, ChevronRight } from 'lucide-react';
+import { Import, X, ChevronRight } from 'lucide-react';
 
 interface ImportDataModalProps {
   isOpen: boolean;
@@ -97,7 +97,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center">
-              <Download size={20} className="icon-primary" />
+              <Import size={20} className="icon-primary" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-primary">Import data from</h2>

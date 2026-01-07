@@ -82,19 +82,19 @@ const ViewOptionsMenu: React.FC<ViewOptionsMenuProps> = ({ view, onRename, onEdi
     // Pin view - only show if not read-only
     ...(onPinToggle && !isBaseReadOnly() ? [{
       label: isPinned ? 'Unpin view' : 'Pin view',
-      icon: <Pin className="w-5 h-5 text-gray-400" />,
+      icon: <Pin className="w-4 h-4 text-gray-500" />,
       onClick: handlePinClick
     }] : []),
     // Edit view - only show if user can update view and not read-only
     ...(canUpdateView() && !isBaseReadOnly() ? [{ 
       label: 'Edit view', 
-      icon: <Edit className="w-5 h-5 text-gray-400" />, 
+      icon: <Edit className="w-4 h-4 text-gray-500" />, 
       onClick: () => setShowEditModal(true) 
     }] : []),
     // Delete view - only show if user can delete
     ...(canDeleteView() ? [{ 
       label: 'Delete view', 
-      icon: <Trash2 className="w-5 h-5 text-gray-400" />, 
+      icon: <Trash2 className="w-4 h-4 text-red-600" />, 
       onClick: () => setShowDelete(true), 
       danger: true 
     }] : []),
