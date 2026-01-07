@@ -1320,7 +1320,9 @@
 <a name='L1255'></a><a href='#L1255'>1255</a>
 <a name='L1256'></a><a href='#L1256'>1256</a>
 <a name='L1257'></a><a href='#L1257'>1257</a>
-<a name='L1258'></a><a href='#L1258'>1258</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L1258'></a><a href='#L1258'>1258</a>
+<a name='L1259'></a><a href='#L1259'>1259</a>
+<a name='L1260'></a><a href='#L1260'>1260</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1410,21 +1412,16 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -2360,10 +2357,13 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -2483,11 +2483,15 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -2667,20 +2671,15 @@ interface UserTableProps {
 <span class="cstat-no" title="statement not covered" >  }</span>
 <span class="cstat-no" title="statement not covered" >};</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >const getTimezoneName = (timezone: string, activityData?: TenantUser['activity_data']): string =&gt; {</span>
-  // First try to get timezone from login_sessions
-<span class="cstat-no" title="statement not covered" >  if (activityData?.login_sessions &amp;&amp; activityData.login_sessions.length &gt; 0) {</span>
-<span class="cstat-no" title="statement not covered" >    const tz = activityData.login_sessions[0].timezone;</span>
-<span class="cstat-no" title="statement not covered" >    if (tz) {</span>
-<span class="cstat-no" title="statement not covered" >      return tz;</span>
-<span class="cstat-no" title="statement not covered" >    }</span>
-<span class="cstat-no" title="statement not covered" >  }</span>
+import { timeZoneOptions } from '../../types/constants';
 &nbsp;
-  // Fallback to timezone field
+<span class="cstat-no" title="statement not covered" >const getTimezoneName = (timezone: string, _activityData?: TenantUser['activity_data']): string =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >  if (!timezone || timezone.trim() === '') {</span>
 <span class="cstat-no" title="statement not covered" >    return '-';</span>
 <span class="cstat-no" title="statement not covered" >  }</span>
-<span class="cstat-no" title="statement not covered" >  return timezone;</span>
+  // Try to find a readable label for the short code
+<span class="cstat-no" title="statement not covered" >  const tzObj = timeZoneOptions.find(tz =&gt; tz.value === timezone);</span>
+<span class="cstat-no" title="statement not covered" >  return tzObj ? tzObj.label : timezone;</span>
 <span class="cstat-no" title="statement not covered" >};</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >const formatCreatedTime = (createdTime?: string) =&gt; {</span>
@@ -3547,7 +3546,7 @@ interface UserTableProps {
 <span class="cstat-no" title="statement not covered" >                              &lt;div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0"&gt;</span>
 <span class="cstat-no" title="statement not covered" >                                &lt;img</span>
 <span class="cstat-no" title="statement not covered" >                                  src={user.avatar}</span>
-<span class="cstat-no" title="statement not covered" >                                  alt={user.display_name || `${user.first_name} ${user.last_name}`}</span>
+<span class="cstat-no" title="statement not covered" >                                  alt={`${user.first_name} ${user.last_name}`}</span>
 <span class="cstat-no" title="statement not covered" >                                  className="w-full h-full object-cover"</span>
 <span class="cstat-no" title="statement not covered" >                                /&gt;</span>
 <span class="cstat-no" title="statement not covered" >                              &lt;/div&gt;</span>
@@ -3557,7 +3556,7 @@ interface UserTableProps {
 <span class="cstat-no" title="statement not covered" >                              &lt;/div&gt;</span>
                             )}
 <span class="cstat-no" title="statement not covered" >                            &lt;div&gt;</span>
-<span class="cstat-no" title="statement not covered" >                              &lt;p className="text-sm font-medium text-gray-900"&gt;{user.display_name || `${user.first_name} ${user.last_name}`}&lt;/p&gt;</span>
+<span class="cstat-no" title="statement not covered" >                              &lt;p className="text-sm font-medium text-gray-900"&gt;{`${user.first_name} ${user.last_name}`}&lt;/p&gt;</span>
 <span class="cstat-no" title="statement not covered" >                              &lt;p className="text-xs text-gray-500"&gt;{user.email}&lt;/p&gt;</span>
 <span class="cstat-no" title="statement not covered" >                            &lt;/div&gt;</span>
 <span class="cstat-no" title="statement not covered" >                          &lt;/div&gt;</span>
@@ -3616,14 +3615,17 @@ interface UserTableProps {
 &nbsp;
                         {/* Actions */}
 <span class="cstat-no" title="statement not covered" >                        {(() =&gt; {</span>
-                          // Check if user is Owner
+                          // Check if user is Owner or Co-owner
 <span class="cstat-no" title="statement not covered" >                          const roles = getOverallRoles(user);</span>
 <span class="cstat-no" title="statement not covered" >                          const userIsOwner = roles.some(role =&gt;</span>
 <span class="cstat-no" title="statement not covered" >                            role.toLowerCase() === 'owner'</span>
 <span class="cstat-no" title="statement not covered" >                          );</span>
+<span class="cstat-no" title="statement not covered" >                          const userIsCoOwner = roles.some(role =&gt;</span>
+<span class="cstat-no" title="statement not covered" >                            role.toLowerCase() === 'co-owner'</span>
+<span class="cstat-no" title="statement not covered" >                          );</span>
                           
-                          // Co-owner cannot see action button for Owner users
-<span class="cstat-no" title="statement not covered" >                          if (isCoOwner() &amp;&amp; userIsOwner) {</span>
+                          // Co-owner cannot see action button for Owner users or other Co-owners
+<span class="cstat-no" title="statement not covered" >                          if (isCoOwner() &amp;&amp; (userIsOwner || userIsCoOwner)) {</span>
 <span class="cstat-no" title="statement not covered" >                            return null;</span>
 <span class="cstat-no" title="statement not covered" >                          }</span>
                           
@@ -3739,14 +3741,18 @@ interface UserTableProps {
 <span class="cstat-no" title="statement not covered" >            const user = paginatedUsers.find(u =&gt; u.id === openActionMenu);</span>
 <span class="cstat-no" title="statement not covered" >            if (!user) return null;</span>
 &nbsp;
-            // Check if user is Owner or Co-owner - don't show deactivate option
-<span class="cstat-no" title="statement not covered" >            const roles = getOverallRoles(user);</span>
-<span class="cstat-no" title="statement not covered" >            const isOwnerOrCoOwner = roles.some(role =&gt;</span>
-<span class="cstat-no" title="statement not covered" >              role.toLowerCase() === 'owner' || role.toLowerCase() === 'co-owner'</span>
-<span class="cstat-no" title="statement not covered" >            );</span>
 &nbsp;
-            // Don't show deactivate/activate options for owners or co-owners
-<span class="cstat-no" title="statement not covered" >            if (isOwnerOrCoOwner) {</span>
+            // Determine target user's roles
+<span class="cstat-no" title="statement not covered" >            const roles = getOverallRoles(user);</span>
+<span class="cstat-no" title="statement not covered" >            const targetIsOwner = roles.some(role =&gt; role.toLowerCase() === 'owner');</span>
+<span class="cstat-no" title="statement not covered" >            const targetIsCoOwner = roles.some(role =&gt; role.toLowerCase() === 'co-owner');</span>
+&nbsp;
+            // Only Owner can deactivate Co-owner; nobody can deactivate Owner
+<span class="cstat-no" title="statement not covered" >            if (targetIsOwner) {</span>
+<span class="cstat-no" title="statement not covered" >              return null;</span>
+<span class="cstat-no" title="statement not covered" >            }</span>
+            // Co-owner cannot deactivate another co-owner
+<span class="cstat-no" title="statement not covered" >            if (targetIsCoOwner &amp;&amp; !isOwner()) {</span>
 <span class="cstat-no" title="statement not covered" >              return null;</span>
 <span class="cstat-no" title="statement not covered" >            }</span>
 &nbsp;
@@ -3841,7 +3847,7 @@ interface UserTableProps {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-01-05T10:35:13.827Z
+                at 2026-01-07T06:22:17.156Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

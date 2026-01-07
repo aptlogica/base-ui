@@ -186,7 +186,7 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     if (checkingBaseId && checkingBaseTablesData !== undefined) {
       const tables = Array.isArray(checkingBaseTablesData) ? checkingBaseTablesData : (checkingBaseTablesData as any)?.data || [];
-      
+
       if (tables.length === 0) {
         // No tables - show toast and open create table modal
         toast.info('This base has no tables yet. Create your first table to get started!');
@@ -198,7 +198,7 @@ const HomePage: React.FC = () => {
           toast.error(error?.message || 'Failed to navigate to base. Please try again.');
         });
       }
-      
+
       // Clear the checking state
       setCheckingBaseId(null);
     }
@@ -455,9 +455,9 @@ const HomePage: React.FC = () => {
                   <Plus className="w-6 h-6 text-gray-900" />
                 </div>
                 <div>
-                <div className="font-semibold text-md text-gray-900">Create New Base</div>
-                <div className="text-xs text-gray-600">Creates a new base.</div>
-              </div>
+                  <div className="font-semibold text-md text-gray-900">Create New Base</div>
+                  <div className="text-xs text-gray-600">Creates a new base.</div>
+                </div>
               </div>
             )}
 
@@ -471,9 +471,9 @@ const HomePage: React.FC = () => {
                   <Import className="w-6 h-6 text-gray-900" />
                 </div>
                 <div>
-                <div className="font-semibold text-md text-gray-900">Import Data</div>
-                <div className="text-xs text-gray-600">Bring in external data.</div>
-              </div>
+                  <div className="font-semibold text-md text-gray-900">Import Data</div>
+                  <div className="text-xs text-gray-600">Bring in external data.</div>
+                </div>
               </div>
             )}
           </div>
@@ -764,14 +764,14 @@ const HomePage: React.FC = () => {
                   setBaseNameToDelete('');
                   setIsDeletingBase(false);
                 }}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-500 focus:ring-offset-2"
+                className="px-16 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
                 disabled={!isDeletingBase}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-16 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Delete Base
               </button>

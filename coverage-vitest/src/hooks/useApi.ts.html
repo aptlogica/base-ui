@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">7.28% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>87/1194</span>
+                <span class='fraction'>86/1180</span>
             </div>
         
             
@@ -39,14 +39,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/77</span>
+                <span class='fraction'>0/76</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">7.28% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>87/1194</span>
+                <span class='fraction'>86/1180</span>
             </div>
         
             
@@ -1739,24 +1739,7 @@
 <a name='L1674'></a><a href='#L1674'>1674</a>
 <a name='L1675'></a><a href='#L1675'>1675</a>
 <a name='L1676'></a><a href='#L1676'>1676</a>
-<a name='L1677'></a><a href='#L1677'>1677</a>
-<a name='L1678'></a><a href='#L1678'>1678</a>
-<a name='L1679'></a><a href='#L1679'>1679</a>
-<a name='L1680'></a><a href='#L1680'>1680</a>
-<a name='L1681'></a><a href='#L1681'>1681</a>
-<a name='L1682'></a><a href='#L1682'>1682</a>
-<a name='L1683'></a><a href='#L1683'>1683</a>
-<a name='L1684'></a><a href='#L1684'>1684</a>
-<a name='L1685'></a><a href='#L1685'>1685</a>
-<a name='L1686'></a><a href='#L1686'>1686</a>
-<a name='L1687'></a><a href='#L1687'>1687</a>
-<a name='L1688'></a><a href='#L1688'>1688</a>
-<a name='L1689'></a><a href='#L1689'>1689</a>
-<a name='L1690'></a><a href='#L1690'>1690</a>
-<a name='L1691'></a><a href='#L1691'>1691</a>
-<a name='L1692'></a><a href='#L1692'>1692</a>
-<a name='L1693'></a><a href='#L1693'>1693</a>
-<a name='L1694'></a><a href='#L1694'>1694</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L1677'></a><a href='#L1677'>1677</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -3119,23 +3102,6 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -4812,23 +4778,6 @@ export const useGetUsersForAssign = <span class="fstat-no" title="function not c
 <span class="cstat-no" title="statement not covered" >  });</span>
 <span class="cstat-no" title="statement not covered" >};</span>
 &nbsp;
-export const useGetTenant = <span class="fstat-no" title="function not covered" >() =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >  return useQuery({</span>
-<span class="cstat-no" title="statement not covered" >    queryKey: ['tenant'],</span>
-<span class="cstat-no" title="statement not covered" >    queryFn: async () =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >      try {</span>
-        // TODO: Implement getTenantService if needed
-        // const result = await getTenantService();
-        // return (result as any)?.data;
-<span class="cstat-no" title="statement not covered" >        return null;</span>
-<span class="cstat-no" title="statement not covered" >      } catch (error: any) {</span>
-<span class="cstat-no" title="statement not covered" >        console.error('❌ Get tenant failed:', error);</span>
-<span class="cstat-no" title="statement not covered" >        throw error;</span>
-<span class="cstat-no" title="statement not covered" >      }</span>
-<span class="cstat-no" title="statement not covered" >    },</span>
-<span class="cstat-no" title="statement not covered" >    enabled: false, // Disabled until service is implemented</span>
-<span class="cstat-no" title="statement not covered" >  });</span>
-<span class="cstat-no" title="statement not covered" >};</span>
 &nbsp;
 export const useAddUser = <span class="fstat-no" title="function not covered" >() =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >  const queryClient = useQueryClient();</span>
@@ -5149,7 +5098,7 @@ export const useUpdateOrganization = <span class="fstat-no" title="function not 
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-01-05T10:35:13.827Z
+                at 2026-01-07T06:22:17.156Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

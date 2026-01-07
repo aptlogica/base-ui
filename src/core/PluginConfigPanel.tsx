@@ -126,7 +126,7 @@ export const PluginConfigPanel: React.FC<PluginConfigPanelProps> = ({ pluginId }
               <div key={key} className="flex flex-col gap-1">
                 <label className="font-medium text-utility-gray-700 text-sm flex items-center gap-1">
                   {schema.title || key}
-                  {schema.required && <span className="text-utility-error-600">*</span>}
+                  {schema.required && <span className="text-[var(--color-error-600)]">*</span>}
                 </label>
                 {schema.type === 'boolean' ? (
                   <label className="inline-flex items-center gap-2 cursor-pointer select-none">

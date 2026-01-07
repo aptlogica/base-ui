@@ -806,7 +806,7 @@ const Breadcrumb: React.FC = () => {
               </div>
               <div className="mb-4">
                 <p className="text-sm text-primary">
-                  <strong>Are you sure you want to proceed? This deletion cannot be reversed.</strong>
+                  <strong>Are you sure you want to proceed? This deletion cannot be reversed. </strong>
                   Confirming this action will permanently delete this base and all of its related contents.
                 </p>
               </div>
@@ -839,14 +839,14 @@ const Breadcrumb: React.FC = () => {
                   setBaseNameToDelete('');
                   setIsDeletingBase(false);
                 }}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-500 focus:ring-offset-2"
+                className="px-16 py-2 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
                 disabled={!isDeletingBase}
-                className="px-4 py-2 bg-red-600 text-primary rounded-md hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-16 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Delete Base
               </button>

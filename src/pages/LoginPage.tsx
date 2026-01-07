@@ -213,7 +213,7 @@ const LogIn: React.FC = () => {
           {/* Promotional Text - Top Left, Consistent Alignment */}
           <div className="pl-8 md:pl-12 lg:pl-16 xl:pl-20 pr-8 md:pr-12 lg:pr-16 mb-10 md:mb-14 lg:mb-16 xl:mb-20">
             <div className="space-y-4 text-left max-w-xl lg:max-w-2xl">
-              <h1 className="text-3xl lg:text-4xl xl:text-5xl 2xl:text-6xl font-bold text-black leading-tight">{formText.login.subtitle}</h1>
+              <h1 className="text-3xl lg:text-4xl xl:text-4xl 2xl:text-6xl font-bold text-black leading-tight">{formText.login.subtitle}</h1>
               <p className="text-base lg:text-lg xl:text-xl text-black leading-relaxed">{formText.login.description3}</p>
             </div>
           </div>

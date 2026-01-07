@@ -19,18 +19,18 @@ const UpdateFieldConfirmModal: React.FC<UpdateFieldConfirmModalProps> = ({ isOpe
           <TriangleAlert size={20} color="var(--color-warning-400)" />
           <span className="text-lg font-semibold text-[var(--text-color-tertiary-heading)]">{title}</span>
         </div>
-        <div className="bg-modal-content mb-4 text-[var(--text-color-tertiary)]">{message}</div>
-        <div className="flex justify-end gap-2 flex-shrink-0">
+        <div className="bg-modal-content mb-4 font-bold text-[var(--text-color-tertiary)]">{message}</div>
+        <div className="flex justify-between gap-2 flex-shrink-0">
           <button
             type="button"
-            className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-800"
+            className="px-16 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800"
             onClick={onClose}
           >
             Cancel
           </button>
           <button
             type="button"
-            className="px-4 py-2 rounded btn-primary text-white font-semibold"
+            className="px-16 py-2 rounded-xl btn-primary text-white font-semibold"
             onClick={onConfirm}
           >
             Confirm

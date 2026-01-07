@@ -62,7 +62,7 @@ const AdministratorSettingsButton: React.FC = () => {
         }`} />
       </button>
       {/* Vertical Separator */}
-      <div className="h-7 w-px border mx-3"></div>
+      <div className="h-6 w-px bg-gray-300 mx-2"></div>
     </>
   );
 };

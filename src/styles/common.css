@@ -299,11 +299,11 @@
 
 /*Destructive Button styles */
 .btn-destructive {
-  @apply bg-[var(--color-utility-error-500)] text-[var(--color-white)] border border-[var(--color-utility-error-500)] rounded-xl p-2;
+  @apply bg-[var(--color-error-500)] text-[var(--color-white)] border border-[var(--color-error-500)] rounded-xl p-2;
 }
 
 .btn-destructive:hover {
-  @apply bg-[var(--color-utility-error-600)] border-[var(--color-utility-error-600)];
+  @apply bg-[var(--color-error-600)] border-[var(--color-error-600)];
 }
 
 .btn-destructive:focus {
@@ -312,7 +312,7 @@
 }
 
 .btn-destructive:active {
-  @apply bg-[var(--color-utility-error-700)] border-[var(--color-utility-error-700)];
+  @apply bg-[var(--color-error-700)] border-[var(--color-error-700)];
 }
 
 /* Tertiary Button styles */
@@ -398,7 +398,7 @@
 }
 
 .border-destructive {
-  @apply border border-[var(--color-utility-error-500)];
+  @apply border border-[var(--color-error-500)];
 }
 
 .checkbox-primary-brand {
@@ -486,7 +486,7 @@
   }
 
   .bg-error {
-    background-color: var(--color-utility-error-50);
+    background-color: var(--color-error-50);
   }
 
   .bg-primary {

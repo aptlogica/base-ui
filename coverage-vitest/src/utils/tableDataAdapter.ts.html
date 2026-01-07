@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>29/29</span>
+                <span class='fraction'>0/29</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">83.33% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>15/18</span>
+                <span class='fraction'>1/1</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>29/29</span>
+                <span class='fraction'>0/29</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -109,80 +109,80 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import type { ViewContext } from '../types/viewRuntime';
 import type { TableData, TableModel, TableColumn, TableView } from '../types/tableData';
 &nbsp;
 /**
  * Convert ViewContext to the minimal, API-like table shape used by all views.
  */
-export function contextToTableData(ctx: ViewContext, withViews: boolean = true): TableData {
-  const model: TableModel = {
-    id: String(ctx.tableId),
-    base_id: ctx.baseId,
-    workspace_id: ctx.workspaceId,
-    title: ctx.tableTitle,
-    alias: ctx.tableAlias,
-    meta: ctx.tableMeta,
-  };
+<span class="cstat-no" title="statement not covered" >export function contextToTableData(ctx: ViewContext, withViews: boolean = true): TableData {</span>
+<span class="cstat-no" title="statement not covered" >  const model: TableModel = {</span>
+<span class="cstat-no" title="statement not covered" >    id: String(ctx.tableId),</span>
+<span class="cstat-no" title="statement not covered" >    base_id: ctx.baseId,</span>
+<span class="cstat-no" title="statement not covered" >    workspace_id: ctx.workspaceId,</span>
+<span class="cstat-no" title="statement not covered" >    title: ctx.tableTitle,</span>
+<span class="cstat-no" title="statement not covered" >    alias: ctx.tableAlias,</span>
+<span class="cstat-no" title="statement not covered" >    meta: ctx.tableMeta,</span>
+<span class="cstat-no" title="statement not covered" >  };</span>
 &nbsp;
-  const columns: TableColumn[] = (ctx.<span class="branch-0 cbranch-no" title="branch not covered" >fields || []).m</span>ap((f, idx) =&gt; ({
-    id: String(f.id),
-    column_name: String((f as any).columnName ?? (f as any).column_name ?? f.title ?? f.id),
-    title: String(f.title ?? (f as any).columnName ?? (f as any).column_name ?? f.id),
-    uidt: String(f.uidt || 'text'),
-    meta: f.meta || {},
-    order_index: typeof f.position === 'number' ? f.position : idx,
-  }));
+<span class="cstat-no" title="statement not covered" >  const columns: TableColumn[] = (ctx.fields || []).map((f, idx) =&gt; ({</span>
+<span class="cstat-no" title="statement not covered" >    id: String(f.id),</span>
+<span class="cstat-no" title="statement not covered" >    column_name: String((f as any).columnName ?? (f as any).column_name ?? f.title ?? f.id),</span>
+<span class="cstat-no" title="statement not covered" >    title: String(f.title ?? (f as any).columnName ?? (f as any).column_name ?? f.id),</span>
+<span class="cstat-no" title="statement not covered" >    uidt: String(f.uidt || 'text'),</span>
+<span class="cstat-no" title="statement not covered" >    meta: f.meta || {},</span>
+<span class="cstat-no" title="statement not covered" >    order_index: typeof f.position === 'number' ? f.position : idx,</span>
+<span class="cstat-no" title="statement not covered" >  }));</span>
 &nbsp;
-  const records: Record&lt;string, any&gt;[] = (ctx.<span class="branch-0 cbranch-no" title="branch not covered" >rows || []).m</span>ap(r =&gt; r?.<span class="branch-0 cbranch-no" title="branch not covered" >data ?? {})</span>;
+<span class="cstat-no" title="statement not covered" >  const records: Record&lt;string, any&gt;[] = (ctx.rows || []).map(r =&gt; r?.data ?? {});</span>
 &nbsp;
-  const tableData: TableData = {
-    model,
-    columns,
-    records,
-  };
+<span class="cstat-no" title="statement not covered" >  const tableData: TableData = {</span>
+<span class="cstat-no" title="statement not covered" >    model,</span>
+<span class="cstat-no" title="statement not covered" >    columns,</span>
+<span class="cstat-no" title="statement not covered" >    records,</span>
+<span class="cstat-no" title="statement not covered" >  };</span>
 &nbsp;
-  if (withViews) {
-    const tv: TableView = { id: String(ctx.viewId), type: String(ctx.viewType), meta: ctx.meta?.extra ?? ctx.meta };
-    tableData.views = [tv];
-  }
+<span class="cstat-no" title="statement not covered" >  if (withViews) {</span>
+<span class="cstat-no" title="statement not covered" >    const tv: TableView = { id: String(ctx.viewId), type: String(ctx.viewType), meta: ctx.meta?.extra ?? ctx.meta };</span>
+<span class="cstat-no" title="statement not covered" >    tableData.views = [tv];</span>
+<span class="cstat-no" title="statement not covered" >  }</span>
 &nbsp;
-  return tableData;
-}
+<span class="cstat-no" title="statement not covered" >  return tableData;</span>
+<span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -190,7 +190,7 @@ export function contextToTableData(ctx: ViewContext, withViews: boolean = true):
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-01-05T10:35:13.827Z
+                at 2026-01-07T06:22:17.156Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

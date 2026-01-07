@@ -45,7 +45,7 @@ export const Button: React.FC<ButtonProps> = ({
       case 'outline':
         return 'bg-transparent border border-[var(--color-border-brand)] text-[var(--color-text-brand-tertiary)] hover:bg-[var(--color-bg-brand-primary)]';
       case 'danger':
-        return 'bg-[var(--color-bg-error-solid)] text-[var(--color-text-white)] hover:bg-[var(--color-utility-error-700)]';
+        return 'bg-[var(--color-bg-error-solid)] text-[var(--color-text-white)] hover:bg-[var(--color-error-700)]';
       case 'success':
         return 'bg-[var(--color-bg-success-solid)] text-[var(--color-text-white)] hover:bg-[var(--color-utility-success-700)]';
       case 'warning':
