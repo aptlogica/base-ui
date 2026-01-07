@@ -137,11 +137,11 @@ export const TableViews: React.FC<TableViewsProps> = ({
         return (
           <div
             key={view.id}
-            className={`sidebar-flyout-view flex items-center gap-3 py-2 pr-3 pl-7 mt-1 first:mt-0 hover:bg-[var(--color-gray-100)] rounded-xl ${isViewActive(table.base_id, table.id, view.id) ? 'bg-blue-25 ' : ''} relative group`}
+            className={`sidebar flex items-center gap-3 py-2 pr-3 pl-10 mt-1 first:mt-0 hover:bg-[var(--color-gray-100)] transition-all ease-in duration-200 rounded-xl ${isViewActive(table.base_id, table.id, view.id) ? 'bg-blue-25 ' : ''} relative`}
           >
             {/* View icon and name - click to navigate */}
             <div
-              className="flex items-center gap-3 flex-1 cursor-pointer hover:bg-[var(--color-gray-100)] hover:translate-x-1 transition-all ease-in duration-200"
+              className="flex items-center gap-3 flex-1 cursor-pointer "
               onClick={() => navigateToView(table.workspace_id, table.base_id, table.id, view.id)}
             >
               <span className="cursor-pointer h-5 w-5">

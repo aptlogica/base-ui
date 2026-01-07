@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Download, Search, Zap, Database, ChevronDown } from 'lucide-react';
-import { useWorkspaceBases, useCreateBase, useUpdateBase, useDeleteBase } from '../hooks/useApi';
+import React, { useState, useMemo, useRef, useEffect, Suspense, lazy } from 'react';
+import { Plus, Import, Search, Zap, Database, ChevronDown } from 'lucide-react';
+import { useWorkspaceBases, useCreateBase, useUpdateBase, useDeleteBase, useBaseTables, useCreateTable } from '../hooks/useApi';
 import { useNavigationStore } from '../stores/navigationStore';
 import { useNavigationActions } from '../hooks/useNavigationActions';
 import { Loader } from '../components/ui/Loader';
@@ -9,6 +9,10 @@ import { ImportDataModal } from '../components/modals/ImportDataModal';
 import { ImportModal } from '../components/modals/ImportModal';
 import { EditItemModal } from '../components/modals/EditItemModal';
 import { AddBaseMembersModal } from '../components/modals/AddBaseMembersModal';
+
+const CreateTableModal = lazy(() =>
+  import('../components/modals/CreateTableModal').then(m => ({ default: m.CreateTableModal }))
+);
 import { BaseMenu } from '../components/common/BaseMenu';
 import { useToast } from '../components/common/Toast';
 import { useWorkspaceAccess } from '../hooks/useWorkspaceAccess';
@@ -59,11 +63,12 @@ const BaseMenuWrapper: React.FC<{
 
 const HomePage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { selectedWorkspaceId } = useNavigationStore();
+  const { selectedWorkspaceId, navigateToTable } = useNavigationStore();
   const { data: workspaceBasesData, isLoading: basesLoading } = useWorkspaceBases(selectedWorkspaceId || '');
   const toast = useToast();
   const { canCreateBase, accessLevel, isBaseLevelAccess } = useWorkspaceAccess(selectedWorkspaceId || undefined);
   const createBaseMutation = useCreateBase();
+  const createTableMutation = useCreateTable();
   const { navigateToFirstView } = useNavigateToBaseFirstView();
 
   // Extract bases array from workspaceBases response
@@ -104,6 +109,9 @@ const HomePage: React.FC = () => {
   const [isDeletingBase, setIsDeletingBase] = useState(false);
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [baseForMembers, setBaseForMembers] = useState<any | null>(null);
+  const [showCreateTableBaseId, setShowCreateTableBaseId] = useState<string | null>(null);
+  const [checkingBaseId, setCheckingBaseId] = useState<string | null>(null);
+  const { data: checkingBaseTablesData } = useBaseTables(checkingBaseId || '');
 
   const updateBaseMutation = useUpdateBase();
   const deleteBaseMutation = useDeleteBase();
@@ -170,13 +178,31 @@ const HomePage: React.FC = () => {
   }, [allBases, searchTerm, sortOption]);
 
   const handleBaseClick = async (base: any) => {
-    try {
-      await navigateToFirstView(base.id);
-    } catch (error: any) {
-      console.error('Failed to navigate to base:', error);
-      toast.error(error?.message || 'Failed to navigate to base. Please try again.');
-    }
+    // Set the base to check - this will trigger the useBaseTables hook
+    setCheckingBaseId(base.id);
   };
+
+  // Handle table check result - show modal if empty, navigate if has tables
+  useEffect(() => {
+    if (checkingBaseId && checkingBaseTablesData !== undefined) {
+      const tables = Array.isArray(checkingBaseTablesData) ? checkingBaseTablesData : (checkingBaseTablesData as any)?.data || [];
+      
+      if (tables.length === 0) {
+        // No tables - show toast and open create table modal
+        toast.info('This base has no tables yet. Create your first table to get started!');
+        setShowCreateTableBaseId(checkingBaseId);
+      } else {
+        // Has tables - navigate to first view
+        navigateToFirstView(checkingBaseId).catch((error: any) => {
+          console.error('Failed to navigate to base:', error);
+          toast.error(error?.message || 'Failed to navigate to base. Please try again.');
+        });
+      }
+      
+      // Clear the checking state
+      setCheckingBaseId(null);
+    }
+  }, [checkingBaseId, checkingBaseTablesData, navigateToFirstView, toast]);
 
   const handleEditBase = (base: any) => {
     setEditingBase(base);
@@ -423,13 +449,15 @@ const HomePage: React.FC = () => {
                   }
                   setShowCreateBase(true);
                 }}
-                className="rounded-xl bg-card border px-5 py-5 flex flex-col items-start cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px]"
+                className="rounded-xl bg-card border px-5 py-5 flex items-start gap-3 cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px]"
               >
-                <div className="w-10 h-10 rounded-xl bg-card border flex items-center justify-center mb-3">
-                  <Plus className="w-5 h-5 text-gray-900" />
+                <div className="w-12 h-12 rounded-xl bg-card border flex items-center justify-center">
+                  <Plus className="w-6 h-6 text-gray-900" />
                 </div>
-                <div className="font-semibold text-sm text-gray-900 mb-0.5">Create New Base</div>
+                <div>
+                <div className="font-semibold text-md text-gray-900">Create New Base</div>
                 <div className="text-xs text-gray-600">Creates a new base.</div>
+              </div>
               </div>
             )}
 
@@ -437,13 +465,15 @@ const HomePage: React.FC = () => {
             {accessLevel !== 'limited_access' && (
               <div
                 onClick={() => setShowImportData(true)}
-                className="rounded-xl bg-card border px-5 py-5 flex flex-col items-start cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px]"
+                className="rounded-xl bg-card border px-5 py-5 flex items-start gap-3 cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px]"
               >
-                <div className="w-10 h-10 rounded-xl bg-card border flex items-center justify-center mb-3">
-                  <Download className="w-5 h-5 text-gray-900" />
+                <div className="w-12 h-12 p-3 rounded-xl bg-card border flex items-center justify-center">
+                  <Import className="w-6 h-6 text-gray-900" />
                 </div>
-                <div className="font-semibold text-sm text-gray-900 mb-0.5">Import Data</div>
+                <div>
+                <div className="font-semibold text-md text-gray-900">Import Data</div>
                 <div className="text-xs text-gray-600">Bring in external data.</div>
+              </div>
               </div>
             )}
           </div>
@@ -766,6 +796,43 @@ const HomePage: React.FC = () => {
           workspaceId={baseForMembers.workspace_id || selectedWorkspaceId || ''}
           baseId={baseForMembers.id}
         />
+      )}
+
+      {/* Create Table Modal - Lazy loaded with Suspense */}
+      {showCreateTableBaseId && (
+        <Suspense fallback={
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]">
+            <Loader />
+          </div>
+        }>
+          <CreateTableModal
+            isOpen={!!showCreateTableBaseId}
+            onClose={() => setShowCreateTableBaseId(null)}
+            baseId={showCreateTableBaseId}
+            existingTables={[]}
+            onCreate={async ({ name, description }: { name: string; description: string }) => {
+              try {
+                const newTable = await createTableMutation.mutateAsync({
+                  base_id: showCreateTableBaseId,
+                  workspace_id: selectedWorkspaceId || '',
+                  title: name,
+                  description: description || '',
+                });
+
+                // Navigate to the newly created table
+                if (selectedWorkspaceId && showCreateTableBaseId && newTable && typeof newTable === 'object' && 'data' in newTable && (newTable as any).data?.id) {
+                  navigateToTable(selectedWorkspaceId, showCreateTableBaseId, (newTable as any).data.id);
+                }
+
+                setShowCreateTableBaseId(null);
+                toast.success('Table created successfully');
+              } catch (err) {
+                console.error('Failed to create table:', err);
+                toast.error('Failed to create table. Please try again.');
+              }
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );
