@@ -74,16 +74,19 @@
         0% {
             transform: translateX(0);
         }
+
         100% {
             transform: translateX(-100%);
         }
     }
 
     @keyframes caret-blink {
+
         0%,
         50% {
             opacity: 1;
         }
+
         51%,
         100% {
             opacity: 0;
@@ -236,12 +239,12 @@
     --color-muted-bg: var(--color-hover-bg);
 
     /* TEXT COLORS - Using YOUR defined colors */
-    --color-text-primary: #181D27;
-    --color-text-secondary: #414651;
-    --color-text-tertiary: #535862;
+    --color-text-primary: rgb(24, 29, 39);
+    --color-text-secondary: rgb(65, 70, 81);
+    --color-text-tertiary: rgb(83, 88, 98);
     --color-text-disabled: var(--color-gray-500);
     --color-text-placeholder: var(--color-gray-500);
-    
+
     /* Alias for backward compatibility (used in modals) */
     --text-color-primary: var(--color-text-primary);
     --text-color-secondary: var(--color-text-secondary);
@@ -266,6 +269,7 @@
 }
 
 @layer base {
+
     /* DARK MODE VARIABLES */
     :root[data-theme="dark"] {
         --color-alpha-white: rgb(23, 23, 23);
