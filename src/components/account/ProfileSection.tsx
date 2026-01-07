@@ -6,7 +6,7 @@ import { UserProfile } from '../../types/userProfile';
 import { useToast } from '../common/Toast';
 import { Loader2, CheckCircle, CloudUpload,X } from 'lucide-react';
 import { AdvancedDropdown } from '../common/dropdown/AdvancedDropdown';
-import { timeZoneOptions } from '../../types/constants';
+import { timeZoneOptions, currencyLocaleOptions } from '../../types/constants';
 import { useFooterButtons } from './AccountSettings';
 import { DateField } from '../common/Fields/DateField';
 import { validateDOB, getYesterdayISO, convertDateToFormat } from '../../utils/dateValidation';
@@ -662,16 +662,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
             Language
           </div>
           <AdvancedDropdown
-            options={[
-              { label: 'English (US)', value: 'en-US' },
-              { label: 'English (GB)', value: 'en-GB' },
-              { label: 'English (IN)', value: 'en-IN' },
-              { label: 'Spanish', value: 'es' },
-              { label: 'French', value: 'fr' },
-              { label: 'German', value: 'de' },
-              { label: 'Japanese', value: 'ja' },
-              { label: 'Chinese', value: 'zh' },
-            ]}
+            options={currencyLocaleOptions}
             value={isEditing ? (formData.locale || '') : (userProfile.locale || '')}
             onChange={(val) => handleInputChange('locale', (val as string) || '')}
             placeholder="Select Language"

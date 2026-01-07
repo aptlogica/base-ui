@@ -15,7 +15,7 @@ export const CreateViewButton: React.FC<CreateViewButtonProps> = ({
     <div className="relative w-full">
       <button
         ref={btnRef}
-        className="flex w-full items-center gap-2 text-left hover:bg-[var(--color-gray-100)] text-[var(--color-brand-700)] mb-1 mt-1 pl-7 pr-3 py-1 rounded-xl transition"
+        className="flex w-full items-center gap-2 text-left hover:bg-[var(--color-gray-100)] text-[var(--color-brand-700)] my-1 pl-10 pr-3 py-1 rounded-xl transition-all ease-in duration-200"
         onClick={() => setOpen(v => !v)}
       >
         <LucideIcons.Plus size={12} className="text-[var(--color-brand-700)]" /> Create View
