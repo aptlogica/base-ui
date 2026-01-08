@@ -233,6 +233,16 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
                   workspaces.map((ws: any) => {
                     const icon = getWorkspaceIcon(ws);
                     const isSelected = ws.id === selectedWorkspaceId;
+
+                    let accessLevelClasses = 'bg-gray-50 text-gray-700 border-gray-200';
+                    if (ws.access_level === 'workspace-read' || ws.access_level === 'base-read') {
+                      accessLevelClasses = 'bg-green-50 text-green-700 border-green-200';
+                    } else if (ws.access_level === 'base') {
+                      accessLevelClasses = 'bg-blue-50 text-blue-700 border-blue-200';
+                    } else if (ws.access_level === 'maintainer') {
+                      accessLevelClasses = 'bg-purple-50 text-purple-700 border-purple-200';
+                    }
+
                     return (
                       <button
                         key={ws.id}
@@ -256,15 +266,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
                             
                             {/* Access Level Badge - Don't show for owner/co-owner */}
                             {ws.access_level && ws.access_level !== 'owner' && ws.access_level !== 'co-owner' && (
-                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full border flex-shrink-0 ${
-                                ws.access_level === 'workspace-read' || ws.access_level === 'base-read'
-                                  ? 'bg-green-50 text-green-700 border-green-200'
-                                  : ws.access_level === 'base'
-                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                  : ws.access_level === 'maintainer'
-                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                  : 'bg-gray-50 text-gray-700 border-gray-200'
-                              }`}>
+                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full border flex-shrink-0 ${accessLevelClasses}`}>
                                 {getRoleLabel(ws.access_level)}
                               </span>
                             )}

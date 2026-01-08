@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useUserRole } from '../useUserRole';
 
@@ -9,7 +9,7 @@ describe('useUserRole', () => {
     mockStorage = new Map();
     
     // Replace sessionStorage completely
-    Object.defineProperty(global, 'sessionStorage', {
+    Object.defineProperty(globalThis, 'sessionStorage', {
       value: {
         getItem: (key: string) => mockStorage.get(key) || null,
         setItem: (key: string, value: string) => mockStorage.set(key, value),

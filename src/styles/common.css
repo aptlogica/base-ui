@@ -6,8 +6,10 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: "Inter", "sans-serif";
+  font-family: "Inter", sans-serif;
   font-size: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-200) var(--color-gray-100);
 }
 
 ::-webkit-scrollbar {
@@ -29,13 +31,6 @@
   background: var(--color-gray-100);
 }
 
-/* Firefox */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-gray-200) var(--color-gray-100);
-}
-
-/* Loading and Error States */
 .loading {
   display: flex;
   align-items: center;
@@ -43,12 +38,6 @@
   height: 100vh;
   font-size: 18px;
   color: var(--textMuted);
-}
-
-/* Flyout Menu Transitions */
-.sidebar-flyout {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-origin: left center;
 }
 
 .sidebar-flyout-bg {
@@ -203,11 +192,6 @@
   @apply fixed top-0 left-14 h-full w-96 bg-sidebar shadow-lg z-50 border-r border-border flex flex-col;
 }
 
-.sidebar-flyout,
-.sidebar-flyout * {
-  font-size: 14px !important;
-}
-
 .sidebar-flyout-header {
   @apply p-[5px] border-b flex items-center gap-1 bg-[var(--color-gray-50)];
 }
@@ -241,7 +225,6 @@
 }
 
 .field-component {
-  /* box-shadow: var(--shadow-xs); */
   @apply w-[99%] text-xs px-3 h-11 flex items-center rounded-[var(--radius-lg)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)] bg-[--color-alpha-white] outline-none cursor-pointer transition-all duration-200;
 }
 
@@ -434,7 +417,7 @@
   }
 
   .theme-toggle-animation {
-    @apply transform scale-95 transition-transform duration-200
+    @apply transform scale-95 transition-all duration-200
   }
 
   /* Responsive modal sizing */

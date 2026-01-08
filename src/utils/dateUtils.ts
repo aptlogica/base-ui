@@ -1,10 +1,6 @@
 import { DateTime } from "luxon";
 
 /**
- * Utility functions for date formatting and handling
- */
-
-/**
  * Format a date string to a readable format
  * @param dateStr - The date string to format (ISO string, timestamp, etc.)
  * @param options - Formatting options
@@ -44,7 +40,7 @@ export const formatDate = (
     const date = new Date(dateStr);
     
     // Check if date is valid
-    if (isNaN(date.getTime())) {
+    if (Number.isNaN(date.getTime())) {
       return 'N/A';
     }
 
@@ -68,7 +64,7 @@ export const formatRelativeDate = (dateStr: string | null | undefined): string =
   try {
     const date = new Date(dateStr);
     
-    if (isNaN(date.getTime())) {
+    if (Number.isNaN(date.getTime())) {
       return 'N/A';
     }
 
@@ -97,6 +93,23 @@ export const formatRelativeDate = (dateStr: string | null | undefined): string =
     console.warn('Relative date formatting error:', error);
     return 'N/A';
   }
+};
+
+/**
+ * Extract the relative time portion from a "Last modified" label.
+ * Expects strings in the form "Last modified X" where X is produced by formatRelativeDate
+ * (e.g., "Last modified 5 minutes ago"). Returns just the X portion.
+ */
+export const extractRelativeTimePart = (label: string): string => {
+  if (!label) return '';
+
+  const prefix = 'Last modified ';
+  if (label.startsWith(prefix)) {
+    const timePart = label.slice(prefix.length).trim();
+    return timePart === 'N/A' ? '' : timePart;
+  }
+
+  return '';
 };
 
 /**

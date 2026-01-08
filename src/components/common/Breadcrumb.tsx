@@ -349,9 +349,24 @@ const Breadcrumb: React.FC = () => {
     }
 
     try {
+      // Get current bases BEFORE deletion
+      const currentBases = ((workspaceBasesQuery.data as any)?.data || []) as any[];
+      const remainingBases = currentBases.filter((base: any) => base.id !== deletingBase.id);
+
       await deleteBaseMutation.mutateAsync(deletingBase.id);
 
-      // Use the navigation handler to properly clean up localStorage
+      // Handle navigation BEFORE calling handleBaseDeletion
+      if (remainingBases.length > 0 && selectedWorkspaceId) {
+        try {
+          await navigateToFirstView(remainingBases[0].id);
+        } catch (err) {
+          navigate('/homepage');
+        }
+      } else {
+        navigate('/homepage');
+      }
+
+      // Now clean up navigation state
       handleBaseDeletion(deletingBase.id);
 
       // Invalidate queries to refresh the list
@@ -613,7 +628,7 @@ const Breadcrumb: React.FC = () => {
                   viewDropdownRef
             }>
               <div
-                className="flex items-center gap-1.5 cursor-pointer rounded px-2 py-1 transition-colors hover:bg-gray-100 group"
+                className="flex items-center gap-1.5 cursor-pointer rounded-xl px-2 py-1 transition-colors hover:bg-gray-100 group"
                 onClick={(e) => handleSegmentClick(e, item.type)}
               >
                 {item.icon}

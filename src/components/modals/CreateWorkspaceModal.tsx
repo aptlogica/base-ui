@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, HelpCircle, Plus } from 'lucide-react';
-import { useCreateWorkspace } from '../../hooks/useApi';
+import { useCreateWorkspace, useWorkspaces } from '../../hooks/useApi';
 import { useToast } from '../common/Toast';
 import { MultiLineText } from '../common/Fields';
+import { validateWorkspaceName } from '../../utils/nameValidation';
 
 interface CreateWorkspaceModalProps {
   isOpen: boolean;
@@ -34,13 +35,18 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   onSubmit: controlledSubmit,
 }) => {
   const internalMutation = useCreateWorkspace();
+  const { data: workspacesData } = useWorkspaces();
   const toast = useToast();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
+  const [validationError, setValidationError] = useState('');
 
   const isControlled = typeof controlledName !== 'undefined' && typeof setControlledName === 'function';
+  
+  // Get existing workspaces for validation
+  const existingWorkspaces = Array.isArray(workspacesData) ? workspacesData : [];
 
   useEffect(() => {
     if (isOpen) {
@@ -48,6 +54,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
         setName('');
         setDescription('');
         setError('');
+        setValidationError('');
       } else {
         // when controlled, keep local fields in sync with controlled values
         setName(controlledName || '');
@@ -63,6 +70,16 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
       setDescription(controlledDescription || '');
     }
   }, [controlledName, controlledDescription, isControlled]);
+  
+  // Validate name on change
+  useEffect(() => {
+    if (name.trim()) {
+      const validation = validateWorkspaceName(name, existingWorkspaces);
+      setValidationError(validation.error || '');
+    } else {
+      setValidationError('');
+    }
+  }, [name, existingWorkspaces]);
 
   const submitting = internalMutation.isPending;
 
@@ -77,6 +94,18 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
         controlledError && toast.error(controlledError);
       } else {
         setError('Workspace name is required');
+      }
+      return;
+    }
+
+    // Check for validation errors
+    const validation = validateWorkspaceName(title, existingWorkspaces);
+    if (!validation.isValid) {
+      if (isControlled) {
+        toast.error(validation.error || 'Invalid workspace name');
+      } else {
+        setError(validation.error || 'Invalid workspace name');
+        setValidationError(validation.error || '');
       }
       return;
     }
@@ -100,6 +129,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
         setName('');
         setDescription('');
         setError('');
+        setValidationError('');
       }
 
       onClose();
@@ -168,7 +198,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
                 value={isControlled ? (controlledName || '') : name}
                 onChange={(e) => (isControlled ? setControlledName?.(e.target.value) : setName(e.target.value))}
                 placeholder="Enter workspace name"
-                className={`field-component field-component-border field-component-focus ${(!isControlled && error) || (isControlled && controlledError) ? 'border-red-500' : 'border'}`}
+                className={`field-component field-component-border field-component-focus ${validationError || (!isControlled && error) || (isControlled && controlledError) ? 'border-red-500' : 'border'}`}
                 required
                 minLength={3}
                 maxLength={50}
@@ -176,12 +206,15 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
               />
               <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
                 <span className="relative inline-block group">
-                  <HelpCircle className={`w-4 h-4 ${( (!isControlled && error) || (isControlled && controlledError) ) ? 'text-red-500' : ( (isControlled ? (controlledName || '').trim().length >=3 : name.trim().length >=3) ? 'text-green-600' : 'text-gray-400' )} cursor-help`} />
+                  <HelpCircle className={`w-4 h-4 ${validationError || ((!isControlled && error) || (isControlled && controlledError)) ? 'text-red-500' : ((isControlled ? (controlledName || '').trim().length >=3 : name.trim().length >=3) ? 'text-green-600' : 'text-gray-400')} cursor-help`} />
                   <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                     <h4 className="font-medium mb-2">Workspace name requirements:</h4>
                     <ul className="space-y-1">
                       <li className={`flex items-center ${(isControlled ? (controlledName || '').trim().length >= 3 : name.trim().length >= 3) ? 'text-green-600' : 'text-gray-500'}`}>
                         • Minimum 3 characters
+                      </li>
+                      <li className="flex items-center text-gray-500">
+                        • Must be unique
                       </li>
                     </ul>
                   </div>
@@ -189,9 +222,9 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
               </div>
             </div>
 
-            {((!isControlled && error) || (isControlled && controlledError)) && (
+            {(validationError || (!isControlled && error) || (isControlled && controlledError)) && (
               <div className="mt-1 text-sm text-red-600">
-                <span>{isControlled ? controlledError : error}</span>
+                <span>{validationError || (isControlled ? controlledError : error)}</span>
               </div>
             )}
 
@@ -221,7 +254,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={submitting || !(isControlled ? (controlledName || '').trim().length >= 3 : name.trim().length >= 3)}
+              disabled={submitting || !!validationError || !(isControlled ? (controlledName || '').trim().length >= 3 : name.trim().length >= 3)}
               className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {submitting && <Loader2 size={16} className="animate-spin" />}

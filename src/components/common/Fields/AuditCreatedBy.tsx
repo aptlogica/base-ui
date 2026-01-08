@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { useCurrentUser, getUserInitials } from "../../../auth/useCurrentUser";
 import { useUserProfile } from "../../../hooks/useApi";
 
