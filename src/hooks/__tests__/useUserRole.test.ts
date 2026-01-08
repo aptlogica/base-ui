@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useUserRole } from '../useUserRole';
+import { ROLES } from '../../types/roles';
 
 describe('useUserRole', () => {
   let mockStorage: Map<string, string>;
@@ -33,46 +34,172 @@ describe('useUserRole', () => {
       expect(result.current.getRole()).toBeNull();
     });
 
-    it('should return role from sessionStorage', () => {
+    it('should return role from user_token_data when available', () => {
+      sessionStorage.setItem('user_token_data', JSON.stringify({ roles: 'owner' }));
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.getRole()).toBe('owner');
+    });
+
+    it('should fallback to user_role when user_token_data is not present', () => {
       sessionStorage.setItem('user_role', 'owner');
       const { result } = renderHook(() => useUserRole());
       expect(result.current.getRole()).toBe('owner');
     });
+
+    it('should handle invalid JSON in user_token_data gracefully', () => {
+      sessionStorage.setItem('user_token_data', 'invalid-json');
+      sessionStorage.setItem('user_role', 'maintainer');
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.getRole()).toBe('maintainer');
+    });
   });
 
   describe('hasRole', () => {
-    it('should return false when role is not present', () => {
+    it('should return false when role does not match', () => {
       sessionStorage.setItem('user_role', 'maintainer');
       const { result } = renderHook(() => useUserRole());
       expect(result.current.hasRole('owner')).toBe(false);
     });
 
-    it('should return true when role is present', () => {
+    it('should return true when role matches', () => {
       sessionStorage.setItem('user_role', 'owner');
       const { result } = renderHook(() => useUserRole());
       expect(result.current.hasRole('owner')).toBe(true);
     });
 
-    it('should return false when no roles are stored', () => {
+    it('should return false when no role is stored', () => {
       const { result } = renderHook(() => useUserRole());
       expect(result.current.hasRole('owner')).toBe(false);
     });
   });
 
-  describe('isAdmin', () => {
-    it('should return true when user has Admin role', () => {
-      sessionStorage.setItem('user_role', 'owner');
+  describe('isOwner', () => {
+    it('should return true when user has owner role', () => {
+      sessionStorage.setItem('user_role', ROLES.Owner);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.isOwner()).toBe(true);
+    });
+
+    it('should return false when user does not have owner role', () => {
+      sessionStorage.setItem('user_role', ROLES.CoOwner);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.isOwner()).toBe(false);
+    });
+  });
+
+  describe('isCoOwner', () => {
+    it('should return true when user has co-owner role', () => {
+      sessionStorage.setItem('user_role', ROLES.CoOwner);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.isCoOwner()).toBe(true);
+    });
+
+    it('should return false when user does not have co-owner role', () => {
+      sessionStorage.setItem('user_role', ROLES.Owner);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.isCoOwner()).toBe(false);
+    });
+  });
+
+  describe('isMaintainer', () => {
+    it('should return true when user has maintainer role', () => {
+      sessionStorage.setItem('user_role', ROLES.WorkspaceMaintainer);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.isMaintainer()).toBe(true);
+    });
+
+    it('should return false when user does not have maintainer role', () => {
+      sessionStorage.setItem('user_role', ROLES.Owner);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.isMaintainer()).toBe(false);
+    });
+  });
+
+  describe('isBaseMember', () => {
+    it('should return true when user has base member role', () => {
+      sessionStorage.setItem('user_role', ROLES.BaseMember);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.isBaseMember()).toBe(true);
+    });
+
+    it('should return false when user does not have base member role', () => {
+      sessionStorage.setItem('user_role', ROLES.Owner);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.isBaseMember()).toBe(false);
+    });
+  });
+
+  describe('hasAdminRole', () => {
+    it('should return true when user is owner', () => {
+      sessionStorage.setItem('user_role', ROLES.Owner);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.hasAdminRole()).toBe(true);
+    });
+
+    it('should return true when user is co-owner', () => {
+      sessionStorage.setItem('user_role', ROLES.CoOwner);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.hasAdminRole()).toBe(true);
+    });
+
+    it('should return false when user is maintainer', () => {
+      sessionStorage.setItem('user_role', ROLES.WorkspaceMaintainer);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.hasAdminRole()).toBe(false);
+    });
+
+    it('should return false when no role is stored', () => {
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.hasAdminRole()).toBe(false);
+    });
+  });
+
+  describe('hasFullAccessRole', () => {
+    it('should return true when user is owner', () => {
+      sessionStorage.setItem('user_role', ROLES.Owner);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.hasFullAccessRole()).toBe(true);
+    });
+
+    it('should return true when user is co-owner', () => {
+      sessionStorage.setItem('user_role', ROLES.CoOwner);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.hasFullAccessRole()).toBe(true);
+    });
+
+    it('should return true when user is maintainer', () => {
+      sessionStorage.setItem('user_role', ROLES.WorkspaceMaintainer);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.hasFullAccessRole()).toBe(true);
+    });
+
+    it('should return false when user is base member', () => {
+      sessionStorage.setItem('user_role', ROLES.BaseMember);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.hasFullAccessRole()).toBe(false);
+    });
+  });
+
+  describe('isAdmin (backward compatibility)', () => {
+    it('should return true when user is owner', () => {
+      sessionStorage.setItem('user_role', ROLES.Owner);
       const { result } = renderHook(() => useUserRole());
       expect(result.current.isAdmin()).toBe(true);
     });
 
-    it('should return false when user does not have Admin role', () => {
-      sessionStorage.setItem('user_roles', JSON.stringify(['User']));
+    it('should return true when user is co-owner', () => {
+      sessionStorage.setItem('user_role', ROLES.CoOwner);
+      const { result } = renderHook(() => useUserRole());
+      expect(result.current.isAdmin()).toBe(true);
+    });
+
+    it('should return false when user does not have admin role', () => {
+      sessionStorage.setItem('user_role', ROLES.WorkspaceMaintainer);
       const { result } = renderHook(() => useUserRole());
       expect(result.current.isAdmin()).toBe(false);
     });
 
-    it('should return false when no roles are stored', () => {
+    it('should return false when no role is stored', () => {
       const { result } = renderHook(() => useUserRole());
       expect(result.current.isAdmin()).toBe(false);
     });
