@@ -221,7 +221,7 @@ const LogIn: React.FC = () => {
           <div className="pl-8 md:pl-12 lg:pl-16 xl:pl-20 flex-1 min-h-0 overflow-hidden">
             <div className="bg-white rounded-tl-2xl shadow-2xl overflow-hidden w-[115%] lg:w-[120%] xl:w-[125%] 2xl:w-[130%] h-full">
               <img
-                src="/assets/CalendarVIewImage.png"
+                src="/assets/login-image.png"
                 alt="Calendar View Preview"
                 className="w-full h-full object-cover object-left-top"
               />

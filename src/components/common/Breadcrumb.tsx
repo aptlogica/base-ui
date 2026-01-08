@@ -235,7 +235,7 @@ const Breadcrumb: React.FC = () => {
 
       // Use image if available, otherwise use initial with colored background
       const baseIconElement = baseImage ? (
-        <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
+        <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0">
           <img
             src={baseImage}
             alt={baseName}
@@ -243,7 +243,7 @@ const Breadcrumb: React.FC = () => {
           />
         </div>
       ) : (
-        <div className={`w-8 h-8 ${baseIcon.color} rounded-lg flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}>
+        <div className={`w-7 h-7 ${baseIcon.color} rounded-lg flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}>
           {baseIcon.letter}
         </div>
       );
@@ -821,7 +821,7 @@ const Breadcrumb: React.FC = () => {
               </div>
               <div className="mb-4">
                 <p className="text-sm text-primary">
-                  <strong>Are you sure you want to proceed? This deletion cannot be reversed. </strong>
+                  <strong>Are you sure you want to proceed? This deletion cannot be reversed.</strong>
                   Confirming this action will permanently delete this base and all of its related contents.
                 </p>
               </div>
