@@ -17,7 +17,7 @@ import { BaseMenu } from '../components/common/BaseMenu';
 import { useToast } from '../components/common/Toast';
 import { useWorkspaceAccess } from '../hooks/useWorkspaceAccess';
 import { useBaseAccess } from '../hooks/useBaseAccess';
-import { formatRelativeDate } from '../utils/dateUtils';
+import { formatRelativeDate, extractRelativeTimePart } from '../utils/dateUtils';
 import { getRoleLabel } from '../types/roles';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser, getUserDisplayName } from '../auth/useCurrentUser';
@@ -47,7 +47,9 @@ const BaseMenuWrapper: React.FC<{
   }
 
   return (
-    <div onClick={(e) => e.stopPropagation()}>
+    <div
+      onClick={(e) => e.stopPropagation()}
+    >
       <BaseMenu
         base={base}
         onEdit={onEdit}
@@ -437,7 +439,8 @@ const HomePage: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-4 flex-shrink-0 w-full lg:w-auto">
             {/* Create New Base - Hidden if access level is base-member */}
             {accessLevel !== 'limited_access' && (
-              <div
+              <button
+                type="button"
                 onClick={() => {
                   if (!selectedWorkspaceId) {
                     toast.error('Please select a workspace first');
@@ -449,7 +452,7 @@ const HomePage: React.FC = () => {
                   }
                   setShowCreateBase(true);
                 }}
-                className="rounded-xl bg-card border px-5 py-5 flex items-start gap-3 cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px]"
+                className="rounded-xl bg-card border px-5 py-5 flex items-start gap-3 cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px] text-left"
               >
                 <div className="w-12 h-12 rounded-xl bg-card border flex items-center justify-center">
                   <Plus className="w-6 h-6 text-gray-900" />
@@ -458,14 +461,15 @@ const HomePage: React.FC = () => {
                   <div className="font-semibold text-md text-gray-900">Create New Base</div>
                   <div className="text-xs text-gray-600">Creates a new base.</div>
                 </div>
-              </div>
+              </button>
             )}
 
             {/* Import Data - Hidden if access level is base-member */}
             {accessLevel !== 'limited_access' && (
-              <div
+              <button
+                type="button"
                 onClick={() => setShowImportData(true)}
-                className="rounded-xl bg-card border px-5 py-5 flex items-start gap-3 cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px]"
+                className="rounded-xl bg-card border px-5 py-5 flex items-start gap-3 cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px] text-left"
               >
                 <div className="w-12 h-12 p-3 rounded-xl bg-card border flex items-center justify-center">
                   <Import className="w-6 h-6 text-gray-900" />
@@ -474,7 +478,7 @@ const HomePage: React.FC = () => {
                   <div className="font-semibold text-md text-gray-900">Import Data</div>
                   <div className="text-xs text-gray-600">Bring in external data.</div>
                 </div>
-              </div>
+              </button>
             )}
           </div>
         </div>
@@ -584,8 +588,7 @@ const HomePage: React.FC = () => {
             const icon = getBaseIcon(base, index);
             const lastModified = formatLastModified(base.updated_time || base.created_time);
             // Extract the time part (e.g., "30 minutes ago") to make it bold
-            const timeMatch = lastModified.match(/(\d+\s+(?:minute|hour|day|week|month|year)s?\s+ago)/i);
-            const timePart = timeMatch ? timeMatch[1] : '';
+            const timePart = extractRelativeTimePart(lastModified);
 
             // Check for base image (same logic as breadcrumb)
             const baseImage = base.image || base.logo || base.meta?.image;

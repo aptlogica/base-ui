@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useWorkspaceData } from '../useWorkspaceData';
 import * as useApi from '../useApi';
-import * as clientService from '../../service/clientService';
 
 // Mock dependencies
 vi.mock('../useApi', () => ({

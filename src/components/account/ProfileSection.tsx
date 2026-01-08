@@ -113,7 +113,6 @@ export const ProfileSection: React.FC = () => { // NOSONAR
   const removeAvatarMutation = useRemoveAvatar(authUser?.id || '');
 
   // Avatar states
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
@@ -187,14 +186,14 @@ export const ProfileSection: React.FC = () => { // NOSONAR
         <button
           onClick={handleCancel}
           disabled={isSaving}
-          className="flex items-center gap-2 px-6 py-2.5 text-sm border text-gray-700 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50 transition-colors"
+          className="flex items-center gap-2 px-16 py-2 text-sm border text-gray-700 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50 transition-colors"
         >
           Cancel
         </button>
         <button
           onClick={handleSave}
           disabled={!hasChanges || isSaving || updateProfileMutation.isPending}
-          className="flex items-center gap-2 px-6 py-2.5 text-sm btn-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-primary"
+          className="flex items-center gap-2 px-16 py-2 text-sm btn-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-primary"
         >
           {(isSaving || updateProfileMutation.isPending) && (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -211,7 +210,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
             }
             setIsEditing(true);
           }}
-          className="flex items-center gap-2 px-6 py-2.5 text-sm btn-primary transition-colors rounded-xl text-primary"
+          className="flex items-center gap-2 px-16 py-2 text-sm btn-primary transition-colors rounded-xl text-primary"
         >
           Edit
         </button>
@@ -430,7 +429,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
       avatarUploadStateClass = 'border hover:border-green-500 bg-gray-50 cursor-pointer';
     }
   }
-  const avatarUploadBusyClass = (isUploadingAvatar || addOrUpdateAvatarMutation.isPending) ? 'opacity-50 cursor-not-allowed' : '';
+  const avatarUploadBusyClass = (addOrUpdateAvatarMutation.isPending) ? 'opacity-50 cursor-not-allowed' : '';
 
   const activeCountry = isEditing ? (formData.country || '') : (userProfile.country || '');
   const tzDropdownOptions = getTimeZonesForCountry(activeCountry)
@@ -446,7 +445,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
   }
 
   const triggerAvatarInput = () => {
-    if (!isEditing || isUploadingAvatar || addOrUpdateAvatarMutation.isPending) return;
+    if (!isEditing || addOrUpdateAvatarMutation.isPending) return;
     document.getElementById('avatar-upload-input')?.click();
   };
 
@@ -535,13 +534,13 @@ export const ProfileSection: React.FC = () => { // NOSONAR
                     alt="Profile"
                     className="w-full h-full object-cover"
                   />
-                  {(isUploadingAvatar || addOrUpdateAvatarMutation.isPending) && (
+                  {(addOrUpdateAvatarMutation.isPending) && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                       <Loader2 className="w-5 h-5 animate-spin text-primary" />
                     </div>
                   )}
                 </div>
-                {isEditing && !isUploadingAvatar && !addOrUpdateAvatarMutation.isPending && (
+                {isEditing && !addOrUpdateAvatarMutation.isPending && (
                   <button
                     type="button"
                     onClick={(e) => {
@@ -580,7 +579,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
                     type="file"
                     accept="image/*"
                     onChange={handleAvatarUpload}
-                    disabled={isUploadingAvatar || addOrUpdateAvatarMutation.isPending}
+                    disabled={addOrUpdateAvatarMutation.isPending}
                     className="hidden"
                   />
                   <CloudUpload className={`w-12 h-12 ${isDragging ? 'text-[var(--color-brand-600)]' : 'text-gray-400'} mx-auto mb-3`} />
@@ -606,7 +605,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
                 type="file"
                 accept="image/*"
                 onChange={handleAvatarUpload}
-                disabled={isUploadingAvatar || addOrUpdateAvatarMutation.isPending}
+                disabled={addOrUpdateAvatarMutation.isPending}
                 className="hidden"
               />
               <CloudUpload className={`w-12 h-12 ${isDragging ? 'text-[var(--color-brand-600)]' : 'text-gray-400'} mx-auto mb-3`} />

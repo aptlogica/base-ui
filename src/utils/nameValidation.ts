@@ -55,7 +55,6 @@ export const isNameDuplicate = (
 export const generateUniqueName = (
   baseName: string,
   existingItems: ExistingItem[],
-  entityType: string = 'item'
 ): string => {
   const trimmedName = baseName.trim();
   
@@ -64,12 +63,14 @@ export const generateUniqueName = (
   }
 
   // Get all existing names (case-insensitive)
-  const existingNames = existingItems.map(item => 
-    (item.model?.title || item.name || item.title || item.key || '').trim().toLowerCase()
+  const existingNames = new Set(
+    existingItems.map(item =>
+      (item.model?.title || item.name || item.title || item.key || '').trim().toLowerCase()
+    )
   );
 
   // If the base name is unique, return it
-  if (!existingNames.includes(trimmedName.toLowerCase())) {
+  if (!existingNames.has(trimmedName.toLowerCase())) {
     return trimmedName;
   }
 
@@ -77,7 +78,7 @@ export const generateUniqueName = (
   let counter = 1;
   let candidateName = `${trimmedName} ${counter}`;
   
-  while (existingNames.includes(candidateName.toLowerCase())) {
+  while (existingNames.has(candidateName.toLowerCase())) {
     counter++;
     candidateName = `${trimmedName} ${counter}`;
   }
@@ -153,7 +154,7 @@ export const validateViewName = (
  * Generates default table name
  */
 export const getDefaultTableName = (existingTables: ExistingItem[] = []): string => {
-  return generateUniqueName('New Table', existingTables, 'table');
+  return generateUniqueName('New Table', existingTables);
 };
 
 /**
@@ -189,10 +190,42 @@ export const validateBaseName = (
 };
 
 /**
+ * Validates workspace name
+ */
+export const validateWorkspaceName = (
+  name: string,
+  existingWorkspaces: ExistingItem[] = [],
+  currentItemId?: string
+): { isValid: boolean; error?: string } => {
+  const trimmedName = name.trim();
+
+  if (!trimmedName) {
+    return { isValid: false, error: 'Workspace name is required' };
+  }
+
+  if (trimmedName.length < 3) {
+    return { isValid: false, error: 'Workspace name must be at least 3 characters' };
+  }
+
+  if (trimmedName.length > 50) {
+    return { isValid: false, error: 'Workspace name must be less than 50 characters' };
+  }
+
+  if (isNameDuplicate(trimmedName, existingWorkspaces, currentItemId)) {
+    return {
+      isValid: false,
+      error: 'Workspace name already exists'
+    };
+  }
+
+  return { isValid: true };
+};
+
+/**
  * Generates default view name based on type
  */
 export const getDefaultViewName = (viewType: string, existingViews: ExistingItem[] = []): string => {
   const typeName = viewType.charAt(0).toUpperCase() + viewType.slice(1).replace(/([A-Z])/g, ' $1');
   const baseName = `${typeName} View`;
-  return generateUniqueName(baseName, existingViews, 'view');
+  return generateUniqueName(baseName, existingViews);
 };

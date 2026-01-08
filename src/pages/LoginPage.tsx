@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Info, Eye, EyeOff } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from '../auth/AuthContext';
-import formText from '../config/formText';
 import { login as apiLogin, resendOtp } from '../service/clientService';
 import { useToast } from "../components/common/Toast";
 
@@ -116,7 +115,7 @@ const LogIn: React.FC = () => {
           </div>
           
           <h2 className="text-3xl font-bold text-foreground text-left">Welcome back</h2>
-          <p className="text-base lg:text-lg text-white/90 leading-relaxed drop-shadow-md">{formText.login.description2}</p>
+          <p className="text-base lg:text-lg text-white/90 leading-relaxed drop-shadow-md">Welcome back! Please enter your details.</p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
               <label className="field-component-label">Email
@@ -131,7 +130,7 @@ const LogIn: React.FC = () => {
                   else if (!validateEmail(formData.email.trim())) setEmailError("Please enter a valid email address");
                   else setEmailError(null);
                 }}
-                placeholder={formText.login.emailPlaceholder}
+                placeholder="Email"
                 className={`field-component field-component-border field-component-focus ${emailError ? "border-destructive bg-red-50" : ""}`}
                 style={{ boxShadow: "var(--shadow-xs)" }}
               />
@@ -158,7 +157,7 @@ const LogIn: React.FC = () => {
                       setPasswordError(null);
                     }
                   }}
-                  placeholder={formText.login.passwordPlaceholder}
+                  placeholder="Password"
                   className={`field-component field-component-border field-component-focus ${passwordError ? "border-destructive bg-red-50" : ""}`}
                   style={{ boxShadow: "var(--shadow-xs)" }}
                 />
@@ -189,7 +188,7 @@ const LogIn: React.FC = () => {
                 />
                 Remember me
               </label>
-              <Link to="/forgot-password" className="text-primary hover:underline">{formText.login.forgotPassword}</Link>
+              <Link to="/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
             </div>
             {error && <div className="text-destructive text-sm text-center">{error}</div>}
             <button
@@ -197,7 +196,7 @@ const LogIn: React.FC = () => {
               disabled={isSendingOtp}
               className="w-full btn-primary py-2 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSendingOtp ? 'Sending OTP...' : formText.login.signIn}
+              {isSendingOtp ? 'Sending OTP...' : 'Sign in'}
             </button>
           </form>
         </div>
@@ -213,8 +212,8 @@ const LogIn: React.FC = () => {
           {/* Promotional Text - Top Left, Consistent Alignment */}
           <div className="pl-8 md:pl-12 lg:pl-16 xl:pl-20 pr-8 md:pr-12 lg:pr-16 mb-10 md:mb-14 lg:mb-16 xl:mb-20">
             <div className="space-y-4 text-left max-w-xl lg:max-w-2xl">
-              <h1 className="text-3xl lg:text-4xl xl:text-4xl 2xl:text-6xl font-bold text-black leading-tight">{formText.login.subtitle}</h1>
-              <p className="text-base lg:text-lg xl:text-xl text-black leading-relaxed">{formText.login.description3}</p>
+              <h1 className="text-3xl lg:text-4xl xl:text-4xl 2xl:text-6xl font-bold text-black leading-tight">Build powerful databases with ease.</h1>
+              <p className="text-base lg:text-lg xl:text-xl text-black leading-relaxed">Create, manage, and collaborate on databases with our intuitive platform. Organize your data, build custom views, and scale your applications effortlessly.</p>
             </div>
           </div>
 

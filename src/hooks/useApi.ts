@@ -115,10 +115,9 @@ export const useWorkspaces = () => {
     queryKey: queryKeys.workspaces,
     queryFn: async () => {
       try {
-        // const result: any = await getAllWorkspacesService();
         const result: any = await getWorkspacesByUser();
         // Ensure we return the data in the expected format
-        const data = result?.data as any;
+        const data = result?.data;
         if (data) {
           return Array.isArray(data) ? data : [];
         }

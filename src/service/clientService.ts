@@ -93,7 +93,7 @@ export const getStoredRefreshToken = (): string => {
 const getTokenExpiry = (): number => {
   try {
     const expiry = sessionStorage.getItem('_te_');
-    return expiry ? parseInt(expiry) : 0;
+    return expiry ? Number(expiry) : 0;
   } catch {
     return 0;
   }
@@ -106,7 +106,7 @@ const getTokenExpiry = (): number => {
 const getRefreshTokenExpiry = (): number => {
   try {
     const expiry = sessionStorage.getItem('_rte_');
-    return expiry ? parseInt(expiry) : 0;
+    return expiry ? Number(expiry) : 0;
   } catch {
     return 0;
   }

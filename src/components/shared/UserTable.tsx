@@ -1040,12 +1040,12 @@ export const UserTable: React.FC<UserTableProps> = ({
                           const userIsCoOwner = roles.some(role =>
                             role.toLowerCase() === 'co-owner'
                           );
-                          
+
                           // Co-owner cannot see action button for Owner users or other Co-owners
                           if (isCoOwner() && (userIsOwner || userIsCoOwner)) {
                             return null;
                           }
-                          
+
                           // Show action button if there are any actions available
                           if (onRemoveUser || onEditUser || onActivateUser || onDeactivateUser) {
                             return (
@@ -1176,7 +1176,7 @@ export const UserTable: React.FC<UserTableProps> = ({
             const status = user.status?.toLowerCase();
             const isActive = status === 'active' && user.email_verified;
             const isDeactivated = status === 'deactivated';
-            
+
             if (isActive && onDeactivateUser) {
               return (
                 <button
