@@ -5,6 +5,7 @@ import { useWorkspaces, useWorkspaceBases, useBaseTables, useTableViews } from '
 import { useNavigationStore } from '../stores/navigationStore';
 import { replaceNavigate } from '../utils/navigationRedirect';
 import { getBestNavigationTarget } from '../utils/navigationPersistence';
+import { usePluginStore } from '../stores/pluginStore';
 
 /**
  * NavigationResolver - Resolves and navigates to saved view BEFORE workspace page renders
@@ -36,7 +37,11 @@ export const NavigationResolver: React.FC = () => {
     selectedBaseId,
     selectedTableId,
     selectedViewId,
+    getNavigationPath,
   } = useNavigationStore();
+
+  // Flyout management
+  const { openFlyout, closeFlyout } = usePluginStore();
   
   // Load workspaces to validate navigation state
   const { data: workspacesData, isLoading: workspacesLoading } = useWorkspaces();
@@ -75,7 +80,6 @@ export const NavigationResolver: React.FC = () => {
     // Excluded routes where we should NOT redirect (user intentionally navigated here)
     const excludedRoutes = [
       '/workspace', // Only exclude base /workspace, not /workspace/:id paths
-      '/projects',
       '/reset-password'
     ];
     
@@ -401,6 +405,8 @@ export const NavigationResolver: React.FC = () => {
           // Update navigation store BEFORE navigating to ensure consistency
           const { navigateToView } = useNavigationStore.getState();
           navigateToView(selectedWorkspaceId, selectedBaseId, selectedTableId, selectedViewId);
+          // Open flyout for base/table/view routes
+          openFlyout('workspace-flyout-menu');
           replaceNavigate(navigate, targetPath);
         }
         resolvedRef.current = true;
@@ -437,6 +443,8 @@ export const NavigationResolver: React.FC = () => {
       // But also auto-select first base so homepage has something to show
       if (currentPath !== '/homepage') {
         debug('NavigationResolver: No saved view - navigating to homepage');
+        // Close flyout on homepage
+        closeFlyout();
         replaceNavigate(navigate, '/homepage');
       }
       
@@ -501,6 +509,8 @@ export const NavigationResolver: React.FC = () => {
               // Update navigation store BEFORE navigating
               const { navigateToView } = useNavigationStore.getState();
               navigateToView(workspaceId, baseId, tableId, viewId);
+              // Open flyout for base/table/view routes
+              openFlyout('workspace-flyout-menu');
               debug('NavigationResolver: ✅ Auto-selecting first available view', {
                 targetPath,
                 workspaceId,

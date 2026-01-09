@@ -628,7 +628,7 @@ const Breadcrumb: React.FC = () => {
                   viewDropdownRef
             }>
               <div
-                className="flex items-center gap-1.5 cursor-pointer rounded-xl px-2 py-1 transition-colors hover:bg-gray-100 group"
+                className="flex items-center gap-1.5 cursor-pointer rounded px-2 py-1 transition-colors hover:bg-gray-100 group"
                 onClick={(e) => handleSegmentClick(e, item.type)}
               >
                 {item.icon}

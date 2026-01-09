@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import { resolveWorkspaceIdFromBaseId } from '../utils/navigationPersistence';
 import { buildWorkspaceIndex } from '../utils/navigationIndex';
 import useWorkspaceData from './useWorkspaceData';
+import { usePluginStore } from '../stores/pluginStore';
 
 /**
  * Navigation hook that syncs Zustand store with React Router
@@ -31,6 +32,9 @@ export const useNavigation = () => {
     saveUserNavigation,
     updateActivityData
   } = useNavigationStore();
+
+  // Flyout management for layout navigation
+  const { openFlyout, closeFlyout } = usePluginStore();
 
   // Sync URL params with store on mount and route changes
   useEffect(() => {
@@ -161,12 +165,16 @@ export const useNavigation = () => {
   const navigateToWorkspaceWithUrl = (workspaceId: string) => {
     navigateToWorkspace(workspaceId);
     navigate(`/workspace/${workspaceId}`);
+    // Close flyout on workspace route (not a base route)
+    closeFlyout();
     // No API call - cached in sessionStorage only
   };
 
   const navigateToBaseWithUrl = (workspaceId: string, baseId: string) => {
     navigateToBase(workspaceId, baseId);
     navigate(`/base/${baseId}`);
+    // Open flyout for base routes
+    openFlyout('workspace-flyout-menu');
     // No API call - cached in sessionStorage only
   };
 
@@ -174,12 +182,16 @@ export const useNavigation = () => {
     // Default to grid view route for consistency with router
     navigateToTable(workspaceId, baseId, tableId);
     navigate(`/base/${baseId}/table/${tableId}/grid`);
+    // Open flyout for table/view routes
+    openFlyout('workspace-flyout-menu');
     // No API call - cached in sessionStorage only
   };
 
   const navigateToViewWithUrl = (workspaceId: string, baseId: string, tableId: string, viewId: string) => {
     navigateToView(workspaceId, baseId, tableId, viewId);
     navigate(`/base/${baseId}/table/${tableId}/${viewId}`);
+    // Open flyout for view routes
+    openFlyout('workspace-flyout-menu');
     // No API call - cached in sessionStorage only
   };
 

@@ -65,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     createTableMutation,
     createViewMutation,
     // Plugin store state
-    flyoutMode, flyoutOpen, isTransitioning,
+    flyoutOpen, isTransitioning,
   } = useWorkspaceBusinessLogic();
 
   // Use propSelectedWorkspace if available, otherwise fall back to currentWorkspace from business logic
@@ -195,12 +195,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   }, [onClose, popoverRef, isLayoutMode]);
 
-  // Flyout style based on mode and position
-  const flyoutStyle: React.CSSProperties = isLayoutMode
-    ? { height: '100vh', display: 'flex', flexDirection: 'column' }
-    : sidebarPosition === 'left'
-      ? { minHeight: '100vh', left: sidebarWidth, right: 'auto', display: 'flex', flexDirection: 'column' }
-      : { minHeight: '100vh', right: sidebarWidth, left: 'auto', display: 'flex', flexDirection: 'column' };
+  // Flyout style for layout mode
+  const flyoutStyle: React.CSSProperties = { height: '100vh', display: 'flex', flexDirection: 'column' };
 
   // Loading and error states
   if (loading) return (
@@ -414,21 +410,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Main flyout component */}
-      {flyoutMode === 'floating' && flyoutOpen ? (
-        ReactDOM.createPortal(
-          <div
-            ref={ref}
-            className={`flyout-container floating transition-all ease-in-out duration-300 fixed z-50 bg-gray-50 border-r shadow-xl sb-flyout-open ${isTransitioning ? 'opacity-50' : 'opacity-100'
-              }`}
-            style={flyoutStyle}
-          >
-            <style>{slideStyles}</style>
-            {renderFlyoutContent()}
-          </div>,
-          document.body
-        )
-      ) : flyoutMode === 'layout' && flyoutOpen ? (
+      {/* Main flyout component - Layout mode only */}
+      {flyoutOpen ? (
         <div
           ref={ref}
           className={`flyout-content bg-gray-50 border-r shadow-inner layout transition-all ease-in-out duration-300 h-full flex flex-col sb-flyout-open ${isTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
