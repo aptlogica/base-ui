@@ -3,8 +3,10 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import AccountSettingsPage from '../AccountSettingsPage';
 
-// Mock the AccountSettings component
-const mockAccountSettingsComponent = vi.fn(() => <div data-testid="account-settings-component">Account Settings</div>);
+// Hoist mock function to top scope for vi.mock() to access it
+const { mockAccountSettingsComponent } = vi.hoisted(() => ({
+  mockAccountSettingsComponent: vi.fn((_props: any) => <div data-testid="account-settings-component">Account Settings</div>),
+}));
 
 vi.mock('../../components/account/AccountSettings', () => ({
   AccountSettings: (props: any) => mockAccountSettingsComponent(props),
