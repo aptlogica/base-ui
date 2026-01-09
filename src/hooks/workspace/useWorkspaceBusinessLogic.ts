@@ -345,15 +345,16 @@ export const useWorkspaceBusinessLogic = () => {
 
     // Priority 1: If store has selectedWorkspaceId (from activity_data or previous selection), sync the workspace object
     // This is critical for browser reload - store has ID, need to restore workspace object
+    // FIX: Only sync workspace object, don't call setWorkspace() which triggers save and can cause loops
     if (selectedWorkspaceId) {
       const savedWorkspace = workspaces.find(ws => ws.id === selectedWorkspaceId);
       if (savedWorkspace) {
-        // Workspace exists - sync it (even if selectedWorkspace is already set)
-        // This ensures workspace selection is restored on browser reload
+        // Workspace exists - sync the workspace object ONLY (don't update store ID - it's already correct)
+        // This ensures workspace selection is restored on browser reload without triggering saves
         if (!selectedWorkspace || selectedWorkspace.id !== savedWorkspace.id) {
           setSelectedWorkspace(savedWorkspace);
-          // Defensive: ensure store also has the ID
-          setWorkspace(savedWorkspace.id);
+          // DON'T call setWorkspace() here - selectedWorkspaceId is already correct in store
+          // Calling setWorkspace() would trigger a save and potentially cause a restore loop
         }
       } else {
         // Workspace ID in store doesn't exist in loaded workspaces
@@ -370,13 +371,22 @@ export const useWorkspaceBusinessLogic = () => {
         }
       }
     } else {
-      // No workspace selected in store (no activity_data) - FALLBACK: auto-select first one
-      // This is the fallback when user has no activity_data (newly assigned user or refresh)
-      // Priority is given to activity_data, but if none exists, first workspace is the default
-      if (workspaces.length > 0) {
+      // No workspace selected in store - ONLY auto-select on initial load (not after user changes)
+      // FIX: Check if this is initial load by checking if AppInitializer has completed
+      // We should only auto-select if there's truly no saved state AND it's initial load
+      // Don't auto-select if user just changed workspace (that would override their choice)
+      const hasInitialized = sessionStorage.getItem('nav_initialized') === 'true';
+      
+      // Only auto-select first workspace if:
+      // 1. This is initial load (not initialized yet)
+      // 2. No workspace is selected
+      // 3. Workspaces are available
+      if (!hasInitialized && workspaces.length > 0) {
         const firstWorkspace = workspaces[0];
         setSelectedWorkspace(firstWorkspace);
         setWorkspace(firstWorkspace.id);
+        // Mark as initialized to prevent future auto-selection
+        sessionStorage.setItem('nav_initialized', 'true');
         // Persist the selection for refresh scenarios
         if (authUser?.id) {
           navigateAndPersist(firstWorkspace.id, null as any, null as any, authUser.id);
@@ -402,12 +412,20 @@ export const useWorkspaceBusinessLogic = () => {
   }, [workspaces, restoreCompleted, selectedWorkspace, selectedWorkspaceId, setWorkspace, authUser, navigateAndPersist]);
 
   // Auto-select first base when workspace is selected but no base is selected
+  // FIX: Only auto-select on initial load, not after user changes
   useEffect(() => {
+    if (!restoreCompleted) return; // Wait for restore to complete
     if (selectedWorkspaceId && !selectedBaseId && workspaceBases?.data && Array.isArray(workspaceBases.data) && workspaceBases.data.length > 0) {
-      const firstBase = workspaceBases.data[0];
-      navigateToBase(selectedWorkspaceId, firstBase.id);
+      // Only auto-select if this is initial load (no base was ever selected)
+      // Don't auto-select if user just changed workspace (that would override their choice)
+      const hasInitialized = sessionStorage.getItem('nav_initialized') === 'true';
+      if (!hasInitialized) {
+        const firstBase = workspaceBases.data[0];
+        navigateToBase(selectedWorkspaceId, firstBase.id);
+        sessionStorage.setItem('nav_initialized', 'true');
+      }
     }
-  }, [selectedWorkspaceId, selectedBaseId, workspaceBases?.data, navigateToBase]);
+  }, [selectedWorkspaceId, selectedBaseId, workspaceBases?.data, navigateToBase, restoreCompleted]);
 
   // Ensure we always have a workspace selected (fallback for refresh scenarios)
   // This runs after restoreCompleted to catch cases where workspace wasn't selected during initial restore

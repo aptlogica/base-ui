@@ -152,7 +152,7 @@ export const getBestNavigationTarget = (workspaces: any[] | null, lastNav?: Last
   }
   
   if (workspaces.length === 0) {
-    return '/workspace';
+    return '/homepage';
   }
   
   // Try to use last navigation state if provided and valid
@@ -199,7 +199,7 @@ export const getBestNavigationTarget = (workspaces: any[] | null, lastNav?: Last
   }
   
   // If no valid path found, go to workspace
-  return '/workspace';
+  return '/homepage';
 };
 
 /**
@@ -228,7 +228,7 @@ export const resolveWorkspaceIdFromBaseId = (baseId: string, workspaces: any[]):
  */
 export const getSafeNavigationTarget = (workspaces: any[] | null): string | null => {
   if (!workspaces || workspaces.length === 0) {
-    return '/workspace';
+    return '/homepage';
   }
   
   // Navigate to first available workspace > base > table > view
@@ -250,7 +250,7 @@ export const getSafeNavigationTarget = (workspaces: any[] | null): string | null
     }
   }
   
-  return '/workspace';
+  return '/homepage';
 };
 
 // =============================================================================

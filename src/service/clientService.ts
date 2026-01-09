@@ -334,19 +334,17 @@ export const forceLogout = async (): Promise<void> => {
   });
 
   // Dispatch custom event for React Router navigation (prevents page refresh)
-  window.dispatchEvent(new CustomEvent('auth_token_expired', { detail: { navigate: true } }));
+  globalThis.dispatchEvent(new CustomEvent('auth_token_expired', { detail: { navigate: true } }));
 
   // Fallback: Only use window.location if no component handles the event within 100ms
   // This ensures we still redirect even if no component is listening
   setTimeout(() => {
     // Check if we're still on a non-login page (event wasn't handled)
-    if (window.location.pathname !== '/login' && !window.location.pathname.startsWith('/login')) {
-      window.location.href = '/login';
+    if (globalThis.location.pathname !== '/login' && !globalThis.location.pathname.startsWith('/login')) {
+      globalThis.location.href = '/login';
     }
   }, 100);
 };
-
-
 /**
  * Validates that all required authentication data is present in storage
  * @returns Object with isValid boolean and array of missing field names

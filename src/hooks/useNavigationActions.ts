@@ -83,20 +83,56 @@ export const useNavigationActions = () => {
     const wasCurrentBase = current.selectedBaseId === deletedBaseId || cleanupBaseNavigation(deletedBaseId, user.id);
     
     if (wasCurrentBase) {
-      // Clear base/table/view since base is gone
+      const selectedWorkspaceId = current.selectedWorkspaceId;
+      
+      // FIX: Stay in SAME workspace, find first remaining base
+      const currentWorkspace = workspacesList.find((ws: any) => ws.id === selectedWorkspaceId);
+      
+      if (currentWorkspace?.bases) {
+        const remainingBases = currentWorkspace.bases.filter((base: any) => base.id !== deletedBaseId);
+        
+        if (remainingBases.length > 0) {
+          // Navigate to first remaining base in SAME workspace
+          const firstBase = remainingBases[0];
+          
+          // Find first table in this base
+          if (firstBase.tables && firstBase.tables.length > 0) {
+            const firstTable = firstBase.tables[0];
+            const tableId = firstTable?.model?.id || firstTable?.id;
+            
+            // Find first view in this table
+            if (firstTable.views && firstTable.views.length > 0) {
+              const firstView = firstTable.views[0];
+              const viewId = firstView.id;
+              
+              // Navigate to first base > first table > first view in SAME workspace
+              current.navigateToView(selectedWorkspaceId, firstBase.id, tableId, viewId);
+              replaceNavigate(navigate, `/base/${firstBase.id}/table/${tableId}/${viewId}`);
+              saveUserNavigation(user.id);
+              return;
+            } else {
+              // No views, use grid
+              current.navigateToTable(selectedWorkspaceId, firstBase.id, tableId);
+              replaceNavigate(navigate, `/base/${firstBase.id}/table/${tableId}/grid`);
+              saveUserNavigation(user.id);
+              return;
+            }
+          } else {
+            // No tables, just navigate to base
+            current.navigateToBase(selectedWorkspaceId, firstBase.id);
+            replaceNavigate(navigate, `/base/${firstBase.id}`);
+            saveUserNavigation(user.id);
+            return;
+          }
+        }
+      }
+      
+      // Only go to homepage if no bases remain in current workspace
       current.setBase(null);
       current.setTable(null);
       current.setView(null);
-      // Navigate to safe location (first available base/table/view)
-      const targetPath = getSafeNavigationTarget(workspacesList);
-      if (targetPath) {
-        replaceNavigate(navigate, targetPath);
-        // Update session cache
-        saveUserNavigation(user.id);
-      } else {
-        // No bases available - go to homepage
-        replaceNavigate(navigate, '/homepage');
-      }
+      replaceNavigate(navigate, '/homepage');
+      saveUserNavigation(user.id);
     }
   };
 
@@ -116,19 +152,49 @@ export const useNavigationActions = () => {
     const wasCurrentTable = current.selectedTableId === deletedTableId || cleanupTableNavigation(deletedTableId, user.id);
     
     if (wasCurrentTable) {
-      // Clear table/view since table is gone
+      const selectedWorkspaceId = current.selectedWorkspaceId;
+      const selectedBaseId = current.selectedBaseId;
+      
+      // FIX: Stay in SAME base, find first remaining table
+      const currentWorkspace = workspacesList.find((ws: any) => ws.id === selectedWorkspaceId);
+      const currentBase = currentWorkspace?.bases?.find((base: any) => base.id === selectedBaseId);
+      
+      if (currentBase?.tables) {
+        const remainingTables = currentBase.tables.filter((table: any) => {
+          const tableId = table?.model?.id || table?.id;
+          return tableId !== deletedTableId;
+        });
+        
+        if (remainingTables.length > 0) {
+          // Navigate to first remaining table in SAME base
+          const firstTable = remainingTables[0];
+          const tableId = firstTable?.model?.id || firstTable?.id;
+          
+          // Find first view in this table
+          if (firstTable.views && firstTable.views.length > 0) {
+            const firstView = firstTable.views[0];
+            const viewId = firstView.id;
+            
+            // Navigate to first table > first view in SAME base
+            current.navigateToView(selectedWorkspaceId, selectedBaseId, tableId, viewId);
+            replaceNavigate(navigate, `/base/${selectedBaseId}/table/${tableId}/${viewId}`);
+            saveUserNavigation(user.id);
+            return;
+          } else {
+            // No views, use grid
+            current.navigateToTable(selectedWorkspaceId, selectedBaseId, tableId);
+            replaceNavigate(navigate, `/base/${selectedBaseId}/table/${tableId}/grid`);
+            saveUserNavigation(user.id);
+            return;
+          }
+        }
+      }
+      
+      // Only go to homepage if no tables remain in current base
       current.setTable(null);
       current.setView(null);
-      // Navigate to safe location (first available table/view)
-      const targetPath = getSafeNavigationTarget(workspacesList);
-      if (targetPath) {
-        replaceNavigate(navigate, targetPath);
-        // Update session cache
-        saveUserNavigation(user.id);
-      } else {
-        // No tables available - navigate to homepage
-        replaceNavigate(navigate, '/homepage');
-      }
+      replaceNavigate(navigate, '/homepage');
+      saveUserNavigation(user.id);
     }
   };
 

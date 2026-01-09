@@ -1,20 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useTable, useWorkspaceBases, useBaseTables, useBaseById } from './hooks/useApi';
+import { useTable, useWorkspaceBases, useBaseTables, useBaseById,useWorkspaces } from './hooks/useApi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useWorkspaces } from './hooks/useApi';
 import { DefaultAuthProvider, useAuth } from './auth/AuthContext';
 import { PrivateRoute } from './auth/PrivateRoute';
 import { RoleBasedRoute } from './auth/RoleBasedRoute';
 import { AccessLevelRoute } from './auth/AccessLevelRoute';
-import { PluginFrameworkProvider } from './core/PluginFrameworkContext';
+import {useExtensions, PluginFrameworkProvider } from './core/PluginFrameworkContext';
 import { AnnouncementBar, AnnouncementBarProps } from './components/AnnouncementBar';
-import { NavigationRecovery } from './components/ZustandNavigationRecovery';
-import { NavigationResolver } from './components/NavigationResolver';
 import { initializeClientToken } from './service/clientService';
-import { useExtensions } from './core/PluginFrameworkContext';
+import { AppInitializer } from './components/AppInitializer';
 import { registerPlugin } from './core/PluginRegistry';
-import { Loader2 } from 'lucide-react';
 import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -27,6 +23,7 @@ import AdministratorPage from './pages/AdministratorPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { useClientHeaders } from './hooks/useClientHeaders';
 import { RouteContextProvider } from './contexts/RouteContext';
+import { NavigationResolver } from './components/NavigationResolver';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -80,8 +77,6 @@ const Layout = () => {
   // Force layout mode only (disable floating mode entirely)
   useEffect(() => {
     setFlyoutMode('layout');
-    // Optional: clear any persisted preference
-    try { localStorage.setItem('flyout-mode', 'layout'); } catch { }
   }, [setFlyoutMode]);
 
   useEffect(() => {
@@ -132,7 +127,7 @@ const Layout = () => {
             <ExtensionPoint id="layout:header" />
             {saving && (
               <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md text-sm border border-blue-200 dark:border-blue-700">
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader size={16} />
                 <span>Saving workspace data...</span>
               </div>
             )}
@@ -305,7 +300,6 @@ const AppRoutes = () => {
       <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route path="/" element={<Navigate to="/homepage" replace />} />
         <Route path="/homepage" element={<ExtensionPoint id="page:homepage" />} />
-        <Route path="/projects" element={<ExtensionPoint id="page:projects" />} />
         <Route
           path="/workspace/:workspaceId/administrator"
           element={
@@ -443,13 +437,14 @@ const App: React.FC = () => {
         <ToastProvider>
           <AuthProviderChooser>
             {announcement && <AnnouncementBar {...announcement} />}
-            <Router>
-              <WorkspacesGuard>
-                <NavigationResolver />
-                <NavigationRecovery />
-                <AppRoutes />
-              </WorkspacesGuard>
-            </Router>
+            <AppInitializer>
+              <Router>
+                <WorkspacesGuard>
+                  <NavigationResolver />
+                  <AppRoutes />
+                </WorkspacesGuard>
+              </Router>
+            </AppInitializer>
           </AuthProviderChooser>
         </ToastProvider>
       </QueryClientProvider>

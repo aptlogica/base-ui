@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronUp, Copy, HelpCircle, X, Search, Plus } from "lucide-react";
-import { FORMULA_FUNCTIONS, FREQUENTLY_USED_FUNCTION_NAMES } from './formulaConstants';
+import { ChevronDown, ChevronUp, HelpCircle, X, Search, Plus } from "lucide-react";
+import { FORMULA_FUNCTIONS, FREQUENTLY_USED_FUNCTION_NAMES } from '../../../utils/formulaConstants';
 import {
   evaluateFormula,
   formatResult,
@@ -14,7 +14,7 @@ import {
   normalizeForComparison,
   convertResultToValue,
   type FormulaContext
-} from './formulaHelper';
+} from '../../../utils/formulaHelper';
 
 interface FormulaConfig {
   formula?: string;

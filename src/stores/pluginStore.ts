@@ -51,9 +51,6 @@ export const usePluginStore = create<PluginState>((set, get) => ({
           flyoutMode: mode,
           isTransitioning: false 
         });
-        
-        // Save preference to localStorage
-        localStorage.setItem('flyout-mode', mode);
       }, 150);
     }
   },
