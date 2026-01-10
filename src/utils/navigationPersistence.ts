@@ -152,7 +152,7 @@ export const getBestNavigationTarget = (workspaces: any[] | null, lastNav?: Last
   }
   
   if (workspaces.length === 0) {
-    return '/homepage';
+    return '/workspace';
   }
   
   // Try to use last navigation state if provided and valid
@@ -170,7 +170,7 @@ export const getBestNavigationTarget = (workspaces: any[] | null, lastNav?: Last
           if (view) {
             // Handle both nested structure (model.id) and direct id
             const tableId = table?.model?.id || table?.id;
-            return `/base/${base.id}/table/${tableId}/${view.id}`;
+            return `/workspace/${lastNav.workspaceId}/base/${base.id}/table/${tableId}/${view.id}`;
           }
         }
       }
@@ -187,19 +187,19 @@ export const getBestNavigationTarget = (workspaces: any[] | null, lastNav?: Last
       const firstTableId = firstTable?.model?.id || firstTable?.id;
       if (firstTable?.views && firstTable.views.length > 0) {
         const firstView = firstTable.views[0];
-        return `/base/${firstBase.id}/table/${firstTableId}/${firstView.id}`;
+        return `/workspace/${firstWorkspace.id}/base/${firstBase.id}/table/${firstTableId}/${firstView.id}`;
       } else {
         // Table exists but no views, navigate to table with grid view
-        return `/base/${firstBase.id}/table/${firstTableId}/grid`;
+        return `/workspace/${firstWorkspace.id}/base/${firstBase.id}/table/${firstTableId}/grid`;
       }
     } else {
-      // Base exists but no tables
-      return `/base/${firstBase.id}`;
+      // Base exists but no tables - go to workspace homepage
+      return `/workspace/${firstWorkspace.id}`;
     }
   }
   
-  // If no valid path found, go to workspace
-  return '/homepage';
+  // If no valid path found, go to first workspace
+  return firstWorkspace ? `/workspace/${firstWorkspace.id}` : '/workspace';
 };
 
 /**
@@ -228,7 +228,7 @@ export const resolveWorkspaceIdFromBaseId = (baseId: string, workspaces: any[]):
  */
 export const getSafeNavigationTarget = (workspaces: any[] | null): string | null => {
   if (!workspaces || workspaces.length === 0) {
-    return '/homepage';
+    return '/workspace';
   }
   
   // Navigate to first available workspace > base > table > view
@@ -240,17 +240,17 @@ export const getSafeNavigationTarget = (workspaces: any[] | null): string | null
         // Handle both nested structure (model.id) and direct id
         const firstTableId = firstTable?.model?.id || firstTable?.id;
         if (firstTable?.views && firstTable.views.length > 0) {
-          return `/base/${firstBase.id}/table/${firstTableId}/${firstTable.views[0].id}`;
+          return `/workspace/${workspace.id}/base/${firstBase.id}/table/${firstTableId}/${firstTable.views[0].id}`;
         } else {
-          return `/base/${firstBase.id}/table/${firstTableId}/grid`;
+          return `/workspace/${workspace.id}/base/${firstBase.id}/table/${firstTableId}/grid`;
         }
       } else {
-        return `/base/${firstBase.id}`;
+        return `/workspace/${workspace.id}`;
       }
     }
   }
   
-  return '/homepage';
+  return workspaces[0] ? `/workspace/${workspaces[0].id}` : '/workspace';
 };
 
 // =============================================================================

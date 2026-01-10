@@ -9,6 +9,7 @@ import { ImportDataModal } from '../components/modals/ImportDataModal';
 import { ImportModal } from '../components/modals/ImportModal';
 import { EditItemModal } from '../components/modals/EditItemModal';
 import { AddBaseMembersModal } from '../components/modals/AddBaseMembersModal';
+import { DeleteBaseModal } from '../components/modals/DeleteBaseModal';
 
 const CreateTableModal = lazy(() =>
   import('../components/modals/CreateTableModal').then(m => ({ default: m.CreateTableModal }))
@@ -107,8 +108,6 @@ const HomePage: React.FC = () => {
   const sortButtonRef = useRef<HTMLButtonElement>(null);
   const [editingBase, setEditingBase] = useState<any | null>(null);
   const [deletingBase, setDeletingBase] = useState<any | null>(null);
-  const [baseNameToDelete, setBaseNameToDelete] = useState('');
-  const [isDeletingBase, setIsDeletingBase] = useState(false);
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [baseForMembers, setBaseForMembers] = useState<any | null>(null);
   const [showCreateTableBaseId, setShowCreateTableBaseId] = useState<string | null>(null);
@@ -244,24 +243,14 @@ const HomePage: React.FC = () => {
 
   const handleDeleteBase = (base: any) => {
     setDeletingBase(base);
-    setBaseNameToDelete('');
-    setIsDeletingBase(false);
   };
 
-  const handleConfirmDelete = async () => {
-    if (!deletingBase) return;
-
-    const baseTitle = deletingBase.title || deletingBase.name || '';
-    if (baseNameToDelete !== baseTitle) {
-      toast.error('Base name does not match');
-      return;
-    }
-
+  const handleConfirmDelete = async (baseId: string) => {
     try {
-      await deleteBaseMutation.mutateAsync(deletingBase.id);
+      await deleteBaseMutation.mutateAsync(baseId);
 
       // Use the navigation handler to properly clean up localStorage
-      handleBaseDeletion(deletingBase.id);
+      handleBaseDeletion(baseId);
 
       // Invalidate queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
@@ -269,12 +258,10 @@ const HomePage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['allBases'] });
 
       toast.success('Base deleted successfully');
-      setDeletingBase(null);
-      setBaseNameToDelete('');
-      setIsDeletingBase(false);
     } catch (err: any) {
       console.error('Failed to delete base:', err);
       toast.error(err?.message || 'Failed to delete base. Please try again.');
+      throw err; // Re-throw so modal can handle it
     }
   };
 
@@ -376,7 +363,7 @@ const HomePage: React.FC = () => {
   if (basesLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader text="Loading bases..." textPosition="bottom" />
+        <Loader />
       </div>
     );
   }
@@ -489,12 +476,12 @@ const HomePage: React.FC = () => {
         <h2 className="text-2xl font-semibold text-primary">All Bases</h2>
         <div className="flex items-center gap-3 w-full sm:w-auto">
           {/* Search Input */}
-          <div className="relative flex-1 sm:flex-none sm:w-64">
+          <div className="relative flex-1 sm:flex-none w-72">
             <div className="flex items-center bg-gray-50 border rounded-xl px-3 py-2 focus-within:outline-none focus-within:ring-1 focus-within:ring-[var(--color-focus-ring)] focus-within:border-[var(--color-focus-ring)] outline-none transition-all">
               <Search className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
               <input
                 type="text"
-                placeholder="Search"
+                placeholder="Search bases"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1 bg-transparent border-none outline-none text-sm text-primary placeholder-gray-400"
@@ -507,7 +494,7 @@ const HomePage: React.FC = () => {
             <button
               ref={sortButtonRef}
               onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
-              className={`flex items-center gap-2 px-3 py-2 text-sm border rounded-xl bg-card transition-all duration-200 whitespace-nowrap ${isSortDropdownOpen
+              className={`flex items-center gap-2 px-3 py-2 text-sm border rounded-xl bg-background transition-all duration-200 whitespace-nowrap ${isSortDropdownOpen
                 ? 'border-primary ring-1 ring-primary ring-opacity-20'
                 : 'border hover:border-gray-400'
                 }`}
@@ -722,66 +709,14 @@ const HomePage: React.FC = () => {
       )}
 
       {/* Delete Base Confirmation Modal */}
-      {deletingBase && (
-        <div className="bg-modal-backdrop">
-          <div className="bg-modal !h-[50vh] !max-w-2xl flex flex-col">
-            <h3 className="text-[1.25rem] text-gray-900 mb-4 pb-3 border-b border-primary">Delete Base</h3>
-            <div className="flex-grow">
-              <div className="bg-[var(--color-error-50)] border border-red-200 rounded-md p-2 mb-4">
-                <p className="text-red-800 mb-2">
-                  <strong>Warning:</strong> All associated tables, records, and data will be permanently deleted.
-                </p>
-              </div>
-              <div className="mb-4">
-                <p className="text-sm text-primary">
-                  <strong>Are you sure you want to proceed? This deletion cannot be reversed.</strong>
-                  Confirming this action will permanently delete this base and all of its related contents.
-                </p>
-              </div>
-              <div className="mb-4">
-                <p className="text-sm text-gray-700">Please type <strong>{deletingBase.title || deletingBase.name}</strong> to confirm.</p>
-              </div>
-              <input
-                type="text"
-                value={baseNameToDelete}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setBaseNameToDelete(value);
-                  const baseTitle = deletingBase.title || deletingBase.name || '';
-                  setIsDeletingBase(value === baseTitle);
-                }}
-                onPaste={(e) => e.preventDefault()}
-                placeholder="Enter base name"
-                className="field-component field-component-border field-component-focus mb-4"
-                required
-                minLength={3}
-                maxLength={50}
-                autoFocus
-              />
-            </div>
-
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setDeletingBase(null);
-                  setBaseNameToDelete('');
-                  setIsDeletingBase(false);
-                }}
-                className="px-16 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-500 focus:ring-offset-2"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                disabled={!isDeletingBase}
-                className="px-16 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Delete Base
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteBaseModal
+        isOpen={!!deletingBase}
+        base={deletingBase}
+        onClose={() => {
+          setDeletingBase(null);
+        }}
+        onConfirm={handleConfirmDelete}
+      />
 
       {/* Add Members Modal */}
       {showAddMembers && baseForMembers && (

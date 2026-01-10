@@ -1,13 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronUp, ChevronDown, Copy, Trash2, Plus } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 interface ContextMenuProps {
   x: number;
   y: number;
   onClose: () => void;
-  onInsertAbove: () => void;
-  onInsertBelow: () => void;
-  onDuplicate: () => void;
   onDelete: () => void;
   canDeleteRecord?: boolean;
 }
@@ -16,9 +13,6 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   x,
   y,
   onClose,
-  onInsertAbove,
-  onInsertBelow,
-  onDuplicate,
   onDelete,
   canDeleteRecord = true
 }) => {
@@ -45,8 +39,6 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   // Calculate position to prevent going off-screen
   useEffect(() => {
     if (!menuRef.current) return;
-
-    const menu = menuRef.current;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const margin = 10;
@@ -111,28 +103,6 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
   return (
     <div ref={menuRef} style={style} className="select-none border p-2 space-y-1 animate-fade-in">
-      <button 
-        className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl opacity-50 cursor-not-allowed transition-colors" 
-        disabled
-        title="Coming soon"
-      >
-        <ChevronUp className="w-4 h-4" /> Insert above
-      </button>
-      <button 
-        className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl opacity-50 cursor-not-allowed transition-colors" 
-        disabled
-        title="Coming soon"
-      >
-        <ChevronDown className="w-4 h-4" /> Insert below
-      </button>
-      <div className="border-t my-1" />
-      <button 
-        className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl opacity-50 cursor-not-allowed transition-colors" 
-        disabled
-        title="Coming soon"
-      >
-        <Copy className="w-4 h-4" /> Duplicate row
-      </button>
       {/* Delete record - only show if user can delete */}
       {canDeleteRecord && (
         <>

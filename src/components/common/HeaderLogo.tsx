@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home } from 'lucide-react';
+import { useNavigationStore } from '../../stores/navigationStore';
 
 interface HeaderLogoProps {
   logoUrl?: string;
@@ -8,10 +9,15 @@ interface HeaderLogoProps {
 
 const HeaderLogo: React.FC<HeaderLogoProps> = () => {
   const navigate = useNavigate();
+  const { selectedWorkspaceId } = useNavigationStore();
   const [isHovered, setIsHovered] = useState(false);
 
   const handleClick = () => {
-    navigate('/homepage');
+    if (selectedWorkspaceId) {
+      navigate(`/workspace/${selectedWorkspaceId}`);
+    } else {
+      navigate('/workspace');
+    }
   };
 
   return (

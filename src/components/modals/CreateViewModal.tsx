@@ -41,6 +41,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
 
   // Decide effective fields: prefer provided `fields` prop, else fetch table columns
   const tableQuery = useTable(tableId);
+  console.log(tableQuery)
   const fetchedColumns = tableQuery?.data?.data?.columns || tableQuery?.data?.data?.fields || tableQuery?.data?.data?.model?.columns || [];
   const effectiveFieldsSource = (fields && fields.length > 0) ? fields : fetchedColumns;
 
@@ -117,7 +118,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
       let initialName = '';
       if (defaultName && defaultName.trim()) {
         // If defaultName is provided, make it unique if it's a duplicate
-        initialName = generateUniqueName(defaultName.trim(), existingViews, 'view');
+        initialName = generateUniqueName(defaultName.trim(), existingViews);
       } else {
         // Otherwise, generate the default view name based on type
         initialName = getDefaultViewName(viewType, existingViews);
@@ -278,37 +279,44 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
 
   return (
     <div
-      className="bg-modal-backdrop"
-      onClick={onClose}
+      className="bg-modal-backdrop relative"
+      onKeyDown={handleKeyDown}
     >
+      <button
+        type="button"
+        aria-label="Close modal"
+        className="absolute inset-0"
+        onClick={onClose}
+      />
       <div
-        className="bg-modal"
+        className="bg-modal !max-w-2xl !p-0 flex flex-col relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={handleKeyDown}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-4 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 icon-primary rounded-xl flex items-center justify-center`}>
+        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`w-10 h-10 icon-primary rounded-xl flex items-center justify-center flex-shrink-0`}>
               <IconComponent size={20} className="icon-primary" />
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-primary">
+            <div className="min-w-0">
+              <h2 className="text-xl font-semibold text-primary truncate">
                 Create {viewType.charAt(0).toUpperCase() + viewType.slice(1)} View
               </h2>
-              <p className="text-sm text-secondary">Add a new view to your table</p>
+              <p className="text-sm text-secondary truncate">Add a new view to your table</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
+            aria-label="Close"
           >
             <X size={16} className="text-[var(--text-color-tertiary)]" />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-2">
+        {/* Scrollable Content Area */}
+        <form id="create-view-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+          <div className="p-4 space-y-2">
           <div className="space-y-1">
             <label htmlFor="viewName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
               View Name <span className="text-xs text-gray-500">(optional)</span>
@@ -445,44 +453,49 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
             </p>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="px-16 py-2 rounded-xl border hover:bg-gray-100 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              disabled={
-                isSubmitting ||
-                (name.trim() && name.trim().length < 3) ||
-                !!validationError ||
-                !!fieldError ||
-                (showFieldDropdown && (fieldDropdownOptions.length === 0 ||
-                  (viewType === 'ganttChart' ? (
-                    !startDateField ||
-                    !endDateField ||
-                    startDateField === endDateField
-                  ) : !selectedField)))
-              }
-              className="px-16 py-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Creating...
-                </>
-              ) : (
-                'Create View'
-              )}
-            </button>
           </div>
         </form>
+
+        {/* Footer - Fixed at Bottom */}
+        <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              handleSubmit(e);
+            }}
+            disabled={
+              isSubmitting ||
+              (name.trim() && name.trim().length < 3) ||
+              !!validationError ||
+              !!fieldError ||
+              (showFieldDropdown && (fieldDropdownOptions.length === 0 ||
+                (viewType === 'ganttChart' ? (
+                  !startDateField ||
+                  !endDateField ||
+                  startDateField === endDateField
+                ) : !selectedField)))
+            }
+            className="px-16 py-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Creating...
+              </>
+            ) : (
+              'Create View'
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -2,17 +2,6 @@
   "plugins": {
     "builtin": [
       {
-        "id": "navigation",
-        "path": "./plugins/NavigationPlugin",
-        "enabled": true,
-        "config": {
-          "menuPosition": "top",
-          "showIcons": true,
-          "theme": "auto",
-          "maxItems": 10
-        }
-      },
-      {
         "id": "grid-view-plugin",
         "name": "Grid View Plugin",
         "enabled": true,
@@ -49,19 +38,7 @@
         "path": "./plugins/GanttChartViewPlugin"
       }
     ],
-    "external": [
-      {
-        "id": "charts-plugin",
-        "manifestUrl": "https://example.com/plugins/charts-plugin/manifest.json",
-        "enabled": false,
-        "config": {
-          "chartLibrary": "recharts",
-          "animationDuration": 750,
-          "defaultChartType": "line",
-          "showDataLabels": false
-        }
-      }
-    ]
+    "external": []
   },
   "settings": {
     "autoLoadPlugins": true,

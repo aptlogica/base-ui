@@ -5,7 +5,7 @@ import { extractFieldConfigFromMeta, generateDefaultFieldConfig, mergeFieldConfi
 import { applyFilters } from '../../../utils/filterUtils';
 import { isFormulaField } from '../../../utils/fieldUtils';
 import { GanttTask } from './useGanttData';
-import type { Column } from '../types/api.types';
+import type { Column } from '../../../types/api.types';
 
 export type FilterType = { column: string; operator: string; value: string };
 

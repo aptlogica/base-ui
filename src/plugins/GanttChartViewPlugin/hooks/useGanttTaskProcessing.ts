@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
-import type { TableResponse } from '../types/api.types';
+import type { TableResponse, Column, View } from '../../../types/api.types';
 import { fieldsToFilter } from '../../../types/constants';
 import type { GanttTask } from './useGanttData';
-import type { Column, View } from '../types/api.types';
 
 interface UseGanttTaskProcessingReturn {
   tasks: GanttTask[];

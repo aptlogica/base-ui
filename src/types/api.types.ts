@@ -1,3 +1,68 @@
+// =========================
+// Generic API Response Wrapper
+// =========================
+
+export interface ApiResponse<T> {
+  success: boolean;
+  message?: string;
+  data: T;
+  meta?: {
+    code?: string;
+    http_status?: number;
+  };
+}
+
+// =========================
+// Workspace Types
+// =========================
+
+export interface Workspace {
+  id: string;
+  title: string;
+  description: string;
+  slug: string;
+  meta?: Record<string, unknown>;
+  is_default: boolean;
+  status: string;
+  access_level: string;
+  created_time: string;
+  last_modified_time: string;
+}
+
+export type WorkspacesResponse = ApiResponse<Workspace[]>;
+export type WorkspaceResponse = ApiResponse<Workspace>;
+
+// =========================
+// Base Types
+// =========================
+
+export interface Base {
+  id: string;
+  workspace_id: string;
+  title: string;
+  description: string;
+  image?: string;
+  type?: string;
+  status?: string;
+  meta?: Record<string, unknown>;
+  visibility?: string;
+  created_by?: string;
+  last_modified_by?: string;
+  created_time?: string;
+  last_modified_time?: string;
+  access_level?: string;
+  tables?: unknown[] | null;
+  name?: string; // alias for title
+  logo?: string; // alias for image
+}
+
+export type BasesResponse = ApiResponse<Base[]>;
+export type BaseResponse = ApiResponse<Base>;
+
+// =========================
+// Table Types
+// =========================
+
 export interface TableResponse {
   success: boolean;
   message: string;
@@ -43,6 +108,19 @@ export interface Column {
   updated_at: string;
 }
 
+export interface TableItem {
+  model: Model;
+  columns: unknown[] | null;
+  views: unknown[] | null;
+  records: unknown[] | null;
+}
+
+export type TablesResponse = ApiResponse<TableItem[]>;
+
+// =========================
+// View Types
+// =========================
+
 export interface View {
   id: string;
   model_id: string;
@@ -56,11 +134,19 @@ export interface View {
   password: string;
   public: boolean;
   uuid: string;
-  meta: Record<string, any>;
+  meta?: Record<string, unknown>;
   order_index: number | null;
-  created_at: string;
-  updated_at: string;
+  created_time: string;
+  last_modified_time: string;
+  created_by?: string;
+  last_modified_by?: string;
+  // Legacy fields (for backward compatibility)
+  created_at?: string;
+  updated_at?: string;
 }
+
+export type ViewsResponse = ApiResponse<View[]>;
+export type ViewResponse = ApiResponse<View>;
 
 export interface TableMeta {
   code: string;

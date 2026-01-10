@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useTable, useWorkspaceBases, useBaseTables, useBaseById,useWorkspaces } from './hooks/useApi';
+import { useTable, useBaseTables, useWorkspaces } from './hooks/useApi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DefaultAuthProvider, useAuth } from './auth/AuthContext';
 import { PrivateRoute } from './auth/PrivateRoute';
-import { RoleBasedRoute } from './auth/RoleBasedRoute';
 import { AccessLevelRoute } from './auth/AccessLevelRoute';
-import {useExtensions, PluginFrameworkProvider } from './core/PluginFrameworkContext';
+import { useExtensions, PluginFrameworkProvider } from './core/PluginFrameworkContext';
 import { AnnouncementBar, AnnouncementBarProps } from './components/AnnouncementBar';
 import { initializeClientToken } from './service/clientService';
 import { AppInitializer } from './components/AppInitializer';
@@ -70,47 +69,29 @@ const Layout = () => {
   // Update client headers when workspace/base changes
   useClientHeaders();
 
-  // Track sidebar position and width from workspace config (for flyout menu)
-  const [sidebarPosition, setSidebarPosition] = useState('left');
-  const [sidebarWidth, setSidebarWidth] = useState(56);
+  // Track sidebar position and width (for flyout menu)
+  const [sidebarPosition] = useState('left');
+  const [sidebarWidth] = useState(56);
 
   // Force layout mode only (disable floating mode entirely)
   useEffect(() => {
     setFlyoutMode('layout');
   }, [setFlyoutMode]);
 
-  useEffect(() => {
-    const getSidebarConfig = () => {
-      const config = (window as Window & { __workspaceConfig?: { sidebarPosition?: string; sidebarWidth?: number } }).__workspaceConfig || {};
-      return {
-        position: config.sidebarPosition || 'left',
-        width: config.sidebarWidth || 50,
-      };
-    };
-    const updateSidebar = () => {
-      const { position, width } = getSidebarConfig();
-      setSidebarPosition(position);
-      setSidebarWidth(width);
-    };
-    updateSidebar();
-    window.addEventListener('workspace-config-changed', updateSidebar);
-    return () => window.removeEventListener('workspace-config-changed', updateSidebar);
-  }, []);
-
   // Auto-open flyout menu when on base/table/view routes
   useEffect(() => {
-    const isBaseRoute = location.pathname.startsWith('/base/');
+    const isBaseRoute = location.pathname.includes('/base/') || (location.pathname.startsWith('/workspace/') && location.pathname.includes('/base/'));
+    const isWorkspaceRoute = location.pathname.startsWith('/workspace/') && !location.pathname.includes('/administrator') && !location.pathname.includes('/base/');
 
     if (isBaseRoute) {
       // Auto-open flyout menu for workspace navigation
       if (!flyoutOpen || currentPlugin !== 'workspace-flyout-menu') {
         openFlyout('workspace-flyout-menu');
       }
-    } else {
-      // Close flyout on homepage and other routes
-      if (flyoutOpen && currentPlugin === 'workspace-flyout-menu') {
-        closeFlyout();
-      }
+    }
+    // Close flyout on workspace homepage and other routes
+    if (isWorkspaceRoute && !isBaseRoute && flyoutOpen && currentPlugin === 'workspace-flyout-menu') {
+      closeFlyout();
     }
   }, [location.pathname, flyoutOpen, currentPlugin, openFlyout, closeFlyout]);
 
@@ -179,20 +160,21 @@ const Layout = () => {
   );
 };
 
-// Wrapper for /base/:baseId/table/:tableId/:viewId to provide table/view context to plugins
+// Wrapper for /workspace/:workspaceId/base/:baseId/table/:tableId/:viewId to provide table/view context to plugins
 const TableViewRouteWrapper: React.FC = () => {
-  const { baseId, tableId, viewId } = useParams();
-
-  if (!tableId) {
-    console.error('❌ TableViewRouteWrapper: Table ID is required');
-    return <div className="p-8 text-red-600">Table ID is required</div>;
-  }
+  const { workspaceId, baseId, tableId, viewId } = useParams();
 
   // Centralized table fetch so only one plugin renders and we can determine view type
   // PAGINATION DISABLED - Uncomment below to re-enable pagination (30 records per page)
   // const { data: response, isLoading, error, refetch } = useTable(tableId, { pageNumber: 1, pageLimit: 30 });
   // PERFORMANCE: Use cached data immediately if available (placeholderData handles this)
-  const { data: response, isLoading, error, refetch } = useTable(tableId); // No pagination - fetches all records
+  // Note: useTable has enabled: !!tableId, so it won't fetch if tableId is missing
+  const { data: response, isLoading, error, refetch } = useTable(tableId || ''); // No pagination - fetches all records
+
+  if (!tableId) {
+    console.error('❌ TableViewRouteWrapper: Table ID is required');
+    return <div className="p-8 text-red-600">Table ID is required</div>;
+  }
 
   // Only show loader on initial load (no cached data)
   // If we have cached data, show it immediately even if refetching
@@ -246,8 +228,8 @@ const TableViewRouteWrapper: React.FC = () => {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 text-lg mb-2">⚠️ View Not Found</div>
-          <p className="text-muted-foreground">No view with ID "{viewId}" exists for this table.</p>
+          <div className="text-red-500 text-lg mb-2">Something went wrong</div>
+          <p className="text-muted-foreground">Please try again later.</p>
         </div>
       </div>
     );
@@ -272,6 +254,7 @@ const TableViewRouteWrapper: React.FC = () => {
   );
 };
 
+
 const AppRoutes = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -285,9 +268,9 @@ const AppRoutes = () => {
       }
     };
 
-    window.addEventListener('auth_token_expired', handleAuthTokenExpired);
+    globalThis.addEventListener('auth_token_expired', handleAuthTokenExpired);
     return () => {
-      window.removeEventListener('auth_token_expired', handleAuthTokenExpired);
+      globalThis.removeEventListener('auth_token_expired', handleAuthTokenExpired);
     };
   }, [navigate, location.pathname]);
 
@@ -298,8 +281,9 @@ const AppRoutes = () => {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
-        <Route path="/" element={<Navigate to="/homepage" replace />} />
-        <Route path="/homepage" element={<ExtensionPoint id="page:homepage" />} />
+        <Route path="/" element={<Navigate to="/workspace" replace />} />
+        <Route path="/workspace" element={<ExtensionPoint id="page:homepage" />} /> {/* Handles /workspace when no workspaceId - NavigationResolver will redirect to first workspace */}
+        <Route path="/workspace/:workspaceId" element={<ExtensionPoint id="page:homepage" />} />
         <Route
           path="/workspace/:workspaceId/administrator"
           element={
@@ -310,23 +294,8 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
-        {/* Add pluggable table view route with baseId (guarded) */}
-        <Route path="/base/:baseId/table/:tableId/:viewId" element={<TableGuard><TableViewRouteWrapper /></TableGuard>} />
-        {/* Base route redirects to homepage - base details are now on homepage */}
-        <Route path="/base/:baseId" element={<BaseGuard><Navigate to="/homepage" replace /></BaseGuard>} />
-        {/* (Legacy) Old table view route for backward compatibility (guarded) */}
-        <Route path="/table/:tableId/:viewId" element={<TableGuard><TableViewRouteWrapper /></TableGuard>} />
-        {/* Administrator page */}
-        <Route
-          path="/administrator"
-          element={
-            <RoleBasedRoute requiredRoles={['owner']}>
-              <PrivateRoute>
-                <AdministratorPage />
-              </PrivateRoute>
-            </RoleBasedRoute>
-          }
-        />
+        {/* Table view route with workspace context */}
+        <Route path="/workspace/:workspaceId/base/:baseId/table/:tableId/:viewId" element={<TableGuard><TableViewRouteWrapper /></TableGuard>} />
         {/* Fallback: 404 page for unmatched routes */}
         <Route path="*" element={<NotFoundPage />} />
       </Route>
@@ -394,7 +363,7 @@ const App: React.FC = () => {
     message: "Your free trial ends in 3 days.",
     type: "warning",
     buttons: [
-      { label: "Upgrade", onClick: () => window.location.href = '/billing', style: "primary" },
+      { label: "Upgrade", onClick: () => globalThis.location.href = '/billing', style: "primary" },
       { label: "Remind me later", onClick: () => setAnnouncement(null) }
     ]
   });
@@ -424,7 +393,7 @@ const App: React.FC = () => {
       <div className="error">
         <h2>Plugin Initialization Error</h2>
         <p>{initError}</p>
-        <button onClick={() => window.location.reload()}>
+        <button onClick={() => globalThis.location.reload()}>
           Reload Application
         </button>
       </div>
@@ -459,7 +428,7 @@ const WorkspacesGuard: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const location = useLocation();
 
   // Public routes that don't need workspace data
-  const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password'];
   const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
 
   // Only fetch workspaces if not on a public route
@@ -478,7 +447,7 @@ const WorkspacesGuard: React.FC<{ children: React.ReactNode }> = ({ children }) 
           // If forceLogout fails, at least clear tokens and redirect
           sessionStorage.clear();
           localStorage.clear();
-          window.location.href = '/login';
+          globalThis.location.href = '/login';
         });
       }
     }
@@ -501,27 +470,6 @@ const WorkspacesGuard: React.FC<{ children: React.ReactNode }> = ({ children }) 
     );
   }
 
-  return <>{children}</>;
-};
-
-// BaseGuard: ensures base's workspace bases are present for deep-links
-const BaseGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const params = useParams();
-  const baseId = String(params.baseId || '');
-  const { data: baseResp, isLoading: baseLoading } = useBaseById(baseId);
-  const baseData = baseResp && typeof baseResp === 'object' && 'data' in baseResp 
-    ? (baseResp as { data?: { workspace_id?: string }; workspace_id?: string })
-    : null;
-  const workspaceId = baseData?.data?.workspace_id || (baseResp as { workspace_id?: string })?.workspace_id;
-  const { isLoading: basesLoading } = useWorkspaceBases(String(workspaceId || ''));
-
-  if (baseLoading || (workspaceId && basesLoading)) {
-    return (
-      <div className="w-full h-[30vh] flex items-center justify-center">
-        <div className="w-6 h-6 border-4 border-gray-200 dark:border-gray-700 border-t-blue-600 dark:border-t-blue-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
   return <>{children}</>;
 };
 

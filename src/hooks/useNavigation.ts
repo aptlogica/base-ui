@@ -3,9 +3,6 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useNavigationStore } from '../stores/navigationStore';
 import { useToast } from '../components/common/Toast';
 import { useAuth } from '../auth/AuthContext';
-import { resolveWorkspaceIdFromBaseId } from '../utils/navigationPersistence';
-import { buildWorkspaceIndex } from '../utils/navigationIndex';
-import useWorkspaceData from './useWorkspaceData';
 import { usePluginStore } from '../stores/pluginStore';
 
 /**
@@ -43,12 +40,8 @@ export const useNavigation = () => {
       
       // Parse different route patterns
       const patterns = [
-        // /base/{baseId}/table/{tableId}/{viewId}
-        /^\/base\/([^\/]+)\/table\/([^\/]+)\/([^\/]+)$/,
-        // /base/{baseId}/table/{tableId}
-        /^\/base\/([^\/]+)\/table\/([^\/]+)$/,
-        // /base/{baseId}
-        /^\/base\/([^\/]+)$/,
+        // /workspace/{workspaceId}/base/{baseId}/table/{tableId}/{viewId}
+        /^\/workspace\/([^\/]+)\/base\/([^\/]+)\/table\/([^\/]+)\/([^\/]+)$/,
         // /workspace/{workspaceId}
         /^\/workspace\/([^\/]+)$/
       ];
@@ -56,61 +49,29 @@ export const useNavigation = () => {
       for (const pattern of patterns) {
         const match = path.match(pattern);
         if (match) {
-          if (match.length === 4) {
-            // View route: /base/{baseId}/table/{tableId}/{viewId}
-            const [, baseId, tableId, viewId] = match;
+          if (match.length === 5) {
+            // View route: /workspace/{workspaceId}/base/{baseId}/table/{tableId}/{viewId}
+            const [, workspaceId, baseId, tableId, viewId] = match;
             
             // Check if viewId is a slug (not a real view ID)
             const viewTypeSlugs = ['grid', 'form', 'gallery', 'kanban', 'calendar', 'gantt'];
             const isViewSlug = viewTypeSlugs.includes(viewId.toLowerCase());
             
-            if (selectedBaseId !== baseId || selectedTableId !== tableId || selectedViewId !== viewId) {
-              // Ensure we have a workspaceId. If missing, resolve from baseId (prefer O(1) index)
-              const effectiveWorkspaceId = selectedWorkspaceId || workspaceIndex.baseToWorkspace.get(baseId) || resolveWorkspaceIdFromBaseId(baseId, workspacesList) || '';
-              if (!effectiveWorkspaceId) {
-                // User-friendly feedback instead of silent failure
-                try { toast.error('Unable to resolve workspace for this base.'); } catch {}
-                return;
-              }
-              
+            if (selectedWorkspaceId !== workspaceId || selectedBaseId !== baseId || selectedTableId !== tableId || selectedViewId !== viewId) {
               if (isViewSlug) {
                 // Don't save slug as selectedViewId - only update table/base
                 // This prevents "grid" from being saved and causing redirects
-                navigateToTable(effectiveWorkspaceId, baseId, tableId);
+                navigateToTable(workspaceId, baseId, tableId);
               } else {
                 // Real view ID - save it
-                navigateToView(effectiveWorkspaceId, baseId, tableId, viewId);
+                navigateToView(workspaceId, baseId, tableId, viewId);
               }
-            }
-          } else if (match.length === 3) {
-            // Table route: /base/{baseId}/table/{tableId}
-            const [, baseId, tableId] = match;
-            if (selectedBaseId !== baseId || selectedTableId !== tableId) {
-              const effectiveWorkspaceId = selectedWorkspaceId || workspaceIndex.baseToWorkspace.get(baseId) || resolveWorkspaceIdFromBaseId(baseId, workspacesList) || '';
-              if (!effectiveWorkspaceId) {
-                try { toast.error('Unable to resolve workspace for this base.'); } catch {}
-                return;
-              }
-              navigateToTable(effectiveWorkspaceId, baseId, tableId);
             }
           } else if (match.length === 2) {
-            if (pattern.source.includes('base')) {
-              // Base route: /base/{baseId}
-              const [, baseId] = match;
-              if (selectedBaseId !== baseId) {
-                const effectiveWorkspaceId = selectedWorkspaceId || workspaceIndex.baseToWorkspace.get(baseId) || resolveWorkspaceIdFromBaseId(baseId, workspacesList) || '';
-                if (!effectiveWorkspaceId) {
-                  try { toast.error('Unable to resolve workspace for this base.'); } catch {}
-                  return;
-                }
-                navigateToBase(effectiveWorkspaceId, baseId);
-              }
-            } else {
-              // Workspace route: /workspace/{workspaceId}
-              const [, workspaceId] = match;
-              if (selectedWorkspaceId !== workspaceId) {
-                navigateToWorkspace(workspaceId);
-              }
+            // Workspace route: /workspace/{workspaceId}
+            const [, workspaceId] = match;
+            if (selectedWorkspaceId !== workspaceId) {
+              navigateToWorkspace(workspaceId);
             }
           }
           return;
@@ -119,7 +80,7 @@ export const useNavigation = () => {
     };
 
     parseCurrentRoute();
-  }, [location.pathname]);
+  }, [location.pathname, selectedWorkspaceId, selectedBaseId, selectedTableId, selectedViewId, navigateToWorkspace, navigateToBase, navigateToTable, navigateToView]);
 
   // Cache navigation in sessionStorage on changes (per-user)
   // Note: This only caches in sessionStorage for session recovery
@@ -154,10 +115,6 @@ export const useNavigation = () => {
     saveUserNavigation,
   ]);
 
-  // Get workspaces for workspaceId resolution
-  const { workspaces } = useWorkspaceData();
-  const workspacesList = useMemo(() => (workspaces?.data?.workspaces || (Array.isArray(workspaces) ? workspaces : [])) as any[], [workspaces]);
-  const workspaceIndex = useMemo(() => buildWorkspaceIndex(workspacesList), [workspacesList]);
 
   // Navigation functions that update both store and URL
   // Note: Activity data is NOT updated here - only saved to API on logout
@@ -172,7 +129,8 @@ export const useNavigation = () => {
 
   const navigateToBaseWithUrl = (workspaceId: string, baseId: string) => {
     navigateToBase(workspaceId, baseId);
-    navigate(`/base/${baseId}`);
+    // Navigate to workspace homepage (bases are shown there)
+    navigate(`/workspace/${workspaceId}`);
     // Open flyout for base routes
     openFlyout('workspace-flyout-menu');
     // No API call - cached in sessionStorage only
@@ -181,7 +139,7 @@ export const useNavigation = () => {
   const navigateToTableWithUrl = (workspaceId: string, baseId: string, tableId: string) => {
     // Default to grid view route for consistency with router
     navigateToTable(workspaceId, baseId, tableId);
-    navigate(`/base/${baseId}/table/${tableId}/grid`);
+    navigate(`/workspace/${workspaceId}/base/${baseId}/table/${tableId}/grid`);
     // Open flyout for table/view routes
     openFlyout('workspace-flyout-menu');
     // No API call - cached in sessionStorage only
@@ -189,7 +147,7 @@ export const useNavigation = () => {
 
   const navigateToViewWithUrl = (workspaceId: string, baseId: string, tableId: string, viewId: string) => {
     navigateToView(workspaceId, baseId, tableId, viewId);
-    navigate(`/base/${baseId}/table/${tableId}/${viewId}`);
+    navigate(`/workspace/${workspaceId}/base/${baseId}/table/${tableId}/${viewId}`);
     // Open flyout for view routes
     openFlyout('workspace-flyout-menu');
     // No API call - cached in sessionStorage only

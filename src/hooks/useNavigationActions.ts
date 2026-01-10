@@ -61,8 +61,8 @@ export const useNavigationActions = () => {
         // Update session cache (backend sync happens on logout)
         saveUserNavigation(user.id);
       } else {
-        // No workspaces available - go to homepage
-        replaceNavigate(navigate, '/homepage');
+        // No workspaces available - go to workspace route
+        replaceNavigate(navigate, '/workspace');
       }
     }
   };
@@ -107,31 +107,35 @@ export const useNavigationActions = () => {
               
               // Navigate to first base > first table > first view in SAME workspace
               current.navigateToView(selectedWorkspaceId, firstBase.id, tableId, viewId);
-              replaceNavigate(navigate, `/base/${firstBase.id}/table/${tableId}/${viewId}`);
+              replaceNavigate(navigate, `/workspace/${selectedWorkspaceId}/base/${firstBase.id}/table/${tableId}/${viewId}`);
               saveUserNavigation(user.id);
               return;
             } else {
               // No views, use grid
               current.navigateToTable(selectedWorkspaceId, firstBase.id, tableId);
-              replaceNavigate(navigate, `/base/${firstBase.id}/table/${tableId}/grid`);
+              replaceNavigate(navigate, `/workspace/${selectedWorkspaceId}/base/${firstBase.id}/table/${tableId}/grid`);
               saveUserNavigation(user.id);
               return;
             }
           } else {
-            // No tables, just navigate to base
+            // No tables, just navigate to workspace homepage
             current.navigateToBase(selectedWorkspaceId, firstBase.id);
-            replaceNavigate(navigate, `/base/${firstBase.id}`);
+            replaceNavigate(navigate, `/workspace/${selectedWorkspaceId}`);
             saveUserNavigation(user.id);
             return;
           }
         }
       }
       
-      // Only go to homepage if no bases remain in current workspace
+      // Only go to workspace homepage if no bases remain in current workspace
       current.setBase(null);
       current.setTable(null);
       current.setView(null);
-      replaceNavigate(navigate, '/homepage');
+      if (selectedWorkspaceId) {
+        replaceNavigate(navigate, `/workspace/${selectedWorkspaceId}`);
+      } else {
+        replaceNavigate(navigate, '/workspace');
+      }
       saveUserNavigation(user.id);
     }
   };
@@ -177,23 +181,27 @@ export const useNavigationActions = () => {
             
             // Navigate to first table > first view in SAME base
             current.navigateToView(selectedWorkspaceId, selectedBaseId, tableId, viewId);
-            replaceNavigate(navigate, `/base/${selectedBaseId}/table/${tableId}/${viewId}`);
+            replaceNavigate(navigate, `/workspace/${selectedWorkspaceId}/base/${selectedBaseId}/table/${tableId}/${viewId}`);
             saveUserNavigation(user.id);
             return;
           } else {
             // No views, use grid
             current.navigateToTable(selectedWorkspaceId, selectedBaseId, tableId);
-            replaceNavigate(navigate, `/base/${selectedBaseId}/table/${tableId}/grid`);
+            replaceNavigate(navigate, `/workspace/${selectedWorkspaceId}/base/${selectedBaseId}/table/${tableId}/grid`);
             saveUserNavigation(user.id);
             return;
           }
         }
       }
       
-      // Only go to homepage if no tables remain in current base
+      // Only go to workspace homepage if no tables remain in current base
       current.setTable(null);
       current.setView(null);
-      replaceNavigate(navigate, '/homepage');
+      if (selectedWorkspaceId) {
+        replaceNavigate(navigate, `/workspace/${selectedWorkspaceId}`);
+      } else {
+        replaceNavigate(navigate, '/workspace');
+      }
       saveUserNavigation(user.id);
     }
   };
@@ -229,12 +237,14 @@ export const useNavigationActions = () => {
               );
               if (table?.views && table.views.length > 0) {
                 const firstView = table.views[0];
-                replaceNavigate(navigate, `/base/${selectedBaseId}/table/${selectedTableId}/${firstView.id}`);
+                const workspaceId = workspace.id;
+                replaceNavigate(navigate, `/workspace/${workspaceId}/base/${selectedBaseId}/table/${selectedTableId}/${firstView.id}`);
                 saveUserNavigation(user.id);
                 return;
               } else if (table) {
                 // Table exists but no views - navigate to grid view
-                replaceNavigate(navigate, `/base/${selectedBaseId}/table/${selectedTableId}/grid`);
+                const workspaceId = workspace.id;
+                replaceNavigate(navigate, `/workspace/${workspaceId}/base/${selectedBaseId}/table/${selectedTableId}/grid`);
                 saveUserNavigation(user.id);
                 return;
               }
@@ -249,7 +259,7 @@ export const useNavigationActions = () => {
         replaceNavigate(navigate, targetPath);
         saveUserNavigation(user.id);
       } else {
-        replaceNavigate(navigate, '/homepage');
+        replaceNavigate(navigate, '/workspace');
       }
     }
   };

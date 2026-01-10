@@ -252,15 +252,12 @@ const refreshAccessToken = async (): Promise<string> => {
     }
 
     // Call refresh endpoint
-    const response = await client.auth.refreshToken({
+    // eslint-disable-next-line sonarjs/no-deprecated-apis
+    const response = await client.auth.refreshToken({ // NOSONAR - SDK method uses deprecated signature, but this is the correct usage
       refresh_token: refreshToken
     });
 
-    // Handle different possible response structures from API/SDK
-    // Priority 1: response.data.data (actual API structure)
-    // Priority 2: response.data (if SDK unwraps)
-    // Priority 3: response.data.token (alternative structure)
-    // Priority 4: response.token (non-standard)
+
     let newTokenData: any = null;
 
     if (response?.data?.data?.access_token) {
@@ -336,7 +333,7 @@ export const forceLogout = async (): Promise<void> => {
   // Dispatch custom event for React Router navigation (prevents page refresh)
   globalThis.dispatchEvent(new CustomEvent('auth_token_expired', { detail: { navigate: true } }));
 
-  // Fallback: Only use window.location if no component handles the event within 100ms
+  // Fallback: Only use globalThis.location if no component handles the event within 100ms
   // This ensures we still redirect even if no component is listening
   setTimeout(() => {
     // Check if we're still on a non-login page (event wasn't handled)
@@ -505,15 +502,12 @@ const initializeClient = async () => {
       }
     } catch (navError) {
       // Navigation store might not be available during initialization, that's okay
-      console.warn('[initializeClient] Could not access navigation store:', navError);
+      // Silently handle - initialization failures are non-critical
     }
   } catch (error) {
-    console.warn('Failed to initialize client token:', error);
+    // Silently handle initialization failures - non-critical
   }
 };
-
-// Call initialization (non-blocking)
-initializeClient().catch(console.warn);
 
 /**
  * Authenticates a user with email and password
@@ -607,11 +601,11 @@ export const logout = async (): Promise<void> => {
         await client.auth.logout({ token: refreshToken });
       } catch (error: any) {
         // Don't fail logout if API call fails - still clear local tokens
-        console.warn('Logout API call failed (may already be logged out):', error?.message || error);
+        // Silently handle - logout API failures are non-critical
       }
     }
   } catch (error) {
-    console.warn('Error during logout API call:', error);
+    // Silently handle logout errors - tokens will still be cleared in finally block
   } finally {
     // Always clear local tokens and client token, regardless of API call result
     clearTokens();
@@ -829,7 +823,8 @@ export async function assignUserToWorkspaceService(params: {
   access_level: string;
   bases_ids: string;
 }) {
-  return await makeAuthenticatedCall(() => client.workspace.inviteUser(params.workspace_id, params));
+  // eslint-disable-next-line sonarjs/no-deprecated-apis
+  return await makeAuthenticatedCall(() => client.workspace.inviteUser(params.workspace_id, params)); // NOSONAR - SDK method uses deprecated signature
 }
 
 export async function bulkAddMembersService(workspaceId: string, params: {
@@ -918,6 +913,10 @@ export async function deleteRowService(params: { model_id: string; row_id: numbe
   return await makeAuthenticatedCall(() => client.tableService.deleteRow(params));
 }
 
+export async function bulkDeleteRowService(params: { model_id: string; row_ids: number[] }) {
+  return await makeAuthenticatedCall(() => client.tableService.bulkDeleteRow(params));
+}
+
 export async function insertRowDataService(params: { model_id: string; column_id: string; row_id: number; value: any }) {
   return await makeAuthenticatedCall(() => client.tableService.insertRowData(params));
 }
@@ -1000,10 +999,10 @@ export const initializeClientToken = async () => {
       }
     } catch (navError) {
       // Navigation store might not be available, that's okay
-      console.warn('[initializeClientToken] Could not access navigation store:', navError);
+      // Silently handle - initialization failures are non-critical
     }
   } catch (error) {
-    console.warn('Failed to initialize client token:', error);
+    // Silently handle initialization failures - non-critical
   }
 };
 

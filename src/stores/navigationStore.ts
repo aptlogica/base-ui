@@ -2,9 +2,7 @@ import { create } from 'zustand';
 import { 
   saveLastNavigation, 
   getLastNavigation, 
-  type LastNavigationState,
-  resolveWorkspaceIdFromBaseId,
-  getSafeNavigationTarget
+  type LastNavigationState
 } from '../utils/navigationPersistence';
 import { 
   updateUserActivity, 
@@ -272,12 +270,12 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
           // Update Zustand store
           get().navigateToView(workspaceId, lastNav.baseId, lastNav.tableId, lastNav.viewId);
           // Navigate to URL
-          navigate(`/base/${lastNav.baseId}/table/${lastNav.tableId}/${lastNav.viewId}`);
+          navigate(`/workspace/${workspaceId}/base/${lastNav.baseId}/table/${lastNav.tableId}/${lastNav.viewId}`);
           return true;
         } else if (lastNav.workspaceId === workspaceId && lastNav.baseId) {
-          // Navigate to last known base
+          // Navigate to workspace homepage (bases shown there)
           get().navigateToBase(workspaceId, lastNav.baseId);
-          navigate(`/base/${lastNav.baseId}`);
+          navigate(`/workspace/${workspaceId}`);
           return true;
         }
         
@@ -313,17 +311,17 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
           if (targetView && (targetView as any).id) {
             // Navigate to first view
             get().navigateToView(targetWorkspaceId, baseId, (targetTable as any).id, (targetView as any).id);
-            navigate(`/base/${baseId}/table/${(targetTable as any).id}/${(targetView as any).id}`);
+            navigate(`/workspace/${targetWorkspaceId}/base/${baseId}/table/${(targetTable as any).id}/${(targetView as any).id}`);
           } else {
             // Navigate to first table with grid view
             get().navigateToTable(targetWorkspaceId, baseId, (targetTable as any).id);
-            navigate(`/base/${baseId}/table/${(targetTable as any).id}/grid`);
+            navigate(`/workspace/${targetWorkspaceId}/base/${baseId}/table/${(targetTable as any).id}/grid`);
           }
           return true;
         } else if (targetWorkspaceId) {
-          // Navigate to base only
+          // Navigate to workspace homepage (bases shown there)
           get().navigateToBase(targetWorkspaceId, baseId);
-          navigate(`/base/${baseId}`);
+          navigate(`/workspace/${targetWorkspaceId}`);
           return true;
         }
         return false;
@@ -359,16 +357,16 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
                   const firstView = firstTable.views[0] as any;
                   if (firstView && firstView.id) {
                     get().navigateToView(workspaceId, firstBase.id, firstTable.id, firstView.id);
-                    navigate(`/base/${firstBase.id}/table/${firstTable.id}/${firstView.id}`);
+                    navigate(`/workspace/${workspaceId}/base/${firstBase.id}/table/${firstTable.id}/${firstView.id}`);
                   }
                 } else {
                   get().navigateToTable(workspaceId, firstBase.id, firstTable.id);
-                  navigate(`/base/${firstBase.id}/table/${firstTable.id}/grid`);
+                  navigate(`/workspace/${workspaceId}/base/${firstBase.id}/table/${firstTable.id}/grid`);
                 }
               }
             } else {
               get().navigateToBase(workspaceId, firstBase.id);
-              navigate(`/base/${firstBase.id}`);
+              navigate(`/workspace/${workspaceId}`);
             }
             return true;
           }
@@ -378,16 +376,16 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
 
       getNavigationPath: () => {
         const state = get();
+        if (!state.selectedWorkspaceId) {
+          return '/workspace';
+        }
         if (state.selectedViewId && state.selectedTableId && state.selectedBaseId) {
-          return `/base/${state.selectedBaseId}/table/${state.selectedTableId}/${state.selectedViewId}`;
+          return `/workspace/${state.selectedWorkspaceId}/base/${state.selectedBaseId}/table/${state.selectedTableId}/${state.selectedViewId}`;
         } else if (state.selectedTableId && state.selectedBaseId) {
-          return `/base/${state.selectedBaseId}/table/${state.selectedTableId}`;
-        } else if (state.selectedBaseId) {
-          return `/base/${state.selectedBaseId}`;
-        } else if (state.selectedWorkspaceId) {
+          return `/workspace/${state.selectedWorkspaceId}/base/${state.selectedBaseId}/table/${state.selectedTableId}/grid`;
+        } else {
           return `/workspace/${state.selectedWorkspaceId}`;
         }
-        return '/';
       },
 
       // Activity data management

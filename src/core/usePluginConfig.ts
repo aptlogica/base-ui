@@ -18,10 +18,6 @@ export const usePluginConfig = (pluginId: string) => {
     return unsubscribe;
   }, [pluginManager, pluginId]);
 
-  // const updateConfig = (newConfig: any) => {
-  //   pluginManager.setPluginConfig(pluginId, newConfig);
-  //   setConfig(newConfig);
-  // };
 
   const updateConfig = useCallback((newConfig: any) => {
     pluginManager.setPluginConfig(pluginId, newConfig);

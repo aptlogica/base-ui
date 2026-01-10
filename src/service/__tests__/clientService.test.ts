@@ -91,13 +91,24 @@ vi.mock('jose', () => ({
 }));
 
 // Helper to create memory storage
-function createMemoryStorage() {
+function createMemoryStorage(): Storage {
   let store = new Map<string, string>();
   return {
     getItem: (key: string) => store.get(key) ?? null,
-    setItem: (key: string, value: string) => store.set(key, String(value)),
-    removeItem: (key: string) => store.delete(key),
+    setItem: (key: string, value: string) => {
+      store.set(key, String(value));
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
     clear: () => store.clear(),
+    get length() {
+      return store.size;
+    },
+    key: (index: number) => {
+      const keys = Array.from(store.keys());
+      return keys[index] ?? null;
+    },
   } as Storage;
 }
 
@@ -122,8 +133,8 @@ describe('clientService', () => {
       configurable: true,
     });
 
-    // Mock window.location
-    Object.defineProperty(window, 'location', {
+    // Mock globalThis.location
+    Object.defineProperty(globalThis, 'location', {
       value: {
         href: '',
         pathname: '/',
@@ -136,7 +147,7 @@ describe('clientService', () => {
     vi.clearAllMocks();
 
     // Mock dispatchEvent
-    window.dispatchEvent = vi.fn();
+    globalThis.dispatchEvent = vi.fn();
   });
 
   afterEach(() => {
@@ -285,8 +296,8 @@ describe('clientService', () => {
     it('should dispatch auth_token_expired event', async () => {
       await forceLogout();
 
-      expect(window.dispatchEvent).toHaveBeenCalled();
-      const calls = (window.dispatchEvent as any).mock.calls;
+      expect(globalThis.dispatchEvent).toHaveBeenCalled();
+      const calls = (globalThis.dispatchEvent as any).mock.calls;
       expect(calls.some((call: any) => call[0].type === 'auth_token_expired')).toBe(true);
     });
 
@@ -296,8 +307,8 @@ describe('clientService', () => {
       await forceLogout();
 
       // Verify event was dispatched
-      expect(window.dispatchEvent).toHaveBeenCalled();
-      expect(window.dispatchEvent).toHaveBeenCalledWith(
+      expect(globalThis.dispatchEvent).toHaveBeenCalled();
+      expect(globalThis.dispatchEvent).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'auth_token_expired' })
       );
     });
@@ -461,7 +472,7 @@ describe('clientService', () => {
       await forceLogout();
 
       // Assert: Event has correct type
-      const dispatchCalls = (window.dispatchEvent as any).mock.calls;
+      const dispatchCalls = (globalThis.dispatchEvent as any).mock.calls;
       expect(dispatchCalls.length).toBeGreaterThan(0);
       const eventArg = dispatchCalls[0][0];
       expect(eventArg.type).toBe('auth_token_expired');
@@ -525,7 +536,7 @@ describe('clientService', () => {
     it('should accept any string value', () => {
       const testCases = [
         'simple-token',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U', // NOSONAR - Test mock token
         '',
         'a'.repeat(1000) // Very long token
       ];
@@ -568,7 +579,7 @@ describe('clientService', () => {
 
         // Act & Assert
         const result = validateAuthData();
-        expect(result.isValid).toBe(false, `Failed for whitespace: "${ws}"`);
+        expect(result.isValid).toBe(false); // Should be invalid for whitespace-only value
       });
     });
 
@@ -662,8 +673,9 @@ describe('clientService', () => {
   describe('Authentication API Wrappers', () => {
     describe('login', () => {
       it('should store tokens when login succeeds', async () => {
-        const mockAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlci0xMjMiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJyb2xlcyI6ImFkbWluIiwiZXhwIjoxNjQwOTk1MjAwfQ.signature';
-        const mockRefreshToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlci0xMjMiLCJleHAiOjE2NDA5OTUyMDB9.signature';
+        // Test mock tokens, not real secrets
+        const mockAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlci0xMjMiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJyb2xlcyI6ImFkbWluIiwiZXhwIjoxNjQwOTk1MjAwfQ.signature'; // NOSONAR
+        const mockRefreshToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlci0xMjMiLCJleHAiOjE2NDA5OTUyMDB9.signature'; // NOSONAR
 
         (decodeJwt as any).mockImplementation((token: string) => {
           if (token === mockAccessToken) {
@@ -1328,7 +1340,7 @@ describe('clientService', () => {
 
       it('should handle tokens with special characters', () => {
         // Arrange: Token with various special chars
-        const specialToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U~!@#$%^&*()';
+        const specialToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U~!@#$%^&*()'; // NOSONAR - Test mock token
         sessionStorageMock.setItem('_st_', specialToken);
 
         // Act & Assert

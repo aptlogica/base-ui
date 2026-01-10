@@ -53,7 +53,7 @@ const LogIn: React.FC = () => {
       const params = { email: email.trim(), password: password.trim() };
       const data = await apiLogin(params);
 
-      if (!data || !data.data) {
+      if (!data?.data) {
         throw new Error("Invalid login response");
       }
       const userInfo = data.data.user || {};
@@ -88,9 +88,8 @@ const LogIn: React.FC = () => {
 
       await login(userInfo);
 
-      // Navigate to homepage - NavigationResolver will resolve and navigate to saved view BEFORE homepage renders
-      // If no saved view, NavigationResolver will auto-select first workspace/base/table/view
-      navigate('/homepage', { replace: true });
+      // NavigationResolver will handle navigation to saved view or first workspace
+      navigate('/', { replace: true });
     } catch (err: any) {
       setError(err?.message || "Login failed");
     }
@@ -118,17 +117,28 @@ const LogIn: React.FC = () => {
           <p className="text-base lg:text-lg text-white/90 leading-relaxed drop-shadow-md">Welcome back! Please enter your details.</p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
-              <label className="field-component-label">Email
-                <span className="field-component-required">*</span>
+              <label htmlFor="email" className="field-component-label">
+                Email<span className="field-component-required">*</span>
               </label>
               <input
+                id="email"
                 type="email"
                 value={formData.email}
-                onChange={e => { setFormData(prev => ({ ...prev, email: e.target.value })); if (emailError) setEmailError(null); if (error) setError(""); }}
+                onChange={e => {
+                  setFormData(prev => ({ ...prev, email: e.target.value }));
+                  if (emailError) setEmailError(null);
+                  if (error) setError("");
+                }}
                 onBlur={() => {
-                  if (!formData.email.trim()) setEmailError("This field is required");
-                  else if (!validateEmail(formData.email.trim())) setEmailError("Please enter a valid email address");
-                  else setEmailError(null);
+                  if (formData.email.trim()) {
+                    if (validateEmail(formData.email.trim())) {
+                      setEmailError(null);
+                    } else {
+                      setEmailError("Please enter a valid email address");
+                    }
+                  } else {
+                    setEmailError("This field is required");
+                  }
                 }}
                 placeholder="Email"
                 className={`field-component field-component-border field-component-focus ${emailError ? "border-destructive bg-red-50" : ""}`}
@@ -142,19 +152,24 @@ const LogIn: React.FC = () => {
               {emailError && <div className="mt-1.5 text-red-500 text-sm">{emailError}</div>}
             </div>
             <div className="relative">
-              <label className="field-component-label">Password
-                <span className="field-component-required">*</span>
+              <label htmlFor="password" className="field-component-label">
+                Password<span className="field-component-required">*</span>
               </label>
               <div className="relative">
                 <input
+                  id="password"
                   type={showPassword ? "text" : "password"}
                   value={formData.password}
-                  onChange={e => { setFormData(prev => ({ ...prev, password: e.target.value })); if (passwordError) setPasswordError(null); if (error) setError(""); }}
+                  onChange={e => {
+                    setFormData(prev => ({ ...prev, password: e.target.value }));
+                    if (passwordError) setPasswordError(null);
+                    if (error) setError("");
+                  }}
                   onBlur={() => {
-                    if (!formData.password.trim()) {
-                      setPasswordError("This field is required");
-                    } else {
+                    if (formData.password.trim()) {
                       setPasswordError(null);
+                    } else {
+                      setPasswordError("This field is required");
                     }
                   }}
                   placeholder="Password"
@@ -186,7 +201,7 @@ const LogIn: React.FC = () => {
                   onChange={e => setRememberMe(e.target.checked)}
                   className="checkbox-primary-brand"
                 />
-                Remember me
+                <span>Remember me</span>
               </label>
               <Link to="/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
             </div>

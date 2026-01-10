@@ -27,9 +27,9 @@ export const useNavigateToBaseFirstView = () => {
       const tables = tablesResponse?.data || [];
       
       if (tables.length === 0) {
-        // No tables, navigate to base page
+        // No tables, navigate to workspace homepage
         navigateToBase(selectedWorkspaceId, baseId);
-        navigate(`/base/${baseId}`);
+        navigate(`/workspace/${selectedWorkspaceId}`);
         return;
       }
 
@@ -37,9 +37,9 @@ export const useNavigateToBaseFirstView = () => {
       const tableId = firstTable.id || firstTable.model?.id;
       
       if (!tableId) {
-        // Invalid table, navigate to homepage
+        // Invalid table, navigate to workspace homepage
         navigateToBase(selectedWorkspaceId, baseId);
-        navigate(`/homepage`);
+        navigate(`/workspace/${selectedWorkspaceId}`);
         return;
       }
       
@@ -55,18 +55,18 @@ export const useNavigateToBaseFirstView = () => {
         // Navigate to first view
         const firstView = views[0];
         navigateToView(selectedWorkspaceId, baseId, tableId, firstView.id);
-        navigate(`/base/${baseId}/table/${tableId}/${firstView.id}`);
+        navigate(`/workspace/${selectedWorkspaceId}/base/${baseId}/table/${tableId}/${firstView.id}`);
       } else {
         // No views, navigate to table with grid view
         navigateToTable(selectedWorkspaceId, baseId, tableId);
-        navigate(`/base/${baseId}/table/${tableId}/grid`);
+        navigate(`/workspace/${selectedWorkspaceId}/base/${baseId}/table/${tableId}/grid`);
       }
     } catch (error) {
       console.error('Failed to navigate to base first view:', error);
-      // Fallback: navigate to base page instead of homepage
+      // Fallback: navigate to workspace homepage
       navigateToBase(selectedWorkspaceId, baseId);
-      navigate(`/base/${baseId}`);
-      // Don't throw error - we've handled it by navigating to base page
+      navigate(`/workspace/${selectedWorkspaceId}`);
+      // Don't throw error - we've handled it by navigating to workspace homepage
     }
   };
 

@@ -1,18 +1,13 @@
 import React from 'react';
 import { Edit, Users, Trash2, MoreVertical } from 'lucide-react';
 import { PopoverMenu } from './PopoverMenu';
+import type { Base } from '../../types/api.types';
 
 interface BaseMenuProps {
-  base: {
-    id: string;
-    title?: string;
-    name?: string;
-    description?: string;
-    workspace_id?: string;
-  };
-  onEdit: (base: any) => void;
-  onAddMembers: (base: any) => void;
-  onDelete: (base: any) => void;
+  base: Base;
+  onEdit: (base: Base) => void;
+  onAddMembers: (base: Base) => void;
+  onDelete: (base: Base) => void;
   canEdit?: boolean;
   canDelete?: boolean;
   canAddMembers?: boolean;

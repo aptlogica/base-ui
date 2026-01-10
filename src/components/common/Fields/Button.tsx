@@ -1,74 +1,53 @@
 import React from 'react';
 
-interface ButtonConfig {
-  buttonText?: string;
-  buttonStyle?: 'primary' | 'secondary' | 'outline' | 'danger' | 'success' | 'warning';
-  action?: string;
-  defaultValue?: string;
+interface ButtonProps {
+  value?: any;
+  onChange?: (value: any) => void;
+  config?: any;
+  disabled?: boolean;
+  readOnly?: boolean;
   [key: string]: any;
 }
 
-interface ButtonProps {
-  value?: string;
-  onChange?: (value: string) => void;
-  onClick?: () => void;
-  config?: ButtonConfig;
-  disabled?: boolean;
-}
+/**
+ * Button field component stub
+ * Displays button text or label from config
+ */
+export const Button: React.FC<ButtonProps> = ({ value, config, disabled, readOnly, ...props }) => {
+  const buttonText = value || config?.buttonText || config?.label || 'Button';
+  const buttonUrl = config?.buttonUrl || config?.url || '';
+  const openInNewTab = config?.openInNewTab || false;
 
-export const Button: React.FC<ButtonProps> = ({
-  value,
-  onChange,
-  onClick,
-  config = {},
-  disabled = false
-}) => {
-  const { buttonText = 'Click', buttonStyle = 'primary', action, defaultValue } = config;
-  
-  // Initialize with value, then defaultValue, then buttonText
-  const getInitialValue = () => {
-    if (value && value?.trim()) {
-      return value;
-    }
-    if (defaultValue && defaultValue?.trim()) {
-      return defaultValue;
-    }
-    return buttonText;
-  };
+  if (disabled || readOnly) {
+    return (
+      <div className="px-3 py-2 text-sm text-muted-foreground">
+        {buttonText}
+      </div>
+    );
+  }
 
-  const displayText = getInitialValue();
-
-  const getButtonStyle = () => {
-    switch (buttonStyle) {
-      case 'secondary':
-        return 'bg-[var(--color-bg-secondary-solid)] text-[var(--color-text-white)] hover:bg-[var(--color-utility-gray-700)]';
-      case 'outline':
-        return 'bg-transparent border border-[var(--color-border-brand)] text-[var(--color-text-brand-tertiary)] hover:bg-[var(--color-bg-brand-primary)]';
-      case 'danger':
-        return 'bg-[var(--color-bg-error-solid)] text-[var(--color-text-white)] hover:bg-[var(--color-error-700)]';
-      case 'success':
-        return 'bg-[var(--color-bg-success-solid)] text-[var(--color-text-white)] hover:bg-[var(--color-utility-success-700)]';
-      case 'warning':
-        return 'bg-[var(--color-bg-warning-solid)] text-[var(--color-text-white)] hover:bg-[var(--color-utility-warning-700)]';
-      case 'primary':
-      default:
-        return 'bg-[var(--color-bg-brand-solid)] text-[var(--color-text-white)] hover:bg-[var(--color-bg-brand-solid_hover)]';
-    }
-  };
-
-  const handleClick = () => {
-    if (onClick) onClick();
-    if (onChange) onChange(displayText);
-  };
+  if (buttonUrl) {
+    return (
+      <a
+        href={buttonUrl}
+        target={openInNewTab ? '_blank' : '_self'}
+        rel={openInNewTab ? 'noopener noreferrer' : undefined}
+        className="inline-flex items-center px-4 py-2 text-sm font-medium text-primary-brand bg-primary-brand/10 hover:bg-primary-brand/20 rounded-md transition-colors"
+        {...props}
+      >
+        {buttonText}
+      </a>
+    );
+  }
 
   return (
     <button
       type="button"
-      className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${getButtonStyle()} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-      onClick={handleClick}
-      disabled={disabled}
+      className="inline-flex items-center px-4 py-2 text-sm font-medium text-primary-brand bg-primary-brand/10 hover:bg-primary-brand/20 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      disabled={disabled || readOnly}
+      {...props}
     >
-      {displayText}
+      {buttonText}
     </button>
   );
-}; 
+};

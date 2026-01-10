@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { Column } from '../types/api.types';
+import type { Column } from '../../../types/api.types';
 
 interface UseGanttFieldConfigOptions {
   currentView?: any;

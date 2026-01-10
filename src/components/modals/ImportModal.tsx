@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, X, Loader2, FileText } from 'lucide-react';
+import { Upload, X, Loader2, FileText, HelpCircle } from 'lucide-react';
 import { useImportTable } from '../../hooks/useApi';
 import { useToast } from '../common/Toast';
+import { MultiLineText } from '../common/Fields/MultiLineText';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -70,6 +71,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isSubmittingRef = useRef(false); // Ref to prevent race conditions
   const importMutation = useImportTable();
   const toast = useToast();
   const config = IMPORT_CONFIG[importType];
@@ -84,6 +86,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       setError(null);
       setIsDragOver(false);
       setIsSubmitting(false);
+      isSubmittingRef.current = false; // Reset ref
     }
   }, [isOpen]);
 
@@ -147,19 +150,21 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     }
   };
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(true);
   };
 
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
   };
 
-  const handleSubmit = async () => {
-    // Prevent multiple submissions
-    if (isSubmitting || importMutation.isPending) {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+
+    // Prevent multiple submissions using ref to avoid race conditions
+    if (isSubmittingRef.current || isSubmitting || importMutation.isPending) {
       return;
     }
 
@@ -181,6 +186,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       return;
     }
 
+    // Set both state and ref immediately to prevent race conditions
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setUploadProgress(0);
 
@@ -188,6 +195,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     const order_index = Array.isArray(existingTables) ? existingTables.length : 0;
 
     try {
+      // Double-check mutation is not already in progress (safety check)
+      if (importMutation.isPending) {
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
+        return;
+      }
+
       await importMutation.mutateAsync({
         ...(baseId && { base_id: baseId }), // Only include base_id if provided
         workspace_id: workspaceId,
@@ -227,6 +241,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       setUploadProgress(0);
     } finally {
       setIsSubmitting(false);
+      isSubmittingRef.current = false; // Reset ref
     }
   };
 
@@ -240,50 +255,69 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
   return (
     <div
-      className="bg-modal-backdrop"
-      onClick={onClose}
+      className="bg-modal-backdrop relative"
       onKeyDown={handleKeyDown}
     >
+      <button
+        type="button"
+        aria-label="Close modal"
+        className="absolute inset-0"
+        onClick={onClose}
+      />
       <div
-        className="bg-modal min-h-[500px] max-h-[90vh] flex flex-col"
+        className="bg-modal min-h-[500px] max-h-[90vh] !p-0 flex flex-col relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-6 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center">
+        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center flex-shrink-0">
               <Upload size={16} className="text-green-600" />
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-primary">Import {config.label}</h2>
-              <p className="text-sm text-secondary">Upload your {config.label} file to create a new table</p>
+            <div className="min-w-0">
+              <h2 className="text-xl font-semibold text-primary truncate">Import {config.label}</h2>
+              <p className="text-sm text-secondary truncate">Upload your {config.label} file to create a new table</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
             aria-label="Close"
           >
             <X size={16} className="text-[var(--text-color-tertiary)]" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto min-h-0 space-y-4 px-1">
+        {/* Scrollable Content Area */}
+        <form id="import-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+          <div className="p-4 space-y-4">
           {/* File Upload Area */}
-          <div>
-            <label className="block text-sm font-medium text-primary mb-2">
+          <div className="space-y-1">
+            <label htmlFor="file-upload-input" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
               Select File <span className="text-red-500">*</span>
             </label>
             <div
-              className={`border border-dashed rounded-xl p-6 text-center transition-colors ${isDragOver
-                ? 'border-[var(--color-bg-brand-primary)] bg-[var(--color-bg-brand-primary)]/10'
-                : 'border-gray-300 hover:border-gray-400'
-                } ${selectedFile ? 'bg-green-50 border-green-300' : ''}`}
+              id="file-upload-input"
+              className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
+                isDragOver
+                  ? 'border-[var(--color-bg-brand-primary)] bg-[var(--color-bg-brand-primary)]/10'
+                  : selectedFile
+                  ? 'border-green-400 bg-green-50 hover:border-green-500'
+                  : 'border-gray-300 hover:border-gray-400 bg-gray-50/50'
+              }`}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label="Click or drag and drop to upload file"
             >
               <input
                 ref={fileInputRef}
@@ -293,10 +327,14 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 className="hidden"
               />
               {selectedFile ? (
-                <div className="flex flex-col items-center gap-2">
-                  <FileText size={32} className="text-green-600" />
-                  <div className="text-sm font-medium text-primary">{selectedFile.name}</div>
-                  <div className="text-xs text-secondary">{formatFileSize(selectedFile.size)}</div>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                    <FileText size={32} className="text-green-600" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-sm font-semibold text-primary">{selectedFile.name}</div>
+                    <div className="text-xs text-secondary">{formatFileSize(selectedFile.size)}</div>
+                  </div>
                   <button
                     type="button"
                     onClick={(e) => {
@@ -306,19 +344,26 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                         fileInputRef.current.value = '';
                       }
                     }}
-                    className="text-xs text-red-600 hover:text-red-800 hover:underline mt-1"
+                    className="text-xs text-red-600 hover:text-red-800 hover:underline mt-1 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
                   >
                     Remove file
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-2">
-                  <Upload size={32} className="text-gray-400" />
-                  <div className="text-sm text-primary">
-                    Drop your document here or <span className="hover:underline cursor-pointer text-[var(--color-bg-brand-primary)]">browse files</span>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                    <Upload size={32} className="text-gray-400" />
                   </div>
-                  <div className="text-xs text-secondary">
-                    {config.label} file (max {formatFileSize(config.maxSize)})
+                  <div className="space-y-1">
+                    <div className="text-sm font-medium text-primary">
+                      Drop your document here or{' '}
+                      <span className="text-[var(--color-bg-brand-primary)] hover:underline font-semibold">
+                        browse files
+                      </span>
+                    </div>
+                    <div className="text-xs text-secondary">
+                      {config.label} file (max {formatFileSize(config.maxSize)})
+                    </div>
                   </div>
                 </div>
               )}
@@ -326,35 +371,64 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           </div>
 
           {/* Title Input */}
-          <div>
-            <label className="block text-sm font-medium text-primary mb-2">
+          <div className="space-y-1">
+            <label htmlFor="tableTitle" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
               Table Title <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter table title"
-              className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-bg-brand-primary)] text-primary bg-background"
-            />
+            <div className="relative">
+              <input
+                id="tableTitle"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter table title"
+                className={`field-component field-component-border field-component-focus ${error && !selectedFile ? 'border-red-500' : 'border'}`}
+                required
+                minLength={3}
+                maxLength={50}
+                autoFocus
+              />
+              <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
+                <span className="relative inline-block group">
+                  <HelpCircle
+                    className={`w-4 h-4 ${
+                      error && !selectedFile ? 'text-red-500' : title.trim().length >= 3 ? 'text-green-600' : 'text-gray-400'
+                    } cursor-help`}
+                  />
+                  <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
+                    <h4 className="font-medium mb-2">Table title requirements:</h4>
+                    <ul className="space-y-1">
+                      <li className={`flex items-center ${title.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
+                        • Minimum 3 characters
+                      </li>
+                      <li className="flex items-center text-gray-500">• Must be unique</li>
+                    </ul>
+                  </div>
+                </span>
+              </div>
+            </div>
+            {error && !selectedFile && (
+              <div className="mt-1 text-sm text-red-600">
+                <span>{error}</span>
+              </div>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              {title.length}/50 characters
+            </p>
           </div>
 
           {/* Description Input */}
-          <div>
-            <label className="block text-sm font-medium text-primary mb-2">
-              Description (Optional)
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter table description"
-              rows={3}
-              className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-bg-brand-primary)] text-primary bg-background resize-none"
-            />
-          </div>
+          <MultiLineText
+            label="Description"
+            value={description}
+            onChange={setDescription}
+            placeholder="Enter table description"
+            rows={5}
+            isBorder={true}
+          />
 
-          {/* Error Message */}
-          {error && (
+          {/* Error Message - Only show if not related to file or title */}
+          {error && selectedFile && title.trim().length >= 3 && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
               {error}
             </div>
@@ -379,22 +453,24 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               </div>
             </div>
           )}
-        </div>
+          </div>
+        </form>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 pt-4 mt-4 flex-shrink-0 border-t">
+        {/* Footer - Fixed at Bottom */}
+        <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
           <button
             type="button"
             onClick={onClose}
             disabled={importMutation.isPending || isSubmitting}
-            className="px-4 py-2 rounded-xl border hover:bg-gray-50 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
+            className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
           >
             Cancel
           </button>
           <button
-            onClick={handleSubmit}
+            type="submit"
+            form="import-form"
             disabled={importMutation.isPending || isSubmitting || !title.trim() || !selectedFile}
-            className="flex items-center gap-2 px-6 py-2 btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {(importMutation.isPending || isSubmitting) && <Loader2 size={16} className="animate-spin" />}
             {(importMutation.isPending || isSubmitting) ? 'Importing...' : 'Import'}

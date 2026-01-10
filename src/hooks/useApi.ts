@@ -62,6 +62,7 @@ import {
   removeUserService,
   addRow,
   deleteRowService,
+  bulkDeleteRowService,
   insertRowDataService,
   insertRelationDataService,
   // Attachment services
@@ -122,7 +123,7 @@ export const useWorkspaces = () => {
           return Array.isArray(data) ? data : [];
         }
 
-        console.warn('⚠️ Workspace API returned unexpected format:', result);
+        // Unexpected format handled gracefully by returning empty array
         return [];
       } catch (error: any) {
         console.error('❌ Workspace query failed:', error);
@@ -137,7 +138,7 @@ export const useWorkspaces = () => {
             // If forceLogout fails, at least clear tokens and redirect
             sessionStorage.clear();
             localStorage.clear();
-            window.location.href = '/login';
+            globalThis.location.href = '/login';
           });
         }
 
@@ -359,7 +360,7 @@ export const useAllBases = () => {
       try {
         const result = await getAllBasesService() as any;
         // Ensure we return the data in the expected format
-        if (result && result.data) {
+        if (result?.data) {
           return Array.isArray(result.data) ? result.data : [];
         }
         return [];
@@ -381,7 +382,7 @@ export const useAllTables = () => {
       try {
         const result = await getAllTablesService() as any;
         // Ensure we return the data in the expected format
-        if (result && result.data) {
+        if (result?.data) {
           return Array.isArray(result.data) ? result.data : [];
         }
         return [];
@@ -403,7 +404,7 @@ export const useAllFields = () => {
       try {
         const result = await getAllFieldsService() as any;
         // Ensure we return the data in the expected format
-        if (result && result.data) {
+        if (result?.data) {
           return Array.isArray(result.data) ? result.data : [];
         }
         return [];
@@ -425,7 +426,7 @@ export const useAllViews = () => {
       try {
         const result = await getAllViewsService() as any;
         // Ensure we return the data in the expected format
-        if (result && result.data) {
+        if (result?.data) {
           return Array.isArray(result.data) ? result.data : [];
         }
         return [];
@@ -477,7 +478,7 @@ export const useTableViews = (tableId: string) => {
   const location = useLocation();
   
   // Public routes that don't need view data
-  const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password'];
   const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
 
   return useQuery({
@@ -526,8 +527,11 @@ export const useCreateWorkspace = () => {
     mutationFn: ({ workspace }: { workspace: WorkspaceBaseInput }) =>
       createWorkspaceService(workspace),
     onSuccess: (data: any) => {
-      // Invalidate workspaces list
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      // Invalidate and immediately refetch workspaces list for instant UI update
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.workspaces,
+        refetchType: 'active' // Force immediate refetch for active queries
+      });
       
       // If the new workspace has an ID, invalidate its bases query
       const newWorkspaceId = data?.data?.id || data?.id;
@@ -617,9 +621,15 @@ export const useUpdateBase = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.allBases });
 
       // Get the base data to invalidate workspace-specific bases if available
-      const baseData = queryClient.getQueryData(['bases', baseId]) as any;
-      if (baseData?.data?.workspace_id) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.bases(baseData.data.workspace_id) });
+      const baseData = queryClient.getQueryData(['bases', baseId]);
+      if (baseData && typeof baseData === 'object' && 'data' in baseData) {
+        const workspaceId = (baseData as { data?: { workspace_id?: string } }).data?.workspace_id;
+        if (workspaceId) {
+          queryClient.invalidateQueries({ queryKey: queryKeys.bases(workspaceId) });
+        } else {
+          // Fallback: invalidate all workspace bases queries
+          queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+        }
       } else {
         // Fallback: invalidate all workspace bases queries
         queryClient.invalidateQueries({ queryKey: ['workspaces'] });
@@ -663,7 +673,7 @@ export const useDeleteTable = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ tableId, baseId }: { tableId: string; baseId: string }) => deleteTableService(tableId),
+    mutationFn: ({ tableId, baseId: _baseId }: { tableId: string; baseId: string }) => deleteTableService(tableId),
     onSuccess: (_, { baseId }) => {
       // Invalidate the specific base's tables query
       queryClient.invalidateQueries({ queryKey: queryKeys.tables(baseId) });
@@ -706,6 +716,7 @@ export const useImportTable = () => {
         onProgress
       );
     },
+    retry: false, // Disable automatic retries to prevent duplicate table creation
     onSuccess: (_, { base_id }) => {
       // Invalidate the specific base's tables query if base_id is provided
       if (base_id) {
@@ -897,7 +908,7 @@ export const useUpdateViewAppearance = () => {
 
       return { previousView };
     },
-    onError: (err, variables, context) => {
+    onError: (_err, variables, context) => {
       // Rollback on error
       if (context?.previousView) {
         queryClient.setQueryData(['view', String(variables.viewId)], context.previousView);
@@ -955,7 +966,7 @@ export const useUpdateViewMeta = () => {
 
       return { previousView };
     },
-    onError: (err, variables, context) => {
+    onError: (_err, variables, context) => {
       // Rollback on error
       if (context?.previousView) {
         queryClient.setQueryData(['view', String(variables.viewId)], context.previousView);
@@ -1075,12 +1086,34 @@ export const useDeleteRecord = () => {
   });
 };
 
+export const useBulkDeleteRecords = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ model_id, row_ids }: { model_id: string; row_ids: number[] }) =>
+      bulkDeleteRowService({ model_id, row_ids }),
+    onSuccess: (_, { model_id }) => {
+      // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
+      // This ensures UI updates instantly after bulk deletion, regardless of cache age
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
 // Insert Relation Data
 export const useInsertRelationData = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ model_id, column_id, source_row_id, target_row_id, action, target_table_id }: {
+    mutationFn: ({ model_id, column_id, source_row_id, target_row_id, action, target_table_id: _target_table_id }: {
       model_id: string;
       column_id: string;
       source_row_id: number;
@@ -1213,7 +1246,7 @@ export const useUpdateUserProfile = (userId: string) => {
       const result = await updateUserProfileService(userId, updateData);
       return result;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       // Invalidate React Query cache - this triggers automatic refetch in all components
       queryClient.invalidateQueries({ queryKey: ['userProfile'] });
 
@@ -1275,7 +1308,7 @@ export const useAddOrUpdateAvatar = (userId: string) => {
       const result = await addOrUpdateAvatarService(userId, avatarFile);
       return result;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       // Invalidate user profile queries to refetch updated data
       queryClient.invalidateQueries({ queryKey: ['userProfile'] });
     },
@@ -1291,7 +1324,7 @@ export const useRemoveAvatar = (userId: string) => {
       const result = await removeAvatarService(userId);
       return result;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       // Invalidate user profile queries to refetch updated data
       queryClient.invalidateQueries({ queryKey: ['userProfile'] });
     },

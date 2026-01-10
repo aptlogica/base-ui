@@ -9,7 +9,7 @@ const NewColumnModal = lazy(() =>
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
 import { normalizeFieldType } from '../../../../utils/fieldType';
 import { parseApiColumnMeta } from '../../../../components/shared/table/tableUtils';
-import type { TableData } from '../../types/api.types';
+import type { TableData } from '../../../../types/api.types';
 import { Plus, PanelRight, PanelRightClose } from 'lucide-react';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../../../utils/fieldUsageUtils';
 import { useAllViews } from '../../../../hooks/useApi';

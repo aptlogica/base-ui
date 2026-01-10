@@ -104,9 +104,9 @@ export const NavigationResolver: React.FC = () => {
     // Slugs like "grid" should not be treated as navigation state
     const viewTypeSlugs = ['grid', 'form', 'gallery', 'kanban', 'calendar', 'gantt'];
     const isViewSlug = selectedViewId && viewTypeSlugs.includes(selectedViewId.toLowerCase());
-    const hasNavigationState = !!(selectedBaseId && selectedTableId && selectedViewId && !isViewSlug);
+    const hasNavigationState = !!(selectedWorkspaceId && selectedBaseId && selectedTableId && selectedViewId && !isViewSlug);
     const expectedPath = hasNavigationState
-      ? `/base/${selectedBaseId}/table/${selectedTableId}/${selectedViewId}`
+      ? `/workspace/${selectedWorkspaceId}/base/${selectedBaseId}/table/${selectedTableId}/${selectedViewId}`
       : null;
     
     debug('NavigationResolver: useEffect triggered', {
@@ -377,9 +377,9 @@ export const NavigationResolver: React.FC = () => {
         viewId: selectedViewId
       });
       
-      if (base && table && viewOk) {
+      if (base && table && viewOk && selectedWorkspaceId) {
         // Valid saved view - navigate directly
-        const targetPath = `/base/${selectedBaseId}/table/${selectedTableId}/${selectedViewId}`;
+        const targetPath = `/workspace/${selectedWorkspaceId}/base/${selectedBaseId}/table/${selectedTableId}/${selectedViewId}`;
         
         // Double-check: Don't navigate if user is on an excluded route
         // EXCEPTION: Allow navigation from /workspace during initial navigation
@@ -395,6 +395,7 @@ export const NavigationResolver: React.FC = () => {
         
         debug('NavigationResolver: ✅ Navigating to saved view', {
           targetPath,
+          workspaceId: selectedWorkspaceId,
           baseId: selectedBaseId,
           tableId: selectedTableId,
           viewId: selectedViewId,
@@ -439,13 +440,17 @@ export const NavigationResolver: React.FC = () => {
         workspacesCount: workspaces.length
       });
       
-      // If user has no saved view, navigate to homepage
-      // But also auto-select first base so homepage has something to show
-      if (currentPath !== '/homepage') {
-        debug('NavigationResolver: No saved view - navigating to homepage');
-        // Close flyout on homepage
+      // If user has no saved view, navigate to first workspace
+      // But also auto-select first base so workspace page has something to show
+      if (workspaces.length > 0 && (currentPath === '/' || currentPath === '/workspace')) {
+        const firstWorkspace = workspaces[0];
+        debug('NavigationResolver: No saved view - navigating to first workspace');
+        // Close flyout on workspace homepage
         closeFlyout();
-        replaceNavigate(navigate, '/homepage');
+        // Set workspace in store first
+        const { setWorkspace } = useNavigationStore.getState();
+        setWorkspace(firstWorkspace.id);
+        replaceNavigate(navigate, `/workspace/${firstWorkspace.id}`);
       }
       
       // Auto-select first workspace and base for new users (helps workspace page show content)
@@ -488,22 +493,10 @@ export const NavigationResolver: React.FC = () => {
         
         if (targetPath && currentPath !== targetPath && targetPath !== '/workspace') {
           // Extract IDs from target path and update navigation store
-          // Pattern: /base/{baseId}/table/{tableId}/{viewId}
-          const pathMatch = targetPath.match(/^\/base\/([^\/]+)\/table\/([^\/]+)\/([^\/]+)$/);
+          // Pattern: /workspace/{workspaceId}/base/{baseId}/table/{tableId}/{viewId}
+          const pathMatch = targetPath.match(/^\/workspace\/([^\/]+)\/base\/([^\/]+)\/table\/([^\/]+)\/([^\/]+)$/);
           if (pathMatch) {
-            const [, baseId, tableId, viewId] = pathMatch;
-            
-            // Find workspace ID from base ID
-            let workspaceId: string | null = null;
-            for (const ws of workspaces) {
-              if (ws?.bases) {
-                const base = Array.isArray(ws.bases) ? ws.bases.find((b: any) => b?.id === baseId) : null;
-                if (base) {
-                  workspaceId = ws.id;
-                  break;
-                }
-              }
-            }
+            const [, workspaceId, baseId, tableId, viewId] = pathMatch;
             
             if (workspaceId && baseId && tableId && viewId) {
               // Update navigation store BEFORE navigating
@@ -588,16 +581,22 @@ export const NavigationResolver: React.FC = () => {
     const isExcluded = excludedRoutes.some(route => currentPath.includes(route));
     if (isExcluded) return;
     
-    // If no workspaces at all, redirect to /homepage (shows "Welcome" message)
+    // If no workspaces at all, stay on /workspace and let HomePage show "no workspaces" message
     if (workspaces.length === 0) {
-      debug('NavigationResolver: No workspaces available, redirecting to /homepage');
-      replaceNavigate(navigate, '/homepage');
+      debug('NavigationResolver: No workspaces available, staying on /workspace');
       // Clear any invalid navigation state
       const { setWorkspace, setBase, setTable, setView } = useNavigationStore.getState();
       setWorkspace(null);
       setBase(null);
       setTable(null);
       setView(null);
+      // If not already on /workspace, navigate there
+      if (currentPath !== '/workspace' && currentPath !== '/') {
+        replaceNavigate(navigate, '/workspace');
+      }
+      resolvedRef.current = true;
+      initialNavigationDoneRef.current = true;
+      setIsResolving(false);
       return;
     }
     
@@ -615,7 +614,7 @@ export const NavigationResolver: React.FC = () => {
           const firstWorkspace = workspaces[0];
           const { setWorkspace } = useNavigationStore.getState();
           setWorkspace(firstWorkspace.id);
-          replaceNavigate(navigate, '/homepage');
+          replaceNavigate(navigate, `/workspace/${firstWorkspace.id}`);
         }
       }
     }

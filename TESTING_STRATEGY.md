@@ -9,7 +9,7 @@
 - **Utils:** 100% coverage (dateUtils, validation, helpers, etc.) ✅
 - **Hooks - UI:** 90% coverage (useClickOutside, useSearch, etc.) ✅  
 - **Components - Common:** 20% coverage (HeaderLogo, Toast, Skeleton, etc.) ✅
-- **Contexts/Config:** Basic coverage (RouteContext, NavigationPlugin) ✅
+- **Contexts/Config:** Basic coverage (RouteContext) ✅
 
 #### Missing Unit Tests (Critical for 80% core coverage):
 - **useApi.ts:** 0% coverage (50+ tests needed - queries/mutations) ❌

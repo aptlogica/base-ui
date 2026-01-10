@@ -35,18 +35,17 @@ function normalizeParams(params: Record<string, string | undefined>): Record<str
 // Route patterns configuration
 const ROUTE_PATTERNS = {
   homepage: [
-    '/homepage',
     '/',
     '/workspace',
-    { path: '/workspace/:workspaceId', exact: true }, // Exact match only (no sub-routes)
+    // Match /workspace/:workspaceId exactly (not sub-routes)
+    // We check this after view/administrator to avoid false matches
+    { path: '/workspace/:workspaceId' },
   ],
   administrator: [
     { path: '/workspace/:workspaceId/administrator' },
-    { path: '/administrator' },
   ],
   view: [
-    { path: '/base/:baseId/table/:tableId/:viewId' },
-    { path: '/table/:tableId/:viewId' },
+    { path: '/workspace/:workspaceId/base/:baseId/table/:tableId/:viewId' },
   ]
 } as const;
 
@@ -103,12 +102,17 @@ function determineRouteType(pathname: string): RouteType {
   
   
   // Homepage (check last to avoid false matches)
+  // Only match if pathname exactly matches (not a sub-route like /base/...)
   for (const pattern of ROUTE_PATTERNS.homepage) {
     if (typeof pattern === 'string') {
       if (pathname === pattern) return 'homepage';
     } else {
       const match = matchPath(pattern, pathname);
-      if (match) return 'homepage';
+      // For homepage patterns, ensure exact match (not a sub-route)
+      // Check that the matched pathname equals the input pathname
+      if (match && match.pathname === pathname) {
+        return 'homepage';
+      }
     }
   }
   
