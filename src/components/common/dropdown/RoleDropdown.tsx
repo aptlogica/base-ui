@@ -90,8 +90,8 @@ export const RoleDropdown: React.FC<RoleDropdownProps> = ({
 
       // Don't close if clicking inside this dropdown's trigger or menu
       if (
-        (triggerRef.current && triggerRef.current.contains(target)) ||
-        (menuRef.current && menuRef.current.contains(target))
+        triggerRef.current?.contains(target) ||
+        menuRef.current?.contains(target)
       ) {
         return;
       }
@@ -133,6 +133,29 @@ export const RoleDropdown: React.FC<RoleDropdownProps> = ({
     setIsOpen(false);
   };
 
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent, optionValue?: string) => {
+    if (e.key === 'Escape') {
+      setIsOpen(false);
+      triggerRef.current?.focus();
+    } else if (e.key === 'Enter' && optionValue) {
+      e.preventDefault();
+      handleSelect(optionValue);
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const currentIndex = optionValue 
+        ? options.findIndex(opt => opt.value === optionValue)
+        : -1;
+      const nextIndex = e.key === 'ArrowDown' 
+        ? (currentIndex + 1) % options.length
+        : (currentIndex - 1 + options.length) % options.length;
+      const nextOption = options[nextIndex];
+      if (nextOption) {
+        onChange(nextOption.value);
+      }
+    }
+  };
+
   return (
     <>
       <div className={`relative ${className}`} ref={dropdownRef}>
@@ -143,11 +166,24 @@ export const RoleDropdown: React.FC<RoleDropdownProps> = ({
             e.stopPropagation();
             setIsOpen(!isOpen);
           }}
-          className="w-full text-xs px-3 py-2.5 border rounded-xl gap-1 bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-gray-700 flex items-center justify-between transition-all"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsOpen(!isOpen);
+            } else if (e.key === 'ArrowDown' && !isOpen) {
+              e.preventDefault();
+              setIsOpen(true);
+            }
+          }}
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+          className="w-full text-xs px-3 py-2.5 border rounded-xl gap-1 bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-gray-700 flex items-center justify-between transition-all min-w-0"
           data-dropdown-trigger="true"
         >
-          <span>{selectedOption ? selectedOption.label : placeholder}</span>
-          <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <span className="truncate flex-1 min-w-0 text-left" title={selectedOption ? selectedOption.label : placeholder}>
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
+          <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
         </button>
       </div>
 
@@ -156,7 +192,10 @@ export const RoleDropdown: React.FC<RoleDropdownProps> = ({
         <div
           ref={menuRef}
           data-dropdown-menu="true"
-          className="fixed z-[9999] bg-card border rounded-xl shadow-lg overflow-hidden"
+          role="menu"
+          tabIndex={-1}
+          onKeyDown={(e) => handleKeyDown(e)}
+          className="fixed z-[9999] bg-card border rounded-xl shadow-lg overflow-hidden focus:outline-none"
           style={{
             ...(dropdownPosition.top !== undefined && { top: `${dropdownPosition.top}px` }),
             ...(dropdownPosition.bottom !== undefined && { bottom: `${dropdownPosition.bottom}px` }),
@@ -164,30 +203,33 @@ export const RoleDropdown: React.FC<RoleDropdownProps> = ({
             width: `${dropdownPosition.width}px`
           }}
           onClick={(e) => e.stopPropagation()}
+          aria-label="Role selection menu"
         >
-          <ul className="p-2 space-y-1 max-h-64 overflow-y-auto" role="listbox">
+          <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
             {options.map((option) => {
               const isSelected = value === option.value;
               return (
-                <li
+                <button
                   key={option.value}
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSelect(option.value);
                   }}
-                  className={`px-3 py-2 text-xs cursor-pointer transition-colors rounded-xl flex items-center justify-between ${isSelected
+                  onKeyDown={(e) => handleKeyDown(e, option.value)}
+                  className={`w-full text-left px-3 py-2 text-xs cursor-pointer transition-colors rounded-xl flex items-center justify-between ${isSelected
                     ? 'bg-gray-200 text-primary'
                     : 'text-primary hover:bg-gray-200'
                     }`}
-                  role="option"
-                  aria-selected={isSelected}
+                  aria-checked={isSelected}
+                  role="menuitemradio"
                 >
                   <span>{option.label}</span>
                   {isSelected && <Check className="w-3 h-3" />}
-                </li>
+                </button>
               );
             })}
-          </ul>
+          </div>
         </div>,
         document.body
       )}

@@ -353,7 +353,7 @@ describe('handleViewDeletion', () => {
     result.current.handleViewDeletion('view-1');
 
     // Assert
-    expect(navigateSpy).toHaveBeenCalledWith('/base/base-1/table/table-1/view-1', { replace: true });
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1/base/base-1/table/table-1/view-1', { replace: true });
     expect(saveUserNavigation).toHaveBeenCalledWith('user-1');
   });
 
@@ -371,7 +371,7 @@ describe('handleViewDeletion', () => {
     result.current.handleViewDeletion('view-1');
 
     // Assert
-    expect(navigateSpy).toHaveBeenCalledWith('/base/base-1/table/table-1/grid', { replace: true });
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1/base/base-1/table/table-1/grid', { replace: true });
     expect(saveUserNavigation).toHaveBeenCalledWith('user-1');
   });
 
@@ -392,7 +392,7 @@ describe('handleViewDeletion', () => {
     result.current.handleViewDeletion('v-1');
 
     // Assert
-    expect(navigateSpy).toHaveBeenCalledWith('/base/base-1/table/tbl-xyz/v-1', { replace: true });
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1/base/base-1/table/tbl-xyz/v-1', { replace: true });
   });
 
   it('falls back to global safe target when table/base cannot be resolved', () => {

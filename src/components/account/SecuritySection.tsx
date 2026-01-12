@@ -225,7 +225,7 @@ export const SecuritySection: React.FC = () => {
             setConfirmPasswordError(null);
           }}
           disabled={isUpdatingPassword || changePasswordMutation.isPending}
-          className="flex items-center gap-2 px-6 py-2.5 text-sm border text-gray-700 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50 transition-colors"
+          className="flex items-center gap-2 px-16 py-2 text-sm border text-gray-700 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50 transition-colors"
         >
           Cancel
         </button>
@@ -236,7 +236,7 @@ export const SecuritySection: React.FC = () => {
             changePasswordMutation.isPending ||
             !isPasswordFormValid
           }
-          className={`flex items-center gap-2 px-6 py-2.5 text-sm rounded-xl transition-colors ${isPasswordFormValid && !isUpdatingPassword && !changePasswordMutation.isPending
+          className={`flex items-center gap-2 px-16 py-2 text-sm rounded-xl transition-colors ${isPasswordFormValid && !isUpdatingPassword && !changePasswordMutation.isPending
               ? 'btn-primary text-primary'
               : 'bg-gray-300 text-gray-600 cursor-not-allowed'
             } disabled:opacity-50 disabled:cursor-not-allowed`}

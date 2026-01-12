@@ -35,7 +35,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
   // Ensure local state is always a string so calls to `trim()` are safe
   const [name, setName] = useState(initialName ?? '');
   const [description, setDescription] = useState(initialDescription ?? '');
-  const [_image, setImage] = useState<File | null>(null);
+  const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialImage);
   const [error, setError] = useState('');
   const [validationError, setValidationError] = useState('');

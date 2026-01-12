@@ -261,7 +261,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         const rendererProps = createFieldRendererProps(
             field,
             value,
-            isReadOnly ? undefined : (v: any) => handleFieldChange(field, v),
+            isReadOnly ? () => {} : (v: any) => handleFieldChange(field, v),
             {
                 isBorder: true,
                 required: field.required,

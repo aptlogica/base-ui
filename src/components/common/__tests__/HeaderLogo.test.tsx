@@ -34,7 +34,7 @@ describe('HeaderLogo', () => {
 
     await user.click(screen.getByTitle('Go to Homepage'));
 
-    expect(navigateMock).toHaveBeenCalledWith('/homepage');
+    expect(navigateMock).toHaveBeenCalledWith('/workspace');
   });
 
   it('swaps the image out on hover', () => {

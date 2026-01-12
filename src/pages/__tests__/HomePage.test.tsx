@@ -238,7 +238,7 @@ describe('HomePage', () => {
 
       renderWithProviders(<HomePage />);
 
-      expect(screen.getByText(/loading bases/i)).toBeInTheDocument();
+      expect(screen.getByLabelText('Loading')).toBeInTheDocument();
     });
 
     it('should render welcome message when no workspace is selected', () => {
@@ -284,7 +284,7 @@ describe('HomePage', () => {
 
       renderWithProviders(<HomePage />);
 
-      const searchInput = screen.getByPlaceholderText('Search');
+      const searchInput = screen.getByPlaceholderText('Search bases');
       expect(searchInput).toBeInTheDocument();
       expect(searchInput).toHaveAttribute('type', 'text');
     });
@@ -515,7 +515,7 @@ describe('HomePage', () => {
 
       renderWithProviders(<HomePage />);
 
-      const searchInput = screen.getByPlaceholderText('Search');
+      const searchInput = screen.getByPlaceholderText('Search bases');
       await user.type(searchInput, 'Alpha');
 
       await waitFor(() => {
@@ -547,7 +547,7 @@ describe('HomePage', () => {
 
       renderWithProviders(<HomePage />);
 
-      const searchInput = screen.getByPlaceholderText('Search');
+      const searchInput = screen.getByPlaceholderText('Search bases');
       await user.type(searchInput, 'keyword');
 
       await waitFor(() => {
@@ -569,7 +569,7 @@ describe('HomePage', () => {
 
       renderWithProviders(<HomePage />);
 
-      const searchInput = screen.getByPlaceholderText('Search');
+      const searchInput = screen.getByPlaceholderText('Search bases');
       await user.type(searchInput, 'project');
 
       await waitFor(() => {
@@ -590,7 +590,7 @@ describe('HomePage', () => {
 
       renderWithProviders(<HomePage />);
 
-      const searchInput = screen.getByPlaceholderText('Search');
+      const searchInput = screen.getByPlaceholderText('Search bases');
       await user.type(searchInput, 'NonexistentBase');
 
       await waitFor(() => {
@@ -612,7 +612,7 @@ describe('HomePage', () => {
 
       renderWithProviders(<HomePage />);
 
-      const searchInput = screen.getByPlaceholderText('Search');
+      const searchInput = screen.getByPlaceholderText('Search bases');
       await user.type(searchInput, 'First');
 
       await waitFor(() => {

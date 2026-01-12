@@ -134,12 +134,11 @@ describe('ImportModal', () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
 
-      const { container } = renderWithQueryClient(
-        <ImportModal {...defaultProps} onClose={onClose} />
-      );
+      renderWithQueryClient(<ImportModal {...defaultProps} onClose={onClose} />);
 
-      const backdrop = container.querySelector('.bg-modal-backdrop');
-      await user.click(backdrop!);
+      // Look for the backdrop button with aria-label
+      const backdrop = screen.getByLabelText('Close modal');
+      await user.click(backdrop);
 
       expect(onClose).toHaveBeenCalledTimes(1);
     });

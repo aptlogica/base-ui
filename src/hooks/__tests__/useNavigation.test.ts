@@ -251,7 +251,7 @@ describe('useNavigation Hook', () => {
     it('should return current pathname as currentPath', () => {
       // Arrange
       useLocationMock.mockReturnValue({
-        pathname: '/base/base-1/table/table-1',
+        pathname: '/workspace/ws-1/base/base-1/table/table-1/grid',
         search: '',
         hash: '',
         state: null,
@@ -263,7 +263,7 @@ describe('useNavigation Hook', () => {
       });
 
       // Assert
-      expect(result.current.currentPath).toBe('/base/base-1/table/table-1');
+      expect(result.current.currentPath).toBe('/workspace/ws-1/base/base-1/table/table-1/grid');
     });
 
     it('should return null for all navigation states on initial load', () => {
@@ -363,314 +363,27 @@ describe('useNavigation Hook', () => {
   });
 
   // =========================================================================
-  // TEST GROUP 3: URL PARSING - BASE ROUTE PATTERN
+  // TEST GROUP 3: URL PARSING - VIEW ROUTE PATTERN (Full route with workspace)
   // =========================================================================
-
-  describe('URL Parsing - Base Route (/base/{baseId})', () => {
-    it('should parse base route and update store', async () => {
-      // Arrange
-      useLocationMock.mockReturnValue({
-        pathname: '/base/base-1',
-        search: '',
-        hash: '',
-        state: null,
-      });
-      const storeState = {
-        ...mockStoreState,
-        selectedWorkspaceId: null,
-        selectedBaseId: null,
-      };
-      const mockUseNavigationStore = vi.mocked(navigationStore.useNavigationStore);
-      mockUseNavigationStore.mockReturnValue(storeState  as any);
-
-      // Act
-      renderHook(() => useNavigation(), {
-        wrapper: createQueryClientWrapper(),
-      });
-
-      // Assert
-      await waitFor(() => {
-        expect(mockStoreState.navigateToBase).toHaveBeenCalledWith('ws-1', 'base-1');
-      });
-    });
-
-    it('should NOT update store if base already selected', () => {
-      // Arrange
-      useLocationMock.mockReturnValue({
-        pathname: '/base/base-1',
-        search: '',
-        hash: '',
-        state: null,
-      });
-      const storeState = {
-        ...mockStoreState,
-        selectedWorkspaceId: 'ws-1',
-        selectedBaseId: 'base-1',
-      };
-      const mockUseNavigationStore = vi.mocked(navigationStore.useNavigationStore);
-      mockUseNavigationStore.mockReturnValue(storeState  as any);
-
-      // Act
-      renderHook(() => useNavigation(), {
-        wrapper: createQueryClientWrapper(),
-      });
-
-      // Assert
-      expect(mockStoreState.navigateToBase).not.toHaveBeenCalled();
-    });
-
-    it('should use workspace index for O(1) workspace resolution', async () => {
-      // Arrange
-      useLocationMock.mockReturnValue({
-        pathname: '/base/base-3',
-        search: '',
-        hash: '',
-        state: null,
-      });
-      const storeState = {
-        ...mockStoreState,
-        selectedWorkspaceId: null,
-        selectedBaseId: null,
-      };
-      const mockUseNavigationStore = vi.mocked(navigationStore.useNavigationStore);
-      mockUseNavigationStore.mockReturnValue(storeState  as any);
-
-      // Act
-      renderHook(() => useNavigation(), {
-        wrapper: createQueryClientWrapper(),
-      });
-
-      // Assert
-      await waitFor(() => {
-        expect(mockStoreState.navigateToBase).toHaveBeenCalledWith('ws-1', 'base-3');
-      });
-    });
-
-    it('should show error toast if workspace resolution fails', async () => {
-      // Arrange
-      useLocationMock.mockReturnValue({
-        pathname: '/base/unknown-base',
-        search: '',
-        hash: '',
-        state: null,
-      });
-      const storeState = {
-        ...mockStoreState,
-        selectedWorkspaceId: null,
-        selectedBaseId: null,
-      };
-      const mockUseNavigationStore = vi.mocked(navigationStore.useNavigationStore);
-      mockUseNavigationStore.mockReturnValue(storeState  as any);
-
-      const mockBuildWorkspaceIndex = vi.mocked(navigationIndexModule.buildWorkspaceIndex);
-      mockBuildWorkspaceIndex.mockReturnValue({
-        baseToWorkspace: new Map(),
-        tableToBase: new Map(),
-      });
-
-      const mockResolveWorkspaceIdFromBaseId = vi.mocked(
-        navigationPersistenceModule.resolveWorkspaceIdFromBaseId
-      );
-      mockResolveWorkspaceIdFromBaseId.mockReturnValue(null);
-
-      // Act
-      renderHook(() => useNavigation(), {
-        wrapper: createQueryClientWrapper(),
-      });
-
-      // Assert
-      await waitFor(() => {
-        expect(mockToastContext.error).toHaveBeenCalledWith(
-          'Unable to resolve workspace for this base.'
-        );
-      });
-    });
-
-    it('should fall back to linear search if index lookup fails', async () => {
-      // Arrange
-      useLocationMock.mockReturnValue({
-        pathname: '/base/base-1',
-        search: '',
-        hash: '',
-        state: null,
-      });
-      const storeState = {
-        ...mockStoreState,
-        selectedWorkspaceId: null,
-      };
-      const mockUseNavigationStore = vi.mocked(navigationStore.useNavigationStore);
-      mockUseNavigationStore.mockReturnValue(storeState  as any);
-
-      const mockBuildWorkspaceIndex = vi.mocked(navigationIndexModule.buildWorkspaceIndex);
-      mockBuildWorkspaceIndex.mockReturnValue({
-        baseToWorkspace: new Map(),
-        tableToBase: new Map(),
-      });
-
-      const mockResolveWorkspaceIdFromBaseId = vi.mocked(
-        navigationPersistenceModule.resolveWorkspaceIdFromBaseId
-      );
-      mockResolveWorkspaceIdFromBaseId.mockReturnValue('ws-1');
-
-      // Act
-      renderHook(() => useNavigation(), {
-        wrapper: createQueryClientWrapper(),
-      });
-
-      // Assert
-      await waitFor(() => {
-        expect(mockResolveWorkspaceIdFromBaseId).toHaveBeenCalled();
-        expect(mockStoreState.navigateToBase).toHaveBeenCalledWith('ws-1', 'base-1');
-      });
-    });
-  });
+  // Note: Base-only routes (/base/{baseId}) are no longer supported
+  // Navigation to base now goes to /workspace/{workspaceId}
+  // Full routes are: /workspace/{workspaceId}/base/{baseId}/table/{tableId}/{viewId}
 
   // =========================================================================
-  // TEST GROUP 4: URL PARSING - TABLE ROUTE PATTERN
+  // TEST GROUP 4: URL PARSING - VIEW ROUTE PATTERN (Full route with workspace)
   // =========================================================================
-
-  describe('URL Parsing - Table Route (/base/{baseId}/table/{tableId})', () => {
-    it('should parse table route and update store', async () => {
-      // Arrange
-      useLocationMock.mockReturnValue({
-        pathname: '/base/base-1/table/table-1',
-        search: '',
-        hash: '',
-        state: null,
-      });
-      const storeState = {
-        ...mockStoreState,
-        selectedWorkspaceId: null,
-        selectedBaseId: null,
-        selectedTableId: null,
-      };
-      const mockUseNavigationStore = vi.mocked(navigationStore.useNavigationStore);
-      mockUseNavigationStore.mockReturnValue(storeState  as any);
-
-      // Act
-      renderHook(() => useNavigation(), {
-        wrapper: createQueryClientWrapper(),
-      });
-
-      // Assert
-      await waitFor(() => {
-        expect(mockStoreState.navigateToTable).toHaveBeenCalledWith(
-          'ws-1',
-          'base-1',
-          'table-1'
-        );
-      });
-    });
-
-    it('should NOT update store if table already selected', () => {
-      // Arrange
-      useLocationMock.mockReturnValue({
-        pathname: '/base/base-1/table/table-1',
-        search: '',
-        hash: '',
-        state: null,
-      });
-      const storeState = {
-        ...mockStoreState,
-        selectedWorkspaceId: 'ws-1',
-        selectedBaseId: 'base-1',
-        selectedTableId: 'table-1',
-      };
-      const mockUseNavigationStore = vi.mocked(navigationStore.useNavigationStore);
-      mockUseNavigationStore.mockReturnValue(storeState  as any);
-
-      // Act
-      renderHook(() => useNavigation(), {
-        wrapper: createQueryClientWrapper(),
-      });
-
-      // Assert
-      expect(mockStoreState.navigateToTable).not.toHaveBeenCalled();
-    });
-
-    it('should update store when table changes for same base', async () => {
-      // Arrange
-      useLocationMock.mockReturnValue({
-        pathname: '/base/base-1/table/table-2',
-        search: '',
-        hash: '',
-        state: null,
-      });
-      const storeState = {
-        ...mockStoreState,
-        selectedWorkspaceId: 'ws-1',
-        selectedBaseId: 'base-1',
-        selectedTableId: 'table-1',
-      };
-      const mockUseNavigationStore = vi.mocked(navigationStore.useNavigationStore);
-      mockUseNavigationStore.mockReturnValue(storeState  as any);
-
-      // Act
-      renderHook(() => useNavigation(), {
-        wrapper: createQueryClientWrapper(),
-      });
-
-      // Assert
-      await waitFor(() => {
-        expect(mockStoreState.navigateToTable).toHaveBeenCalledWith(
-          'ws-1',
-          'base-1',
-          'table-2'
-        );
-      });
-    });
-
-    it('should show error toast if workspace resolution fails for table route', async () => {
-      // Arrange
-      useLocationMock.mockReturnValue({
-        pathname: '/base/unknown-base/table/table-1',
-        search: '',
-        hash: '',
-        state: null,
-      });
-      const storeState = {
-        ...mockStoreState,
-        selectedWorkspaceId: null,
-        selectedBaseId: null,
-        selectedTableId: null,
-      };
-      const mockUseNavigationStore = vi.mocked(navigationStore.useNavigationStore);
-      mockUseNavigationStore.mockReturnValue(storeState  as any);
-
-      const mockBuildWorkspaceIndex = vi.mocked(navigationIndexModule.buildWorkspaceIndex);
-      mockBuildWorkspaceIndex.mockReturnValue({
-        baseToWorkspace: new Map(),
-        tableToBase: new Map(),
-      });
-
-      const mockResolveWorkspaceIdFromBaseId = vi.mocked(
-        navigationPersistenceModule.resolveWorkspaceIdFromBaseId
-      );
-      mockResolveWorkspaceIdFromBaseId.mockReturnValue(null);
-
-      // Act
-      renderHook(() => useNavigation(), {
-        wrapper: createQueryClientWrapper(),
-      });
-
-      // Assert
-      await waitFor(() => {
-        expect(mockToastContext.error).toHaveBeenCalledWith(
-          'Unable to resolve workspace for this base.'
-        );
-      });
-    });
-  });
+  // Note: Table-only routes (/base/{baseId}/table/{tableId}) are no longer supported
+  // Full routes are: /workspace/{workspaceId}/base/{baseId}/table/{tableId}/{viewId}
 
   // =========================================================================
   // TEST GROUP 5: URL PARSING - VIEW ROUTE PATTERN & SLUG DETECTION
   // =========================================================================
 
-  describe('URL Parsing - View Route (/base/{baseId}/table/{tableId}/{viewId})', () => {
+  describe('URL Parsing - View Route (/workspace/{workspaceId}/base/{baseId}/table/{tableId}/{viewId})', () => {
     it('should parse view route with real view ID', async () => {
       // Arrange
       useLocationMock.mockReturnValue({
-        pathname: '/base/base-1/table/table-1/view-uuid-123',
+        pathname: '/workspace/ws-1/base/base-1/table/table-1/view-uuid-123',
         search: '',
         hash: '',
         state: null,
@@ -704,7 +417,7 @@ describe('useNavigation Hook', () => {
     it('should NOT save grid slug as selectedViewId', async () => {
       // Arrange
       useLocationMock.mockReturnValue({
-        pathname: '/base/base-1/table/table-1/grid',
+        pathname: '/workspace/ws-1/base/base-1/table/table-1/grid',
         search: '',
         hash: '',
         state: null,
@@ -738,7 +451,7 @@ describe('useNavigation Hook', () => {
     it('should NOT save form slug as selectedViewId', async () => {
       // Arrange
       useLocationMock.mockReturnValue({
-        pathname: '/base/base-1/table/table-1/form',
+        pathname: '/workspace/ws-1/base/base-1/table/table-1/form',
         search: '',
         hash: '',
         state: null,
@@ -780,7 +493,7 @@ describe('useNavigation Hook', () => {
       // Act & Assert for each slug
       for (const slug of slugs) {
         useLocationMock.mockReturnValue({
-          pathname: `/base/base-1/table/table-1/${slug}`,
+          pathname: `/workspace/ws-1/base/base-1/table/table-1/${slug}`,
           search: '',
           hash: '',
           state: null,
@@ -804,7 +517,7 @@ describe('useNavigation Hook', () => {
     it('should NOT update store if view already selected and unchanged', () => {
       // Arrange
       useLocationMock.mockReturnValue({
-        pathname: '/base/base-1/table/table-1/view-uuid-123',
+        pathname: '/workspace/ws-1/base/base-1/table/table-1/view-uuid-123',
         search: '',
         hash: '',
         state: null,
@@ -826,48 +539,6 @@ describe('useNavigation Hook', () => {
 
       // Assert
       expect(mockStoreState.navigateToView).not.toHaveBeenCalled();
-    });
-
-    it('should show error toast if workspace resolution fails for view route', async () => {
-      // Arrange
-      useLocationMock.mockReturnValue({
-        pathname: '/base/unknown-base/table/table-1/view-uuid',
-        search: '',
-        hash: '',
-        state: null,
-      });
-      const storeState = {
-        ...mockStoreState,
-        selectedWorkspaceId: null,
-        selectedBaseId: null,
-        selectedTableId: null,
-        selectedViewId: null,
-      };
-      const mockUseNavigationStore = vi.mocked(navigationStore.useNavigationStore);
-      mockUseNavigationStore.mockReturnValue(storeState  as any);
-
-      const mockBuildWorkspaceIndex = vi.mocked(navigationIndexModule.buildWorkspaceIndex);
-      mockBuildWorkspaceIndex.mockReturnValue({
-        baseToWorkspace: new Map(),
-        tableToBase: new Map(),
-      });
-
-      const mockResolveWorkspaceIdFromBaseId = vi.mocked(
-        navigationPersistenceModule.resolveWorkspaceIdFromBaseId
-      );
-      mockResolveWorkspaceIdFromBaseId.mockReturnValue(null);
-
-      // Act
-      renderHook(() => useNavigation(), {
-        wrapper: createQueryClientWrapper(),
-      });
-
-      // Assert
-      await waitFor(() => {
-        expect(mockToastContext.error).toHaveBeenCalledWith(
-          'Unable to resolve workspace for this base.'
-        );
-      });
     });
   });
 
@@ -892,7 +563,7 @@ describe('useNavigation Hook', () => {
       expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-2');
     });
 
-    it('navigateToBase should call store and React Router navigate', async () => {
+    it('navigateToBase should call store and React Router navigate to workspace', async () => {
       // Arrange
       const { result } = renderHook(() => useNavigation(), {
         wrapper: createQueryClientWrapper(),
@@ -905,10 +576,11 @@ describe('useNavigation Hook', () => {
 
       // Assert
       expect(mockStoreState.navigateToBase).toHaveBeenCalledWith('ws-1', 'base-2');
-      expect(navigateSpy).toHaveBeenCalledWith('/base/base-2');
+      // navigateToBase now navigates to workspace homepage
+      expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1');
     });
 
-    it('navigateToTable should call store and React Router with grid slug', async () => {
+    it('navigateToTable should call store and React Router with full route', async () => {
       // Arrange
       const { result } = renderHook(() => useNavigation(), {
         wrapper: createQueryClientWrapper(),
@@ -925,7 +597,7 @@ describe('useNavigation Hook', () => {
         'base-1',
         'table-2'
       );
-      expect(navigateSpy).toHaveBeenCalledWith('/base/base-1/table/table-2/grid');
+      expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1/base/base-1/table/table-2/grid');
     });
 
     it('navigateToView should call store and React Router navigate', async () => {
@@ -947,7 +619,7 @@ describe('useNavigation Hook', () => {
         'view-abc'
       );
       expect(navigateSpy).toHaveBeenCalledWith(
-        '/base/base-1/table/table-1/view-abc'
+        '/workspace/ws-1/base/base-1/table/table-1/view-abc'
       );
     });
   });
@@ -1116,7 +788,7 @@ describe('useNavigation Hook', () => {
         selectedWorkspaceId: 'ws-1',
         selectedBaseId: 'base-1',
         selectedTableId: 'table-1',
-        getNavigationPath: vi.fn(() => '/base/base-1/table/table-1'),
+        getNavigationPath: vi.fn(() => '/workspace/ws-1/base/base-1/table/table-1/grid'),
       };
       const mockUseNavigationStore = vi.mocked(navigationStore.useNavigationStore);
       mockUseNavigationStore.mockReturnValue(storeState  as any);
@@ -1132,7 +804,7 @@ describe('useNavigation Hook', () => {
 
       // Assert
       expect(navigateSpy).toHaveBeenCalledWith(
-        '/base/base-1/table/table-1',
+        '/workspace/ws-1/base/base-1/table/table-1/grid',
         { replace: true }
       );
     });
@@ -1140,7 +812,7 @@ describe('useNavigation Hook', () => {
     it('should NOT restore if already on non-home route', () => {
       // Arrange
       useLocationMock.mockReturnValue({
-        pathname: '/base/base-1/table/table-1',
+        pathname: '/workspace/ws-1/base/base-1/table/table-1/grid',
         search: '',
         hash: '',
         state: null,
@@ -1148,7 +820,7 @@ describe('useNavigation Hook', () => {
       const storeState = {
         ...mockStoreState,
         selectedWorkspaceId: 'ws-1',
-        getNavigationPath: vi.fn(() => '/base/base-1/table/table-1'),
+        getNavigationPath: vi.fn(() => '/workspace/ws-1/base/base-1/table/table-1/grid'),
       };
       const mockUseNavigationStore = vi.mocked(navigationStore.useNavigationStore);
       mockUseNavigationStore.mockReturnValue(storeState  as any);
@@ -1254,7 +926,7 @@ describe('useNavigation Hook', () => {
     it('should handle special characters in IDs', async () => {
       // Arrange
       useLocationMock.mockReturnValue({
-        pathname: '/base/base-with-dash_and_underscore/table/table-123',
+        pathname: '/workspace/ws-1/base/base-with-dash_and_underscore/table/table-123/grid',
         search: '',
         hash: '',
         state: null,
@@ -1279,52 +951,6 @@ describe('useNavigation Hook', () => {
           'table-123'
         );
       });
-    });
-
-    it('should handle toast error gracefully if it throws', async () => {
-      // Arrange
-      useLocationMock.mockReturnValue({
-        pathname: '/base/unknown-base',
-        search: '',
-        hash: '',
-        state: null,
-      });
-      const storeState = {
-        ...mockStoreState,
-        selectedWorkspaceId: null,
-      };
-      const mockUseNavigationStore = vi.mocked(navigationStore.useNavigationStore);
-      mockUseNavigationStore.mockReturnValue(storeState  as any);
-
-      const mockBuildWorkspaceIndex = vi.mocked(navigationIndexModule.buildWorkspaceIndex);
-      mockBuildWorkspaceIndex.mockReturnValue({
-        baseToWorkspace: new Map(),
-        tableToBase: new Map(),
-      });
-
-      const mockResolveWorkspaceIdFromBaseId = vi.mocked(
-        navigationPersistenceModule.resolveWorkspaceIdFromBaseId
-      );
-      mockResolveWorkspaceIdFromBaseId.mockReturnValue(null);
-
-      const mockToastError = vi.fn(() => {
-        throw new Error('Toast error');
-      });
-      const mockUseToast = vi.mocked(toastModule.useToast);
-      mockUseToast.mockReturnValue({
-        ...mockToastContext,
-        error: mockToastError,
-      }  as any);
-
-      // Act - should not throw
-      expect(() => {
-        renderHook(() => useNavigation(), {
-          wrapper: createQueryClientWrapper(),
-        });
-      }).not.toThrow();
-
-      // Assert
-      expect(mockToastError).toHaveBeenCalled();
     });
 
     it('should handle workspace data loading state', () => {
@@ -1471,25 +1097,23 @@ describe('useNavigation Hook', () => {
       mockStoreState.navigateToWorkspace.mockClear();
       storeState.selectedWorkspaceId = 'ws-1';
 
-      // Act 2: Navigate to base
+      // Act 2: Navigate to base (now navigates to workspace homepage)
       useLocationMock.mockReturnValue({
-        pathname: '/base/base-1',
+        pathname: '/workspace/ws-1',
         search: '',
         hash: '',
         state: null,
       });
       rerender();
 
-      await waitFor(() => {
-        expect(mockStoreState.navigateToBase).toHaveBeenCalledWith('ws-1', 'base-1');
-      });
-
+      // Note: Base navigation now goes to workspace homepage, not a base-specific route
+      // The base is selected in the store but URL shows workspace
       mockStoreState.navigateToBase.mockClear();
       storeState.selectedBaseId = 'base-1';
 
       // Act 3: Navigate to table
       useLocationMock.mockReturnValue({
-        pathname: '/base/base-1/table/table-1',
+        pathname: '/workspace/ws-1/base/base-1/table/table-1/grid',
         search: '',
         hash: '',
         state: null,
@@ -1509,7 +1133,7 @@ describe('useNavigation Hook', () => {
 
       // Act 4: Navigate to view
       useLocationMock.mockReturnValue({
-        pathname: '/base/base-1/table/table-1/view-abc',
+        pathname: '/workspace/ws-1/base/base-1/table/table-1/view-abc',
         search: '',
         hash: '',
         state: null,
@@ -1641,7 +1265,7 @@ describe('useNavigation Hook', () => {
     it('should NOT match path with extra segments', () => {
       // Arrange
       useLocationMock.mockReturnValue({
-        pathname: '/base/base-1/table/table-1/grid/extra',
+        pathname: '/workspace/ws-1/base/base-1/table/table-1/grid/extra',
         search: '',
         hash: '',
         state: null,
@@ -1655,36 +1279,15 @@ describe('useNavigation Hook', () => {
         wrapper: createQueryClientWrapper(),
       });
 
-      // Assert
+      // Assert - extra segments should not match the pattern
       expect(mockStoreState.navigateToView).not.toHaveBeenCalled();
       expect(mockStoreState.navigateToTable).not.toHaveBeenCalled();
-    });
-
-    it('should NOT match path with missing segments', () => {
-      // Arrange
-      useLocationMock.mockReturnValue({
-        pathname: '/base/',
-        search: '',
-        hash: '',
-        state: null,
-      });
-      const storeState = { ...mockStoreState };
-      const mockUseNavigationStore = vi.mocked(navigationStore.useNavigationStore);
-      mockUseNavigationStore.mockReturnValue(storeState  as any);
-
-      // Act
-      renderHook(() => useNavigation(), {
-        wrapper: createQueryClientWrapper(),
-      });
-
-      // Assert
-      expect(mockStoreState.navigateToBase).not.toHaveBeenCalled();
     });
 
     it('should handle uppercase view type slugs case-insensitively', async () => {
       // Arrange
       useLocationMock.mockReturnValue({
-        pathname: '/base/base-1/table/table-1/GRID',
+        pathname: '/workspace/ws-1/base/base-1/table/table-1/GRID',
         search: '',
         hash: '',
         state: null,
@@ -1711,7 +1314,7 @@ describe('useNavigation Hook', () => {
     it('should handle mixed case view type slugs', async () => {
       // Arrange
       useLocationMock.mockReturnValue({
-        pathname: '/base/base-1/table/table-1/GrId',
+        pathname: '/workspace/ws-1/base/base-1/table/table-1/GrId',
         search: '',
         hash: '',
         state: null,
@@ -1739,72 +1342,6 @@ describe('useNavigation Hook', () => {
   // =========================================================================
   // TEST GROUP 13: MEMOIZATION & PERFORMANCE
   // =========================================================================
-
-  describe('Memoization & Performance', () => {
-    it('should memoize workspace list from workspaces data', () => {
-      // Arrange
-      const mockUseWorkspaceData = vi.mocked(useWorkspaceDataModule.default);
-      const workspacesData = mockWorkspaceData;
-      mockUseWorkspaceData.mockReturnValue({
-        workspaces: workspacesData,
-        loading: false,
-        error: null,
-      }  as any);
-
-      // Act
-      const { rerender } = renderHook(() => useNavigation(), {
-        wrapper: createQueryClientWrapper(),
-      });
-
-      const callCountBefore = vi.mocked(navigationIndexModule.buildWorkspaceIndex).mock.calls.length;
-      rerender();
-      const callCountAfter = vi.mocked(navigationIndexModule.buildWorkspaceIndex).mock.calls.length;
-
-      // Assert - buildWorkspaceIndex should not be called again with same data
-      expect(callCountAfter).toBe(callCountBefore);
-    });
-
-    it('should rebuild workspace index when workspaces data changes', () => {
-      // Arrange
-      const mockUseWorkspaceData = vi.mocked(useWorkspaceDataModule.default);
-      const initialData = mockWorkspaceData;
-      mockUseWorkspaceData.mockReturnValue({
-        workspaces: initialData,
-        loading: false,
-        error: null,
-      }  as any);
-
-      const { rerender } = renderHook(() => useNavigation(), {
-        wrapper: createQueryClientWrapper(),
-      });
-
-      const mockBuildWorkspaceIndex = vi.mocked(navigationIndexModule.buildWorkspaceIndex);
-      const callCountBefore = mockBuildWorkspaceIndex.mock.calls.length;
-
-      // Act - Change workspaces data
-      const newData = {
-        ...mockWorkspaceData,
-        data: {
-          workspaces: [
-            {
-              id: 'ws-3',
-              name: 'Workspace 3',
-              bases: []
-            }
-          ]
-        }
-      };
-      mockUseWorkspaceData.mockReturnValue({
-        workspaces: newData,
-        loading: false,
-        error: null,
-      }  as any);
-      rerender();
-
-      const callCountAfter = mockBuildWorkspaceIndex.mock.calls.length;
-
-      // Assert
-      expect(callCountAfter).toBeGreaterThan(callCountBefore);
-    });
-  });
+  // Note: Workspace index building is no longer needed since workspaceId is in URL
+  // These tests have been removed as they test obsolete functionality
 });

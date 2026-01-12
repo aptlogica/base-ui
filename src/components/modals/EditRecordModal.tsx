@@ -250,7 +250,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     const fieldRendererProps = createFieldRendererProps(
       field,
       value, 
-      isReadOnly ? undefined : (v: any) => handleFieldChange(field, v),
+      isReadOnly ? () => {} : (v: any) => handleFieldChange(field, v),
       { 
         isBorder: true,
         readOnly: isReadOnly,

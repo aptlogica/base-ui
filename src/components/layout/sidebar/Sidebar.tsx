@@ -203,7 +203,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const renderFlyoutContent = () => (
     <>
       {/* Scrollable Content */}
-      <div className="flyout-content sb-flyout-inner p-3 flex-1 overflow-y-auto min-h-0">
+      <div className="flyout-content sb-flyout-inner p-3 flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         {/* Tables Section */}
         {(() => {
           // Check if we have a current workspace
@@ -413,7 +413,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       {flyoutOpen ? (
         <div
           ref={ref}
-          className={`flyout-content bg-gray-50 border-r shadow-inner layout transition-all ease-in-out duration-300 h-full flex flex-col sb-flyout-open ${isTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
+          className={`flyout-content bg-gray-50 border-r shadow-inner layout transition-all ease-in-out duration-300 h-full flex flex-col sb-flyout-open overflow-x-hidden ${isTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
             }`}
         >
           <style>{slideStyles}</style>

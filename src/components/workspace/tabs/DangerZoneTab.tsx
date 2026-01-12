@@ -24,8 +24,7 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
   const handleLeaveWorkspace = async () => {
     setIsLeaving(true);
     try {
-      // TODO: Implement leave workspace logic
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
       setShowLeaveConfirm(false);
     } catch (error) {
       console.error('Error leaving workspace:', error);

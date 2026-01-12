@@ -102,7 +102,7 @@ describe('useNavigateToBaseFirstView', () => {
     // Assert
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(navigateToBase).toHaveBeenCalledWith('ws-1', 'base-1');
-    expect(navigateSpy).toHaveBeenCalledWith('/base/base-1');
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1');
     expect(navigateToTable).not.toHaveBeenCalled();
     expect(navigateToView).not.toHaveBeenCalled();
   });
@@ -119,7 +119,7 @@ describe('useNavigateToBaseFirstView', () => {
     // Assert
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(navigateToBase).toHaveBeenCalledWith('ws-1', 'base-1');
-    expect(navigateSpy).toHaveBeenCalledWith('/homepage');
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1');
     expect(navigateToTable).not.toHaveBeenCalled();
     expect(navigateToView).not.toHaveBeenCalled();
   });
@@ -138,7 +138,7 @@ describe('useNavigateToBaseFirstView', () => {
     // Assert
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(navigateToView).toHaveBeenCalledWith('ws-1', 'base-1', 'tbl-xyz', 'view-1');
-    expect(navigateSpy).toHaveBeenCalledWith('/base/base-1/table/tbl-xyz/view-1');
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1/base/base-1/table/tbl-xyz/view-1');
   });
 
   it('navigates to first view when views exist', async () => {
@@ -155,7 +155,7 @@ describe('useNavigateToBaseFirstView', () => {
     // Assert
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(navigateToView).toHaveBeenCalledWith('ws-1', 'base-1', 'table-1', 'view-1');
-    expect(navigateSpy).toHaveBeenCalledWith('/base/base-1/table/table-1/view-1');
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1/base/base-1/table/table-1/view-1');
   });
 
   it('navigates to grid when no views exist', async () => {
@@ -172,7 +172,7 @@ describe('useNavigateToBaseFirstView', () => {
     // Assert
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(navigateToTable).toHaveBeenCalledWith('ws-1', 'base-1', 'table-1');
-    expect(navigateSpy).toHaveBeenCalledWith('/base/base-1/table/table-1/grid');
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1/base/base-1/table/table-1/grid');
     expect(navigateToView).not.toHaveBeenCalled();
   });
 
@@ -189,7 +189,7 @@ describe('useNavigateToBaseFirstView', () => {
     // Assert
     expect(consoleSpy).toHaveBeenCalled();
     expect(navigateToBase).toHaveBeenCalledWith('ws-1', 'base-1');
-    expect(navigateSpy).toHaveBeenCalledWith('/base/base-1');
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1');
     consoleSpy.mockRestore();
   });
 });

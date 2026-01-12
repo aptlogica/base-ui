@@ -71,7 +71,7 @@ describe('RouteContext', () => {
 
   it('classifies view routes and extracts baseId/tableId/viewId', () => {
     render(
-      <MemoryRouter initialEntries={['/base/b1/table/t1/v1']}>
+      <MemoryRouter initialEntries={['/workspace/w1/base/b1/table/t1/v1']}>
         <RouteContextProvider>
           <Consumer />
         </RouteContextProvider>
@@ -80,7 +80,7 @@ describe('RouteContext', () => {
 
     expect(screen.getByTestId('routeType')).toHaveTextContent('view');
     expect(screen.getByTestId('params')).toHaveTextContent(
-      JSON.stringify({ baseId: 'b1', tableId: 't1', viewId: 'v1' })
+      JSON.stringify({ workspaceId: 'w1', baseId: 'b1', tableId: 't1', viewId: 'v1' })
     );
 
     // On view routes, admin settings button is hidden by rule

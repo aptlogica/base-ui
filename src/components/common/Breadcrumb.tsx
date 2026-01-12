@@ -227,14 +227,29 @@ const Breadcrumb: React.FC = () => {
     // Check for new route format: /workspace/:workspaceId/base/:baseId/table/:tableId/:viewId
     // pathParts: ['workspace', workspaceId, 'base', baseId, 'table', tableId, viewId]
     const isNewFormat = pathParts[0] === 'workspace' && pathParts[2] === 'base';
-    const baseIndex = isNewFormat ? 3 : (pathParts[0] === 'base' ? 1 : -1);
-    const tableIndex = isNewFormat ? 5 : (pathParts[2] === 'table' ? 3 : -1);
-    const viewIndex = isNewFormat ? 6 : (pathParts[4] ? 4 : -1);
+    
+    // Determine indices based on route format
+    let baseIndex = -1;
+    let tableIndex = -1;
+    let viewIndex = -1;
+    
+    if (isNewFormat) {
+      // New format: /workspace/:workspaceId/base/:baseId/table/:tableId/:viewId
+      baseIndex = 3;
+      tableIndex = 5;
+      viewIndex = 6;
+    } else if (pathParts[0] === 'base') {
+      // Legacy format: /base/:baseId/table/:tableId/:viewId (kept for safety)
+      baseIndex = 1;
+      tableIndex = 3;
+      viewIndex = pathParts[4] ? 4 : -1;
+    }
 
     // Add base
     if (baseIndex > 0 && pathParts[baseIndex] && currentBase) {
       const baseName = currentBase.title || currentBase.name || 'Base';
-      const baseImage = currentBase.image || currentBase.logo || currentBase.meta?.image;
+      const baseImageRaw = currentBase.image || currentBase.logo || currentBase.meta?.image;
+      const baseImage = typeof baseImageRaw === 'string' ? baseImageRaw : undefined;
       const baseIcon = getBaseIcon(currentBase, 0);
 
       // Use image if available, otherwise use initial with colored background
@@ -269,7 +284,7 @@ const Breadcrumb: React.FC = () => {
     if (tableIndex > 0 && pathParts[tableIndex] && currentTable) {
       const tableData = currentTable.model || currentTable;
       const tableId = tableData.id || pathParts[tableIndex];
-      const tableName = tableData.title || tableData.name || 'Table';
+      const tableName = tableData.title || (tableData as any).name || 'Table';
 
       if (tableId && selectedWorkspaceId && currentBase) {
         items.push({
@@ -442,7 +457,8 @@ const Breadcrumb: React.FC = () => {
     return bases.map((base, index: number) => {
       const icon = getBaseIcon(base, index);
       const baseName = base.title || base.name || 'Base';
-      const baseImage = base.image || base.logo || base.meta?.image;
+      const baseImageRaw = base.image || base.logo || base.meta?.image;
+      const baseImage = typeof baseImageRaw === 'string' ? baseImageRaw : undefined;
 
       // Use image if available, otherwise use initial with colored background
       const baseIconElement = baseImage ? (

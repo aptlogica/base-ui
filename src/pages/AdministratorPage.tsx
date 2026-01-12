@@ -17,7 +17,7 @@ const AdministratorPage: React.FC = () => {
   // Get current workspace title
   const currentWorkspace = useMemo(() => {
     const workspaces = Array.isArray(workspacesData) ? workspacesData : [];
-    return workspaces.find((ws: any) => ws.id === workspaceId);
+    return workspaces.find((ws: { id?: string }) => ws.id === workspaceId);
   }, [workspacesData, workspaceId]);
 
 
@@ -32,11 +32,15 @@ const AdministratorPage: React.FC = () => {
   // workspace-read users only see Workspace tab
   // admin users see all tabs
   // maintainer/full_access users see only Workspaces tab
-  const tabs = isWorkspaceReadOnly()
-    ? allTabs.filter(tab => tab.key === 'workspaces')
-    : canAccessAllSettingsTabs()
-      ? allTabs
-      : allTabs.filter(tab => tab.key === 'workspaces');
+  const tabs = (() => {
+    if (isWorkspaceReadOnly()) {
+      return allTabs.filter(tab => tab.key === 'workspaces');
+    }
+    if (canAccessAllSettingsTabs()) {
+      return allTabs;
+    }
+    return allTabs.filter(tab => tab.key === 'workspaces');
+  })();
 
   // Get valid tab keys (memoized)
   const validTabKeys = useMemo(() => tabs.map(tab => tab.key), [tabs]);

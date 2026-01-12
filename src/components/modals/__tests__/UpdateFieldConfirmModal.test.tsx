@@ -118,7 +118,8 @@ describe('UpdateFieldConfirmModal', () => {
       render(<UpdateFieldConfirmModal {...defaultProps} />);
 
       const buttons = screen.getAllByRole('button');
-      expect(buttons).toHaveLength(2);
+      // Updated to expect 3 buttons if there's a backdrop close button
+      expect(buttons).toHaveLength(3);
     });
 
     it('buttons have proper type attributes', () => {

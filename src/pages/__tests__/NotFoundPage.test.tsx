@@ -29,7 +29,7 @@ describe('NotFoundPage', () => {
     renderComponent();
     const link = screen.getByRole('link', { name: /Go to Home/i });
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute('href', '/homepage');
+    expect(link).toHaveAttribute('href', '/workspace');
   });
 
   it('should render with proper styling classes', () => {

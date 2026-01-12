@@ -10,6 +10,11 @@ vi.mock('../../../hooks/useApi', () => ({
     mutateAsync: vi.fn(),
     isPending: false,
   })),
+  useWorkspaces: vi.fn(() => ({
+    data: [],
+    isLoading: false,
+    error: null,
+  })),
 }));
 
 // Mock Toast
@@ -206,12 +211,11 @@ describe('CreateWorkspaceModal', () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
 
-      const { container } = renderWithQueryClient(
-        <CreateWorkspaceModal {...defaultProps} onClose={onClose} />
-      );
+      renderWithQueryClient(<CreateWorkspaceModal {...defaultProps} onClose={onClose} />);
 
-      const backdrop = container.querySelector('.bg-modal-backdrop');
-      await user.click(backdrop!);
+      // Look for the backdrop button with aria-label
+      const backdrop = screen.getByLabelText('Close modal');
+      await user.click(backdrop);
 
       expect(onClose).toHaveBeenCalledTimes(1);
     });

@@ -503,7 +503,7 @@ describe('LoginPage', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/homepage', { replace: true });
+        expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
       });
     });
 
@@ -944,7 +944,7 @@ describe('LoginPage', () => {
 
       await waitFor(() => {
         expect(screen.queryByText('First attempt failed')).not.toBeInTheDocument();
-        expect(mockNavigate).toHaveBeenCalledWith('/homepage', { replace: true });
+        expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
       });
     });
   });

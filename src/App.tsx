@@ -121,7 +121,7 @@ const Layout = () => {
           {sidebarPosition === 'left' && flyoutMode === 'layout' && flyoutOpen && (
             <aside
               style={{ width: flyoutWidth, minWidth: flyoutWidth, maxWidth: flyoutWidth }}
-              className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner overflow-y-auto"
+              className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out"
             >
               <Sidebar
                 sidebarPosition={sidebarPosition}
@@ -140,7 +140,7 @@ const Layout = () => {
           {sidebarPosition === 'right' && flyoutMode === 'layout' && flyoutOpen && (
             <aside
               style={{ width: flyoutWidth, minWidth: flyoutWidth, maxWidth: flyoutWidth }}
-              className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner overflow-y-auto"
+              className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out"
             >
               <Sidebar
                 sidebarPosition={sidebarPosition}

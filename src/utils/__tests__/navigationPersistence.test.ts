@@ -117,7 +117,7 @@ describe('navigationPersistence', () => {
       viewId: 'v2',
     });
 
-    expect(path).toBe('/base/b1/table/t1/v2');
+    expect(path).toBe('/workspace/w1/base/b1/table/t1/v2');
   });
 
   it('getBestNavigationTarget should fall back to first items and grid when no views', () => {
@@ -135,7 +135,7 @@ describe('navigationPersistence', () => {
       },
     ];
 
-    expect(getBestNavigationTarget(workspaces as any)).toBe('/base/b1/table/t1/grid');
+    expect(getBestNavigationTarget(workspaces as any)).toBe('/workspace/w1/base/b1/table/t1/grid');
   });
 
   it('getBestNavigationTarget should handle nested table model ids', () => {
@@ -153,7 +153,7 @@ describe('navigationPersistence', () => {
       },
     ];
 
-    expect(getBestNavigationTarget(workspaces as any)).toBe('/base/b1/table/t1/v1');
+    expect(getBestNavigationTarget(workspaces as any)).toBe('/workspace/w1/base/b1/table/t1/v1');
   });
 
   it('resolveWorkspaceIdFromBaseId should find workspace id or null', () => {
@@ -178,6 +178,6 @@ describe('navigationPersistence', () => {
       },
     ];
 
-    expect(getSafeNavigationTarget(workspaces as any)).toBe('/base/b1/table/t1/v1');
+    expect(getSafeNavigationTarget(workspaces as any)).toBe('/workspace/w1/base/b1/table/t1/v1');
   });
 });
