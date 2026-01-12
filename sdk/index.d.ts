@@ -195,6 +195,7 @@ interface UpdateUserProfileParams {
     dob?: string;
     country?: string;
     timezone?: string;
+    locale?: string;
 }
 interface ChangePasswordParams {
     current_password: string;

@@ -228,7 +228,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
       } else if (!selectedField) {
         // For other view types that require field selection
         setFieldError(`${getFieldLabel()} is required for ${viewType} views`);
-        return;
+          return;
       }
     }
 
@@ -259,21 +259,34 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
           endDateFieldId,
         });
       } else {
-        // For other view types, use the single field selection
+        // For other view types, use the single field selection (only if required)
         const normalizedFieldId = getFieldId(selectedField);
 
-        if (!normalizedFieldId) {
+        // Only require field selection if showFieldDropdown is true
+        if (showFieldDropdown && !normalizedFieldId) {
           setError('Field selection is required');
           setIsSubmitting(false);
           return;
         }
 
-        onCreate({
+        // Build the onCreate payload - only include fieldId if it exists
+        const onCreatePayload: {
+          name: string;
+          description: string;
+          type: string;
+          fieldId?: string;
+        } = {
           name: finalName,
           description: description.trim(),
           type: viewType,
-          fieldId: normalizedFieldId,
-        });
+        };
+
+        // Only add fieldId if it exists (for view types that require it)
+        if (normalizedFieldId) {
+          onCreatePayload.fieldId = normalizedFieldId;
+        }
+
+        onCreate(onCreatePayload);
       }
 
       // Close the modal on successful creation
@@ -415,7 +428,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
             }
 
             if (viewType === 'ganttChart') {
-              // Gantt Chart: Dual field selection for start and end dates
+                // Gantt Chart: Dual field selection for start and end dates
               return (
                 <div className="space-y-4">
                   <AdvancedDropdown
@@ -444,7 +457,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
               );
             }
 
-            // Other view types: Single field selection
+                // Other view types: Single field selection
             const getFieldLabel = () => {
               if (viewType === 'calendar') return 'Date Field';
               if (viewType === 'kanban') return 'Group by Field';
@@ -452,18 +465,18 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
             };
 
             return (
-              <AdvancedDropdown
+                <AdvancedDropdown
                 label={getFieldLabel()}
-                options={fieldDropdownOptions}
-                value={selectedField}
-                onChange={(val) => {
+                  options={fieldDropdownOptions}
+                  value={selectedField}
+                  onChange={(val) => {
                   setSelectedField(val as FieldValue);
-                  setFieldError(''); // Clear error when user makes selection
-                }}
-                placeholder="Select field..."
-                searchable
-                required
-              />
+                    setFieldError(''); // Clear error when user makes selection
+                  }}
+                  placeholder="Select field..."
+                  searchable
+                  required
+                />
             );
           })()}
 
@@ -507,15 +520,15 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
 
         {/* Footer - Fixed at Bottom */}
         <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
             className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
-          >
-            Cancel
-          </button>
-          <button
+            >
+              Cancel
+            </button>
+            <button
             type="button"
             onClick={(e) => {
               e.preventDefault();
@@ -541,18 +554,18 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
               
               return false;
             })()}
-            className="px-16 py-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Creating...
-              </>
-            ) : (
-              'Create View'
-            )}
-          </button>
-        </div>
+              className="px-16 py-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Creating...
+                </>
+              ) : (
+                'Create View'
+              )}
+            </button>
+          </div>
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import { validateTableName, validateViewName, validateBaseName, ExistingItem } f
 interface EditItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { name: string; description: string }) => void;
+  onSave: (data: { name: string; description: string; image?: File | null }) => void;
   title: string;
   subtitle: string;
   icon: React.ReactNode;
@@ -88,18 +88,24 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
         return;
       }
       
-      // Validate dimensions (max 800x400)
+      // Set image and preview immediately (so it's available for submission)
+      const previewUrl = URL.createObjectURL(file);
+      setImage(file);
+      setImagePreview(previewUrl);
+      setError('');
+      
+      // Validate dimensions asynchronously (show error if invalid, but don't clear the image)
       const img = new Image();
       img.onload = () => {
         if (img.width > 800 || img.height > 400) {
           setError('Image dimensions must be max 800 x 400px');
-          return;
+          // Don't clear the image - let user decide if they want to proceed
         }
-        setImage(file);
-        setImagePreview(URL.createObjectURL(file));
-        setError('');
       };
-      img.src = URL.createObjectURL(file);
+      img.onerror = () => {
+        setError('Failed to load image. Please try again.');
+      };
+      img.src = previewUrl;
     }
   };
 
@@ -116,17 +122,24 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
     if (file && file.type.startsWith('image/')) {
       const validTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
       if (validTypes.includes(file.type)) {
+        // Set image and preview immediately (so it's available for submission)
+        const previewUrl = URL.createObjectURL(file);
+        setImage(file);
+        setImagePreview(previewUrl);
+        setError('');
+        
+        // Validate dimensions asynchronously (show error if invalid, but don't clear the image)
         const img = new Image();
         img.onload = () => {
-          if (img.width <= 800 && img.height <= 400) {
-            setImage(file);
-            setImagePreview(URL.createObjectURL(file));
-            setError('');
-          } else {
+          if (img.width > 800 || img.height > 400) {
             setError('Image dimensions must be max 800 x 400px');
+            // Don't clear the image - let user decide if they want to proceed
           }
         };
-        img.src = URL.createObjectURL(file);
+        img.onerror = () => {
+          setError('Failed to load image. Please try again.');
+        };
+        img.src = previewUrl;
       } else {
         setError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
       }
@@ -167,10 +180,17 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      await onSave({
+      const saveData: { name: string; description: string; image?: File | null } = {
         name: name.trim(),
         description: description.trim(),
-      });
+      };
+      
+      // Only include image for base type (must be a File object)
+      if (itemType === 'base' && image instanceof File) {
+        saveData.image = image;
+      }
+      
+      await onSave(saveData);
       // Close the modal on successful save
       onClose();
     } catch (err) {

@@ -1237,13 +1237,8 @@ export const useUpdateUserProfile = (userId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: { first_name?: string; last_name?: string; display_name?: string; country?: string; dob?: string; timezone?: string }) => {
-      // Only send fields that have values (not empty strings)
-      const updateData = Object.fromEntries(
-        Object.entries(params).filter(([_, value]) => value !== undefined && value !== '')
-      );
-
-      const result = await updateUserProfileService(userId, updateData);
+    mutationFn: async (params: { first_name?: string; last_name?: string; display_name?: string; country?: string; dob?: string; timezone?: string; locale?: string }) => {
+      const result = await updateUserProfileService(userId, params);
       return result;
     },
     onSuccess: (_, variables) => {

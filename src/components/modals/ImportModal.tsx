@@ -100,9 +100,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
   const validateFile = (file: File): string | null => {
     // Check file size
-    if (file.size > config.maxSize) {
-      return `File size exceeds ${formatFileSize(config.maxSize)}. Please select a smaller file.`;
-    }
+    // if (file.size > config.maxSize) {
+    //   return `File size exceeds ${formatFileSize(config.maxSize)}. Please select a smaller file.`;
+    // }
 
     // Check file extension
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -361,9 +361,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                         browse files
                       </span>
                     </div>
-                    <div className="text-xs text-secondary">
+                    {/* <div className="text-xs text-secondary">
                       {config.label} file (max {formatFileSize(config.maxSize)})
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               )}
