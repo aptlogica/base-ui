@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { useWorkspaceDataService } from '../../hooks/workspace/useWorkspaceDataService';
 import { ChevronRight, ChevronDown, Database, Sheet, Plus } from 'lucide-react';
-import { useWorkspaceBases, useBaseTables, useTableViews, useUpdateBase, useDeleteBase, useCreateBase} from '../../hooks/useApi';
+import { useWorkspaceBases, useBaseTables, useTableViews, useUpdateBase, useDeleteBase, useCreateBase } from '../../hooks/useApi';
 import { getViewIconInfo } from '../../types/viewTypes';
 import { useNavigateToBaseFirstView } from '../../hooks/useNavigateToBaseFirstView';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
@@ -13,11 +13,13 @@ import { BaseMenu } from './BaseMenu';
 import { EditItemModal } from '../modals/EditItemModal';
 import { AddBaseMembersModal } from '../modals/AddBaseMembersModal';
 import { CreateBaseModal } from '../modals/CreateBaseModal';
+import { DeleteBaseModal } from '../modals/DeleteBaseModal';
 import { useNavigationActions } from '../../hooks/useNavigationActions';
 import { useToast } from './Toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useComponentVisibility, COMPONENT_IDS } from '../../contexts/RouteContext';
 import { getInitials } from '../../utils/helpers';
+import type { Base, BasesResponse, BaseResponse, ViewsResponse, TablesResponse, TableResponse } from '../../types/api.types';
 
 interface BreadcrumbItem {
   type: 'base' | 'table' | 'view';
@@ -33,21 +35,20 @@ interface DropdownItem {
   icon?: React.ReactNode;
   onClick: () => void;
   isActive?: boolean;
-  base?: any; // For base items, include the full base object
+  base?: Base;
 }
 
 // Wrapper component to handle base menu permissions
 const BaseMenuWrapper: React.FC<{
-  base: any;
-  onEdit: (base: any) => void;
-  onAddMembers: (base: any) => void;
-  onDelete: (base: any) => void;
+  base: Base;
+  onEdit: (base: Base) => void;
+  onAddMembers: (base: Base) => void;
+  onDelete: (base: Base) => void;
 }> = ({ base, onEdit, onAddMembers, onDelete }) => {
   const { canUpdateBase: canUpdateBaseFromWorkspace, canDeleteBase: canDeleteBaseFromWorkspace, canAssignUsers } = useWorkspaceAccess(base.workspace_id);
   const { canUpdateBase: canUpdateBaseFromBase, canDeleteBase: canDeleteBaseFromBase, canManageBaseMembers, baseAccess } = useBaseAccess(base.id);
-  
+
   // Base-member can edit title/description, but not delete or manage members
-  // Allow edit if: workspace-level permission OR base-level permission OR base-member
   const canEdit = canUpdateBaseFromWorkspace() || canUpdateBaseFromBase() || baseAccess === 'base-member';
   const canDelete = canDeleteBaseFromWorkspace() || canDeleteBaseFromBase();
   const canAddMembers = canAssignUsers() || canManageBaseMembers();
@@ -93,20 +94,16 @@ const Breadcrumb: React.FC = () => {
   const updateBaseMutation = useUpdateBase();
   const deleteBaseMutation = useDeleteBase();
   const createBaseMutation = useCreateBase();
-  // const createTableMutation = useCreateTable(); // COMMENTED OUT: Create table functionality
   const { handleBaseDeletion } = useNavigationActions();
 
   // State for base actions
-  const [editingBase, setEditingBase] = useState<any | null>(null);
-  const [deletingBase, setDeletingBase] = useState<any | null>(null);
-  const [baseNameToDelete, setBaseNameToDelete] = useState('');
-  const [isDeletingBase, setIsDeletingBase] = useState(false);
+  const [editingBase, setEditingBase] = useState<Base | null>(null);
+  const [deletingBase, setDeletingBase] = useState<Base | null>(null);
   const [showAddMembers, setShowAddMembers] = useState(false);
-  const [baseForMembers, setBaseForMembers] = useState<any | null>(null);
+  const [baseForMembers, setBaseForMembers] = useState<Base | null>(null);
 
   // State for create modals
   const [showCreateBase, setShowCreateBase] = useState(false);
-  // const [showCreateTable, setShowCreateTable] = useState(false); // COMMENTED OUT: Create table functionality
 
   // Get data for breadcrumb items
   const { baseByIdQuery, tableByIdQuery, viewByIdQuery } = useWorkspaceDataService(
@@ -122,7 +119,7 @@ const Breadcrumb: React.FC = () => {
   const tableViewsQuery = useTableViews(selectedTableId || '');
 
   // Get base icon (matching homepage styling)
-  const getBaseIcon = (base: any, index: number) => {
+  const getBaseIcon = (base: Base, index: number) => {
     const title = base.title || base.name || '';
     const initials = getInitials(title, 'B');
     const firstLetter = initials.charAt(0);
@@ -218,8 +215,8 @@ const Breadcrumb: React.FC = () => {
   }
 
   const pathname = location.pathname;
-  const currentBase = (baseByIdQuery.data as any)?.data;
-  const currentTable = (tableByIdQuery.data as any)?.data;
+  const currentBase = (baseByIdQuery.data as BaseResponse | undefined)?.data;
+  const currentTable = (tableByIdQuery.data as TableResponse | undefined)?.data;
   const currentView = viewByIdQuery.data;
 
   // Build breadcrumb items (only Base > Table > View, no workspace)
@@ -227,15 +224,37 @@ const Breadcrumb: React.FC = () => {
     const items: BreadcrumbItem[] = [];
     const pathParts = pathname.split('/').filter(Boolean);
 
+    // Check for new route format: /workspace/:workspaceId/base/:baseId/table/:tableId/:viewId
+    // pathParts: ['workspace', workspaceId, 'base', baseId, 'table', tableId, viewId]
+    const isNewFormat = pathParts[0] === 'workspace' && pathParts[2] === 'base';
+    
+    // Determine indices based on route format
+    let baseIndex = -1;
+    let tableIndex = -1;
+    let viewIndex = -1;
+    
+    if (isNewFormat) {
+      // New format: /workspace/:workspaceId/base/:baseId/table/:tableId/:viewId
+      baseIndex = 3;
+      tableIndex = 5;
+      viewIndex = 6;
+    } else if (pathParts[0] === 'base') {
+      // Legacy format: /base/:baseId/table/:tableId/:viewId (kept for safety)
+      baseIndex = 1;
+      tableIndex = 3;
+      viewIndex = pathParts[4] ? 4 : -1;
+    }
+
     // Add base
-    if (pathParts[0] === 'base' && pathParts[1] && currentBase) {
+    if (baseIndex > 0 && pathParts[baseIndex] && currentBase) {
       const baseName = currentBase.title || currentBase.name || 'Base';
-      const baseImage = currentBase.image || currentBase.logo || currentBase.meta?.image;
+      const baseImageRaw = currentBase.image || currentBase.logo || currentBase.meta?.image;
+      const baseImage = typeof baseImageRaw === 'string' ? baseImageRaw : undefined;
       const baseIcon = getBaseIcon(currentBase, 0);
 
       // Use image if available, otherwise use initial with colored background
       const baseIconElement = baseImage ? (
-        <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0">
+        <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
           <img
             src={baseImage}
             alt={baseName}
@@ -243,51 +262,57 @@ const Breadcrumb: React.FC = () => {
           />
         </div>
       ) : (
-        <div className={`w-7 h-7 ${baseIcon.color} rounded-lg flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}>
+        <div className={`w-8 h-8 ${baseIcon.color} rounded-lg flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}>
           {baseIcon.letter}
         </div>
       );
+
+      const basePath = selectedWorkspaceId
+        ? `/workspace/${selectedWorkspaceId}`
+        : '/workspace';
 
       items.push({
         type: 'base',
         id: currentBase.id,
         label: baseName,
         icon: baseIconElement,
-        path: `/base/${currentBase.id}`
+        path: basePath
       });
     }
 
     // Add table
-    if (pathParts[0] === 'base' && pathParts[1] && pathParts[2] === 'table' && pathParts[3] && currentTable) {
+    if (tableIndex > 0 && pathParts[tableIndex] && currentTable) {
       const tableData = currentTable.model || currentTable;
-      const tableId = tableData.id || pathParts[3];
-      const tableName = tableData.title || tableData.name || 'Table';
+      const tableId = tableData.id || pathParts[tableIndex];
+      const tableName = tableData.title || (tableData as any).name || 'Table';
 
-      if (tableId) {
+      if (tableId && selectedWorkspaceId && currentBase) {
         items.push({
           type: 'table',
           id: tableId,
           label: tableName,
           icon: <Sheet size={14} className="text-blue-600" />,
-          path: `/base/${currentBase?.id}/table/${tableId}/grid`
+          path: `/workspace/${selectedWorkspaceId}/base/${currentBase.id}/table/${tableId}/grid`
         });
       }
     }
 
     // Add view
-    if (pathParts[0] === 'base' && pathParts[1] && pathParts[2] === 'table' && pathParts[3] && pathParts[4] && currentView) {
+    if (viewIndex > 0 && pathParts[viewIndex] && currentView) {
       const viewName = currentView.title || currentView.name || 'View';
       const viewType = currentView.type || 'grid';
       const viewIconInfo = getViewIconInfo(viewType);
       const ViewIcon = viewIconInfo.icon;
 
-      items.push({
-        type: 'view',
-        id: currentView.id,
-        label: viewName,
-        icon: <ViewIcon size={14} className="text-purple-600" />,
-        path: `/base/${currentBase?.id}/table/${selectedTableId}/${currentView.id}`
-      });
+      if (selectedWorkspaceId && currentBase && selectedTableId) {
+        items.push({
+          type: 'view',
+          id: currentView.id,
+          label: viewName,
+          icon: <ViewIcon size={14} className="text-purple-600" />,
+          path: `/workspace/${selectedWorkspaceId}/base/${currentBase.id}/table/${selectedTableId}/${currentView.id}`
+        });
+      }
     }
 
     return items;
@@ -296,21 +321,54 @@ const Breadcrumb: React.FC = () => {
   const breadcrumbItems = buildBreadcrumbItems();
 
   // Handlers for base actions
-  const handleEditBase = (base: any) => {
+  const handleEditBase = (base: Base) => {
     setEditingBase(base);
     // Close the dropdown when opening edit modal
     setOpenDropdown(null);
     setDropdownPosition(null);
   };
 
-  const handleSaveBase = async ({ name, description }: { name: string; description: string }) => {
+  const handleSaveBase = async ({ name, description, image }: { name: string; description: string; image?: File | null }) => {
     if (!editingBase) return;
 
     try {
-      const updates = {
-        title: name,
-        description: description || '',
-      };
+      const updates: {
+        title?: string;
+        description?: string;
+        image?: File | Blob;
+      } = {};
+
+      // Only include fields that have actually changed
+      const currentTitle = editingBase.title || editingBase.name || '';
+      const currentDescription = editingBase.description || '';
+      
+      if (name !== currentTitle) {
+        updates.title = name;
+      }
+      
+      if (description !== currentDescription) {
+        updates.description = description;
+      }
+
+      // Include image if provided (must be a File object)
+      if (image instanceof File) {
+        updates.image = image;
+      }
+
+      // Check if there are any changes to save
+      if (Object.keys(updates).length === 0) {
+        toast.info('No changes to save');
+        setEditingBase(null);
+        return;
+      }
+
+      console.log('Updating base with payload:', {
+        baseId: editingBase.id,
+        updates: {
+          ...updates,
+          image: updates.image ? `[File: ${(updates.image as File).name}, ${(updates.image as File).size} bytes]` : undefined
+        }
+      });
 
       await updateBaseMutation.mutateAsync({
         baseId: editingBase.id,
@@ -330,29 +388,37 @@ const Breadcrumb: React.FC = () => {
     }
   };
 
-  const handleDeleteBase = (base: any) => {
+  const handleDeleteBase = (base: Base) => {
     setDeletingBase(base);
-    setBaseNameToDelete('');
-    setIsDeletingBase(false);
     // Close the dropdown when opening delete modal
     setOpenDropdown(null);
     setDropdownPosition(null);
   };
 
-  const handleConfirmDelete = async () => {
-    if (!deletingBase) return;
-
-    const baseTitle = deletingBase.title || deletingBase.name || '';
-    if (baseNameToDelete !== baseTitle) {
-      toast.error('Base name does not match');
-      return;
-    }
-
+  const handleConfirmDelete = async (baseId: string) => {
     try {
-      await deleteBaseMutation.mutateAsync(deletingBase.id);
+      // Get current bases BEFORE deletion
+      const basesResponse = workspaceBasesQuery.data as BasesResponse | undefined;
+      const currentBases = basesResponse?.data || [];
+      const remainingBases = currentBases.filter((base) => base.id !== baseId);
 
-      // Use the navigation handler to properly clean up localStorage
-      handleBaseDeletion(deletingBase.id);
+      await deleteBaseMutation.mutateAsync(baseId);
+
+      // Handle navigation BEFORE calling handleBaseDeletion
+      if (remainingBases.length > 0 && selectedWorkspaceId) {
+        try {
+          await navigateToFirstView(remainingBases[0].id);
+        } catch (err) {
+          navigate(`/workspace/${selectedWorkspaceId}`);
+        }
+      } else if (selectedWorkspaceId) {
+        navigate(`/workspace/${selectedWorkspaceId}`);
+      } else {
+        navigate('/workspace');
+      }
+
+      // Now clean up navigation state
+      handleBaseDeletion(baseId);
 
       // Invalidate queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
@@ -360,18 +426,16 @@ const Breadcrumb: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['allBases'] });
 
       toast.success('Base deleted successfully');
-      setDeletingBase(null);
-      setBaseNameToDelete('');
-      setIsDeletingBase(false);
       setOpenDropdown(null);
       setDropdownPosition(null);
     } catch (err: any) {
       console.error('Failed to delete base:', err);
       toast.error(err?.message || 'Failed to delete base. Please try again.');
+      throw err; // Re-throw so modal can handle it
     }
   };
 
-  const handleAddMembers = (base: any) => {
+  const handleAddMembers = (base: Base) => {
     setBaseForMembers(base);
     setShowAddMembers(true);
     // Close the dropdown when opening add members modal
@@ -400,95 +464,35 @@ const Breadcrumb: React.FC = () => {
 
       toast.success('Base created successfully');
       setShowCreateBase(false);
-
-      // Navigate to the new base
-      const baseId = (newBase as any)?.data?.id;
-      if (baseId) {
-        // COMMENTED OUT: Navigation to table on base creation
-        // try {
-        //   // Update navigation store first
-        //   const { navigateToBase } = useNavigationStore.getState();
-        //   navigateToBase(selectedWorkspaceId, baseId);
-          
-        //   // Try to navigate to first view, but fallback to base page if no tables exist
-        //   await navigateToFirstView(baseId);
-        // } catch (err) {
-        //   console.error('Navigation error after base creation:', err);
-        //   // Fallback: navigate directly to base page
-        //   const { navigateToBase } = useNavigationStore.getState();
-        //   navigateToBase(selectedWorkspaceId, baseId);
-        //   navigate(`/base/${baseId}`);
-        // }
-      } else {
-        console.error('Base created but no ID in response:', newBase);
-        // If no ID, just refresh the homepage
-        // navigate('/homepage');
-      }
     } catch (err: any) {
       toast.error(err?.message || 'Failed to create base. Please try again.');
     }
   };
 
-  // COMMENTED OUT: Create Table functionality
-  // const handleCreateTable = async ({ name, description }: { name: string; description: string }) => {
-  //   if (!selectedWorkspaceId || !selectedBaseId) {
-  //     toast.error('Please select a workspace and base first');
-  //     return;
-  //   }
-
-  //   try {
-  //     // Get the count of existing tables to set order_index
-  //     const existingTables = baseTablesQuery.data?.data || [];
-  //     const order_index = existingTables.length;
-
-  //     const newTable = await createTableMutation.mutateAsync({
-  //       base_id: selectedBaseId,
-  //       workspace_id: selectedWorkspaceId,
-  //       title: name,
-  //       description: description || '',
-  //       order_index
-  //     });
-
-  //     // Invalidate queries to refresh the tables list
-  //     queryClient.invalidateQueries({ queryKey: ['bases', selectedBaseId, 'tables'] });
-  //     queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
-
-  //     toast.success('Table created successfully');
-  //     setShowCreateTable(false);
-
-  //     // Navigate to the newly created table
-  //     if (newTable?.data?.id) {
-  //       const { navigateToTable } = useNavigationStore.getState();
-  //       navigateToTable(selectedWorkspaceId, selectedBaseId, newTable.data.id);
-  //       navigate(`/base/${selectedBaseId}/table/${newTable.data.id}/grid`);
-  //     }
-  //   } catch (err: any) {
-  //     toast.error(err?.message || 'Failed to create table. Please try again.');
-  //   }
-  // };
-
   // Get dropdown items for each level
   const getBaseDropdownItems = (): DropdownItem[] => {
-    let bases = ((workspaceBasesQuery.data as any)?.data || []) as any[];
-    
+    const basesResponse = workspaceBasesQuery.data as BasesResponse | undefined;
+    let bases = basesResponse?.data || [];
+
     // If workspace access is "base", filter to only show bases user has access to
     if (isBaseLevelAccess()) {
-      bases = bases.filter((base: any) => {
+      bases = bases.filter((base) => {
         const baseAccess = base?.access_level?.toLowerCase();
         // Show bases where user has any valid access level
-        return baseAccess === 'owner' || 
-               baseAccess === 'maintainer' || 
-               baseAccess === 'base-member' || 
-               baseAccess === 'base-read' ||
-               baseAccess === 'workspace-read';
+        return baseAccess === 'owner' ||
+          baseAccess === 'maintainer' ||
+          baseAccess === 'base-member' ||
+          baseAccess === 'base-read' ||
+          baseAccess === 'workspace-read';
       });
     }
-    
-    return bases.map((base: any, index: number) => {
+
+    return bases.map((base, index: number) => {
       const icon = getBaseIcon(base, index);
       const baseName = base.title || base.name || 'Base';
-      const baseImage = base.image || base.logo || base.meta?.image;
-      
+      const baseImageRaw = base.image || base.logo || base.meta?.image;
+      const baseImage = typeof baseImageRaw === 'string' ? baseImageRaw : undefined;
+
       // Use image if available, otherwise use initial with colored background
       const baseIconElement = baseImage ? (
         <div className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0 border">
@@ -500,10 +504,10 @@ const Breadcrumb: React.FC = () => {
         </div>
       ) : (
         <div className={`w-8 h-8 ${icon.color} rounded-md flex items-center justify-center text-white text-sm font-semibold flex-shrink-0`}>
-            {icon.letter}
-          </div>
+          {icon.letter}
+        </div>
       );
-      
+
       return {
         id: base.id,
         label: baseName,
@@ -514,7 +518,11 @@ const Breadcrumb: React.FC = () => {
           try {
             await navigateToFirstView(base.id);
           } catch (err) {
-            navigate('/homepage');
+            if (selectedWorkspaceId) {
+              navigate(`/workspace/${selectedWorkspaceId}`);
+            } else {
+              navigate('/workspace');
+            }
           }
         },
         isActive: base.id === selectedBaseId,
@@ -524,13 +532,14 @@ const Breadcrumb: React.FC = () => {
   };
 
   const getTableDropdownItems = (): DropdownItem[] => {
-    const tables = ((baseTablesQuery.data as any)?.data || []) as any[];
-    return tables.map((item: any) => {
+    const tablesResponse = baseTablesQuery.data as TablesResponse | undefined;
+    const tables = tablesResponse?.data || [];
+    return tables.map((item) => {
       const table = item.model || item;
       const tableId = table.id;
       return {
         id: tableId,
-        label: table.title || table.name || 'Table',
+        label: table.title || 'Table',
         icon: (
           <Sheet size={16} color="#2563eb" />
         ),
@@ -540,7 +549,7 @@ const Breadcrumb: React.FC = () => {
           const { navigateToTable } = useNavigationStore.getState();
           if (selectedWorkspaceId && selectedBaseId) {
             navigateToTable(selectedWorkspaceId, selectedBaseId, tableId);
-            navigate(`/base/${selectedBaseId}/table/${tableId}/grid`);
+            navigate(`/workspace/${selectedWorkspaceId}/base/${selectedBaseId}/table/${tableId}/grid`);
           }
         },
         isActive: tableId === selectedTableId
@@ -549,14 +558,15 @@ const Breadcrumb: React.FC = () => {
   };
 
   const getViewDropdownItems = (): DropdownItem[] => {
-    const views = ((tableViewsQuery.data as any)?.data || []) as any[];
-    return views.map((view: any) => {
+    const viewsResponse = tableViewsQuery.data as ViewsResponse | undefined;
+    const views = viewsResponse?.data || [];
+    return views.map((view) => {
       const viewType = view.type || 'grid';
       const viewIconInfo = getViewIconInfo(viewType);
       const ViewIcon = viewIconInfo.icon;
       return {
         id: view.id,
-        label: view.title || view.name || 'View',
+        label: view.title || 'View',
         icon: (
           <ViewIcon size={16} style={{ color: viewIconInfo.color }} />
         ),
@@ -566,7 +576,7 @@ const Breadcrumb: React.FC = () => {
           const { navigateToView } = useNavigationStore.getState();
           if (selectedWorkspaceId && selectedBaseId && selectedTableId) {
             navigateToView(selectedWorkspaceId, selectedBaseId, selectedTableId, view.id);
-            navigate(`/base/${selectedBaseId}/table/${selectedTableId}/${view.id}`);
+            navigate(`/workspace/${selectedWorkspaceId}/base/${selectedBaseId}/table/${selectedTableId}/${view.id}`);
           }
         },
         isActive: view.id === selectedViewId
@@ -618,8 +628,8 @@ const Breadcrumb: React.FC = () => {
               >
                 {item.icon}
                 <span className={`font-medium truncate max-w-[150px] ${isLast
-                    ? 'text-[var(--color-text-primary)]'
-                    : 'text-gray-700 group-hover:text-[var(--color-text-primary)]'
+                  ? 'text-[var(--color-text-primary)]'
+                  : 'text-gray-700 group-hover:text-[var(--color-text-primary)]'
                   }`} title={item.label}>
                   {item.label}
                 </span>
@@ -703,42 +713,6 @@ const Breadcrumb: React.FC = () => {
                       <div className="border-t flex-shrink-0"></div>
                     )}
 
-                    {/* Create Button - always visible at bottom if user has permission */}
-                    {/* COMMENTED OUT: Create Table and Create View functionality */}
-                    {/* {((item.type === 'base' && canCreateBase()) ||
-                      (item.type === 'table' && canCreateTable()) ||
-                      (item.type === 'view' && canCreateView())) && (
-                        <div className="p-2 flex-shrink-0">
-                          <button
-                            className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-gray-100 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                            onClick={(e) => {
-                              e.stopPropagation();
-
-                              // Close dropdown first
-                              setOpenDropdown(null);
-                              setDropdownPosition(null);
-                              ignoreNextClickRef.current = true;
-
-                              // Open appropriate modal
-                              if (item.type === 'base') {
-                                setShowCreateBase(true);
-                              } else if (item.type === 'table') {
-                                setShowCreateTable(true);
-                              }
-                              // TODO: Add view creation modal
-                            }}
-                          >
-                            <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
-                              <Plus className="w-4 h-4 text-primary" />
-                            </div>
-                            <span>
-                              {item.type === 'base' ? 'Create New Base' :
-                                item.type === 'table' ? 'Create New Table' :
-                                  'Create New View'}
-                            </span>
-                          </button>
-                        </div>
-                      )} */}
                     {/* Only show Create Base button */}
                     {item.type === 'base' && canCreateBase() && (
                       <div className="p-2 flex-shrink-0">
@@ -760,9 +734,9 @@ const Breadcrumb: React.FC = () => {
                             <Plus className="w-4 h-4 text-primary" />
                           </div>
                           <span>Create New Base</span>
-                          </button>
-                        </div>
-                      )}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>,
                 document.body
@@ -784,76 +758,24 @@ const Breadcrumb: React.FC = () => {
           initialName={editingBase.title || editingBase.name || ''}
           initialDescription={editingBase.description || ''}
           itemType="base"
-          existingItems={(((workspaceBasesQuery.data as any)?.data || []) as any[]).map((b: any) => ({
+          existingItems={((workspaceBasesQuery.data as BasesResponse | undefined)?.data || []).map((b) => ({
             id: b.id,
             name: b.title || b.name || '',
           }))}
           currentItemId={editingBase.id}
-          initialImage={editingBase.image || editingBase.logo || editingBase.meta?.image || null}
+          initialImage={editingBase.image || editingBase.logo || (typeof editingBase.meta === 'object' && editingBase.meta !== null && 'image' in editingBase.meta ? String(editingBase.meta.image) : null) || null}
         />
       )}
 
       {/* Delete Base Confirmation Modal */}
-      {deletingBase && (
-        <div className="bg-modal-backdrop">
-          <div className="bg-modal !h-[50vh] !max-w-2xl flex flex-col">
-            <h3 className="text-[1.25rem] text-gray-900 mb-4 pb-3 border-b border-primary">Delete Base</h3>
-            <div className="flex-grow">
-              <div className="bg-[var(--color-error-50)] border border-red-200 rounded-md p-2 mb-4">
-                <p className="text-red-800 mb-2">
-                  <strong>Warning:</strong> All associated tables, records, and data will be permanently deleted.
-                </p>
-              </div>
-              <div className="mb-4">
-                <p className="text-sm text-primary">
-                  <strong>Are you sure you want to proceed? This deletion cannot be reversed.</strong>
-                  Confirming this action will permanently delete this base and all of its related contents.
-                </p>
-              </div>
-              <div className="mb-4">
-                <p className="text-sm text-gray-700">Please type <strong>{deletingBase.title || deletingBase.name}</strong> to confirm.</p>
-              </div>
-              <input
-                type="text"
-                value={baseNameToDelete}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setBaseNameToDelete(value);
-                  const baseTitle = deletingBase.title || deletingBase.name || '';
-                  setIsDeletingBase(value === baseTitle);
-                }}
-                onPaste={(e) => e.preventDefault()}
-                placeholder="Enter base name"
-                className="field-component field-component-border field-component-focus mb-4"
-                required
-                minLength={3}
-                maxLength={50}
-                autoFocus
-              />
-            </div>
-
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setDeletingBase(null);
-                  setBaseNameToDelete('');
-                  setIsDeletingBase(false);
-                }}
-                className="px-16 py-2 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-500 focus:ring-offset-2"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                disabled={!isDeletingBase}
-                className="px-16 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Delete Base
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteBaseModal
+        isOpen={!!deletingBase}
+        base={deletingBase}
+        onClose={() => {
+          setDeletingBase(null);
+        }}
+        onConfirm={handleConfirmDelete}
+      />
 
       {showAddMembers && baseForMembers && (
         <AddBaseMembersModal
@@ -878,20 +800,9 @@ const Breadcrumb: React.FC = () => {
           onClose={() => setShowCreateBase(false)}
           onCreate={handleCreateBase}
           workspaceId={selectedWorkspaceId}
-          existingBases={((workspaceBasesQuery.data as any)?.data || []) as any[]}
+          existingBases={(workspaceBasesQuery.data as BasesResponse | undefined)?.data || []}
         />
       )}
-
-      {/* COMMENTED OUT: Create Table Modal */}
-      {/* {showCreateTable && selectedBaseId && (
-        <CreateTableModal
-          isOpen={showCreateTable}
-          onClose={() => setShowCreateTable(false)}
-          onCreate={handleCreateTable}
-          baseId={selectedBaseId}
-          existingTables={(baseTablesQuery.data?.data || [])}
-        />
-      )} */}
     </nav>
   );
 };

@@ -2,8 +2,7 @@ import React from 'react';
 import {
   Type, FileText, Hash, DecimalsArrowRight, CheckSquare, DollarSign, Percent,
   Clock, Calendar1, Calendar, CalendarClock, Mail, Phone, Link2, List,
-  Star, User, UserRoundPen, UserRound,
-  Paperclip, TextSearch, Timer,
+  Star, User, Paperclip, TextSearch, Timer,
   LayoutList,
   Braces,
   Calculator,

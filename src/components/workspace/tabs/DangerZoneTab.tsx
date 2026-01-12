@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useDeleteWorkspace } from '../../../hooks/useApi';
-import { useNavigate } from 'react-router-dom';
 import { useNavigationActions } from '../../../hooks/useNavigationActions';
 import { useWorkspaceAccess } from '../../../hooks/useWorkspaceAccess';
+import { useToast } from '../../../components/common/Toast';
+import { DeleteWorkspaceModal } from '../../../components/modals/DeleteWorkspaceModal';
 
 interface DangerZoneTabProps {
   workspaceId: string;
@@ -14,9 +15,7 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [workspaceToDelete, setWorkspaceToDelete] = useState('');
-  const navigate = useNavigate();
+  const toast = useToast();
   
   // Navigation state handler
   const { handleWorkspaceDeletion } = useNavigationActions();
@@ -25,8 +24,7 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
   const handleLeaveWorkspace = async () => {
     setIsLeaving(true);
     try {
-      // TODO: Implement leave workspace logic
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
       setShowLeaveConfirm(false);
     } catch (error) {
       console.error('Error leaving workspace:', error);
@@ -35,18 +33,22 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
     }
   };
 
-  const handleDeleteWorkspace = async () => {
-    setIsDeleting(true);
+  const handleDeleteWorkspace = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async (wsId: string) => {
     try {
-      const result = await deleteWorkspaceMutation.mutateAsync(workspaceId);
+      await deleteWorkspaceMutation.mutateAsync(wsId);
+      
       // Use the navigation handler to properly clean up localStorage and navigate
-      handleWorkspaceDeletion(workspaceId);
-      setShowDeleteConfirm(false);
-    } catch (error) {
-      console.error('Error deleting workspace:', error);
-      alert('Failed to delete workspace. Please try again.');
-    } finally {
-      setIsDeleting(false);
+      handleWorkspaceDeletion(wsId);
+      
+      toast.success('Workspace deleted successfully');
+    } catch (err: any) {
+      console.error('Failed to delete workspace:', err);
+      toast.error(err?.message || 'Failed to delete workspace. Please try again.');
+      throw err; // Re-throw so modal can handle it
     }
   };
 
@@ -68,7 +70,7 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
             <button
               onClick={() => setShowLeaveConfirm(true)}
               disabled={true}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-gray-600 text-white rounded-xl hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Leave Workspace
             </button>
@@ -76,7 +78,7 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
 
           {/* Delete Workspace - only show for admin users */}
           {canDeleteWorkspace() && (
-            <div className="flex items-center justify-between p-4 bg-error rounded-xl border border-red-400">
+            <div className="flex items-center justify-between p-4 rounded-xl border border-red-400">
               <div className="flex-1">
                 <h3 className="text-sm font-medium text-gray-900">Delete this workspace and all it's contents.</h3>
                 <p className="text-sm text-gray-600 mt-1">
@@ -84,8 +86,8 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
                 </p>
               </div>
               <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-2"
+                onClick={handleDeleteWorkspace}
+                className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-2"
               >
                 Delete Workspace
               </button>
@@ -105,14 +107,14 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowLeaveConfirm(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-500 focus:ring-offset-2"
+                className="px-16 py-2 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Cancel
               </button>
               <button
                 onClick={handleLeaveWorkspace}
                 disabled={isLeaving}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-16 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLeaving ? 'Leaving...' : 'Leave Workspace'}
               </button>
@@ -122,65 +124,14 @@ export const DangerZoneTab: React.FC<DangerZoneTabProps> = ({ workspaceId, works
       )}
 
       {/* Delete Workspace Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="bg-modal-backdrop">
-          <div className="bg-modal !h-[50vh] !max-w-2xl flex flex-col">
-            <h3 className="text-[1.25rem] text-gray-900 mb-4 pb-3 border-b border-primary">Delete Workspace</h3>
-            <div className="flex-grow">
-              <div className="bg-[var(--color-error-50)] border border-red-200 rounded-md p-2 mb-4">
-                <p className="text-red-800 mb-2">
-                  <strong>Warning:</strong> All associated bases, tables, records, and data will be permanently removed.
-                </p>
-              </div>
-              <div className="mb-4">
-                <p className="text-sm text-primary">
-                  <strong>Are you sure you want to proceed? This deletion cannot be reversed.</strong>
-                  Confirming this action will permanently delete this workspace and all of its realted contents.
-                </p>
-              </div>
-              <div className="mb-4">
-                <p className="text-sm text-gray-700">Please type <strong> {workspaceTitle}</strong> to confirm.</p>
-              </div>
-              <input
-                  type="text"
-                  id="baseName"
-                  value={workspaceToDelete}
-                  onChange={(e:any)=>{
-                    setWorkspaceToDelete(e.target.value);
-                    if(e.target.value === workspaceTitle){
-                      setIsDeleting(true)
-                    }else{
-                      setIsDeleting(false)
-                    }
-                  }}
-                  onPaste={(e) => e.preventDefault()}
-                  placeholder="Enter workspace name"
-                  className={`field-component field-component-border field-component-focus mb-4`}
-                  required
-                  minLength={3}
-                  maxLength={50}
-                  autoFocus
-                />
-            </div>
-
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-500 focus:ring-offset-2"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteWorkspace}
-                disabled={!isDeleting}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Delete Workspace
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteWorkspaceModal
+        isOpen={showDeleteConfirm}
+        workspace={showDeleteConfirm ? { id: workspaceId, title: workspaceTitle, name: workspaceTitle } : null}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+        }}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { GanttTask } from './useGanttData';
-import type { Column } from '../types/api.types';
+import type { Column } from '../../../types/api.types';
 import { useToast } from '../../../components/common/Toast';
 import { buildInitialValuesForEdit } from '../../../utils/initialValues';
 

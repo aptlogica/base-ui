@@ -116,19 +116,19 @@ describe('navigationStore', () => {
     const { useNavigationStore } = await import('../navigationStore');
     const store = useNavigationStore.getState();
 
-    expect(store.getNavigationPath()).toBe('/');
+    expect(store.getNavigationPath()).toBe('/workspace');
 
     store.navigateToWorkspace('w1');
     expect(useNavigationStore.getState().getNavigationPath()).toBe('/workspace/w1');
 
     store.navigateToBase('w1', 'b1');
-    expect(useNavigationStore.getState().getNavigationPath()).toBe('/base/b1');
+    expect(useNavigationStore.getState().getNavigationPath()).toBe('/workspace/w1');
 
     store.navigateToTable('w1', 'b1', 't1');
-    expect(useNavigationStore.getState().getNavigationPath()).toBe('/base/b1/table/t1');
+    expect(useNavigationStore.getState().getNavigationPath()).toBe('/workspace/w1/base/b1/table/t1/grid');
 
     store.navigateToView('w1', 'b1', 't1', 'v1');
-    expect(useNavigationStore.getState().getNavigationPath()).toBe('/base/b1/table/t1/v1');
+    expect(useNavigationStore.getState().getNavigationPath()).toBe('/workspace/w1/base/b1/table/t1/v1');
   });
 
   it('saveUserNavigation should NOT overwrite storage when workspaceId is null', async () => {

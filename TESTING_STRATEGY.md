@@ -1,595 +1,340 @@
-# Testing Strategy - E2E + Unit Testing (80%+ Coverage Plan)
+# Testing Strategy - Unit Testing (80%+ Coverage Goal)
 
-## Current Status (January 7, 2026)
+## 🎯 Current Status (Updated: January 2026)
 
-### ✅ Completed Tests (774/774 passing, 55 test files)
+### Test Statistics
+- **Total Test Files:** 92 (49 `.test.ts` + 43 `.test.tsx`)
+- **Total Tests:** ~750+ tests
+- **Current Coverage:** ~35% (estimated, needs verification)
+- **Target Coverage:** 80%+ (lines, functions, branches, statements)
+- **Test Framework:** Vitest with v8 coverage provider
+- **Coverage Thresholds:** 80% (configured in `vitest.config.ts`)
 
-#### Unit Tests - Utils (100% coverage):
-  - `dateUtils.test.ts` - 45 tests ✓
-  - `dateValidation.test.ts` - 24 tests ✓
-  - `dropdownHelpers.test.ts` - 29 tests ✓
-  - `filterUtils.test.ts` - 9 tests ✓
-  - `helpers.test.ts` - 11 tests ✓
-  - `nameValidation.test.ts` - 49 tests ✓
-  - `sortUtils.test.ts` - 99 tests ✓
-  - `standardFieldUtils.test.ts` - 40 tests ✓
-  - `validation.test.ts` - 20 tests ✓
-
-#### Unit Tests - Hooks (Mostly complete):
-  - `useClickOutside.test.ts` - 7 tests ✓
-  - `useClientHeaders.test.ts` - 7 tests ✓
-  - `useClientInitialization.test.ts` - 8 tests ✓
-  - `useFrontendPagination.test.ts` - 10 tests ✓
-  - `useLinkedRecordsResolver.test.ts` - 14 tests ✓
-  - `useLookupSourceColumn.test.tsx` - 10 tests ✓
-  - `useNormalizedTableData.test.ts` - 32 tests ✓
-  - `useSearch.test.ts` - 14 tests ✓
-  - `useSmartPopover.test.ts` - 16 tests ✓
-  - `useUniqueTwoDigit.test.tsx` - 7 tests ✓
-  - `useWorkspaceAccess.test.ts` - 15 tests ✓
-  - `useWorkspaceData.test.ts` - 16 tests ✓
-
-#### Unit Tests - Components (Recently added):
-- `AnnouncementBar.test.tsx` - 3 tests ✓
-- `HeaderLogo.test.tsx` - 3 tests ✓
-- `SkeletonComponents.test.tsx` - 4 tests ✓
-- `AdministratorSettingsButton.test.tsx` - 6 tests ✓
-- `ErrorBoundary.test.tsx` - 4 tests ✓
-- `Tabs.test.tsx` - 3 tests ✓
-- `JIRA Roadmap: Unit Testing + E2E
-
-### EPIC: Unit Testing (Core Modules) - Continue/Complete
-
-**Current state:** 774 tests passing. Next: fill gaps in useApi, useBaseAccess, useNavigation.
-
-#### PRIORITY 1: useApi.ts - 50+ tests (1–2 weeks)
-- `HeaderWorkspaceDropdown.test.tsx` - 5 tests ✓
-
-#### Unit Tests - Other:
-- RouteContext tests - 5 tests ✓
-- NavigationPlugin tests - 5 tests ✓
-- Config/context tests - 4 tests ✓
+### ⚠️ Test Failures (Blocking Coverage)
+- **useNavigation.test.ts:** 21 tests failing (routing refactoring)
+- **useWorkspaceBusinessLogic.test.ts:** 61 tests failing (hook refactoring)
+- **Total Failing:** ~82 tests need fixes
 
 ---
 
-## Overview: Two-Track Testing Strategy
+## ✅ Completed Test Coverage
 
-### Scope Definition
-**In scope (80% coverage target):**
-- `src/hooks/` (data, access, navigation, UI utilities)
-- `src/utils/` (helpers, validation, data transforms, etc.)
-- `src/stores/` (Zustand state management)
-- `src/contexts/` (React contexts)
-- `src/service/` (API client service)
-- `src/components/common/` (reusable header/UI components)
-- `src/pages/` (page-level components)
+### High Coverage Areas (80%+)
+- **Utils:** 100% coverage
+  - `dateUtils.ts`, `validation.ts`, `helpers.ts`, `nameValidation.ts`
+  - `dateValidation.ts`, `sortUtils.ts`, `filterUtils.ts`
+  - `fieldUtils.ts`, `fieldType.ts`, `dropdownHelpers.ts`
+  - `standardFieldUtils.ts`, `pluginUtils.ts`, `configSync.ts`
+  - `navigationPersistence.ts`, `navigationIndex.ts`, `navigationRedirect.ts`
+  - `viewConfig.ts`, `viewType.ts`, `viewFieldConfigUtils.ts`
+  - `tableDataAdapter.ts`, `dataTransform.ts`, `fieldUsageUtils.ts`
+  - `viewDiagnostics.ts`, `initialValues.ts`, `componentOptions.ts`
+  - `createMockSemver.ts`, `PluginConfigManager.ts`
 
-**Out of scope (excluded from coverage):**
-- `src/plugins/` (view plugins: Grid, Kanban, Gantt, Gallery, Calendar, Form – tested via E2E)
-- `sdk/` (external SDK package, out of tree)
-- `src/test/` (test utilities)
-- `dist/`, `node_modules/`, test files (`*.test.ts`, `*.spec.ts`)
+- **Hooks - UI:** 90% coverage
+  - `useClickOutside.ts`, `useSearch.ts`, `useSmartPopover.ts`
+  - `useUniqueTwoDigit.tsx`, `useFrontendPagination.ts`
 
-**Result:** Realistic 80% coverage on core app logic; plugins exercised via E2E journeys.
+- **Service Layer:** Good coverage
+  - `clientService.ts` - 155 tests ✅
+  - `activityService.ts` - Tests exist ✅
 
----
+### Medium Coverage Areas (50-80%)
+- **API Hooks:** ~170 tests for `useApi.ts` ✅
+  - Query hooks: useWorkspaces, useWorkspaceById, useWorkspaceBases, etc.
+  - Mutation hooks: CRUD operations, member operations
+  - **Missing:** `useBulkDeleteRecords` hook tests ❌
 
-### Track 1: Unit Testing (Fast feedback loop, deterministic)
-- Focus: utilities, hooks, state management, permission logic, isolated components (excluding plugins)
-- Framework: Vitest + React Testing Library
-- Coverage threshold: 80% on core modules (hooks/utils/stores/contexts/service/pages/common components)
-- Execution time: ~10–15 seconds
-- Estimated effort to reach 80%: **2–3 weeks** (continue on API hooks + access control)
+- **Access Control:** Tests exist
+  - `useBaseAccess.ts` - Tests exist ✅
+  - `useWorkspaceAccess.ts` - Tests exist ✅
 
-### Track 2: E2E Testing (Real browser, real app behavior)
-- Focus: user journeys, integration across features, plugin views, auth flows
-- Framework: Playwright
-- Coverage metric: Journey coverage (major workflows executed end-to-end)
-- Execution time: ~5–10 minutes (depending on test count)
-- Estimated effort: **3–6 weeks** (depending on backend setup + plugin complexity)
+- **Auth:** 57 tests for `AuthContext.tsx` ✅
+- **Navigation Store:** Tests exist ✅
 
-**Combined goal:** 80%+ code coverage (unit) + critical journey coverage (E2E) by end of Q1 2026.
+### Low Coverage Areas (<50%)
+- **Components - Common:** ~20% coverage
+  - Some tests: HeaderLogo, Toast, Skeleton, Breadcrumb, BaseMenu
+  - **Missing:** Many common components need tests
 
----
+- **Components - Modals:** Partial coverage
+  - Tests exist for: CreateWorkspaceModal, CreateBaseModal, CreateTableModal, etc.
+  - **Missing:** DeleteBaseModal, DeleteWorkspaceModal ❌
 
-**Story breakdown:**
-- **B1: Query wrapper + test harness** (0.5–1 day): QueryClient setup, retry logic disabled, deterministic mocking
-- **B2: Workspace queries** (1–2 days): useWorkspaces, useWorkspaceById, useWorkspaceMembers, etc.
-- **B3: Base/Table/View queries** (1–2 days): useBaseTables, useTable, useTableViews, useViewById, etc.
-- **B4: Mutation batch #1 – CRUD** (2–3 days): create/update/delete workspace/base/table/view/field
-- **B5: Mutation batch #2 – Members/Rows** (1–2 days): member add/remove, bulk ops, row mutations
+- **Pages:** Partial coverage
+  - Tests exist for: LoginPage, HomePage, AdministratorPage, etc.
+  - **Missing:** Some page components
 
-**Hooks to cover:**
-#### 1. **useApi.ts** - NO TESTS YET
-**Estimated tests needed: 50+**
-
-Critical API hooks to test:
-```typescript
-// Query hooks
-- useWorkspaces()
-- useWorkspaceById(id)
-- useWorkspaceBases(workspaceId)
-- useWorkspaceMembers(workspaceId)
-- useBaseTables(baseId)
-- useBaseMembers(baseId)
-- useTable(tableId)
-- useTableViews(tableId)
-- useViewById(viewId)
-- useAllBases()
-- useAllTables()
-- useAllFields()
-- useAllViews()
-
-// Mutation hooks
-- useCreateWorkspace()
-- useUpdateWorkspace()
-- useDeleteWorkspace()
-- useCreateBase()
-- useUpdateBase()
-- useDeleteBase()
-- useCreateTable()
-- useUpdateTable()
-- useDeleteTable()
-- useCreateView()
-- useUpdateView()
-- useDeleteView()
-- useCreateField()
-- useUpdateField()
-- useDeleteField()
-- useAddRow()
-- useBulkAddBaseMembers()
----
-
-#### PRIORITY 2: useBaseAccess.ts + useWorkspaceAccess.ts - 15+ tests (3–5 days)
-**Goal:** Exhaustive permission matrix for all operations (create/edit/delete table/view/field/record).
-
-**Hooks to cover:**
-#### 2. **useBaseAccess.ts** - NO TESTS YET
-**Estimated tests needed: 25+**
-
-Access control logic to test:
-```typescript
-- canCreateTable()
-- canUpdateTable()
-- canDeleteTable()
-- canCreateView()
-- canUpdateView()
-- canDeleteView()
-- canCreateField()
-- canUpdateField()
-- canDeleteField()
-- canManageRecords()
-- Base-level permission checks
-- Role-based access scenarios
-```
-
-#### 3. **useNavigation.ts** - NO TESTS YET
-**Estimated tests needed: 15+**
-
-Navigation state management:
-```typescript
-- Navigation state updates
-- Workspace selection
-- Base selection
-- Table selection
-- View selection
-- URL synchronization
-```
-
-#### 4. **useNavigationActions.ts** - NO TESTS YET
-**Estimated tests needed: 20+**
-
-Navigation actions:
-```typescript
-- navigateToWorkspace()
-- navigateToBase()
-- navigateToTable()
-- navigateToView()
-```
+- **Hooks - Navigation:** Tests exist but failing
+  - `useNavigation.ts` - 21 tests failing ❌
+  - `useNavigationActions.ts` - May need updates ❌
+  - `useWorkspaceBusinessLogic.ts` - 61 tests failing ❌
 
 ---
 
-## E2E Testing Roadmap (Playwright)
+## ❌ Missing Tests (Critical for 80% Coverage)
 
-### EPIC E2E-1: E2E Foundation (Playwright + CI-ready)
-**Duration: 1–2 weeks**
-- **E2E-1.1: Install & configure Playwright** (1 day)
-  - Add playwright package, configure browser target (chromium)
-  - Create playwright.config.ts with webServer (dev/preview)
-  - Add baseURL, timeout, screenshot/video on failure
-  - **DoD:** `npx playwright install && npx playwright codegen` works
-  
-- **E2E-1.2: Test fixtures & helpers** (1 day)
-  - Create `tests/fixtures/auth.ts` (login helper, storageState)
-  - Create `tests/fixtures/data.ts` (factory functions for test data)
-  - Create `tests/pages/` (page objects for major UI sections)
-  - **DoD:** Reusable fixtures tested locally
-  
-- **E2E-1.3: CI integration & reporting** (0.5 day)
-  - Add `test:e2e` and `test:e2e:ui` scripts to package.json
-  - Configure HTML report output + artifact upload (if using GitHub Actions)
-  - **DoD:** E2E tests run in CI and generate readable reports
+### New Components/Hooks (No Tests)
+1. **AppInitializer.tsx** - Initialization orchestration component
+2. **DeleteBaseModal.tsx** - Base deletion modal
+3. **DeleteWorkspaceModal.tsx** - Workspace deletion modal
+4. **useWorkspaceSelection.ts** - Workspace selection hook
+5. **useBulkDeleteRecords** - Bulk row deletion hook
+6. **NavigationResolver.tsx** - Route resolution component (may need updates)
+
+### Components Needing More Coverage
+- **Common Components:** Many field components, dropdowns, UI elements
+- **Layout Components:** Sidebar, header components
+- **Workspace Components:** Tabs, modals, tables
+- **Plugin Components:** Grid, Kanban, Calendar, Gallery views (lower priority)
 
 ---
 
-### EPIC E2E-2: Test Environment & Data Strategy
-**Duration: 2–5 weeks** (depends on backend readiness)
-- **E2E-2.1: Choose data strategy** (decide with team)
-  - **Option A (Real backend):** Setup seeded workspace/base/tables/users that never change
-  - **Option B (Mocked API):** Playwright route interception with JSON fixtures
-  - **Decision:** Recommend Option A if backend team can provide stable test tenant; Option B if API is volatile
-  - **DoD:** Data source documented, test data reproducible
+## 🚨 Immediate Action Items (Priority Order)
 
-- **E2E-2.2: Implement chosen strategy** (1–3 days)
-  - If Option A: Document how to reset test data; create seed script if needed
-  - If Option B: Build fixtures for all major API endpoints; mock in beforeEach()
-  - **DoD:** Tests pass consistently when run multiple times
+### Phase 1: Fix Failing Tests (URGENT - 2-3 days)
+**Goal:** Get all existing tests passing before adding new coverage
+
+1. **Fix useNavigation.test.ts (21 failures)**
+   - Update route patterns from old format to new format
+   - Old: `/base/:baseId`, `/table/:tableId/:viewId`
+   - New: `/workspace/:workspaceId/base/:baseId/table/:tableId/:viewId`
+   - Update URL parsing tests
+   - Verify navigation state synchronization
+
+2. **Fix useWorkspaceBusinessLogic.test.ts (61 failures)**
+   - Update for refactored hook structure
+   - Test new `useWorkspaceSelection` hook separately
+   - Verify state management functions
+
+3. **Verify Other Navigation Tests**
+   - `useNavigationActions.test.ts` - Check for route format issues
+   - `navigationStore.test.ts` - Verify path generation
+
+**Estimated:** 2-3 days | **Impact:** Unblocks coverage measurement
 
 ---
 
-### EPIC E2E-3: Authentication Flow
-**Duration: 1–3 weeks**
-- **E2E-3.1: Login/OTP journey** (1–2 days)
-  - Test email login → OTP entry → token storage → navigation to homepage
-  - Use real auth if possible, or stub with direct token injection
-  - **DoD:** Login test passes, subsequent tests preserve auth state
-  
-- **E2E-3.2: Session persistence** (0.5–1 day)
-  - Save authenticated session state (storageState.json) for reuse across tests
-  - Unit Test File Structure (Vitest)
-```typescript
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+### Phase 2: Add Missing Tests for New Components (3-4 days)
+**Goal:** Cover all new components/hooks added during refactoring
 
-// 1. Mock external dependencies
-vi.mock('../service/clientService');
+1. **AppInitializer.tsx Tests**
+   - Test initialization sequence
+   - Test navigation state restoration priority
+   - Test sessionStorage coordination
+   - Test error handling
 
-// 2. Create test wrapper
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  
-  return ({ children }) => (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  );
-};
+2. **DeleteBaseModal.tsx Tests**
+   - Test modal rendering
+   - Test validation (name confirmation)
+   - Test delete action
+   - Test error handling
 
-describe('HookName', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+3. **DeleteWorkspaceModal.tsx Tests**
+   - Test modal rendering
+   - Test validation (name confirmation)
+   - Test delete action
+   - Test navigation after deletion
 
-  describe('success scenarios', () => {
-    it('should handle successful operation', async () => {
-      // Test implementation
-    });
-  });
+4. **useWorkspaceSelection.ts Tests**
+   - Test workspace selection logic
+   - Test fallback to first workspace
+   - Test invalid workspace handling
+   - Test sessionStorage coordination
 
-  describe('error scenarios', () => {
-    it('should handle errors gracefully', async () => {
-      // Test implementation
-    });
-  });
+5. **useBulkDeleteRecords Tests**
+   - Test bulk deletion mutation
+   - Test query invalidation
+   - Test error handling
+   - Test success notifications
 
-  describe('edge cases', () => {
-    it('should handle null/undefined inputs', () => {
-      // Test implementation
-    });
-  });
-});
-```
+**Estimated:** 3-4 days | **Impact:** +5 components/hooks covered
 
-### E2E Test File Structure (P (Unit Testing)
+---
 
-| Category | Target | Current | Gap | Timeline |
-|----------|--------|---------|-----|----------|
-| Utils | 95%+ | ✅ ~95% | Complete | Done |
-| Hooks - UI | 85%+ | ✅ ~90% | Complete | Done |
-| Hooks - Data (useApi) | 85%+ | ~0% | 50+ tests | 1–2 wks |
-| Hooks - Access | 85%+ | ~40% | 15+ tests | 0.5–1 wk |
-| Hooks - Navigation | 80%+ | ~20% | 15+ tests | 0.5–1 wk |
-| Components - Common | 75%+ | ~20% | ~20 tests | 1 wk |
-| Services | 80%+ | ~10% | 30+ tests | 1–2 wks |
-| **Overall Core Modules** | **80%+** | **~35%** | **150+ tests** | **2–3 weeks** |
+### Phase 3: Increase Component Coverage (1-2 weeks)
+**Goal:** Bring component coverage from ~20% to 60%+
 
-### E2E Journey Coverage Goals
+**Priority Components:**
+1. **Common Components** (High Priority)
+   - Field components (Attachment, User, SingleSelect, MultiSelect, LinksField, URL, etc.)
+   - Dropdown components (RoleDropdown, AdvancedDropdown)
+   - Form components
+   - UI components (Loader, ErrorBoundary, etc.)
 
-| Journey | Stories | Est. Tests | Timeline |
-|---------|---------|-----------|----------|
-| Foundation (Playwright setup) | 3 | - | 1–2 days |
-| Data strategy | 2 | - | 2–5 days |
-| Auth + Session | 3 | (Combined Unit + E2E)
+2. **Layout Components** (Medium Priority)
+   - Sidebar components
+   - Header components
+   - Navigation components
 
-### Phase 1: Unit Testing (Weeks 1–3)
-Complete the highest-ROI hooks to reach 80% on core modules.
-- **Week 1:** useApi.ts (50+ tests, queries + mutations)
-- **Week 2:** useBaseAccess + useWorkspaceAccess (15+ tests, permission matrix)
-- **Week 3:** useNavigation + useNavigationActions (15+ tests, state/routing)
+3. **Workspace Components** (Medium Priority)
+   - Workspace tabs
+   - Member management components
+   - User management components
 
-**Parallel:** Start E2E foundation (playwright install, fixtures, page objects) **→ 1 day effort**.
+**Estimated:** 1-2 weeks | **Impact:** +40-50% component coverage
 
-### Phase 2: E2E Testing (Weeks 4–6)
-Build core journeys + plugin coverage; aim for "every major UI path executed at least once".
-- **Week 4:** Data strategy + auth flow + core journeys (workspace/base selection, table CRUD)
-- **Week 5:** Plugin views (Grid, Kanban, Gallery, Gantt)
-- **Week 6:** Permissions testing + stabilization
+---
 
-**Parallel:** Instrument build for code coverage (optional, if E2E coverage required) **→ 1 day effort**.
+### Phase 4: Increase Hook Coverage (1 week)
+**Goal:** Cover remaining hooks and edge cases
 
-### Phase 3: Validation (Week 7)
-- Run full unit + E2E suite
-- Verify 80%+ code coverage (unit) + journey coverage (E2E)
-- Fix flakes, stabilize CI
-- Document test data setup + how to run locally/CI
-### EPIC E2E-6: Permissions & Read-only (Critical for UX)
-**Duration: 1–2 weeks**
-**Goal:** Verify permission-based UI (buttons/modals hidden, "Read only" labels, etc).
+**Priority Hooks:**
+1. **Navigation Hooks** (After fixes)
+   - Complete coverage for useNavigation
+   - Complete coverage for useNavigationActions
+   - Test edge cases and error scenarios
 
-- **E2E-6.1: Viewer role journey** (0.5 day)
-  - Log in as viewer → verify "Read only" tag → verify no edit/delete buttons → navigation works
-  - **DoD:** UI correctly restricted for viewer
+2. **Data Hooks**
+   - useNormalizedTableData - Verify coverage
+   - useLookupSourceColumn - Add tests if missing
+   - useWorkspaceData - Verify coverage
 
-- **E2E-6.2: Maintainer role journey** (0.5 day)
-  - Log in as maintainer → create table, edit record → verify admin buttons hidden
-  - **DoD:** Maintainer has correct privileges
-Unit Tests (Vitest)
+3. **UI Hooks**
+   - Verify all UI hooks have good coverage
 
+**Estimated:** 1 week | **Impact:** +10-15% hook coverage
+
+---
+
+### Phase 5: Store & Context Coverage (3-5 days)
+**Goal:** Ensure stores and contexts are well-tested
+
+1. **Stores**
+   - `navigationStore.ts` - Verify coverage, add edge cases
+   - `pluginStore.ts` - Add tests if missing
+
+2. **Contexts**
+   - `RouteContext.tsx` - Verify coverage
+   - `AuthContext.tsx` - Already has 57 tests ✅
+   - `PluginFrameworkContext.tsx` - Add tests if missing
+
+**Estimated:** 3-5 days | **Impact:** +5-10% coverage
+
+---
+
+## 📊 Coverage Roadmap to 80%+
+
+### Current State
+- **Overall Coverage:** ~35%
+- **Lines:** ~35%
+- **Functions:** ~35%
+- **Branches:** ~35%
+- **Statements:** ~35%
+
+### Target State (80%+)
+- **Overall Coverage:** 80%+
+- **Lines:** 80%+
+- **Functions:** 80%+
+- **Branches:** 80%+
+- **Statements:** 80%+
+
+### Progress Tracking
+
+| Phase | Focus Area | Current | Target | Status |
+|-------|-----------|---------|--------|--------|
+| Phase 1 | Fix Failing Tests | 82 failures | 0 failures | 🔴 Not Started |
+| Phase 2 | New Components | 0% | 80%+ | 🔴 Not Started |
+| Phase 3 | Component Coverage | ~20% | 60%+ | 🔴 Not Started |
+| Phase 4 | Hook Coverage | ~60% | 80%+ | 🟡 In Progress |
+| Phase 5 | Store/Context | ~50% | 80%+ | 🟡 In Progress |
+| **Overall** | **All Areas** | **~35%** | **80%+** | 🔴 **Not Started** |
+
+---
+
+## 🎯 Success Criteria
+
+### Phase 1 Complete When:
+- ✅ All 82 failing tests pass
+- ✅ `npm test` runs with 0 failures
+- ✅ Coverage can be accurately measured
+
+### Phase 2 Complete When:
+- ✅ All 5 new components/hooks have tests
+- ✅ Each has 80%+ coverage
+- ✅ All tests pass
+
+### 80%+ Coverage Achieved When:
+- ✅ Overall coverage ≥ 80%
+- ✅ Lines coverage ≥ 80%
+- ✅ Functions coverage ≥ 80%
+- ✅ Branches coverage ≥ 80%
+- ✅ Statements coverage ≥ 80%
+- ✅ All tests pass
+- ✅ CI pipeline enforces coverage thresholds
+
+---
+
+## 📝 Testing Best Practices
+
+### Test Structure
+- Use AAA pattern (Arrange-Act-Assert)
+- Test happy paths, error cases, and edge cases
+- Mock external dependencies (API calls, router, etc.)
+- Use descriptive test names
+
+### Coverage Goals
+- **Critical Paths:** 90%+ coverage
+- **Business Logic:** 80%+ coverage
+- **UI Components:** 70%+ coverage (interactions, rendering)
+- **Utilities:** 100% coverage (already achieved ✅)
+
+### Exclusions (Not Counted in Coverage)
+- Plugin components (Grid, Kanban, Calendar, Gallery views)
+- SDK folder
+- Test files themselves
+- Config files
+- Type definition files
+
+---
+
+## 🚀 Quick Start Guide
+
+### Run Tests
 ```bash
-# Run all unit tests
+# Run all tests
 npm test
 
-# Run with coverage report
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
 npm run test:coverage
 
-# Run specific test file
-npm test -- useApi.test.ts
-
-# Watch mode (rebuild on file change)
-npm test -- --watch
-
-# UI mode (interactive test viewer)
-npm test:ui
+# Run tests with UI
+npm run test:ui
 ```
 
-**Coverage reports:**
-```
-coverage-vitest/
-├── lcov-report/index.html  # View in browser
-├── coverage-final.json
-└── coverage-summary.json
-```
-
----
-
-### E2E Tests (Playwright)
-
+### Check Coverage
 ```bash
-# Install browser binaries (first time)
-npx playwright install
-Summary: Effort & Timeline
+# Generate coverage report
+npm run test:coverage
 
-### Unit Testing (Core Modules)
-- **Current:** 774 tests, ~35% code coverage on scoped modules
-- **Target:** 80%+ on hooks/utils/stores/contexts/service
-- **Work:** ~150 new tests (API hooks, access control, navigation)
-- **Timeline:** 2–3 weeks
-- **Team:** 1 engineer
+# View HTML report
+# Open: coverage-vitest/index.html
+```
 
-### E2E Testing
-- **Current:** 0 tests
-- **Target:** 50–70 tests covering all major journeys + plugins
-- **Work:** Playwright setup + 7 epics (auth, core journeys, plugin coverage, permissions)
-- **Timeline:** 3–6 weeks (depends on backend data stability)
-- **Team:** 1–2 engineers (if plugins complex)
-
-### Combined Goal
-- **80%+ code coverage** via unit tests on core modules
-- **Critical journey coverage** via E2E tests (every major workflow executed)
-- **Total effort:** 5–9 weeks for 1 engineer (or 3–6 weeks if 2 engineers in parallel)
-- **Target completion:** End of Q1 2026
+### Fix Failing Tests
+1. Run `npm test` to see failures
+2. Focus on `useNavigation.test.ts` first (21 failures)
+3. Update route patterns to new format
+4. Verify navigation state management
+5. Repeat for `useWorkspaceBusinessLogic.test.ts` (61 failures)
 
 ---
 
-## Jira Epics Template (Ready to Create)
+## 📈 Estimated Timeline
 
-### Unit Testing Epics
-1. **UNIT-API: useApi.ts Tests** (50 tests, 1–2 weeks)
-2. **UNIT-ACCESS: Access Control Tests** (15 tests, 0.5–1 week)
-3. **UNIT-NAV: Navigation Tests** (15 tests, 0.5–1 week)
+### To Fix Failing Tests: 2-3 days
+### To Add New Component Tests: 3-4 days
+### To Reach 80% Coverage: 3-4 weeks
 
-### E2E Testing Epics
-1. **E2E-FOUND: Playwright Foundation** (1–2 days)
-2. **E2E-DATA: Test Environment & Data** (2–5 days)
-3. **E2E-AUTH: Authentication Flow** (1–3 days)
-4. **E2E-CORE: Core User Journeys** (1–2 weeks)
-5. **E2E-PLUGINS: Plugin/View Coverage** (2–4 weeks)
-6. **E2E-PERMS: Permissions & Read-only** (1–2 weeks)
-7. **E2E-COVERAGE: Code Coverage Instrumentation** (2–4 days, optional)
+**Total Estimated Time:** 4-5 weeks to reach 80%+ coverage
 
 ---
 
-## Decision Points (For Planning)
+## 🎯 Focus: Unit Testing Only
 
-**Before starting E2E, align on:**
-1. **Backend for testing:** Real test tenant or mocked API?
-2. **Code coverage requirement:** Must E2E tests contribute to the 80% code coverage gate?
-3. **Browser support:** Chromium only, or also Firefox/Safari?
-4. **CI integration:** GitHub Actions / other?
+**Note:** This strategy focuses exclusively on unit testing to achieve 80%+ code coverage. E2E testing is deferred and not part of this plan.
 
-**Answers will adjust timelines (±1 week depending on setup complexity).**
-npx playwright show-report
-```
-
-**Setup for local development:**
-```bash
-# Terminal 1: Start dev server
-npm run dev
-
-# Terminal 2: Run E2E tests
-npm run test:e2eI** (0.5 day)
-  - Add coverage threshold check in GitHub Actions
-  - Fail if overall coverage drops below target
-  - **DoD:** CI enforces 80%+ coverage from combined unit + E2E testsi.spyOn(Storage.prototype, 'getItem').mockImplementation((key) => 
-    mockStorage.get(key) || null
-  );
-  vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key, value) => {
-    mockStorage.set(key, value);
-  });
-  vi.spyOn(Storage.prototype, 'clear').mockImplementation(() => {
-    mockStorage.clear();
-  });
-});
-```
-
----
-
-## Testing Standards & Patterns
-
-### Test File Structure
-```typescript
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
-// 1. Mock external dependencies
-vi.mock('../service/clientService');
-
-// 2. Create test wrapper
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  
-  return ({ children }) => (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  );
-};
-
-describe('HookName', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  describe('success scenarios', () => {
-    it('should handle successful operation', async () => {
-      // Test implementation
-    });
-  });
-
-  describe('error scenarios', () => {
-    it('should handle errors gracefully', async () => {
-      // Test implementation
-    });
-  });
-
-  describe('edge cases', () => {
-    it('should handle null/undefined inputs', () => {
-      // Test implementation
-    });
-  });
-});
-```
-
-### Coverage Goals by Category
-
-| Category | Target | Current | Gap |
-|----------|--------|---------|-----|
-| Utils | 95%+ | ~95% | ✅ Complete |
-| Hooks - Data | 85%+ | ~60% | Missing useApi tests |
-| Hooks - Access | 85%+ | ~75% | Missing useBaseAccess |
-| Hooks - Navigation | 80%+ | ~30% | Missing nav tests |
-| Hooks - UI | 85%+ | ~90% | ✅ Nearly complete |
-| Components | 75%+ | ~0% | Not started |
-| Services | 80%+ | ~0% | Not started |
-
----
-
-## Implementation Plan
-
-### Phase 1: Fix Existing (Week 1)
-- [ ] Fix useUserRole.test.ts (3 failures)
-- [ ] Verify all other tests pass
-- [ ] Run coverage report
-
-### Phase 2: Critical API Tests (Week 2-3)
-- [ ] Create useApi.test.ts with 50+ tests
-  - [ ] All query hooks (15 tests)
-  - [ ] All mutation hooks (35 tests)
-- [ ] Target: 85%+ coverage for useApi.ts
-
-### Phase 3: Access Control (Week 4)
-- [ ] Create useBaseAccess.test.ts (25 tests)
-- [ ] Verify permission logic for all operations
-- [ ] Target: 90%+ coverage for access hooks
-
-### Phase 4: Navigation (Week 5)
-- [ ] Create useNavigation.test.ts (15 tests)
-- [ ] Create useNavigationActions.test.ts (20 tests)
-- [ ] Create useNavigateToBaseFirstView.test.ts (8 tests)
-- [ ] Target: 80%+ coverage for navigation
-
-### Phase 5: Integration & Cleanup (Week 6)
-- [ ] Run full coverage report
-- [ ] Identify gaps
-- [ ] Add missing edge case tests
-- [ ] Target: 80%+ overall coverage
-
----
-
-## Running Tests
-
-### Run all tests:
-```bash
-npm test
-```
-
-### Run with coverage:
-```bash
-npm test -- --coverage
-```
-
-### Run specific test file:
-```bash
-npm test -- useApi.test.ts
-```
-
-### Watch mode:
-```bash
-npm test -- --watch
-```
-
-### Coverage report location:
-```
-coverage/
-├── lcov-report/index.html  # View in browser
-└── coverage-summary.json
-```
-
----
-
-## Key Metrics
-
-**Total Lines to Test:** ~5,000
-**Current Test Coverage:** ~60%
-**Target Coverage:** 80%+
-**Tests to Add:** ~200+
-**Estimated Effort:** 6 weeks
-
-**Priority:** 
-1. useApi (most critical)
-2. useBaseAccess (security critical)
-3. useNavigation (core UX)
-4. Components (user-facing)
-5. Services (backend integration)
+**Priority:** Fix failing tests → Add missing tests → Increase coverage → Maintain 80%+ threshold

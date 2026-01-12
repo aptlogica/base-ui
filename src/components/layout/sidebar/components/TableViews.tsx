@@ -149,7 +149,7 @@ export const TableViews: React.FC<TableViewsProps> = ({
               </span>
               <span
                 title={view.title}
-                className="font-medium text-[var(--color-text-primary)] truncate max-w-[170px]"
+                className="font-medium text-[var(--color-text-tertiary)] truncate max-w-[170px]"
               >
                 {view.title}
               </span>
@@ -167,7 +167,7 @@ export const TableViews: React.FC<TableViewsProps> = ({
                   align="auto"
                   isPinned={pinnedViews[view.id] || false}
                   onPinToggle={handlePinToggle}
-                  onRename={async (newName) => {
+                  onRename={async () => {
                     try {
                       // Trigger refetch to update UI with new view name
                       if (setViewsRefetchTrigger) {
@@ -177,7 +177,7 @@ export const TableViews: React.FC<TableViewsProps> = ({
                       console.error('Failed to rename view:', err);
                     }
                   }}
-                  onEditDescription={async (description) => {
+                  onEditDescription={async () => {
                     try {
                       // Trigger refetch to update UI with new view description
                       if (setViewsRefetchTrigger) {

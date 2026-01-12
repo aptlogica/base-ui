@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, Plus, Search, X, ChevronDown } from 'lucide-react';
-// FRONTEND PAGINATION: Using linked records resolver to ensure all linked records are resolved
 import { useTable, useInsertRelationData } from '../../../hooks/useApi';
-import { useLinkedRecordsForField } from '../../../hooks/useLinkedRecordsResolver';
 import { useClickOutside } from '../../../hooks/useClickOutside';
 import { useToast } from '../../common/Toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -54,7 +52,6 @@ export const LinksField: React.FC<LinksFieldProps> = ({
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
     const [loadingRecordId, setLoadingRecordId] = useState<string | null>(null);
     const [dropdownPosition, setDropdownPosition] = useState<{ top?: number; bottom?: number; left: number; width: number; position: 'above' | 'below' } | null>(null);
     const [focusedRecordIndex, setFocusedRecordIndex] = useState<number>(-1);
@@ -221,12 +218,15 @@ export const LinksField: React.FC<LinksFieldProps> = ({
     // FRONTEND PAGINATION: Get all records from target table (no pagination)
     // Since pagination is disabled, useTable returns all records
     const records = useMemo(() => {
-        if (!tableData?.data?.records) return [];
-        return tableData.data.records.map((record: any) => ({
+        const data = tableData as { data?: { records?: any[] } } | null | undefined;
+        if (!data?.data?.records || !Array.isArray(data.data.records)) {
+            return [];
+        }
+        return data.data.records.map((record: any) => ({
             id: record.id.toString(),
             ...record
         }));
-    }, [tableData?.data?.records]);
+    }, [tableData]);
 
     // FRONTEND PAGINATION: Use linked records resolver as a safety net
     // This ensures linked records are resolved even if they're not in the initial records array
@@ -372,7 +372,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                 model_id: currentTableId,
                 column_id: field.id,
                 source_row_id: currentRowId,
-                target_row_id: parseInt(recordId),
+                target_row_id: Number.parseInt(recordId, 10),
                 action,
                 target_table_id: targetTableId // Pass target table ID for cache invalidation
             });
@@ -475,75 +475,6 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             }
         }
     }, [persistImmediately, persistRelation, selectedRecords, onChange, toast, value, currentTableId, queryClient]);
-
-    // const handleSelectAll = useCallback(async () => {
-    //     if (disabled) return;
-
-    //     const unselectedRecords = filteredRecords.filter(record =>
-    //         !selectedRecords.some(selected => selected.id === record.id)
-    //     );
-
-    //     if (unselectedRecords.length === 0) return;
-
-    //     if (persistImmediately) {
-    //         if (!currentRowId || !currentTableId) return;
-
-    //         try {
-    //             setIsLoading(true);
-    //             const promises = unselectedRecords.map(record =>
-    //                 persistRelation(record.id, 'link')
-    //             );
-    //             const results = await Promise.all(promises);
-    //             const successCount = results.filter(Boolean).length;
-
-    //             if (successCount > 0) {
-    //                 toast.success(`Linked ${successCount} record${successCount > 1 ? 's' : ''} successfully`);
-    //             }
-    //         } catch (error: any) {
-    //             const errorMessage = error?.response?.data?.error?.message || error?.message || 'Failed to link records';
-    //             toast.error(errorMessage);
-    //         } finally {
-    //             setIsLoading(false);
-    //         }
-    //     } else {
-    //         // Update local state only (for form view)
-    //         const newSelectedRecords = [...selectedRecords, ...unselectedRecords];
-    //         if (onChange) {
-    //             onChange(newSelectedRecords);
-    //         }
-    //     }
-    // }, [disabled, filteredRecords, selectedRecords, persistImmediately, currentRowId, currentTableId, persistRelation, onChange, toast]);
-
-    // const handleClearAll = useCallback(async () => {
-    //     if (disabled || selectedRecords.length === 0) return;
-
-    //     if (persistImmediately) {
-    //         if (!currentRowId || !currentTableId) return;
-
-    //         try {
-    //             setIsLoading(true);
-    //             const promises = selectedRecords.map(record =>
-    //                 persistRelation(record.id, 'unlink')
-    //             );
-    //             const results = await Promise.all(promises);
-    //             const successCount = results.filter(Boolean).length;
-
-    //             if (successCount > 0) {
-    //                 toast.success(`Unlinked ${successCount} record${successCount > 1 ? 's' : ''} successfully`);
-    //             }
-    //         } catch (error: any) {
-    //             const errorMessage = error?.response?.data?.error?.message || error?.message || 'Failed to unlink records';
-    //             toast.error(errorMessage);
-    //         } finally {
-    //             setIsLoading(false);
-    //         }
-    //     } else {
-    //         // Update local state only (for form view)
-    //         if (onChange) {
-    //             onChange([]);
-    //         }
-    //     }
-    // }, [disabled, selectedRecords, persistImmediately, currentRowId, currentTableId, persistRelation, onChange, toast]);
 
     const getRecordDisplayText = (record: RelatedRecord) => {
         // Try multiple fields in order of preference
@@ -923,7 +854,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                 );
                             })
                         )}
-                        
+
                         {/* Loading more indicator */}
                         {isLoadingMore && (
                             <div className="p-4 text-center text-gray-500" role="status" aria-live="polite">
@@ -933,7 +864,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                 </div>
                             </div>
                         )}
-                        
+
                         {/* Load More button */}
                         {hasMore && !isLoadingMore && (
                             <div className="p-3 text-center border-t">

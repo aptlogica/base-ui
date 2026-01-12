@@ -18,13 +18,18 @@ describe('useFrontendPagination', () => {
     expect(result.current.hasPrev).toBe(false);
   });
 
-  it('should load next page', () => {
+  it('should load next page', async () => {
     const { result } = renderHook(() =>
       useFrontendPagination({ data: testData, pageSize: 30 })
     );
 
     act(() => {
       result.current.loadNextPage();
+    });
+
+    // Wait for requestAnimationFrame to complete
+    await act(async () => {
+      await new Promise(resolve => requestAnimationFrame(resolve));
     });
 
     expect(result.current.currentPage).toBe(2);

@@ -9,7 +9,7 @@ const NotFoundPage: React.FC = () => (
         Sorry, the page you are looking for does not exist.
       </p>
       <Link 
-        to="/homepage" 
+        to="/workspace" 
         className="inline-block px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium"
       >
         Go to Home

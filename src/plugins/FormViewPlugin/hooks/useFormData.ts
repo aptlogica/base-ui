@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTable, useAddRow, useDeleteRecord, useInsertRowData, useUpdateField, useDeleteColumn, useCreateField, useUpdateView, useUpdateViewAppearance, useInsertRelationData, useAddAttachment } from '../../../hooks/useApi';
-import type { TableData } from '../types/api.types';
+import type { TableData } from '../../../types/api.types';
 import { fieldsToFilter } from '../../../types/constants';
 import { isFormulaField } from '../../../utils/fieldUtils';
 

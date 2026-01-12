@@ -27,6 +27,7 @@ coverage-vitest/
 *.sln
 *.sw?
 coverage/
+coverage-vitest/
 
 # Environment variables
 .env

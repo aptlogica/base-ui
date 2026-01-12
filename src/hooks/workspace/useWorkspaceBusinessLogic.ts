@@ -4,6 +4,7 @@ import { useEffect, useCallback, useState } from 'react';
 import { useToast } from '../../components/common/Toast';
 import { useNavigation } from '../../hooks/useNavigation';
 import { useNavigationActions } from '../../hooks/useNavigationActions';
+import { useWorkspaceSelection } from './useWorkspaceSelection';
 
 /**
  * Centralized business logic for workspace operations
@@ -33,22 +34,12 @@ export const useWorkspaceBusinessLogic = () => {
     tablesError,
     viewsError,
     createWorkspaceMutation,
-    updateWorkspaceMutation,
-    deleteWorkspaceMutation,
     createBaseMutation,
-    deleteBaseMutation,
     createTableMutation,
     updateTableMutation,
     deleteTableMutation,
-    createFieldMutation,
-    updateFieldMutation,
-    deleteFieldMutation,
     createViewMutation,
-    updateViewMutation,
     deleteViewMutation,
-    addRowMutation,
-    insertRowDataMutation,
-    deleteRecordMutation,
   } = useWorkspaceDataService(
     useWorkspaceStateManager().selectedWorkspaceId || undefined,
     useWorkspaceStateManager().selectedBaseId || undefined,
@@ -93,28 +84,25 @@ export const useWorkspaceBusinessLogic = () => {
     flyoutMode, flyoutOpen, isTransitioning,
   } = useWorkspaceStateManager();
 
-  // Derived state
+  // Derived state with proper type guards
   const workspaces = workspacesQuery.data;
-  const currentWorkspace = workspaceByIdQuery.data?.data;
-  const workspaceBases = workspaceBasesQuery.data;
-  const selectedBase = baseByIdQuery.data?.data;
-  const baseTables = baseTablesQuery.data;
-  const selectedTable = tableByIdQuery.data?.data;
+  const currentWorkspace = (workspaceByIdQuery.data as { data?: any } | undefined)?.data;
+  const workspaceBases = (workspaceBasesQuery.data as { data?: any } | undefined);
+  const selectedBase = (baseByIdQuery.data as { data?: any } | undefined)?.data;
+  const baseTables = (baseTablesQuery.data as { data?: any } | undefined);
+  const selectedTable = (tableByIdQuery.data as { data?: any } | undefined)?.data;
   const tableViews = tableViewsQuery.data;
   const selectedView = viewByIdQuery.data;
 
-  // State to force refetch of views when needed (kept for backward compatibility, but no longer used)
-  // React Query mutations already invalidate view queries automatically
-  const [viewsRefetchTrigger, setViewsRefetchTrigger] = useState(0);
 
   // Use baseTables directly - views will be fetched on-demand when tables are expanded
   // This prevents fetching views for all tables upfront (60+ API calls)
   const enrichedBaseTables = baseTables;
 
+  // State to force refetch of views when needed (used by Sidebar and TableViews components)
+  const [viewsRefetchTrigger, setViewsRefetchTrigger] = useState(0);
+
   
-  // Debug logging for workspace tracking
-  useEffect(() => {
-  }, [selectedWorkspaceId, currentWorkspace, selectedBaseId, selectedBase, workspaceBases?.data?.length, baseTables?.data?.length]);
 
   // Loading and error states
   // Removed tableViewsLoading - views are now fetched on-demand, not during initial load
@@ -141,20 +129,22 @@ export const useWorkspaceBusinessLogic = () => {
         }
       });
 
-      if (!(newWorkspace as any)?.data?.id) {
+      const workspaceData = newWorkspace?.data;
+      if (!workspaceData?.id) {
         onError?.('Failed to create workspace. Please try again.');
         return;
       }
-
-      const workspaceData = (newWorkspace as any).data;
       const firstBase = workspaceData.bases?.[0];
       const firstTable = firstBase?.tables?.[0]?.model;
-      const firstView = firstBase?.tables?.[0]?.views?.[0];
 
       // Update navigation store with new workspace ID immediately
       // This ensures bases query refetches with the new workspaceId
       if (workspaceData?.id) {
         setWorkspace(workspaceData.id);
+        // Also update selectedWorkspace state so dropdown shows the new workspace
+        setSelectedWorkspace(workspaceData);
+        // Note: workspaces query will be refetched automatically via mutation's onSuccess
+        // which uses refetchType: 'active' for immediate update
       }
 
       // Navigate after a brief delay to ensure state updates and query invalidation are processed
@@ -163,25 +153,25 @@ export const useWorkspaceBusinessLogic = () => {
       if (firstBase && firstTable && authUser?.id) {
         try {
           navigateAndPersist(workspaceData.id, firstBase.id, firstTable.id, authUser.id);
-          navigate(`/base/${firstBase.id}/table/${firstTable.id}/grid`);
-        } catch (navErr) {
-            console.error('Navigation error after workspace creation:', navErr);
-            // Fallback to homepage if navigation fails
-            navigate(`/homepage`);
+          navigate(`/workspace/${workspaceData.id}/base/${firstBase.id}/table/${firstTable.id}/grid`);
+        } catch (error_) {
+            console.error('Navigation error after workspace creation:', error_);
+            // Fallback to workspace homepage if navigation fails
+            navigate(`/workspace/${workspaceData.id}`, { replace: true });
         }
       } else {
-          // Navigate to homepage if no base/table exists
+          // Navigate to workspace homepage if no base/table exists
           // Use replace to avoid adding to history stack
-          navigate(`/homepage`, { replace: true });
+          navigate(`/workspace/${workspaceData.id}`, { replace: true });
       }
       });
 
       onSuccess?.(workspaceData);
-    } catch (error) {
-      
+    } catch (error_) {
+      console.error('Failed to create workspace:', error_);
       onError?.('Failed to create workspace. Please try again.');
     }
-  }, [createWorkspaceMutation, authUser?.id, navigateAndPersist, navigate]);
+  }, [createWorkspaceMutation, authUser?.id, navigateAndPersist, navigate, setWorkspace]);
 
   const handleCreateBaseForWorkspace = useCallback(async ({ name, description, image }: { name: string; description: string; image?: File | null }) => {
     if (!currentWorkspace) {
@@ -190,7 +180,7 @@ export const useWorkspaceBusinessLogic = () => {
     }
 
     try {
-      const newBase = await createBaseMutation.mutateAsync({
+      await createBaseMutation.mutateAsync({
         title: name,
         description: description || '',
         workspace_id: currentWorkspace.id,
@@ -198,11 +188,9 @@ export const useWorkspaceBusinessLogic = () => {
       });
 
       setShowCreateBaseWorkspaceId(null);
-      // COMMENTED OUT: Navigation to table on base creation
-      // navigateToBase(currentWorkspace.id, newBase.data.id);
       toast.success('Base created successfully');
     } catch (err) {
-      
+      console.error('Failed to create base:', err);
       toast.error('Failed to create base. Please try again.');
       throw err;
     }
@@ -248,7 +236,7 @@ export const useWorkspaceBusinessLogic = () => {
         baseId: table.base_id 
       });
       
-      await handleTableDeletion(table.id);
+      handleTableDeletion(table.id);
 
       toggleTableExpansion(table.id);
 
@@ -274,7 +262,7 @@ export const useWorkspaceBusinessLogic = () => {
     try {
       const isCurrentlySelected = selectedViewId === view.id;
       
-      await navigationHandleViewDeletion(view.id);
+      navigationHandleViewDeletion(view.id);
 
       // Trigger refetch of views
       setViewsRefetchTrigger(prev => prev + 1);
@@ -293,7 +281,7 @@ export const useWorkspaceBusinessLogic = () => {
       toast.error('Failed to delete view. Please try again.');
       throw error;
     }
-  }, [selectedViewId, selectedTableId, selectedBaseId, selectedWorkspaceId, navigationHandleViewDeletion, navigateToTable, navigateToBase, toast]);
+  }, [selectedViewId, selectedTableId, selectedBaseId, selectedWorkspaceId, navigationHandleViewDeletion, navigateToTable, navigateToBase, toast, setViewsRefetchTrigger]);
 
   // Helper functions for active state
   const isTableActive = useCallback((baseId: string, tableId: string) => {
@@ -305,8 +293,7 @@ export const useWorkspaceBusinessLogic = () => {
   }, [selectedBaseId, selectedTableId, selectedViewId]);
 
   // Additional UI state for sidebar
-  const [menuItems, setMenuItems] = useState<any[]>([]);
-  const [config, setConfig] = useState((window as any).__workspaceConfig || {});
+  const [config, setConfig] = useState((globalThis as any).__workspaceConfig || {});
   const [workspaceDropdownOpen, setWorkspaceDropdownOpen] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [newWorkspaceDescription, setNewWorkspaceDescription] = useState('');
@@ -314,100 +301,39 @@ export const useWorkspaceBusinessLogic = () => {
   const [isError, setIsError] = useState(false);
   const [selectedWorkspace, setSelectedWorkspace] = useState<any>(null);
 
-  // Navigation service effect
-  useEffect(() => {
-    const navService = (window as any).__navigationService;
-    if (navService) {
-      setMenuItems(navService.getMenuItems());
-      const unsubscribe = navService.subscribe(() => setMenuItems(navService.getMenuItems()));
-      return unsubscribe;
-    }
-  }, []);
-
   // Workspace config effect
   useEffect(() => {
-    const handler = () => setConfig({ ...(window as any).__workspaceConfig });
-    window.addEventListener('workspace-config-changed', handler);
-    return () => window.removeEventListener('workspace-config-changed', handler);
+    const handler = () => setConfig({ ...(globalThis as any).__workspaceConfig });
+    globalThis.addEventListener('workspace-config-changed', handler);
+    return () => globalThis.removeEventListener('workspace-config-changed', handler);
   }, []);
 
-  // Process workspace data from TanStack Query
-  // CRITICAL: This effect must always sync selectedWorkspace with selectedWorkspaceId from store
-  // On browser reload, the store has the ID but workspace object needs to be restored
-  // FALLBACK: Always ensure a workspace is selected when workspaces are available
-  useEffect(() => {
-    if (!restoreCompleted) return;
-    if (!workspaces || !Array.isArray(workspaces) || workspaces.length === 0) return;
-
-    // Check if selectedWorkspace is null or invalid (workspace doesn't exist in list)
-    const isSelectedWorkspaceInvalid = !selectedWorkspace || 
-      (selectedWorkspace.id && !workspaces.find(ws => ws.id === selectedWorkspace.id));
-
-    // Priority 1: If store has selectedWorkspaceId (from activity_data or previous selection), sync the workspace object
-    // This is critical for browser reload - store has ID, need to restore workspace object
-    if (selectedWorkspaceId) {
-      const savedWorkspace = workspaces.find(ws => ws.id === selectedWorkspaceId);
-      if (savedWorkspace) {
-        // Workspace exists - sync it (even if selectedWorkspace is already set)
-        // This ensures workspace selection is restored on browser reload
-        if (!selectedWorkspace || selectedWorkspace.id !== savedWorkspace.id) {
-          setSelectedWorkspace(savedWorkspace);
-          // Defensive: ensure store also has the ID
-          setWorkspace(savedWorkspace.id);
-        }
-      } else {
-        // Workspace ID in store doesn't exist in loaded workspaces
-        // This could happen if workspace was deleted or user lost access
-        // FALLBACK: Always select first workspace when saved workspace is invalid
-        if (workspaces.length > 0) {
-          const firstWorkspace = workspaces[0];
-          setSelectedWorkspace(firstWorkspace);
-          setWorkspace(firstWorkspace.id);
-          // Persist the selection for refresh scenarios
-          if (authUser?.id) {
-            navigateAndPersist(firstWorkspace.id, null as any, null as any, authUser.id);
-          }
-        }
-      }
-    } else {
-      // No workspace selected in store (no activity_data) - FALLBACK: auto-select first one
-      // This is the fallback when user has no activity_data (newly assigned user or refresh)
-      // Priority is given to activity_data, but if none exists, first workspace is the default
-      if (workspaces.length > 0) {
-        const firstWorkspace = workspaces[0];
-        setSelectedWorkspace(firstWorkspace);
-        setWorkspace(firstWorkspace.id);
-        // Persist the selection for refresh scenarios
-        if (authUser?.id) {
-          navigateAndPersist(firstWorkspace.id, null as any, null as any, authUser.id);
-        }
-      }
-    }
-
-    // ADDITIONAL SAFETY CHECK: If selectedWorkspace is null or invalid but workspaces are available,
-    // always fallback to first workspace. This handles edge cases where selection gets lost unexpectedly.
-    // This ensures workspace selection never disappears when workspaces are available.
-    if (isSelectedWorkspaceInvalid && workspaces.length > 0) {
-      const firstWorkspace = workspaces[0];
-      // Only update if we don't already have a valid selection
-      if (!selectedWorkspaceId || !workspaces.find(ws => ws.id === selectedWorkspaceId)) {
-        setSelectedWorkspace(firstWorkspace);
-        setWorkspace(firstWorkspace.id);
-        // Persist the selection for refresh scenarios
-        if (authUser?.id) {
-          navigateAndPersist(firstWorkspace.id, null as any, null as any, authUser.id);
-        }
-      }
-    }
-  }, [workspaces, restoreCompleted, selectedWorkspace, selectedWorkspaceId, setWorkspace, authUser, navigateAndPersist]);
+  // Use extracted hook for workspace selection synchronization
+  useWorkspaceSelection(
+    workspaces,
+    restoreCompleted,
+    selectedWorkspace,
+    selectedWorkspaceId,
+    setSelectedWorkspace,
+    setWorkspace,
+    navigateAndPersist
+  );
 
   // Auto-select first base when workspace is selected but no base is selected
+  // FIX: Only auto-select on initial load, not after user changes
   useEffect(() => {
+    if (!restoreCompleted) return; // Wait for restore to complete
     if (selectedWorkspaceId && !selectedBaseId && workspaceBases?.data && Array.isArray(workspaceBases.data) && workspaceBases.data.length > 0) {
-      const firstBase = workspaceBases.data[0];
-      navigateToBase(selectedWorkspaceId, firstBase.id);
+      // Only auto-select if this is initial load (no base was ever selected)
+      // Don't auto-select if user just changed workspace (that would override their choice)
+      const hasInitialized = sessionStorage.getItem('nav_initialized') === 'true';
+      if (!hasInitialized) {
+        const firstBase = workspaceBases.data[0];
+        navigateToBase(selectedWorkspaceId, firstBase.id);
+        sessionStorage.setItem('nav_initialized', 'true');
+      }
     }
-  }, [selectedWorkspaceId, selectedBaseId, workspaceBases?.data, navigateToBase]);
+  }, [selectedWorkspaceId, selectedBaseId, workspaceBases?.data, navigateToBase, restoreCompleted]);
 
   // Ensure we always have a workspace selected (fallback for refresh scenarios)
   // This runs after restoreCompleted to catch cases where workspace wasn't selected during initial restore
@@ -438,12 +364,9 @@ export const useWorkspaceBusinessLogic = () => {
     await handleCreateWorkspace(
       newWorkspaceName,
       newWorkspaceDescription,
-      (workspace: any) => {
-        // Update both the workspace object and the selectedWorkspaceId in navigation store
-        setSelectedWorkspace(workspace);
-        if (workspace?.id) {
-          setWorkspace(workspace.id); // This updates selectedWorkspaceId in navigation store
-        }
+      () => {
+        // Workspace is already set in handleCreateWorkspace (both store and selectedWorkspace state)
+        // Just clean up UI state here
         setShowCreateWorkspace(false);
         setNewWorkspaceName('');
         setNewWorkspaceDescription('');
@@ -459,8 +382,8 @@ export const useWorkspaceBusinessLogic = () => {
 
   // Helper functions
   const isAnyBaseActive = useCallback(() => {
-    const pathname = window.location.pathname;
-    return pathname.startsWith('/base/') || pathname.startsWith('/table/') || pathname === '/workspace';
+    const pathname = globalThis.location.pathname;
+    return pathname.includes('/base/') || pathname.startsWith('/workspace/');
   }, []);
 
   const findFirstBase = useCallback(() => {
@@ -522,7 +445,7 @@ export const useWorkspaceBusinessLogic = () => {
     handleDeleteView,
     isTableActive,
     isViewActive,
-    // View refetch trigger
+    // View refetch trigger (used by Sidebar components)
     setViewsRefetchTrigger,
     // Mutations (for direct access if needed)
     createWorkspaceMutation,
@@ -533,7 +456,6 @@ export const useWorkspaceBusinessLogic = () => {
     deleteTableMutation,
     deleteViewMutation,
     // Additional UI state
-    menuItems,
     config,
     workspaceDropdownOpen, setWorkspaceDropdownOpen,
     newWorkspaceName, setNewWorkspaceName,

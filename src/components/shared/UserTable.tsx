@@ -2,7 +2,6 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import ReactDOM, { createPortal } from 'react-dom';
 import { MoreVertical, Search, ChevronsUpDown, UserX, UserCheck, Trash2, Filter, Edit, Loader2 } from 'lucide-react';
 import { useUserRole } from '../../hooks/useUserRole';
-import { UserAccessDetailsModal } from '../modals/UserAccessDetailsModal';
 import { useUserRolesAndAccess } from '../../hooks/useApi';
 
 export interface TenantUser {
@@ -451,7 +450,6 @@ export const UserTable: React.FC<UserTableProps> = ({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const [accessDetailsUserId, setAccessDetailsUserId] = useState<string | null>(null);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string | null>(null);
@@ -1040,12 +1038,12 @@ export const UserTable: React.FC<UserTableProps> = ({
                           const userIsCoOwner = roles.some(role =>
                             role.toLowerCase() === 'co-owner'
                           );
-                          
+
                           // Co-owner cannot see action button for Owner users or other Co-owners
                           if (isCoOwner() && (userIsOwner || userIsCoOwner)) {
                             return null;
                           }
-                          
+
                           // Show action button if there are any actions available
                           if (onRemoveUser || onEditUser || onActivateUser || onDeactivateUser) {
                             return (
@@ -1176,7 +1174,7 @@ export const UserTable: React.FC<UserTableProps> = ({
             const status = user.status?.toLowerCase();
             const isActive = status === 'active' && user.email_verified;
             const isDeactivated = status === 'deactivated';
-            
+
             if (isActive && onDeactivateUser) {
               return (
                 <button
@@ -1240,20 +1238,6 @@ export const UserTable: React.FC<UserTableProps> = ({
         document.body
       )}
 
-      {/* Access Details Modal */}
-      {accessDetailsUserId && (() => {
-        const user = paginatedUsers.find(u => u.id === accessDetailsUserId) || users.find(u => u.id === accessDetailsUserId);
-        if (!user) return null;
-        return ReactDOM.createPortal(
-          <UserAccessDetailsModal
-            isOpen={!!accessDetailsUserId}
-            onClose={() => setAccessDetailsUserId(null)}
-            userId={accessDetailsUserId}
-            userName={user.display_name || `${user.first_name} ${user.last_name}` || user.email}
-          />,
-          document.body
-        );
-      })()}
     </div>
   );
 };

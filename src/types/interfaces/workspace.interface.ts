@@ -1,4 +1,3 @@
-import { BaseDB } from "./base.interface";
 export interface WorkspaceBaseInput {
     title: string;
     description: string;

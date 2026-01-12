@@ -45,27 +45,29 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
   return (
     <div className="border rounded-xl bg-card">
       {/* Workspace Row */}
-      <div className="flex items-center justify-between p-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-900">
+      <div className="flex items-center gap-3 p-3 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="text-sm font-medium text-gray-900 truncate" title={workspace.title || workspace.name}>
             {workspace.title || workspace.name}
           </span>
-          <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
+          <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full flex-shrink-0">
             {baseCount} Base{baseCount !== 1 ? 's' : ''}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <RoleDropdown
-            value={assignment?.role || ''}
-            options={workspaceRoleOptions}
-            onChange={(value) => {
-              onRoleChange(
-                workspace.id,
-                value === '' ? null : value as 'maintainer' | 'workspace-read' | 'base_specific'
-              );
-            }}
-            placeholder="Select a role"
-          />
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="min-w-[160px]">
+            <RoleDropdown
+              value={assignment?.role || ''}
+              options={workspaceRoleOptions}
+              onChange={(value) => {
+                onRoleChange(
+                  workspace.id,
+                  value === '' ? null : value as 'maintainer' | 'workspace-read' | 'base_specific'
+                );
+              }}
+              placeholder="Select a role"
+            />
+          </div>
           {assignment?.role && (
             <button
               type="button"
@@ -73,7 +75,7 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
                 e.stopPropagation();
                 onRoleChange(workspace.id, null);
               }}
-              className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
               title="Clear selection"
               aria-label="Clear role selection"
             >
@@ -99,29 +101,30 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
               const isBaseSelected = !!baseAssignment;
 
               return (
-                <div key={base.id} className="flex items-center justify-between py-1.5 px-3">
-                  <span className="text-xs text-gray-700">
+                <div key={base.id} className="flex items-center gap-3 py-1.5 px-3 min-w-0">
+                  <span className="text-xs text-gray-700 truncate flex-1 min-w-0" title={base.title || base.name}>
                     {base.title || base.name}
                   </span>
-                  <div className="flex items-center gap-2">
-                    <RoleDropdown
-                      value={baseAssignment?.role || ''}
-                      options={baseRoleOptions}
-                      onChange={(value) => {
-                        if (!isBaseSelected) {
-                          // If base is not selected yet, toggle it first
-                          onToggleBase(workspace.id, base.id);
-                        }
-                        // Then set the role
-                        onBaseRoleChange(
-                          workspace.id,
-                          base.id,
-                          value as 'base-member' | 'base-read'
-                        );
-                      }}
-                      placeholder="Select a role"
-                      className="min-w-[120px]"
-                    />
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="min-w-[120px]">
+                      <RoleDropdown
+                        value={baseAssignment?.role || ''}
+                        options={baseRoleOptions}
+                        onChange={(value) => {
+                          if (!isBaseSelected) {
+                            // If base is not selected yet, toggle it first
+                            onToggleBase(workspace.id, base.id);
+                          }
+                          // Then set the role
+                          onBaseRoleChange(
+                            workspace.id,
+                            base.id,
+                            value as 'base-member' | 'base-read'
+                          );
+                        }}
+                        placeholder="Select a role"
+                      />
+                    </div>
                     {isBaseSelected && baseAssignment?.role && (
                       <button
                         type="button"
@@ -130,7 +133,7 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
                           // Remove base from selection
                           onToggleBase(workspace.id, base.id);
                         }}
-                        className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                        className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
                         title="Clear selection"
                         aria-label="Clear base role selection"
                       >

@@ -250,7 +250,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     const fieldRendererProps = createFieldRendererProps(
       field,
       value, 
-      isReadOnly ? undefined : (v: any) => handleFieldChange(field, v),
+      isReadOnly ? () => {} : (v: any) => handleFieldChange(field, v),
       { 
         isBorder: true,
         readOnly: isReadOnly,
@@ -289,30 +289,24 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   };
 
   return (
-    <div className="bg-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="bg-modal rounded-xl shadow-lg w-full relative" style={{ maxWidth: '50vw' }} onClick={(e) => e.stopPropagation()}>
+    <div className="bg-modal-backdrop relative" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <button
+        type="button"
+        aria-label="Close modal"
+        className="absolute inset-0"
+        onClick={onClose}
+      />
+      <div className="bg-modal w-full relative !p-0 flex flex-col overflow-hidden" style={{ maxWidth: '50vw' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b">
-          <div className="flex items-center gap-3">
-            <Pencil className="w-5 h-5 icons-primary" />
-            <div className="flex items-center gap-2">
-              <span className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded truncate max-w-[150px]">{table?.title}</span>
-              <h2 className="text-2xl font-semibold">{title}</h2>
+        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <Pencil className="w-5 h-5 icons-primary flex-shrink-0" />
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded truncate max-w-[150px] flex-shrink-0">{table?.title}</span>
+              <h2 className="text-2xl font-semibold truncate">{title}</h2>
             </div>
           </div>
-          <div className="flex items-center gap-2 relative">
-            {canUpdateRecord() && (
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={handleSave}
-                className={`px-3 py-1.5 rounded btn-primary ${
-                  submitting ? 'opacity-60 cursor-not-allowed' : ''
-                }`}
-              >
-                {submitLabel}
-              </button>
-            )}
+          <div className="flex items-center gap-2 relative flex-shrink-0">
             {/* Menu button for duplicate/delete */}
             <div className="relative" ref={menuRef}>
               <button
@@ -370,14 +364,15 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                 </div>
               )}
             </div>
-            <button type="button" className="p-2" onClick={onClose} aria-label="Close">
+            <button type="button" className="p-2 flex-shrink-0" onClick={onClose} aria-label="Close">
               <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
         </div>
 
-        {/* Body */}
-        <div className="px-6 py-6 max-h-[70vh] overflow-y-auto">
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+          <div className="p-6">
            {/* Visible fields */}
            <div className="space-y-4">
              {visibleFields.map((field) => {
@@ -438,7 +433,32 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
           {formError && (
             <div className="mt-4 text-red-600 text-sm">{formError}</div>
           )}
+          </div>
         </div>
+
+        {/* Footer - Fixed at Bottom */}
+        {canUpdateRecord() && (
+          <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={submitting}
+              className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={handleSave}
+              className={`px-16 py-2 rounded-xl btn-primary ${
+                submitting ? 'opacity-60 cursor-not-allowed' : ''
+              }`}
+            >
+              {submitLabel}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

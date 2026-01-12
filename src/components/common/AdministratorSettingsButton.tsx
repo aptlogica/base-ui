@@ -11,16 +11,16 @@ const AdministratorSettingsButton: React.FC = () => {
   const location = useLocation();
   const { selectedWorkspaceId } = useNavigationStore();
   const { isAdmin, isMaintainer } = useUserRole();
-  const { currentWorkspace } = useWorkspaceAccess(selectedWorkspaceId);
-  
+  const { currentWorkspace } = useWorkspaceAccess(selectedWorkspaceId || undefined);
+
   // Route-based visibility check
   const isRouteVisible = useComponentVisibility(COMPONENT_IDS.ADMINISTRATOR_SETTINGS_BUTTON);
 
   // Check if workspace access_level is maintainer, admin, or workspace-read
-  const hasWorkspaceMaintainerAccess = currentWorkspace?.access_level === 'maintainer' || 
-                                       currentWorkspace?.access_level === 'owner' ||
-                                       currentWorkspace?.access_level === 'co-owner' ||
-                                       currentWorkspace?.access_level === 'workspace-read';
+  const hasWorkspaceMaintainerAccess = currentWorkspace?.access_level === 'maintainer' ||
+    currentWorkspace?.access_level === 'owner' ||
+    currentWorkspace?.access_level === 'co-owner' ||
+    currentWorkspace?.access_level === 'workspace-read';
 
   // Combined visibility check:
   // 1. Route-based visibility (handled by RouteContext)
@@ -47,19 +47,17 @@ const AdministratorSettingsButton: React.FC = () => {
     <>
       <button
         onClick={handleClick}
-        className={`relative p-2 rounded-xl transition-colors focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-2 ${
-          isActive
-            ? 'bg-green-200 text-black'
-            : 'bg-card icons-bg hover:bg-[var(--color-gray-100)] hover:text-black'
-        }`}
+        className={`relative p-2 rounded-xl transition-colors focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-2 ${isActive
+          ? 'bg-green-200 text-black'
+          : 'bg-card icons-bg hover:bg-[var(--color-gray-100)] hover:text-black'
+          }`}
         title="Owner Settings"
         aria-label="Owner Settings"
       >
-        <Settings className={`w-5 h-5 transition-all duration-200 ${
-          isActive
-            ? 'text-green-600'
-            : 'text-gray-500 hover:scale-110'
-        }`} />
+        <Settings className={`w-5 h-5 transition-all duration-200 ${isActive
+          ? 'text-green-600'
+          : 'text-gray-500 hover:scale-110'
+          }`} />
       </button>
       {/* Vertical Separator */}
       <div className="h-6 w-px bg-gray-300 mx-2"></div>

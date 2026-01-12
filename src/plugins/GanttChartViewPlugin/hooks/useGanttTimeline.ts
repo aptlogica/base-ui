@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { GanttTask } from './useGanttData';
 import { buildGanttTooltipLines } from '../utils/buildGanttTooltip';
-import type { Column } from '../types/api.types';
+import type { Column } from '../../../types/api.types';
 
 interface UseGanttTimelineOptions {
   filteredTasks: GanttTask[];

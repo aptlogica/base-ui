@@ -457,6 +457,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
   const showCoOwnerToggle =
     !isEditMode || (currentUserIsOwner() && !editedUserIsOwnerOrCoOwner && !isEditingSelf);
 
+  // Hide workspace/base panel for owners since they already have access to everything
   const showWorkspaceBasePanel =
     (!isEditMode && !isCoOwner) || (isEditMode && !isCoOwner && !editedUserIsOwnerOrCoOwner && !isEditingSelf);
 
@@ -531,7 +532,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
         {/* Scrollable Content Area */}
         <form id="add-user-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto min-h-0">
           <div className="p-0 h-full">
-            <div className="grid grid-cols-2 gap-6 h-full">
+            <div className={`grid gap-6 h-full ${showWorkspaceBasePanel ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {/* Left Column - User Details */}
               <div className="space-y-4 bg-card p-4 lg:p-6">
                 {/* First Name and Last Name - Side by Side */}

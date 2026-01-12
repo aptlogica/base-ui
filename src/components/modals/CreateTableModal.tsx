@@ -87,34 +87,41 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
 
   return (
     <div
-      className="bg-modal-backdrop"
-      onClick={onClose}
+      className="bg-modal-backdrop relative"
+      onKeyDown={handleKeyDown}
     >
+      <button
+        type="button"
+        aria-label="Close modal"
+        className="absolute inset-0"
+        onClick={onClose}
+      />
       <div
-        className="bg-modal"
+        className="bg-modal !max-w-3xl !p-0 flex flex-col relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={handleKeyDown}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center">
+        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center flex-shrink-0">
               <Table2 size={20} className="icon-primary" />
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-primary">Create Table</h2>
-              <p className="text-sm text-secondary">Add a new table to your base</p>
+            <div className="min-w-0">
+              <h2 className="text-xl font-semibold text-primary truncate">Create Table</h2>
+              <p className="text-sm text-secondary truncate">Add a new table to your base</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
+            aria-label="Close"
           >
             <X size={16} className="text-[var(--text-color-tertiary)]" />
           </button>
         </div>
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Scrollable Content Area */}
+        <form id="create-table-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+          <div className="p-4 space-y-4">
           <div className="space-y-1">
             <label htmlFor="tableName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
               Table Name <span className="text-red-500">*</span>
@@ -165,32 +172,38 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
             rows={5}
             isBorder={true}
           />
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="px-16 py-2 rounded-xl border hover:bg-gray-100 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || !name.trim() || name.trim().length < 3}
-              className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"></div>
-                  Creating...
-                </>
-              ) : (
-                'Create Table'
-              )}
-            </button>
           </div>
         </form>
+
+        {/* Footer - Fixed at Bottom */}
+        <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              handleSubmit(e);
+            }}
+            disabled={isSubmitting || !name.trim() || name.trim().length < 3}
+            className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"></div>
+                Creating...
+              </>
+            ) : (
+              'Create Table'
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

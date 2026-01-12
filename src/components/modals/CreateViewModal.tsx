@@ -7,6 +7,8 @@ import { getFieldTypeIconComponent } from '../../types/fieldTypes';
 import { useTable } from '../../hooks/useApi';
 import { validateViewName, getDefaultViewName, generateUniqueName } from '../../utils/nameValidation';
 
+type FieldValue = { value: string; label: string } | string | null;
+
 interface CreateViewModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -32,16 +34,17 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedField, setSelectedField] = useState<any | null>(null);
+  const [selectedField, setSelectedField] = useState<FieldValue>(null);
   const [validationError, setValidationError] = useState('');
   const [fieldError, setFieldError] = useState('');
   // Gantt chart specific fields
-  const [startDateField, setStartDateField] = useState<any | null>(null);
-  const [endDateField, setEndDateField] = useState<any | null>(null);
+  const [startDateField, setStartDateField] = useState<FieldValue>(null);
+  const [endDateField, setEndDateField] = useState<FieldValue>(null);
 
   // Decide effective fields: prefer provided `fields` prop, else fetch table columns
   const tableQuery = useTable(tableId);
-  const fetchedColumns = tableQuery?.data?.data?.columns || tableQuery?.data?.data?.fields || tableQuery?.data?.data?.model?.columns || [];
+  const tableData = tableQuery?.data as { data?: { columns?: any[]; fields?: any[]; model?: { columns?: any[] } } } | undefined;
+  const fetchedColumns = tableData?.data?.columns || tableData?.data?.fields || tableData?.data?.model?.columns || [];
   const effectiveFieldsSource = (fields && fields.length > 0) ? fields : fetchedColumns;
 
   // Normalize incoming fields and ensure we check both 'uidt' and 'type'
@@ -115,9 +118,9 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
     if (isOpen) {
       // Automatically set the default view name (which will be incremented if duplicates exist)
       let initialName = '';
-      if (defaultName && defaultName.trim()) {
+      if (defaultName?.trim()) {
         // If defaultName is provided, make it unique if it's a duplicate
-        initialName = generateUniqueName(defaultName.trim(), existingViews, 'view');
+        initialName = generateUniqueName(defaultName.trim(), existingViews);
       } else {
         // Otherwise, generate the default view name based on type
         initialName = getDefaultViewName(viewType, existingViews);
@@ -151,13 +154,25 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, viewType]);
 
+  // Helper function to extract field ID from field value (can be object or string)
+  const getFieldId = (field: FieldValue): string | null => {
+    if (!field) return null;
+    if (typeof field === 'object' && 'value' in field) {
+      return field.value;
+    }
+    if (typeof field === 'string') {
+      return field;
+    }
+    return null;
+  };
+
   // Validate Gantt chart date fields in real-time
   useEffect(() => {
     if (viewType === 'ganttChart' && startDateField && endDateField) {
-      const startFieldId = (startDateField && typeof startDateField === 'object') ? (startDateField as any).value : (startDateField as any);
-      const endFieldId = (endDateField && typeof endDateField === 'object') ? (endDateField as any).value : (endDateField as any);
+      const startFieldId = getFieldId(startDateField);
+      const endFieldId = getFieldId(endDateField);
 
-      if (startFieldId === endFieldId) {
+      if (startFieldId && endFieldId && startFieldId === endFieldId) {
         setFieldError('Start date and end date fields must be different');
       } else {
         setFieldError('');
@@ -185,6 +200,13 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
     setError('');
     setFieldError('');
 
+    // Helper to get field label for error messages
+    const getFieldLabel = (): string => {
+      if (viewType === 'calendar') return 'Date field';
+      if (viewType === 'kanban') return 'Group by field';
+      return 'Field';
+    };
+
     // Validation for field selection based on view type
     if (showFieldDropdown) {
       if (viewType === 'ganttChart') {
@@ -197,18 +219,16 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
           return;
         }
         // Check if start and end date fields are the same
-        const startFieldId = (startDateField && typeof startDateField === 'object') ? (startDateField as any).value : (startDateField as any);
-        const endFieldId = (endDateField && typeof endDateField === 'object') ? (endDateField as any).value : (endDateField as any);
-        if (startFieldId === endFieldId) {
+        const startFieldId = getFieldId(startDateField);
+        const endFieldId = getFieldId(endDateField);
+        if (startFieldId && endFieldId && startFieldId === endFieldId) {
           setFieldError('Start date and end date fields must be different');
           return;
         }
-      } else {
+      } else if (!selectedField) {
         // For other view types that require field selection
-        if (!selectedField) {
-          setFieldError(`${viewType === 'calendar' ? 'Date field' : viewType === 'kanban' ? 'Group by field' : 'Field'} is required for ${viewType} views`);
+        setFieldError(`${getFieldLabel()} is required for ${viewType} views`);
           return;
-        }
       }
     }
 
@@ -222,10 +242,16 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
     try {
       if (viewType === 'ganttChart') {
         // For Gantt charts, pass both start and end date field IDs
-        const startDateFieldId = (startDateField && typeof startDateField === 'object') ? (startDateField as any).value : (startDateField as any);
-        const endDateFieldId = (endDateField && typeof endDateField === 'object') ? (endDateField as any).value : (endDateField as any);
+        const startDateFieldId = getFieldId(startDateField);
+        const endDateFieldId = getFieldId(endDateField);
 
-        await onCreate({
+        if (!startDateFieldId || !endDateFieldId) {
+          setError('Start and end date fields are required');
+          setIsSubmitting(false);
+          return;
+        }
+
+        onCreate({
           name: finalName,
           description: description.trim(),
           type: viewType,
@@ -233,20 +259,41 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
           endDateFieldId,
         });
       } else {
-        // For other view types, use the single field selection
-        const normalizedFieldId = (selectedField && typeof selectedField === 'object') ? (selectedField as any).value : (selectedField as any);
-        await onCreate({
+        // For other view types, use the single field selection (only if required)
+        const normalizedFieldId = getFieldId(selectedField);
+
+        // Only require field selection if showFieldDropdown is true
+        if (showFieldDropdown && !normalizedFieldId) {
+          setError('Field selection is required');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Build the onCreate payload - only include fieldId if it exists
+        const onCreatePayload: {
+          name: string;
+          description: string;
+          type: string;
+          fieldId?: string;
+        } = {
           name: finalName,
           description: description.trim(),
           type: viewType,
-          fieldId: normalizedFieldId,
-        });
+        };
+
+        // Only add fieldId if it exists (for view types that require it)
+        if (normalizedFieldId) {
+          onCreatePayload.fieldId = normalizedFieldId;
+        }
+
+        onCreate(onCreatePayload);
       }
 
       // Close the modal on successful creation
       onClose();
     } catch (err) {
-      setError('Failed to create view. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create view. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -278,37 +325,44 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
 
   return (
     <div
-      className="bg-modal-backdrop"
-      onClick={onClose}
+      className="bg-modal-backdrop relative"
+      onKeyDown={handleKeyDown}
     >
+      <button
+        type="button"
+        aria-label="Close modal"
+        className="absolute inset-0"
+        onClick={onClose}
+      />
       <div
-        className="bg-modal"
+        className="bg-modal !max-w-2xl !p-0 flex flex-col relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={handleKeyDown}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-4 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 icon-primary rounded-xl flex items-center justify-center`}>
+        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`w-10 h-10 icon-primary rounded-xl flex items-center justify-center flex-shrink-0`}>
               <IconComponent size={20} className="icon-primary" />
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-primary">
+            <div className="min-w-0">
+              <h2 className="text-xl font-semibold text-primary truncate">
                 Create {viewType.charAt(0).toUpperCase() + viewType.slice(1)} View
               </h2>
-              <p className="text-sm text-secondary">Add a new view to your table</p>
+              <p className="text-sm text-secondary truncate">Add a new view to your table</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
+            aria-label="Close"
           >
             <X size={16} className="text-[var(--text-color-tertiary)]" />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-2">
+        {/* Scrollable Content Area */}
+        <form id="create-view-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+          <div className="p-4 space-y-2">
           <div className="space-y-1">
             <label htmlFor="viewName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
               View Name <span className="text-xs text-gray-500">(optional)</span>
@@ -328,8 +382,15 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
               />
               <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
                 <span className="relative inline-block group">
-                  <HelpCircle className={`w-4 h-4 ${validationError ? 'text-red-500' : (name.trim().length === 0 || name.trim().length >= 3) ? 'text-green-600' : 'text-gray-400'
-                    } cursor-help`} />
+                  {(() => {
+                    let iconColor = 'text-gray-400';
+                    if (validationError) {
+                      iconColor = 'text-red-500';
+                    } else if (name.trim().length === 0 || name.trim().length >= 3) {
+                      iconColor = 'text-green-600';
+                    }
+                    return <HelpCircle className={`w-4 h-4 ${iconColor} cursor-help`} />;
+                  })()}
                   <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                     <h4 className="mb-2 text-primary">View name info:</h4>
                     <ul className="space-y-1 text-gray-600">
@@ -357,17 +418,25 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
           </div>
 
           {/* Field Selection for different view types */}
-          {showFieldDropdown && (
-            fieldDropdownOptions.length > 0 ? (
-              viewType === 'ganttChart' ? (
+          {showFieldDropdown && (() => {
+            if (fieldDropdownOptions.length === 0) {
+              // Show a small loading / empty state while fetching columns
+              if (tableQuery.isLoading) {
+                return <div className="text-sm text-secondary px-2 py-2">Loading fields...</div>;
+              }
+              return <div className="text-sm text-red-500 px-2 py-2">No required fields are available for this view.</div>;
+            }
+
+            if (viewType === 'ganttChart') {
                 // Gantt Chart: Dual field selection for start and end dates
+              return (
                 <div className="space-y-4">
                   <AdvancedDropdown
                     label="Start Date Field"
                     options={fieldDropdownOptions}
                     value={startDateField}
                     onChange={(val) => {
-                      setStartDateField(val as any);
+                      setStartDateField(val as FieldValue);
                     }}
                     placeholder="Select start date field..."
                     searchable
@@ -378,37 +447,38 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
                     options={fieldDropdownOptions}
                     value={endDateField}
                     onChange={(val) => {
-                      setEndDateField(val as any);
+                      setEndDateField(val as FieldValue);
                     }}
                     placeholder="Select end date field..."
                     searchable
                     required
                   />
                 </div>
-              ) : (
+              );
+            }
+
                 // Other view types: Single field selection
+            const getFieldLabel = () => {
+              if (viewType === 'calendar') return 'Date Field';
+              if (viewType === 'kanban') return 'Group by Field';
+              return 'Organize by';
+            };
+
+            return (
                 <AdvancedDropdown
-                  label={viewType === 'calendar' ? 'Date Field' : viewType === 'kanban' ? 'Group by Field' : 'Organize by'}
+                label={getFieldLabel()}
                   options={fieldDropdownOptions}
                   value={selectedField}
                   onChange={(val) => {
-                    setSelectedField(val as any);
+                  setSelectedField(val as FieldValue);
                     setFieldError(''); // Clear error when user makes selection
                   }}
                   placeholder="Select field..."
                   searchable
                   required
                 />
-              )
-            ) : (
-              // Show a small loading / empty state while fetching columns
-              tableQuery.isLoading ? (
-                <div className="text-sm text-secondary px-2 py-2">Loading fields...</div>
-              ) : (
-                <div className="text-sm text-red-500 px-2 py-2">No required fields are available for this view.</div>
-              )
-            )
-          )}
+            );
+          })()}
 
           {/* Field Error Display */}
           {fieldError && (
@@ -445,31 +515,45 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
             </p>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-2">
+          </div>
+        </form>
+
+        {/* Footer - Fixed at Bottom */}
+        <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-16 py-2 rounded-xl border hover:bg-gray-100 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-[var(--text-color-tertiary)]"
+            className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
             >
               Cancel
             </button>
             <button
-              type="submit"
-              onClick={handleSubmit}
-              disabled={
-                isSubmitting ||
-                (name.trim() && name.trim().length < 3) ||
-                !!validationError ||
-                !!fieldError ||
-                (showFieldDropdown && (fieldDropdownOptions.length === 0 ||
-                  (viewType === 'ganttChart' ? (
-                    !startDateField ||
-                    !endDateField ||
-                    startDateField === endDateField
-                  ) : !selectedField)))
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              handleSubmit(e);
+            }}
+            disabled={(() => {
+              if (isSubmitting) return true;
+              if (name.trim() && name.trim().length < 3) return true;
+              if (validationError) return true;
+              if (fieldError) return true;
+              
+              if (showFieldDropdown) {
+                if (fieldDropdownOptions.length === 0) return true;
+                if (viewType === 'ganttChart') {
+                  if (!startDateField || !endDateField) return true;
+                  const startId = getFieldId(startDateField);
+                  const endId = getFieldId(endDateField);
+                  if (startId && endId && startId === endId) return true;
+                } else if (!selectedField) {
+                  return true;
+                }
               }
+              
+              return false;
+            })()}
               className="px-16 py-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? (
@@ -482,7 +566,6 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
               )}
             </button>
           </div>
-        </form>
       </div>
     </div>
   );

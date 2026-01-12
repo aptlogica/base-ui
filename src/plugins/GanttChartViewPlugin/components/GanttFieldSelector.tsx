@@ -4,7 +4,7 @@ import { AdvancedDropdown } from '../../../components/common/dropdown/AdvancedDr
 import { getFieldTypeIconWithMargin } from '../../../types/fieldTypes';
 import { useSmartPopover } from '../../../hooks/useSmartPopover';
 import { createPortal } from 'react-dom';
-import type { Column } from '../types/api.types';
+import type { Column } from '../../../types/api.types';
 
 interface GanttFieldSelectorProps {
   label: string;

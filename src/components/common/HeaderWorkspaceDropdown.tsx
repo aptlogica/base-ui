@@ -23,8 +23,8 @@ const HeaderWorkspaceDropdown: React.FC = () => {
   // Route-based visibility check
   const isRouteVisible = useComponentVisibility(COMPONENT_IDS.WORKSPACE_DROPDOWN);
 
-  // Check if we're on the homepage
-  const isHomepage = location.pathname === '/homepage' || location.pathname === '/workspace';
+  // Check if we're on the workspace homepage
+  const isHomepage = location.pathname.startsWith('/workspace') && !location.pathname.includes('/base/');
 
   // Update dropdown positioning when it opens
   useEffect(() => {
@@ -80,10 +80,23 @@ const HeaderWorkspaceDropdown: React.FC = () => {
 
   // Derive the selected workspace immediately from selectedWorkspaceId and workspaces
   // This ensures we show the workspace name even before selectedWorkspace state is set
+  // Also handles newly created workspaces that might not be in the workspaces array yet
   const displayWorkspace = React.useMemo(() => {
-    if (selectedWorkspace) return selectedWorkspace;
+    // Priority 1: Use selectedWorkspace if available (handles newly created workspaces)
+    if (selectedWorkspace) {
+      // Verify it matches the selectedWorkspaceId
+      if (selectedWorkspace.id === selectedWorkspaceId) {
+        return selectedWorkspace;
+      }
+    }
+    // Priority 2: Find workspace in workspaces array by selectedWorkspaceId
     if (selectedWorkspaceId && workspaces && Array.isArray(workspaces)) {
-      return workspaces.find((ws: any) => ws.id === selectedWorkspaceId) || null;
+      const found = workspaces.find((ws: any) => ws.id === selectedWorkspaceId);
+      if (found) return found;
+    }
+    // Priority 3: Use selectedWorkspace even if not in workspaces array yet (newly created)
+    if (selectedWorkspace && selectedWorkspace.id === selectedWorkspaceId) {
+      return selectedWorkspace;
     }
     // FALLBACK: If no workspace is selected but workspaces are available, return first one for display
     // The actual selection will be handled by the useEffect below
@@ -159,13 +172,9 @@ const HeaderWorkspaceDropdown: React.FC = () => {
     // Set the selected workspace
     setSelectedWorkspace(workspace);
 
-    // If on homepage, just update the workspace in store without navigating
-    if (isHomepage) {
-      setWorkspace(workspace.id);
-    } else {
-      // Otherwise, navigate to the workspace
-      navigateToWorkspace(workspace.id);
-    }
+    // Always navigate to the workspace homepage to ensure URL is updated
+    // This works whether we're on homepage or a view - we want to go to the new workspace homepage
+    navigateToWorkspace(workspace.id);
 
     setWorkspaceDropdownOpen(false);
 
@@ -219,7 +228,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
           )}
 
           {/* Dropdown Icon - chevron up when open */}
-          <ChevronsUpDown className="w-4 h-4 text-tertiary transition-transform flex-shrink-0" />
+          <ChevronsUpDown className="w-4 h-4 text-[var(--text-color-tertiary)] transition-transform flex-shrink-0" />
         </button>
 
         {/* Workspace Dropdown */}

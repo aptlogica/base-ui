@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTable, useAddRow, useDeleteRecord, useInsertRowData, useUpdateField, useUpdateView } from '../../../hooks/useApi';
-import type { TableResponse, TableData, Column, View } from '../types/api.types';
+import type { TableResponse, TableData, Column, View } from '../../../types/api.types';
 import { fieldsToFilter } from '../../../types/constants';
 
 // Gantt-specific types

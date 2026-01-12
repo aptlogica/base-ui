@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Calendar, Plus, Layers, ZoomIn, ZoomOut } from 'lucide-react';
-import type { TableResponse } from '../types/api.types';
+import type { TableResponse } from '../../../types/api.types';
 import { GanttFieldConfiguration } from './GanttFieldSelector';
 import { FilterPopover } from '../../../components/shared/table/FilterPopover';
 import { SortPopover } from '../../../components/shared/table/SortPopover';

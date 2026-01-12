@@ -20,6 +20,11 @@ interface ClientConfig {
         maxRetries?: number;
         retryDelay?: number;
     };
+    uploadLimits?: {
+        maxFileSize?: number;
+        maxBulkSize?: number;
+        allowedFileTypes?: string[];
+    };
 }
 interface StandardResponse<T = any> {
     success: boolean;
@@ -55,10 +60,12 @@ interface PaginatedResponse<T> {
     };
 }
 
+declare function encodeToBase64(value: string): string;
 declare class HttpClient extends EventEmitter {
     private client;
     private config;
     constructor(config: ClientConfig);
+    private getUploadConfig;
     private createAxiosInstance;
     private setupInterceptors;
     private shouldRetry;
@@ -73,6 +80,10 @@ declare class HttpClient extends EventEmitter {
     setAuthToken(token: string): void;
     setHeaders(headers: Record<string, string>): void;
     clearAuth(): void;
+    getUploadLimits(isBulk?: boolean): {
+        maxContentLength: number;
+        maxBodyLength: number;
+    };
 }
 
 interface LoginParams {
@@ -113,7 +124,7 @@ interface LogoutParams {
 }
 
 declare class AuthService {
-    private http;
+    private readonly http;
     constructor(http: HttpClient);
     /**
      * Login with email and password
@@ -184,6 +195,7 @@ interface UpdateUserProfileParams {
     dob?: string;
     country?: string;
     timezone?: string;
+    locale?: string;
 }
 interface ChangePasswordParams {
     current_password: string;
@@ -196,7 +208,6 @@ interface AddUserRequest {
     profile_pic?: File;
     is_coowner?: boolean;
     membership?: MembershipRequest[];
-    locale?: string;
 }
 interface EditUserRequest {
     user_id: string;
@@ -280,22 +291,9 @@ interface BulkMemberRequest {
     user_id: string;
     memberships: MembershipRequest[];
 }
-interface MemberAddSuccess {
-    user_id: string;
-}
-interface MemberAddFailure {
-    user_id: string;
-    error: string;
-}
-interface InviteMultipleUsersResponse {
-    success_count: number;
-    failure_count: number;
-    successes: MemberAddSuccess[];
-    failures: MemberAddFailure[];
-}
 
 declare class WorkspaceService {
-    private http;
+    private readonly http;
     constructor(http: HttpClient);
     /**
      * Create new workspace
@@ -358,10 +356,10 @@ declare class WorkspaceService {
      */
     removeAccessMember(accessId: string): Promise<StandardResponse<any>>;
     /**
-     * Invite multiple users to the workspace (deprecated - use bulkAddMembers)
-     * @deprecated Use bulkAddMembers instead
+     * Invite multiple users to the workspace
+     * Delegates to bulkAddMembers for better implementation
      */
-    inviteUser(workspaceId: string, params: InviteMultipleUsers): Promise<StandardResponse<InviteMultipleUsersResponse>>;
+    inviteUser(workspaceId: string, params: InviteMultipleUsers): Promise<StandardResponse<any>>;
 }
 
 interface CreateBase {
@@ -390,7 +388,7 @@ interface RemoveUserFromBase {
 }
 
 declare class BaseService {
-    private http;
+    private readonly http;
     constructor(http: HttpClient);
     /**
      * Create new base (database)
@@ -528,6 +526,10 @@ interface DeleteRow {
     model_id: string;
     row_id: number;
 }
+interface BulkDeleteRow {
+    model_id: string;
+    row_ids: number[];
+}
 interface CreateView {
     model_id: string;
     title: string;
@@ -546,9 +548,6 @@ interface UpdateView {
 interface GetBulkAssets$1 {
     ids: string[];
 }
-interface UpdateAsset$1 {
-    title?: string;
-}
 interface ImportTable {
     base_id?: string;
     workspace_id: string;
@@ -558,8 +557,21 @@ interface ImportTable {
     file: File;
 }
 
+interface GetBulkAssets {
+    asset_ids: string[];
+}
+interface UpdateAsset {
+    filename?: string;
+    description?: string;
+    tags?: string[];
+}
+
 declare class TableService {
-    private http;
+    private readonly http;
+    private readonly columnService;
+    private readonly rowService;
+    private readonly viewService;
+    private readonly assetService;
     constructor(http: HttpClient);
     /**
      * Create new table
@@ -648,6 +660,11 @@ declare class TableService {
      */
     deleteRow(params: DeleteRow): Promise<StandardResponse<any>>;
     /**
+     * Bulk delete multiple rows
+     * POST /row/bulk-remove
+     */
+    bulkDeleteRow(params: BulkDeleteRow): Promise<StandardResponse<any>>;
+    /**
      * Insert row data
      * POST /row/data/insert
      */
@@ -700,13 +717,14 @@ declare class TableService {
     /**
      * Get multiple assets by IDs
      * POST /asset/bulk
+     * @deprecated Use types.GetBulkAssets with 'ids' property, will be migrated to 'asset_ids'
      */
-    getBulkAssets(params: GetBulkAssets$1): Promise<StandardResponse<any>>;
+    getBulkAssets(params: GetBulkAssets$1 | GetBulkAssets): Promise<StandardResponse<any>>;
     /**
      * Update asset metadata
      * PATCH /asset/:id
      */
-    updateAssetById(id: string, params: UpdateAsset$1): Promise<StandardResponse<any>>;
+    updateAssetById(id: string, params: UpdateAsset): Promise<StandardResponse<any>>;
     /**
      * Delete asset
      * DELETE /asset/:id
@@ -715,8 +733,10 @@ declare class TableService {
 }
 
 declare class UserService {
-    private http;
+    private readonly http;
+    private workspaceService;
     constructor(http: HttpClient);
+    setWorkspaceService(workspaceService: WorkspaceService): void;
     /**
      * Get user profile by ID
      * GET /user/profile/:id
@@ -807,21 +827,13 @@ declare class UserService {
     /**
      * Remove user from workspace
      * POST /workspace/:id/remove
+     * Delegates to WorkspaceService for better code organization
      */
     removeFromWorkspace(workspaceId: string, params: RemoveUserFromWorkspace$1): Promise<StandardResponse<any>>;
 }
 
-interface GetBulkAssets {
-    asset_ids: string[];
-}
-interface UpdateAsset {
-    filename?: string;
-    description?: string;
-    tags?: string[];
-}
-
 declare class AssetService {
-    private http;
+    private readonly http;
     constructor(http: HttpClient);
     /**
      * Upload assets/files
@@ -874,7 +886,7 @@ interface OrganizationUpdateRequest {
 }
 
 declare class OrganizationService {
-    private http;
+    private readonly http;
     constructor(http: HttpClient);
     /**
      * Get all organizations (user is member of)
@@ -893,8 +905,131 @@ declare class OrganizationService {
     update(id: string, params: OrganizationUpdateRequest): Promise<StandardResponse<OrganizationResponse>>;
 }
 
+declare class ColumnService {
+    private readonly http;
+    constructor(http: HttpClient);
+    /**
+     * Get all columns in table
+     * GET /table/:id/columns
+     */
+    getColumnsByTableId(id: string): Promise<StandardResponse<any>>;
+    /**
+     * Create new column in table
+     * POST /column/create
+     */
+    create(params: AddColumn): Promise<StandardResponse<any>>;
+    /**
+     * Get column by ID
+     * GET /column/:id
+     */
+    getById(id: string): Promise<StandardResponse<any>>;
+    /**
+     * Get all columns
+     * GET /column/
+     */
+    getAll(): Promise<StandardResponse<any>>;
+    /**
+     * Update column
+     * PATCH /column/:id
+     */
+    update(id: string, params: UpdateColumn): Promise<StandardResponse<any>>;
+    /**
+     * Delete column
+     * DELETE /column/:id
+     */
+    delete(id: string): Promise<StandardResponse<any>>;
+    /**
+     * Reorder columns in table
+     * POST /column/reorder
+     */
+    reorder(params: ReorderColumn): Promise<StandardResponse<any>>;
+}
+
+declare class RowService {
+    private readonly http;
+    constructor(http: HttpClient);
+    /**
+     * Get all records in table
+     * GET /table/:id/records
+     */
+    getAllRecords(id: string, options?: {
+        page?: number;
+        page_size?: number;
+    }): Promise<StandardResponse<any>>;
+    /**
+     * Create new record/row
+     * POST /row/create
+     */
+    create(params: CreateRow): Promise<StandardResponse<any>>;
+    /**
+     * Delete row(s)
+     * POST /row/remove
+     */
+    delete(params: DeleteRow): Promise<StandardResponse<any>>;
+    /**
+     * Bulk delete multiple rows
+     * POST /row/bulk-remove
+     */
+    bulkDelete(params: BulkDeleteRow): Promise<StandardResponse<any>>;
+    /**
+     * Insert row data
+     * POST /row/data/insert
+     */
+    insertData(params: InsertRowData): Promise<StandardResponse<any>>;
+    /**
+     * Insert relationship/link data between rows
+     * POST /row/data/relation
+     */
+    insertRelation(params: InsertRelationData): Promise<StandardResponse<any>>;
+    /**
+     * Add attachment to row
+     * POST /row/attachment/add
+     */
+    addAttachment(params: AddAttachments, extra?: (progressEvent: ProgressEvent) => void): Promise<StandardResponse<any>>;
+    /**
+     * Remove attachment from row
+     * POST /row/attachment/remove
+     */
+    removeAttachment(params: RemoveAttachments): Promise<StandardResponse<any>>;
+}
+
+declare class ViewService {
+    private readonly http;
+    constructor(http: HttpClient);
+    /**
+     * Get all views for table
+     * GET /table/:id/views
+     */
+    getViewsByModelId(id: string): Promise<StandardResponse<any>>;
+    /**
+     * Create view of table data
+     * POST /view/create
+     */
+    create(params: CreateView): Promise<StandardResponse<any>>;
+    /**
+     * Get view by ID
+     * GET /view/:id
+     */
+    getById(id: string): Promise<StandardResponse<any>>;
+    /**
+     * Get all views
+     * GET /view/
+     */
+    getAll(): Promise<StandardResponse<any>>;
+    /**
+     * Update view
+     * PATCH /view/:id
+     */
+    update(id: string, params: UpdateView): Promise<StandardResponse<any>>;
+    /**
+     * Delete view
+     * DELETE /view/:id
+     */
+    delete(id: string): Promise<StandardResponse<any>>;
+}
+
 declare class SereniBaseClient {
-    private http;
+    private readonly http;
     readonly auth: AuthService;
     readonly workspace: WorkspaceService;
     readonly baseService: BaseService;
@@ -902,6 +1037,9 @@ declare class SereniBaseClient {
     readonly userService: UserService;
     readonly assetService: AssetService;
     readonly organization: OrganizationService;
+    readonly columnService: ColumnService;
+    readonly rowService: RowService;
+    readonly viewService: ViewService;
     constructor(config: ClientConfig);
     /**
      * Set authentication token
@@ -929,5 +1067,5 @@ declare class SereniBaseClient {
     off(event: string, listener: (...args: any[]) => void): void;
 }
 
-export { AuthService, HttpClient, SereniBaseClient, SereniBaseClient as default };
+export { AuthService, HttpClient, SereniBaseClient, SereniBaseClient as default, encodeToBase64 };
 export type { ClientConfig, ErrorInfo, PaginatedResponse, PaginationParams, StandardResponse };

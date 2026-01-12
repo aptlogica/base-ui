@@ -163,18 +163,10 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
             display_name: user_display_name || undefined,
             avatar: user_avatar || undefined,
           });
-          // Try to restore navigation from activity_data first (cross-device)
-          try {
-            const hasFullPath = await useNavigationStore.getState().loadFromActivityData(user_id);
-            debug('initializeAuth: loadFromActivityData ->', hasFullPath);
-            if (!hasFullPath) {
-              useNavigationStore.getState().loadUserNavigation(user_id);
-              debug('initializeAuth: fallback to session cache');
-            }
-          } catch {
-            useNavigationStore.getState().loadUserNavigation(user_id);
-            debug('initializeAuth: activity API error, fallback to session cache');
-          }
+          // FIX: Navigation restoration is now handled by AppInitializer
+          // AuthContext should only handle authentication, not navigation
+          // This prevents navigation state from being overwritten on every refresh
+          debug('initializeAuth: Authentication complete, navigation will be handled by AppInitializer');
         } else {
           // No user ID - clear cache to be safe
           if (lastUserIdRef.current) {
@@ -329,7 +321,7 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
       }
       
       // Mark navigation data as loaded
-      // NavigationRecovery will handle actual navigation after workspaces load
+      // AppInitializer will handle actual navigation restoration after workspaces load
       setRestoreCompleted(true);
       
     } catch (error) {

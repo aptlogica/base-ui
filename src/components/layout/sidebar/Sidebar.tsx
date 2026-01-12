@@ -1,9 +1,7 @@
 import React, { useRef, useEffect, useMemo, useState, Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom';
-import { ChevronDown, Sheet, Plus, Download } from 'lucide-react';
-import { Pin } from 'lucide-react';
+import { Pin, ChevronDown, Sheet, Plus, Download } from 'lucide-react';
 import { useToast } from '../../common/Toast';
-
 const CreateTableModal = lazy(() =>
   import('../../modals/CreateTableModal').then(m => ({ default: m.CreateTableModal }))
 );
@@ -12,7 +10,6 @@ const ImportModal = lazy(() =>
 );
 import { CreateBaseModal } from '../../modals/CreateBaseModal';
 import TableOptionsMenu from '../../tables/TableOptionsMenu';
-
 import { SidebarProps } from './types';
 import { TableViewsWithData } from './components/TableViewsWithData';
 import { CreateViewModalWrapper } from './components/CreateViewModalWrapper';
@@ -21,6 +18,7 @@ import { Loader } from '../../ui/Loader';
 import { SidebarSkeleton } from '../../common/Skeleton/SidebarSkeleton';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
 import { useUpdateBase } from '../../../hooks/useApi';
+import type { TablesResponse } from '../../../types/api.types';
 
 interface PinnedTables {
   [tableId: string]: boolean;
@@ -28,10 +26,7 @@ interface PinnedTables {
 
 const Sidebar: React.FC<SidebarProps> = ({
   onClose,
-  sidebarPosition = 'left',
-  sidebarWidth = 56,
-  selectedWorkspace: propSelectedWorkspace, // Renamed to avoid conflict
-  onWorkspaceUpdate: _onWorkspaceUpdate // Prefixed with _ to indicate intentionally unused
+  selectedWorkspace: propSelectedWorkspace,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const toast = useToast();
@@ -65,14 +60,14 @@ const Sidebar: React.FC<SidebarProps> = ({
     createTableMutation,
     createViewMutation,
     // Plugin store state
-    flyoutMode, flyoutOpen, isTransitioning,
+    flyoutOpen, isTransitioning,
   } = useWorkspaceBusinessLogic();
 
   // Use propSelectedWorkspace if available, otherwise fall back to currentWorkspace from business logic
   const effectiveSelectedWorkspace = propSelectedWorkspace || currentWorkspace;
   const { canCreateTable } = useBaseAccess(selectedBase?.id);
   const updateBaseMutation = useUpdateBase();
-  
+
   // Import table modal state
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedImportType, setSelectedImportType] = useState<'csv' | 'excel' | 'sql' | 'json' | 'airtable' | 'nocodb' | null>(null);
@@ -99,9 +94,10 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Clean up orphaned pinned table IDs when tables change
   useEffect(() => {
-    if (!selectedBase || !baseTables || typeof baseTables !== 'object' || !('data' in baseTables) || !Array.isArray((baseTables as any).data)) return;
+    const tablesResponse = baseTables as TablesResponse | undefined;
+    if (!selectedBase || !tablesResponse?.data || !Array.isArray(tablesResponse.data)) return;
 
-    const tableIds = new Set((baseTables as any).data.map((item: any) => item.model.id));
+    const tableIds = new Set(tablesResponse.data.map((item) => item.model.id));
     const currentPinnedIds = Object.keys(pinnedTablesRef.current);
 
     // Only proceed if there are pinned tables to check
@@ -162,9 +158,10 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Sort tables to show pinned first - memoized for performance
   const sortedTables = useMemo(() => {
-    if (!baseTables || typeof baseTables !== 'object' || !('data' in baseTables) || !Array.isArray((baseTables as any).data)) return [];
+    const tablesResponse = baseTables as TablesResponse | undefined;
+    if (!tablesResponse?.data || !Array.isArray(tablesResponse.data)) return [];
 
-    return [...(baseTables as any).data].sort((a: any, b: any) => {
+    return [...tablesResponse.data].sort((a, b) => {
       const aPinned = pinnedTables[a.model.id] || false;
       const bPinned = pinnedTables[b.model.id] || false;
 
@@ -185,7 +182,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         if (
           ref.current &&
           !ref.current.contains(e.target as Node) &&
-          (!popoverRef || !popoverRef.contains(e.target as Node))
+          !popoverRef?.contains(e.target as Node)
         ) {
           onClose?.();
         }
@@ -194,13 +191,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       return () => document.removeEventListener('mousedown', handleClick);
     }
   }, [onClose, popoverRef, isLayoutMode]);
-
-  // Flyout style based on mode and position
-  const flyoutStyle: React.CSSProperties = isLayoutMode
-    ? { height: '100vh', display: 'flex', flexDirection: 'column' }
-    : sidebarPosition === 'left'
-      ? { minHeight: '100vh', left: sidebarWidth, right: 'auto', display: 'flex', flexDirection: 'column' }
-      : { minHeight: '100vh', right: sidebarWidth, left: 'auto', display: 'flex', flexDirection: 'column' };
 
   // Loading and error states
   if (loading) return (
@@ -213,7 +203,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const renderFlyoutContent = () => (
     <>
       {/* Scrollable Content */}
-      <div className="flyout-content sb-flyout-inner p-3 flex-1 overflow-y-auto min-h-0">
+      <div className="flyout-content sb-flyout-inner p-3 flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         {/* Tables Section */}
         {(() => {
           // Check if we have a current workspace
@@ -249,7 +239,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             );
           }
-          return (sortedTables as any[]).map((item: any, index: number) => {
+          return sortedTables.map((item, index: number) => {
             const table = item.model;
             return (
               <div key={table.id}>
@@ -258,32 +248,37 @@ const Sidebar: React.FC<SidebarProps> = ({
                     } relative hover:shadow-xs transition-all ease-in duration-200`}
                 >
                   {/* Expand/collapse chevron */}
-                  <span
-                    className="cursor-pointer"
+                  <button
+                    type="button"
+                    className="cursor-pointer bg-transparent border-0 p-0"
                     onClick={e => {
                       e.stopPropagation();
                       toggleTableExpansion(table.id);
                     }}
+                    aria-label={expandedTables.includes(table.id) ? 'Collapse table' : 'Expand table'}
                   >
                     <ChevronDown
                       size={12}
                       className={`text-[var(--color-gray-500)] ${expandedTables.includes(table.id) ? '' : 'rotate-[-90deg]'}`}
                     />
-                  </span>
+                  </button>
                   {/* Table icon */}
-                  <span
-                    className="cursor-pointer h-5 w-5"
+                  <button
+                    type="button"
+                    className="cursor-pointer h-5 w-5 bg-transparent border-0 p-0"
                     onClick={e => {
                       e.stopPropagation();
                       toggleTableExpansion(table.id);
                     }}
+                    aria-label={expandedTables.includes(table.id) ? 'Collapse table' : 'Expand table'}
                   >
                     <Sheet size={15} color="#2563eb" />
-                  </span>
+                  </button>
 
                   {/* Table name - navigate only */}
-                  <div
-                    className="flex items-center gap-2 flex-1 cursor-pointer"
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 flex-1 cursor-pointer bg-transparent border-0 p-0 text-left"
                     onClick={() => {
                       // Navigate to the table's default view (grid) and close the floating flyout if open
                       try {
@@ -295,11 +290,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                         onClose?.();
                       }
                     }}
+                    aria-label={`Navigate to ${table.title}`}
                   >
                     <span
                       title={table.title}
-                      className="font-medium text-[var(--color-text-tertiary)] truncate"
-                      style={{ maxWidth: '200px' }}
+                      className="font-medium text-[var(--color-text-tertiary)] truncate max-w-[200px]"
                     >
                       {table.title}
                     </span>
@@ -307,7 +302,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     {pinnedTables[table.id] && (
                       <Pin className="w-3 h-3 text-primary-brand fill-current rotate-45" />
                     )}
-                  </div>
+                  </button>
 
                   {/* Actions */}
                   <div className="flex items-center gap-2">
@@ -345,7 +340,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     isViewActive={isViewActive}
                     handleViewDeletion={handleDeleteView}
                     setShowCreateViewModal={setShowCreateViewModal}
-                    setEditingViewId={() => {}}
+                    setEditingViewId={() => { }}
                     setPopoverRef={setPopoverRef}
                     setViewsRefetchTrigger={setViewsRefetchTrigger}
                   />
@@ -414,24 +409,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Main flyout component */}
-      {flyoutMode === 'floating' && flyoutOpen ? (
-        ReactDOM.createPortal(
-          <div
-            ref={ref}
-            className={`flyout-container floating transition-all ease-in-out duration-300 fixed z-50 bg-gray-50 border-r shadow-xl sb-flyout-open ${isTransitioning ? 'opacity-50' : 'opacity-100'
-              }`}
-            style={flyoutStyle}
-          >
-            <style>{slideStyles}</style>
-            {renderFlyoutContent()}
-          </div>,
-          document.body
-        )
-      ) : flyoutMode === 'layout' && flyoutOpen ? (
+      {/* Main flyout component - Layout mode only */}
+      {flyoutOpen ? (
         <div
           ref={ref}
-          className={`flyout-content bg-gray-50 border-r shadow-inner layout transition-all ease-in-out duration-300 h-full flex flex-col sb-flyout-open ${isTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
+          className={`flyout-content bg-gray-50 border-r shadow-inner layout transition-all ease-in-out duration-300 h-full flex flex-col sb-flyout-open overflow-x-hidden ${isTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
             }`}
         >
           <style>{slideStyles}</style>
@@ -468,11 +450,11 @@ const Sidebar: React.FC<SidebarProps> = ({
             isOpen={!!showCreateTableBaseId}
             onClose={() => setShowCreateTableBaseId(null)}
             baseId={showCreateTableBaseId}
-            existingTables={(baseTables && typeof baseTables === 'object' && 'data' in baseTables && Array.isArray((baseTables as any).data)) ? (baseTables as any).data : []}
+            existingTables={((baseTables as TablesResponse | undefined)?.data || [])}
             onCreate={async ({ name, description }) => {
               try {
                 // Get the count of existing tables to set order_index
-                const existingTables = (baseTables && typeof baseTables === 'object' && 'data' in baseTables && Array.isArray((baseTables as any).data)) ? (baseTables as any).data : [];
+                const existingTables = (baseTables as TablesResponse | undefined)?.data || [];
                 const order_index = existingTables.length;
 
                 const newTable = await createTableMutation.mutateAsync({
@@ -486,12 +468,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                 // Persist navigation and navigate to the newly created table
                 try {
                   const workspaceId = selectedWorkspaceId || effectiveSelectedWorkspace?.id || '';
-                  if (workspaceId && showCreateTableBaseId && newTable && typeof newTable === 'object' && 'data' in newTable && (newTable as any).data?.id) {
-                    // Use the provided navigation function to update URL
-                    navigateToTable(workspaceId, showCreateTableBaseId, (newTable as any).data.id);
+                  if (workspaceId && showCreateTableBaseId && newTable && typeof newTable === 'object' && 'data' in newTable) {
+                    const tableResponse = newTable as { data?: { id?: string } };
+                    if (tableResponse.data?.id) {
+                      // Use the provided navigation function to update URL
+                      navigateToTable(workspaceId, showCreateTableBaseId, tableResponse.data.id);
+                    }
                   }
-                } catch (navErr) {
-                  console.warn('Navigation after table create failed', navErr);
+                } catch (error_) {
+                  console.warn('Navigation after table create failed', error_);
                 }
 
                 setShowCreateTableBaseId(null);
@@ -509,12 +494,13 @@ const Sidebar: React.FC<SidebarProps> = ({
         const tableId = showCreateViewModal.tableId;
 
         // Find the table to get its fields
-        const tables = (baseTables && typeof baseTables === 'object' && 'data' in baseTables && Array.isArray((baseTables as any).data)) ? (baseTables as any).data : [];
-        const tableEntry = tables.find((t: any) =>
-          (t?.model?.id === tableId) || (t?.id === tableId)
-        );
+        const tables = (baseTables as TablesResponse | undefined)?.data || [];
+        const tableEntry = tables.find((t) => t?.model?.id === tableId);
         // Prefer columns if present; fallback to fields if API provides that shape
-        const fields = tableEntry?.columns || tableEntry?.fields || tableEntry?.model?.columns || [];
+        // TableItem.columns is unknown[] | null, so we need to type assert or check
+        const fields = (tableEntry?.columns && Array.isArray(tableEntry.columns))
+          ? tableEntry.columns
+          : [];
 
         return ReactDOM.createPortal(
           <CreateViewModalWrapper
@@ -522,37 +508,60 @@ const Sidebar: React.FC<SidebarProps> = ({
             viewType={showCreateViewModal.viewType}
             fields={fields}
             onClose={() => setShowCreateViewModal(null)}
-            onCreate={async ({ name, description, type, fieldId, startDateFieldId, endDateFieldId }) => {
+            onCreate={async ({ name, description, type, fieldId, startDateFieldId, endDateFieldId }: {
+              name: string;
+              description?: string;
+              type: string;
+              fieldId?: string | { value: string } | null;
+              startDateFieldId?: string | { value: string } | null;
+              endDateFieldId?: string | { value: string } | null;
+            }) => {
               // Find base_id for the selected table
-              const tables = (baseTables && typeof baseTables === 'object' && 'data' in baseTables && Array.isArray((baseTables as any).data)) ? (baseTables as any).data : [];
-              const tableObj = tables.find((t: any) => t.model.id === showCreateViewModal.tableId);
+              const tables = (baseTables as TablesResponse | undefined)?.data || [];
+              const tableObj = tables.find((t) => t.model.id === showCreateViewModal.tableId);
               const base_id = tableObj?.model?.base_id || selectedBaseId;
-              const payload: any = {
+
+              // Ensure base_id is not null
+              if (!base_id) {
+                toast.error('Base ID is required to create a view', { title: 'Error' });
+                return;
+              }
+
+              // Handle different view types with their specific field configurations
+              const normalizedFieldId = (fieldId && typeof fieldId === 'object' && 'value' in fieldId)
+                ? String(fieldId.value)
+                : (typeof fieldId === 'string' ? fieldId : undefined);
+              const normalizedStartDateFieldId = (startDateFieldId && typeof startDateFieldId === 'object' && 'value' in startDateFieldId)
+                ? String(startDateFieldId.value)
+                : (typeof startDateFieldId === 'string' ? startDateFieldId : undefined);
+              const normalizedEndDateFieldId = (endDateFieldId && typeof endDateFieldId === 'object' && 'value' in endDateFieldId)
+                ? String(endDateFieldId.value)
+                : (typeof endDateFieldId === 'string' ? endDateFieldId : undefined);
+
+              let meta: Record<string, any> = {};
+
+              if (String(type).toLowerCase() === 'calendar' && normalizedFieldId) {
+                meta = { date_field_id: String(normalizedFieldId) };
+              } else if (String(type).toLowerCase() === 'kanban' && normalizedFieldId) {
+                meta = { view_target_field: String(normalizedFieldId) };
+              } else if (String(type).toLowerCase() === 'gallery' && normalizedFieldId) {
+                meta = { attachment_field_id: String(normalizedFieldId) };
+              } else if (String(type).toLowerCase() === 'ganttchart' && normalizedStartDateFieldId && normalizedEndDateFieldId) {
+                meta = {
+                  start_date_field_id: String(normalizedStartDateFieldId),
+                  end_date_field_id: String(normalizedEndDateFieldId)
+                };
+              }
+
+              const payload = {
                 model_id: showCreateViewModal.tableId,
                 base_id,
                 title: name,
                 description: description || '',
                 type: type,
+                meta,
               };
-              // Handle different view types with their specific field configurations
-              const normalizedFieldId = (fieldId && typeof fieldId === 'object') ? (fieldId as any).value : fieldId;
-              const normalizedStartDateFieldId = (startDateFieldId && typeof startDateFieldId === 'object') ? (startDateFieldId as any).value : startDateFieldId;
-              const normalizedEndDateFieldId = (endDateFieldId && typeof endDateFieldId === 'object') ? (endDateFieldId as any).value : endDateFieldId;
 
-              if (String(type).toLowerCase() === 'calendar' && normalizedFieldId) {
-                payload.meta = { date_field_id: String(normalizedFieldId) };
-              } else if (String(type).toLowerCase() === 'kanban' && normalizedFieldId) {
-                payload.meta = { view_target_field: String(normalizedFieldId) };
-              } else if (String(type).toLowerCase() === 'gallery' && normalizedFieldId) {
-                payload.meta = { attachment_field_id: String(normalizedFieldId) };
-              } else if (String(type).toLowerCase() === 'ganttchart' && normalizedStartDateFieldId && normalizedEndDateFieldId) {
-                payload.meta = {
-                  start_date_field_id: String(normalizedStartDateFieldId),
-                  end_date_field_id: String(normalizedEndDateFieldId)
-                };
-              } else {
-                payload.meta = {};
-              }
               try {
                 await createViewMutation.mutateAsync(payload);
                 setShowCreateViewModal(null);
@@ -585,7 +594,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             importType={selectedImportType}
             baseId={selectedBase.id}
             workspaceId={effectiveSelectedWorkspace.id}
-            existingTables={(baseTables && typeof baseTables === 'object' && 'data' in baseTables && Array.isArray((baseTables as any).data)) ? (baseTables as any).data : []}
+            existingTables={(baseTables as TablesResponse | undefined)?.data || []}
             onSuccess={() => {
               setShowImportModal(false);
               setSelectedImportType(null);

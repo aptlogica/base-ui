@@ -5,12 +5,34 @@ Object.defineProperty(exports, '__esModule', { value: true });
 var axios = require('axios');
 var eventemitter3 = require('eventemitter3');
 
+function encodeToBase64(value) {
+    if (typeof globalThis.Buffer !== 'undefined') {
+        return globalThis.Buffer.from(value, 'utf8').toString('base64');
+    }
+    if (typeof globalThis.btoa !== 'undefined') {
+        return globalThis.btoa(value);
+    }
+    throw new Error('No base64 encoder available in this environment.');
+}
+// Default upload limits (in bytes)
+const DEFAULT_MAX_FILE_SIZE = 104857600; // 100MB
+const DEFAULT_MAX_BULK_SIZE = 524288000; // 500MB
 class HttpClient extends eventemitter3.EventEmitter {
     constructor(config) {
         super();
         this.config = config;
         this.client = this.createAxiosInstance();
         this.setupInterceptors();
+    }
+    getUploadConfig(isBulk = false) {
+        const limits = this.config.uploadLimits || {};
+        const maxSize = isBulk
+            ? (limits.maxBulkSize || DEFAULT_MAX_BULK_SIZE)
+            : (limits.maxFileSize || DEFAULT_MAX_FILE_SIZE);
+        return {
+            maxContentLength: maxSize,
+            maxBodyLength: maxSize
+        };
     }
     createAxiosInstance() {
         return axios.create({
@@ -31,7 +53,8 @@ class HttpClient extends eventemitter3.EventEmitter {
                     config.headers.Authorization = `Bearer ${this.config.auth.token}`;
                 }
                 else if (this.config.auth.type === 'basic' && this.config.auth.username && this.config.auth.password) {
-                    const credentials = btoa(`${this.config.auth.username}:${this.config.auth.password}`);
+                    console.warn('[DEPRECATED] Basic authentication is deprecated and will be removed in a future version. Please use bearer token authentication instead.');
+                    const credentials = encodeToBase64(`${this.config.auth.username}:${this.config.auth.password}`);
                     config.headers.Authorization = `Basic ${credentials}`;
                 }
             }
@@ -52,7 +75,7 @@ class HttpClient extends eventemitter3.EventEmitter {
             if (((_a = this.config.retries) === null || _a === void 0 ? void 0 : _a.enabled) && this.shouldRetry(error)) {
                 return this.retryRequest(error);
             }
-            return Promise.reject(this.formatError(error));
+            throw this.formatError(error);
         });
     }
     shouldRetry(error) {
@@ -65,7 +88,7 @@ class HttpClient extends eventemitter3.EventEmitter {
         const retryDelay = ((_b = this.config.retries) === null || _b === void 0 ? void 0 : _b.retryDelay) || 1000;
         const retryCount = error.config.__retryCount || 0;
         if (retryCount >= maxRetries) {
-            return Promise.reject(this.formatError(error));
+            throw this.formatError(error);
         }
         error.config.__retryCount = retryCount + 1;
         await new Promise(resolve => setTimeout(resolve, retryDelay * Math.pow(2, retryCount)));
@@ -116,7 +139,7 @@ class HttpClient extends eventemitter3.EventEmitter {
     setHeaders(headers) {
         this.updateConfig({
             headers: {
-                ...(this.config.headers || {}),
+                ...this.config.headers,
                 ...headers
             }
         });
@@ -125,6 +148,9 @@ class HttpClient extends eventemitter3.EventEmitter {
         this.updateConfig({
             auth: undefined
         });
+    }
+    getUploadLimits(isBulk = false) {
+        return this.getUploadConfig(isBulk);
     }
 }
 
@@ -307,12 +333,63 @@ class WorkspaceService {
         return this.http.delete(`/workspace/access/${accessId}`);
     }
     /**
-     * Invite multiple users to the workspace (deprecated - use bulkAddMembers)
-     * @deprecated Use bulkAddMembers instead
+     * Invite multiple users to the workspace
+     * Delegates to bulkAddMembers for better implementation
      */
     inviteUser(workspaceId, params) {
-        return this.http.post(`/workspace/${workspaceId}/invite`, params);
+        const accessRole = params.access_level === 'full_access' ? 'admin' : 'viewer';
+        const baseMemberships = params.bases_ids
+            ? [{ base_id: params.bases_ids, role: 'editor' }]
+            : undefined;
+        const bulkParams = {
+            members: params.user_ids.map((user_id) => ({
+                user_id,
+                memberships: [
+                    {
+                        workspace_id: workspaceId,
+                        role: accessRole,
+                        bases: baseMemberships,
+                    },
+                ],
+            })),
+        };
+        return this.bulkAddMembers(workspaceId, bulkParams);
     }
+}
+
+// src/browser.ts
+var globalObject = function() {
+  if (typeof globalThis !== "undefined") {
+    return globalThis;
+  }
+  if (typeof self !== "undefined") {
+    return self;
+  }
+  return window;
+}();
+var { FormData: FormData$1, Blob, File } = globalObject;
+
+let cachedConstructor = null;
+function resolveFormDataConstructor() {
+    if (cachedConstructor) {
+        return cachedConstructor;
+    }
+    if ('FormData' in globalThis) {
+        cachedConstructor = globalThis.FormData;
+        return cachedConstructor;
+    }
+    cachedConstructor = FormData$1;
+    if (!('FormData' in globalThis)) {
+        globalThis.FormData = cachedConstructor;
+    }
+    if (!('File' in globalThis)) {
+        globalThis.File = File;
+    }
+    return cachedConstructor;
+}
+function createFormData() {
+    const FormDataImpl = resolveFormDataConstructor();
+    return new FormDataImpl();
 }
 
 class BaseService {
@@ -324,7 +401,7 @@ class BaseService {
      * POST /base/create
      */
     async create(params) {
-        const formData = new FormData();
+        const formData = createFormData();
         formData.append('title', params.title);
         if (params.description) {
             formData.append('description', params.description);
@@ -335,10 +412,12 @@ class BaseService {
         if (params.image) {
             formData.append('image', params.image);
         }
+        const uploadLimits = this.http.getUploadLimits(false);
         return this.http.post(`/base/create`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
+            ...uploadLimits
         });
     }
     /**
@@ -353,7 +432,7 @@ class BaseService {
      * PUT /base/:id
      */
     update(id, params) {
-        const formData = new FormData();
+        const formData = createFormData();
         if (params.title !== undefined) {
             formData.append('title', params.title);
         }
@@ -372,10 +451,12 @@ class BaseService {
         if (params.image) {
             formData.append('image', params.image);
         }
+        const uploadLimits = this.http.getUploadLimits(false);
         return this.http.put(`/base/${id}`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
+            ...uploadLimits
         });
     }
     /**
@@ -432,12 +513,13 @@ class BaseService {
      * POST /base/:id/image
      */
     uploadImage(id, imageFile) {
-        const formData = new FormData();
+        const formData = createFormData();
         formData.append('image', imageFile);
         return this.http.post(`/base/${id}/image`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
+            // ...uploadLimits
         });
     }
     /**
@@ -456,9 +538,277 @@ class BaseService {
     }
 }
 
+class ColumnService {
+    constructor(http) {
+        this.http = http;
+    }
+    /**
+     * Get all columns in table
+     * GET /table/:id/columns
+     */
+    getColumnsByTableId(id) {
+        return this.http.get(`/table/${id}/columns`);
+    }
+    /**
+     * Create new column in table
+     * POST /column/create
+     */
+    create(params) {
+        return this.http.post(`/column/create`, params);
+    }
+    /**
+     * Get column by ID
+     * GET /column/:id
+     */
+    getById(id) {
+        return this.http.get(`/column/${id}`);
+    }
+    /**
+     * Get all columns
+     * GET /column/
+     */
+    getAll() {
+        return this.http.get(`/column/`);
+    }
+    /**
+     * Update column
+     * PATCH /column/:id
+     */
+    update(id, params) {
+        return this.http.patch(`/column/${id}`, params);
+    }
+    /**
+     * Delete column
+     * DELETE /column/:id
+     */
+    delete(id) {
+        return this.http.delete(`/column/${id}`);
+    }
+    /**
+     * Reorder columns in table
+     * POST /column/reorder
+     */
+    reorder(params) {
+        return this.http.post(`/column/reorder`, params);
+    }
+}
+
+class RowService {
+    constructor(http) {
+        this.http = http;
+    }
+    /**
+     * Get all records in table
+     * GET /table/:id/records
+     */
+    getAllRecords(id, options) {
+        var _a, _b;
+        const page = (_a = options === null || options === void 0 ? void 0 : options.page) !== null && _a !== void 0 ? _a : 1;
+        const page_size = (_b = options === null || options === void 0 ? void 0 : options.page_size) !== null && _b !== void 0 ? _b : 30;
+        return this.http.get(`/table/${id}/records?page=${page}&page_size=${page_size}`);
+    }
+    /**
+     * Create new record/row
+     * POST /row/create
+     */
+    create(params) {
+        return this.http.post(`/row/create`, params);
+    }
+    /**
+     * Delete row(s)
+     * POST /row/remove
+     */
+    delete(params) {
+        return this.http.post(`/row/remove`, params);
+    }
+    /**
+     * Bulk delete multiple rows
+     * POST /row/bulk-remove
+     */
+    bulkDelete(params) {
+        return this.http.post(`/row/bulk-remove`, params);
+    }
+    /**
+     * Insert row data
+     * POST /row/data/insert
+     */
+    insertData(params) {
+        return this.http.post(`/row/data/insert`, params);
+    }
+    /**
+     * Insert relationship/link data between rows
+     * POST /row/data/relation
+     */
+    insertRelation(params) {
+        return this.http.post(`/row/data/relation`, params);
+    }
+    /**
+     * Add attachment to row
+     * POST /row/attachment/add
+     */
+    addAttachment(params, extra) {
+        const formData = createFormData();
+        formData.append('model_id', params.model_id.toString());
+        formData.append('column_id', params.column_id.toString());
+        formData.append('row_id', params.row_id.toString());
+        if (Array.isArray(params.files)) {
+            params.files.forEach((file) => {
+                formData.append('files', file);
+            });
+        }
+        const uploadLimits = this.http.getUploadLimits(true); // bulk upload
+        const config = {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            },
+            ...uploadLimits
+        };
+        if (typeof extra === 'function') {
+            config.onUploadProgress = extra;
+        }
+        return this.http.post(`/row/attachment/add`, formData, config);
+    }
+    /**
+     * Remove attachment from row
+     * POST /row/attachment/remove
+     */
+    removeAttachment(params) {
+        return this.http.post(`/row/attachment/remove`, params);
+    }
+}
+
+class ViewService {
+    constructor(http) {
+        this.http = http;
+    }
+    /**
+     * Get all views for table
+     * GET /table/:id/views
+     */
+    getViewsByModelId(id) {
+        return this.http.get(`/table/${id}/views`);
+    }
+    /**
+     * Create view of table data
+     * POST /view/create
+     */
+    create(params) {
+        return this.http.post(`/view/create`, params);
+    }
+    /**
+     * Get view by ID
+     * GET /view/:id
+     */
+    getById(id) {
+        return this.http.get(`/view/${id}`);
+    }
+    /**
+     * Get all views
+     * GET /view/
+     */
+    getAll() {
+        return this.http.get(`/view/`);
+    }
+    /**
+     * Update view
+     * PATCH /view/:id
+     */
+    update(id, params) {
+        return this.http.patch(`/view/${id}`, params);
+    }
+    /**
+     * Delete view
+     * DELETE /view/:id
+     */
+    delete(id) {
+        return this.http.delete(`/view/${id}`);
+    }
+}
+
+class AssetService {
+    constructor(http) {
+        this.http = http;
+    }
+    /**
+     * Upload assets/files
+     * POST /asset/upload
+     */
+    upload(files, description, tags, extra) {
+        const formData = createFormData();
+        files.forEach((file) => {
+            formData.append('files', file);
+        });
+        if (description) {
+            formData.append('description', description);
+        }
+        if (tags && tags.length > 0) {
+            formData.append('tags', JSON.stringify(tags));
+        }
+        const uploadLimits = this.http.getUploadLimits(true); // bulk upload
+        const config = {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            },
+            ...uploadLimits
+        };
+        if (typeof extra === 'function') {
+            config.onUploadProgress = extra;
+        }
+        return this.http.post(`/asset/upload`, formData, config);
+    }
+    /**
+     * Upload single image (optimized)
+     * POST /asset/upload-image
+     */
+    uploadImage(file, optimize, extra) {
+        const formData = createFormData();
+        formData.append('file', file);
+        if (optimize !== undefined) {
+            formData.append('optimize', String(optimize));
+        }
+        const uploadLimits = this.http.getUploadLimits(false); // single file upload
+        const config = {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            },
+            ...uploadLimits
+        };
+        if (typeof extra === 'function') {
+            config.onUploadProgress = extra;
+        }
+        return this.http.post(`/asset/upload-image`, formData, config);
+    }
+    /**
+     * Get multiple assets by IDs
+     * POST /asset/bulk
+     */
+    getBulk(params) {
+        return this.http.post(`/asset/bulk`, params);
+    }
+    /**
+     * Update asset metadata
+     * PATCH /asset/:id
+     */
+    updateById(id, params) {
+        return this.http.patch(`/asset/${id}`, params);
+    }
+    /**
+     * Delete asset
+     * DELETE /asset/:id
+     */
+    deleteById(id) {
+        return this.http.delete(`/asset/${id}`);
+    }
+}
+
 class TableService {
     constructor(http) {
         this.http = http;
+        // Initialize specialized services
+        this.columnService = new ColumnService(http);
+        this.rowService = new RowService(http);
+        this.viewService = new ViewService(http);
+        this.assetService = new AssetService(http);
     }
     // ============ TABLE ENDPOINTS ============
     /**
@@ -507,7 +857,7 @@ class TableService {
      * POST /table/import
      */
     import(params, extra) {
-        const formData = new FormData();
+        const formData = createFormData();
         if (params.base_id) {
             formData.append('base_id', params.base_id);
         }
@@ -518,12 +868,12 @@ class TableService {
         if (params.file) {
             formData.append('file', params.file);
         }
+        const uploadLimits = this.http.getUploadLimits(true); // bulk upload
         const config = {
             headers: {
                 'Content-Type': 'multipart/form-data'
             },
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
+            ...uploadLimits
         };
         if (typeof extra === 'function') {
             config.onUploadProgress = extra;
@@ -531,197 +881,196 @@ class TableService {
         return this.http.post(`/table/import`, formData, config);
     }
     // ============ COLUMN ENDPOINTS ============
+    // Delegated to ColumnService for better code organization
     /**
      * Get all columns in table
      * GET /table/:id/columns
      */
     getColumnsByTableId(id) {
-        return this.http.get(`/table/${id}/columns`);
+        return this.columnService.getColumnsByTableId(id);
     }
     /**
      * Create new column in table
      * POST /column/create
      */
     addColumn(params) {
-        return this.http.post(`/column/create`, params);
+        return this.columnService.create(params);
     }
     /**
      * Get column by ID
      * GET /column/:id
      */
     getColumnById(id) {
-        return this.http.get(`/column/${id}`);
+        return this.columnService.getById(id);
     }
     /**
      * Get all columns
      * GET /column/
      */
     getAllColumns() {
-        return this.http.get(`/column/`);
+        return this.columnService.getAll();
     }
     /**
      * Update column
      * PATCH /column/:id
      */
     updateColumn(id, params) {
-        return this.http.patch(`/column/${id}`, params);
+        return this.columnService.update(id, params);
     }
     /**
      * Delete column
      * DELETE /column/:id
      */
     deleteColumn(id) {
-        return this.http.delete(`/column/${id}`);
+        return this.columnService.delete(id);
     }
     /**
      * Reorder columns in table
      * POST /column/reorder
      */
     reorderColumn(params) {
-        return this.http.post(`/column/reorder`, params);
+        return this.columnService.reorder(params);
     }
     // ============ ROW ENDPOINTS ============
+    // Delegated to RowService for better code organization
     /**
      * Get all records in table
      * GET /table/:id/records
      */
     getAllRecords(id, options) {
-        var _a, _b;
-        const page = (_a = options === null || options === void 0 ? void 0 : options.page) !== null && _a !== void 0 ? _a : 1;
-        const page_size = (_b = options === null || options === void 0 ? void 0 : options.page_size) !== null && _b !== void 0 ? _b : 30;
-        return this.http.get(`/table/${id}/records?page=${page}&page_size=${page_size}`);
+        return this.rowService.getAllRecords(id, options);
     }
     /**
      * Create new record/row
      * POST /row/create
      */
     createRow(params) {
-        return this.http.post(`/row/create`, params);
+        return this.rowService.create(params);
     }
     /**
      * Delete row(s)
      * POST /row/remove
      */
     deleteRow(params) {
-        return this.http.post(`/row/remove`, params);
+        return this.rowService.delete(params);
+    }
+    /**
+     * Bulk delete multiple rows
+     * POST /row/bulk-remove
+     */
+    bulkDeleteRow(params) {
+        return this.rowService.bulkDelete(params);
     }
     /**
      * Insert row data
      * POST /row/data/insert
      */
     insertRowData(params) {
-        return this.http.post(`/row/data/insert`, params);
+        return this.rowService.insertData(params);
     }
     /**
      * Insert relationship/link data between rows
      * POST /row/data/relation
      */
     insertRelationData(params) {
-        return this.http.post(`/row/data/relation`, params);
+        return this.rowService.insertRelation(params);
     }
     /**
      * Add attachment to row
      * POST /row/attachment/add
      */
     addAttachment(params, extra) {
-        const formData = new FormData();
-        formData.append('model_id', params.model_id.toString());
-        formData.append('column_id', params.column_id.toString());
-        formData.append('row_id', params.row_id.toString());
-        if (Array.isArray(params.files)) {
-            params.files.forEach((file) => {
-                formData.append('files', file);
-            });
-        }
-        const config = {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            },
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
-        };
-        if (typeof extra === 'function') {
-            config.onUploadProgress = extra;
-        }
-        return this.http.post(`/row/attachment/add`, formData, config);
+        return this.rowService.addAttachment(params, extra);
     }
     /**
      * Remove attachment from row
      * POST /row/attachment/remove
      */
     removeAttachments(params) {
-        return this.http.post(`/row/attachment/remove`, params);
+        return this.rowService.removeAttachment(params);
     }
     // ============ VIEW ENDPOINTS ============
+    // Delegated to ViewService for better code organization
     /**
      * Get all views for table
      * GET /table/:id/views
      */
     getViewsByModelId(id) {
-        return this.http.get(`/table/${id}/views`);
+        return this.viewService.getViewsByModelId(id);
     }
     /**
      * Create view of table data
      * POST /view/create
      */
     createView(params) {
-        return this.http.post(`/view/create`, params);
+        return this.viewService.create(params);
     }
     /**
      * Get view by ID
      * GET /view/:id
      */
     getViewById(id) {
-        return this.http.get(`/view/${id}`);
+        return this.viewService.getById(id);
     }
     /**
      * Get all views
      * GET /view/
      */
     getAllViews() {
-        return this.http.get(`/view/`);
+        return this.viewService.getAll();
     }
     /**
      * Update view
      * PATCH /view/:id
      */
     updateView(id, params) {
-        return this.http.patch(`/view/${id}`, params);
+        return this.viewService.update(id, params);
     }
     /**
      * Delete view
      * DELETE /view/:id
      */
     deleteView(id) {
-        return this.http.delete(`/view/${id}`);
+        return this.viewService.delete(id);
     }
     // ============ ASSET ENDPOINTS ============
+    // Delegated to AssetService for better code organization
     /**
      * Get multiple assets by IDs
      * POST /asset/bulk
+     * @deprecated Use types.GetBulkAssets with 'ids' property, will be migrated to 'asset_ids'
      */
     getBulkAssets(params) {
-        return this.http.post(`/asset/bulk`, params);
+        // Handle both old and new format
+        const assetParams = 'ids' in params
+            ? { asset_ids: params.ids }
+            : params;
+        return this.assetService.getBulk(assetParams);
     }
     /**
      * Update asset metadata
      * PATCH /asset/:id
      */
     updateAssetById(id, params) {
-        return this.http.patch(`/asset/${id}`, params);
+        return this.assetService.updateById(id, params);
     }
     /**
      * Delete asset
      * DELETE /asset/:id
      */
     deleteAssetById(id) {
-        return this.http.delete(`/asset/${id}`);
+        return this.assetService.deleteById(id);
     }
 }
 
 class UserService {
     constructor(http) {
         this.http = http;
+        this.workspaceService = null;
+    }
+    // Method to inject WorkspaceService (called from main client)
+    setWorkspaceService(workspaceService) {
+        this.workspaceService = workspaceService;
     }
     /**
      * Get user profile by ID
@@ -749,7 +1098,7 @@ class UserService {
      * POST /user/profile/:id/avatar
      */
     addOrUpdateAvatar(id, avatarFile) {
-        const formData = new FormData();
+        const formData = createFormData();
         formData.append("file", avatarFile);
         return this.http.post(`/user/profile/${id}/avatar`, formData, {
             headers: {
@@ -807,7 +1156,7 @@ class UserService {
      * POST /user/create
      */
     async addUser(userData) {
-        const formData = new FormData();
+        const formData = createFormData();
         formData.append('email', userData.email);
         formData.append('firstname', userData.firstname);
         formData.append('lastname', userData.lastname);
@@ -848,10 +1197,12 @@ class UserService {
         if (userData.membership) {
             formData.append('membership', JSON.stringify(userData.membership));
         }
+        const uploadLimits = this.http.getUploadLimits(false);
         return this.http.post(`/user/edit`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
+            ...uploadLimits
         });
     }
     /**
@@ -892,85 +1243,14 @@ class UserService {
     /**
      * Remove user from workspace
      * POST /workspace/:id/remove
+     * Delegates to WorkspaceService for better code organization
      */
     removeFromWorkspace(workspaceId, params) {
+        if (this.workspaceService) {
+            return this.workspaceService.removeUserFromWorkspace(workspaceId, params);
+        }
+        // Fallback if WorkspaceService not injected yet
         return this.http.post(`/workspace/${workspaceId}/remove`, params);
-    }
-}
-
-class AssetService {
-    constructor(http) {
-        this.http = http;
-    }
-    /**
-     * Upload assets/files
-     * POST /asset/upload
-     */
-    upload(files, description, tags, extra) {
-        const formData = new FormData();
-        files.forEach((file) => {
-            formData.append('files', file);
-        });
-        if (description) {
-            formData.append('description', description);
-        }
-        if (tags && tags.length > 0) {
-            formData.append('tags', JSON.stringify(tags));
-        }
-        const config = {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            },
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
-        };
-        if (typeof extra === 'function') {
-            config.onUploadProgress = extra;
-        }
-        return this.http.post(`/asset/upload`, formData, config);
-    }
-    /**
-     * Upload single image (optimized)
-     * POST /asset/upload-image
-     */
-    uploadImage(file, optimize, extra) {
-        const formData = new FormData();
-        formData.append('file', file);
-        if (optimize !== undefined) {
-            formData.append('optimize', String(optimize));
-        }
-        const config = {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            },
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
-        };
-        if (typeof extra === 'function') {
-            config.onUploadProgress = extra;
-        }
-        return this.http.post(`/asset/upload-image`, formData, config);
-    }
-    /**
-     * Get multiple assets by IDs
-     * POST /asset/bulk
-     */
-    getBulk(params) {
-        return this.http.post(`/asset/bulk`, params);
-    }
-    /**
-     * Update asset metadata
-     * PATCH /asset/:id
-     */
-    updateById(id, params) {
-        return this.http.patch(`/asset/${id}`, params);
-    }
-    /**
-     * Delete asset
-     * DELETE /asset/:id
-     */
-    deleteById(id) {
-        return this.http.delete(`/asset/${id}`);
     }
 }
 
@@ -1012,6 +1292,12 @@ class SereniBaseClient {
         this.userService = new UserService(this.http);
         this.assetService = new AssetService(this.http);
         this.organization = new OrganizationService(this.http);
+        // Initialize specialized services
+        this.columnService = new ColumnService(this.http);
+        this.rowService = new RowService(this.http);
+        this.viewService = new ViewService(this.http);
+        // Set up service injection for delegation
+        this.userService.setWorkspaceService(this.workspace);
     }
     /**
      * Set authentication token
@@ -1055,4 +1341,5 @@ exports.AuthService = AuthService;
 exports.HttpClient = HttpClient;
 exports.SereniBaseClient = SereniBaseClient;
 exports.default = SereniBaseClient;
+exports.encodeToBase64 = encodeToBase64;
 //# sourceMappingURL=index.js.map

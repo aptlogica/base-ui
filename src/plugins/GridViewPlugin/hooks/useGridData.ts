@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { useTable, useAddRow, useDeleteRecord, useInsertRowData, useUpdateField, useDeleteColumn, useCreateField, useUpdateView } from '../../../hooks/useApi';
-import type { TableData, TableResponse } from '../types/api.types';
+import { useTable, useAddRow, useDeleteRecord, useBulkDeleteRecords, useInsertRowData, useUpdateField, useDeleteColumn, useCreateField, useUpdateView } from '../../../hooks/useApi';
+import type { TableData, TableResponse } from '../../../types/api.types';
 
 // Data layer for Grid: fetch + CRUD orchestration; keeps UI components clean
 export interface UseGridDataOptions {
@@ -19,6 +19,7 @@ export interface UseGridDataReturn {
   addRow: ReturnType<typeof useAddRow>;
   insertRowData: ReturnType<typeof useInsertRowData>;
   deleteRecord: ReturnType<typeof useDeleteRecord>;
+  bulkDeleteRecords: ReturnType<typeof useBulkDeleteRecords>;
   updateField: ReturnType<typeof useUpdateField>;
   deleteColumn: ReturnType<typeof useDeleteColumn>;
   createField: ReturnType<typeof useCreateField>;
@@ -58,6 +59,7 @@ export function useGridData({ tableId, viewId }: UseGridDataOptions): UseGridDat
   const addRow = useAddRow();
   const insertRowData = useInsertRowData();
   const deleteRecord = useDeleteRecord();
+  const bulkDeleteRecords = useBulkDeleteRecords();
   const updateField = useUpdateField();
   const deleteColumn = useDeleteColumn();
   const createField = useCreateField();
@@ -110,6 +112,7 @@ export function useGridData({ tableId, viewId }: UseGridDataOptions): UseGridDat
     addRow,
     insertRowData,
     deleteRecord,
+    bulkDeleteRecords,
     updateField,
     deleteColumn,
     createField,

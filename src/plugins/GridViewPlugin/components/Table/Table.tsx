@@ -37,6 +37,7 @@ type TableActions = {
   addRow: any;
   insertRowData: any;
   deleteRecord: any;
+  bulkDeleteRecords: any;
   updateField: any;
   deleteColumn: any;
   createField: any;
@@ -314,6 +315,7 @@ export const Table: React.FC<TableProps> = ({
 
   // TanStack Query hooks - Mutations provided by data layer hook
   const deleteRecordMutation = actions?.deleteRecord;
+  const bulkDeleteRecordsMutation = actions?.bulkDeleteRecords;
   const addRowMutation = actions?.addRow;
 
   // Track expanded groups for expand/collapse functionality
@@ -586,6 +588,43 @@ export const Table: React.FC<TableProps> = ({
       alert('Failed to delete record. Please try again.');
     }
   }, [deleteRecordMutation, tableId, toast, onRefresh]);
+
+  // Bulk delete selected rows
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedRows.size === 0 || !tableId || !bulkDeleteRecordsMutation) {
+      return;
+    }
+
+    try {
+      // Convert selected row IDs to numeric IDs
+      const rowIds: number[] = [];
+      for (const rowId of selectedRows) {
+        const numericRowId = Number(rowId);
+        if (!Number.isNaN(numericRowId)) {
+          rowIds.push(numericRowId);
+        }
+      }
+
+      if (rowIds.length === 0) {
+        toast.error('No valid rows selected for deletion', { title: 'Error' });
+        return;
+      }
+
+      await bulkDeleteRecordsMutation.mutateAsync({ 
+        model_id: String(tableId), 
+        row_ids: rowIds 
+      });
+
+      // Clear selection after successful deletion
+      setSelectedRows(new Set());
+      
+      toast.success(`${rowIds.length} row${rowIds.length > 1 ? 's' : ''} deleted`, { title: 'Success' });
+      try { onRefresh?.(); } catch { }
+    } catch (err) {
+      console.error('[Bulk Delete] Failed to delete records:', err);
+      toast.error('Failed to delete records. Please try again.', { title: 'Error' });
+    }
+  }, [selectedRows, tableId, bulkDeleteRecordsMutation, toast, onRefresh, setSelectedRows]);
 
   // Column drag and drop handler wrapper (uses hook's handleColumnDragEnd with proper params)
   const handleColumnDragStart = useCallback((index: number) => {
@@ -920,7 +959,7 @@ export const Table: React.FC<TableProps> = ({
         <div className="ml-auto flex items-center gap-3 text-sm">
           {/* Virtualization is always enabled - indicator removed to reduce UI clutter */}
           <div className="text-muted-foreground">
-            {formatCompactNumber(filteredAndSortedData.length)} rows{hasMore && ` (${formatCompactNumber(paginatedData.length)} loaded)`} • {formatCompactNumber(selectedRows.size)} selected
+          {selectedRows?.size > 0 ? `${formatCompactNumber(selectedRows?.size)} selected` : ''} {selectedRows?.size > 0 ? `•` : ''} {formatCompactNumber(filteredAndSortedData.length)} rows{hasMore && ` (${formatCompactNumber(paginatedData.length)} loaded)`}
           </div>
         </div>
       </div>
@@ -932,19 +971,17 @@ export const Table: React.FC<TableProps> = ({
           x={contextMenu.x}
           y={contextMenu.y}
           onClose={handleCloseContextMenu}
-          onInsertAbove={async () => {
-            // await handleInsertAbove(contextMenu.rowId!); 
+          onDelete={() => {
+            // If multiple rows are selected, delete all selected rows using bulk delete
+            // Otherwise, delete just the right-clicked row
+            if (selectedRows.size > 1 && selectedRows.has(contextMenu.rowId!)) {
+              handleBulkDelete();
+            } else {
+              // Delete just the right-clicked row
+              handleDelete(contextMenu.rowId!);
+            }
             handleCloseContextMenu();
           }}
-          onInsertBelow={async () => {
-            // await handleInsertBelow(contextMenu.rowId!); 
-            handleCloseContextMenu();
-          }}
-          onDuplicate={async () => {
-            // await handleDuplicate(contextMenu.rowId!); 
-            handleCloseContextMenu();
-          }}
-          onDelete={() => { handleDelete(contextMenu.rowId!); handleCloseContextMenu(); }}
           canDeleteRecord={canDeleteRecord()}
         />
       )}

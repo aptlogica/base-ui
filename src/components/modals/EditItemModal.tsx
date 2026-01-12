@@ -6,7 +6,7 @@ import { validateTableName, validateViewName, validateBaseName, ExistingItem } f
 interface EditItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { name: string; description: string }) => void;
+  onSave: (data: { name: string; description: string; image?: File | null }) => void;
   title: string;
   subtitle: string;
   icon: React.ReactNode;
@@ -35,7 +35,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
   // Ensure local state is always a string so calls to `trim()` are safe
   const [name, setName] = useState(initialName ?? '');
   const [description, setDescription] = useState(initialDescription ?? '');
-  const [_image, setImage] = useState<File | null>(null);
+  const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialImage);
   const [error, setError] = useState('');
   const [validationError, setValidationError] = useState('');
@@ -88,18 +88,24 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
         return;
       }
       
-      // Validate dimensions (max 800x400)
+      // Set image and preview immediately (so it's available for submission)
+      const previewUrl = URL.createObjectURL(file);
+      setImage(file);
+      setImagePreview(previewUrl);
+      setError('');
+      
+      // Validate dimensions asynchronously (show error if invalid, but don't clear the image)
       const img = new Image();
       img.onload = () => {
         if (img.width > 800 || img.height > 400) {
           setError('Image dimensions must be max 800 x 400px');
-          return;
+          // Don't clear the image - let user decide if they want to proceed
         }
-        setImage(file);
-        setImagePreview(URL.createObjectURL(file));
-        setError('');
       };
-      img.src = URL.createObjectURL(file);
+      img.onerror = () => {
+        setError('Failed to load image. Please try again.');
+      };
+      img.src = previewUrl;
     }
   };
 
@@ -116,17 +122,24 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
     if (file && file.type.startsWith('image/')) {
       const validTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
       if (validTypes.includes(file.type)) {
+        // Set image and preview immediately (so it's available for submission)
+        const previewUrl = URL.createObjectURL(file);
+        setImage(file);
+        setImagePreview(previewUrl);
+        setError('');
+        
+        // Validate dimensions asynchronously (show error if invalid, but don't clear the image)
         const img = new Image();
         img.onload = () => {
-          if (img.width <= 800 && img.height <= 400) {
-            setImage(file);
-            setImagePreview(URL.createObjectURL(file));
-            setError('');
-          } else {
+          if (img.width > 800 || img.height > 400) {
             setError('Image dimensions must be max 800 x 400px');
+            // Don't clear the image - let user decide if they want to proceed
           }
         };
-        img.src = URL.createObjectURL(file);
+        img.onerror = () => {
+          setError('Failed to load image. Please try again.');
+        };
+        img.src = previewUrl;
       } else {
         setError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
       }
@@ -167,10 +180,17 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      await onSave({
+      const saveData: { name: string; description: string; image?: File | null } = {
         name: name.trim(),
         description: description.trim(),
-      });
+      };
+      
+      // Only include image for base type (must be a File object)
+      if (itemType === 'base' && image instanceof File) {
+        saveData.image = image;
+      }
+      
+      await onSave(saveData);
       // Close the modal on successful save
       onClose();
     } catch (err) {
@@ -191,35 +211,42 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
 
   return (
     <div
-      className="bg-modal-backdrop"
-      onClick={onClose}
+      className="bg-modal-backdrop relative"
+      onKeyDown={handleKeyDown}
     >
+      <button
+        type="button"
+        aria-label="Close modal"
+        className="absolute inset-0"
+        onClick={onClose}
+      />
       <div
-        className="bg-modal"
+        className="bg-modal !p-0 flex flex-col relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={handleKeyDown}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
               <PencilLine size={16} className="text-green-600" />
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-primary">{title}</h2>
-              <p className="text-sm text-secondary">{subtitle}</p>
+            <div className="min-w-0">
+              <h2 className="text-xl font-semibold text-primary truncate">{title}</h2>
+              <p className="text-sm text-secondary truncate">{subtitle}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
+            aria-label="Close"
           >
             <X size={16} className="text-[var(--text-color-tertiary)]" />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Scrollable Content Area */}
+        <form id="edit-item-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+          <div className="p-4 space-y-4">
           <div className="space-y-1">
             <label htmlFor="itemName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
               {itemType.charAt(0).toUpperCase() + itemType.slice(1)} Name <span className="text-red-500">*</span>
@@ -352,32 +379,38 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="px-16 py-2 rounded-xl border hover:bg-gray-100 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || !name.trim() || name.trim().length < 3 || !!validationError}
-              className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"></div>
-                  Updating...
-                </>
-              ) : (
-                'Update'
-              )}
-            </button>
           </div>
         </form>
+
+        {/* Footer - Fixed at Bottom */}
+        <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              handleSubmit(e);
+            }}
+            disabled={isSubmitting || !name.trim() || name.trim().length < 3 || !!validationError}
+            className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"></div>
+                Updating...
+              </>
+            ) : (
+              'Update'
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
