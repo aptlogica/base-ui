@@ -66,14 +66,13 @@ describe('AdvancedDropdown', () => {
 
   it('toggles multiple selections, display count and label', () => {
     const { onChange } = setup({ multiple: true, value: [], clearable: false });
-    const button = screen.getByRole('button');
-    fireEvent.click(button);
+    fireEvent.click(screen.getByRole('button'));
     const list = screen.getByRole('listbox');
 
     fireEvent.click(within(list).getByText('Alpha'));
     expect(onChange).toHaveBeenCalledWith(['alpha']);
 
-    // Re-render with updated value to simulate controlled component without adding clear button
+    // Re-render with updated value to simulate controlled component
     const { onChange: onChange2 } = setup({ multiple: true, value: ['alpha'], clearable: false });
     const triggerButtons = screen.getAllByRole('button');
     const secondTrigger = triggerButtons[triggerButtons.length - 1];
@@ -83,8 +82,11 @@ describe('AdvancedDropdown', () => {
     fireEvent.click(within(secondList).getByText('Beta'));
     expect(onChange2).toHaveBeenCalledWith(['alpha', 'beta']);
 
-    // Badge shows count on first trigger
-    expect(button).toHaveTextContent('2');
+    // Re-render with both selections to verify count display
+    setup({ multiple: true, value: ['alpha', 'beta'], clearable: false });
+    const allButtons = screen.getAllByRole('button');
+    const finalButton = allButtons[allButtons.length - 1];
+    expect(finalButton).toHaveTextContent('2');
   });
 
   it('renders rightLabel when provided', () => {
