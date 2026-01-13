@@ -716,20 +716,25 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
                 {/* Co-owner Toggle */}
                 {showCoOwnerToggle && (
-                  <div className="flex items-center justify-start gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setIsCoOwner(!isCoOwner)}
-                      aria-pressed={isCoOwner}
-                      className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors ${isCoOwner ? 'bg-brand-600' : 'bg-gray-300'
-                        }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${isCoOwner ? 'translate-x-5' : 'translate-x-1'
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setIsCoOwner(!isCoOwner)}
+                        aria-pressed={isCoOwner}
+                        className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors ${isCoOwner ? 'bg-brand-600' : 'bg-gray-300'
                           }`}
-                      />
-                    </button>
-                    <span className="block text-sm font-medium text-gray-700">Set as Co-owner</span>
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${isCoOwner ? 'translate-x-5' : 'translate-x-1'
+                            }`}
+                        />
+                      </button>
+                      <span className="block text-sm font-medium text-gray-700">Set as Co-owner</span>
+                    </div>
+                    <p className="text-sm text-gray-500 ml-13">
+                      Co-owners have full administrative access, including the ability to manage users, bases, and workspace settings.
+                    </p>
                   </div>
                 )}
               </div>

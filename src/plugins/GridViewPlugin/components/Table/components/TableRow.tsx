@@ -48,6 +48,11 @@ export const TableRow: React.FC<TableRowProps> = ({
     if (rowId) onCellChange(rowId, columnKey, value);
   }, [rowId, onCellChange]);
 
+  // Check if any cell in this row is active or if the row is selected via checkbox
+  const isRowActive = useMemo(() => {
+    return activeCell?.rowId === rowId || isSelected;
+  }, [activeCell, rowId, isSelected]);
+
   // Memoize column objects to prevent recreating them on every render
   const memoizedColumnProps = useMemo(() => {
     return columns.map((column, index) => {
@@ -79,12 +84,12 @@ export const TableRow: React.FC<TableRowProps> = ({
 
   return (
     <div
-      className="group grid transition-colors min-w-full"
+      className={`group grid transition-colors min-w-full ${isRowActive ? 'bg-[var(--color-brand-50)]' : ''}`}
       style={{ gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`, height: '40px', minHeight: '40px', maxHeight: '40px' }}
       onContextMenu={onContextMenu}
       onClick={() => setActiveCell?.(null)}
     >
-      <div className="flex-shrink-0 w-13 h-10 bg-background border-r border-b flex items-center justify-center bg-muted/30 relative select-none gap-2" style={{height: '40px', position: 'sticky', left: 0, zIndex: 11, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)'}}>
+      <div className={`flex-shrink-0 w-13 h-10 border-r border-b flex items-center justify-center relative select-none gap-2 ${isRowActive ? 'bg-[var(--color-brand-50)]' : 'bg-background bg-muted/30'}`} style={{height: '40px', position: 'sticky', left: 0, zIndex: 11, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)'}}>
         {/* Row number always visible, but fades out on hover or when selected */}
         <span className={`text-xs text-muted-foreground font-normal absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none transition-opacity duration-150 ${
           isSelected ? 'opacity-0' : 'group-hover:opacity-0'
@@ -109,7 +114,7 @@ export const TableRow: React.FC<TableRowProps> = ({
         return (
           <div
            key={column.key}
-            className={`${props.isActive ? 'border border-[var(--color-brand-600)]' : ''}`}
+            className={`${props.isActive ? 'border border-[var(--color-brand-600)]' : ''} ${isRowActive ? 'bg-[var(--color-brand-50)]' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
               setActiveCell?.({ rowId, colKey: column.key });
