@@ -31,7 +31,7 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
-export function DefaultAuthProvider({ children }: { children: ReactNode }) {
+export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -64,19 +64,19 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
   // Debug helper – enable by setting window.__NAV_DEBUG__ = true in console
   const debug = (...args: any[]) => {
     try {
-      const w: any = window as any;
-      const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const w: any = globalThis as any;
+      const q = typeof globalThis === 'undefined' ? null : new URLSearchParams(globalThis.location.search);
       const enabled = !!(
-        (w && w.__NAV_DEBUG__) ||
+        (w?.__NAV_DEBUG__) ||
         (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('NAV_DEBUG') === '1') ||
         (q && q.get('navdebug') === '1')
       );
       if (enabled) console.log('[NAV][Auth]', ...args);
-    } catch {}
+    } catch { }
   };
 
   // Get navigation store methods
-  const { loadUserNavigation, saveUserNavigation, clearUserNavigation, updateActivityData, loadFromActivityData } = useNavigationStore();
+  const { loadUserNavigation, clearUserNavigation, updateActivityData, loadFromActivityData } = useNavigationStore();
 
   // Cross-tab signout handler: listen for 'sb_signout' events
   React.useEffect(() => {
@@ -88,17 +88,16 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
         } catch (err) {
           console.warn('clientLogout error during cross-tab signout', err);
         }
-        
+
         // Clear React Query cache on cross-tab logout
         try {
-          debug('Cross-tab logout - clearing all React Query cache');
           queryClient.clear(); // Use clear() to prevent refetch attempts
         } catch (err) {
           debug('Failed to clear React Query cache on cross-tab logout', err);
         }
-        
+
         // Remove known keys (only what we actually store)
-        const keys = ['user_id','user_email','user_display_name','user_avatar','user_role','user_token_data'];
+        const keys = ['user_id', 'user_email', 'user_display_name', 'user_avatar', 'user_role', 'user_token_data'];
         keys.forEach(k => { sessionStorage.removeItem(k); localStorage.removeItem(k); });
         // Clear navigation for current user if any
         const remoteUserId = sessionStorage.getItem('user_id') || localStorage.getItem('user_id');
@@ -108,8 +107,8 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    globalThis.addEventListener('storage', onStorage);
+    return () => globalThis.removeEventListener('storage', onStorage);
   }, [clearUserNavigation, queryClient]);
 
   // Listen for token expiration events
@@ -117,7 +116,6 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
     const onTokenExpired = () => {
       // Clear React Query cache on token expiration
       try {
-        debug('Token expired - clearing all React Query cache');
         queryClient.clear(); // Use clear() to prevent refetch attempts
       } catch (err) {
         debug('Failed to clear React Query cache on token expiration', err);
@@ -131,8 +129,8 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
       // Force redirect will happen via clientService
     };
 
-    window.addEventListener('auth_token_expired', onTokenExpired);
-    return () => window.removeEventListener('auth_token_expired', onTokenExpired);
+    globalThis.addEventListener('auth_token_expired', onTokenExpired);
+    return () => globalThis.removeEventListener('auth_token_expired', onTokenExpired);
   }, [clearUserNavigation, queryClient]);
 
   useEffect(() => {
@@ -144,7 +142,7 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
         const user_email = sessionStorage.getItem('user_email');
         const user_display_name = sessionStorage.getItem('user_display_name');
         const user_avatar = sessionStorage.getItem('user_avatar');
-        
+
         if (user_id) {
           // Clear cache if user changed (e.g., different user logged in this session)
           if (lastUserIdRef.current && lastUserIdRef.current !== user_id) {
@@ -155,7 +153,7 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
             reset();
           }
           lastUserIdRef.current = user_id;
-          
+
           // Set minimal user state - full profile will be fetched via useUserProfile hook
           setUser({
             id: user_id,
@@ -166,7 +164,6 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
           // FIX: Navigation restoration is now handled by AppInitializer
           // AuthContext should only handle authentication, not navigation
           // This prevents navigation state from being overwritten on every refresh
-          debug('initializeAuth: Authentication complete, navigation will be handled by AppInitializer');
         } else {
           // No user ID - clear cache to be safe
           if (lastUserIdRef.current) {
@@ -202,23 +199,23 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
       reset();
     }
     // Note: Don't clear cache on fresh login - let navigation recovery use any available data
-    
+
     // Update last user ref
     if (userInfo?.id) {
       lastUserIdRef.current = userInfo.id;
     }
-    
+
     setRestoreCompleted(false);
-    
+
     try {
-      if (userInfo && userInfo.id) {
+      if (userInfo?.id) {
         // Store only minimal data in sessionStorage (for instant UI render)
         sessionStorage.setItem('user_id', userInfo.id);
         if (userInfo.email) sessionStorage.setItem('user_email', userInfo.email);
         if (userInfo.display_name) sessionStorage.setItem('user_display_name', userInfo.display_name);
         if (userInfo.avatar) sessionStorage.setItem('user_avatar', userInfo.avatar);
       }
-      
+
       // Set minimal user state - full profile will be fetched via useUserProfile hook
       setUser({
         id: userInfo.id,
@@ -226,10 +223,10 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
         display_name: userInfo.display_name || undefined,
         avatar: userInfo.avatar || undefined,
       });
-      
+
       // Create/update login session on login (not on logout)
       // This ensures the login_at timestamp reflects when user actually logged in
-      if (userInfo && userInfo.id) {
+      if (userInfo?.id) {
         try {
           await updateActivityData(userInfo.id, true); // true = isLogin
         } catch (err) {
@@ -237,24 +234,15 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
           debug('login: ⚠️ Failed to create login session (non-blocking)', err);
         }
       }
-      
+
       // On login: Load from activity_data in login response (most efficient)
       // Falls back to API call, then sessionStorage cache
-      if (userInfo && userInfo.id) {
+      if (userInfo?.id) {
         try {
           // Check if activity_data is in login response (more efficient - no extra API call)
           // userInfo is the user object from data.data.user, so activity_data is directly on it
           const activityDataFromResponse = userInfo.activity_data || userInfo.data?.activity_data || userInfo.data?.user?.activity_data;
-          
-          debug('login: checking for activity_data', { 
-            hasActivityData: !!activityDataFromResponse,
-            userInfoKeys: Object.keys(userInfo || {}),
-            activityDataFromResponse,
-            userInfoActivityData: userInfo.activity_data,
-            userInfoDataActivityData: userInfo.data?.activity_data,
-            userInfoDataUserActivityData: userInfo.data?.user?.activity_data
-          });
-          
+
           if (activityDataFromResponse) {
             // Load directly from login response data
             const navigationStore = useNavigationStore.getState();
@@ -262,68 +250,51 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
             const baseId = activityDataFromResponse.last_base_id || null;
             const tableId = activityDataFromResponse.last_table_id || null;
             const viewId = activityDataFromResponse.last_view_id || null;
-            
-            debug('login: Setting navigation state from activity_data', {
-              workspace: workspaceId,
-              base: baseId,
-              table: tableId,
-              view: viewId
-            });
-            
+
             navigationStore.setWorkspace(workspaceId);
             navigationStore.setBase(baseId);
             navigationStore.setTable(tableId);
             navigationStore.setView(viewId);
-            
+
             // Verify it was set
             const verifyState = useNavigationStore.getState();
-            const match = 
+            const match =
               verifyState.selectedWorkspaceId === workspaceId &&
               verifyState.selectedBaseId === baseId &&
               verifyState.selectedTableId === tableId &&
               verifyState.selectedViewId === viewId;
-            
-            debug('login: ✅ Navigation state set and verified', {
-              stored: {
-                workspace: verifyState.selectedWorkspaceId,
-                base: verifyState.selectedBaseId,
-                table: verifyState.selectedTableId,
-                view: verifyState.selectedViewId
-              },
-              expected: {
-                workspace: workspaceId,
-                base: baseId,
-                table: tableId,
-                view: viewId
-              },
-              match
+
+            debug('login: Navigation state restored from activity_data', {
+              workspace: workspaceId,
+              base: baseId,
+              table: tableId,
+              view: viewId,
+              verified: match
             });
           } else {
             // Fallback: Try to load from activity_data API
             try {
               const hasFullPath = await loadFromActivityData(userInfo.id);
-              debug('login: loadFromActivityData ->', hasFullPath);
               if (!hasFullPath) {
                 loadUserNavigation(userInfo.id);
-                debug('login: fallback to session cache');
               }
             } catch (apiError) {
               // Fallback to sessionStorage cache on error
               loadUserNavigation(userInfo.id);
-              debug('login: activity API error, fallback to session cache');
+              debug('login: activity API error, fallback to session cache', apiError);
             }
           }
         } catch (error) {
           // Final fallback to sessionStorage cache
           loadUserNavigation(userInfo.id);
-          debug('login: unexpected error, fallback to session cache');
+          debug('login: unexpected error, fallback to session cache', error);
         }
       }
-      
+
       // Mark navigation data as loaded
       // AppInitializer will handle actual navigation restoration after workspaces load
       setRestoreCompleted(true);
-      
+
     } catch (error) {
       console.error('Login error:', error);
       setRestoreCompleted(true);
@@ -338,7 +309,7 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
         await updateActivityData(uid);
       }
     } catch (err) {
-      // Continue with logout even if save fails
+      debug('Failed to save activity data on logout', err);
     }
 
     // STEP 2: Cancel all pending queries and clear React Query cache (before API call to prevent refetch attempts)
@@ -361,33 +332,30 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
       cleanupOldTokenKeys();
       clearAllLastNavigation();
     } catch (err) {
-      // Ignore cleanup errors
+      debug('Failed to clear navigation persistence on logout', err);
     }
 
     // STEP 5: Call logout API to expire token on backend (this will also clear local tokens)
     try {
       await clientLogout(); // This now calls the logout API before clearing tokens
     } catch (err) {
+      debug('Failed to logout via API', err);
       // Continue with cleanup even if API call fails
     }
 
     // STEP 6: Remove user & tenant data from storage
-    try {
-      const keysToRemove = ['user_id','user_email','user_display_name','user_avatar','tenant_schema','user_role','user_token_data'];
-      keysToRemove.forEach(k => {
-        try { sessionStorage.removeItem(k); } catch {}
-        try { localStorage.removeItem(k); } catch {}
-      });
-    } catch (err) {
-      // Ignore storage errors
-    }
+    const keysToRemove = ['user_id', 'user_email', 'user_display_name', 'user_avatar', 'tenant_schema', 'user_role', 'user_token_data'];
+    keysToRemove.forEach(k => {
+      try { sessionStorage.removeItem(k); } catch { }
+      try { localStorage.removeItem(k); } catch { }
+    });
 
     // STEP 7: Clear user navigation persistence for this user (if any)
     try {
       const uid = sessionStorage.getItem('user_id') || localStorage.getItem('user_id') || undefined;
       if (uid) clearUserNavigation(uid);
     } catch (err) {
-      // Ignore navigation cleanup errors
+      debug('Failed to clear user navigation on logout', err);
     }
 
     // STEP 8: Broadcast sign-out to other tabs (write-then-remove to trigger storage event)
@@ -395,7 +363,7 @@ export function DefaultAuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('sb_signout', Date.now().toString());
       localStorage.removeItem('sb_signout');
     } catch (err) {
-      // ignore
+      debug('Failed to broadcast sign-out to other tabs', err);
     }
   };
 

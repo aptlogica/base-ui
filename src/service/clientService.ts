@@ -468,8 +468,7 @@ const makeAuthenticatedCall = async <T>(apiCall: () => Promise<T>): Promise<T> =
           return await apiCall();
         }
       } catch (refreshError) {
-        // Don't force logout on refresh failure - let the error propagate
-        // The calling code or PrivateRoute will handle redirect to login
+        console.error('Token refresh failed during retry:', refreshError);
       }
     }
 
@@ -477,104 +476,89 @@ const makeAuthenticatedCall = async <T>(apiCall: () => Promise<T>): Promise<T> =
   }
 };
 
+
 /**
- * Initializes the client with token from storage on startup
- * Called automatically when the module loads
+ * Stores user data in sessionStorage for instant UI render
  */
-const initializeClient = async () => {
-  try {
-    const token = await getStoredToken();
-    if (token) {
-      updateClientToken(token);
-    }
+function storeUserDataInSession(user: any): void {
+  if (!user?.id) return;
 
-    // Initialize workspace and base from navigation store if available
-    try {
-      const mod = await import('../stores/navigationStore');
-      const navStore = (mod as any)?.useNavigationStore;
-      if (!navStore || typeof navStore.getState !== 'function') {
-        return;
-      }
-
-      const navState = navStore.getState();
-      if (navState?.selectedWorkspaceId || navState?.selectedBaseId) {
-        updateClientWorkspaceAndBase(navState.selectedWorkspaceId, navState.selectedBaseId);
-      }
-    } catch (navError) {
-      // Navigation store might not be available during initialization, that's okay
-      // Silently handle - initialization failures are non-critical
-    }
-  } catch (error) {
-    // Silently handle initialization failures - non-critical
+  sessionStorage.setItem('user_id', user.id);
+  if (user.email) {
+    sessionStorage.setItem('user_email', user.email);
   }
-};
+  if (user.display_name) {
+    sessionStorage.setItem('user_display_name', user.display_name);
+  }
+  if (user.avatar) {
+    sessionStorage.setItem('user_avatar', user.avatar);
+  }
+  if (user.timezone) {
+    sessionStorage.setItem('timezone', user.timezone);
+  }
+  if (user.country) {
+    sessionStorage.setItem('country', user.country);
+  }
+}
 
 /**
- * Authenticates a user with email and password
- * Stores tokens and user info in sessionStorage
- * Updates client with access token
- * @param params - Login credentials (email and password)
- * @returns The login response containing user and tenant data
+ * Extracts role from decoded token and stores it in sessionStorage
  */
+function extractAndStoreRole(accessDecoded: any): void {
+  if (!accessDecoded?.roles) return;
+
+  let role: string | null;
+  if (typeof accessDecoded.roles === 'string') {
+    role = accessDecoded.roles;
+  } else if (Array.isArray(accessDecoded.roles)) {
+    role = accessDecoded.roles[0];
+  } else {
+    role = null;
+  }
+
+  if (role) {
+    sessionStorage.setItem('user_role', role);
+    // Also store full token data for reference
+    sessionStorage.setItem('user_token_data', JSON.stringify({
+      user_id: accessDecoded.user_id,
+      email: accessDecoded.email,
+      roles: role,
+      email_verified: accessDecoded.email_verified,
+    }));
+  }
+}
+
+/**
+ * Processes and stores authentication tokens
+ */
+function processAndStoreTokens(response: any): any {
+  const accessDecoded = decodeJwt(response.data.token.access_token);
+  const refreshDecoded = response.data.token.refresh_token ? decodeJwt(response.data.token.refresh_token) : null;
+
+  const tokenData: TokenData = {
+    access_token: response.data.token.access_token,
+    refresh_token: response.data.token.refresh_token || '',
+    expires_at: accessDecoded?.exp as number,
+    refresh_expires_at: refreshDecoded?.exp as number
+  };
+
+  // Store tokens securely
+  storeTokenSecurely(tokenData);
+  updateClientToken(response.data.token.access_token);
+
+  return accessDecoded;
+}
+
 export async function login(params: LoginParams) {
   const response = await client.auth.login(params);
   if (!response) {
     throw new Error(response.message || 'Login failed');
   }
 
-  if (response.data && response.data.token && response.data.token.access_token) {
-    // Decode tokens to get expiry times
-    const accessDecoded = decodeJwt(response.data.token.access_token);
-    const refreshDecoded = response.data.token.refresh_token ? decodeJwt(response.data.token.refresh_token) : null;
-
-    const tokenData: TokenData = {
-      access_token: response.data.token.access_token,
-      refresh_token: response.data.token.refresh_token || '',
-      expires_at: accessDecoded?.exp as number,
-      refresh_expires_at: refreshDecoded?.exp as number
-    };
-
-    // Store tokens securely
-    storeTokenSecurely(tokenData);
-    updateClientToken(response.data.token.access_token);
-
-    // Store only minimal user info in sessionStorage (for instant UI render)
-    if (response.data.user && response.data.user.id) {
-      sessionStorage.setItem('user_id', response.data.user.id);
-      if (response.data.user.email) {
-        sessionStorage.setItem('user_email', response.data.user.email);
-      }
-      if (response.data.user.display_name) {
-        sessionStorage.setItem('user_display_name', response.data.user.display_name);
-      }
-      if (response.data.user.avatar) {
-        sessionStorage.setItem('user_avatar', response.data.user.avatar);
-      }
-      if (response.data.user.timezone) {
-        sessionStorage.setItem('timezone', response.data.user.timezone);
-      }
-      if (response.data.user.country) {
-        sessionStorage.setItem('country', response.data.user.country);
-      }
-    }
-
-    // Store role from decoded token (single string, not array)
-    if (accessDecoded?.roles) {
-      const role = typeof accessDecoded.roles === 'string'
-        ? accessDecoded.roles
-        : (Array.isArray(accessDecoded.roles) ? accessDecoded.roles[0] : null);
-
-      if (role) {
-        sessionStorage.setItem('user_role', role);
-        // Also store full token data for reference
-        sessionStorage.setItem('user_token_data', JSON.stringify({
-          user_id: accessDecoded.user_id,
-          email: accessDecoded.email,
-          roles: role,
-          email_verified: accessDecoded.email_verified,
-        }));
-      }
-    }
+  if (response?.data?.token?.access_token) {
+    const accessDecoded = processAndStoreTokens(response);
+    storeUserDataInSession(response.data.user);
+    extractAndStoreRole(accessDecoded);
 
     // Validate that all required auth data is present
     const validation = validateAuthData();
@@ -600,12 +584,11 @@ export const logout = async (): Promise<void> => {
       try {
         await client.auth.logout({ token: refreshToken });
       } catch (error: any) {
-        // Don't fail logout if API call fails - still clear local tokens
-        // Silently handle - logout API failures are non-critical
+        console.error('Logout API call failed:', error);
       }
     }
   } catch (error) {
-    // Silently handle logout errors - tokens will still be cleared in finally block
+    console.error('Error during logout:', error);
   } finally {
     // Always clear local tokens and client token, regardless of API call result
     clearTokens();
@@ -793,8 +776,8 @@ export async function getUserProfileByIDService(id: string) {
   return await makeAuthenticatedCall(() => client.userService.getProfile(id));
 }
 
-export async function updateUserProfileService(id: string, params: any) {
-  return await makeAuthenticatedCall(() => client.userService.updateProfile(id, params));
+export async function updateUserProfileService(id: string, params: any, avatarFile?: File) {
+  return await makeAuthenticatedCall(() => client.userService.updateProfile(id, params, avatarFile));
 }
 
 export async function getUserAccessDetailsService(userId: string, workspaceId?: string) {
@@ -998,11 +981,10 @@ export const initializeClientToken = async () => {
         updateClientWorkspaceAndBase(navState.selectedWorkspaceId, navState.selectedBaseId);
       }
     } catch (navError) {
-      // Navigation store might not be available, that's okay
-      // Silently handle - initialization failures are non-critical
+      console.warn('Navigation store initialization failed:', navError);
     }
   } catch (error) {
-    // Silently handle initialization failures - non-critical
+    console.error('Failed to initialize client token:', error);
   }
 };
 

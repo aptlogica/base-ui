@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { utcISOToZoned, zonedToUtcISO } from '../../../utils/dateUtils';
 
 interface DateTimeProps {
@@ -74,7 +74,6 @@ function formatDate(date: string, format: string): string {
   if (!date) return '';
 
   const [year, month, day] = date.split('-');
-  const dateObj = new Date(Number(year), Number(month) - 1, Number(day));
 
   switch (format) {
     case 'YYYY-MM-DD':

@@ -1,7 +1,6 @@
-import { useEffect, useMemo } from 'react';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useEffect} from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useNavigationStore } from '../stores/navigationStore';
-import { useToast } from '../components/common/Toast';
 import { useAuth } from '../auth/AuthContext';
 import { usePluginStore } from '../stores/pluginStore';
 
@@ -12,9 +11,7 @@ import { usePluginStore } from '../stores/pluginStore';
 export const useNavigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const params = useParams();
   const { user } = useAuth();
-  const toast = useToast();
   
   const {
     selectedWorkspaceId,
@@ -27,7 +24,6 @@ export const useNavigation = () => {
     navigateToView,
     getNavigationPath,
     saveUserNavigation,
-    updateActivityData
   } = useNavigationStore();
 
   // Flyout management for layout navigation
@@ -41,9 +37,9 @@ export const useNavigation = () => {
       // Parse different route patterns
       const patterns = [
         // /workspace/{workspaceId}/base/{baseId}/table/{tableId}/{viewId}
-        /^\/workspace\/([^\/]+)\/base\/([^\/]+)\/table\/([^\/]+)\/([^\/]+)$/,
+        /^\/workspace\/([^/]+)\/base\/([^/]+)\/table\/([^/]+)\/([^/]+)$/,
         // /workspace/{workspaceId}
-        /^\/workspace\/([^\/]+)$/
+        /^\/workspace\/([^/]+)$/
       ];
 
       for (const pattern of patterns) {

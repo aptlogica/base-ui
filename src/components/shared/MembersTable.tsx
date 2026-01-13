@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import ReactDOM, { createPortal } from 'react-dom';
 import { MoreVertical, ChevronsUpDown, Search, Edit, Trash2, Filter, Loader2 } from 'lucide-react';
 import { useClickOutside } from '../../hooks/useClickOutside';
-import { AccessRoleSelector, AccessRole, RoleConfig } from './AccessRoleSelector';
+import { AccessRole, RoleConfig } from './AccessRoleSelector';
 import { useUserRolesAndAccess } from '../../hooks/useApi';
 import { getInitials } from '../../utils/helpers';
 
@@ -32,16 +32,11 @@ export interface Member {
 
 interface MembersTableProps {
   members: Member[];
-  roleConfig: Record<AccessRole, RoleConfig>;
-  onRoleChange?: (memberId: string, newRole: AccessRole) => void;
-  onCopyUserId?: (userId: string) => void;
   onRemoveMember?: (memberId: string) => void;
   onEditMember?: (memberId: string) => void;
   showSearch?: boolean;
-  editorSeats?: number;
-  className?: string;
   headerActions?: React.ReactNode;
-  workspaceId?: string; // Optional workspaceId to pass as scopeId for getUserRolesAndAccess
+  workspaceId?: string; 
 }
 
 
@@ -56,7 +51,7 @@ const getAvatarColor = (userId: string): string => {
     'bg-indigo-500',
     'bg-cyan-500'
   ];
-  const hash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const hash = userId.split('').reduce((acc, char) => acc + (char.codePointAt(0) || 0), 0);
   return colors[hash % colors.length];
 };
 
@@ -219,13 +214,9 @@ const getOverallRoles = (member: Member, rolesAndAccessData?: Array<{
     }
   }
 
-  // Fallback: if no roles found, use access_level or role field
+  // Fallback: if no roles found, use role field
   if (roles.length === 0) {
-    if (member.access_level === 'full_access') {
-      roles.push('Co-owner');
-    } else if (member.access_level === 'limited_access') {
-      roles.push('Workspace Maintainer');
-    } else if (member.role === 'owner') {
+    if (member.role === 'owner') {
       roles.push('Owner');
     } else if (member.role === 'editor') {
       roles.push('Workspace Member');
@@ -325,8 +316,6 @@ const AccessDetailsRow: React.FC<{
     );
   }
 
-  // Handle the getUserRolesAndAccess API response structure
-  // The hook already extracts result?.data, so rolesAndAccess is the array directly
   // Response structure: [{ workspace_name, access, bases: [] }]
   const workspaces = Array.isArray(rolesAndAccess) ? rolesAndAccess : [];
 
@@ -418,14 +407,9 @@ const AccessDetailsRow: React.FC<{
 
 export const MembersTable: React.FC<MembersTableProps> = ({
   members,
-  roleConfig,
-  onRoleChange,
-  onCopyUserId,
   onRemoveMember,
   onEditMember,
   showSearch = true,
-  editorSeats,
-  className = '',
   headerActions,
   workspaceId
 }) => {
@@ -434,7 +418,6 @@ export const MembersTable: React.FC<MembersTableProps> = ({
   const [sortColumn, setSortColumn] = useState<'name' | 'role' | 'date' | 'lastActive' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [openActionsMenu, setOpenActionsMenu] = useState<string | null>(null);
-  const [memberRoleDropdowns, setMemberRoleDropdowns] = useState<Record<string, AccessRole>>({});
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [expandedMembers, setExpandedMembers] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
