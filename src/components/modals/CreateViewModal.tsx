@@ -391,7 +391,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
                     }
                     return <HelpCircle className={`w-4 h-4 ${iconColor} cursor-help`} />;
                   })()}
-                  <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
+                  <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                     <h4 className="mb-2 text-primary">View name info:</h4>
                     <ul className="space-y-1 text-gray-600">
                       <li>• Optional - leave empty for auto-generated name</li>

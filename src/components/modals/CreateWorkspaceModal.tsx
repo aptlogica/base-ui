@@ -19,6 +19,8 @@ interface CreateWorkspaceModalProps {
   error?: string;
   // If provided, parent handles submit. Should return a Promise if async.
   onSubmit?: (e?: React.FormEvent) => Promise<void> | void;
+  // For edit mode: pass the current workspace ID to exclude it from duplicate validation
+  currentWorkspaceId?: string;
 }
 
 export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
@@ -33,6 +35,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   setDescription: setControlledDescription,
   error: controlledError,
   onSubmit: controlledSubmit,
+  currentWorkspaceId,
 }) => {
   const internalMutation = useCreateWorkspace();
   const { data: workspacesData } = useWorkspaces();
@@ -74,12 +77,12 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   // Validate name on change
   useEffect(() => {
     if (name.trim()) {
-      const validation = validateWorkspaceName(name, existingWorkspaces);
+      const validation = validateWorkspaceName(name, existingWorkspaces, currentWorkspaceId);
       setValidationError(validation.error || '');
     } else {
       setValidationError('');
     }
-  }, [name, existingWorkspaces]);
+  }, [name, existingWorkspaces, currentWorkspaceId]);
 
   const submitting = internalMutation.isPending;
 
@@ -99,7 +102,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
     }
 
     // Check for validation errors
-    const validation = validateWorkspaceName(title, existingWorkspaces);
+    const validation = validateWorkspaceName(title, existingWorkspaces, currentWorkspaceId);
     if (!validation.isValid) {
       if (isControlled) {
         toast.error(validation.error || 'Invalid workspace name');
@@ -210,7 +213,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
               <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
                 <span className="relative inline-block group">
                   <HelpCircle className={`w-4 h-4 ${validationError || ((!isControlled && error) || (isControlled && controlledError)) ? 'text-red-500' : ((isControlled ? (controlledName || '').trim().length >=3 : name.trim().length >=3) ? 'text-green-600' : 'text-gray-400')} cursor-help`} />
-                  <div className="invisible group-hover:visible absolute left-0 mt-1 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
+                  <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                     <h4 className="font-medium mb-2">Workspace name requirements:</h4>
                     <ul className="space-y-1">
                       <li className={`flex items-center ${(isControlled ? (controlledName || '').trim().length >= 3 : name.trim().length >= 3) ? 'text-green-600' : 'text-gray-500'}`}>

@@ -77,17 +77,18 @@ const HeaderWorkspaceDropdown: React.FC = () => {
   // This ensures we show the workspace name even before selectedWorkspace state is set
   // Also handles newly created workspaces that might not be in the workspaces array yet
   const displayWorkspace = React.useMemo(() => {
-    // Priority 1: Use selectedWorkspace if available (handles newly created workspaces)
+    // Priority 1: Find workspace in workspaces array by selectedWorkspaceId (always use latest from query)
+    // This ensures the header updates when workspace name is updated
+    if (selectedWorkspaceId && workspaces && Array.isArray(workspaces)) {
+      const found = workspaces.find((ws: any) => ws.id === selectedWorkspaceId);
+      if (found) return found;
+    }
+    // Priority 2: Use selectedWorkspace if available (handles newly created workspaces not yet in query)
     if (selectedWorkspace) {
       // Verify it matches the selectedWorkspaceId
       if (selectedWorkspace.id === selectedWorkspaceId) {
         return selectedWorkspace;
       }
-    }
-    // Priority 2: Find workspace in workspaces array by selectedWorkspaceId
-    if (selectedWorkspaceId && workspaces && Array.isArray(workspaces)) {
-      const found = workspaces.find((ws: any) => ws.id === selectedWorkspaceId);
-      if (found) return found;
     }
     // Priority 3: Use selectedWorkspace even if not in workspaces array yet (newly created)
     if (selectedWorkspace?.id === selectedWorkspaceId) {
@@ -122,11 +123,18 @@ const HeaderWorkspaceDropdown: React.FC = () => {
       return;
     }
 
-    // If selectedWorkspace is null but selectedWorkspaceId exists and workspace is in list, sync it
-    if (selectedWorkspaceId && !selectedWorkspace) {
+    // Sync selectedWorkspace with updated workspace data from query (handles name updates)
+    // This ensures selectedWorkspace state stays in sync when workspace is updated
+    if (selectedWorkspaceId) {
       const found = workspaces.find((ws: any) => ws.id === selectedWorkspaceId);
       if (found) {
-        setSelectedWorkspace(found);
+        // Update selectedWorkspace if it's null or if workspace data has changed (e.g., name update)
+        if (!selectedWorkspace || 
+            selectedWorkspace.id !== found.id || 
+            selectedWorkspace.title !== found.title || 
+            selectedWorkspace.name !== found.name) {
+          setSelectedWorkspace(found);
+        }
       }
     }
   }, [workspaces, selectedWorkspace, selectedWorkspaceId, setSelectedWorkspace, setWorkspace]);
