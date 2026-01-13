@@ -256,7 +256,8 @@ export const SecuritySection: React.FC = () => {
         clearFooter();
       }
     };
-  }, [isUpdatingPassword, changePasswordMutation.isPending, isPasswordFormValid, registerFooter, clearFooter, handleUpdatePassword, currentSection]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isUpdatingPassword, changePasswordMutation.isPending, isPasswordFormValid, currentSection]);
 
   // Loading state
   if (isLoading) {

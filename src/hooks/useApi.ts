@@ -880,7 +880,8 @@ export const useUpdateViewAppearance = () => {
   return useMutation({
     mutationFn: ({ viewId, appearance, currentMeta }: { viewId: string; appearance: any; currentMeta?: any }) => {
       // Merge appearance into existing meta (from parameter or cache)
-      const existingMeta = currentMeta || (queryClient.getQueryData(['view', String(viewId)]) as any)?.meta || {};
+      const viewData = queryClient.getQueryData(['view', String(viewId)]);
+      const existingMeta = currentMeta || (viewData && typeof viewData === 'object' && 'meta' in viewData ? (viewData as any).meta : {}) || {};
       const newMeta = {
         ...existingMeta,
         formViewAppearance: appearance
@@ -938,7 +939,11 @@ export const useUpdateViewMeta = () => {
   return useMutation({
     mutationFn: ({ viewId, meta, currentMeta }: { viewId: string; meta: any; currentMeta?: any }) => {
       // Merge meta into existing meta (from parameter or cache)
-      const existingMeta = currentMeta || (queryClient.getQueryData(['view', String(viewId)]) as any)?.meta || {};
+      const viewData = queryClient.getQueryData(['view', String(viewId)]);
+      const existingMeta =
+        currentMeta ||
+        (viewData && typeof viewData === 'object' && 'meta' in viewData ? (viewData as any).meta : {}) ||
+        {};
       const newMeta = {
         ...existingMeta,
         ...meta
@@ -1237,13 +1242,9 @@ export const useUpdateUserProfile = (userId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: { first_name?: string; last_name?: string; display_name?: string; country?: string; dob?: string; timezone?: string }) => {
-      // Only send fields that have values (not empty strings)
-      const updateData = Object.fromEntries(
-        Object.entries(params).filter(([_, value]) => value !== undefined && value !== '')
-      );
-
-      const result = await updateUserProfileService(userId, updateData);
+    mutationFn: async (params: { first_name?: string; last_name?: string; display_name?: string; country?: string; dob?: string; timezone?: string; locale?: string; avatarFile?: File }) => {
+      const { avatarFile, ...profileParams } = params;
+      const result = await updateUserProfileService(userId, profileParams, avatarFile);
       return result;
     },
     onSuccess: (_, variables) => {

@@ -30,10 +30,6 @@ export const useNavigationActions = () => {
   const workspacesList = (workspaces as any)?.data?.workspaces || (Array.isArray(workspaces) ? workspaces : []);
 
   /**
-   * Handle workspace deletion cleanup and safe navigation
-   * When deleting the current workspace, navigate to first available workspace/base/table/view
-   */
-  /**
    * Handle deletion of a workspace.
    * Clears selections if the deleted workspace was active and
    * redirects to the first valid remaining workspace tree.
@@ -68,13 +64,9 @@ export const useNavigationActions = () => {
   };
 
   /**
-   * Handle base deletion cleanup and safe navigation
-   * When deleting the current base, navigate to first available base/table/view
-   */
-  /**
    * Handle deletion of a base.
    * Clears base/table/view if the deleted base was active and
-   * redirects to the next safe location.
+   * redirects to the next safe location in the same workspace.
    */
   const handleBaseDeletion = (deletedBaseId: string) => {
     if (!user?.id) return;
@@ -85,7 +77,13 @@ export const useNavigationActions = () => {
     if (wasCurrentBase) {
       const selectedWorkspaceId = current.selectedWorkspaceId;
       
-      // FIX: Stay in SAME workspace, find first remaining base
+      if (!selectedWorkspaceId) {
+        replaceNavigate(navigate, '/workspace');
+        saveUserNavigation(user.id);
+        return;
+      }
+      
+      // Stay in SAME workspace, find first remaining base
       const currentWorkspace = workspacesList.find((ws: any) => ws.id === selectedWorkspaceId);
       
       if (currentWorkspace?.bases) {
@@ -99,6 +97,13 @@ export const useNavigationActions = () => {
           if (firstBase.tables && firstBase.tables.length > 0) {
             const firstTable = firstBase.tables[0];
             const tableId = firstTable?.model?.id || firstTable?.id;
+            
+            if (!tableId) {
+              current.navigateToBase(selectedWorkspaceId, firstBase.id);
+              replaceNavigate(navigate, `/workspace/${selectedWorkspaceId}`);
+              saveUserNavigation(user.id);
+              return;
+            }
             
             // Find first view in this table
             if (firstTable.views && firstTable.views.length > 0) {
@@ -141,13 +146,9 @@ export const useNavigationActions = () => {
   };
 
   /**
-   * Handle table deletion cleanup and safe navigation
-   * When deleting the current table, navigate to first available table/view
-   */
-  /**
    * Handle deletion of a table.
    * Clears table/view if the deleted table was active and
-   * redirects to the next safe location.
+   * redirects to the next safe location in the same base.
    */
   const handleTableDeletion = (deletedTableId: string) => {
     if (!user?.id) return;
@@ -159,7 +160,17 @@ export const useNavigationActions = () => {
       const selectedWorkspaceId = current.selectedWorkspaceId;
       const selectedBaseId = current.selectedBaseId;
       
-      // FIX: Stay in SAME base, find first remaining table
+      if (!selectedWorkspaceId || !selectedBaseId) {
+        if (selectedWorkspaceId) {
+          replaceNavigate(navigate, `/workspace/${selectedWorkspaceId}`);
+        } else {
+          replaceNavigate(navigate, '/workspace');
+        }
+        saveUserNavigation(user.id);
+        return;
+      }
+      
+      // Stay in SAME base, find first remaining table
       const currentWorkspace = workspacesList.find((ws: any) => ws.id === selectedWorkspaceId);
       const currentBase = currentWorkspace?.bases?.find((base: any) => base.id === selectedBaseId);
       
@@ -173,6 +184,14 @@ export const useNavigationActions = () => {
           // Navigate to first remaining table in SAME base
           const firstTable = remainingTables[0];
           const tableId = firstTable?.model?.id || firstTable?.id;
+          
+          if (!tableId) {
+            current.setTable(null);
+            current.setView(null);
+            replaceNavigate(navigate, `/workspace/${selectedWorkspaceId}`);
+            saveUserNavigation(user.id);
+            return;
+          }
           
           // Find first view in this table
           if (firstTable.views && firstTable.views.length > 0) {
@@ -206,10 +225,6 @@ export const useNavigationActions = () => {
     }
   };
 
-  /**
-   * Handle view deletion cleanup and safe navigation
-   * When deleting the current view, navigate to another view in the same table, or safe location
-   */
   /**
    * Handle deletion of a view.
    * Tries to select another view under the same table;

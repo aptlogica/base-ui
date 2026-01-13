@@ -270,10 +270,3 @@ describe('useBaseAccess', () => {
     });
   });
 });
-
-// TODO: Add tests for:
-// - Base-specific member access
-// - Table-specific member access  
-// - Custom permission scenarios
-// - Permission inheritance
-// - Collaboration features

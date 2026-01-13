@@ -328,14 +328,47 @@ const Breadcrumb: React.FC = () => {
     setDropdownPosition(null);
   };
 
-  const handleSaveBase = async ({ name, description }: { name: string; description: string }) => {
+  const handleSaveBase = async ({ name, description, image }: { name: string; description: string; image?: File | null }) => {
     if (!editingBase) return;
 
     try {
-      const updates = {
-        title: name,
-        description: description || '',
-      };
+      const updates: {
+        title?: string;
+        description?: string;
+        image?: File | Blob;
+      } = {};
+
+      // Only include fields that have actually changed
+      const currentTitle = editingBase.title || editingBase.name || '';
+      const currentDescription = editingBase.description || '';
+      
+      if (name !== currentTitle) {
+        updates.title = name;
+      }
+      
+      if (description !== currentDescription) {
+        updates.description = description;
+      }
+
+      // Include image if provided (must be a File object)
+      if (image instanceof File) {
+        updates.image = image;
+      }
+
+      // Check if there are any changes to save
+      if (Object.keys(updates).length === 0) {
+        toast.info('No changes to save');
+        setEditingBase(null);
+        return;
+      }
+
+      console.log('Updating base with payload:', {
+        baseId: editingBase.id,
+        updates: {
+          ...updates,
+          image: updates.image ? `[File: ${(updates.image as File).name}, ${(updates.image as File).size} bytes]` : undefined
+        }
+      });
 
       await updateBaseMutation.mutateAsync({
         baseId: editingBase.id,

@@ -5,6 +5,7 @@ export interface UpdateUserProfileParams {
     dob?: string;
     country?: string;
     timezone?: string;
+    locale?: string;
 }
 export interface ChangePasswordParams {
     current_password: string;

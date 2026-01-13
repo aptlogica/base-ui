@@ -14,7 +14,7 @@ export function RoleBasedRoute({
   requiredRoles = [], 
   requireAll = false,
   fallbackPath = '/not-found' 
-}: RoleBasedRouteProps) {
+}: Readonly<RoleBasedRouteProps>) {
   const { hasRole } = useUserRole();
 
   // If no roles required, always render children

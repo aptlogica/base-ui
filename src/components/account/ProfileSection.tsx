@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { useCurrentUser } from '../../auth/useCurrentUser';
-import { useUserProfile, useUpdateUserProfile, useAddOrUpdateAvatar, useRemoveAvatar } from '../../hooks/useApi';
+import { useUserProfile, useUpdateUserProfile, useRemoveAvatar } from '../../hooks/useApi';
 import { UserProfile } from '../../types/userProfile';
 import { useToast } from '../common/Toast';
 import { Loader2, CheckCircle, CloudUpload,X } from 'lucide-react';
@@ -51,40 +51,19 @@ const PROFILE_UPDATE_FIELDS: Array<keyof ProfileFormData> = [
   'locale',
 ];
 
-const buildProfileUpdatePayload = (formData: ProfileFormData, userProfile: UserProfile | null): Record<string, string> => {
+const buildProfileUpdatePayload = (formData: ProfileFormData): Record<string, string> => {
+  // Send ALL formData fields directly - no comparison, no filtering
   const payload: Record<string, string> = {};
-
-  if (userProfile) {
-    for (const field of PROFILE_UPDATE_FIELDS) {
-      const nextVal = formData[field] ?? '';
-      const prevVal = (userProfile as any)[field] ?? '';
-      if (nextVal !== prevVal) {
-        payload[field] = nextVal;
-      }
-    }
-    return payload;
-  }
-
+  
   for (const field of PROFILE_UPDATE_FIELDS) {
-    const nextVal = formData[field];
-    if (typeof nextVal === 'string') {
-      payload[field] = nextVal;
-    }
+    const value = formData[field];
+    // Include field even if empty string (let API decide what to do with it)
+    payload[field] = value ?? '';
   }
+  
   return payload;
 };
 
-const persistProfilePayloadToSessionStorage = (payload: Record<string, string>) => {
-  const country = payload['country'];
-  const timezone = payload['timezone'];
-
-  if (typeof country === 'string') {
-    safeSessionStorageSet('country', country);
-  }
-  if (typeof timezone === 'string') {
-    safeSessionStorageSet('timezone', timezone);
-  }
-};
 
 const getTimeZonesForCountry = (country?: string) => {
   if (!country) return [];
@@ -95,8 +74,9 @@ export const ProfileSection: React.FC = () => { // NOSONAR
   const { user: authUser } = useAuth();
   const currentUser = useCurrentUser();
   const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<ProfileFormData>({});
+  const isFormInitializedRef = useRef(false);
+  const formDataRef = useRef<ProfileFormData>({}); // Ref to always get latest formData
 
   const [hasChanges, setHasChanges] = useState(false);
   const [dobError, setDobError] = useState<string | null>(null);
@@ -109,7 +89,6 @@ export const ProfileSection: React.FC = () => { // NOSONAR
 
   // API hooks
   const updateProfileMutation = useUpdateUserProfile(authUser?.id || '');
-  const addOrUpdateAvatarMutation = useAddOrUpdateAvatar(authUser?.id || '');
   const removeAvatarMutation = useRemoveAvatar(authUser?.id || '');
 
   // Avatar states
@@ -132,12 +111,12 @@ export const ProfileSection: React.FC = () => { // NOSONAR
 
 
 
-  // Initialize form data when profile loads
+  // Initialize form data ONLY when entering edit mode - never reset while editing
   useEffect(() => {
-    const isFormEmpty = Object.keys(formData || {}).length === 0;
-    // If user clicks Edit before profile loads, formData stays empty; hydrate it once profile arrives.
-    if (userProfile && (!isEditing || isFormEmpty)) {
+    // Only initialize when isEditing becomes true and form hasn't been initialized yet
+    if (userProfile && isEditing && !isFormInitializedRef.current) {
       setFormData(buildFormDataFromProfile(userProfile));
+      isFormInitializedRef.current = true;
 
       // Store timezone and country in sessionStorage when profile loads
       if (userProfile.timezone) {
@@ -147,7 +126,17 @@ export const ProfileSection: React.FC = () => { // NOSONAR
         safeSessionStorageSet('country', userProfile.country);
       }
     }
-  }, [userProfile, isEditing]);
+    
+    // Reset flag when exiting edit mode
+    if (!isEditing) {
+      isFormInitializedRef.current = false;
+    }
+  }, [isEditing]); // ONLY depend on isEditing - never reset when userProfile changes
+
+  // Keep ref in sync with formData state (safety net)
+  useEffect(() => {
+    formDataRef.current = formData;
+  }, [formData]);
 
   // Clean up preview URL when component unmounts or preview changes
   useEffect(() => {
@@ -185,20 +174,16 @@ export const ProfileSection: React.FC = () => { // NOSONAR
       <div className="flex items-center justify-end gap-3 w-full">
         <button
           onClick={handleCancel}
-          disabled={isSaving}
           className="flex items-center gap-2 px-16 py-2 text-sm border text-gray-700 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50 transition-colors"
         >
           Cancel
         </button>
         <button
           onClick={handleSave}
-          disabled={!hasChanges || isSaving || updateProfileMutation.isPending}
+          disabled={!hasChanges}
           className="flex items-center gap-2 px-16 py-2 text-sm btn-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-primary"
         >
-          {(isSaving || updateProfileMutation.isPending) && (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          )}
-          {(isSaving || updateProfileMutation.isPending) ? 'Saving...' : 'Update'}
+          Update
         </button>
       </div>
     ) : (
@@ -225,7 +210,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditing, isSaving, hasChanges, updateProfileMutation.isPending, registerFooter, clearFooter, currentSection]);
+  }, [isEditing, hasChanges, registerFooter, clearFooter, currentSection]);
 
   const handleInputChange = (field: 'first_name' | 'last_name' | 'display_name' | 'country' | 'dob' | 'timezone' | 'locale', value: string) => {
     if (field === 'country') {
@@ -235,26 +220,35 @@ export const ProfileSection: React.FC = () => { // NOSONAR
       setFormData(prev => {
         const prevTz = prev.timezone || '';
         const nextTz = tzValues.includes(prevTz) ? prevTz : (tzValues[0] || '');
-        return {
+        const newData = {
           ...prev,
           country,
           timezone: nextTz,
         };
+        formDataRef.current = newData; // Update ref immediately
+        return newData;
       });
       return;
     }
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        [field]: value
+      };
+      formDataRef.current = newData; // Update ref immediately
+      return newData;
+    });
   };
 
   const handleSave = async () => { // NOSONAR
     if (!hasChanges) return;
 
+    // Use ref to get the LATEST formData (not stale closure value)
+    const latestFormData = formDataRef.current;
+
     // Validate DOB before saving
-    if (formData.dob) {
-      const dobErr = validateDOB(formData.dob, 'DD-MM-YYYY');
+    if (latestFormData.dob) {
+      const dobErr = validateDOB(latestFormData.dob, 'DD-MM-YYYY');
       if (dobErr) {
         setDobError(dobErr);
         toast.error(dobErr, { title: 'Invalid Date of Birth' });
@@ -262,25 +256,23 @@ export const ProfileSection: React.FC = () => { // NOSONAR
       }
     }
 
-    setIsSaving(true);
     try {
-      // Upload avatar if selected
-      if (selectedAvatarFile) {
-        try {
-          await addOrUpdateAvatarMutation.mutateAsync(selectedAvatarFile);
-        } catch (error: any) {
-          console.error('Failed to upload avatar:', error);
-          toast.error(error?.message || 'Failed to upload avatar. Please try again.', { title: 'Avatar Upload Failed' });
-          setIsSaving(false);
-          return;
-        }
-      }
+      // Build payload from LATEST formData - sends ALL fields directly
+      const payload = buildProfileUpdatePayload(latestFormData);
 
-      const payload = buildProfileUpdatePayload(formData, userProfile);
-      await updateProfileMutation.mutateAsync(payload);
+      // Call the mutation with both profile data and avatar file in one API call
+      await updateProfileMutation.mutateAsync({
+        ...payload,
+        avatarFile: selectedAvatarFile || undefined,
+      });
 
       // Persist updated country and timezone to sessionStorage
-      persistProfilePayloadToSessionStorage(payload);
+      if (latestFormData.country) {
+        safeSessionStorageSet('country', latestFormData.country);
+      }
+      if (latestFormData.timezone) {
+        safeSessionStorageSet('timezone', latestFormData.timezone);
+      }
 
       // Clear avatar selection and preview
       setSelectedAvatarFile(null);
@@ -292,13 +284,12 @@ export const ProfileSection: React.FC = () => { // NOSONAR
       setIsEditing(false);
       setHasChanges(false);
       setFormData({});
+      formDataRef.current = {}; // Clear ref
       setDobError(null);
+      
       toast.success('Profile updated successfully!', { title: 'Success' });
     } catch (error: any) {
-      console.error('Failed to save profile:', error);
       toast.error(error?.message || 'Failed to save profile. Please try again.', { title: 'Save Failed' });
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -375,7 +366,6 @@ export const ProfileSection: React.FC = () => { // NOSONAR
       await removeAvatarMutation.mutateAsync();
       toast.success('Avatar removed successfully!', { title: 'Success' });
     } catch (error: any) {
-      console.error('Failed to remove avatar:', error);
       toast.error(error?.message || 'Failed to remove avatar. Please try again.', { title: 'Remove Failed' });
     }
   };
@@ -429,7 +419,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
       avatarUploadStateClass = 'border hover:border-green-500 bg-gray-50 cursor-pointer';
     }
   }
-  const avatarUploadBusyClass = (addOrUpdateAvatarMutation.isPending) ? 'opacity-50 cursor-not-allowed' : '';
+  const avatarUploadBusyClass = (updateProfileMutation.isPending) ? 'opacity-50 cursor-not-allowed' : '';
 
   const activeCountry = isEditing ? (formData.country || '') : (userProfile.country || '');
   const tzDropdownOptions = getTimeZonesForCountry(activeCountry)
@@ -445,7 +435,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
   }
 
   const triggerAvatarInput = () => {
-    if (!isEditing || addOrUpdateAvatarMutation.isPending) return;
+    if (!isEditing || updateProfileMutation.isPending) return;
     document.getElementById('avatar-upload-input')?.click();
   };
 
@@ -534,13 +524,13 @@ export const ProfileSection: React.FC = () => { // NOSONAR
                     alt="Profile"
                     className="w-full h-full object-cover"
                   />
-                  {(addOrUpdateAvatarMutation.isPending) && (
+                  {(updateProfileMutation.isPending) && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                       <Loader2 className="w-5 h-5 animate-spin text-primary" />
                     </div>
                   )}
                 </div>
-                {isEditing && !addOrUpdateAvatarMutation.isPending && (
+                {isEditing && !updateProfileMutation.isPending && (
                   <button
                     type="button"
                     onClick={(e) => {
@@ -579,7 +569,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
                     type="file"
                     accept="image/*"
                     onChange={handleAvatarUpload}
-                    disabled={addOrUpdateAvatarMutation.isPending}
+                    disabled={updateProfileMutation.isPending}
                     className="hidden"
                   />
                   <CloudUpload className={`w-12 h-12 ${isDragging ? 'text-[var(--color-brand-600)]' : 'text-gray-400'} mx-auto mb-3`} />
@@ -605,7 +595,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
                 type="file"
                 accept="image/*"
                 onChange={handleAvatarUpload}
-                disabled={addOrUpdateAvatarMutation.isPending}
+                disabled={updateProfileMutation.isPending}
                 className="hidden"
               />
               <CloudUpload className={`w-12 h-12 ${isDragging ? 'text-[var(--color-brand-600)]' : 'text-gray-400'} mx-auto mb-3`} />

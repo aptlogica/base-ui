@@ -77,9 +77,6 @@ export function useWorkspaceAccess(workspaceId?: string) {
     return wsAccess === 'owner' || wsAccess === 'co-owner' || wsAccess === 'maintainer';
   }, [wsAccess]);
   
-  // Note: Table/View/Record/Column operations are handled in useBaseAccess.ts
-  // This hook only handles workspace-level operations
-  
   // User management (owner, co-owner, maintainer)
   const canAssignUsers = React.useCallback(() => {
     return wsAccess === 'owner' || wsAccess === 'co-owner' || wsAccess === 'maintainer';
@@ -106,21 +103,11 @@ export function useWorkspaceAccess(workspaceId?: string) {
     return wsAccess === 'base';
   }, [wsAccess]);
   
-  // Backward compatibility: Keep accessLevel for components that still use it
-  // But map to actual values for clarity
-  const accessLevel = React.useMemo(() => {
-    if (wsAccess === 'owner' || wsAccess === 'co-owner') return 'admin';
-    if (wsAccess === 'maintainer') return 'full_access';
-    return 'limited_access';
-  }, [wsAccess]);
-  
   return {
     // Actual access_level value
     wsAccess,
     hasFullWorkspaceAccess,
     isBaseLevelAccess,
-    // Backward compatibility
-    accessLevel,
     isAdmin: wsAccess === 'owner' || wsAccess === 'co-owner',
     isFullAccess: wsAccess === 'maintainer',
     isLimitedAccess: !hasFullWorkspaceAccess,

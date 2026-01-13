@@ -4,7 +4,7 @@ import { useToast } from '../../common/Toast';
 import { useGetTenantUsers, useRemoveTenantUser, useActivateTenantUser, useDeactivateTenantUser } from '../../../hooks/useApi';
 import { UserTable, TenantUser } from '../../shared/UserTable';
 import { Plus } from 'lucide-react';
-import { Loader } from '@/components/ui/Loader';
+import { Loader } from '../../ui/Loader';
 
 interface UserSettingsTabProps {
   workspaceId: string;

@@ -195,6 +195,7 @@ interface UpdateUserProfileParams {
     dob?: string;
     country?: string;
     timezone?: string;
+    locale?: string;
 }
 interface ChangePasswordParams {
     current_password: string;
@@ -745,7 +746,7 @@ declare class UserService {
      * Update user profile
      * PATCH /user/profile/:id
      */
-    updateProfile(id: string, params: UpdateUserProfileParams): Promise<StandardResponse<any>>;
+    updateProfile(id: string, params: UpdateUserProfileParams, avatarFile?: File): Promise<StandardResponse<any>>;
     /**
      * Change user password
      * POST /user/change-password/:id

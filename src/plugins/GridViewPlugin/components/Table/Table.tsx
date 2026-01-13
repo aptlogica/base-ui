@@ -17,7 +17,7 @@ import { useToast } from '../../../../components/common/Toast';
 import { sortRowsByDataKey } from '../../../../utils/sortUtils';
 import { applyFilters } from '../../../../utils/filterUtils';
 import { formatCompactNumber } from '../../../../utils/helpers';
-const NewColumnModal = lazy(() => 
+const NewColumnModal = lazy(() =>
   import('../../../../components/modals/NewColumnModal').then(m => ({ default: m.NewColumnModal }))
 );
 import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldConfirmModal';
@@ -88,7 +88,7 @@ export const Table: React.FC<TableProps> = ({
   // Extract IDs from tableData.model
   const tableId = useMemo(() => String(tableData?.model?.id ?? ''), [tableData?.model?.id]);
   const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
-  
+
   // Check permissions for read-only access
   const { isBaseReadOnly, canCreateColumn, canDeleteRecord, canUpdateRecord, canCreateRecord, canUpdateColumn, canDeleteColumn } = useBaseAccess(baseId || undefined);
 
@@ -193,12 +193,12 @@ export const Table: React.FC<TableProps> = ({
 
     const handleDocumentClick = (e: MouseEvent) => {
       // Check if the click is inside the table body (rows area)
-      if (tableRef.current && tableRef.current.contains(e.target as Node)) {
+      if (tableRef?.current?.contains(e.target as Node)) {
         return; // Don't close if inside table rows
       }
       // Also check excluded refs (modals, backdrop)
       for (const ref of [newColumnModalRef, editModalRef, backdropRef]) {
-        if (ref.current && ref.current.contains(e.target as Node)) {
+        if (ref?.current?.contains(e.target as Node)) {
           return;
         }
       }
@@ -219,7 +219,6 @@ export const Table: React.FC<TableProps> = ({
     setSelectedSearchField,
     realTimeFilter,
     localFieldConfig,
-    setLocalFieldConfig,
     visibleColumns,
     handleRealTimeFilter,
     handleAddFilter,
@@ -283,7 +282,6 @@ export const Table: React.FC<TableProps> = ({
     columnToDelete,
     updateFieldConfirmModalOpen,
     setUpdateFieldConfirmModalOpen,
-    pendingEditColumnChanges,
     setPendingEditColumnChanges,
     dragColumnIndex,
     hoverColumnIndex,
@@ -341,18 +339,17 @@ export const Table: React.FC<TableProps> = ({
     return visibleColumns.map(c => ({ key: c.key, type: String(c.type) }));
   }, [visibleColumns]);
 
-  // FRONTEND PAGINATION: Apply filters/search to FULL dataset first
   // This ensures filters/search work on entire dataset, not just loaded page
   const filteredAndSortedData = useMemo(() => {
     // Start with ALL records (full dataset from backend)
     let result = [...allRecords];
 
     // Apply search filtering
-    if (searchTerm.trim() && selectedSearchField && selectedSearchField.key) {
+    if (searchTerm.trim() && selectedSearchField?.key) {
       const lowerSearchTerm = searchTerm.toLowerCase();
       result = result.filter(row => {
         // Search in specific field
-        const value = row.data?.[selectedSearchField.key] ?? (row as any)[selectedSearchField.key];
+        const value = row.data?.[selectedSearchField?.key] ?? (row as any)[selectedSearchField?.key];
         return value?.toString().toLowerCase().includes(lowerSearchTerm);
       });
     }
@@ -361,7 +358,7 @@ export const Table: React.FC<TableProps> = ({
     const allFilters = realTimeFilter
       ? [...viewConfigState.filters, realTimeFilter]
       : viewConfigState.filters;
-      
+
     // Apply all filters at once
     if (allFilters.length > 0) {
       result = applyFilters(result, allFilters, columns);
@@ -375,9 +372,9 @@ export const Table: React.FC<TableProps> = ({
 
     return result;
   }, [
-    allRecords, // Changed from data to allRecords - full dataset
-    viewConfigState.filters, // Specific property instead of whole object
-    viewConfigState.sorts,   // Specific property instead of whole object
+    allRecords, 
+    viewConfigState.filters, 
+    viewConfigState.sorts,  
     searchTerm,
     selectedSearchField,
     columns,
@@ -386,11 +383,6 @@ export const Table: React.FC<TableProps> = ({
   ]);
 
   // Grouping logic
-  // Group rows when groupBy is active; returns an array of { groupValue, rows }
-  // IMPORTANT: Sorting is applied BEFORE grouping (in filteredAndSortedData), so:
-  // - Rows within each group maintain their sort order from the sort configuration
-  // - Groups themselves are sorted by the group direction (asc/desc)
-  // - This means sorting works WITH grouping: rows in groups respect sort settings
   const groupedData = useMemo(() => {
     if (!viewConfigState.groupBy.length) return null;
 
@@ -453,7 +445,7 @@ export const Table: React.FC<TableProps> = ({
     tableId,
     insertRowDataMutation: actions?.insertRowData,
     // No need for onRecordsUpdate - data comes from filteredAndSortedData via pagination
-    onRecordsUpdate: () => {},
+    onRecordsUpdate: () => { },
   });
 
   // Measure table body container height
@@ -515,59 +507,16 @@ export const Table: React.FC<TableProps> = ({
   const addNewRow = useCallback(async () => {
     try {
       if (!addRowMutation) return;
-      
-      // PAGINATION DISABLED - preservePagesOnNextUpdate commented out
-      // Mark that we should preserve pages 2+ on next update (smart merge)
-      // This prevents losing loaded pages when refetching after adding a row
-      // preservePagesOnNextUpdate();
-      
-      const result = await addRowMutation.mutateAsync({ model_id: tableId });
-      
-      // Get the new row ID from the response
-      const newRowId = result?.id || result?.data?.id || result?.data?.data?.id || result?.data?.record?.id;
-      
-      // PAGINATION DISABLED - Optimistic update commented out (not needed without pagination)
-      // Optimistically add the new row to allRecords immediately
-      // This ensures it appears even if it's beyond page 1
-      // if (newRowId) {
-      //   const newRow = {
-      //     id: newRowId,
-      //     created_at: new Date().toISOString(),
-      //     updated_at: new Date().toISOString(),
-      //     last_modified_time: new Date().toISOString(),
-      //     // Initialize empty values for all columns
-      //     ...columns.reduce((acc, col) => {
-      //       const colKey = col.column_name || col.key || col.id;
-      //       if (colKey) {
-      //         acc[colKey] = null;
-      //       }
-      //       return acc;
-      //     }, {} as any)
-      //   };
-      //   
-      //   setAllRecords(prev => {
-      //     // Check if row already exists (from refetch)
-      //     const exists = prev.some(r => {
-      //       const id = r?.id || r?._meta?.id;
-      //       return String(id) === String(newRowId);
-      //     });
-      //     return exists ? prev : [...prev, newRow];
-      //   });
-      // }
-      
-      // Notify user of success
-      try {
-        toast.success('Row added', { title: 'Success', duration: 3000 });
-      } catch (err) {
-        // If toast context isn't available, silently fail
-      }
-      // Ensure fresh data (will merge with optimistic update)
-      try { onRefresh?.(); } catch { }
+
+      await addRowMutation.mutateAsync({ model_id: tableId });
+
+      toast.success('Row added', { title: 'Success', duration: 3000 });
+      onRefresh?.();
     } catch (err) {
       console.error('Failed to add row', err);
       toast.error('Failed to add row', { title: 'Error', duration: 3500 });
     }
-  }, [addRowMutation, tableId, toast, onRefresh, columns]); // PAGINATION DISABLED - Removed preservePagesOnNextUpdate and setAllRecords from deps
+  }, [addRowMutation, tableId, toast, onRefresh]);
 
   // Delete a row by id (memoized to prevent recreation)
   const handleDelete = useCallback(async (rowId: string) => {
@@ -610,14 +559,14 @@ export const Table: React.FC<TableProps> = ({
         return;
       }
 
-      await bulkDeleteRecordsMutation.mutateAsync({ 
-        model_id: String(tableId), 
-        row_ids: rowIds 
+      await bulkDeleteRecordsMutation.mutateAsync({
+        model_id: String(tableId),
+        row_ids: rowIds
       });
 
       // Clear selection after successful deletion
       setSelectedRows(new Set());
-      
+
       toast.success(`${rowIds.length} row${rowIds.length > 1 ? 's' : ''} deleted`, { title: 'Success' });
       try { onRefresh?.(); } catch { }
     } catch (err) {
@@ -912,7 +861,7 @@ export const Table: React.FC<TableProps> = ({
                         : paginatedData.length;
                       const totalContentHeight = estimatedItemCount * 40;
                       const scrollThreshold = totalContentHeight - tableBodyHeight - 100;
-                      
+
                       // Load next page when near bottom and more pages available
                       if (scrollTop >= scrollThreshold && hasMore) {
                         loadNextPage();
@@ -939,10 +888,10 @@ export const Table: React.FC<TableProps> = ({
                   <Loader size={4} />
                 </div>
               )}
-              </div>
             </div>
           </div>
         </div>
+      </div>
 
       {/* Fixed Footer */}
       <div className="sticky bottom-0 z-30 bg-card border-t flex items-center px-4 h-12">
@@ -959,7 +908,7 @@ export const Table: React.FC<TableProps> = ({
         <div className="ml-auto flex items-center gap-3 text-sm">
           {/* Virtualization is always enabled - indicator removed to reduce UI clutter */}
           <div className="text-muted-foreground">
-          {selectedRows?.size > 0 ? `${formatCompactNumber(selectedRows?.size)} selected` : ''} {selectedRows?.size > 0 ? `•` : ''} {formatCompactNumber(filteredAndSortedData.length)} rows{hasMore && ` (${formatCompactNumber(paginatedData.length)} loaded)`}
+            {selectedRows?.size > 0 ? `${formatCompactNumber(selectedRows?.size)} selected` : ''} {selectedRows?.size > 0 ? `•` : ''} {formatCompactNumber(filteredAndSortedData.length)} rows{hasMore && ` (${formatCompactNumber(paginatedData.length)} loaded)`}
           </div>
         </div>
       </div>
@@ -1070,6 +1019,6 @@ export const Table: React.FC<TableProps> = ({
         />
       }
     </div>
-    
+
   );
 };

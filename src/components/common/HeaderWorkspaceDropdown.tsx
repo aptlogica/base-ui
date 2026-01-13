@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useWorkspaceBusinessLogic } from '../../hooks/workspace/useWorkspaceBusinessLogic';
 import { ChevronsUpDown, Plus } from 'lucide-react';
 import { useComponentVisibility, COMPONENT_IDS } from '../../contexts/RouteContext';
@@ -12,7 +11,6 @@ import { getRoleLabel } from '../../types/roles';
 import { getInitials } from '../../utils/helpers';
 
 const HeaderWorkspaceDropdown: React.FC = () => {
-  const location = useLocation();
   const [workspaceDropdownOpen, setWorkspaceDropdownOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const logoButtonRef = useRef<HTMLDivElement>(null);
@@ -22,9 +20,6 @@ const HeaderWorkspaceDropdown: React.FC = () => {
 
   // Route-based visibility check
   const isRouteVisible = useComponentVisibility(COMPONENT_IDS.WORKSPACE_DROPDOWN);
-
-  // Check if we're on the workspace homepage
-  const isHomepage = location.pathname.startsWith('/workspace') && !location.pathname.includes('/base/');
 
   // Update dropdown positioning when it opens
   useEffect(() => {
@@ -45,7 +40,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node;
       // Don't close if clicking on the logo button
-      if (logoButtonRef?.current && logoButtonRef.current.contains(target)) {
+      if (logoButtonRef?.current?.contains(target)) {
         return;
       }
       // Close if clicking outside the dropdown
@@ -95,7 +90,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
       if (found) return found;
     }
     // Priority 3: Use selectedWorkspace even if not in workspaces array yet (newly created)
-    if (selectedWorkspace && selectedWorkspace.id === selectedWorkspaceId) {
+    if (selectedWorkspace?.id === selectedWorkspaceId) {
       return selectedWorkspace;
     }
     // FALLBACK: If no workspace is selected but workspaces are available, return first one for display
@@ -120,7 +115,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
     }
 
     // If selectedWorkspaceId exists but workspace is not found in list, select first one
-    if (selectedWorkspaceId && !workspaces.find((ws: any) => ws.id === selectedWorkspaceId)) {
+    if (selectedWorkspaceId && !workspaces.some((ws: any) => ws.id === selectedWorkspaceId)) {
       const firstWorkspace = workspaces[0];
       setSelectedWorkspace(firstWorkspace);
       setWorkspace(firstWorkspace.id);
@@ -179,7 +174,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
     setWorkspaceDropdownOpen(false);
 
     // Dispatch custom event for sidebar to handle base auto-selection
-    window.dispatchEvent(new CustomEvent('workspace-selected', {
+    globalThis.dispatchEvent(new CustomEvent('workspace-selected', {
       detail: { workspace, shouldAutoSelectBase: true }
     }));
   };
@@ -228,7 +223,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
           )}
 
           {/* Dropdown Icon - chevron up when open */}
-          <ChevronsUpDown className="w-4 h-4 text-[var(--text-color-tertiary)] transition-transform flex-shrink-0" />
+          <ChevronsUpDown className="w-4 h-4 text-tertiary transition-transform flex-shrink-0" />
         </button>
 
         {/* Workspace Dropdown */}
@@ -275,8 +270,17 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                   return (
                     <div
                       key={workspace.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={isSelected}
                       className="w-full rounded-lg text-left p-1.5 hover:bg-gray-100 text-sm transition-all duration-200 cursor-pointer"
                       onClick={() => handleWorkspaceClick(workspace)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleWorkspaceClick(workspace);
+                        }
+                      }}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         {/* Workspace Icon */}

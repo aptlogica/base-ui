@@ -45,19 +45,6 @@ export interface TenantUser {
   };
 }
 
-interface UserAccessDetailsResponse {
-  workspaces: Array<{
-    id: string;
-    title: string;
-    access_level: string;
-    bases: Array<{
-      id: string;
-      title: string;
-      // TODO: Add role field when API provides it
-    }>;
-  }>;
-}
-
 interface UserTableProps {
   users: TenantUser[];
   onRemoveUser?: (userId: string) => void;
@@ -158,7 +145,7 @@ const getAvatarColor = (userId: string) => {
     'bg-cyan-500'
   ];
 
-  const hash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const hash = userId.split('').reduce((acc, char) => acc + (char.codePointAt(0) || 0), 0);
   return colors[hash % colors.length];
 };
 
@@ -192,7 +179,7 @@ const getLanguageDisplay = (locale: string, activityData?: TenantUser['activity_
 };
 
 // Role calculation utility
-const getOverallRoles = (user: TenantUser, accessDetails?: UserAccessDetailsResponse): string[] => {
+const getOverallRoles = (user: TenantUser): string[] => {
   const roles: string[] = [];
 
   // Extract roles from roles array (same logic as MembersTable)
@@ -244,29 +231,6 @@ const getOverallRoles = (user: TenantUser, accessDetails?: UserAccessDetailsResp
     }
   }
 
-  // Workspace/base roles (from access details if available - legacy support)
-  if (accessDetails?.workspaces) {
-    accessDetails.workspaces.forEach(ws => {
-      if (ws.access_level === 'full_access') {
-        // Check if already has Owner role, if not add Co-owner
-        if (!roles.includes('Owner')) {
-          roles.push('Co-owner');
-        }
-      } else if (ws.access_level === 'limited_access') {
-        roles.push('Workspace Maintainer');
-      }
-
-      // Base roles - TEMPORARY: infer from workspace access_level
-      // TODO: Replace when API provides base-level roles
-      if (ws.bases && ws.bases.length > 0) {
-        if (ws.access_level === 'full_access') {
-          roles.push('Base Member');
-        } else {
-          roles.push('Base Read Only');
-        }
-      }
-    });
-  }
 
   // Fallback: if no roles found, use tenant role
   if (roles.length === 0) {
@@ -298,16 +262,6 @@ const getRolePillStyle = (role: string) => {
     return 'bg-gray-100 text-gray-700 border border';
   }
   return 'bg-gray-100 text-gray-700 border border';
-};
-
-// Infer base role from workspace access level (TEMPORARY)
-const inferBaseRole = (workspaceAccessLevel: string): string => {
-  // TEMPORARY: Infer base role from workspace access level
-  // TODO: Replace when API provides actual base roles
-  if (workspaceAccessLevel === 'full_access') {
-    return 'Base Member';
-  }
-  return 'Base Read Only';
 };
 
 // Expandable Row Component for Access Details
@@ -396,7 +350,7 @@ const AccessDetailsRow: React.FC<{
                 // When workspace access is "maintainer", show "Workspace Maintainer"
                 if (baseCount === 0) {
                   return (
-                    <tr key={wsIndex} className="bg-background">
+                    <tr key={`${ws.workspace_id || ws.workspace_name}-${wsIndex}`} className="bg-background">
                       <td className="px-4 py-3 text-sm text-gray-900 font-medium">{ws.workspace_name}</td>
                       <td className="px-4 py-3 text-sm text-gray-500">-</td>
                       <td className="px-4 py-3">
@@ -411,7 +365,7 @@ const AccessDetailsRow: React.FC<{
                   const baseRole = base.access || '';
                   const baseName = base.base_name || `Base ${base.base_id || baseIndex + 1}`;
                   return (
-                    <tr key={`${wsIndex}-${baseIndex}`} className="bg-background">
+                    <tr key={`${ws.workspace_id || ws.workspace_name}-${base.base_id || base.base_name || baseIndex}`} className="bg-background">
                       {baseIndex === 0 && (
                         <td rowSpan={baseCount} className="px-4 py-3 text-sm text-gray-900 font-medium align-top border-r">
                           {ws.workspace_name}
@@ -688,8 +642,8 @@ export const UserTable: React.FC<UserTableProps> = ({
 
       // Don't close if clicking inside this dropdown's trigger or menu
       if (
-        (roleFilterButtonRef.current && roleFilterButtonRef.current.contains(target)) ||
-        (roleFilterMenuRef.current && roleFilterMenuRef.current.contains(target))
+        (roleFilterButtonRef?.current?.contains(target)) ||
+        (roleFilterMenuRef?.current?.contains(target))
       ) {
         return;
       }
@@ -783,11 +737,6 @@ export const UserTable: React.FC<UserTableProps> = ({
                   >
                     <Filter className="w-4 h-4" />
                     Filter by Role
-                    {/* {selectedRoleFilter && (
-                      <span className="ml-1 px-1.5 py-0.5 bg-blue-200 text-blue-800 rounded text-xs">
-                        {selectedRoleFilter}
-                      </span>
-                    )} */}
                   </button>
                 </div>
 
@@ -796,6 +745,8 @@ export const UserTable: React.FC<UserTableProps> = ({
                   <div
                     ref={roleFilterMenuRef}
                     data-dropdown-menu="role-filter"
+                    role="menu"
+                    tabIndex={-1}
                     className="fixed z-[9999] bg-card border rounded-xl shadow-lg max-h-64 overflow-y-auto"
                     style={{
                       ...(roleFilterPosition.top !== undefined && { top: `${roleFilterPosition.top}px` }),
@@ -804,6 +755,11 @@ export const UserTable: React.FC<UserTableProps> = ({
                       width: `${roleFilterPosition.width}px`
                     }}
                     onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setIsRoleFilterOpen(false);
+                      }
+                    }}
                   >
                     <div className="p-2 space-y-1">
                       <button
@@ -812,7 +768,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                           setSelectedRoleFilter(null);
                           setIsRoleFilterOpen(false);
                         }}
-                        className={`w-full text-left px-3 py-2 text-sm text-primary rounded-xl hover:bg-gray-100 transition-colors ${!selectedRoleFilter ? 'bg-gray-100 font-medium' : ''
+                        className={`w-full text-left px-3 py-2 text-sm text-primary rounded-xl hover:bg-gray-100 transition-colors ${selectedRoleFilter ? '' : 'bg-gray-100 font-medium'
                           }`}
                       >
                         All Roles
@@ -981,9 +937,9 @@ export const UserTable: React.FC<UserTableProps> = ({
                         <td className="px-6 py-4">
                           <div className="flex flex-col gap-1.5 min-w-48">
                             <div className="flex flex-wrap gap-1.5">
-                              {roles.map((role, idx) => (
+                              {roles.map((role) => (
                                 <span
-                                  key={idx}
+                                  key={`${user.id}-${role}`}
                                   className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getRolePillStyle(role)}`}
                                 >
                                   {role}
