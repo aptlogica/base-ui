@@ -69,7 +69,7 @@ const HomePage: React.FC = () => {
   const { selectedWorkspaceId, navigateToTable } = useNavigationStore();
   const { data: workspaceBasesData, isLoading: basesLoading } = useWorkspaceBases(selectedWorkspaceId || '');
   const toast = useToast();
-  const { canCreateBase, accessLevel, isBaseLevelAccess } = useWorkspaceAccess(selectedWorkspaceId || undefined);
+  const { canCreateBase, isBaseLevelAccess } = useWorkspaceAccess(selectedWorkspaceId || undefined);
   const createBaseMutation = useCreateBase();
   const createTableMutation = useCreateTable();
   const { navigateToFirstView } = useNavigateToBaseFirstView();
@@ -440,17 +440,13 @@ const HomePage: React.FC = () => {
 
           {/* Right Side - Action Cards */}
           <div className="flex flex-col sm:flex-row gap-4 flex-shrink-0 w-full lg:w-auto">
-            {/* Create New Base - Hidden if access level is base-member */}
-            {accessLevel !== 'limited_access' && (
+            {/* Create New Base - Only owner, co-owner, maintainer can create */}
+            {canCreateBase() && (
               <button
                 type="button"
                 onClick={() => {
                   if (!selectedWorkspaceId) {
                     toast.error('Please select a workspace first');
-                    return;
-                  }
-                  if (!canCreateBase()) {
-                    toast.error('You do not have permission to create bases');
                     return;
                   }
                   setShowCreateBase(true);
@@ -467,8 +463,8 @@ const HomePage: React.FC = () => {
               </button>
             )}
 
-            {/* Import Data - Hidden if access level is base-member */}
-            {accessLevel !== 'limited_access' && (
+            {/* Import Data - Only owner, co-owner, maintainer can import */}
+            {canCreateBase() && (
               <button
                 type="button"
                 onClick={() => setShowImportData(true)}

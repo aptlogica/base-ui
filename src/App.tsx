@@ -162,7 +162,7 @@ const Layout = () => {
 
 // Wrapper for /workspace/:workspaceId/base/:baseId/table/:tableId/:viewId to provide table/view context to plugins
 const TableViewRouteWrapper: React.FC = () => {
-  const { workspaceId, baseId, tableId, viewId } = useParams();
+  const { baseId, tableId, viewId } = useParams();
 
   // Centralized table fetch so only one plugin renders and we can determine view type
   // PAGINATION DISABLED - Uncomment below to re-enable pagination (30 records per page)
@@ -219,9 +219,12 @@ const TableViewRouteWrapper: React.FC = () => {
 
   // Construct props for plugins
   const table = { id: tableId, base_id: baseId || '' };
-  const view = requestedView
-    ? { id: requestedView.id, type: requestedView.type }
-    : (typeMatchedView ? { id: typeMatchedView.id, type: typeMatchedView.type } : null);
+  let view = null;
+  if (requestedView) {
+    view = { id: requestedView.id, type: requestedView.type };
+  } else if (typeMatchedView) {
+    view = { id: typeMatchedView.id, type: typeMatchedView.type };
+  }
 
   // If a non-slug viewId was provided but not found, show a clear message
   if (viewId && !requestedView && !isTypeSlug) {
@@ -352,7 +355,7 @@ const loadEnabledPlugins = async (): Promise<unknown[]> => {
 };
 
 // AuthProviderChooser: chooses plugin-provided or default AuthProvider, must be inside PluginFrameworkProvider
-function AuthProviderChooser({ children }: { children: React.ReactNode }) {
+function AuthProviderChooser({ children }: Readonly<{ children: React.ReactNode }>) {
   const authProviders = useExtensions('auth:provider');
   const AuthProvider = authProviders.length > 0 ? authProviders[0].component : DefaultAuthProvider;
   return <AuthProvider>{children}</AuthProvider>;

@@ -6,7 +6,6 @@ import { CreateWorkspaceModal } from '../../modals/CreateWorkspaceModal';
 import { AssignUserToWorkspaceModal } from '../../modals/AssignUserToWorkspaceModal';
 import { MembersTable, Member } from '../../shared/MembersTable';
 import { AccessRole } from '../../shared/AccessRoleSelector';
-import { defaultRoleConfig } from '../../shared/roleConfig';
 import { useWorkspaceAccess } from '../../../hooks/useWorkspaceAccess';
 import { useUserRole } from '../../../hooks/useUserRole';
 import { getRoleLabel } from '../../../types/roles';
@@ -101,11 +100,11 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
       : [];
 
     return membersData.map((member: any) => {
-      // Map access_level to AccessRole (for backward compatibility)
+      // Map access_level to AccessRole
       let role: AccessRole = 'viewer';
-      if (member.access_level === 'workspaceAdmin' || member.access_level === 'full_access') {
+      if (member.access_level === 'workspaceAdmin') {
         role = 'owner';
-      } else if (member.access_level === 'workspaceMember' || member.access_level === 'limited_access') {
+      } else if (member.access_level === 'workspaceMember') {
         role = 'editor';
       }
 
@@ -166,7 +165,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
     if (!workspace) return { initials: 'WS', color: 'bg-purple-400' };
     const initials = getInitials(workspace.title || workspace.name || 'W', 'WS');
     const colors = ['bg-purple-400', 'bg-red-400', 'bg-orange-400', 'bg-blue-400', 'bg-green-400'];
-    const hash = workspace.id ? workspace.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) : 0;
+    const hash = workspace.id ? workspace.id.split('').reduce((acc: number, char: string) => acc + (char.codePointAt(0) || 0), 0) : 0;
     return { initials, color: colors[hash % colors.length] };
   };
 
@@ -332,7 +331,6 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
           ) : (
             <MembersTable
               members={members}
-              roleConfig={defaultRoleConfig}
               onRemoveMember={canAssignUsers() && !isWorkspaceReadOnly() ? handleRemoveMember : undefined}
               workspaceId={selectedWorkspaceId}
               onEditMember={canAssignUsers() && !isWorkspaceReadOnly() ? handleEditMember : undefined}

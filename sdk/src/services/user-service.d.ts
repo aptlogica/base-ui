@@ -15,7 +15,7 @@ export declare class UserService {
      * Update user profile
      * PATCH /user/profile/:id
      */
-    updateProfile(id: string, params: types.UpdateUserProfileParams): Promise<import("..").StandardResponse<any>>;
+    updateProfile(id: string, params: types.UpdateUserProfileParams, avatarFile?: File): Promise<import("..").StandardResponse<any>>;
     /**
      * Change user password
      * POST /user/change-password/:id

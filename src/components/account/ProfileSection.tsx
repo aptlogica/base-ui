@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { useCurrentUser } from '../../auth/useCurrentUser';
-import { useUserProfile, useUpdateUserProfile, useAddOrUpdateAvatar, useRemoveAvatar } from '../../hooks/useApi';
+import { useUserProfile, useUpdateUserProfile, useRemoveAvatar } from '../../hooks/useApi';
 import { UserProfile } from '../../types/userProfile';
 import { useToast } from '../common/Toast';
 import { Loader2, CheckCircle, CloudUpload,X } from 'lucide-react';
@@ -89,7 +89,6 @@ export const ProfileSection: React.FC = () => { // NOSONAR
 
   // API hooks
   const updateProfileMutation = useUpdateUserProfile(authUser?.id || '');
-  const addOrUpdateAvatarMutation = useAddOrUpdateAvatar(authUser?.id || '');
   const removeAvatarMutation = useRemoveAvatar(authUser?.id || '');
 
   // Avatar states
@@ -258,21 +257,14 @@ export const ProfileSection: React.FC = () => { // NOSONAR
     }
 
     try {
-      // Upload avatar if selected
-      if (selectedAvatarFile) {
-        try {
-          await addOrUpdateAvatarMutation.mutateAsync(selectedAvatarFile);
-        } catch (error: any) {
-          toast.error(error?.message || 'Failed to upload avatar. Please try again.', { title: 'Avatar Upload Failed' });
-          return;
-        }
-      }
-
       // Build payload from LATEST formData - sends ALL fields directly
       const payload = buildProfileUpdatePayload(latestFormData);
 
-      // Call the mutation with the payload
-      await updateProfileMutation.mutateAsync(payload);
+      // Call the mutation with both profile data and avatar file in one API call
+      await updateProfileMutation.mutateAsync({
+        ...payload,
+        avatarFile: selectedAvatarFile || undefined,
+      });
 
       // Persist updated country and timezone to sessionStorage
       if (latestFormData.country) {
@@ -427,7 +419,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
       avatarUploadStateClass = 'border hover:border-green-500 bg-gray-50 cursor-pointer';
     }
   }
-  const avatarUploadBusyClass = (addOrUpdateAvatarMutation.isPending) ? 'opacity-50 cursor-not-allowed' : '';
+  const avatarUploadBusyClass = (updateProfileMutation.isPending) ? 'opacity-50 cursor-not-allowed' : '';
 
   const activeCountry = isEditing ? (formData.country || '') : (userProfile.country || '');
   const tzDropdownOptions = getTimeZonesForCountry(activeCountry)
@@ -443,7 +435,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
   }
 
   const triggerAvatarInput = () => {
-    if (!isEditing || addOrUpdateAvatarMutation.isPending) return;
+    if (!isEditing || updateProfileMutation.isPending) return;
     document.getElementById('avatar-upload-input')?.click();
   };
 
@@ -532,13 +524,13 @@ export const ProfileSection: React.FC = () => { // NOSONAR
                     alt="Profile"
                     className="w-full h-full object-cover"
                   />
-                  {(addOrUpdateAvatarMutation.isPending) && (
+                  {(updateProfileMutation.isPending) && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                       <Loader2 className="w-5 h-5 animate-spin text-primary" />
                     </div>
                   )}
                 </div>
-                {isEditing && !addOrUpdateAvatarMutation.isPending && (
+                {isEditing && !updateProfileMutation.isPending && (
                   <button
                     type="button"
                     onClick={(e) => {
@@ -577,7 +569,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
                     type="file"
                     accept="image/*"
                     onChange={handleAvatarUpload}
-                    disabled={addOrUpdateAvatarMutation.isPending}
+                    disabled={updateProfileMutation.isPending}
                     className="hidden"
                   />
                   <CloudUpload className={`w-12 h-12 ${isDragging ? 'text-[var(--color-brand-600)]' : 'text-gray-400'} mx-auto mb-3`} />
@@ -603,7 +595,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
                 type="file"
                 accept="image/*"
                 onChange={handleAvatarUpload}
-                disabled={addOrUpdateAvatarMutation.isPending}
+                disabled={updateProfileMutation.isPending}
                 className="hidden"
               />
               <CloudUpload className={`w-12 h-12 ${isDragging ? 'text-[var(--color-brand-600)]' : 'text-gray-400'} mx-auto mb-3`} />

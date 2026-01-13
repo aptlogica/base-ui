@@ -637,7 +637,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
                                         <button
                                           type="button"
                                           onClick={async () => {
-                                            if (!window.confirm(`Are you sure you want to remove access to "${baseName}"?`)) {
+                                            if (!globalThis.confirm(`Are you sure you want to remove access to "${baseName}"?`)) {
                                               return;
                                             }
 
