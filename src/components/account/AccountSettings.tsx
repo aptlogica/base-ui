@@ -14,8 +14,8 @@ export const useFooterButtons = (): FooterButtonContextType => {
   const context = useContext(FooterButtonContext);
   if (!context) {
     return {
-      registerFooter: () => {},
-      clearFooter: () => {},
+      registerFooter: () => { },
+      clearFooter: () => { },
       currentSection: '',
     };
   }
@@ -97,7 +97,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
     <FooterButtonContext.Provider value={contextValue}>
       <div className="flex flex-col h-full min-h-0">
         {/* Fixed Navigation Tabs */}
-        <div className="flex-shrink-0 bg-alpha-white border-b border-gray-200 px-6">
+        <div className="flex-shrink-0 bg-alpha-white border-b px-6">
           <nav className="flex space-x-8" aria-label="Account sections">
             {sections.map((section) => (
               <button
@@ -106,9 +106,9 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
                 className={`
                 py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 relative
                 ${activeSection === section.key
-                  ? 'border-[var(--color-brand-600)] text-[var(--color-brand-600)]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }
+                    ? 'border-[var(--color-brand-600)] text-[var(--color-brand-600)]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }
               `}
               >
                 {section.label}

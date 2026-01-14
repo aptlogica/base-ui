@@ -18,11 +18,116 @@ interface CurrencyProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean; // true = single click, false = double click
-  readOnly?: boolean; // true = completely prevent editing
+  allowEdit?: boolean;
+  readOnly?: boolean;
   helperText?: string;
-  icon?: string;
 }
+
+const getInitialValue = (value: number | null, defaultValue: string): string => {
+  if (value !== null && value !== undefined) return value.toString();
+  if (defaultValue && String(defaultValue).trim()) return String(defaultValue);
+  return "";
+};
+
+const validateValue = (val: string, required: boolean): string | null => {
+  if (required && !val.trim()) return "This field is required";
+  if (val.trim() === "") return null;
+  if (Number.isNaN(Number.parseFloat(val))) return "Please enter a valid amount";
+  return null;
+};
+
+const useCurrencyState = (
+  value: number | null,
+  defaultValue: string,
+  onChange: (value: number | null) => void,
+  required: boolean,
+  readOnly: boolean
+) => {
+  const initialValue = getInitialValue(value, defaultValue);
+  const [localValue, setLocalValue] = useState(initialValue);
+  const [committedValue, setCommittedValue] = useState(initialValue);
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    const displayValue = value !== null && value !== undefined
+      ? value.toString()
+      : defaultValue || "";
+    setLocalValue(displayValue);
+    setCommittedValue(displayValue);
+  }, [value, defaultValue]);
+
+  useEffect(() => {
+    if (readOnly && isEditing) {
+      setIsEditing(false);
+    }
+  }, [readOnly, isEditing]);
+
+  const saveValidValue = (val: string) => {
+    if (val.trim() === "") {
+      onChange(null);
+      setCommittedValue("");
+      return;
+    }
+    const numValue = Number.parseFloat(val);
+    if (!Number.isNaN(numValue)) {
+      onChange(numValue);
+      setCommittedValue(val);
+    }
+  };
+
+  const clearInvalidValue = () => {
+    setLocalValue("");
+    onChange(null);
+    setCommittedValue("");
+  };
+
+  const handleBlur = () => {
+    const validationError = validateValue(localValue, required);
+    const hasChanged = localValue !== committedValue;
+
+    if (!validationError && hasChanged) {
+      saveValidValue(localValue);
+    } else if (validationError) {
+      clearInvalidValue();
+    }
+
+    setIsEditing(false);
+  };
+
+  const cancelEdit = () => {
+    setLocalValue(committedValue);
+    setIsEditing(false);
+  };
+
+  return {
+    localValue,
+    setLocalValue,
+    committedValue,
+    isEditing,
+    setIsEditing,
+    handleBlur,
+    cancelEdit,
+  };
+};
+
+const formatCurrency = (amount: number, locale: string, currency: string, precision: number) =>
+  new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision,
+  }).format(amount);
+
+const getDisplayValue = (localValue: string, placeholder: string, locale: string, currency: string, precision: number) => {
+  if (!localValue) return placeholder;
+  const numValue = Number.parseFloat(localValue);
+  if (Number.isNaN(numValue)) return placeholder;
+  return formatCurrency(numValue, locale, currency, precision);
+};
+
+const filterCurrencyInput = (input: string): string => {
+  return input.replaceAll(/[^0-9.-]/g, "");
+};
 
 export const Currency: React.FC<CurrencyProps> = ({
   label,
@@ -37,88 +142,53 @@ export const Currency: React.FC<CurrencyProps> = ({
   allowEdit = true,
   readOnly = false,
   helperText,
-  icon = "",
 }) => {
   const { currencyType = "USD", currencyLocale = "en-US", precision = 2, defaultValue = "" } = config;
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat(currencyLocale, {
-      style: "currency",
-      currency: currencyType,
-      minimumFractionDigits: precision,
-      maximumFractionDigits: precision,
-    }).format(amount);
+  const {
+    localValue,
+    setLocalValue,
+    isEditing,
+    setIsEditing,
+    handleBlur,
+    cancelEdit,
+  } = useCurrencyState(value, defaultValue, onChange, required, readOnly);
 
-  const getInitialValue = () => {
-    if (value !== null && value !== undefined) return value.toString();
-    if (defaultValue && String(defaultValue).trim()) return String(defaultValue);
-    return "";
-  };
+  const canEdit = !readOnly && !disabled;
+  const handleSingleClick = () => canEdit && allowEdit && setIsEditing(true);
+  const handleDoubleClick = () => canEdit && !allowEdit && setIsEditing(true);
+  const handleClick = useClickHandler(handleSingleClick, handleDoubleClick);
 
-  const [localValue, setLocalValue] = useState(getInitialValue());
-  const [committedValue, setCommittedValue] = useState(getInitialValue());
-  const [isEditing, setIsEditing] = useState(false);
-
-  // Sync with external updates
-  useEffect(() => {
-    const displayValue =
-      value !== null && value !== undefined
-        ? value.toString()
-        : defaultValue || "";
-    setLocalValue(displayValue);
-    setCommittedValue(displayValue);
-  }, [value, defaultValue]);
-
-  // Exit edit mode if readOnly becomes true
-  useEffect(() => {
-    if (readOnly && isEditing) {
-      setIsEditing(false);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      handleClick();
     }
-  }, [readOnly, isEditing]);
-
-  const validate = (val: string) => {
-    if (required && !val.trim()) return "This field is required";
-    if (val.trim() === "") return null;
-    if (isNaN(parseFloat(val))) return "Please enter a valid amount";
-    return null;
   };
 
-  const handleBlur = () => {
-    const validationError = validate(localValue);
-
-    // Only save if valid, otherwise clear silently
-    if (!validationError && localValue !== committedValue) {
-      if (localValue.trim() === "") {
-        onChange(null);
-        setCommittedValue("");
-      } else {
-        const numValue = parseFloat(localValue);
-        if (!isNaN(numValue)) {
-          onChange(numValue);
-          setCommittedValue(localValue);
-        }
-      }
-    } else if (validationError) {
-      // Invalid value - clear silently
-      setLocalValue("");
-      onChange(null);
-      setCommittedValue("");
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleBlur();
+    } else if (e.key === "Escape") {
+      cancelEdit();
     }
-
-    setIsEditing(false);
   };
 
-  // allowEdit controls single vs double-click behavior
-  // readOnly completely prevents editing
-  const handleClick = useClickHandler(
-    () => !readOnly && allowEdit && !disabled && setIsEditing(true), // Single click when allowEdit=true
-    () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // Double click when allowEdit=false
-  );
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(filterCurrencyInput(e.target.value));
+  };
 
+  const displayValue = getDisplayValue(localValue, placeholder, currencyLocale, currencyType, precision);
+  const displayClassName = `field-component pl-8 ${localValue ? "text-gray-800" : "text-gray-400"} ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`.trim();
+  const inputClassName = `field-component pl-8 ${isBorder ? "field-component-focus" : ""} ${disabled || readOnly ? "cursor-not-allowed" : ""}`.trim();
+  const containerClassName = `relative ${className} ${isBorder ? "field-component-border" : ""}`.trim();
+  const showHelperText = helperText && allowEdit;
+
+  const containerProps = readOnly
+    ? { className: containerClassName, tabIndex: -1, style: { cursor: 'default' } as React.CSSProperties }
+    : { className: containerClassName, onClick: handleClick, onKeyDown: handleKeyDown, tabIndex: 0, role: "button" as const };
 
   return (
     <div className="w-full">
-      {/* Label */}
       {label && (
         <label className="field-component-label">
           {label}
@@ -126,51 +196,27 @@ export const Currency: React.FC<CurrencyProps> = ({
         </label>
       )}
 
-      {/* Input or Display */}
-      <div 
-        className={`relative ${className} ${isBorder ? "field-component-border" : ""}`} 
-        onClick={!readOnly ? handleClick : undefined}
-        style={readOnly ? { cursor: 'default' } : undefined}
-      >
-        {/* Currency Type Display */}
-        {/* <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
-          {currencyType === "USD" ? "$" : currencyType}
-        </div> */}
-
+      <div {...containerProps}>
         {isEditing ? (
           <input
             type="text"
             autoFocus
             value={localValue}
-            onChange={(e) =>
-              setLocalValue(e.target.value.replace(/[^0-9.-]/g, ""))
-            }
+            onChange={handleInputChange}
             onBlur={handleBlur}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleBlur();
-              if (e.key === "Escape") {
-                setLocalValue(committedValue);
-                setIsEditing(false);
-              }
-            }}
+            onKeyDown={handleInputKeyDown}
             placeholder={placeholder}
             disabled={disabled || readOnly}
-            className={`field-component pl-8 ${isBorder ? "field-component-focus" : ""} ${disabled || readOnly ? 'cursor-not-allowed' : ''}`}
+            className={inputClassName}
           />
         ) : (
-          <div
-            className={`field-component pl-8 ${localValue ? "text-gray-800" : "text-gray-400"} ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
-          >
-            {localValue && !isNaN(parseFloat(localValue))
-              ? formatCurrency(parseFloat(localValue))
-              : placeholder}
+          <div className={displayClassName}>
+            {displayValue}
           </div>
         )}
-
       </div>
 
-      {/* Helper text */}
-      {helperText && allowEdit && (
+      {showHelperText && (
         <p className="text-xs text-gray-500 mt-1">{helperText}</p>
       )}
     </div>

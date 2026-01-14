@@ -2,18 +2,18 @@ import React from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface FieldType {
-  key: string;
-  label: string;
-  icon: any;
-  isSystem?: boolean;
+    key: string;
+    label: string;
+    icon: any;
+    isSystem?: boolean;
 }
 
-export function FieldTypeDropdown({ selectedType, setSelectedType, fieldTypes, disabled = false }: {
+export function FieldTypeDropdown({ selectedType, setSelectedType, fieldTypes, disabled = false }: Readonly<{
     selectedType: FieldType | null;
     setSelectedType: (type: FieldType) => void;
     fieldTypes: FieldType[];
     disabled?: boolean;
-}) {
+}>) {
     const [open, setOpen] = React.useState(false);
     const dropdownRef = React.useRef<HTMLDivElement>(null);
 
@@ -35,7 +35,7 @@ export function FieldTypeDropdown({ selectedType, setSelectedType, fieldTypes, d
                 className={`w-full flex items-center gap-2 px-3 py-2 border rounded-xl text-sm focus:outline-none ${disabled
                     ? 'btn-disabled'
                     : 'bg-[var(--color-alpha-white)] text-[var(--text-color-primary)] focus:ring-1 focus:ring-[var(--ring-color-brand)]'
-                }`}
+                    }`}
                 onClick={() => !disabled && setOpen((v) => !v)}
                 aria-haspopup="listbox"
                 aria-expanded={open}
@@ -47,7 +47,7 @@ export function FieldTypeDropdown({ selectedType, setSelectedType, fieldTypes, d
                     })()}
                 </span>
                 <span className="flex-1 text-left">{selectedType?.label}</span>
-                {!open ? <ChevronDown className="h-4 w-4 ml-auto" /> : <ChevronUp className="h-4 w-4 ml-auto" />}
+                {open ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
             </button>
             {open && !disabled && (
                 <div className="absolute z-50 mt-1 left-0 p-2 space-y-1 w-full bg-[var(--color-alpha-white)] text-[var(--text-color-tertiary)] border rounded-xl shadow-lg max-h-72 overflow-y-auto transition-all ease">

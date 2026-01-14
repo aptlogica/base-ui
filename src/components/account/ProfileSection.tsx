@@ -4,7 +4,7 @@ import { useCurrentUser } from '../../auth/useCurrentUser';
 import { useUserProfile, useUpdateUserProfile, useRemoveAvatar } from '../../hooks/useApi';
 import { UserProfile } from '../../types/userProfile';
 import { useToast } from '../common/Toast';
-import { Loader2, CheckCircle, CloudUpload,X } from 'lucide-react';
+import { Loader2, CheckCircle, CloudUpload, X } from 'lucide-react';
 import { AdvancedDropdown } from '../common/dropdown/AdvancedDropdown';
 import { timeZoneOptions, currencyLocaleOptions } from '../../types/constants';
 import { useFooterButtons } from './AccountSettings';
@@ -54,13 +54,13 @@ const PROFILE_UPDATE_FIELDS: Array<keyof ProfileFormData> = [
 const buildProfileUpdatePayload = (formData: ProfileFormData): Record<string, string> => {
   // Send ALL formData fields directly - no comparison, no filtering
   const payload: Record<string, string> = {};
-  
+
   for (const field of PROFILE_UPDATE_FIELDS) {
     const value = formData[field];
     // Include field even if empty string (let API decide what to do with it)
     payload[field] = value ?? '';
   }
-  
+
   return payload;
 };
 
@@ -83,7 +83,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
 
   // Toast for notifications
   const toast = useToast();
-  
+
   // Footer buttons context
   const { registerFooter, clearFooter, currentSection } = useFooterButtons();
 
@@ -126,7 +126,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
         safeSessionStorageSet('country', userProfile.country);
       }
     }
-    
+
     // Reset flag when exiting edit mode
     if (!isEditing) {
       isFormInitializedRef.current = false;
@@ -202,7 +202,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
       </div>
     );
     registerFooter(footerContent, 'profile');
-    
+
     // Cleanup: clear footer when component unmounts or section changes
     return () => {
       if (currentSection === 'profile') {
@@ -286,7 +286,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
       setFormData({});
       formDataRef.current = {}; // Clear ref
       setDobError(null);
-      
+
       toast.success('Profile updated successfully!', { title: 'Success' });
     } catch (error: any) {
       toast.error(error?.message || 'Failed to save profile. Please try again.', { title: 'Save Failed' });
@@ -300,7 +300,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
     setDobError(null);
     setIsEditing(false);
     setHasChanges(false);
-    
+
     // Clear avatar selection and preview
     setSelectedAvatarFile(null);
     if (avatarPreviewUrl) {
@@ -344,7 +344,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
   const handleDrop = async (e: React.DragEvent<HTMLElement>) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const file = e.dataTransfer.files?.[0];
     if (file) {
       await processFile(file);
@@ -554,10 +554,10 @@ export const ProfileSection: React.FC = () => { // NOSONAR
                   </button>
                 )}
               </div>
-              
+
               {/* Upload Area - Right Side */}
               <div className="flex-1">
-                <div
+                <button
                   onDragOver={isEditing ? handleDragOver : undefined}
                   onDrop={isEditing ? handleDrop : undefined}
                   onDragLeave={isEditing ? handleDragLeave : undefined}
@@ -579,11 +579,11 @@ export const ProfileSection: React.FC = () => { // NOSONAR
                   <p className="text-xs text-gray-500">
                     SVG, PNG, JPG or GIF (max. 800 x 400px)
                   </p>
-                </div>
+                </button>
               </div>
             </div>
           ) : (
-            <div
+            <button
               onDragOver={isEditing ? handleDragOver : undefined}
               onDrop={isEditing ? handleDrop : undefined}
               onDragLeave={isEditing ? handleDragLeave : undefined}
@@ -605,7 +605,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
               <p className="text-xs text-gray-500">
                 SVG, PNG, JPG or GIF (max. 800 x 400px)
               </p>
-            </div>
+            </button>
           )}
         </div>
 
@@ -671,14 +671,14 @@ export const ProfileSection: React.FC = () => { // NOSONAR
             <>
               <DateField
                 value={formData.dob || ''}
-                onChange={(val) => { 
+                onChange={(val) => {
                   handleInputChange('dob', val);
                   if (dobError) setDobError(null);
                 }}
                 format="DD-MM-YYYY"
                 isBorder
                 max={convertDateToFormat(getYesterdayISO(), 'DD-MM-YYYY')}
-                config={{ 
+                config={{
                   max: convertDateToFormat(getYesterdayISO(), 'DD-MM-YYYY'),
                   hideTodayButton: true
                 }}

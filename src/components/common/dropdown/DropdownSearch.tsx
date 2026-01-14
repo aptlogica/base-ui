@@ -1,4 +1,3 @@
-import React from 'react';
 import { Search } from 'lucide-react';
 
 interface DropdownSearchProps {
@@ -11,7 +10,7 @@ export function DropdownSearch({
   value,
   onChange,
   placeholder = 'Search options...',
-}: DropdownSearchProps) {
+}: Readonly<DropdownSearchProps>) {
   return (
     <div className="p-2 border-b border">
       <div className="relative">
@@ -21,7 +20,7 @@ export function DropdownSearch({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full pl-9 pr-3 py-2 text-sm border border rounded-md 
+          className="w-full pl-9 pr-3 py-2 text-sm border rounded-md 
                      focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] focus:border-[var(--color-brand-600)]"
           autoFocus
         />
