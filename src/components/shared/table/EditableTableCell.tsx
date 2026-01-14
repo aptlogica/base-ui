@@ -20,7 +20,6 @@ import {
   Time,
   DateTime,
   User,
-  Button,
   JSONField,
   AuditCreatedBy,
   AuditLastModifiedBy,
@@ -31,7 +30,6 @@ import {
   Lookup
 } from '../../../components/common/Fields';
 import { normalizeFieldType } from '../../../utils/fieldType';
-import { isFormulaField } from '../../../utils/fieldUtils';
 import { utcISOToZoned } from '../../../utils/dateUtils';
 import { timeZoneOptions } from '../../../types/constants';
 
@@ -391,7 +389,6 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
       case 'multiSelect': return <MultiSelect value={Array.isArray(value) ? value : (typeof value === 'string' ? JSON.parse(value || '[]') : [])} onChange={(newValue) => onChange(newValue)} options={parsedConfig?.options || []} maxSelections={10} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       case 'rating': return <Rating {...commonProps} value={value} max={parsedConfig?.ratingMax || 5} readOnly={!allowEdit} config={parsedConfig} />;
       case 'user': return <User {...commonProps} readOnly={!allowEdit} config={parsedConfig} />;
-      case 'button': return <Button value={value} onChange={onChange} config={parsedConfig} />;
       case 'json': return <JSONField {...commonProps} value={value} config={parsedConfig} />;
       case 'createdTime': {
         const tz = getSelectedTimeZone();
@@ -452,13 +449,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
   );
 };
 
-// Memoize the component to prevent unnecessary re-renders
-// Only re-render if props actually change
 export const EditableTableCell = React.memo(EditableTableCellComponent, (prevProps, nextProps) => {
-  // Custom comparison function for better performance
-  // CRITICAL: Deep comparison for arrays and objects (important for MultiSelect, JSON, etc.)
-  // This ensures UI updates when array/object values change
-  // OPTIMIZED: Fast path for reference equality, deep comparison only when needed
   const valueChanged = (() => {
     const prevVal = prevProps.value;
     const nextVal = nextProps.value;

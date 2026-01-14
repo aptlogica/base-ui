@@ -32,19 +32,19 @@ function pad(n: number) {
 
 function getTimeOptions(step = 30, hourFormat: '12' | '24' = '24', timeFormat: string = 'HH:mm') {
   const options: string[] = [];
-  
+
   // Determine step based on time format
   let actualStep = step;
   if (timeFormat === 'HH:mm:ss' || timeFormat === 'HH:mm:ss.SSS') {
     actualStep = 1; // Show every minute for seconds format
   }
-  
+
   for (let h = 0; h < 24; h++) {
     for (let m = 0; m < 60; m += actualStep) {
       if (hourFormat === '12') {
         const period = h >= 12 ? 'PM' : 'AM';
         const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
-        
+
         if (timeFormat === 'HH:mm:ss' || timeFormat === 'HH:mm:ss.SSS') {
           // For seconds format, show seconds as 00
           options.push(`${displayHour}:${pad(m)}:00 ${period}`);
@@ -189,7 +189,7 @@ function toUtcIso(localDate: string, localTime: string): string {
     return d.toISOString();
   }
   // Fallback: append Z if parsing somehow failed (should be rare with valid inputs)
-      return `${localDate}T${localTime}Z`;
+  return `${localDate}T${localTime}Z`;
 }
 
 // Normalize any display time (possibly 12h or with seconds) to 24h HH:mm for calculations
@@ -286,14 +286,14 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
     if (!trigger) return null;
 
     const rect = trigger.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
+    const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
     const dropdownMinHeight = 400;
     const dropdownWidth = 320; // w-80 = 320px
 
-        const spaceBelow = viewportHeight - rect.bottom;
-        const spaceAbove = rect.top;
-        
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
     // Determine if we should open above or below
     let position: 'below' | 'above' = 'below';
     if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
@@ -317,7 +317,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
         left,
         width: dropdownWidth
       };
-        } else {
+    } else {
       return {
         bottom: viewportHeight - rect.top + 8,
         left,
@@ -353,12 +353,12 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
         setShowQuickSelect(false);
       }
     }
-    
+
     if (dateOpen) {
       window.addEventListener('resize', handleResize);
       window.addEventListener('scroll', handleResize);
     }
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -403,14 +403,14 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
     if (!trigger) return null;
 
     const rect = trigger.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
+    const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
     const dropdownMinHeight = 300;
     const dropdownWidth = 144; // w-36 = 144px
 
-        const spaceBelow = viewportHeight - rect.bottom;
-        const spaceAbove = rect.top;
-        
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
     // Determine if we should open above or below
     let position: 'below' | 'above' = 'below';
     if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
@@ -434,7 +434,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
         left,
         width: dropdownWidth
       };
-        } else {
+    } else {
       return {
         bottom: viewportHeight - rect.top + 8,
         left,
@@ -467,12 +467,12 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
         setTimeOpen(false);
       }
     }
-    
+
     if (timeOpen) {
       window.addEventListener('resize', handleResize);
       window.addEventListener('scroll', handleResize);
     }
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -631,7 +631,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
       const parts = raw.split(' ');
       if (parts.length === 1) {
         const datePartOnly = parts[0];
-        
+
         let dateOnlyValid = false;
         switch (dateFormat) {
           case 'YYYY-MM-DD':
@@ -710,7 +710,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
     // const newValue = toUtcIso(selected, newTime);
     // const newValue = toUtcIso(selected, newTime);
     const normalizedTime = toHHmm(newTime, hourFormat, timeFormat);
-    const newValue = zonedToUtcISO(selected, normalizedTime, config?.timeZoneLabel);   
+    const newValue = zonedToUtcISO(selected, normalizedTime, config?.timeZoneLabel);
     setError(validate(selected, normalizedTime));
     onChange(newValue);
   };
@@ -739,7 +739,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
     if (hourFormat === '12' && selected.includes(' ')) {
       const [time, period] = selected.split(' ');
       const [hours, minutes] = time.split(':');
-      let hour = parseInt(hours);
+      let hour = Number(hours);
       if (period === 'PM' && hour !== 12) hour += 12;
       if (period === 'AM' && hour === 12) hour = 0;
       timeValue = `${pad(hour)}:${minutes}`;
@@ -772,14 +772,6 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
     newDate.setMonth(month);
     setCalendarMonth(newDate);
     setShowMonthPicker(false);
-  };
-
-  const handleQuickSelect = (daysOffset: number) => {
-    const today = new Date();
-    const targetDate = new Date(today);
-    targetDate.setDate(today.getDate() + daysOffset);
-    const isoDate = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}`;
-    // handleDateSelect(isoDate);
   };
 
   // Calendar logic
@@ -964,10 +956,10 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
       const hour = parseInt(hours);
       const period = hour >= 12 ? 'PM' : 'AM';
       const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-      
+
       if (timeFormat === 'hh:mm:ss') {
         return `${displayHour}:${minutes}:${seconds || '00'} ${period}`;
-      } 
+      }
       else if (timeFormat === 'hh:mm:ss.SSS') {
         return `${displayHour}:${minutes}:${seconds || '00.000'} ${period}`;
       } else {
@@ -981,7 +973,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
         const [hours, minutes, seconds] = time.split(':');
         return `${hours}:${minutes}:${seconds || '00.000'}`;
       }
-       else {
+      else {
         return time;
       }
     })()) : '';
@@ -1023,9 +1015,9 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
               onClick={() => !disabled && setDateOpen(v => !v)}
               disabled={disabled}
             >
-              {displayOriginalDate || <span className="text-gray-400 min-w-max">{dateFormat}</span>} 
+              {displayOriginalDate || <span className="text-gray-400 min-w-max">{dateFormat}</span>}
             </button>
-              </div>
+          </div>
           {/* Date Dropdown Portal */}
           {dateOpen && dateCalculatedPosition && createPortal(
             <div
@@ -1052,10 +1044,10 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
               onClick={() => !disabled && setTimeOpen(v => !v)}
               disabled={disabled}
             >
-               {displayOriginalTime ||          
+              {displayOriginalTime ||
                 <span className="text-gray-400">  {/* hello2 */}
-                {timeFormat}
-              </span>
+                  {timeFormat}
+                </span>
               }
             </button>
           </div>
@@ -1071,14 +1063,14 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
                 width: `${timeCalculatedPosition.width}px`
               }}
             >
-                <div className="flex flex-col">
-                  {/* Scrollable time options */}
-                  <div className="flex-1 max-h-64 overflow-y-auto p-1.5 space-y-1">
-                    {timeOptions.map(option => (
-                      <button
-                        key={option}
-                        type="button"
-                        className={`w-full px-4 py-2 text-sm text-[var(--color-text-primary)] rounded-xl text-left 
+              <div className="flex flex-col">
+                {/* Scrollable time options */}
+                <div className="flex-1 max-h-64 overflow-y-auto p-1.5 space-y-1">
+                  {timeOptions.map(option => (
+                    <button
+                      key={option}
+                      type="button"
+                      className={`w-full px-4 py-2 text-sm text-[var(--color-text-primary)] rounded-xl text-left 
               hover:bg-[var(--color-bg-brand-primary)] hover:text-black 
               focus:bg-[var(--color-bg-brand-secondary)] transition-colors 
               ${displayTime === option ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
@@ -1089,23 +1081,23 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
                   ))}
                 </div>
 
-                  {/* Sticky footer */}
-                  <div className="border-t border-gray-100 px-2 py-2 flex justify-center bg-background">
-                    <button
-                      type="button"
-                      className="px-3 py-1 rounded bg-[var(--color-bg-brand-primary)] text-[var(--color-text-primary)] 
+                {/* Sticky footer */}
+                <div className="border-t border-gray-100 px-2 py-2 flex justify-center bg-background">
+                  <button
+                    type="button"
+                    className="px-3 py-1 rounded bg-[var(--color-bg-brand-primary)] text-[var(--color-text-primary)] 
             hover:bg-[var(--color-bg-brand-secondary)] text-xs font-medium"
                     onClick={() =>
-                     handleNowUtc()
+                      handleNowUtc()
                     }
-                    >
-                      Now
-                    </button>
-                  </div>
+                  >
+                    Now
+                  </button>
                 </div>
+              </div>
             </div>,
             document.body
-            )}
+          )}
           {/* Timezone indicator - positioned on the right, separate from date & time */}
           {displayTimeZone && (
             <span className="text-xs text-gray-500 ml-auto">

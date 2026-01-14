@@ -94,11 +94,6 @@ const typeComponentMap: Record<
       default: m.User,
     }))
   ),
-  button: React.lazy(() =>
-    import('../../../../components/common/Fields/Button').then(m => ({
-      default: m.Button,
-    }))
-  ),
   json: React.lazy(() =>
     import('../../../../components/common/Fields/JSONField').then(m => ({
       default: m.JSONField,

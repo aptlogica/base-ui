@@ -160,12 +160,12 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
         break;
       case 'ArrowDown':
         e.preventDefault();
-        if (!isOpen) {
-          setIsOpen(true);
-        } else {
+        if (isOpen) {
           setFocusedIndex(prev => 
             prev < filteredOptions.length - 1 ? prev + 1 : prev
           );
+        } else {
+          setIsOpen(true);
         }
         break;
       case 'ArrowUp':
@@ -287,7 +287,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
       {isOpen && dropdownPosition && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] bg-card border border rounded-xl shadow-lg overflow-hidden"
+          className="fixed z-[9999] bg-card border rounded-xl shadow-lg overflow-hidden"
           style={{
             top: `${dropdownPosition.top}px`,
             left: `${dropdownPosition.left}px`,

@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from './AuthContext';
 import { Navigate, useLocation } from 'react-router-dom';
  
-export function PrivateRoute({ children }: { children: React.ReactNode }) {
+export function PrivateRoute({ children }: { readonly children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
