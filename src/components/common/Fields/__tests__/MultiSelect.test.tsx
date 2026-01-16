@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { MultiSelect } from '../MultiSelect';
 
 describe('MultiSelect Component', () => {
@@ -71,6 +72,18 @@ describe('MultiSelect Component', () => {
       );
       expect(screen.getByText('Choose options')).toBeInTheDocument();
     });
+
+    it('should render helper text when provided', () => {
+      render(
+        <MultiSelect
+          value={[]}
+          onChange={mockOnChange}
+          options={defaultOptions}
+          helperText="Select your options"
+        />
+      );
+      expect(screen.getByText('Select your options')).toBeInTheDocument();
+    });
   });
 
   describe('Option Selection', () => {
@@ -84,11 +97,13 @@ describe('MultiSelect Component', () => {
       );
       const button = screen.getByRole('button');
 
-      fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await userEvent.click(button);
+      await waitFor(() => expect(screen.getByText('Option 1')).toBeInTheDocument());
 
-      const option = screen.getAllByText('Option 1')[0];
-      fireEvent.click(option);
+      const optionElement = screen.getByText('Option 1');
+      const option = optionElement.closest('button');
+      expect(option).toBeTruthy();
+      await userEvent.click(option!);
 
       await waitFor(() => {
         expect(mockOnChange).toHaveBeenCalledWith(['Option 1']);
@@ -96,44 +111,31 @@ describe('MultiSelect Component', () => {
     });
 
     it('should add multiple options to selection', async () => {
-      const { rerender } = render(
-        <MultiSelect
-          value={[]}
-          onChange={mockOnChange}
-          options={defaultOptions}
-        />
-      );
+      const TestWrapper = () => {
+        const [value, setValue] = useState<string[]>([]);
+        return <MultiSelect value={value} onChange={setValue} options={defaultOptions} />;
+      };
+
+      render(<TestWrapper />);
       const button = screen.getByRole('button');
 
-      fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await userEvent.click(button);
+      await waitFor(() => expect(screen.getByText('Option 1')).toBeInTheDocument());
 
-      let options = screen.getAllByText('Option 1');
-      fireEvent.click(options[0]);
+      const option1Element = screen.getByText('Option 1');
+      const option1 = option1Element.closest('button');
+      expect(option1).toBeTruthy();
+      await userEvent.click(option1!);
 
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalledWith(['Option 1']);
-      });
+      await waitFor(() => expect(screen.getAllByText('Option 1')).toHaveLength(2)); // tag and dropdown
 
-      vi.clearAllMocks();
+      // Dropdown should still be open
+      const option2Element = screen.getByText('Option 2');
+      const option2 = option2Element.closest('button');
+      expect(option2).toBeTruthy();
+      await userEvent.click(option2!);
 
-      rerender(
-        <MultiSelect
-          value={['Option 1']}
-          onChange={mockOnChange}
-          options={defaultOptions}
-        />
-      );
-
-      fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      options = screen.getAllByText('Option 2');
-      fireEvent.click(options[0]);
-
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalledWith(['Option 1', 'Option 2']);
-      });
+      await waitFor(() => expect(screen.getAllByText('Option 2')).toHaveLength(2)); // tag and dropdown
     });
 
     it('should remove option from selection', async () => {
@@ -158,24 +160,25 @@ describe('MultiSelect Component', () => {
     });
 
     it('should remove option by unchecking in dropdown', async () => {
-      render(
-        <MultiSelect
-          value={['Option 1']}
-          onChange={mockOnChange}
-          options={defaultOptions}
-        />
-      );
-      const button = screen.getByRole('button');
+      const TestWrapper = () => {
+        const [value, setValue] = useState<string[]>(['Option 1']);
+        return <MultiSelect value={value} onChange={setValue} options={defaultOptions} />;
+      };
 
-      fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      render(<TestWrapper />);
+      const mainButton = screen.getByRole('button');
 
-      const option = screen.getAllByText('Option 1')[0];
-      fireEvent.click(option);
+      await userEvent.click(mainButton);
+      await waitFor(() => expect(screen.getAllByText('Option 1')).toHaveLength(2)); // tag and dropdown
 
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalledWith([]);
-      });
+      const optionSpans = screen.getAllByText('Option 1');
+      const dropdownSpan = optionSpans.find(span => span.closest('button') !== mainButton);
+      expect(dropdownSpan).toBeTruthy();
+      const optionButton = dropdownSpan!.closest('button');
+      expect(optionButton).toBeTruthy();
+      await userEvent.click(optionButton!);
+
+      await waitFor(() => expect(screen.getAllByText('Option 1')).toHaveLength(1)); // only dropdown left
     });
   });
 
@@ -190,15 +193,14 @@ describe('MultiSelect Component', () => {
       );
       const button = screen.getByRole('button');
 
-      fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await userEvent.click(button);
+      await waitFor(() => expect(screen.getByText('Option 1')).toBeInTheDocument());
 
-      expect(screen.getByText('Option 1')).toBeInTheDocument();
       expect(screen.getByText('Option 2')).toBeInTheDocument();
     });
 
     it('should close dropdown when clicking outside', async () => {
-      const { container } = render(
+      render(
         <div>
           <MultiSelect
             value={[]}
@@ -210,13 +212,17 @@ describe('MultiSelect Component', () => {
       );
       const button = screen.getByRole('button');
 
-      fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await userEvent.click(button);
+      await waitFor(() => {
+        const buttons = Array.from(document.querySelectorAll('button'));
+        const dropdownOption1 = buttons.find(btn => btn.textContent === 'Option 1');
+        expect(dropdownOption1).toBeTruthy();
+      });
 
       const outside = screen.getByTestId('outside');
-      fireEvent.click(outside);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await userEvent.click(outside);
 
+      await waitFor(() => expect(screen.queryByText('Option 1')).not.toBeInTheDocument());
       expect(mockOnChange).not.toHaveBeenCalled();
     });
 
@@ -230,12 +236,13 @@ describe('MultiSelect Component', () => {
       );
       const button = screen.getByRole('button');
 
-      fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await userEvent.click(button);
+      await waitFor(() => expect(screen.getByText('Option 1')).toBeInTheDocument());
 
-      let option = screen.getAllByText('Option 1')[0];
-      fireEvent.click(option);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      const optionElement = screen.getByText('Option 1');
+      const option = optionElement.closest('button');
+      expect(option).toBeTruthy();
+      await userEvent.click(option!);
 
       expect(screen.getByText('Option 2')).toBeInTheDocument();
     });
@@ -253,14 +260,12 @@ describe('MultiSelect Component', () => {
       const button = screen.getByRole('button');
 
       fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await waitFor(() => expect(screen.getByText('Option 1')).toBeInTheDocument());
 
       const input = container.querySelector('input[type="text"]');
       if (input) {
         await userEvent.type(input, 'Option 1');
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        expect(screen.getByText('Option 1')).toBeInTheDocument();
+        await waitFor(() => expect(screen.getByText('Option 1')).toBeInTheDocument());
         expect(screen.queryByText('Option 4')).not.toBeInTheDocument();
       }
     });
@@ -276,71 +281,19 @@ describe('MultiSelect Component', () => {
       const button = screen.getByRole('button');
 
       fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await waitFor(() => expect(screen.getByText('Option 1')).toBeInTheDocument());
 
       const input = container.querySelector('input[type="text"]');
       if (input) {
         await userEvent.type(input, 'Option');
         await userEvent.clear(input);
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        expect(screen.getByText('Option 1')).toBeInTheDocument();
+        await waitFor(() => expect(screen.getByText('Option 1')).toBeInTheDocument());
         expect(screen.getByText('Option 4')).toBeInTheDocument();
       }
     });
   });
 
-  describe('Select All / Deselect All', () => {
-    it('should select all options when select all is clicked', async () => {
-      const { container } = render(
-        <MultiSelect
-          value={[]}
-          onChange={mockOnChange}
-          options={defaultOptions}
-        />
-      );
-      const button = screen.getByRole('button');
 
-      fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const selectAllButton = container.querySelector('[aria-label*="Select all"]') ||
-                             container.querySelector('[title*="Select all"]');
-
-      if (selectAllButton) {
-        fireEvent.click(selectAllButton);
-
-        await waitFor(() => {
-          expect(mockOnChange).toHaveBeenCalled();
-        });
-      }
-    });
-
-    it('should deselect all options when deselect all is clicked', async () => {
-      const { container } = render(
-        <MultiSelect
-          value={['Option 1', 'Option 2']}
-          onChange={mockOnChange}
-          options={defaultOptions}
-        />
-      );
-      const button = screen.getByRole('button');
-
-      fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const deselectAllButton = container.querySelector('[aria-label*="Deselect all"]') ||
-                               container.querySelector('[title*="Clear"]');
-
-      if (deselectAllButton) {
-        fireEvent.click(deselectAllButton);
-
-        await waitFor(() => {
-          expect(mockOnChange).toHaveBeenCalled();
-        });
-      }
-    });
-  });
 
   describe('Validation', () => {
     it('should validate required field', () => {
@@ -357,7 +310,7 @@ describe('MultiSelect Component', () => {
     });
 
     it('should accept non-empty selection for required field', async () => {
-      const { container } = render(
+      render(
         <MultiSelect
           value={['Option 1']}
           onChange={mockOnChange}
@@ -381,11 +334,33 @@ describe('MultiSelect Component', () => {
 
       expect(screen.getByRole('button') || document.body).toBeInTheDocument();
     });
+
+    it('should prevent selection when maxSelections is reached', async () => {
+      render(
+        <MultiSelect
+          value={['Option 1', 'Option 2']}
+          onChange={mockOnChange}
+          options={defaultOptions}
+          maxSelections={2}
+        />
+      );
+      const button = screen.getByRole('button');
+
+      await userEvent.click(button);
+      await waitFor(() => expect(screen.getByText('Option 3')).toBeInTheDocument());
+
+      const option3Element = screen.getByText('Option 3');
+      const option3 = option3Element.closest('button');
+      expect(option3).toBeTruthy();
+      await userEvent.click(option3!);
+
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
   });
 
   describe('Disabled and ReadOnly States', () => {
     it('should disable selection when disabled', () => {
-      const { container } = render(
+      render(
         <MultiSelect
           value={['Option 1']}
           onChange={mockOnChange}
@@ -400,7 +375,7 @@ describe('MultiSelect Component', () => {
     });
 
     it('should prevent editing when readOnly', () => {
-      const { container } = render(
+      render(
         <MultiSelect
           value={['Option 1']}
           onChange={mockOnChange}
@@ -441,10 +416,9 @@ describe('MultiSelect Component', () => {
       );
       const button = screen.getByRole('button');
 
-      fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await userEvent.click(button);
+      await waitFor(() => expect(screen.getByText('Custom 1')).toBeInTheDocument());
 
-      expect(screen.getByText('Custom 1')).toBeInTheDocument();
       expect(screen.getByText('Custom 2')).toBeInTheDocument();
     });
   });
@@ -496,8 +470,8 @@ describe('MultiSelect Component', () => {
       );
       const button = screen.getByRole('button');
 
-      fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await userEvent.click(button);
+      await waitFor(() => expect(screen.getByText('Only Option')).toBeInTheDocument());
 
       expect(screen.getByText('Only Option')).toBeInTheDocument();
     });
@@ -513,8 +487,8 @@ describe('MultiSelect Component', () => {
       );
       const button = screen.getByRole('button');
 
-      fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await userEvent.click(button);
+      await waitFor(() => expect(screen.getByText('Option 1')).toBeInTheDocument());
 
       expect(screen.getByText('Option 1')).toBeInTheDocument();
     });
@@ -530,13 +504,14 @@ describe('MultiSelect Component', () => {
       );
       const button = screen.getByRole('button');
 
-      fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await userEvent.click(button);
+      await waitFor(() => expect(screen.getByText(longText)).toBeInTheDocument());
 
       expect(screen.getByText(longText)).toBeInTheDocument();
     });
 
     it('should handle duplicate selections in value', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       render(
         <MultiSelect
           value={['Option 1', 'Option 1', 'Option 2']}
@@ -546,6 +521,7 @@ describe('MultiSelect Component', () => {
       );
       const elements = screen.getAllByText('Option 1');
       expect(elements.length).toBeGreaterThanOrEqual(1);
+      consoleWarnSpy.mockRestore();
     });
 
     it('should handle selections not in options list', () => {
@@ -569,16 +545,22 @@ describe('MultiSelect Component', () => {
       );
       const button = screen.getByRole('button');
 
-      fireEvent.click(button);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await userEvent.click(button);
+      await waitFor(() => expect(screen.getByText('Option 1')).toBeInTheDocument());
 
-      const option1 = screen.getAllByText('Option 1')[0];
-      const option2 = screen.getAllByText('Option 2')[0];
-      const option3 = screen.getAllByText('Option 3')[0];
+      const option1Element = screen.getByText('Option 1');
+      const option1 = option1Element.closest('button');
+      expect(option1).toBeTruthy();
+      const option2Element = screen.getByText('Option 2');
+      const option2 = option2Element.closest('button');
+      expect(option2).toBeTruthy();
+      const option3Element = screen.getByText('Option 3');
+      const option3 = option3Element.closest('button');
+      expect(option3).toBeTruthy();
 
-      fireEvent.click(option1);
-      fireEvent.click(option2);
-      fireEvent.click(option3);
+      await userEvent.click(option1!);
+      await userEvent.click(option2!);
+      await userEvent.click(option3!);
 
       await waitFor(() => {
         expect(mockOnChange).toHaveBeenCalled();

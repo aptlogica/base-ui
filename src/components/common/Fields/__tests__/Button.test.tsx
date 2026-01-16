@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { Button } from '../Button';
 
 describe('Button Component', () => {
-  const mockOnClick = vi.fn();
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -169,7 +167,7 @@ describe('Button Component', () => {
 
     it('should be clickable', () => {
       const onClick = vi.fn();
-      const { container } = render(
+      render(
         <Button onChange={vi.fn()} onClick={onClick} />
       );
       const button = screen.getByRole('button');
@@ -340,7 +338,7 @@ describe('Button Component', () => {
     });
 
     it('should pass through className to button', () => {
-      const { container } = render(
+      render(
         <Button
           onChange={vi.fn()}
           className="custom-class"
@@ -351,7 +349,7 @@ describe('Button Component', () => {
     });
 
     it('should pass through className to link', () => {
-      const { container } = render(
+      render(
         <Button
           onChange={vi.fn()}
           config={{ buttonUrl: 'https://example.com' }}

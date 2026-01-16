@@ -99,9 +99,10 @@ describe('SingleSelect Component', () => {
           options={defaultOptions}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const mainButton = buttons[0];
 
-      fireEvent.click(button);
+      fireEvent.click(mainButton);
       await delay(100);
 
       expect(screen.getByText('Option 1')).toBeInTheDocument();
@@ -117,9 +118,10 @@ describe('SingleSelect Component', () => {
           options={defaultOptions}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const mainButton = buttons[0];
 
-      fireEvent.click(button);
+      fireEvent.click(mainButton);
       await delay(100);
 
       const optionElements = screen.getAllByText('Option 1');
@@ -138,18 +140,19 @@ describe('SingleSelect Component', () => {
           options={defaultOptions}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const mainButton = buttons[0];
 
       // Open
-      fireEvent.click(button);
+      fireEvent.click(mainButton);
       await delay(100);
 
       // Close
-      fireEvent.click(button);
+      fireEvent.click(mainButton);
       await delay(100);
 
       // Open again
-      fireEvent.click(button);
+      fireEvent.click(mainButton);
       await delay(100);
 
       expect(screen.getByText('Option 1')).toBeInTheDocument();
@@ -166,9 +169,10 @@ describe('SingleSelect Component', () => {
           <div data-testid="outside">Outside element</div>
         </div>
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const mainButton = buttons[0];
 
-      fireEvent.click(button);
+      fireEvent.click(mainButton);
       await delay(100);
 
       const outside = screen.getByTestId('outside');
@@ -188,9 +192,10 @@ describe('SingleSelect Component', () => {
           options={defaultOptions}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const mainButton = buttons[0];
 
-      fireEvent.click(button);
+      fireEvent.click(mainButton);
       await delay(100);
 
       const option = screen.getAllByText('Option 2')[0];
@@ -209,7 +214,8 @@ describe('SingleSelect Component', () => {
           options={optionsWithColor}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       await delay(100);
@@ -230,7 +236,8 @@ describe('SingleSelect Component', () => {
           options={defaultOptions}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       await delay(100);
@@ -246,7 +253,8 @@ describe('SingleSelect Component', () => {
           options={defaultOptions}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       await delay(100);
@@ -315,7 +323,8 @@ describe('SingleSelect Component', () => {
           allowCustom={true}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       await delay(100);
@@ -334,7 +343,8 @@ describe('SingleSelect Component', () => {
           allowCustom={false}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       await delay(100);
@@ -352,7 +362,8 @@ describe('SingleSelect Component', () => {
           config={{ allowCustom: true }}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       await delay(100);
@@ -405,7 +416,8 @@ describe('SingleSelect Component', () => {
           disabled
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       expect(button).toBeDisabled();
@@ -420,7 +432,8 @@ describe('SingleSelect Component', () => {
           disabled
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       await delay(100);
@@ -437,7 +450,8 @@ describe('SingleSelect Component', () => {
           readOnly
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       await delay(100);
@@ -469,7 +483,8 @@ describe('SingleSelect Component', () => {
           config={{ options: configOptions }}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       await delay(100);
@@ -509,7 +524,8 @@ describe('SingleSelect Component', () => {
           options={['Old 1', 'Old 2']}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       rerender(
         <SingleSelect
@@ -537,8 +553,8 @@ describe('SingleSelect Component', () => {
           options={[]}
         />
       );
-      const button = screen.getByRole('button');
-      expect(button).toBeInTheDocument();
+      const buttons = screen.getAllByRole('button');
+      expect(buttons[0]).toBeInTheDocument();
     });
 
     it('should handle single option', async () => {
@@ -549,7 +565,8 @@ describe('SingleSelect Component', () => {
           options={['Only Option']}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       await delay(100);
@@ -566,7 +583,8 @@ describe('SingleSelect Component', () => {
           options={[longText, 'Option 2']}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       await delay(100);
@@ -583,7 +601,8 @@ describe('SingleSelect Component', () => {
           options={specialOptions}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       await delay(100);
@@ -602,7 +621,8 @@ describe('SingleSelect Component', () => {
           options={unicodeOptions}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       await delay(100);
@@ -621,7 +641,8 @@ describe('SingleSelect Component', () => {
           options={duplicateOptions}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       await delay(100);
@@ -639,7 +660,8 @@ describe('SingleSelect Component', () => {
           options={whitespaceOptions}
         />
       );
-      const button = screen.getByRole('button');
+      const buttons = screen.getAllByRole('button');
+      const button = buttons[0];
 
       fireEvent.click(button);
       await delay(100);

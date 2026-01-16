@@ -3,295 +3,330 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Percent } from '../Percent';
 
+// Mock lucide-react icons
+vi.mock('lucide-react', () => ({
+    Percent: () => <div data-testid="percentage-icon" />,
+}));
+
 describe('Percent Component', () => {
-  const mockOnChange = vi.fn();
+    const mockOnChange = vi.fn();
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  describe('Rendering', () => {
-    it('should render percentage input component', () => {
-      render(<Percent value="" onChange={mockOnChange} />);
-      expect(screen.getByRole('textbox')).toBeInTheDocument();
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
 
-    it('should render label when provided', () => {
-      render(<Percent label="Discount" value="" onChange={mockOnChange} />);
-      expect(screen.getByText('Discount')).toBeInTheDocument();
+    describe('Rendering', () => {
+        it('should render with default props', () => {
+            const { container } = render(
+                <Percent value={null} onChange={mockOnChange} />
+            );
+            const field = container.querySelector('.field-component');
+            expect(field).toBeInTheDocument();
+        });
+
+        it('should display current value', () => {
+            render(<Percent value={75.5} onChange={mockOnChange} />);
+            expect(screen.getByText('75.5')).toBeInTheDocument();
+        });
+
+        it('should display placeholder when value is null', () => {
+            render(
+                <Percent value={null} onChange={mockOnChange} placeholder="Enter %" />
+            );
+            expect(screen.getByText('Enter %')).toBeInTheDocument();
+        });
+
+        it('should render helper text when allowEdit is true', () => {
+            render(
+                <Percent
+                    value={null}
+                    onChange={mockOnChange}
+                    helperText="Helper message"
+                    allowEdit={true}
+                />
+            );
+            expect(screen.getByText('Helper message')).toBeInTheDocument();
+        });
+
+        it('should not render helper text when allowEdit is false', () => {
+            render(
+                <Percent
+                    value={null}
+                    onChange={mockOnChange}
+                    helperText="Helper message"
+                    allowEdit={false}
+                />
+            );
+            expect(screen.queryByText('Helper message')).not.toBeInTheDocument();
+        });
     });
 
-    it('should display percentage value', () => {
-      render(<Percent value="50" onChange={mockOnChange} />);
-      expect(screen.getByDisplayValue('50')).toBeInTheDocument();
+    describe('Edit Mode Interaction', () => {
+        it('should enter edit mode on single click by default (allowEdit=true)', async () => {
+            render(<Percent value={50} onChange={mockOnChange} allowEdit={true} />);
+
+            const displayValue = screen.getByText('50');
+            fireEvent.click(displayValue);
+
+            const input = await screen.findByRole('textbox');
+            expect(input).toBeInTheDocument();
+            expect(input).toHaveValue('50');
+        });
+
+        it('should enter edit mode on double click when allowEdit is false', async () => {
+            render(<Percent value={50} onChange={mockOnChange} allowEdit={false} />);
+
+            const displayValue = screen.getByText('50');
+
+            // Simulate double click using fireEvent since useClickHandler uses a timer
+            fireEvent.click(displayValue);
+            fireEvent.click(displayValue);
+
+            const input = await screen.findByRole('textbox');
+            expect(input).toBeInTheDocument();
+        });
+
+        it('should not enter edit mode when disabled', () => {
+            render(<Percent value={50} onChange={mockOnChange} disabled={true} />);
+
+            const displayValue = screen.getByText('50');
+            fireEvent.click(displayValue);
+
+            expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+        });
+
+        it('should not enter edit mode when readOnly', () => {
+            render(<Percent value={50} onChange={mockOnChange} readOnly={true} />);
+
+            const displayValue = screen.getByText('50');
+            fireEvent.click(displayValue);
+
+            expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+        });
     });
 
-    it('should show percentage symbol', () => {
-      const { container } = render(
-        <Percent value="25" onChange={mockOnChange} />
-      );
-      expect(container.textContent).toContain('%');
-    });
-  });
+    describe('Input Behavior', () => {
+        it('should filter non-numeric characters except dots and dashes', async () => {
+            const { container } = render(<Percent value={null} onChange={mockOnChange} />);
 
-  describe('Input Interaction', () => {
-    it('should accept percentage values', async () => {
-      render(<Percent value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox');
+            const display = container.querySelector('.field-component');
+            fireEvent.click(display!);
 
-      await userEvent.type(input, '50');
-      fireEvent.blur(input);
+            const input = await screen.findByRole('textbox');
+            // "a1b.2c-d" -> "1.2-"
+            await userEvent.type(input, 'a1b.2c-d');
 
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
-      });
-    });
+            expect(input).toHaveValue('1.2-');
+        });
 
-    it('should accept decimal percentages', async () => {
-      render(<Percent value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox');
+        it('should focus and select text when entering edit mode', async () => {
+            render(<Percent value={12.3} onChange={mockOnChange} />);
 
-      await userEvent.type(input, '33.33');
-      fireEvent.blur(input);
+            const display = screen.getByText('12.3');
+            fireEvent.click(display);
 
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
-      });
+            const input = await screen.findByRole('textbox');
+            expect(document.activeElement).toBe(input);
+
+            // The select() call happens in a useEffect, so we wait for it to be applied
+            await waitFor(() => {
+                expect(input.selectionStart).toBe(0);
+                expect(input.selectionEnd).toBe(input.value.length);
+            });
+        });
     });
 
-    it('should accept zero percent', async () => {
-      render(<Percent value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox');
+    describe('Blur and Value Synchronization', () => {
+        it('should trigger onChange with rounded value (1 decimal) on blur', async () => {
+            render(<Percent value={10} onChange={mockOnChange} />);
 
-      await userEvent.type(input, '0');
-      fireEvent.blur(input);
+            fireEvent.click(screen.getByText('10'));
+            const input = await screen.findByRole('textbox');
 
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
-      });
+            await userEvent.clear(input);
+            await userEvent.type(input, '15.678');
+            fireEvent.blur(input);
+
+            await waitFor(() => {
+                expect(mockOnChange).toHaveBeenCalledWith(15.7);
+            });
+        });
+
+        it('should set value to null when input is empty on blur', async () => {
+            render(<Percent value={10} onChange={mockOnChange} />);
+
+            fireEvent.click(screen.getByText('10'));
+            const input = await screen.findByRole('textbox');
+
+            await userEvent.clear(input);
+            fireEvent.blur(input);
+
+            await waitFor(() => {
+                expect(mockOnChange).toHaveBeenCalledWith(null);
+            });
+        });
+
+        it('should reset to previous valid value if input is > 100', async () => {
+            render(<Percent value={50} onChange={mockOnChange} />);
+
+            fireEvent.click(screen.getByText('50'));
+            const input = await screen.findByRole('textbox');
+
+            await userEvent.clear(input);
+            await userEvent.type(input, '101');
+            fireEvent.blur(input);
+
+            // In Percent.tsx, it resets to prevValueRef.current if out of 0-100 range
+            await waitFor(() => {
+                expect(mockOnChange).toHaveBeenCalledWith(50);
+            });
+            // Component should show the reset value back in display mode
+            expect(screen.getByText('50')).toBeInTheDocument();
+        });
+
+        it('should reset to previous valid value if input is < 0', async () => {
+            render(<Percent value={50} onChange={mockOnChange} />);
+
+            fireEvent.click(screen.getByText('50'));
+            const input = await screen.findByRole('textbox');
+
+            await userEvent.clear(input);
+            await userEvent.type(input, '-5');
+            fireEvent.blur(input);
+
+            await waitFor(() => {
+                expect(mockOnChange).toHaveBeenCalledWith(50);
+            });
+        });
+
+        it('should reset to null if input becomes empty due to filtering', async () => {
+            const { container } = render(<Percent value={null} onChange={mockOnChange} />);
+
+            const display = container.querySelector('.field-component');
+            fireEvent.click(display!);
+
+            const input = await screen.findByRole('textbox');
+            // Typing 'abc' will cause it to be empty string due to regex filter in handleChange
+            await userEvent.type(input, 'abc');
+            fireEvent.blur(input);
+
+            await waitFor(() => {
+                expect(mockOnChange).toHaveBeenCalledWith(null);
+            });
+        });
+
+        it('should not trigger onChange if value did not change', async () => {
+            render(<Percent value={50} onChange={mockOnChange} />);
+
+            fireEvent.click(screen.getByText('50'));
+            const input = await screen.findByRole('textbox');
+
+            fireEvent.blur(input);
+
+            await new Promise(resolve => setTimeout(resolve, 50));
+            expect(mockOnChange).not.toHaveBeenCalled();
+        });
     });
 
-    it('should accept 100 percent', async () => {
-      render(<Percent value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox');
+    describe('Progress Bar Mode', () => {
+        const config = { displayAsProgress: true, progressColor: 'orange' };
 
-      await userEvent.type(input, '100');
-      fireEvent.blur(input);
+        it('should render progress bar container', () => {
+            const { container } = render(
+                <Percent value={60} onChange={mockOnChange} config={config} />
+            );
 
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
-      });
+            const progressBar = container.querySelector('.bg-orange-500');
+            expect(progressBar).toBeInTheDocument();
+            expect(progressBar).toHaveStyle('width: 60%');
+        });
+
+        it('should enter edit mode on double click in progress mode', async () => {
+            const { container } = render(
+                <Percent value={60} onChange={mockOnChange} config={config} />
+            );
+
+            const clickableArea = container.firstChild;
+            fireEvent.doubleClick(clickableArea!);
+
+            const input = await screen.findByRole('textbox');
+            expect(input).toBeInTheDocument();
+        });
+
+        it('should clamp progress between 0 and 100', () => {
+            const { rerender, container } = render(
+                <Percent value={150} onChange={mockOnChange} config={config} />
+            );
+
+            let progressBar = container.querySelector('.bg-orange-500');
+            expect(progressBar).toHaveStyle('width: 100%');
+
+            rerender(<Percent value={-50} onChange={mockOnChange} config={config} />);
+            progressBar = container.querySelector('.bg-orange-500');
+            expect(progressBar).toHaveStyle('width: 0%');
+        });
+
+        it('should use default progress color if mapping fails', () => {
+            const { container } = render(
+                <Percent value={50} onChange={mockOnChange} config={{ displayAsProgress: true, progressColor: 'unknown' as any }} />
+            );
+
+            const progressBar = container.querySelector(String.raw`.bg-\[var\(--color-utility-brand-500\)\]`);
+            expect(progressBar).toBeInTheDocument();
+        });
     });
 
-    it('should accept above 100 percent', async () => {
-      render(<Percent value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox');
+    describe('External Props Synchronization', () => {
+        it('should update local value when external value changes', async () => {
+            const { rerender } = render(<Percent value={10} onChange={mockOnChange} />);
+            expect(screen.getByText('10')).toBeInTheDocument();
 
-      await userEvent.type(input, '150');
-      fireEvent.blur(input);
+            rerender(<Percent value={20} onChange={mockOnChange} />);
+            await waitFor(() => {
+                expect(screen.getByText('20')).toBeInTheDocument();
+            });
+        });
 
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
-      });
-    });
-  });
-
-  describe('Validation', () => {
-    it('should validate required field', async () => {
-      render(<Percent value="" onChange={mockOnChange} required />);
-      const input = screen.getByRole('textbox');
-
-      fireEvent.blur(input);
-
-      expect(mockOnChange).not.toHaveBeenCalled();
-    });
-
-    it('should reject non-numeric input', async () => {
-      render(<Percent value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox') as HTMLInputElement;
-
-      await userEvent.type(input, '50abc');
-      fireEvent.blur(input);
-
-      expect(/^\d*\.?\d*$/.test(input.value)).toBe(true);
+        it('should use defaultValue if value is null', () => {
+            render(
+                <Percent
+                    value={null}
+                    onChange={mockOnChange}
+                    config={{ defaultValue: 42 }}
+                />
+            );
+            expect(screen.getByText('42')).toBeInTheDocument();
+        });
     });
 
-    it('should accept valid percentages', async () => {
-      render(<Percent value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox');
+    describe('Miscellaneous', () => {
+        it('should render border class when isBorder is true', () => {
+            const { container } = render(
+                <Percent value={null} onChange={mockOnChange} isBorder={true} />
+            );
+            expect(container.firstChild).toHaveClass('field-component-border');
+        });
 
-      await userEvent.type(input, '75');
-      fireEvent.blur(input);
+        it('should show error red border on validation error (during editing)', async () => {
+            render(<Percent value={50} onChange={mockOnChange} required={true} />);
 
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
-      });
+            fireEvent.click(screen.getByText('50'));
+            const input = await screen.findByRole('textbox');
+
+            await userEvent.clear(input);
+            // validate function in Percent.tsx returns string if required and empty
+            // handleChange calls validate and setShowError(true)
+
+            await waitFor(() => {
+                expect(input).toHaveClass('border-red-500');
+            });
+        });
+
+        it('should apply custom className', () => {
+            const { container } = render(
+                <Percent value={10} onChange={mockOnChange} className="custom-test-class" />
+            );
+            expect(container.firstChild).toHaveClass('custom-test-class');
+        });
     });
-  });
-
-  describe('Range Validation', () => {
-    it('should validate min constraint if set', () => {
-      render(
-        <Percent
-          value=""
-          onChange={mockOnChange}
-          config={{ min: 0 }}
-        />
-      );
-      expect(screen.getByRole('textbox')).toBeInTheDocument();
-    });
-
-    it('should validate max constraint if set', () => {
-      render(
-        <Percent
-          value=""
-          onChange={mockOnChange}
-          config={{ max: 100 }}
-        />
-      );
-      expect(screen.getByRole('textbox')).toBeInTheDocument();
-    });
-  });
-
-  describe('Disabled and ReadOnly States', () => {
-    it('should disable input when disabled', () => {
-      render(
-        <Percent value="50" onChange={mockOnChange} disabled />
-      );
-      expect(screen.getByRole('textbox')).toBeDisabled();
-    });
-
-    it('should prevent editing when readOnly', async () => {
-      const { container } = render(
-        <Percent
-          value="50"
-          onChange={mockOnChange}
-          readOnly
-          allowEdit={true}
-        />
-      );
-      const editable = container.querySelector('.field-component');
-
-      fireEvent.click(editable!);
-      await new Promise(resolve => setTimeout(resolve, 250));
-
-      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('Config Props', () => {
-    it('should use defaultValue from config', () => {
-      render(
-        <Percent
-          value=""
-          onChange={mockOnChange}
-          config={{ defaultValue: 25 }}
-        />
-      );
-      expect(screen.getByRole('textbox')).toHaveValue('25');
-    });
-
-    it('should use min from config', () => {
-      render(
-        <Percent
-          value=""
-          onChange={mockOnChange}
-          config={{ min: 0 }}
-        />
-      );
-      expect(screen.getByRole('textbox')).toBeInTheDocument();
-    });
-
-    it('should use max from config', () => {
-      render(
-        <Percent
-          value=""
-          onChange={mockOnChange}
-          config={{ max: 100 }}
-        />
-      );
-      expect(screen.getByRole('textbox')).toBeInTheDocument();
-    });
-  });
-
-  describe('Value Synchronization', () => {
-    it('should update when value prop changes', () => {
-      const { rerender } = render(
-        <Percent value="25" onChange={mockOnChange} />
-      );
-      expect(screen.getByDisplayValue('25')).toBeInTheDocument();
-
-      rerender(
-        <Percent value="75" onChange={mockOnChange} />
-      );
-
-      expect(screen.getByDisplayValue('75')).toBeInTheDocument();
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty value', () => {
-      render(<Percent value="" onChange={mockOnChange} />);
-      expect(screen.getByRole('textbox')).toHaveValue('');
-    });
-
-    it('should handle very large percentages', async () => {
-      render(<Percent value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox');
-
-      await userEvent.type(input, '9999');
-      fireEvent.blur(input);
-
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
-      });
-    });
-
-    it('should handle fractional percentages', async () => {
-      render(<Percent value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox');
-
-      await userEvent.type(input, '0.01');
-      fireEvent.blur(input);
-
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
-      });
-    });
-
-    it('should handle trailing zeros', async () => {
-      render(<Percent value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox');
-
-      await userEvent.type(input, '50.00');
-      fireEvent.blur(input);
-
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
-      });
-    });
-  });
-
-  describe('Accessibility', () => {
-    it('should have accessible label', () => {
-      render(
-        <Percent label="Percentage" value="" onChange={mockOnChange} />
-      );
-      expect(screen.getByText('Percentage')).toBeInTheDocument();
-    });
-
-    it('should mark required fields', () => {
-      render(
-        <Percent label="Discount" value="" onChange={mockOnChange} required />
-      );
-      expect(screen.getByText('*')).toBeInTheDocument();
-    });
-
-    it('should have disabled attribute when disabled', () => {
-      render(
-        <Percent value="50" onChange={mockOnChange} disabled />
-      );
-      expect(screen.getByRole('textbox')).toBeDisabled();
-    });
-  });
 });

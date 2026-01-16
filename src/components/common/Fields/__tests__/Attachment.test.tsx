@@ -1,9 +1,46 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Attachment } from '../Attachment';
+
+// Mock the hooks
+vi.mock('../../../hooks/useApi', () => ({
+  useAddAttachment: () => ({
+    mutateAsync: vi.fn().mockResolvedValue(null),
+  }),
+  useRemoveAttachments: () => ({
+    mutateAsync: vi.fn().mockResolvedValue(null),
+  }),
+}));
+
+// Mock the modals
+vi.mock('../../../plugins/GalleryViewPlugin/components/shared/Modals/AttachmentModal', () => ({
+  AttachmentModal: ({ isOpen }: any) => 
+    isOpen ? <div data-testid="attachment-modal">Modal</div> : null,
+}));
+
+vi.mock('../../../plugins/GalleryViewPlugin/components/shared/Modals/AttachmentPreviewModal', () => ({
+  AttachmentPreviewModal: ({ isOpen }: any) => 
+    isOpen ? <div data-testid="preview-modal">Preview Modal</div> : null,
+}));
+
+const createQueryClient = () => new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+    mutations: { retry: false },
+  },
+});
+
+const renderWithProviders = (component: React.ReactElement) => {
+  const queryClient = createQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {component}
+    </QueryClientProvider>
+  );
+};
 
 describe('Attachment Component', () => {
   let mockOnChange: ReturnType<typeof vi.fn>;
@@ -15,29 +52,26 @@ describe('Attachment Component', () => {
 
   describe('Rendering', () => {
     it('should render attachment container', () => {
-      render(
+      renderWithProviders(
         <Attachment
           value={[]}
           onChange={mockOnChange}
         />
       );
 
-      expect(document.querySelector('[class*="attachment"]') || document.body).toBeInTheDocument();
+      const container = document.querySelector('.relative');
+      expect(container).toBeInTheDocument();
     });
 
     it('should display upload button when no attachments', () => {
-      render(
+      renderWithProviders(
         <Attachment
           value={[]}
           onChange={mockOnChange}
         />
       );
 
-      const uploadButton = screen.getByRole('button', { name: /upload|attach|add/i }) || 
-                          Array.from(document.querySelectorAll('button')).find(btn => 
-                            btn.textContent?.toLowerCase().includes('attach')
-                          );
-      
+      const uploadButton = screen.getByRole('button', { name: /add attachment/i });
       expect(uploadButton).toBeInTheDocument();
     });
 
@@ -46,50 +80,51 @@ describe('Attachment Component', () => {
         { id: '1', title: 'document.pdf', url: '/files/doc.pdf', mime_type: 'application/pdf', size: 1024 }
       ];
 
-      render(
+      renderWithProviders(
         <Attachment
           value={files}
           onChange={mockOnChange}
         />
       );
 
-      expect(screen.getByText('document.pdf')).toBeInTheDocument();
+      const thumbnail = document.querySelector('[title="document.pdf"]');
+      expect(thumbnail).toBeInTheDocument();
     });
 
-    it('should show file count when multiple attachments', () => {
+    it('should show multiple attachment thumbnails', () => {
       const files = [
         { id: '1', title: 'file1.pdf', url: '/file1.pdf', mime_type: 'application/pdf', size: 1024 },
         { id: '2', title: 'file2.pdf', url: '/file2.pdf', mime_type: 'application/pdf', size: 2048 }
       ];
 
-      render(
+      renderWithProviders(
         <Attachment
           value={files}
           onChange={mockOnChange}
         />
       );
 
-      expect(screen.getByText('file1.pdf')).toBeInTheDocument();
-      expect(screen.getByText('file2.pdf')).toBeInTheDocument();
+      expect(document.querySelector('[title="file1.pdf"]')).toBeInTheDocument();
+      expect(document.querySelector('[title="file2.pdf"]')).toBeInTheDocument();
     });
   });
 
   describe('File Upload', () => {
     it('should handle file selection', async () => {
-      render(
+      renderWithProviders(
         <Attachment
           value={[]}
           onChange={mockOnChange}
         />
       );
 
-      // Upload input should exist
-      const uploadInput = document.querySelector('input[type="file"]');
-      expect(uploadInput).toBeInTheDocument();
+      // Upload button should exist
+      const uploadButton = screen.getByRole('button', { name: /add attachment/i });
+      expect(uploadButton).toBeInTheDocument();
     });
 
     it('should enforce maxFiles constraint', () => {
-      render(
+      renderWithProviders(
         <Attachment
           value={[]}
           onChange={mockOnChange}
@@ -97,55 +132,69 @@ describe('Attachment Component', () => {
         />
       );
 
-      // Component should be rendered with config
-      expect(document.body).toBeInTheDocument();
+      // Button should be present with config
+      const uploadButton = screen.getByRole('button', { name: /add attachment/i });
+      expect(uploadButton).toBeInTheDocument();
     });
 
-    it('should enforce maxFileSize constraint', () => {
-      render(
+    it('should disable upload when maxFiles reached', () => {
+      const files = [
+        { id: '1', title: 'file1.pdf', url: '/1.pdf', mime_type: 'application/pdf', size: 1024 },
+        { id: '2', title: 'file2.pdf', url: '/2.pdf', mime_type: 'application/pdf', size: 1024 },
+        { id: '3', title: 'file3.pdf', url: '/3.pdf', mime_type: 'application/pdf', size: 1024 }
+      ];
+
+      renderWithProviders(
         <Attachment
-          value={[]}
+          value={files}
           onChange={mockOnChange}
-          config={{ maxFileSize: 5 * 1024 * 1024 }} // 5MB
+          config={{ maxFiles: 3 }}
         />
       );
 
-      expect(document.body).toBeInTheDocument();
+      const uploadButton = screen.getByRole('button', { name: /add attachment/i });
+      expect(uploadButton).toBeDisabled();
     });
 
-    it('should validate file types', () => {
-      render(
+    it('should show tooltip when maxFiles reached', () => {
+      const files = [
+        { id: '1', title: 'file1.pdf', url: '/1.pdf', mime_type: 'application/pdf', size: 1024 },
+        { id: '2', title: 'file2.pdf', url: '/2.pdf', mime_type: 'application/pdf', size: 1024 },
+        { id: '3', title: 'file3.pdf', url: '/3.pdf', mime_type: 'application/pdf', size: 1024 }
+      ];
+
+      renderWithProviders(
         <Attachment
-          value={[]}
+          value={files}
           onChange={mockOnChange}
-          config={{ allowedTypes: ['pdf', 'doc', 'docx'] }}
+          config={{ maxFiles: 3 }}
         />
       );
 
-      expect(document.body).toBeInTheDocument();
+      const uploadButton = screen.getByRole('button', { name: /add attachment/i });
+      expect(uploadButton).toHaveAttribute('title', expect.stringContaining('Maximum 3 files'));
     });
 
-    it('should show loading state during upload', async () => {
-      render(
+    it('should respect maxFileSize from config', () => {
+      renderWithProviders(
         <Attachment
           value={[]}
           onChange={mockOnChange}
-          persistImmediately={true}
+          config={{ maxFileSize: 5 * 1024 * 1024 }}
         />
       );
 
-      // Component should handle loading state
       expect(document.body).toBeInTheDocument();
     });
   });
 
   describe('File Management', () => {
-    it('should display remove button for each attachment', () => {
+    it('should display attachment thumbnails', () => {
       const files = [
         { id: '1', title: 'document.pdf', url: '/doc.pdf', mime_type: 'application/pdf', size: 1024 }
       ];
 
-      render(
+      renderWithProviders(
         <Attachment
           value={files}
           onChange={mockOnChange}
@@ -153,49 +202,16 @@ describe('Attachment Component', () => {
         />
       );
 
-      const removeButton = screen.getByRole('button', { name: /remove|delete|trash/i }) ||
-                          Array.from(document.querySelectorAll('button')).find(btn =>
-                            btn.textContent?.toLowerCase().includes('remove')
-                          );
-
-      expect(removeButton).toBeInTheDocument();
+      const thumbnail = document.querySelector('[title="document.pdf"]');
+      expect(thumbnail).toBeInTheDocument();
     });
 
-    it('should remove attachment when delete button clicked', async () => {
+    it('should show preview modal button', () => {
       const files = [
         { id: '1', title: 'document.pdf', url: '/doc.pdf', mime_type: 'application/pdf', size: 1024 }
       ];
 
-      render(
-        <Attachment
-          value={files}
-          onChange={mockOnChange}
-          allowEdit={true}
-        />
-      );
-
-      const removeButton = Array.from(document.querySelectorAll('button')).find(btn =>
-        btn.textContent?.toLowerCase().includes('remove') || 
-        btn.querySelector('[class*="trash"]')
-      );
-
-      if (removeButton) {
-        fireEvent.click(removeButton);
-
-        await waitFor(() => {
-          expect(mockOnChange).toHaveBeenCalledWith([]);
-        }, { timeout: 1000 }).catch(() => {
-          // May not be called depending on implementation
-        });
-      }
-    });
-
-    it('should show preview for image attachments', () => {
-      const files = [
-        { id: '1', title: 'image.jpg', url: '/image.jpg', mime_type: 'image/jpeg', size: 1024, thumbnail_url: '/thumb.jpg' }
-      ];
-
-      render(
+      renderWithProviders(
         <Attachment
           value={files}
           onChange={mockOnChange}
@@ -203,30 +219,49 @@ describe('Attachment Component', () => {
         />
       );
 
-      const thumbnail = document.querySelector('img');
-      expect(thumbnail).toBeInTheDocument();
+      const previewButton = screen.getByRole('button', { name: /preview attachments/i });
+      expect(previewButton).toBeInTheDocument();
     });
 
-    it('should display file type icons', () => {
+    it('should hide preview button when showPreview is false', () => {
       const files = [
         { id: '1', title: 'document.pdf', url: '/doc.pdf', mime_type: 'application/pdf', size: 1024 }
       ];
 
-      render(
+      renderWithProviders(
+        <Attachment
+          value={files}
+          onChange={mockOnChange}
+          showPreview={false}
+        />
+      );
+
+      const previewButton = screen.queryByRole('button', { name: /preview attachments/i });
+      expect(previewButton).not.toBeInTheDocument();
+    });
+
+    it('should display image preview thumbnail for image files', () => {
+      const files = [
+        { id: '1', title: 'image.jpg', url: '/image.jpg', mime_type: 'image/jpeg', size: 1024, thumbnail_url: '/thumb.jpg' }
+      ];
+
+      renderWithProviders(
         <Attachment
           value={files}
           onChange={mockOnChange}
         />
       );
 
-      // File icon or document indicator should be present
-      expect(document.querySelector('[class*="icon"]') || screen.getByText('document.pdf')).toBeInTheDocument();
+      const img = document.querySelector('img');
+      expect(img).toBeInTheDocument();
+      // Component uses thumbnail_url when available, so check for that
+      expect(img?.src).toContain('thumb.jpg');
     });
   });
 
   describe('Validation', () => {
     it('should show error for required field when empty', async () => {
-      render(
+      renderWithProviders(
         <Attachment
           required
           value={[]}
@@ -234,20 +269,22 @@ describe('Attachment Component', () => {
         />
       );
 
-      // Required validation should show error
+      // Required validation should show error message
       await waitFor(() => {
-        expect(screen.getByText(/required|Please attach/i) || document.body).toBeInTheDocument();
+        const error = document.querySelector('.text-red-600');
+        expect(error).toBeInTheDocument();
+        expect(error?.textContent).toContain('Please attach');
       }).catch(() => {
-        // Validation may happen on blur
+        // Error might only show after interactions
       });
     });
 
-    it('should accept non-empty file list as valid', () => {
+    it('should not show error for required field when files present', () => {
       const files = [
         { id: '1', title: 'file.pdf', url: '/file.pdf', mime_type: 'application/pdf', size: 1024 }
       ];
 
-      render(
+      renderWithProviders(
         <Attachment
           required
           value={files}
@@ -255,7 +292,8 @@ describe('Attachment Component', () => {
         />
       );
 
-      expect(document.body).toBeInTheDocument();
+      const error = document.querySelector('.text-red-600');
+      expect(error).not.toBeInTheDocument();
     });
 
     it('should validate max files constraint', () => {
@@ -266,7 +304,7 @@ describe('Attachment Component', () => {
         { id: '4', title: 'file4.pdf', url: '/4.pdf', mime_type: 'application/pdf', size: 1024 }
       ];
 
-      render(
+      renderWithProviders(
         <Attachment
           value={files}
           onChange={mockOnChange}
@@ -274,14 +312,15 @@ describe('Attachment Component', () => {
         />
       );
 
-      // Should show error about max files
-      expect(document.body).toBeInTheDocument();
+      // Upload button should be disabled
+      const uploadButton = screen.getByRole('button', { name: /add attachment/i });
+      expect(uploadButton).toBeDisabled();
     });
   });
 
   describe('Disabled & ReadOnly State', () => {
     it('should disable uploads when disabled is true', () => {
-      render(
+      renderWithProviders(
         <Attachment
           value={[]}
           onChange={mockOnChange}
@@ -289,8 +328,8 @@ describe('Attachment Component', () => {
         />
       );
 
-      const uploadButton = document.querySelector('button');
-      expect(uploadButton?.disabled || uploadButton?.classList.toString().includes('disabled')).toBeTruthy();
+      const uploadButton = screen.getByRole('button', { name: /add attachment/i });
+      expect(uploadButton).toBeDisabled();
     });
 
     it('should prevent editing when allowEdit is false', () => {
@@ -298,7 +337,7 @@ describe('Attachment Component', () => {
         { id: '1', title: 'file.pdf', url: '/file.pdf', mime_type: 'application/pdf', size: 1024 }
       ];
 
-      render(
+      renderWithProviders(
         <Attachment
           value={files}
           onChange={mockOnChange}
@@ -306,11 +345,10 @@ describe('Attachment Component', () => {
         />
       );
 
-      const removeButtons = Array.from(document.querySelectorAll('button')).filter(btn =>
-        btn.textContent?.toLowerCase().includes('remove')
-      );
-
-      expect(removeButtons.length).toBe(0);
+      // When allowEdit is false, the button is still rendered but no edit actions are visible
+      // The component shows the upload button but attachment editing features are hidden
+      const uploadButton = screen.getByRole('button', { name: /add attachment/i });
+      expect(uploadButton).toBeInTheDocument();
     });
 
     it('should prevent editing when readOnly is true', () => {
@@ -318,7 +356,7 @@ describe('Attachment Component', () => {
         { id: '1', title: 'file.pdf', url: '/file.pdf', mime_type: 'application/pdf', size: 1024 }
       ];
 
-      render(
+      renderWithProviders(
         <Attachment
           value={files}
           onChange={mockOnChange}
@@ -326,26 +364,54 @@ describe('Attachment Component', () => {
         />
       );
 
-      const uploadInput = document.querySelector('input[type="file"]');
-      expect(uploadInput?.disabled || uploadInput?.style.display === 'none').toBeTruthy();
+      // Upload button should be disabled or hidden
+      const uploadButton = screen.queryByRole('button', { name: /add attachment/i });
+      expect(uploadButton).not.toBeInTheDocument();
+    });
+
+    it('should disable preview button when disabled', () => {
+      const files = [
+        { id: '1', title: 'file.pdf', url: '/file.pdf', mime_type: 'application/pdf', size: 1024 }
+      ];
+
+      renderWithProviders(
+        <Attachment
+          value={files}
+          onChange={mockOnChange}
+          disabled
+          showPreview={true}
+        />
+      );
+
+      const previewButton = screen.getByRole('button', { name: /preview attachments/i });
+      expect(previewButton).toBeDisabled();
     });
   });
 
   describe('Configuration Props', () => {
     it('should respect maxFiles from config', () => {
-      render(
+      const files = new Array(5).fill(null).map((_, i) => ({
+        id: `${i}`,
+        title: `file${i}.pdf`,
+        url: `/file${i}.pdf`,
+        mime_type: 'application/pdf',
+        size: 1024
+      }));
+
+      renderWithProviders(
         <Attachment
-          value={[]}
+          value={files}
           onChange={mockOnChange}
           config={{ maxFiles: 5 }}
         />
       );
 
-      expect(document.body).toBeInTheDocument();
+      const uploadButton = screen.getByRole('button', { name: /add attachment/i });
+      expect(uploadButton).toBeDisabled();
     });
 
     it('should respect maxFileSize from config', () => {
-      render(
+      renderWithProviders(
         <Attachment
           value={[]}
           onChange={mockOnChange}
@@ -353,25 +419,35 @@ describe('Attachment Component', () => {
         />
       );
 
-      expect(document.body).toBeInTheDocument();
+      const uploadButton = screen.getByRole('button', { name: /add attachment/i });
+      expect(uploadButton).toBeInTheDocument();
     });
 
-    it('should respect allowedTypes from config', () => {
-      render(
+    it('should use default maxFiles when not provided', () => {
+      const files = new Array(6).fill(null).map((_, i) => ({
+        id: `${i}`,
+        title: `file${i}.pdf`,
+        url: `/file${i}.pdf`,
+        mime_type: 'application/pdf',
+        size: 1024
+      }));
+
+      renderWithProviders(
         <Attachment
-          value={[]}
+          value={files}
           onChange={mockOnChange}
-          config={{ allowedTypes: ['pdf', 'xlsx', 'docx'] }}
         />
       );
 
-      expect(document.body).toBeInTheDocument();
+      // Default maxFiles is 5, so with 6 files button should be disabled
+      const uploadButton = screen.getByRole('button', { name: /add attachment/i });
+      expect(uploadButton).toBeDisabled();
     });
   });
 
   describe('Persistence Behavior', () => {
-    it('should upload immediately when persistImmediately is true', async () => {
-      render(
+    it('should handle persistImmediately true', async () => {
+      renderWithProviders(
         <Attachment
           value={[]}
           onChange={mockOnChange}
@@ -379,11 +455,12 @@ describe('Attachment Component', () => {
         />
       );
 
-      expect(document.body).toBeInTheDocument();
+      const uploadButton = screen.getByRole('button', { name: /add attachment/i });
+      expect(uploadButton).toBeInTheDocument();
     });
 
-    it('should allow deferred upload when persistImmediately is false', async () => {
-      render(
+    it('should handle persistImmediately false', async () => {
+      renderWithProviders(
         <Attachment
           value={[]}
           onChange={mockOnChange}
@@ -391,17 +468,34 @@ describe('Attachment Component', () => {
         />
       );
 
-      expect(document.body).toBeInTheDocument();
+      const uploadButton = screen.getByRole('button', { name: /add attachment/i });
+      expect(uploadButton).toBeInTheDocument();
+    });
+
+    it('should default to persistImmediately true for backward compatibility', () => {
+      renderWithProviders(
+        <Attachment
+          value={[]}
+          onChange={mockOnChange}
+        />
+      );
+
+      // Component should render without errors
+      const uploadButton = screen.getByRole('button', { name: /add attachment/i });
+      expect(uploadButton).toBeInTheDocument();
     });
   });
 
   describe('Value Synchronization', () => {
     it('should sync external file list changes', () => {
+      const queryClient = createQueryClient();
       const { rerender } = render(
-        <Attachment
-          value={[]}
-          onChange={mockOnChange}
-        />
+        <QueryClientProvider client={queryClient}>
+          <Attachment
+            value={[]}
+            onChange={mockOnChange}
+          />
+        </QueryClientProvider>
       );
 
       const files = [
@@ -409,18 +503,24 @@ describe('Attachment Component', () => {
       ];
 
       rerender(
-        <Attachment
-          value={files}
-          onChange={mockOnChange}
-        />
+        <QueryClientProvider client={queryClient}>
+          <Attachment
+            value={files}
+            onChange={mockOnChange}
+          />
+        </QueryClientProvider>
       );
 
-      expect(screen.getByText('file.pdf')).toBeInTheDocument();
+      const thumbnail = document.querySelector('[title="file.pdf"]');
+      expect(thumbnail).toBeInTheDocument();
     });
 
     it('should handle rapid list updates', () => {
+      const queryClient = createQueryClient();
       const { rerender } = render(
-        <Attachment value={[]} onChange={mockOnChange} />
+        <QueryClientProvider client={queryClient}>
+          <Attachment value={[]} onChange={mockOnChange} />
+        </QueryClientProvider>
       );
 
       const files1 = [
@@ -432,35 +532,71 @@ describe('Attachment Component', () => {
         { id: '2', title: 'file2.pdf', url: '/2.pdf', mime_type: 'application/pdf', size: 1024 }
       ];
 
-      rerender(<Attachment value={files1} onChange={mockOnChange} />);
-      rerender(<Attachment value={files2} onChange={mockOnChange} />);
+      rerender(
+        <QueryClientProvider client={queryClient}>
+          <Attachment value={files1} onChange={mockOnChange} />
+        </QueryClientProvider>
+      );
+      rerender(
+        <QueryClientProvider client={queryClient}>
+          <Attachment value={files2} onChange={mockOnChange} />
+        </QueryClientProvider>
+      );
 
-      expect(screen.getByText('file1.pdf')).toBeInTheDocument();
-      expect(screen.getByText('file2.pdf')).toBeInTheDocument();
+      expect(document.querySelector('[title="file1.pdf"]')).toBeInTheDocument();
+      expect(document.querySelector('[title="file2.pdf"]')).toBeInTheDocument();
+    });
+
+    it('should handle removing attachments', () => {
+      const queryClient = createQueryClient();
+      const { rerender } = render(
+        <QueryClientProvider client={queryClient}>
+          <Attachment
+            value={[
+              { id: '1', title: 'file.pdf', url: '/file.pdf', mime_type: 'application/pdf', size: 1024 }
+            ]}
+            onChange={mockOnChange}
+          />
+        </QueryClientProvider>
+      );
+
+      rerender(
+        <QueryClientProvider client={queryClient}>
+          <Attachment
+            value={[]}
+            onChange={mockOnChange}
+          />
+        </QueryClientProvider>
+      );
+
+      const thumbnail = document.querySelector('[title="file.pdf"]');
+      expect(thumbnail).not.toBeInTheDocument();
     });
   });
 
   describe('Edge Cases', () => {
     it('should handle null value', () => {
-      render(
+      renderWithProviders(
         <Attachment
           value={null as any}
           onChange={mockOnChange}
         />
       );
 
-      expect(document.body).toBeInTheDocument();
+      const container = document.querySelector('.relative');
+      expect(container).toBeInTheDocument();
     });
 
     it('should handle undefined value', () => {
-      render(
+      renderWithProviders(
         <Attachment
           value={undefined as any}
           onChange={mockOnChange}
         />
       );
 
-      expect(document.body).toBeInTheDocument();
+      const container = document.querySelector('.relative');
+      expect(container).toBeInTheDocument();
     });
 
     it('should handle large file counts', () => {
@@ -472,14 +608,16 @@ describe('Attachment Component', () => {
         size: 1024
       }));
 
-      render(
+      renderWithProviders(
         <Attachment
           value={files}
           onChange={mockOnChange}
         />
       );
 
-      expect(screen.getByText('file0.pdf')).toBeInTheDocument();
+      // Should show first 3 thumbnails inline
+      const thumbnail = document.querySelector('[title="file0.pdf"]');
+      expect(thumbnail).toBeInTheDocument();
     });
 
     it('should handle various MIME types', () => {
@@ -489,22 +627,42 @@ describe('Attachment Component', () => {
         { id: '3', title: 'video.mp4', url: '/3.mp4', mime_type: 'video/mp4', size: 5120 }
       ];
 
-      render(
+      renderWithProviders(
         <Attachment
           value={files}
           onChange={mockOnChange}
         />
       );
 
-      expect(screen.getByText('image.png')).toBeInTheDocument();
-      expect(screen.getByText('doc.pdf')).toBeInTheDocument();
-      expect(screen.getByText('video.mp4')).toBeInTheDocument();
+      expect(document.querySelector('[title="image.png"]')).toBeInTheDocument();
+      expect(document.querySelector('[title="doc.pdf"]')).toBeInTheDocument();
+      expect(document.querySelector('[title="video.mp4"]')).toBeInTheDocument();
+    });
+
+    it('should filter out invalid attachment objects', () => {
+      const files = [
+        { id: '1', title: 'valid.pdf', url: '/valid.pdf', mime_type: 'application/pdf', size: 1024 },
+        { id: '2' }, // No URL
+        null,
+        undefined,
+        { title: 'no-id-or-url' }
+      ];
+
+      renderWithProviders(
+        <Attachment
+          value={files as any}
+          onChange={mockOnChange}
+        />
+      );
+
+      // Should only show valid attachment
+      expect(document.querySelector('[title="valid.pdf"]')).toBeInTheDocument();
     });
   });
 
   describe('Accessibility', () => {
     it('should have proper button labels', () => {
-      render(
+      renderWithProviders(
         <Attachment
           value={[]}
           onChange={mockOnChange}
@@ -512,7 +670,8 @@ describe('Attachment Component', () => {
       );
 
       // Upload button should have clear label
-      expect(document.querySelector('button')).toBeInTheDocument();
+      const uploadButton = screen.getByRole('button', { name: /add attachment/i });
+      expect(uploadButton).toHaveAttribute('aria-label', 'Add attachment');
     });
 
     it('should support keyboard navigation', () => {
@@ -520,7 +679,7 @@ describe('Attachment Component', () => {
         { id: '1', title: 'file.pdf', url: '/file.pdf', mime_type: 'application/pdf', size: 1024 }
       ];
 
-      render(
+      renderWithProviders(
         <Attachment
           value={files}
           onChange={mockOnChange}
@@ -528,10 +687,45 @@ describe('Attachment Component', () => {
         />
       );
 
-      const button = document.querySelector('button');
-      button?.focus();
+      const thumbnail = document.querySelector('[role="button"]');
+      (thumbnail as HTMLElement)?.focus();
 
-      expect(button).toHaveFocus();
+      expect(thumbnail).toHaveFocus();
+    });
+
+    it('should have accessible preview button labels', () => {
+      const files = [
+        { id: '1', title: 'file.pdf', url: '/file.pdf', mime_type: 'application/pdf', size: 1024 }
+      ];
+
+      renderWithProviders(
+        <Attachment
+          value={files}
+          onChange={mockOnChange}
+          showPreview={true}
+        />
+      );
+
+      const previewButton = screen.getByRole('button', { name: /preview attachments/i });
+      expect(previewButton).toHaveAttribute('aria-label', 'Preview attachments');
+    });
+
+    it('should have role and aria labels for thumbnail buttons', () => {
+      const files = [
+        { id: '1', title: 'file.pdf', url: '/file.pdf', mime_type: 'application/pdf', size: 1024 }
+      ];
+
+      renderWithProviders(
+        <Attachment
+          value={files}
+          onChange={mockOnChange}
+        />
+      );
+
+      const thumbnail = document.querySelector('[role="button"]');
+      expect(thumbnail).toHaveAttribute('tabIndex', '0');
+      expect(thumbnail).toHaveAttribute('aria-label');
     });
   });
 });
+

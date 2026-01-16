@@ -19,6 +19,7 @@ interface PercentProps {
   isBorder?: boolean;
   className?: string;
   allowEdit?: boolean;
+  readOnly?: boolean;
   helperText?: string;
   icon?: string;
 }
@@ -35,7 +36,6 @@ export const Percent: React.FC<PercentProps> = ({
   allowEdit = true,
   readOnly = false,
   helperText,
-  icon = "",
 }) => {
   const { displayAsProgress = false, defaultValue, progressColor = 'blue' } = config;
 
@@ -63,12 +63,12 @@ export const Percent: React.FC<PercentProps> = ({
       value !== null && value !== undefined
         ? value.toString()
         : defaultValue !== null && defaultValue !== undefined
-        ? defaultValue.toString()
-        : '';
+          ? defaultValue.toString()
+          : '';
     setLocalValue(displayValue);
 
-    const parsed = parseFloat(displayValue);
-    prevValueRef.current = !isNaN(parsed) ? parsed : null;
+    const parsed = Number.parseFloat(displayValue);
+    prevValueRef.current = !Number.isNaN(parsed) ? parsed : null;
   }, [value, defaultValue]);
 
   useEffect(() => {
@@ -86,11 +86,11 @@ export const Percent: React.FC<PercentProps> = ({
   }, [readOnly, isEditing]);
 
   const validate = (val: string) => {
-    if (required ) return 'This field is required';
-    if (!val)return null;
+    if (required) return 'This field is required';
+    if (!val) return null;
 
-    const numValue = parseFloat(val);
-    if (isNaN(numValue)) return 'Please enter a valid percentage';
+    const numValue = Number.parseFloat(val);
+    if (Number.isNaN(numValue)) return 'Please enter a valid percentage';
     if (numValue < 0 || numValue > 100) return 'Percentage must be between 0 and 100';
 
     return null;
@@ -115,29 +115,29 @@ export const Percent: React.FC<PercentProps> = ({
       return;
     }
 
-    const numValue = parseFloat(localValue);
-    if (!isNaN(numValue)) {
+    const numValue = Number.parseFloat(localValue);
+    if (!Number.isNaN(numValue)) {
       // Clear invalid values instead of showing error
       if (numValue < 0 || numValue > 100) {
         // Reset to previous valid value or 0
-        const validValue = prevValueRef.current !== null ? prevValueRef.current : 0;
+        const validValue = prevValueRef.current ?? 0;
         onChange(validValue);
         setLocalValue(validValue.toString());
         return;
       }
 
-      const rounded = parseFloat(numValue.toFixed(1));
+      const rounded = Number.parseFloat(numValue.toFixed(1));
 
       // ✅ Only trigger API call if numeric value actually changed
       if (prevValueRef.current !== rounded) {
         onChange(rounded);
         prevValueRef.current = rounded;
       } else {
-        setLocalValue(prevValueRef.current?.toString() || '');
+        setLocalValue(prevValueRef.current?.toString() ?? '');
       }
     } else {
       // Clear invalid non-numeric values
-      const validValue = prevValueRef.current !== null ? prevValueRef.current : 0;
+      const validValue = prevValueRef.current ?? 0;
       onChange(validValue);
       setLocalValue(validValue.toString());
     }
@@ -161,14 +161,14 @@ export const Percent: React.FC<PercentProps> = ({
   const error = validate(localValue);
 
   const getPercentValue = () => {
-    if (typeof value === 'number' && !isNaN(value)) return value;
+    if (typeof value === 'number' && !Number.isNaN(value)) return value;
     if (defaultValue !== null && defaultValue !== undefined) {
       if (typeof defaultValue === 'number') {
         return defaultValue;
       }
       if (typeof defaultValue === 'string' && defaultValue.trim()) {
-        const parsed = parseFloat(defaultValue);
-        if (!isNaN(parsed)) return parsed;
+        const parsed = Number.parseFloat(defaultValue);
+        if (!Number.isNaN(parsed)) return parsed;
       }
     }
     return 0;
@@ -180,7 +180,7 @@ export const Percent: React.FC<PercentProps> = ({
   if (displayAsProgress) {
     return (
       <div
-        className={`w-full relative ${isBorder ? "field-component-border" : ""}`}
+        className={`w-full relative ${isBorder ? "field-component-border" : ""} ${className}`}
         onDoubleClick={!readOnly ? handleDoubleClick : undefined}
         style={{ cursor: !isEditing && !disabled && !readOnly ? 'pointer' : 'default' }}
       >
@@ -236,7 +236,7 @@ export const Percent: React.FC<PercentProps> = ({
 
   return (
     <div
-      className={`w-full relative ${isBorder ? "field-component-border" : ""}`}
+      className={`w-full relative ${isBorder ? "field-component-border" : ""} ${className}`}
       onClick={!readOnly ? handleClick : undefined}
       style={readOnly ? { cursor: 'default' } : undefined}
     >

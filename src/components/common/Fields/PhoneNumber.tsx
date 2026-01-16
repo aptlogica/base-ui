@@ -114,7 +114,8 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
   // readOnly completely prevents editing
   const handleClick = useClickHandler(
     () => !readOnly && allowEdit && !disabled && setIsEditing(true), // Single click when allowEdit=true
-    () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // Double click when allowEdit=false
+    () => !readOnly && !allowEdit && !disabled && setIsEditing(true), // Double click when allowEdit=false
+    1
   );
 
   return (
@@ -130,7 +131,6 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
       {/* Input or Display */}
       <div
         className={`relative ${className} ${isBorder ? "field-component-border" : ""}`}
-        onClick={!readOnly ? handleClick : undefined}
         style={readOnly ? { cursor: 'default' } : undefined}
       >
         {isEditing ? (
@@ -164,12 +164,13 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
           />
         ) : (
           <div
+            onClick={!readOnly ? handleClick : undefined}
             className={`field-component ${
               localValue ? "text-gray-800" : "text-gray-400"
             } ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""} max-w-full overflow-hidden`}
             style={{ textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
-            {formatDisplay ? formatPhoneNumber(localValue) : localValue || configPlaceholder}
+            {localValue ? (formatDisplay ? formatPhoneNumber(localValue) : localValue) : configPlaceholder}
           </div>
         )}
 

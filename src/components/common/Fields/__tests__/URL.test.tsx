@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { URL } from '../URL';
+import { URL as URLField } from '../URL';
 
 describe('URL Component', () => {
   const mockOnChange = vi.fn();
@@ -12,24 +12,24 @@ describe('URL Component', () => {
 
   describe('Rendering', () => {
     it('should render URL input component', () => {
-      render(<URL value="" onChange={mockOnChange} />);
+      render(<URLField value="" onChange={mockOnChange} />);
       expect(screen.getByRole('textbox')).toBeInTheDocument();
     });
 
     it('should render label when provided', () => {
-      render(<URL label="Website" value="" onChange={mockOnChange} />);
+      render(<URLField label="Website" value="" onChange={mockOnChange} />);
       expect(screen.getByText('Website')).toBeInTheDocument();
     });
 
     it('should display URL value', () => {
-      render(<URL value="https://example.com" onChange={mockOnChange} />);
+      render(<URLField value="https://example.com" onChange={mockOnChange} />);
       expect(screen.getByDisplayValue('https://example.com')).toBeInTheDocument();
     });
   });
 
   describe('Input Interaction', () => {
     it('should accept valid URLs', async () => {
-      render(<URL value="" onChange={mockOnChange} />);
+      render(<URLField value="" onChange={mockOnChange} />);
       const input = screen.getByRole('textbox');
 
       await userEvent.type(input, 'https://example.com');
@@ -41,7 +41,7 @@ describe('URL Component', () => {
     });
 
     it('should accept URLs without protocol', async () => {
-      render(<URL value="" onChange={mockOnChange} />);
+      render(<URLField value="" onChange={mockOnChange} />);
       const input = screen.getByRole('textbox');
 
       await userEvent.type(input, 'example.com');
@@ -53,7 +53,7 @@ describe('URL Component', () => {
     });
 
     it('should accept URLs with paths and query params', async () => {
-      render(<URL value="" onChange={mockOnChange} />);
+      render(<URLField value="" onChange={mockOnChange} />);
       const input = screen.getByRole('textbox');
 
       await userEvent.type(input, 'https://example.com/path?query=value');
@@ -67,7 +67,7 @@ describe('URL Component', () => {
 
   describe('Validation', () => {
     it('should validate required field', async () => {
-      render(<URL value="" onChange={mockOnChange} required />);
+      render(<URLField value="" onChange={mockOnChange} required />);
       const input = screen.getByRole('textbox');
 
       fireEvent.blur(input);
@@ -85,7 +85,7 @@ describe('URL Component', () => {
 
       for (const url of validUrls) {
         vi.clearAllMocks();
-        render(<URL value="" onChange={mockOnChange} />);
+        render(<URLField value="" onChange={mockOnChange} />);
         const input = screen.getByRole('textbox');
 
         await userEvent.type(input, url);
@@ -101,14 +101,14 @@ describe('URL Component', () => {
   describe('Disabled and ReadOnly States', () => {
     it('should disable input when disabled', () => {
       render(
-        <URL value="https://example.com" onChange={mockOnChange} disabled />
+        <URLField value="https://example.com" onChange={mockOnChange} disabled />
       );
       expect(screen.getByRole('textbox')).toBeDisabled();
     });
 
     it('should prevent editing when readOnly', async () => {
       const { container } = render(
-        <URL
+        <URLField
           value="https://example.com"
           onChange={mockOnChange}
           readOnly
@@ -126,13 +126,13 @@ describe('URL Component', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty value', () => {
-      render(<URL value="" onChange={mockOnChange} />);
+      render(<URLField value="" onChange={mockOnChange} />);
       expect(screen.getByRole('textbox')).toHaveValue('');
     });
 
     it('should handle very long URLs', async () => {
       const longUrl = 'https://example.com/' + 'a'.repeat(200);
-      render(<URL value="" onChange={mockOnChange} />);
+      render(<URLField value="" onChange={mockOnChange} />);
       const input = screen.getByRole('textbox');
 
       await userEvent.type(input, longUrl);
@@ -144,7 +144,7 @@ describe('URL Component', () => {
     });
 
     it('should handle URLs with fragments', async () => {
-      render(<URL value="" onChange={mockOnChange} />);
+      render(<URLField value="" onChange={mockOnChange} />);
       const input = screen.getByRole('textbox');
 
       await userEvent.type(input, 'https://example.com#section');
@@ -156,7 +156,7 @@ describe('URL Component', () => {
     });
 
     it('should handle relative URLs', async () => {
-      render(<URL value="" onChange={mockOnChange} />);
+      render(<URLField value="" onChange={mockOnChange} />);
       const input = screen.getByRole('textbox');
 
       await userEvent.type(input, '/path/to/page');

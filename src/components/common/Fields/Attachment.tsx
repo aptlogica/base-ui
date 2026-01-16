@@ -288,6 +288,7 @@ export const Attachment: React.FC<AttachmentProps> = ({
                   ? `Maximum ${maxFiles} files allowed`
                   : 'Add attachment'
             }
+            aria-label="Add attachment"
           >
             {isUploading ? (
               <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />

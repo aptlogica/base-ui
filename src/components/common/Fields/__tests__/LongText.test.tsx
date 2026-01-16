@@ -1,6 +1,5 @@
-import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { LongText } from '../LongText';
@@ -196,14 +195,14 @@ describe('LongText Component', () => {
         />
       );
 
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
-      expect(textarea.maxLength).toBe(20);
+      const textarea = screen.getByRole('textbox');
+      expect((textarea as HTMLTextAreaElement).maxLength).toBe(20);
     });
 
     it('should show character count error when exceeding max', async () => {
       render(
         <LongText
-          value="x".repeat(20)
+          value={"x".repeat(20)}
           onChange={mockOnChange}
           maxLength={15}
           allowEdit={true}
@@ -318,7 +317,7 @@ describe('LongText Component', () => {
         />
       );
 
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const textarea: HTMLTextAreaElement = screen.getByRole('textbox');
       expect(textarea.disabled).toBe(true);
     });
 
@@ -332,7 +331,7 @@ describe('LongText Component', () => {
         />
       );
 
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const textarea = screen.getByRole<HTMLTextAreaElement>('textbox');
       expect(textarea.readOnly).toBe(true);
     });
 
@@ -376,7 +375,7 @@ describe('LongText Component', () => {
         />
       );
 
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const textarea = screen.getByRole('textbox');
       expect(textarea.maxLength).toBe(50);
     });
 
@@ -462,7 +461,7 @@ describe('LongText Component', () => {
         />
       );
 
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const textarea: HTMLTextAreaElement = screen.getByRole('textbox');
       expect(textarea.value).toBe(longText);
     });
 

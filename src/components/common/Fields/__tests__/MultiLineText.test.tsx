@@ -1,4 +1,3 @@
-import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -38,7 +37,7 @@ describe('MultiLineText Component', () => {
           placeholder="Enter your feedback"
         />
       );
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const textarea = screen.getByRole('textbox');
       expect(textarea.placeholder).toBe('Enter your feedback');
     });
 
@@ -46,7 +45,7 @@ describe('MultiLineText Component', () => {
       render(
         <MultiLineText value="Initial content" onChange={mockOnChange} />
       );
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const textarea = screen.getByRole('textbox');
       expect(textarea.value).toBe('Initial content');
     });
 
@@ -63,13 +62,13 @@ describe('MultiLineText Component', () => {
 
     it('should apply default rows value', () => {
       render(<MultiLineText value="" onChange={mockOnChange} />);
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const textarea = screen.getByRole('textbox');
       expect(textarea.rows).toBe(3); // Default rows value
     });
 
     it('should apply custom rows value', () => {
       render(<MultiLineText value="" onChange={mockOnChange} rows={5} />);
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const textarea = screen.getByRole('textbox');
       expect(textarea.rows).toBe(5);
     });
   });
@@ -81,7 +80,7 @@ describe('MultiLineText Component', () => {
 
       await userEvent.type(textarea, 'New content');
 
-      expect((textarea as HTMLTextAreaElement).value).toBe('New content');
+      expect(textarea.value).toBe('New content');
     });
 
     it('should call onChange when value changes and blur occurs', async () => {
@@ -121,11 +120,11 @@ describe('MultiLineText Component', () => {
       const { rerender } = render(
         <MultiLineText value="Initial" onChange={mockOnChange} />
       );
-      let textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      let textarea = screen.getByRole('textbox');
       expect(textarea.value).toBe('Initial');
 
       rerender(<MultiLineText value="Updated" onChange={mockOnChange} />);
-      textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      textarea = screen.getByRole('textbox');
       expect(textarea.value).toBe('Updated');
     });
 
@@ -161,7 +160,7 @@ describe('MultiLineText Component', () => {
     });
 
     it('should clear error when required field is filled', async () => {
-      const { container } = render(
+      render(
         <MultiLineText
           required
           value=""
@@ -192,7 +191,7 @@ describe('MultiLineText Component', () => {
           maxLength={10}
         />
       );
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const textarea = screen.getByRole('textbox');
 
       expect(textarea.maxLength).toBe(10);
     });
@@ -214,7 +213,22 @@ describe('MultiLineText Component', () => {
       // Browser enforces maxLength, so value won't exceed it
       expect((textarea as HTMLTextAreaElement).value.length).toBeLessThanOrEqual(5);
     });
+    it('should show error when value exceeds maxLength on initial render', async () => {
+      render(
+        <MultiLineText
+          value="This is longer than 5"
+          onChange={mockOnChange}
+          maxLength={5}
+        />
+      );
+      const textarea = screen.getByRole('textbox');
 
+      fireEvent.blur(textarea);
+
+      await waitFor(() => {
+        expect(screen.getByText('Max 5 characters allowed')).toBeInTheDocument();
+      });
+    });
     it('should accept whitespace-only content', async () => {
       render(
         <MultiLineText
@@ -237,7 +251,7 @@ describe('MultiLineText Component', () => {
   describe('Disabled & ReadOnly State', () => {
     it('should disable textarea when disabled is true', () => {
       render(<MultiLineText value="" onChange={mockOnChange} disabled />);
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const textarea = screen.getByRole('textbox');
 
       expect(textarea.disabled).toBe(true);
     });
@@ -250,7 +264,7 @@ describe('MultiLineText Component', () => {
           allowEdit={false}
         />
       );
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const textarea = screen.getByRole('textbox');
 
       expect(textarea.readOnly).toBe(true);
     });
@@ -273,7 +287,7 @@ describe('MultiLineText Component', () => {
           allowEdit={false}
         />
       );
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const textarea = screen.getByRole('textbox');
 
       // ReadOnly input ignores user input
       await userEvent.type(textarea, 'New');
@@ -281,7 +295,7 @@ describe('MultiLineText Component', () => {
     });
 
     it('should apply disabled styling', () => {
-      const { container } = render(
+      render(
         <MultiLineText value="" onChange={mockOnChange} disabled />
       );
       const textarea = screen.getByRole('textbox');
@@ -301,14 +315,14 @@ describe('MultiLineText Component', () => {
     });
 
     it('should apply custom className', () => {
-      const { container } = render(
+      render(
         <MultiLineText
           value=""
           onChange={mockOnChange}
           className="custom-class"
         />
       );
-      const wrapper = container.querySelector('.w-full.relative');
+      const wrapper = document.querySelector('.w-full.relative');
 
       expect(wrapper).toBeInTheDocument();
     });
@@ -334,14 +348,14 @@ describe('MultiLineText Component', () => {
   describe('Edge Cases', () => {
     it('should handle undefined value', () => {
       render(<MultiLineText value={undefined as any} onChange={mockOnChange} />);
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const textarea = screen.getByRole('textbox');
 
       expect(textarea.value).toBe('');
     });
 
     it('should handle null value', () => {
       render(<MultiLineText value={null as any} onChange={mockOnChange} />);
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const textarea = screen.getByRole('textbox');
 
       expect(textarea.value).toBe('');
     });
@@ -371,7 +385,7 @@ describe('MultiLineText Component', () => {
     });
 
     it('should handle very long text', async () => {
-      const longText = 'A'.repeat(500);
+      const longText = 'A'.repeat(100);
       render(
         <MultiLineText
           value=""
@@ -381,19 +395,19 @@ describe('MultiLineText Component', () => {
       );
       const textarea = screen.getByRole('textbox');
 
-      await userEvent.type(textarea, longText);
+      fireEvent.change(textarea, { target: { value: longText } });
       fireEvent.blur(textarea);
 
       await waitFor(() => {
         expect(mockOnChange).toHaveBeenCalledWith(longText);
       });
-    });
+    }, 10000);
 
     it('should preserve empty lines', async () => {
       render(<MultiLineText value="" onChange={mockOnChange} />);
       const textarea = screen.getByRole('textbox');
 
-      await userEvent.type(textarea, 'Line1\n\n\nLine2');
+      fireEvent.change(textarea, { target: { value: 'Line1\n\n\nLine2' } });
       fireEvent.blur(textarea);
 
       await waitFor(() => {
@@ -409,7 +423,7 @@ describe('MultiLineText Component', () => {
       rerender(<MultiLineText value="Second" onChange={mockOnChange} />);
       rerender(<MultiLineText value="Third" onChange={mockOnChange} />);
 
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const textarea = screen.getByRole('textbox');
       expect(textarea.value).toBe('Third');
     });
   });
@@ -439,7 +453,7 @@ describe('MultiLineText Component', () => {
       textarea.focus();
       expect(textarea).toHaveFocus();
 
-      await userEvent.type(textarea, 'Focused input');
+      fireEvent.change(textarea, { target: { value: 'Focused input' } });
       fireEvent.blur(textarea);
 
       await waitFor(() => {

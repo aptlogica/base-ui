@@ -10,157 +10,178 @@ describe('Decimal Component', () => {
     vi.clearAllMocks();
   });
 
+  const clickToEdit = async (container: HTMLElement) => {
+    const display = container.querySelector('.field-component');
+    expect(display).toBeTruthy();
+    fireEvent.click(display!);
+    await waitFor(() => {
+      expect(container.querySelector('input')).toBeInTheDocument();
+    });
+    return container.querySelector('input') as HTMLInputElement;
+  };
+
   describe('Rendering', () => {
-    it('should render decimal input component', () => {
-      render(<Decimal value="" onChange={mockOnChange} />);
-      expect(screen.getByRole('textbox')).toBeInTheDocument();
+    it('should render decimal display', () => {
+      const { container } = render(<Decimal value={0} onChange={mockOnChange} />);
+      expect(container.querySelector('.field-component')).toBeInTheDocument();
     });
 
     it('should render label when provided', () => {
-      render(<Decimal label="Rate" value="" onChange={mockOnChange} />);
+      render(<Decimal label="Rate" value={0} onChange={mockOnChange} />);
       expect(screen.getByText('Rate')).toBeInTheDocument();
     });
 
     it('should render required asterisk', () => {
-      render(<Decimal label="Percentage" value="" onChange={mockOnChange} required />);
+      render(<Decimal label="Percentage" value={0} onChange={mockOnChange} required />);
       expect(screen.getByText('*')).toBeInTheDocument();
     });
 
-    it('should display decimal value', () => {
-      render(<Decimal value="3.14" onChange={mockOnChange} />);
-      expect(screen.getByDisplayValue('3.14')).toBeInTheDocument();
+    it('should display formatted decimal value', () => {
+      const { container } = render(<Decimal value={3.14} onChange={mockOnChange} />);
+      expect(container.textContent).toContain('3.14');
     });
   });
 
   describe('Input Interaction', () => {
     it('should accept decimal input', async () => {
-      render(<Decimal value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox');
+      const { container } = render(<Decimal value={0} onChange={mockOnChange} />);
+      const input = await clickToEdit(container);
 
+      await userEvent.clear(input);
       await userEvent.type(input, '10.5');
       fireEvent.blur(input);
 
       await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
+        expect(mockOnChange).toHaveBeenCalledWith(10.5);
       });
     });
 
     it('should accept negative decimals', async () => {
-      render(<Decimal value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox');
+      const { container } = render(<Decimal value={0} onChange={mockOnChange} />);
+      const input = await clickToEdit(container);
 
+      await userEvent.clear(input);
       await userEvent.type(input, '-5.75');
       fireEvent.blur(input);
 
       await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
+        expect(mockOnChange).toHaveBeenCalledWith(-5.75);
       });
     });
 
-    it('should accept multiple decimal places', async () => {
-      render(<Decimal value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox');
+    it('should round to precision', async () => {
+      const { container } = render(
+        <Decimal value={0} onChange={mockOnChange} decimals={2} />
+      );
+      const input = await clickToEdit(container);
 
-      await userEvent.type(input, '3.141592');
+      await userEvent.clear(input);
+      await userEvent.type(input, '3.14159');
       fireEvent.blur(input);
 
       await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
+        expect(mockOnChange).toHaveBeenCalledWith(3.14);
       });
     });
 
-    it('should reject non-numeric characters', async () => {
-      render(<Decimal value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox') as HTMLInputElement;
+    it('should clear invalid input to null', async () => {
+      const { container } = render(<Decimal value={1.2} onChange={mockOnChange} />);
+      const input = await clickToEdit(container);
 
-      await userEvent.type(input, '3.14abc');
+      await userEvent.clear(input);
+      await userEvent.type(input, 'abc');
       fireEvent.blur(input);
 
-      expect(/^-?\d*\.?\d*$/.test(input.value)).toBe(true);
+      await waitFor(() => {
+        expect(mockOnChange).toHaveBeenCalledWith(null);
+      });
     });
   });
 
   describe('Validation', () => {
-    it('should validate required field', async () => {
-      render(<Decimal value="" onChange={mockOnChange} required />);
-      const input = screen.getByRole('textbox');
+    it('should not call onChange when required and empty', async () => {
+      const { container } = render(
+        <Decimal value={null} onChange={mockOnChange} required />
+      );
+      const input = await clickToEdit(container);
 
+      await userEvent.clear(input);
       fireEvent.blur(input);
 
       expect(mockOnChange).not.toHaveBeenCalled();
     });
 
-    it('should accept zero', async () => {
-      render(<Decimal value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox');
+    it('should accept zero as valid value', async () => {
+      const { container } = render(<Decimal value={0} onChange={mockOnChange} />);
+      const input = await clickToEdit(container);
 
-      await userEvent.type(input, '0.0');
+      // Value is already zero, no change should be committed
       fireEvent.blur(input);
 
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
-      });
+      expect(input.value).toBe('0.00');
+      expect(mockOnChange).not.toHaveBeenCalled();
     });
 
-    it('should accept empty non-required field', async () => {
-      render(<Decimal value="" onChange={mockOnChange} required={false} />);
-      const input = screen.getByRole('textbox');
 
+
+    it('should allow empty value when not required', async () => {
+      const { container } = render(
+        <Decimal value={1.5} onChange={mockOnChange} required={false} />
+      );
+      const input = await clickToEdit(container);
+
+      await userEvent.clear(input);
       fireEvent.blur(input);
 
       await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
+        expect(mockOnChange).toHaveBeenCalledWith(null);
       });
     });
   });
 
   describe('Disabled and ReadOnly States', () => {
-    it('should disable input when disabled', () => {
-      render(<Decimal value="5.5" onChange={mockOnChange} disabled />);
-      expect(screen.getByRole('textbox')).toBeDisabled();
+    it('should not enter edit mode when disabled', async () => {
+      const { container } = render(
+        <Decimal value={5.5} onChange={mockOnChange} disabled />
+      );
+      const display = container.querySelector('.field-component')!;
+      fireEvent.click(display);
+
+      expect(container.querySelector('input')).not.toBeInTheDocument();
     });
 
-    it('should prevent editing when readOnly', async () => {
+    it('should not enter edit mode when readOnly', async () => {
       const { container } = render(
-        <Decimal value="5.5" onChange={mockOnChange} readOnly allowEdit={true} />
+        <Decimal value={5.5} onChange={mockOnChange} readOnly />
       );
-      const editable = container.querySelector('.field-component');
+      const display = container.querySelector('.field-component')!;
+      fireEvent.click(display);
 
-      fireEvent.click(editable!);
-      await new Promise(resolve => setTimeout(resolve, 250));
-
-      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+      expect(container.querySelector('input')).not.toBeInTheDocument();
     });
   });
 
   describe('Edge Cases', () => {
-    it('should handle empty value', () => {
-      render(<Decimal value="" onChange={mockOnChange} />);
-      expect(screen.getByRole('textbox')).toHaveValue('');
+    it('should handle defaultValue from config', () => {
+      const { container } = render(
+        <Decimal
+          value={null}
+          onChange={mockOnChange}
+          config={{ defaultValue: 2.5 }}
+        />
+      );
+      expect(container.textContent).toContain('2.50');
     });
 
-    it('should handle very small decimals', async () => {
-      render(<Decimal value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox');
-
-      await userEvent.type(input, '0.000001');
-      fireEvent.blur(input);
-
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
-      });
-    });
-
-    it('should handle trailing zeros', async () => {
-      render(<Decimal value="" onChange={mockOnChange} />);
-      const input = screen.getByRole('textbox');
-
-      await userEvent.type(input, '5.00');
-      fireEvent.blur(input);
-
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
-      });
+    it('should support thousands formatting', () => {
+      const { container } = render(
+        <Decimal
+          value={12345.67}
+          onChange={mockOnChange}
+          config={{ showThousands: true }}
+        />
+      );
+      expect(container.textContent).toContain('12,345.67');
     });
   });
 });
