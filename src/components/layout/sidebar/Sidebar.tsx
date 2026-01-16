@@ -528,15 +528,31 @@ const Sidebar: React.FC<SidebarProps> = ({
               }
 
               // Handle different view types with their specific field configurations
-              const normalizedFieldId = (fieldId && typeof fieldId === 'object' && 'value' in fieldId)
-                ? String(fieldId.value)
-                : (typeof fieldId === 'string' ? fieldId : undefined);
-              const normalizedStartDateFieldId = (startDateFieldId && typeof startDateFieldId === 'object' && 'value' in startDateFieldId)
-                ? String(startDateFieldId.value)
-                : (typeof startDateFieldId === 'string' ? startDateFieldId : undefined);
-              const normalizedEndDateFieldId = (endDateFieldId && typeof endDateFieldId === 'object' && 'value' in endDateFieldId)
-                ? String(endDateFieldId.value)
-                : (typeof endDateFieldId === 'string' ? endDateFieldId : undefined);
+              let normalizedFieldId: string | undefined;
+              if (fieldId && typeof fieldId === 'object' && 'value' in fieldId) {
+                normalizedFieldId = String(fieldId.value);
+              } else if (typeof fieldId === 'string') {
+                normalizedFieldId = fieldId;
+              } else {
+                normalizedFieldId = undefined;
+              }
+              let normalizedStartDateFieldId: string | undefined;
+              if (startDateFieldId && typeof startDateFieldId === 'object' && 'value' in startDateFieldId) {
+                normalizedStartDateFieldId = String(startDateFieldId.value);
+              } else if (typeof startDateFieldId === 'string') {
+                normalizedStartDateFieldId = startDateFieldId;
+              } else {
+                normalizedStartDateFieldId = undefined;
+              }
+
+              let normalizedEndDateFieldId: string | undefined;
+              if (endDateFieldId && typeof endDateFieldId === 'object' && 'value' in endDateFieldId) {
+                normalizedEndDateFieldId = String(endDateFieldId.value);
+              } else if (typeof endDateFieldId === 'string') {
+                normalizedEndDateFieldId = endDateFieldId;
+              } else {
+                normalizedEndDateFieldId = undefined;
+              }
 
               let meta: Record<string, any> = {};
 

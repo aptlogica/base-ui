@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useClickOutside } from '../../../hooks/useClickOutside';
 
 interface TimeProps {
@@ -14,7 +14,6 @@ interface TimeProps {
   allowEdit?: boolean; // true = single click opens dropdown, false = double click for manual edit
   readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
-  icon?: string;
   config?: {
     hourFormat?: '12' | '24';
     timeFormat?: string;
@@ -55,19 +54,16 @@ export const Time: React.FC<TimeProps> = ({
   allowEdit = true,
   readOnly = false,
   helperText,
-  icon = "",
   config = {}
 }) => {
   const {
     hourFormat = '24',
-    timeFormat = 'HH:mm',
-    defaultValue = ''
-  } = config;
+    } = config;
 
   const [localValue, setLocalValue] = useState(value || '');
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState<'below' | 'above'>('below');
+  // Removed unused dropdownPosition state
   const [calculatedPosition, setCalculatedPosition] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -103,8 +99,7 @@ export const Time: React.FC<TimeProps> = ({
     if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
       position = 'above';
     }
-    setDropdownPosition(position);
-
+ 
     // Calculate left position (align to left edge of trigger)
     let left = rect.left;
     if (left < 10) {
@@ -161,7 +156,7 @@ export const Time: React.FC<TimeProps> = ({
     if (hourFormat === '12' && option.includes(' ')) {
       const [time, period] = option.split(' ');
       const [hours, minutes] = time.split(':');
-      let hour = parseInt(hours);
+      let hour = Number.parseInt(hours);
       if (period === 'PM' && hour !== 12) hour += 12;
       if (period === 'AM' && hour === 12) hour = 0;
       timeValue = `${pad(hour)}:${minutes}`;
@@ -188,7 +183,7 @@ export const Time: React.FC<TimeProps> = ({
   const displayValue = localValue ? (hourFormat === '12' ?
     (() => {
       const [hours, minutes] = localValue.split(':');
-      const hour = parseInt(hours);
+      const hour = Number.parseInt(hours);
       const period = hour >= 12 ? 'PM' : 'AM';
       const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
       return `${displayHour}:${minutes} ${period}`;

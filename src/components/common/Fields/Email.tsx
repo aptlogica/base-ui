@@ -13,7 +13,6 @@ interface EmailProps {
   allowEdit?: boolean; // true = single click, false = double click
   readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
-  icon?: string;
   config?: {
     emailValid?: boolean;
     defaultValue?: string;
@@ -33,7 +32,6 @@ export const Email: React.FC<EmailProps> = ({
   allowEdit = true,
   readOnly = false,
   helperText,
-  icon = "",
   config = {},
 }) => {
   const { emailValid = true, defaultValue = "" } = config;
@@ -55,8 +53,54 @@ export const Email: React.FC<EmailProps> = ({
     }
   }, [readOnly, isEditing]);
 
-  const validateEmail = (email: string) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  // Safe email validation without ReDoS vulnerability
+  // Limits input length and uses non-backtracking pattern
+  
+  const validateEmailLength = (email: string): boolean => {
+    return email !== null && email !== undefined && email.length > 0 && email.length <= 320;
+  };
+
+  const validateLocalPart = (localPart: string): boolean => {
+    if (!localPart || localPart.length === 0 || localPart.length > 64) return false;
+    if (/\s/.test(localPart)) return false;
+    return /^[a-zA-Z0-9._%+-]+$/.test(localPart);
+  };
+
+  const validateDomainSegments = (domainParts: string[]): boolean => {
+    for (const segment of domainParts) {
+      if (!segment || segment.length === 0) return false;
+      if (!/^[a-zA-Z0-9-]+$/.test(segment)) return false;
+      
+      const isLastSegment = segment === domainParts[domainParts.length - 1];
+      if (isLastSegment && (segment.length < 2 || segment.startsWith('-'))) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const validateDomainPart = (domainPart: string): boolean => {
+    if (!domainPart || domainPart.length === 0 || domainPart.length > 255) return false;
+    if (/\s/.test(domainPart)) return false;
+    
+    const domainParts = domainPart.split('.');
+    if (domainParts.length < 2) return false;
+    
+    return validateDomainSegments(domainParts);
+  };
+
+  const validateEmail = (email: string): boolean => {
+    if (!validateEmailLength(email)) return false;
+    
+    const parts = email.split('@');
+    if (parts.length !== 2) return false;
+    
+    const [localPart, domainPart] = parts;
+    if (!validateLocalPart(localPart)) return false;
+    if (!validateDomainPart(domainPart)) return false;
+    
+    return true;
+  };
 
   const validate = (val: string) => {
     if (required && !val.trim()) return "This field is required";
@@ -68,7 +112,7 @@ export const Email: React.FC<EmailProps> = ({
 
   const handleBlur = () => {
     const validationError = validate(localValue);
-    
+
     // Don't show error messages - instead clear invalid values
     if (validationError) {
       // If value is invalid, clear it without saving
@@ -112,9 +156,9 @@ export const Email: React.FC<EmailProps> = ({
       )}
 
       {/* Input or Display */}
-      <div 
+      <button
         className={`relative ${className} ${isBorder ? "field-component-border" : ""}`}
-        onClick={!readOnly ? handleClick : undefined}
+        onClick={readOnly ? undefined : handleClick}
         style={readOnly ? { cursor: 'default' } : undefined}
       >
         {isEditing ? (
@@ -145,7 +189,7 @@ export const Email: React.FC<EmailProps> = ({
           </div>
         )}
 
-      </div>
+      </button>
 
       {/* Helper Text */}
       {helperText && allowEdit && (

@@ -377,6 +377,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
           description={editDescription}
           setDescription={setEditDescription}
           onSubmit={handleSaveWorkspace}
+          currentWorkspaceId={selectedWorkspaceId}
         />
       )}
 

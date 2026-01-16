@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, X, Check, Info } from 'lucide-react';
+import { ChevronDown, X, Check } from 'lucide-react';
 import { useClickOutside } from '../../../hooks/useClickOutside';
 
 interface MultiSelectOption {
@@ -22,7 +22,6 @@ interface MultiSelectProps {
   allowEdit?: boolean; // true = single click opens dropdown, false = double click for manual edit
   readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
-  icon?: string;
   config?: {
     defaultValue?: string[];
     options?: Array<string | MultiSelectOption>;
@@ -45,7 +44,6 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   allowEdit = true,
   readOnly = false,
   helperText,
-  icon = "",
   config = {}
 }) => {
   const { defaultValue = [], options: configOptions = options, maxSelections: configMaxSelections = maxSelections } = config;
@@ -54,7 +52,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   );
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState<'below' | 'above'>('below');
+  // Removed unused dropdownPosition state
   const [calculatedPosition, setCalculatedPosition] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -69,7 +67,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
     const dropdownMinHeight = 200;
-    const dropdownWidth = Math.min(384, rect.width); // Use button width or max 384px
+    const dropdownWidth = Math.min(384, rect.width); 
 
     const spaceBelow = viewportHeight - rect.bottom;
     const spaceAbove = rect.top;
@@ -79,8 +77,6 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
     if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
       position = 'above';
     }
-    setDropdownPosition(position);
-
     // Calculate left position (align to left edge of trigger)
     let left = rect.left;
     if (left < 10) {
@@ -125,7 +121,12 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   });
 
   // Use default value if value is empty/undefined/null and default value is provided
-  const displayValue = (value !== null && value !== undefined && Array.isArray(value) && value.length > 0) ? value : (Array.isArray(defaultValue) && defaultValue.length > 0 ? defaultValue : []);
+  let displayValue: string[] = [];
+  if (value !== null && value !== undefined && Array.isArray(value) && value.length > 0) {
+    displayValue = value;
+  } else if (Array.isArray(defaultValue) && defaultValue.length > 0) {
+    displayValue = defaultValue;
+  }
 
   const validate = (val: string[]) => {
     if (required && val.length === 0) {
@@ -188,9 +189,9 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
     if (!hex) return '#1f2937';
     const c = hex.replace('#', '');
     if (c.length !== 6) return '#1f2937';
-    const r = parseInt(c.slice(0, 2), 16);
-    const g = parseInt(c.slice(2, 4), 16);
-    const b = parseInt(c.slice(4, 6), 16);
+    const r = Number.parseInt(c.slice(0, 2), 16);
+    const g = Number.parseInt(c.slice(2, 4), 16);
+    const b = Number.parseInt(c.slice(4, 6), 16);
     const yiq = (r * 299 + g * 587 + b * 114) / 1000;
     return yiq >= 160 ? '#111827' : '#ffffff';
   };
@@ -223,7 +224,8 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                   const optIndex = normalizedOptions.findIndex(o => o.option === item);
                   const opt = optIndex >= 0 ? normalizedOptions[optIndex] : { option: item, color: undefined };
                   const style = opt.color ? { backgroundColor: opt.color, color: getReadableTextColor(opt.color) } : undefined;
-                  const cls = opt.color ? '' : getOptionColor(item, optIndex >= 0 ? optIndex : index);
+                  const colorIndex = optIndex >= 0 ? optIndex : index;
+                  const cls = opt.color ? '' : getOptionColor(item, colorIndex);
                   return (
                     <div
                       key={item}

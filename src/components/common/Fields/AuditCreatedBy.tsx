@@ -1,21 +1,20 @@
 import React from "react";
 import { useCurrentUser, getUserInitials } from "../../../auth/useCurrentUser";
 import { useUserProfile } from "../../../hooks/useApi";
+import type { UserProfileResponse } from "../../../types/userProfile";
 
 interface AuditCreatedByProps {
   placeholder?: string;
-  disabled?: boolean;
 }
 
 export const AuditCreatedBy: React.FC<AuditCreatedByProps> = ({
   placeholder = "Created by...",
-  disabled = false,
 }) => {
   const currentUser = useCurrentUser();
-  
+
   // Get user profile data for avatar
   const { data: profileResponse } = useUserProfile(currentUser?.id || '');
-  const userProfile = profileResponse?.data;
+  const userProfile = (profileResponse as UserProfileResponse | undefined)?.data;
 
   if (!currentUser) {
     return <div className="w-full px-2 py-1 text-sm text-gray-500">{placeholder}</div>;
@@ -24,9 +23,9 @@ export const AuditCreatedBy: React.FC<AuditCreatedByProps> = ({
   return (
     <div className="w-full flex items-center gap-2 px-2 py-1">
       {userProfile?.avatar || currentUser?.avatar ? (
-        <img 
-          src={userProfile?.avatar || currentUser?.avatar} 
-          alt="Profile" 
+        <img
+          src={userProfile?.avatar || currentUser?.avatar}
+          alt="Profile"
           className="w-6 h-6 rounded-full object-cover"
         />
       ) : (

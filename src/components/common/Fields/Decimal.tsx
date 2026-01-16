@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useClickHandler } from "../../../utils/helpers";
 
 interface DecimalProps {
@@ -12,15 +12,13 @@ interface DecimalProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean; // true = single click, false = double click
-  readOnly?: boolean; // true = completely prevent editing
+  allowEdit?: boolean; 
+  readOnly?: boolean; 
   helperText?: string;
-  icon?: string;
   config?: {
     defaultValue?: number | string;
     precision?: number;
     showThousands?: boolean;
-    description?: string;
     [key: string]: any;
   };
 }
@@ -39,7 +37,6 @@ export const Decimal: React.FC<DecimalProps> = ({
   allowEdit = true,
   readOnly = false,
   helperText,
-  icon = "",
   config = {},
 }) => {
   const {
@@ -53,17 +50,34 @@ export const Decimal: React.FC<DecimalProps> = ({
   const isUpdatingRef = useRef(false); // Track if we're updating to prevent render cycle
 
   // --- Utils ---
+  // Safe function to add thousands separators without regex backtracking vulnerability
+  const addThousandsSeparator = (integerPart: string): string => {
+    if (integerPart.length <= 3) return integerPart;
+    
+    // Process from right to left, adding commas every 3 digits
+    let result = "";
+    let count = 0;
+    for (let i = integerPart.length - 1; i >= 0; i--) {
+      if (count > 0 && count % 3 === 0) {
+        result = "," + result;
+      }
+      result = integerPart[i] + result;
+      count++;
+    }
+    return result;
+  };
+
   // Memoize formatValue to prevent recreation on every render
   const formatValue = useCallback((val: number | null) => {
     if (val === null || val === undefined) return "";
-    if (typeof val !== "number" || isNaN(val)) return "";
+    if (typeof val !== "number" || Number.isNaN(val)) return "";
 
     const formatted = val.toFixed(precision);
 
     if (configShowThousands) {
       const [integer, decimal] = formatted.split(".");
-      const formattedInteger = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-      return decimal !== undefined ? `${formattedInteger}.${decimal}` : formattedInteger;
+      const formattedInteger = addThousandsSeparator(integer);
+      return decimal === undefined ? formattedInteger : `${formattedInteger}.${decimal}`;
     }
 
     return formatted;
@@ -71,18 +85,11 @@ export const Decimal: React.FC<DecimalProps> = ({
 
   const parseNumber = (val: string): number | null => {
     if (!val.trim()) return null;
-    const clean = val.replace(/,/g, "");
-    const num = parseFloat(clean);
-    return isNaN(num) ? null : num;
+    const clean = val.replaceAll(",", "");
+    const num = Number.parseFloat(clean);
+    return Number.isNaN(num) ? null : num;
   };
 
-  const validate = (val: string): string | null => {
-    if (required && !val.trim()) return "This field is required";
-    if (!val.trim()) return null;
-    return parseNumber(val) === null ? "Please enter a valid decimal" : null;
-  };
-
-  // --- Init / sync ---
   useEffect(() => {
     // Skip if we're in the middle of updating (prevents render cycle)
     if (isUpdatingRef.current) {
@@ -97,7 +104,7 @@ export const Decimal: React.FC<DecimalProps> = ({
       if ((value === null || value === undefined) && defaultValue != null) {
         displayValue =
           typeof defaultValue === "string"
-            ? parseFloat(defaultValue) || null
+            ? Number.parseFloat(defaultValue) || null
             : Number(defaultValue);
       }
       setLocalValue(formatValue(displayValue));
@@ -120,11 +127,22 @@ export const Decimal: React.FC<DecimalProps> = ({
 
   const handleBlur = () => {
     setIsEditing(false);
-    const clean = localValue.replace(/,/g, "");
+    const clean = localValue.replaceAll(",", "");
     const num = parseNumber(clean);
     
     // Only save on blur, not during typing
-    if (num !== null) {
+    if (num === null) {
+      // Empty or invalid - clear silently and save as null (not 0)
+      setLocalValue("");
+      
+      // Mark that we're updating to prevent useEffect from running
+      isUpdatingRef.current = true;
+      
+      // Only call onChange if value actually changed (wasn't already null)
+      if (value !== null && value !== undefined) {
+        onChange(null);
+      }
+    } else {
       // Valid number - round to precision and format
       // Use Math.round for better precision handling than toFixed + parseFloat
       const multiplier = Math.pow(10, precision);
@@ -141,17 +159,6 @@ export const Decimal: React.FC<DecimalProps> = ({
       if (roundedValue !== (value ?? null)) {
         onChange(roundedValue);
       }
-    } else {
-      // Empty or invalid - clear silently and save as null (not 0)
-      setLocalValue("");
-      
-      // Mark that we're updating to prevent useEffect from running
-      isUpdatingRef.current = true;
-      
-      // Only call onChange if value actually changed (wasn't already null)
-      if (value !== null && value !== undefined) {
-        onChange(null);
-      }
     }
   };
 
@@ -164,8 +171,6 @@ export const Decimal: React.FC<DecimalProps> = ({
     }
   };
 
-  // allowEdit controls single vs double-click behavior
-  // readOnly completely prevents editing
   const handleClick = useClickHandler(
     () => !readOnly && allowEdit && !disabled && setIsEditing(true), // Single click when allowEdit=true
     () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // Double click when allowEdit=false
@@ -182,7 +187,13 @@ export const Decimal: React.FC<DecimalProps> = ({
 
       <div 
         className={`relative ${className} ${isBorder ? "field-component-border" : ""}`} 
-        onClick={!readOnly ? handleClick : undefined}
+        onClick={readOnly ? undefined : handleClick}
+        onKeyDown={readOnly ? undefined : (e => {
+          if (e.key === "Enter" || e.key === " ") {
+            handleClick();
+          }
+        })}
+        tabIndex={readOnly ? -1 : 0}
         style={readOnly ? { cursor: 'default' } : undefined}
       >
         {isEditing ? (

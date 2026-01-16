@@ -11,24 +11,24 @@ interface DropdownOption<T = string | number> {
 }
 
 interface AdvancedDropdownProps<T = string | number> {
-  options: DropdownOption<T>[];
-  value?: T | T[];
-  onChange: (value: T | T[]) => void;
-  multiple?: boolean;
-  placeholder?: string;
-  disabled?: boolean;
-  loading?: boolean;
-  error?: string;
-  searchable?: boolean;
-  clearable?: boolean;
-  maxHeight?: number;
-  className?: string;
-  required?: boolean;
-  label?: string;
-  id?: string;
-  helpText?: string;
-  validate?: (value: T | T[] | undefined) => string | undefined;
-  showValueOnRight?: boolean;
+  readonly options: readonly DropdownOption<T>[];
+  readonly value?: T | T[];
+  readonly onChange: (value: T | T[]) => void;
+  readonly multiple?: boolean;
+  readonly placeholder?: string;
+  readonly disabled?: boolean;
+  readonly loading?: boolean;
+  readonly error?: string;
+  readonly searchable?: boolean;
+  readonly clearable?: boolean;
+  readonly maxHeight?: number;
+  readonly className?: string;
+  readonly required?: boolean;
+  readonly label?: string;
+  readonly id?: string;
+  readonly helpText?: string;
+  readonly validate?: (value: T | T[] | undefined) => string | undefined;
+  readonly showValueOnRight?: boolean;
 }
 
 export function AdvancedDropdown<T extends string | number>({
@@ -82,12 +82,13 @@ export function AdvancedDropdown<T extends string | number>({
   const currentValues = normalizeValue(value);
 
   // Filter and sort options based on search query
-  const filteredOptions = (searchable && searchQuery.trim()
-    ? options.filter(option =>
-      option.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      option.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    : options
+  const filteredOptions = Array.from(
+    searchable && searchQuery.trim()
+      ? options.filter(option =>
+        option.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        option.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      : options
   ).sort((a, b) => a.label.localeCompare(b.label));
 
   // Calculate dropdown position based on available space
@@ -136,7 +137,7 @@ export function AdvancedDropdown<T extends string | number>({
         const newValues = currentValues.includes(optionValue)
           ? currentValues.filter(v => v !== optionValue)
           : [...currentValues, optionValue];
-        onChange(newValues as T[]);
+        onChange(newValues);
       } else {
         onChange(optionValue);
         setIsOpen(false);
@@ -190,14 +191,6 @@ export function AdvancedDropdown<T extends string | number>({
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (disabled || loading) return;
-
-    // if (!isOpen) {
-    //   if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
-    //     e.preventDefault();
-    //     handleToggle();
-    //   }
-    //   return;
-    // }
 
     switch (e.key) {
       case 'ArrowDown':
@@ -272,7 +265,7 @@ export function AdvancedDropdown<T extends string | number>({
   useEffect(() => {
     if (focusedIndex >= 0 && optionsRef.current) {
       const focusedElement = optionsRef.current.children[
-        searchable ? focusedIndex : focusedIndex
+        focusedIndex
       ] as HTMLElement;
 
       if (focusedElement) {
@@ -365,7 +358,6 @@ export function AdvancedDropdown<T extends string | number>({
                   isSelected={isSelected(option.value)}
                   isFocused={index === focusedIndex}
                   multiple={multiple}
-                  showValueOnRight={showValueOnRight}
                   onClick={() => !option.disabled && handleSelect(option.value)}
                 />
               ))
@@ -529,16 +521,14 @@ function DropdownOptionItem<T>({
   isSelected,
   isFocused,
   multiple,
-  showValueOnRight,
   onClick,
-}: {
+}: Readonly<{
   option: DropdownOption<T>;
   isSelected: boolean;
   isFocused: boolean;
   multiple: boolean;
-  showValueOnRight?: boolean;
   onClick: () => void;
-}) {
+}>) {
   const baseClasses = `
     flex items-center justify-between px-3 py-2.5 cursor-pointer
     transition-all duration-150 ease-in-out relative
@@ -599,8 +589,8 @@ function DropdownOptionItem<T>({
         <div className="flex-shrink-0 ml-2">
           {multiple ? (
             <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${isSelected
-                ? 'bg-[var(--color-bg-brand-primary)] border-[var(--color-bg-brand-primary)]'
-                : 'border bg-black'
+              ? 'bg-[var(--color-bg-brand-primary)] border-[var(--color-bg-brand-primary)]'
+              : 'border bg-black'
               }`}>
               <Check className="w-3 h-3 text-black" />
             </div>
@@ -614,38 +604,15 @@ function DropdownOptionItem<T>({
 }
 
 // Helper functions
-function getDisplayLabel<T>(
-  value: T | T[] | undefined | null,
-  options: DropdownOption<T>[],
-  placeholder: string,
-  multiple: boolean
-): string {
-  const normalizedValue = value === undefined || value === null
-    ? []
-    : (Array.isArray(value) ? value : [value]);
-
-  if (normalizedValue.length === 0) return placeholder;
-
-  const labels = normalizedValue
-    .map(val => options.find(opt => opt.value === val)?.label)
-    .filter(Boolean);
-
-  if (labels.length === 0) return placeholder;
-
-  if (multiple) {
-    if (labels.length > 2) {
-      return `${labels.length} items selected`;
-    }
-    return labels.join(', ');
-  }
-
-  return labels[0] || placeholder;
-}
-
 function getSelectedCount<T>(value: T | T[] | undefined | null): number {
-  const normalizedValue = value === undefined || value === null
-    ? []
-    : (Array.isArray(value) ? value : [value]);
+  let normalizedValue: T[];
+  if (value === undefined || value === null) {
+    normalizedValue = [];
+  } else if (Array.isArray(value)) {
+    normalizedValue = value;
+  } else {
+    normalizedValue = [value];
+  }
   return normalizedValue.length;
 }
 

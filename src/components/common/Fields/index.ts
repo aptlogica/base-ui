@@ -18,7 +18,6 @@ export { Year } from './Year';
 export { Time } from './Time';
 export { DateTime } from './DateTime';
 export { User } from './User';
-export { Button } from './Button';
 export { JSONField } from './JSONField';
 export { AuditCreatedBy } from './AuditCreatedBy';
 export { AuditLastModifiedBy } from './AuditLastModifiedBy';

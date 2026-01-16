@@ -17,13 +17,11 @@ interface DateProps {
   allowEdit?: boolean; // true = single click opens dropdown, false = double click for manual edit
   readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
-  icon?: string;
   config?: {
     defaultValue?: string;
     dateFormat?: string;
     min?: string;
     max?: string;
-    description?: string;
     hideTodayButton?: boolean;
     [key: string]: any;
   };
@@ -38,48 +36,57 @@ function getTodayISO() {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
-// Convert date from one format to another
-function convertDateFormat(date: string, fromFormat: string, toFormat: string): string {
+// Convert from various formats to ISO (YYYY-MM-DD)
+function convertToISO(date: string, fromFormat: string): string {
   if (!date) return '';
-  let isoDate = '';
 
   // Normalize known ISO datetime variants like 2025-09-26T00:00:00Z or with offset
   if (fromFormat === 'ISO' || /\d{4}-\d{2}-\d{2}T/.test(date)) {
-    isoDate = date.substring(0, 10);
-  } else if (fromFormat === 'YYYY-MM-DD') {
-    isoDate = date;
-  } else if (fromFormat === 'YYYY/MM/DD') {
-    isoDate = date.replace(/\//g, '-');
-  } else if (fromFormat === 'DD-MM-YYYY') {
-    const parts = date.split('-');
-    if (parts.length === 3) {
-      isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-    }
-  } else if (fromFormat === 'MM-DD-YYYY') {
-    const parts = date.split('-');
-    if (parts.length === 3) {
-      isoDate = `${parts[2]}-${parts[0]}-${parts[1]}`;
-    }
-  } else if (fromFormat === 'DD/MM/YYYY') {
-    const parts = date.split('/');
-    if (parts.length === 3) {
-      isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-    }
-  } else if (fromFormat === 'MM/DD/YYYY') {
-    const parts = date.split('/');
-    if (parts.length === 3) {
-      isoDate = `${parts[2]}-${parts[0]}-${parts[1]}`;
-    }
-  } else if (fromFormat === 'DD MM YYYY') {
-    const parts = date.split(' ');
-    if (parts.length === 3) {
-      isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-    }
+    return date.substring(0, 10);
   }
 
-  // Now convert from ISO to target format
-  if (!isoDate) return date;
+  if (fromFormat === 'YYYY-MM-DD') {
+    return date;
+  }
 
+  if (fromFormat === 'YYYY/MM/DD') {
+    return date.replaceAll('/', '-');
+  }
+
+  const parseDateParts = (dateStr: string, separator: string, order: 'DD-MM-YYYY' | 'MM-DD-YYYY'): string => {
+    const parts = dateStr.split(separator);
+    if (parts.length !== 3) return '';
+    const [first, second, third] = parts;
+    return order === 'DD-MM-YYYY' 
+      ? `${third}-${second}-${first}`
+      : `${third}-${first}-${second}`;
+  };
+
+  if (fromFormat === 'DD-MM-YYYY') {
+    return parseDateParts(date, '-', 'DD-MM-YYYY');
+  }
+
+  if (fromFormat === 'MM-DD-YYYY') {
+    return parseDateParts(date, '-', 'MM-DD-YYYY');
+  }
+
+  if (fromFormat === 'DD/MM/YYYY') {
+    return parseDateParts(date, '/', 'DD-MM-YYYY');
+  }
+
+  if (fromFormat === 'MM/DD/YYYY') {
+    return parseDateParts(date, '/', 'MM-DD-YYYY');
+  }
+
+  if (fromFormat === 'DD MM YYYY') {
+    return parseDateParts(date, ' ', 'DD-MM-YYYY');
+  }
+
+  return '';
+}
+
+// Convert from ISO (YYYY-MM-DD) to target format
+function convertFromISO(isoDate: string, toFormat: string): string {
   const [year, month, day] = isoDate.split('-');
 
   switch (toFormat) {
@@ -100,6 +107,16 @@ function convertDateFormat(date: string, fromFormat: string, toFormat: string): 
     default:
       return isoDate;
   }
+}
+
+// Convert date from one format to another
+function convertDateFormat(date: string, fromFormat: string, toFormat: string): string {
+  if (!date) return '';
+  
+  const isoDate = convertToISO(date, fromFormat);
+  if (!isoDate) return date;
+
+  return convertFromISO(isoDate, toFormat);
 }
 
 // Validate if input matches the expected format pattern
@@ -128,7 +145,7 @@ function validateFormat(input: string, format: string): boolean {
 
 // Detect the format of a date string with better logic for ambiguous formats
 function detectDateFormat(dateStr: string): string {
-  if (!dateStr || !dateStr.trim()) return 'YYYY-MM-DD';
+  if (dateStr?.trim() === '') return 'YYYY-MM-DD';
 
   // ISO datetime (UTC or with offset), e.g., 2025-09-26T00:00:00Z or 2025-09-26T00:00:00+00:00
   if (/^\d{4}-\d{2}-\d{2}T/.test(dateStr)) {
@@ -144,8 +161,8 @@ function detectDateFormat(dateStr: string): string {
   } else if (/^\d{2}-\d{2}-\d{4}$/.test(dateStr)) {
     // For DD-MM-YYYY vs MM-DD-YYYY, check if first number could be a valid month
     const parts = dateStr.split('-');
-    const firstNum = parseInt(parts[0]);
-    const secondNum = parseInt(parts[1]);
+    const firstNum = Number.parseInt(parts[0]);
+    const secondNum = Number.parseInt(parts[1]);
 
     // If first number is > 12, it's likely DD-MM-YYYY
     // If second number is > 12, it's likely MM-DD-YYYY
@@ -160,8 +177,8 @@ function detectDateFormat(dateStr: string): string {
   } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
     // For DD/MM/YYYY vs MM/DD/YYYY, check if first number could be a valid month
     const parts = dateStr.split('/');
-    const firstNum = parseInt(parts[0]);
-    const secondNum = parseInt(parts[1]);
+    const firstNum = Number.parseInt(parts[0]);
+    const secondNum = Number.parseInt(parts[1]);
 
     // If first number is > 12, it's likely DD/MM/YYYY
     // If second number is > 12, it's likely MM/DD/YYYY
@@ -214,7 +231,6 @@ export const DateField: React.FC<DateProps> = ({
   allowEdit = true,
   readOnly = false,
   helperText,
-  icon = "",
   config = {}
 }) => {
   const { defaultValue = '', dateFormat = format, min: configMin = min, max: configMax = max, hideTodayButton = false } = config;
@@ -225,7 +241,6 @@ export const DateField: React.FC<DateProps> = ({
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showQuickSelect, setShowQuickSelect] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<'below' | 'above'>('below');
   const [calculatedPosition, setCalculatedPosition] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -243,51 +258,70 @@ export const DateField: React.FC<DateProps> = ({
   // Track previous value to prevent unnecessary updates
   const prevValueRef = useRef<string | undefined>(undefined);
   const prevDateFormatRef = useRef<string | undefined>(undefined);
+  const dateRef = useRef<string>(date);
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    dateRef.current = date;
+  }, [date]);
+
+  const getDisplayValue = (val: string | null | undefined, defaultVal: string): string => {
+    return (val !== null && val !== undefined && val !== '') ? val : (defaultVal || '');
+  };
+
+  const handleNonEmptyValue = (
+    displayVal: string,
+    currentVal: string,
+    format: string,
+    setDateFn: (d: string) => void,
+    setCalendarMonthFn: (d: Date) => void,
+    onChangeFn: (iso: string) => void
+  ) => {
+    const currentFormat = detectDateFormat(displayVal);
+    const convertedValue = convertDateFormat(displayVal, currentFormat, format);
+
+    if (convertedValue !== dateRef.current) {
+      setDateFn(convertedValue);
+    }
+
+    const newIso = convertDateFormat(convertedValue, format, 'YYYY-MM-DD');
+    if (displayVal !== currentVal && newIso) {
+      onChangeFn(newIso);
+    }
+
+    if (newIso) {
+      const [y, m] = newIso.split('-');
+      setCalendarMonthFn(new Date(Number(y), Number(m) - 1, 1));
+    }
+  };
+
+  const handleEmptyValue = (
+    displayVal: string,
+    currentVal: string | null | undefined,
+    setDateFn: (d: string) => void,
+    onChangeFn: (iso: string) => void
+  ) => {
+    setDateFn(displayVal);
+    const isClearingValue = displayVal === '' && currentVal !== null && currentVal !== undefined && currentVal !== '';
+    if (isClearingValue) {
+      onChangeFn('');
+    }
+  };
 
   useEffect(() => {
-    // Skip if values haven't changed
     if (value === prevValueRef.current && dateFormat === prevDateFormatRef.current) {
       return;
     }
 
-    // Update refs
     prevValueRef.current = value;
     prevDateFormatRef.current = dateFormat;
 
-    // Use default value if value is empty/undefined/null and default value is provided
-    const displayValue = (value !== null && value !== undefined && value !== '') ? value : (defaultValue || '');
+    const displayValue = getDisplayValue(value, defaultValue);
 
-    // If we have a value, convert it to the new display format
-    if (displayValue && displayValue.trim()) {
-      const currentFormat = detectDateFormat(displayValue);
-      const convertedValue = convertDateFormat(displayValue, currentFormat, dateFormat);
-
-      // Only update if the converted value is different from current date
-      if (convertedValue !== date) {
-        setDate(convertedValue);
-      }
-
-      // For initialization: if we're applying a defaultValue (value is empty), emit ISO once
-      const newIso = convertDateFormat(convertedValue, dateFormat, 'YYYY-MM-DD');
-      if (displayValue !== value && newIso) {
-        onChange(newIso);
-      }
-
-      // Update calendar month if the date is valid
-      if (newIso) {
-        const [y, m] = newIso.split('-');
-        setCalendarMonth(new Date(Number(y), Number(m) - 1, 1));
-      }
+    if (displayValue?.trim()) {
+      handleNonEmptyValue(displayValue, value, dateFormat, setDate, setCalendarMonth, onChange);
     } else {
-      setDate(displayValue);
-      // Only call onChange('') if we're actually clearing a value (changing FROM something TO empty)
-      // If value is already null/undefined/'', don't call onChange - no change occurred
-      // This prevents unnecessary onChange calls during initialization when value is already empty
-      if (displayValue === '' && value !== null && value !== undefined && value !== '') {
-        onChange('');
-      }
-      // If displayValue === '' AND value was already null/undefined/'', skip onChange
-      // (No change from empty → empty)
+      handleEmptyValue(displayValue, value, setDate, onChange);
     }
   }, [value, dateFormat, format, onChange, defaultValue]);
 
@@ -300,7 +334,7 @@ export const DateField: React.FC<DateProps> = ({
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
     const dropdownMinHeight = 400;
-    const dropdownWidth = 320; // w-80 = 320px
+    const dropdownWidth = 320;
 
     const spaceBelow = viewportHeight - rect.bottom;
     const spaceAbove = rect.top;
@@ -310,15 +344,14 @@ export const DateField: React.FC<DateProps> = ({
     if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
       position = 'above';
     }
-    setDropdownPosition(position);
 
     // Calculate left position (align with button)
     let left = rect.left;
     if (left + dropdownWidth > viewportWidth - 10) {
-      left = viewportWidth - dropdownWidth - 10; // 10px margin from right edge
+      left = viewportWidth - dropdownWidth - 10;
     }
     if (left < 10) {
-      left = 10; // 10px margin from left edge
+      left = 10;
     }
 
     // Calculate top/bottom position
@@ -342,7 +375,7 @@ export const DateField: React.FC<DateProps> = ({
     if (isOpen) {
       // Reset calendarMonth to the current date's year/month when opening
       let baseDate = date;
-      if (!baseDate || !baseDate.trim()) {
+      if (!baseDate?.trim()) {
         baseDate = getTodayISO();
       }
       const currentFormat = detectDateFormat(baseDate);
@@ -357,14 +390,16 @@ export const DateField: React.FC<DateProps> = ({
     }
   }, [isOpen, date, calculateDropdownPosition]);
 
+  const closeAllDropdowns = () => {
+    setIsOpen(false);
+    setShowYearPicker(false);
+    setShowMonthPicker(false);
+    setShowQuickSelect(false);
+  };
+
   useClickOutside({
     isOpen,
-    onClose: () => {
-      setIsOpen(false);
-      setShowYearPicker(false);
-      setShowMonthPicker(false);
-      setShowQuickSelect(false);
-    },
+    onClose: closeAllDropdowns,
     excludeRefs: [buttonRef, inputRef, popoverRef, dropdownRef]
   });
 
@@ -379,9 +414,9 @@ export const DateField: React.FC<DateProps> = ({
       const quickSelect = document.querySelector('[data-quick-select]');
 
       // Check if click is outside all dropdowns
-      const isOutsideYear = !yearPicker || !yearPicker.contains(target);
-      const isOutsideMonth = !monthPicker || !monthPicker.contains(target);
-      const isOutsideQuick = !quickSelect || !quickSelect.contains(target);
+      const isOutsideYear = !yearPicker?.contains(target);
+      const isOutsideMonth = !monthPicker?.contains(target);
+      const isOutsideQuick = !quickSelect?.contains(target);
 
       if (showYearPicker && isOutsideYear) {
         setShowYearPicker(false);
@@ -405,35 +440,33 @@ export const DateField: React.FC<DateProps> = ({
     }
   }, [isEditing]);
 
-  const validate = (d: string) => {
-    if (required && !d) return 'This field is required';
-    if (d) {
-      // Convert to ISO for validation
-      const isoDate = convertDateFormat(d, dateFormat, 'YYYY-MM-DD');
-      const dateValue = new Date(isoDate);
-      if (isNaN(dateValue.getTime())) return 'Please enter a valid date';
-      if (configMin) {
-        const minISO = convertDateFormat(configMin, dateFormat, 'YYYY-MM-DD');
-        if (isoDate < minISO) return `Date must be after ${configMin}`;
-      }
-      if (configMax) {
-        const maxISO = convertDateFormat(configMax, dateFormat, 'YYYY-MM-DD');
-        if (isoDate > maxISO) return `Date must be before ${configMax}`;
-      }
+  const validateDateValue = (isoDate: string, minVal: string | undefined, maxVal: string | undefined, minFormat: string, maxFormat: string): string | null => {
+    const dateValue = new Date(isoDate);
+    if (Number.isNaN(dateValue.getTime())) return 'Please enter a valid date';
+    if (minVal) {
+      const minISO = convertDateFormat(minVal, minFormat, 'YYYY-MM-DD');
+      if (isoDate < minISO) return `Date must be after ${minVal}`;
+    }
+    if (maxVal) {
+      const maxISO = convertDateFormat(maxVal, maxFormat, 'YYYY-MM-DD');
+      if (isoDate > maxISO) return `Date must be before ${maxVal}`;
     }
     return null;
+  };
+
+  const validate = (d: string) => {
+    if (required && !d) return 'This field is required';
+    if (!d) return null;
+    const isoDate = convertDateFormat(d, dateFormat, 'YYYY-MM-DD');
+    return validateDateValue(isoDate, configMin, configMax, dateFormat, dateFormat);
   };
 
   const handleDateSelect = (selected: string) => {
     if (readOnly) return;
     const formattedDate = convertDateFormat(selected, 'YYYY-MM-DD', dateFormat);
     setDate(formattedDate);
-    setIsOpen(false);
-    setShowYearPicker(false);
-    setShowMonthPicker(false);
-    setShowQuickSelect(false);
+    closeAllDropdowns();
     setError(validate(formattedDate));
-    // Save ISO to parent
     onChange(selected);
   };
 
@@ -451,13 +484,6 @@ export const DateField: React.FC<DateProps> = ({
     setShowMonthPicker(false);
   };
 
-  const handleQuickSelect = (daysOffset: number) => {
-    const today = new Date();
-    const targetDate = new Date(today);
-    targetDate.setDate(today.getDate() + daysOffset);
-    const isoDate = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}`;
-    handleDateSelect(isoDate);
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -467,35 +493,37 @@ export const DateField: React.FC<DateProps> = ({
     setError(validationError);
   };
 
+  const clearDateValue = () => {
+    setDate('');
+    onChange('');
+  };
+
+  const saveValidDate = (dateValue: string) => {
+    const isoDate = convertDateFormat(dateValue, dateFormat, 'YYYY-MM-DD');
+    const formattedDate = convertDateFormat(isoDate, 'YYYY-MM-DD', dateFormat);
+    setDate(formattedDate);
+    onChange(isoDate);
+  };
+
   const handleInputBlur = () => {
     setError(null);
     setIsEditing(false);
 
-    if (date.trim()) {
-      if (!validateFormat(date, dateFormat)) {
-        setDate('');
-        onChange('');
-        return;
-      }
+    if (!date.trim()) {
+      clearDateValue();
+      return;
+    }
 
-      // Then check if it's a valid date
-      const validationError = validate(date);
-      if (!validationError) {
-        // Input is valid and matches format - save it
-        const isoDate = convertDateFormat(date, dateFormat, 'YYYY-MM-DD');
-        const formattedDate = convertDateFormat(isoDate, 'YYYY-MM-DD', dateFormat);
-        setDate(formattedDate);
-        // Save ISO to parent
-        onChange(isoDate);
-      } else {
-        // Validation failed - clear the input
-        setDate('');
-        onChange('');
-      }
+    if (!validateFormat(date, dateFormat)) {
+      clearDateValue();
+      return;
+    }
+
+    const validationError = validate(date);
+    if (validationError) {
+      clearDateValue();
     } else {
-      // Empty input - clear the value
-      setDate('');
-      onChange('');
+      saveValidDate(date);
     }
   };
 
@@ -507,41 +535,50 @@ export const DateField: React.FC<DateProps> = ({
   };
 
   // Calendar logic
-  // Defensive: ensure calendarMonth is valid
-  let safeCalendarMonth = calendarMonth;
-  if (isNaN(safeCalendarMonth.getTime())) {
-    safeCalendarMonth = new Date();
-  }
+  const getSafeCalendarMonth = (month: Date): Date => {
+    return Number.isNaN(month.getTime()) ? new Date() : month;
+  };
+
+  const calculateStartDay = (firstDay: Date): number => {
+    let startDay = firstDay.getDay();
+    startDay = startDay === 0 ? 6 : startDay - 1;
+    return (Number.isNaN(startDay) || startDay < 0) ? 0 : startDay;
+  };
+
+  const generateCalendarWeeks = (year: number, month: number, startDay: number): (string | null)[][] => {
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const weeks: (string | null)[][] = [];
+    let week: (string | null)[] = new Array(startDay).fill(null);
+    
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dayISO = `${year}-${pad(month + 1)}-${pad(d)}`;
+      week.push(dayISO);
+      if (week.length === 7) {
+        weeks.push(week);
+        week = [];
+      }
+    }
+    
+    if (week.length > 0) {
+      while (week.length < 7) week.push(null);
+      weeks.push(week);
+    }
+    
+    return weeks;
+  };
+
+  const safeCalendarMonth = getSafeCalendarMonth(calendarMonth);
   const year = safeCalendarMonth.getFullYear();
   const month = safeCalendarMonth.getMonth();
   const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const daysInMonth = lastDay.getDate();
-  // Monday as first day of week
-  let startDay = firstDay.getDay();
-  startDay = startDay === 0 ? 6 : startDay - 1;
-  if (isNaN(startDay) || startDay < 0) startDay = 0;
+  const startDay = calculateStartDay(firstDay);
   const todayISO = getTodayISO();
-  const weeks: (string | null)[][] = [];
-  let week: (string | null)[] = Array(startDay).fill(null);
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dayISO = `${year}-${pad(month + 1)}-${pad(d)}`;
-    week.push(dayISO);
-    if (week.length === 7) {
-      weeks.push(week);
-      week = [];
-    }
-  }
-  if (week.length > 0) {
-    while (week.length < 7) week.push(null);
-    weeks.push(week);
-  }
+  const weeks = generateCalendarWeeks(year, month, startDay);
 
   const currentYear = new Date().getFullYear();
   const [startYear, setStartYear] = React.useState(currentYear); // page starts at selected/current year
   const years = React.useMemo(() => Array.from({ length: 12 }, (_, i) => startYear + i), [startYear]);
-  // const years = Array.from({ length: 201 }, (_, i) => currentYear - 100 + i);
-
   // Generate month options for dropdown
   const months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -621,7 +658,7 @@ export const DateField: React.FC<DateProps> = ({
                   <div className="grid grid-cols-3 gap-2 p-2">
                     {months.map((monthName, index) => (
                       <button
-                        key={index}
+                        key={monthName}
                         className={[
                           "w-full py-2 rounded-xl text-sm text-center transition-colors",
                           "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black",
@@ -732,7 +769,7 @@ export const DateField: React.FC<DateProps> = ({
             className={`w-9 h-9 rounded-full text-center text-sm font-medium hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${day === convertDateFormat(date, dateFormat, 'YYYY-MM-DD') ? 'bg-[var(--color-bg-brand-solid)] text-black font-bold' :
               day === todayISO ? 'border border-[var(--color-bg-brand-primary)] text-primary' :
                 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)]'
-              } ${!day ? 'opacity-0 pointer-events-none' : ''}`}
+              } ${day ? '' : 'opacity-0 pointer-events-none'}`}
             onClick={() => day && !readOnly && handleDateSelect(day)}
             disabled={!day || readOnly || (min && day < convertDateFormat(min, dateFormat, 'YYYY-MM-DD')) || (max && day > convertDateFormat(max, dateFormat, 'YYYY-MM-DD')) ? true : false}
           >
@@ -796,7 +833,7 @@ export const DateField: React.FC<DateProps> = ({
       {!isEditing && (
         <button
           ref={buttonRef}
-          onDoubleClick={!readOnly ? handleDoubleClick : undefined}
+          onDoubleClick={readOnly ? undefined : handleDoubleClick}
           type="button"
           className={`field-component ${error ? 'border-red-500 bg-red-50' : ''
             } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
@@ -816,7 +853,6 @@ export const DateField: React.FC<DateProps> = ({
             ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
             ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),
             left: `${calculatedPosition.left}px`,
-            // width: `${calculatedPosition.width}px`
           }}
         >
           {renderCalendar()}
