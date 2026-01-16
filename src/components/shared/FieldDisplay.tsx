@@ -28,7 +28,6 @@ import {
   Formula,
   Lookup,
   Attachment,
-  Button
 } from '../common/Fields';
 import { normalizeFieldType } from '../../utils/fieldType';
 
@@ -483,15 +482,6 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
           disabled={true}
           rowData={rowData}
           allColumns={allColumns}
-        />
-      );
-      break;
-    case 'button':
-      renderedComponent = (
-        <Button
-          value={getDisplayValue(fieldType, value)}
-          onChange={() => {}}
-          config={parsedConfig}
         />
       );
       break;

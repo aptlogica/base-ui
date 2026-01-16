@@ -4,19 +4,17 @@ import { Eye, EyeOff, List } from 'lucide-react';
 import { useSmartPopover } from '../../../hooks/useSmartPopover';
 import { ColumnConfig } from '../../../plugins/GridViewPlugin/types/grid.types';
 import { getFieldTypeIconComponent } from '../../../types/fieldTypes';
-import { useCreateField } from '../../../hooks/useApi';
 
 interface FieldsPopoverProps {
-  columns: ColumnConfig[];
-  fieldConfig: any[];
-  onFieldToggle: (fieldId: string) => void;
-  tableId: string;
-  label?: string;
-  iconComponent?: React.ComponentType<{ className?: string }>;
-  onEnsureAllFieldsRegistered?: () => Promise<void>;
+  readonly columns: ColumnConfig[];
+  readonly fieldConfig: any[];
+  readonly onFieldToggle: (fieldId: string) => void;
+  readonly label?: string;
+  readonly iconComponent?: React.ComponentType<{ className?: string }>;
+  readonly onEnsureAllFieldsRegistered?: () => Promise<void>;
 }
 
-export function FieldsPopover({ columns, fieldConfig, onFieldToggle, tableId, label = 'Fields', iconComponent: IconComponent, onEnsureAllFieldsRegistered }: FieldsPopoverProps) {
+export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fields', iconComponent: IconComponent, onEnsureAllFieldsRegistered }: FieldsPopoverProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
   const [showSystemFields, setShowSystemFields] = React.useState(false);
@@ -24,9 +22,6 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, tableId, la
   const [initLoading, setInitLoading] = React.useState(false);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const panelRef = React.useRef<HTMLDivElement>(null);
-
-  // TanStack Query hook
-  const createFieldMutation = useCreateField();
 
   const getIsHidden = (fieldId: string) => {
     const config = fieldConfig?.find(fc => String(fc.id) === String(fieldId));
@@ -88,8 +83,8 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, tableId, la
               await onEnsureAllFieldsRegistered();
               setInitDone(true);
             } catch (e) {
-              // Swallow errors to avoid blocking UI; toggles will still work with existing config
-              // console.error('Failed ensuring fieldConfig on open:', e);
+              // Log the error to help with debugging and monitoring
+              console.error('Failed ensuring fieldConfig on open:', e);
             } finally {
               setInitLoading(false);
             }
@@ -123,25 +118,29 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, tableId, la
           <div className="max-h-64 overflow-y-auto py-1">
             {/* Regular Fields */}
             {filteredRegularFields.map((col) => (
-                <div
+              <div
                 key={col.id || col.column_name || `field-${col.title}`}
                 className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded"
-                  style={{ userSelect: 'none' }}
-                >
+                style={{ userSelect: 'none' }}
+              >
                 <span className="w-5 h-5 flex text-primary items-center justify-center flex-shrink-0">{getFieldTypeIconComponent(col.uidt || 'text') || <span className="w-4 h-4 text-gray-400" />}</span>
-                  <span className="flex-1 truncate text-sm select-none text-secondary" title={col.title}>{col.title}</span>
-                  {/* Switch for visibility */}
-                  <label className="relative inline-flex items-center cursor-pointer ml-2">
-                    <input
-                      type="checkbox"
+                <span className="flex-1 truncate text-sm select-none text-secondary" title={col.title}>{col.title}</span>
+                {/* Switch for visibility */}
+                <label className="relative inline-flex items-center cursor-pointer ml-2">
+                  <span className="sr-only">
+                    Toggle visibility for {col.title}
+                  </span>
+                  <input
+                    type="checkbox"
                     checked={col.id ? !getIsHidden(col.id) : false}
                     onChange={() => col.id && handleToggle(col.id)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                    <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-                  </label>
-                </div>
+                    className="sr-only peer"
+                    aria-label={`Toggle visibility for ${col.title}`}
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
+                  <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+                </label>
+              </div>
             ))}
 
             {/* System Fields Section */}
@@ -159,11 +158,15 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, tableId, la
                     <span className="flex-1 truncate text-sm select-none text-secondary" title={col.title}>{col.title}</span>
                     {/* Switch for visibility */}
                     <label className="relative inline-flex items-center cursor-pointer ml-2">
+                      <span className="sr-only">
+                        Toggle visibility for {col.title}
+                      </span>
                       <input
                         type="checkbox"
                         checked={col.id ? !getIsHidden(col.id) : false}
                         onChange={() => col.id && handleToggle(col.id)}
                         className="sr-only peer"
+                        aria-label={`Toggle visibility for ${col.title}`}
                       />
                       <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
                       <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-4" />

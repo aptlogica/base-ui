@@ -58,9 +58,7 @@ export const Time: React.FC<TimeProps> = ({
 }) => {
   const {
     hourFormat = '24',
-    timeFormat = 'HH:mm',
-    defaultValue = ''
-  } = config;
+    } = config;
 
   const [localValue, setLocalValue] = useState(value || '');
   const [isOpen, setIsOpen] = useState(false);

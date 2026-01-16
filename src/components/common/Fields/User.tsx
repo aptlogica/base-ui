@@ -44,10 +44,10 @@ export const User: React.FC<UserProps> = ({
     if (value !== null && value !== undefined) {
       return value;
     }
-    if (defaultValue && defaultValue.trim()) {
+    if (defaultValue?.trim()) {
       return defaultValue;
     }
-    if (defaultUser && defaultUser.trim()) {
+    if (defaultUser?.trim()) {
       return defaultUser;
     }
     return null;
@@ -58,7 +58,6 @@ export const User: React.FC<UserProps> = ({
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [dropdownPosition, setDropdownPosition] = useState<'below' | 'above'>('below');
   const [calculatedPosition, setCalculatedPosition] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const [selectedValue, setSelectedValue] = useState<string | string[] | null>(getInitialValue());
 
@@ -97,7 +96,7 @@ export const User: React.FC<UserProps> = ({
     if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
       position = 'above';
     }
-    setDropdownPosition(position);
+    // Removed setDropdownPosition(position);
 
     // Calculate left position (align to left edge of trigger)
     let left = rect.left;
@@ -167,7 +166,7 @@ export const User: React.FC<UserProps> = ({
       } else {
         processedValue = value;
       }
-    } else if (defaultValue && defaultValue.trim()) {
+    } else if (defaultValue?.trim()) {
       // Handle defaultValue similarly
       if (allowMultiple && typeof defaultValue === 'string' && defaultValue.trim()) {
         const parsed = defaultValue.split(',').map(id => id.trim()).filter(id => id.length > 0);
@@ -175,7 +174,7 @@ export const User: React.FC<UserProps> = ({
       } else {
         processedValue = defaultValue;
       }
-    } else if (defaultUser && defaultUser.trim()) {
+    } else if (defaultUser?.trim()) {
       processedValue = defaultUser;
     }
 
@@ -283,8 +282,8 @@ export const User: React.FC<UserProps> = ({
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    globalThis.addEventListener('keydown', handleKeyDown);
+    return () => globalThis.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, focusedUserIndex, filteredUsers, handleSelect]);
 
   // Scroll focused user into view
