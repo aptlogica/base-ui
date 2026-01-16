@@ -14,7 +14,6 @@ interface URLProps {
   allowEdit?: boolean; // true = single click, false = double click
   readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
-  icon?: string;
   config?: {
     urlValid?: boolean;
     defaultValue?: string;
@@ -63,7 +62,7 @@ export const URL: React.FC<URLProps> = ({
 
   const validateURL = (url: string) => {
     if (!url.trim()) return true;
-    const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+    const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]+)?\/?$/;
     return urlPattern.test(url);
   };
 
@@ -76,7 +75,8 @@ export const URL: React.FC<URLProps> = ({
 
   const normalizeURL = (url: string) => {
     if (!url) return url;
-    if (!url.match(/^https?:\/\//)) {
+    const protocolRegex = /^https?:\/\//;
+    if (!protocolRegex.exec(url)) {
       return `https://${url}`;
     }
     return url;
@@ -93,16 +93,16 @@ export const URL: React.FC<URLProps> = ({
     const validationError = validate(localValue);
     setError(validationError);
 
-    if (!validationError) {
+    if (validationError) {
+      setLocalValue(prevValueRef.current);
+    } else {
       const normalizedURL = normalizeURL(localValue);
-      if (normalizedURL !== localValue) {
+      if (normalizedURL === localValue) {
+        triggerOnChange(localValue);
+      } else {
         setLocalValue(normalizedURL);
         triggerOnChange(normalizedURL);
-      } else {
-        triggerOnChange(localValue);
       }
-    } else {
-      setLocalValue(prevValueRef.current);
     }
     setIsEditing(false);
   };
@@ -146,17 +146,17 @@ export const URL: React.FC<URLProps> = ({
       )}
       <div
         className={`w-full min-w-0 ${className} ${isBorder ? "field-component-border" : ""}`}
-        role={!readOnly ? "button" : undefined}
+        role={readOnly ? undefined : "button"}
         tabIndex={disabled || readOnly ? -1 : 0}
         aria-disabled={disabled || readOnly}
-        onClick={!readOnly ? handleClick : undefined}
-        onKeyDown={!readOnly ? (e) => {
+        onClick={readOnly ? undefined : handleClick}
+        onKeyDown={readOnly ? undefined : (e) => {
           if (disabled) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             setIsEditing(true);
           }
-        } : undefined}
+        }}
         style={readOnly ? { cursor: 'default' } : undefined}
       >
         {isEditing ? (
