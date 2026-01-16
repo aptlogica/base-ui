@@ -81,7 +81,7 @@ export const MultiLineText: React.FC<MultiLineTextProps> = ({
         readOnly={!allowEdit}
         maxLength={maxLength}
         rows={rows}
-        className={`w-full text-[var(--color-text-primary)] p-3 rounded-[var(--radius-lg)] text-sm leading-normal
+        className={`w-full text-[var(--color-text-primary)] p-3 rounded-[var(--radius-lg)] text-sm leading-normal ${className}
           resize-none overflow-y-auto overflow-x-hidden
           whitespace-pre-wrap break-words
           transition-all duration-200 outline-none

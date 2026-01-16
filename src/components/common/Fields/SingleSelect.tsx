@@ -22,7 +22,6 @@ interface SingleSelectProps {
   allowEdit?: boolean; // true = single click opens dropdown, false = double click for manual edit
   readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
-  icon?: string;
   config?: {
     defaultValue?: string;
     options?: Array<string | SingleSelectOption>;
@@ -45,13 +44,11 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
   allowEdit = true,
   readOnly = false,
   helperText,
-  icon = "",
   config = {}
 }) => {
   const { defaultValue = '', options: configOptions = options, allowCustom: configAllowCustom = allowCustom } = config;
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState<'below' | 'above'>('below');
   const [calculatedPosition, setCalculatedPosition] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const selectRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -77,7 +74,6 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
     if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
       position = 'above';
     }
-    setDropdownPosition(position);
 
     // Calculate left position (align to left edge of trigger)
     let left = rect.left;
@@ -136,9 +132,9 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
     if (!hex) return '#1f2937';
     const c = hex.replace('#', '');
     if (c.length !== 6) return '#1f2937';
-    const r = parseInt(c.slice(0, 2), 16);
-    const g = parseInt(c.slice(2, 4), 16);
-    const b = parseInt(c.slice(4, 6), 16);
+    const r = Number.parseInt(c.slice(0, 2), 16);
+    const g = Number.parseInt(c.slice(2, 4), 16);
+    const b = Number.parseInt(c.slice(4, 6), 16);
     const yiq = (r * 299 + g * 587 + b * 114) / 1000;
     return yiq >= 160 ? '#111827' : '#ffffff';
   };
@@ -171,7 +167,7 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
     setError(null);
   };
 
-  const getOptionColor = (option: string, index: number) => {
+  const getOptionColor = (index: number) => {
     const colors = [
       'bg-blue-100 text-blue-800',
       'bg-green-100 text-green-800',
@@ -209,7 +205,7 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
           <div className="flex items-center flex-1 truncate overflow-hidden whitespace-nowrap">
             {displayValue ? (
               <div
-                className={`min-w-8 h-6 max-w-full inline-flex items-center justify-center gap-0.5 p-1 px-2 rounded-xl truncate overflow-hidden whitespace-nowrap ${selectedOption?.color ? '' : getOptionColor(displayValue, normalizedOptions.findIndex(o => o.option === displayValue))}`}
+                className={`min-w-8 h-6 max-w-full inline-flex items-center justify-center gap-0.5 p-1 px-2 rounded-xl truncate overflow-hidden whitespace-nowrap ${selectedOption?.color ? '' : getOptionColor(normalizedOptions.findIndex(o => o.option === displayValue))}`}
                 style={selectedOption?.color ? { backgroundColor: selectedOption.color, color: getReadableTextColor(selectedOption.color) } : undefined}
                 title={displayValue}
               >
@@ -261,7 +257,7 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
                   className={`w-full text-left text-sm rounded-xl focus:bg-[var(--color-bg-brand-secondary)] transition-colors flex items-center justify-between ${readOnly ? 'cursor-default opacity-75' : 'cursor-pointer'}`}
                 >
                   <div
-                    className={`inline-flex justify-between items-center w-full p-1 px-2 rounded-full text-xs min-w-0 ${opt.color ? '' : getOptionColor(label, index)}`}
+                    className={`inline-flex justify-between items-center w-full p-1 px-2 rounded-full text-xs min-w-0 ${opt.color ? '' : getOptionColor(index)}`}
                     style={opt.color ? { backgroundColor: opt.color, color: getReadableTextColor(opt.color) } : undefined}
                   >
                     <span className="truncate" title={label}>{label}</span>

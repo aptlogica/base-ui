@@ -4,29 +4,18 @@ import { SettingsTabs } from '../components/workspace/tabs/SettingsTabs';
 import { TenantSettingsTab } from '../components/workspace/tabs/TenantSettingsTab';
 import { UserSettingsTab } from '../components/workspace/tabs/UserSettingsTab';
 import { WorkspaceTab } from '../components/workspace/tabs/WorkspaceTab';
-import { DangerZoneTab } from '../components/workspace/tabs/DangerZoneTab';
 import { useWorkspaceAccess } from '../hooks/useWorkspaceAccess';
-import { useWorkspaces } from '../hooks/useApi';
 
 const AdministratorPage: React.FC = () => {
   const { workspaceId } = useParams<{ workspaceId: string }>();
-  const { canAccessAllSettingsTabs, isWorkspaceReadOnly, canDeleteWorkspace } = useWorkspaceAccess(workspaceId);
+  const { canAccessAllSettingsTabs, isWorkspaceReadOnly } = useWorkspaceAccess(workspaceId);
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: workspacesData } = useWorkspaces();
-  
-  // Get current workspace title
-  const currentWorkspace = useMemo(() => {
-    const workspaces = Array.isArray(workspacesData) ? workspacesData : [];
-    return workspaces.find((ws: { id?: string }) => ws.id === workspaceId);
-  }, [workspacesData, workspaceId]);
-
 
   // Filter tabs based on access level
   const allTabs = [
     { key: 'settings', label: 'Organization Information', icon: 'Settings' },
     { key: 'users', label: 'Users', icon: 'Users' },
     { key: 'workspaces', label: 'Workspaces', icon: 'Database' },
-    ...(canDeleteWorkspace() ? [{ key: 'danger-zone', label: 'Danger Zone', icon: 'AlertTriangle' }] : []),
   ];
 
   // workspace-read users only see Workspace tab
@@ -83,15 +72,7 @@ const AdministratorPage: React.FC = () => {
         return newParams;
       }, { replace: true });
     }
-    // If user loses delete permission and is on danger-zone tab, redirect to default
-    if (!canDeleteWorkspace() && activeTab === 'danger-zone') {
-      setSearchParams(prev => {
-        const newParams = new URLSearchParams(prev);
-        newParams.delete('tab');
-        return newParams;
-      }, { replace: true });
-    }
-  }, [isWorkspaceReadOnly, canAccessAllSettingsTabs, canDeleteWorkspace, activeTab, setSearchParams]);
+  }, [isWorkspaceReadOnly, canAccessAllSettingsTabs, activeTab, setSearchParams]);
 
   if (!workspaceId) {
     return (
@@ -112,8 +93,6 @@ const AdministratorPage: React.FC = () => {
         return <UserSettingsTab workspaceId={workspaceId} />;
       case 'workspaces':
         return <WorkspaceTab workspaceId={workspaceId} />;
-      case 'danger-zone':
-        return <DangerZoneTab workspaceId={workspaceId} workspaceTitle={currentWorkspace?.title || currentWorkspace?.name || ''} />;
       default:
         return <TenantSettingsTab workspaceId={workspaceId} />;
     }
