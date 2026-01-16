@@ -22,7 +22,7 @@ const stripHTML = (html: string): string => {
 const formatDate = (dateString: string): string => {
   try {
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return dateString;
+    if (Number.isNaN(date.getTime())) return dateString;
     
     if (dateString.includes('T') || dateString.includes(' ')) {
       return date.toLocaleString('en-US', {
@@ -50,8 +50,8 @@ const formatDate = (dateString: string): string => {
  */
 const formatDuration = (duration: string, format?: string): string => {
   try {
-    const seconds = parseFloat(duration);
-    if (isNaN(seconds)) return duration;
+    const seconds = Number.parseFloat(duration);
+    if (Number.isNaN(seconds)) return duration;
     
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -77,7 +77,7 @@ interface RenderPillProps {
  * Render rating field as numeric value only (no icons)
  */
 export const renderRatingPill = ({ value, sourceColumn, index }: RenderPillProps): React.ReactNode => {
-  const ratingValue = typeof value === 'number' ? value : parseInt(String(value)) || 0;
+  const ratingValue = typeof value === 'number' ? value : Number.parseInt(String(value)) || 0;
   if (ratingValue <= 0) return null;
   
   // Just show the numeric value in a pill, no icons
@@ -221,9 +221,9 @@ export const renderCurrencyPill = ({ value, sourceColumn, index }: RenderPillPro
   
   const meta = sourceColumn?.meta || {};
   const currencyType = meta.currencyType || '';
-  const numValue = typeof value === 'number' ? value : parseFloat(String(value));
+  const numValue = typeof value === 'number' ? value : Number.parseFloat(String(value));
   
-  if (isNaN(numValue)) return null;
+  if (Number.isNaN(numValue)) return null;
   
   const formatted = currencyType ? `${currencyType} ${numValue.toLocaleString()}` : numValue.toLocaleString();
   
@@ -240,8 +240,8 @@ export const renderCurrencyPill = ({ value, sourceColumn, index }: RenderPillPro
 export const renderPercentPill = ({ value, sourceColumn, index }: RenderPillProps): React.ReactNode => {
   if (value === null || value === undefined) return null;
   
-  const numValue = typeof value === 'number' ? value : parseFloat(String(value));
-  if (isNaN(numValue)) return null;
+  const numValue = typeof value === 'number' ? value : Number.parseFloat(String(value));
+  if (Number.isNaN(numValue)) return null;
   
   return (
     <span key={index} className={BASE_PILL_CLASSES}>
@@ -257,10 +257,10 @@ export const renderDecimalPill = ({ value, sourceColumn, index }: RenderPillProp
   if (value === null || value === undefined) return null;
   
   const meta = sourceColumn?.meta || {};
-  const precision = meta.precision ? parseInt(meta.precision.split('.')[1]?.length) || 2 : 2;
-  const numValue = typeof value === 'number' ? value : parseFloat(String(value));
+  const precision = meta.precision ? Number.parseInt(meta.precision.split('.')[1]?.length) || 2 : 2;
+  const numValue = typeof value === 'number' ? value : Number.parseFloat(String(value));
   
-  if (isNaN(numValue)) return null;
+  if (Number.isNaN(numValue)) return null;
   
   const formatted = numValue.toFixed(precision);
   
@@ -307,8 +307,8 @@ export const renderPhoneNumberPill = ({ value, sourceColumn, index }: RenderPill
 export const renderYearPill = ({ value, sourceColumn, index }: RenderPillProps): React.ReactNode => {
   if (value === null || value === undefined) return null;
   
-  const year = typeof value === 'number' ? value : parseInt(String(value));
-  if (isNaN(year)) return null;
+  const year = typeof value === 'number' ? value : Number.parseInt(String(value));
+  if (Number.isNaN(year)) return null;
   
   return (
     <span key={index} className={BASE_PILL_CLASSES}>
@@ -323,8 +323,8 @@ export const renderYearPill = ({ value, sourceColumn, index }: RenderPillProps):
 export const renderNumberPill = ({ value, sourceColumn, index }: RenderPillProps): React.ReactNode => {
   if (value === null || value === undefined) return null;
   
-  const numValue = typeof value === 'number' ? value : parseFloat(String(value));
-  if (isNaN(numValue)) return null;
+  const numValue = typeof value === 'number' ? value : Number.parseFloat(String(value));
+  if (Number.isNaN(numValue)) return null;
   
   return (
     <span key={index} className={BASE_PILL_CLASSES}>
@@ -406,7 +406,7 @@ export const renderMultiSelectPill = ({ value, sourceColumn, index }: RenderPill
     } else {
       options = value
         .filter(v => v !== null && v !== undefined)
-        .map(v => String(v));
+        .map(String);
     }
   }
   
@@ -427,14 +427,14 @@ export const renderMultiSelectPill = ({ value, sourceColumn, index }: RenderPill
   
   return (
     <span key={index} className="inline-flex items-center gap-1">
-      {visibleOptions.map((option, optIdx) => {
+      {visibleOptions.map((option) => {
         const color = getOptionColor(option);
         const colorClasses = getSelectColorClasses(color);
-        const hasHexColor = color && color.startsWith('#');
+        const hasHexColor = color?.startsWith('#');
         
         return (
           <span
-            key={optIdx}
+            key={option}
             className={colorClasses || BASE_PILL_CLASSES}
             style={hasHexColor ? { backgroundColor: `${color}20`, color: color, borderColor: `${color}40` } : undefined}
             title={option}
@@ -464,7 +464,7 @@ export const renderSingleSelectPill = ({ value, sourceColumn, index }: RenderPil
   const config = optionConfigs.find((opt: any) => opt.option === option);
   const color = config?.color || '';
   const colorClasses = getSelectColorClasses(color);
-  const hasHexColor = color && color.startsWith('#');
+  const hasHexColor = color?.startsWith('#');
   
   return (
     <span 

@@ -17,58 +17,120 @@ interface PercentProps {
   disabled?: boolean;
   placeholder?: string;
   isBorder?: boolean;
-  className?: string;
   allowEdit?: boolean;
+  readOnly?: boolean;
   helperText?: string;
-  icon?: string;
 }
 
-export const Percent: React.FC<PercentProps> = ({
-  value,
-  onChange,
-  config = {},
-  required = false,
-  disabled = false,
-  placeholder = '',
-  isBorder = false,
-  className = "",
-  allowEdit = true,
-  readOnly = false,
-  helperText,
-  icon = "",
-}) => {
-  const { displayAsProgress = false, defaultValue, progressColor = 'blue' } = config;
-
-  const getInitialValue = () => {
-    if (value !== null && value !== undefined) return value.toString();
-    if (defaultValue !== null && defaultValue !== undefined) {
-      if (typeof defaultValue === 'number') {
-        return defaultValue.toString();
-      }
-      if (typeof defaultValue === 'string' && defaultValue.trim()) {
-        return defaultValue.trim();
-      }
+// Utility functions
+const getInitialValue = (value: number | null, defaultValue?: string | number): string => {
+  if (value !== null && value !== undefined) return value.toString();
+  if (defaultValue !== null && defaultValue !== undefined) {
+    if (typeof defaultValue === 'number') {
+      return defaultValue.toString();
     }
-    return '';
-  };
+    if (typeof defaultValue === 'string' && defaultValue.trim()) {
+      return defaultValue.trim();
+    }
+  }
+  return '';
+};
 
-  const [localValue, setLocalValue] = useState(getInitialValue());
+const getDisplayValue = (val: number | null, defaultVal: string | number | undefined): string => {
+  if (val !== null && val !== undefined) {
+    return val.toString();
+  }
+  if (defaultVal !== null && defaultVal !== undefined) {
+    return defaultVal.toString();
+  }
+  return '';
+};
+
+const getPercentValue = (value: number | null, defaultValue?: string | number): number => {
+  if (typeof value === 'number' && !Number.isNaN(value)) return value;
+  if (defaultValue !== null && defaultValue !== undefined) {
+    if (typeof defaultValue === 'number') {
+      return defaultValue;
+    }
+    if (typeof defaultValue === 'string' && defaultValue.trim()) {
+      const parsed = Number.parseFloat(defaultValue);
+      if (!Number.isNaN(parsed)) return parsed;
+    }
+  }
+  return 0;
+};
+
+const getProgressColorClass = (color: string): string => {
+  const colorMap: Record<string, string> = {
+    green: 'bg-[var(--color-utility-brand-500)]',
+    blue: 'bg-blue-500',
+    yellow: 'bg-yellow-500',
+    orange: 'bg-orange-500',
+    red: 'bg-red-500',
+    purple: 'bg-purple-500',
+    pink: 'bg-pink-500',
+    indigo: 'bg-indigo-500',
+    teal: 'bg-teal-500',
+  };
+  return colorMap[color] || 'bg-[var(--color-utility-brand-500)]';
+};
+
+const validatePercent = (val: string, required: boolean): string | null => {
+  if (required) return 'This field is required';
+  if (!val) return null;
+
+  const numValue = Number.parseFloat(val);
+  if (Number.isNaN(numValue)) return 'Please enter a valid percentage';
+  if (numValue < 0 || numValue > 100) return 'Percentage must be between 0 and 100';
+
+  return null;
+};
+
+const getInputClassName = (error: string | null, showError: boolean, disabled: boolean, readOnly: boolean): string => {
+  const baseClass = 'field-component';
+  const errorClass = error && showError ? 'border-red-500 bg-red-50' : '';
+  const disabledClass = disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900';
+  return `${baseClass} ${errorClass} ${disabledClass}`;
+};
+
+const getDisplayClassName = (localValue: string, disabled: boolean, readOnly: boolean): string => {
+  const baseClass = 'field-component';
+  const valueClass = localValue ? 'text-gray-800' : 'text-gray-400';
+  const disabledClass = disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : '';
+  return `${baseClass} ${valueClass} ${disabledClass}`;
+};
+
+interface UsePercentStateProps {
+  value: number | null;
+  defaultValue?: string | number;
+  onChange: (value: number | null) => void;
+  required: boolean;
+  disabled: boolean;
+  allowEdit: boolean;
+  readOnly: boolean;
+}
+
+const usePercentState = ({
+  value,
+  defaultValue,
+  onChange,
+  required,
+  disabled,
+  allowEdit,
+  readOnly,
+}: UsePercentStateProps) => {
+  const [localValue, setLocalValue] = useState(() => getInitialValue(value, defaultValue));
   const [isEditing, setIsEditing] = useState(false);
   const [showError, setShowError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const prevValueRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const displayValue =
-      value !== null && value !== undefined
-        ? value.toString()
-        : defaultValue !== null && defaultValue !== undefined
-        ? defaultValue.toString()
-        : '';
+    const displayValue = getDisplayValue(value, defaultValue);
     setLocalValue(displayValue);
 
-    const parsed = parseFloat(displayValue);
-    prevValueRef.current = !isNaN(parsed) ? parsed : null;
+    const parsed = Number.parseFloat(displayValue);
+    prevValueRef.current = Number.isNaN(parsed) ? null : parsed;
   }, [value, defaultValue]);
 
   useEffect(() => {
@@ -78,28 +140,38 @@ export const Percent: React.FC<PercentProps> = ({
     }
   }, [isEditing]);
 
-  // Exit edit mode if readOnly becomes true
   useEffect(() => {
     if (readOnly && isEditing) {
       setIsEditing(false);
     }
   }, [readOnly, isEditing]);
 
-  const validate = (val: string) => {
-    if (required ) return 'This field is required';
-    if (!val)return null;
+  const handleEmptyInput = () => {
+    onChange(null);
+    prevValueRef.current = 0;
+    setLocalValue('');
+  };
 
-    const numValue = parseFloat(val);
-    if (isNaN(numValue)) return 'Please enter a valid percentage';
-    if (numValue < 0 || numValue > 100) return 'Percentage must be between 0 and 100';
+  const resetToPreviousValue = () => {
+    const validValue = prevValueRef.current ?? 0;
+    onChange(validValue);
+    setLocalValue(validValue.toString());
+  };
 
-    return null;
+  const handleValidInput = (numValue: number) => {
+    const rounded = Number.parseFloat(numValue.toFixed(1));
+    if (prevValueRef.current === rounded) {
+      setLocalValue(prevValueRef.current?.toString() || '');
+    } else {
+      onChange(rounded);
+      prevValueRef.current = rounded;
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value.replace(/[^0-9.-]/g, '');
+    const newValue = e.target.value.replaceAll(/[^0-9.-]/g, '');
     setLocalValue(newValue);
-    const validationError = validate(newValue);
+    const validationError = validatePercent(newValue, required);
     setShowError(!!validationError);
   };
 
@@ -108,42 +180,86 @@ export const Percent: React.FC<PercentProps> = ({
     setIsEditing(false);
 
     if (localValue.trim() === '') {
-      // Set to 0 when input is empty
-      onChange(null);
-      prevValueRef.current = 0;
-      setLocalValue('');
+      handleEmptyInput();
       return;
     }
 
-    const numValue = parseFloat(localValue);
-    if (!isNaN(numValue)) {
-      // Clear invalid values instead of showing error
+    const numValue = Number.parseFloat(localValue);
+    if (Number.isFinite(numValue)) {
       if (numValue < 0 || numValue > 100) {
-        // Reset to previous valid value or 0
-        const validValue = prevValueRef.current !== null ? prevValueRef.current : 0;
-        onChange(validValue);
-        setLocalValue(validValue.toString());
+        resetToPreviousValue();
         return;
       }
-
-      const rounded = parseFloat(numValue.toFixed(1));
-
-      // ✅ Only trigger API call if numeric value actually changed
-      if (prevValueRef.current !== rounded) {
-        onChange(rounded);
-        prevValueRef.current = rounded;
-      } else {
-        setLocalValue(prevValueRef.current?.toString() || '');
-      }
+      handleValidInput(numValue);
     } else {
-      // Clear invalid non-numeric values
-      const validValue = prevValueRef.current !== null ? prevValueRef.current : 0;
-      onChange(validValue);
-      setLocalValue(validValue.toString());
+      resetToPreviousValue();
     }
   };
 
-  // 🟢 Special case: double-click only when showing progress bar
+  const handleClick = useClickHandler(
+    () => !readOnly && allowEdit && !disabled && setIsEditing(true),
+    () => !readOnly && !allowEdit && !disabled && setIsEditing(true)
+  );
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (readOnly || disabled) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setIsEditing(true);
+    }
+  };
+
+  const error = validatePercent(localValue, required);
+
+  return {
+    localValue,
+    isEditing,
+    setIsEditing,
+    showError,
+    inputRef,
+    error,
+    handleChange,
+    handleBlur,
+    handleClick,
+    handleKeyDown,
+  };
+};
+
+export const Percent: React.FC<PercentProps> = ({
+  value,
+  onChange,
+  config = {},
+  required = false,
+  disabled = false,
+  placeholder = '',
+  isBorder = false,
+  allowEdit = true,
+  readOnly = false,
+  helperText,
+}) => {
+  const { displayAsProgress = false, defaultValue, progressColor = 'blue' } = config;
+
+  const {
+    localValue,
+    isEditing,
+    setIsEditing,
+    showError,
+    inputRef,
+    error,
+    handleChange,
+    handleBlur,
+    handleClick,
+    handleKeyDown,
+  } = usePercentState({
+    value,
+    defaultValue,
+    onChange,
+    required,
+    disabled,
+    allowEdit,
+    readOnly,
+  });
+
   const handleDoubleClick = (e: React.MouseEvent) => {
     if (displayAsProgress && !disabled && !readOnly) {
       setIsEditing(true);
@@ -151,97 +267,27 @@ export const Percent: React.FC<PercentProps> = ({
     }
   };
 
-  // allowEdit controls single vs double-click behavior
-  // readOnly completely prevents editing
-  const handleClick = useClickHandler(
-    () => !readOnly && allowEdit && !disabled && setIsEditing(true), // single click
-    () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // double click
-  );
-
-  const error = validate(localValue);
-
-  const getPercentValue = () => {
-    if (typeof value === 'number' && !isNaN(value)) return value;
-    if (defaultValue !== null && defaultValue !== undefined) {
-      if (typeof defaultValue === 'number') {
-        return defaultValue;
-      }
-      if (typeof defaultValue === 'string' && defaultValue.trim()) {
-        const parsed = parseFloat(defaultValue);
-        if (!isNaN(parsed)) return parsed;
-      }
-    }
-    return 0;
-  };
-
-  const percentValue = getPercentValue();
+  const percentValue = getPercentValue(value, defaultValue);
   const progress = Math.max(0, Math.min(100, percentValue));
+  const inputClassName = getInputClassName(error, showError, disabled, readOnly);
+  const displayClassName = getDisplayClassName(localValue, disabled, readOnly);
+  const borderClassName = isBorder ? "field-component-border" : "";
+  const baseClassName = `w-full relative ${borderClassName}`;
 
   if (displayAsProgress) {
-    return (
-      <div
-        className={`w-full relative ${isBorder ? "field-component-border" : ""}`}
-        onDoubleClick={!readOnly ? handleDoubleClick : undefined}
-        style={{ cursor: !isEditing && !disabled && !readOnly ? 'pointer' : 'default' }}
-      >
-        {isEditing ? (
-          <div className="relative group mb-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={localValue}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder={placeholder}
-              disabled={disabled || readOnly}
-              className={`field-component ${error && showError ? 'border-red-500 bg-red-50' : ''
-                } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
-            />
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-              <PercentageIcon className="w-4 h-4 text-gray-500" />
-            </div>
-          </div>
-        ) : (
-          <div className="w-full flex align-center justify-center">
-            <div className="w-[90%] h-1 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className={`h-1 rounded-full ${progressColor === 'green'
-                  ? 'bg-[var(--color-utility-brand-500)]'
-                  : progressColor === 'blue'
-                    ? 'bg-blue-500'
-                    : progressColor === 'yellow'
-                      ? 'bg-yellow-500'
-                      : progressColor === 'orange'
-                        ? 'bg-orange-500'
-                        : progressColor === 'red'
-                          ? 'bg-red-500'
-                          : progressColor === 'purple'
-                            ? 'bg-purple-500'
-                            : progressColor === 'pink'
-                              ? 'bg-pink-500'
-                              : progressColor === 'indigo'
-                                ? 'bg-indigo-500'
-                                : progressColor === 'teal'
-                                  ? 'bg-teal-500'
-                                  : 'bg-[var(--color-utility-brand-500)]'
-                  }`}
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-        )}
+    const progressBar = (
+      <div className="w-full flex align-center justify-center">
+        <div className="w-[90%] h-1 bg-gray-200 rounded-full overflow-hidden">
+          <div
+            className={`h-1 rounded-full ${getProgressColorClass(progressColor)}`}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
       </div>
     );
-  }
 
-  return (
-    <div
-      className={`w-full relative ${isBorder ? "field-component-border" : ""}`}
-      onClick={!readOnly ? handleClick : undefined}
-      style={readOnly ? { cursor: 'default' } : undefined}
-    >
-      {isEditing ? (
-
+    const progressInput = (
+      <div className="mb-2">
         <div className="relative group">
           <input
             ref={inputRef}
@@ -249,30 +295,65 @@ export const Percent: React.FC<PercentProps> = ({
             value={localValue}
             onChange={handleChange}
             onBlur={handleBlur}
-            placeholder=""
-            autoFocus
+            placeholder={placeholder}
             disabled={disabled || readOnly}
-            className={`field-component ${error && showError ? 'border-red-500 bg-red-50' : ''
-              } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
+            className={inputClassName}
           />
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
             <PercentageIcon className="w-4 h-4 text-gray-500" />
           </div>
-
         </div>
-      ) : (
-        <div
-          className={`field-component ${localValue ? "text-gray-800" : "text-gray-400"
-            } ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
-        >
-          {localValue || placeholder}
-        </div>
-      )
-      }
+      </div>
+    );
 
-      {/* Error Text - Removed to clear invalid values instead */}
+    const cursorStyle = !isEditing && !disabled && !readOnly ? 'pointer' : 'default';
+    return (
+      <div
+        className={baseClassName}
+        onDoubleClick={readOnly ? undefined : handleDoubleClick}
+        style={{ cursor: cursorStyle }}
+      >
+        {isEditing ? progressInput : progressBar}
+      </div>
+    );
+  }
 
-      {/* Helper Text */}
+  const standardInput = (
+    <div className="relative group">
+      <input
+        ref={inputRef}
+        type="text"
+        value={localValue}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        placeholder=""
+        autoFocus
+        disabled={disabled || readOnly}
+        className={inputClassName}
+      />
+      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+        <PercentageIcon className="w-4 h-4 text-gray-500" />
+      </div>
+    </div>
+  );
+
+  const standardDisplay = (
+    <div className={displayClassName}>
+      {localValue || placeholder}
+    </div>
+  );
+
+  return (
+    <div
+      className={baseClassName}
+      onClick={readOnly ? undefined : handleClick}
+      onKeyDown={readOnly ? undefined : handleKeyDown}
+      role={readOnly ? undefined : "button"}
+      tabIndex={readOnly || disabled ? -1 : 0}
+      aria-label={readOnly ? undefined : "Edit percent value"}
+      style={readOnly ? { cursor: 'default' } : undefined}
+    >
+      {isEditing ? standardInput : standardDisplay}
       {helperText && allowEdit && (
         <p className="text-xs text-gray-500 mt-1">{helperText}</p>
       )}
