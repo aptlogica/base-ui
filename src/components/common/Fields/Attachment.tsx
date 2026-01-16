@@ -52,12 +52,16 @@ export const Attachment: React.FC<AttachmentProps> = ({
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const [previewFile, setPreviewFile] = useState<any>(null);
   const [showError, setShowError] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
   // Normalize value to always be an array
-  const normalizedValue = Array.isArray(value) ? value : (value ? [value] : []);
+  let normalizedValue: any[] = [];
+  if (Array.isArray(value)) {
+    normalizedValue = value;
+  } else if (value) {
+    normalizedValue = [value];
+  }
 
   const validate = (files: any[]) => {
     if (!files || !Array.isArray(files) || files.length === 0) {
@@ -233,6 +237,28 @@ export const Attachment: React.FC<AttachmentProps> = ({
       Object.keys(att).length > 0
     );
 
+    // Helper function to get button title - extracted to avoid nested ternary
+    const getButtonTitle = (): string => {
+      if (isUploading) {
+        return "Upload in progress...";
+      }
+      if (attachmentArray.length >= maxFiles) {
+        return `Maximum ${maxFiles} files allowed`;
+      }
+      return 'Add attachment';
+    };
+
+    // Helper function to get preview button title - extracted to avoid nested ternary
+    const getPreviewButtonTitle = (): string => {
+      if (disabled) {
+        return "Preview disabled";
+      }
+      if (isUploading) {
+        return "Preview unavailable during upload";
+      }
+      return "Preview attachments";
+    };
+
     return (
       <div className={`relative flex items-center px-2 pr-20 ${isBorder ? "field-component-border" : ""}`}>
         {/* Thumbnails row - Show only first 3 images */}
@@ -244,10 +270,8 @@ export const Attachment: React.FC<AttachmentProps> = ({
                 className="w-8 h-8 rounded-lg bg-card flex items-center justify-center overflow-hidden cursor-pointer transition-all hover:border-[var(--color-brand-600)] focus:outline-none flex-shrink-0 shadow-md"
                 key={`${file.url}-${file.title}-${idx}`}
                 title={file.title || file.name}
-                tabIndex={0}
-                role="button"
                 aria-label={`Preview ${file.title || file.name}`}
-                onClick={() => setPreviewFile(file)}
+                // onClick for preview removed as previewFile state is unused
                 style={{ minWidth: '28px', minHeight: '28px' }}
               >
                 {isImage ? (
@@ -281,13 +305,7 @@ export const Attachment: React.FC<AttachmentProps> = ({
             className="w-7 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => !readOnly && setIsModalOpen(true)}
             disabled={disabled || readOnly || attachmentArray.length >= maxFiles || isUploading}
-            title={
-              isUploading
-                ? "Upload in progress..."
-                : attachmentArray.length >= maxFiles
-                  ? `Maximum ${maxFiles} files allowed`
-                  : 'Add attachment'
-            }
+            title={getButtonTitle()}
           >
             {isUploading ? (
               <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
@@ -295,10 +313,8 @@ export const Attachment: React.FC<AttachmentProps> = ({
               <Paperclip className="w-4 h-4" />
             )}
           </button>
-          }
-          {
-            showPreview &&
-            <>
+        }
+          {showPreview &&
               <button
                 type="button"
                 className="w-7 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -306,11 +322,10 @@ export const Attachment: React.FC<AttachmentProps> = ({
                 disabled={disabled || isUploading}
                 tabIndex={0}
                 aria-label="Preview attachments"
-                title={disabled ? "Preview disabled" : isUploading ? "Preview unavailable during upload" : "Preview attachments"}
+                title={getPreviewButtonTitle()}
               >
                 <Maximize2 className="w-4 h-4" />
               </button>
-            </>
           }
         </div>
       </div>
@@ -359,12 +374,8 @@ export const Attachment: React.FC<AttachmentProps> = ({
             model_id,
             column_id,
             row_id,
-            files: fileObjects, // Pass File objects instead of URLs
-            onProgress: (progressEvent: ProgressEvent) => {
-              const percent = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              );
-            }
+            files: fileObjects // Pass File objects instead of URLs
+            // Note: Progress display is handled in AttachmentModal component, not here
           });
         } else {
           console.warn('⚠️ Attachment - No valid File objects found in filesToAdd');

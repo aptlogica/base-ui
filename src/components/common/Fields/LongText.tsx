@@ -8,16 +8,13 @@ interface LongTextProps {
   onChange: (value: string) => void;
   placeholder?: string;
   maxLength?: number;
-  minRows?: number;
-  maxRows?: number;
   required?: boolean;
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean; // true = single click, false = double click
-  readOnly?: boolean; // true = completely prevent editing
+  allowEdit?: boolean;
+  readOnly?: boolean;
   helperText?: string;
-  icon?: string;
   config?: {
     defaultValue?: string;
     maxLength?: number;
@@ -40,7 +37,6 @@ export const LongText: React.FC<LongTextProps> = ({
   allowEdit = true,
   readOnly = false,
   helperText,
-  icon = "",
   config = {}
 }) => {
   const { defaultValue = '', maxLength: configMaxLength = maxLength, placeholder: configPlaceholder = placeholder, richText = false } = config;
@@ -71,12 +67,12 @@ export const LongText: React.FC<LongTextProps> = ({
   useEffect(() => {
     // Use default value if value is empty/undefined/null and default value is provided
     let displayValue = (value !== null && value !== undefined && value !== '') ? value : (defaultValue || '');
-    
+
     // For rich text, show plain text preview (strip HTML tags)
     if (richText && displayValue) {
       displayValue = stripHTML(displayValue);
     }
-    
+
     setLocalValue(displayValue);
   }, [value, defaultValue, richText]);
 
@@ -106,7 +102,7 @@ export const LongText: React.FC<LongTextProps> = ({
     if (isModalOpen) {
       const currentValue = value || '';
       setModalValue(currentValue);
-      
+
       // Initialize rich text editor content when modal opens
       if (richText && richTextEditorRef.current) {
         // Use requestAnimationFrame to ensure DOM is ready
@@ -125,7 +121,7 @@ export const LongText: React.FC<LongTextProps> = ({
                 richTextEditorRef.current.focus();
                 // Move cursor to end
                 const range = document.createRange();
-                const selection = window.getSelection();
+                const selection = globalThis.getSelection();
                 range.selectNodeContents(richTextEditorRef.current);
                 range.collapse(false);
                 selection?.removeAllRanges();
@@ -141,11 +137,11 @@ export const LongText: React.FC<LongTextProps> = ({
   const validate = (val: string) => {
     // For rich text, validate the text content length (without HTML tags)
     const textContent = richText ? stripHTML(val) : val;
-    
+
     if (required && !textContent.trim()) {
       return 'This field is required';
     }
-    
+
     if (textContent.length > maxLength) {
       return `Text must be ${maxLength} characters or less`;
     }
@@ -180,7 +176,7 @@ export const LongText: React.FC<LongTextProps> = ({
       setLinkEditData({ link: null, text: '', url: '', isEditing: false });
     }
   };
-  
+
   const closeModal = () => {
     // For rich text, get HTML content from the editor
     let finalValue = modalValue;
@@ -191,7 +187,7 @@ export const LongText: React.FC<LongTextProps> = ({
         finalValue = '';
       }
     }
-    
+
     setIsModalOpen(false);
     // Save changes if valid
     const validationError = validate(finalValue);
@@ -208,10 +204,10 @@ export const LongText: React.FC<LongTextProps> = ({
   // Rich text editor handlers
   const handleRichTextChange = () => {
     if (!richText || !richTextEditorRef.current) return;
-    
+
     // Enhance links before getting content
     enhanceLinks(richTextEditorRef.current);
-    
+
     let htmlContent = richTextEditorRef.current.innerHTML;
     // Normalize empty content (remove <br> tags that browsers add to empty contentEditable)
     if (htmlContent === '<br>' || htmlContent === '<br/>' || htmlContent.trim() === '') {
@@ -224,18 +220,18 @@ export const LongText: React.FC<LongTextProps> = ({
   const execCommand = (command: string, value: string | null = null, event?: React.MouseEvent) => {
     // Only allow commands in rich text mode
     if (!richText || !richTextEditorRef.current) return;
-    
+
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    
+
     // Ensure editor has focus before executing command
     richTextEditorRef.current.focus();
-    
+
     // Execute the command
     const success = document.execCommand(command, false, value || undefined);
-    
+
     if (success) {
       // Update state after command execution
       setTimeout(() => {
@@ -265,18 +261,18 @@ export const LongText: React.FC<LongTextProps> = ({
   // Helper to find the link at current selection
   const getLinkAtSelection = (): HTMLAnchorElement | null => {
     if (!richTextEditorRef.current) return null;
-    
-    const selection = window.getSelection();
+
+    const selection = globalThis.getSelection();
     if (!selection || selection.rangeCount === 0) return null;
-    
+
     const range = selection.getRangeAt(0);
     let node = range.commonAncestorContainer;
-    
+
     // If it's a text node, get the parent
     if (node.nodeType === Node.TEXT_NODE) {
       node = node.parentNode as Node;
     }
-    
+
     // Find the anchor element
     while (node && node !== richTextEditorRef.current) {
       if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).tagName === 'A') {
@@ -284,31 +280,27 @@ export const LongText: React.FC<LongTextProps> = ({
       }
       node = node.parentNode as Node;
     }
-    
+
     return null;
   };
 
   // Calculate popup position near the element
   const calculatePopupPosition = (element: HTMLElement | Range): { top: number; left: number } => {
     let rect: DOMRect;
-    
-    if (element instanceof Range) {
-      rect = element.getBoundingClientRect();
-    } else {
-      rect = element.getBoundingClientRect();
-    }
-    
+
+    rect = element.getBoundingClientRect();
+
     const popupWidth = 320; // Approximate popup width
     const popupHeight = 120; // Approximate popup height
     const offset = 8;
-    
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    
+
+    const viewportWidth = globalThis.innerWidth;
+    const viewportHeight = globalThis.innerHeight;
+
     // Try to position below the element
     let top = rect.bottom + offset;
     let left = rect.left;
-    
+
     // Adjust if popup would go off screen
     if (top + popupHeight > viewportHeight) {
       // Try above
@@ -319,7 +311,7 @@ export const LongText: React.FC<LongTextProps> = ({
         top = Math.max(8, (viewportHeight - popupHeight) / 2);
       }
     }
-    
+
     // Adjust horizontal position
     if (left + popupWidth > viewportWidth) {
       left = viewportWidth - popupWidth - 8;
@@ -327,32 +319,32 @@ export const LongText: React.FC<LongTextProps> = ({
     if (left < 8) {
       left = 8;
     }
-    
+
     return { top, left };
   };
 
   const insertLink = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    
+
     // Only allow links in rich text mode
     if (!richText || !richTextEditorRef.current) return;
-    
-    const selection = window.getSelection();
+
+    const selection = globalThis.getSelection();
     const selectedText = selection?.toString().trim() || '';
-    
+
     // Check if we're editing an existing link
     const existingLink = getLinkAtSelection();
     if (existingLink) {
       showLinkPopup(existingLink);
       return;
     }
-    
+
     // Create new link - show popup near selection
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       const position = calculatePopupPosition(range);
-      
+
       setLinkEditData({
         link: null,
         text: selectedText,
@@ -366,15 +358,15 @@ export const LongText: React.FC<LongTextProps> = ({
 
   const showLinkPopup = (link: HTMLAnchorElement) => {
     if (!richTextEditorRef.current || !link) return;
-    
+
     const currentUrl = link.getAttribute('href') || '';
     const currentText = link.textContent || '';
-    
+
     // Remove protocol for display/edit
     const displayUrl = currentUrl.replace(/^https?:\/\//i, '');
-    
+
     const position = calculatePopupPosition(link);
-    
+
     setLinkEditData({
       link,
       text: currentText,
@@ -391,44 +383,44 @@ export const LongText: React.FC<LongTextProps> = ({
 
   const handleLinkSave = () => {
     const { link, text, url } = linkEditData;
-    
+
     if (!url.trim()) {
       // No URL provided - just close popup
       setIsLinkPopupOpen(false);
       setLinkEditData({ link: null, text: '', url: '', isEditing: false });
       return;
     }
-    
+
     const normalizedUrl = normalizeUrl(url);
-    
+
     if (link) {
       // Editing existing link
       link.setAttribute('href', normalizedUrl);
       link.setAttribute('title', normalizedUrl);
       link.setAttribute('target', '_blank');
       link.setAttribute('rel', 'noopener noreferrer');
-      
+
       // Update link text if changed
       if (text.trim() && text !== link.textContent) {
         link.textContent = text;
       }
-      
+
       setLinkEditData({ ...linkEditData, isEditing: false });
     } else {
       // Creating new link
       if (!richTextEditorRef.current) return;
-      
-      const selection = window.getSelection();
+
+      const selection = globalThis.getSelection();
       if (!selection || selection.rangeCount === 0) return;
-      
+
       const range = selection.getRangeAt(0);
-      
+
       // If text is provided, use it; otherwise use selected text
       const linkText = text.trim() || range.toString().trim() || normalizedUrl;
-      
+
       // Create the link
       execCommand('createLink', normalizedUrl);
-      
+
       // Find and enhance the newly created link
       setTimeout(() => {
         const targetLink = getLinkAtSelection();
@@ -436,20 +428,20 @@ export const LongText: React.FC<LongTextProps> = ({
           targetLink.setAttribute('title', normalizedUrl);
           targetLink.setAttribute('target', '_blank');
           targetLink.setAttribute('rel', 'noopener noreferrer');
-          
+
           // Update link text if different from selected text
           if (linkText && linkText !== targetLink.textContent) {
             targetLink.textContent = linkText;
           }
-          
+
           handleRichTextChange();
         }
       }, 50);
-      
+
       setIsLinkPopupOpen(false);
       setLinkEditData({ link: null, text: '', url: '', isEditing: false });
     }
-    
+
     handleRichTextChange();
   };
 
@@ -461,13 +453,13 @@ export const LongText: React.FC<LongTextProps> = ({
   const handleLinkRemove = () => {
     const { link, text } = linkEditData;
     if (!link) return;
-    
+
     // Remove link, keep text
     const currentText = link.textContent || text;
     const textNode = document.createTextNode(currentText);
     link.parentNode?.replaceChild(textNode, link);
     handleRichTextChange();
-    
+
     setIsLinkPopupOpen(false);
     setLinkEditData({ link: null, text: '', url: '', isEditing: false });
   };
@@ -475,16 +467,16 @@ export const LongText: React.FC<LongTextProps> = ({
   const handleLinkOpen = () => {
     const { link } = linkEditData;
     if (!link) return;
-    
+
     const href = link.getAttribute('href');
     if (href) {
-      window.open(href, '_blank', 'noopener,noreferrer');
+      globalThis.open(href, '_blank', 'noopener,noreferrer');
     }
   };
-  
+
   const handlePaste = (e: React.ClipboardEvent) => {
     if (!richText || !richTextEditorRef.current) return;
-    
+
     e.preventDefault();
     const text = e.clipboardData.getData('text/plain');
     document.execCommand('insertText', false, text);
@@ -537,7 +529,7 @@ export const LongText: React.FC<LongTextProps> = ({
             } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'} truncate`}
           readOnly
           style={readOnly ? { cursor: 'default' } : { cursor: 'pointer' }}
-          onDoubleClick={!readOnly ? openModal : undefined}
+          onDoubleClick={readOnly ? undefined : openModal}
         />
         {!readOnly && (
           <button
@@ -680,7 +672,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   onClick={(e) => {
                     // Make links clickable (only in rich text mode)
                     if (!richText) return;
-                    
+
                     const target = e.target as HTMLElement;
                     if (target.tagName === 'A' && target instanceof HTMLAnchorElement) {
                       const href = target.getAttribute('href');
@@ -697,7 +689,7 @@ export const LongText: React.FC<LongTextProps> = ({
                     }
                   }}
                   className="w-full flex-1 bg-[var(--background)] border rounded-xl p-3 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand-600)] transition-all overflow-y-auto"
-                  style={{ 
+                  style={{
                     minHeight: '400px',
                     outline: 'none'
                   }}
@@ -756,8 +748,8 @@ export const LongText: React.FC<LongTextProps> = ({
       {isLinkPopupOpen && linkPopupPosition && createPortal(
         <>
           {/* Backdrop to close on outside click */}
-          <div 
-            className="fixed inset-0 z-[9999]" 
+          <div
+            className="fixed inset-0 z-[9999]"
             onClick={handleLinkCancel}
             style={{ background: 'transparent' }}
           />

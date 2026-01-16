@@ -52,14 +52,12 @@ function getTimeOptions(step = 30, hourFormat: '12' | '24' = '24', timeFormat: s
         } else {
           options.push(`${displayHour}:${pad(m)} ${period}`);
         }
-      } else {
-        if (timeFormat === 'HH:mm:ss' || timeFormat === 'HH:mm:ss.SSS') {
+      } else if (timeFormat === 'HH:mm:ss' || timeFormat === 'HH:mm:ss.SSS') {
           // For seconds format, show seconds as 00
           options.push(`${pad(h)}:${pad(m)}:00`);
         } else {
           options.push(`${pad(h)}:${pad(m)}`);
         }
-      }
     }
   }
   return options;

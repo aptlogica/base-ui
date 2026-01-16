@@ -15,7 +15,6 @@ interface RatingProps {
     ratingDefault?: number;
     ratingIcon?: string;
     ratingColor?: string;
-    description?: string;
     [key: string]: any;
   };
 }
@@ -29,7 +28,7 @@ export const Rating: React.FC<RatingProps> = ({
   readOnly = false,
   config = {}
 }) => {
-  const { ratingMax = max, ratingDefault = 0, ratingIcon = 'star', ratingColor = 'yellow', description = '' } = config;
+  const { ratingMax = max, ratingDefault = 0, ratingIcon = 'star', ratingColor = 'yellow' } = config;
 
   // Color mapping (match config modal)
   const getColorClass = (color: string, isFilled: boolean) => {
@@ -54,7 +53,7 @@ export const Rating: React.FC<RatingProps> = ({
       className: "w-5 h-5",
       fill: isFilled ? "currentColor" : "none",
     };
-    
+
     const iconMap: Record<string, React.ReactNode> = {
       star: <Star {...iconProps} />,
       heart: <Heart {...iconProps} />,
@@ -115,7 +114,7 @@ export const Rating: React.FC<RatingProps> = ({
   };
 
   const getStarFill = (starIndex: number) => {
-    const currentValue = hoverValue !== null ? hoverValue : displayValue;
+    const currentValue = hoverValue ?? displayValue;
     if (currentValue >= starIndex) {
       return 'full';
     } else {
@@ -133,9 +132,8 @@ export const Rating: React.FC<RatingProps> = ({
         onClick={() => handleStarClick(starIndex)}
         onMouseEnter={() => handleStarHover(starIndex)}
         disabled={disabled || readOnly}
-        className={`transition-all duration-150 ${
-          disabled || readOnly ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-110'
-        }`}
+        className={`transition-all duration-150 ${disabled || readOnly ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-110'
+          }`}
       >
         <span className={`transition-colors ${getColorClass(ratingColor, isFilled)}`}>
           {getIcon(ratingIcon, isFilled)}
@@ -146,12 +144,12 @@ export const Rating: React.FC<RatingProps> = ({
 
   return (
     <div className="w-full">
-      <div 
+      <button
         className="flex items-center justify-center gap-1 py-1"
         onMouseLeave={handleMouseLeave}
       >
         {Array.from({ length: ratingMax }, (_, index) => renderStar(index + 1))}
-      </div>
+      </button>
       {error && (
         <div className="text-xs text-red-600 mt-1 px-2">{error}</div>
       )}

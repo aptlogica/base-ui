@@ -48,17 +48,12 @@ interface FormulaProps {
 }
 
 export const Formula: React.FC<FormulaProps> = ({
-  label,
   value,
   onChange,
   config = {},
-  required = false,
   disabled = false,
   isBorder = false,
   className = "",
-  allowEdit = true,
-  helperText,
-  icon = "",
   columns = [],
   onFormulaChange,
   onErrorChange,

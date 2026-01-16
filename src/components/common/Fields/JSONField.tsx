@@ -20,7 +20,6 @@ interface JSONTreeNodeProps {
   level: number;
   expandedPaths: Set<string>;
   onToggleExpand: (path: string) => void;
-  onValueChange: (path: string, newValue: any) => void;
   disabled?: boolean;
 }
 
@@ -31,7 +30,6 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
   level,
   expandedPaths,
   onToggleExpand,
-  onValueChange,
   disabled = false
 }) => {
   const isExpanded = expandedPaths.has(path);
@@ -85,7 +83,7 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
   if (Array.isArray(data)) {
     return (
       <div className="json-tree-node">
-        <div
+        <button
           className="flex items-center cursor-pointer hover:bg-gray-50 py-0.5"
           onClick={handleToggle}
           style={{ paddingLeft: `${indent}px` }}
@@ -98,7 +96,7 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
           <span className="text-gray-600">[</span>
           <span className="text-gray-500 ml-1 text-xs">{data.length} items</span>
           {!isExpanded && <span className="text-gray-600 ml-1">]</span>}
-        </div>
+        </button>
         {isExpanded && (
           <div>
             {data.map((item, index) => {
@@ -107,7 +105,7 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
               const isComplex = typeof item === 'object' && item !== null;
 
               return (
-                <div key={index}>
+                <div key={`${path}[${index}]`}>
                   <div
                     className="flex items-center py-0.5 hover:bg-gray-50"
                     style={{ paddingLeft: `${indent + 20}px` }}
@@ -144,27 +142,14 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
                   </div>
                   {isComplex && isItemExpanded && (
                     <div>
-                      {Array.isArray(item) ? (
-                        <JSONTreeNode
-                          data={item}
-                          path={itemPath}
-                          level={level + 2}
-                          expandedPaths={expandedPaths}
-                          onToggleExpand={onToggleExpand}
-                          onValueChange={onValueChange}
-                          disabled={disabled}
-                        />
-                      ) : (
-                        <JSONTreeNode
-                          data={item}
-                          path={itemPath}
-                          level={level + 2}
-                          expandedPaths={expandedPaths}
-                          onToggleExpand={onToggleExpand}
-                          onValueChange={onValueChange}
-                          disabled={disabled}
-                        />
-                      )}
+                      <JSONTreeNode
+                        data={item}
+                        path={itemPath}
+                        level={level + 2}
+                        expandedPaths={expandedPaths}
+                        onToggleExpand={onToggleExpand}
+                        disabled={disabled}
+                      />
                     </div>
                   )}
                 </div>
@@ -181,7 +166,7 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
     const keys = Object.keys(data);
     return (
       <div className="json-tree-node">
-        <div
+        <button
           className="flex items-center cursor-pointer hover:bg-gray-50 py-0.5"
           onClick={handleToggle}
           style={{ paddingLeft: `${indent}px` }}
@@ -194,7 +179,7 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
           <span className="text-gray-600">{'{'}</span>
           <span className="text-gray-500 ml-1 text-xs">{keys.length} keys</span>
           {!isExpanded && <span className="text-gray-600 ml-1">{'}'}</span>}
-        </div>
+        </button>
         {isExpanded && (
           <div>
             {keys.map((key) => {
@@ -243,27 +228,14 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
                   </div>
                   {isComplex && isValExpanded && (
                     <div>
-                      {Array.isArray(val) ? (
-                        <JSONTreeNode
-                          data={val}
-                          path={keyPath}
-                          level={level + 2}
-                          expandedPaths={expandedPaths}
-                          onToggleExpand={onToggleExpand}
-                          onValueChange={onValueChange}
-                          disabled={disabled}
-                        />
-                      ) : (
-                        <JSONTreeNode
-                          data={val}
-                          path={keyPath}
-                          level={level + 2}
-                          expandedPaths={expandedPaths}
-                          onToggleExpand={onToggleExpand}
-                          onValueChange={onValueChange}
-                          disabled={disabled}
-                        />
-                      )}
+                      <JSONTreeNode
+                        data={val}
+                        path={keyPath}
+                        level={level + 2}
+                        expandedPaths={expandedPaths}
+                        onToggleExpand={onToggleExpand}
+                        disabled={disabled}
+                      />
                     </div>
                   )}
                 </div>
@@ -277,6 +249,26 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
   }
 
   return null;
+};
+
+// Helper functions outside component to reduce complexity
+const getDisplayValue = (val: any, defaultVal: any): any => {
+  return (val !== null && val !== undefined && val !== '') ? val : (defaultVal || '');
+};
+
+const formatJsonString = (displayVal: any, usePrettyPrint: boolean): string => {
+  if (displayVal && typeof displayVal === 'object') {
+    return JSON.stringify(displayVal, null, usePrettyPrint ? 2 : 0);
+  }
+  if (typeof displayVal === 'string' && displayVal.trim()) {
+    try {
+      const parsed = JSON.parse(displayVal);
+      return JSON.stringify(parsed, null, usePrettyPrint ? 2 : 0);
+    } catch {
+      return displayVal;
+    }
+  }
+  return '';
 };
 
 export const JSONField: React.FC<JSONFieldProps> = ({
@@ -318,63 +310,30 @@ export const JSONField: React.FC<JSONFieldProps> = ({
   }, [defaultValue]);
 
   useEffect(() => {
-    // Use default value if value is empty/undefined/null and default value is provided
-    const displayValue = (value !== null && value !== undefined && value !== '') ? value : (defaultValue || '');
-
-    // Handle different types of displayValue
-    let jsonString = '';
-    if (displayValue && typeof displayValue === 'object') {
-      jsonString = JSON.stringify(displayValue, null, prettyPrint ? 2 : 0);
-    } else if (typeof displayValue === 'string' && displayValue.trim()) {
-      // If it's already a string, try to parse and re-stringify for consistent formatting
-      try {
-        const parsed = JSON.parse(displayValue);
-        jsonString = JSON.stringify(parsed, null, prettyPrint ? 2 : 0);
-      } catch {
-        jsonString = displayValue;
-      }
-    } else {
-      jsonString = '';
-    }
-
+    const displayValue = getDisplayValue(value, defaultValue);
+    const jsonString = formatJsonString(displayValue, prettyPrint);
     setLocalValue(jsonString);
   }, [value, defaultValue, prettyPrint]);
 
-  useEffect(() => {
-    if (isModalOpen) {
-      // Use the same logic as the display value
-      const displayValue = (value !== null && value !== undefined && value !== '') ? value : (defaultValue || '');
-
-      // Parse for tree view
-      const parsed = parseJsonValue(displayValue);
-      setJsonData(parsed);
-
-      // Expand root by default
-      if (parsed && (typeof parsed === 'object' || Array.isArray(parsed))) {
-        setExpandedPaths(new Set(['']));
-      }
-
-      // Set textarea value
-      let jsonString = '';
-      if (displayValue && typeof displayValue === 'object') {
-        jsonString = JSON.stringify(displayValue, null, prettyPrint ? 2 : 0);
-      } else if (typeof displayValue === 'string' && displayValue.trim()) {
-        try {
-          const parsed = JSON.parse(displayValue);
-          jsonString = JSON.stringify(parsed, null, prettyPrint ? 2 : 0);
-        } catch {
-          jsonString = displayValue;
-        }
-      } else {
-        jsonString = '';
-      }
-
-      setModalValue(jsonString);
-      setError(null);
-
-      // Always default to tree view
-      setViewMode('tree');
+  const initializeExpandedPaths = (parsed: any): void => {
+    if (parsed && (typeof parsed === 'object' || Array.isArray(parsed))) {
+      setExpandedPaths(new Set(['']));
     }
+  };
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    const displayValue = getDisplayValue(value, defaultValue);
+    const parsed = parseJsonValue(displayValue);
+    
+    setJsonData(parsed);
+    initializeExpandedPaths(parsed);
+    
+    const jsonString = formatJsonString(displayValue, prettyPrint);
+    setModalValue(jsonString);
+    setError(null);
+    setViewMode('tree');
   }, [isModalOpen, value, defaultValue, prettyPrint, parseJsonValue]);
 
   const handleModalChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -401,10 +360,6 @@ export const JSONField: React.FC<JSONFieldProps> = ({
     });
   }, []);
 
-  const handleValueChange = useCallback((path: string, newValue: any) => {
-    // This would be used for inline editing - for now we'll use textarea mode for editing
-    // Can be enhanced later
-  }, []);
 
   const handleSave = () => {
     try {
@@ -433,7 +388,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
   // Truncated preview for inline view
   const getPreview = () => {
     if (!localValue) return '';
-    let preview = localValue.replace(/\s+/g, ' ');
+    let preview = localValue.replaceAll(/\s+/g, ' ');
     if (preview.length > 60) {
       preview = preview.slice(0, 57) + '...';
     }
@@ -443,31 +398,46 @@ export const JSONField: React.FC<JSONFieldProps> = ({
   return (
     <div className={`relative ${isBorder ? "field-component-border" : ""}`} >
       {/* Inline preview with floating expand icon */}
-      <div
-        className={`relative flex items-center px-2 py-1 min-h-[32px] rounded cursor-pointer hover:border-blue-400 transition-all ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+      <button
+        type="button"
+        className={`relative flex items-center px-2 py-1 min-h-[32px] rounded cursor-pointer hover:border-blue-400 transition-all w-full text-left ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
         onClick={() => !disabled && setIsModalOpen(true)}
-        tabIndex={0}
+        onKeyDown={e => {
+          if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
+            setIsModalOpen(true);
+          }
+        }}
         style={{ fontFamily: 'monospace', fontSize: 13 }}
+        tabIndex={disabled ? -1 : 0}
+        aria-label="Open JSON editor"
+        disabled={disabled}
       >
         <span className="truncate overflow-hidden whitespace-nowrap block flex-1 text-gray-800" title={localValue || placeholder}>
           {getPreview() || <span className="text-sm text-gray-400">{placeholder}</span>}
         </span>
-        <button
-          type="button"
-          className="absolute right-2 text-gray-400 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg border shadow-md bg-card hover:bg-gray-200 transition-all z-0"
-          onClick={e => { e.stopPropagation(); setIsModalOpen(true); }}
-          tabIndex={0}
-          aria-label="Expand JSON editor"
-          disabled={disabled}
+        <span
+          className="absolute right-2 text-gray-400 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg border shadow-md bg-card hover:bg-gray-200 transition-all z-0 pointer-events-none"
         >
           <Maximize2 className="w-4 h-4" />
-        </button>
-      </div>
+        </span>
+      </button>
       {/* Modal for editing JSON */}
       {isModalOpen && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center">
           {/* Backdrop */}
-          <div className="absolute inset-0 backdrop-blur-sm bg-opacity-40" onClick={() => setIsModalOpen(false)} />
+          <button
+            type="button"
+            className="absolute inset-0 backdrop-blur-sm bg-opacity-40"
+            aria-label="Close modal"
+            tabIndex={0}
+            onClick={() => setIsModalOpen(false)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                setIsModalOpen(false);
+              }
+            }}
+            style={{ cursor: 'pointer' }}
+          />
           {/* Modal Content */}
           <div className="relative bg-[var(--color-card)] border rounded-xl shadow-xl w-full max-w-5xl h-[85vh] p-6 flex flex-col z-10">
             <div className="flex items-center mb-4">
@@ -511,7 +481,6 @@ export const JSONField: React.FC<JSONFieldProps> = ({
                       level={0}
                       expandedPaths={expandedPaths}
                       onToggleExpand={handleToggleExpand}
-                      onValueChange={handleValueChange}
                       disabled={disabled}
                     />
                   ) : (

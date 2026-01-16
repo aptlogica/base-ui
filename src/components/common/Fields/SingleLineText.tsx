@@ -15,7 +15,6 @@ interface SingleLineTextProps {
   allowEdit?: boolean; // true = single click, false = double click
   readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
-  icon?: string;
   updateOnType?: boolean;
   config?: {
     defaultValue?: string;
@@ -38,7 +37,6 @@ export const SingleLineText: React.FC<SingleLineTextProps> = ({
   allowEdit = true,
   readOnly = false,
   helperText,
-  icon = "",
   updateOnType = false,
   config = {},
 }) => {
@@ -92,6 +90,14 @@ export const SingleLineText: React.FC<SingleLineTextProps> = ({
     () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // Double click when allowEdit=false
   );
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (readOnly || disabled) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setIsEditing(true);
+    }
+  };
+
   return (
     <div className="w-full relative">
       {/* Label */}
@@ -103,9 +109,13 @@ export const SingleLineText: React.FC<SingleLineTextProps> = ({
       )}
 
       {/* Input or Display */}
-      <div 
-        className={`relative ${className} ${isBorder && !isEditing ? "field-component-border" : ""}`} 
-        onClick={!readOnly ? handleClick : undefined}
+      <div
+        className={`relative ${className} ${isBorder && !isEditing ? "field-component-border" : ""}`}
+        onClick={readOnly ? undefined : handleClick}
+        onKeyDown={readOnly ? undefined : handleKeyDown}
+        role={readOnly ? undefined : "button"}
+        tabIndex={readOnly || disabled ? -1 : 0}
+        aria-label={readOnly ? undefined : "Edit text"}
         style={readOnly ? { cursor: 'default' } : undefined}
       >
         {isEditing ? (
