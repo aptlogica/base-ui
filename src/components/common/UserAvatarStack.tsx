@@ -57,7 +57,10 @@ export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({
       'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500',
       'bg-yellow-500', 'bg-red-500', 'bg-indigo-500', 'bg-cyan-500'
     ];
-    const hash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const hash = userId.split('').reduce((acc, char) => {
+      const codePoint = char.codePointAt(0) ?? 0;
+      return acc + codePoint;
+    }, 0);
     return colors[hash % colors.length];
   };
 

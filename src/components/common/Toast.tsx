@@ -53,20 +53,20 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
   defaultDuration = 3000,
 }) => {
   const [toasts, setToasts] = useState<InternalToast[]>([]);
-  const timers = useRef<Map<string, number>>(new Map());
+  const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const dismiss = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
     const timer = timers.current.get(id);
     if (timer) {
-      window.clearTimeout(timer);
+      globalThis.clearTimeout(timer);
       timers.current.delete(id);
     }
   }, []);
 
   const scheduleAutoDismiss = useCallback((toast: InternalToast) => {
     if (toast.duration > 0) {
-      const timerId = window.setTimeout(() => {
+      const timerId = globalThis.setTimeout(() => {
         dismiss(toast.id);
         toast.onClose?.();
       }, toast.duration);
@@ -99,7 +99,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
         grouped.set(pos, arr);
       }
       const flattened: InternalToast[] = [];
-      for (const [pos, arr] of grouped) {
+      for (const [_pos, arr] of grouped) {
         flattened.push(...arr.slice(0, maxToasts));
       }
       return flattened;
@@ -133,10 +133,9 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
     }[toast.variant];
 
     return (
-      <div
+      <output
         key={toast.id}
         className={`shadow-md rounded-md px-4 py-3 mb-2 w-80 ${baseColor} transition-all duration-200`}
-        role="status"
       >
         <div className="flex items-start gap-3">
           <div className="flex-1">
@@ -163,7 +162,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
             )}
           </div>
         </div>
-      </div>
+      </output>
     );
   };
 

@@ -50,17 +50,11 @@ vi.mock('../../../auth/useCurrentUser', () => ({
 // Mock Plugin Store
 const mockPluginStore = {
   flyoutOpen: false,
-  flyoutMode: 'normal' as any,
-  flyoutWidth: 300,
   currentPlugin: null as any,
-  isTransitioning: false,
   selectedWorkspace: null as any,
   openFlyout: vi.fn(),
   closeFlyout: vi.fn(),
-  setFlyoutMode: vi.fn(),
-  setFlyoutWidth: vi.fn(),
   toggleFlyout: vi.fn(),
-  setTransitioning: vi.fn(),
   setSelectedWorkspace: vi.fn(),
 };
 
@@ -102,10 +96,7 @@ const resetAllMocks = () => {
   vi.clearAllMocks();
   // Reset store states
   mockPluginStore.flyoutOpen = false;
-  mockPluginStore.flyoutMode = 'normal';
-  mockPluginStore.flyoutWidth = 300;
   mockPluginStore.currentPlugin = null;
-  mockPluginStore.isTransitioning = false;
   mockPluginStore.selectedWorkspace = null;
 
   mockNavigationStore.selectedWorkspaceId = 'ws-1';
@@ -202,36 +193,12 @@ describe('Plugin Store State', () => {
     expect(result.current.flyoutOpen).toBe(true);
   });
 
-  it('should expose flyout mode from plugin store', () => {
-    mockPluginStore.flyoutMode = 'details' as any;
-
-    const { result } = renderHook(() => useWorkspaceStateManager());
-
-    expect(result.current.flyoutMode).toBe('details');
-  });
-
-  it('should expose flyout width from plugin store', () => {
-    mockPluginStore.flyoutWidth = 500;
-
-    const { result } = renderHook(() => useWorkspaceStateManager());
-
-    expect(result.current.flyoutWidth).toBe(500);
-  });
-
   it('should expose current plugin from plugin store', () => {
     mockPluginStore.currentPlugin = 'test-plugin' as any;
 
     const { result } = renderHook(() => useWorkspaceStateManager());
 
     expect(result.current.currentPlugin).toBe('test-plugin');
-  });
-
-  it('should expose isTransitioning from plugin store', () => {
-    mockPluginStore.isTransitioning = true;
-
-    const { result } = renderHook(() => useWorkspaceStateManager());
-
-    expect(result.current.isTransitioning).toBe(true);
   });
 
   it('should expose selected workspace from plugin store', () => {
@@ -268,28 +235,10 @@ describe('Plugin Store Actions', () => {
     expect(typeof result.current.closeFlyout).toBe('function');
   });
 
-  it('should expose setFlyoutMode action', () => {
-    const { result } = renderHook(() => useWorkspaceStateManager());
-
-    expect(typeof result.current.setFlyoutMode).toBe('function');
-  });
-
-  it('should expose setFlyoutWidth action', () => {
-    const { result } = renderHook(() => useWorkspaceStateManager());
-
-    expect(typeof result.current.setFlyoutWidth).toBe('function');
-  });
-
   it('should expose toggleFlyout action', () => {
     const { result } = renderHook(() => useWorkspaceStateManager());
 
     expect(typeof result.current.toggleFlyout).toBe('function');
-  });
-
-  it('should expose setTransitioning action', () => {
-    const { result } = renderHook(() => useWorkspaceStateManager());
-
-    expect(typeof result.current.setTransitioning).toBe('function');
   });
 
   it('should expose setPluginStoreSelectedWorkspace action', () => {
@@ -658,7 +607,6 @@ describe('Combined State Management', () => {
 
     // Plugin Store
     expect(result.current.flyoutOpen).toBeDefined();
-    expect(result.current.flyoutMode).toBeDefined();
     expect(result.current.openFlyout).toBeDefined();
 
     // Navigation Store
@@ -729,19 +677,13 @@ describe('Return Value Completeness', () => {
 
     // Plugin Store State
     expect(result.current).toHaveProperty('flyoutOpen');
-    expect(result.current).toHaveProperty('flyoutMode');
-    expect(result.current).toHaveProperty('flyoutWidth');
     expect(result.current).toHaveProperty('currentPlugin');
-    expect(result.current).toHaveProperty('isTransitioning');
     expect(result.current).toHaveProperty('pluginStoreSelectedWorkspace');
 
     // Plugin Store Actions
     expect(result.current).toHaveProperty('openFlyout');
     expect(result.current).toHaveProperty('closeFlyout');
-    expect(result.current).toHaveProperty('setFlyoutMode');
-    expect(result.current).toHaveProperty('setFlyoutWidth');
     expect(result.current).toHaveProperty('toggleFlyout');
-    expect(result.current).toHaveProperty('setTransitioning');
     expect(result.current).toHaveProperty('setPluginStoreSelectedWorkspace');
 
     // Navigation Store State
@@ -786,11 +728,11 @@ describe('Return Value Completeness', () => {
     expect(result.current).toHaveProperty('navigate');
   });
 
-  it('should return exactly 49 properties', () => {
+  it('should return exactly 42 properties', () => {
     const { result } = renderHook(() => useWorkspaceStateManager());
 
     const keys = Object.keys(result.current);
-    expect(keys.length).toBe(49);
+    expect(keys.length).toBe(42);
   });
 });
 

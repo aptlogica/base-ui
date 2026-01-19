@@ -1,5 +1,3 @@
-import { ReactNode } from 'react';
-
 /**
  * Plugin manifest that describes a plugin and its requirements
  */
@@ -49,6 +47,9 @@ export interface PluginManager {
   validatePluginCompatibility: (plugin: Plugin) => boolean;
   setPluginConfig: (pluginId: string, config: any) => void;
   getPluginConfig: (pluginId: string) => any;
+  getExtensions: (pointId: string) => any[];
+  registerCoreExtensionPoint: (pointId: string, schema?: Record<string, any>) => void;
+  registerCoreExtension: (pointId: string, extension: any) => void;
   subscribeToPluginConfig?: (pluginId: string, listener: (config: any) => void) => () => void;
   subscribeToAllConfigChanges?: (listener: (pluginId: string, config: any) => void) => () => void;
   subscribeToExtensionChanges?: (pointId: string, listener: () => void) => () => void;

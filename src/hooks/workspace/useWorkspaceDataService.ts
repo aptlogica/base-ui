@@ -1,7 +1,7 @@
 import {
   useWorkspaces, useWorkspaceById, useWorkspaceBases, useBaseById, useBaseTables, useTable, useTableViews, useViewById,
   useCreateWorkspace, useUpdateWorkspace, useDeleteWorkspace,
-  useCreateBase, // useUpdateBase, // Not available in useApi
+  useCreateBase, 
   useDeleteBase,
   useCreateTable, useUpdateTable, useDeleteTable,
   useCreateField, useUpdateField, useDeleteColumn,
@@ -17,9 +17,7 @@ export const useWorkspaceDataService = (workspaceId?: string, baseId?: string, t
   const workspaceBasesQuery = useWorkspaceBases(workspaceId || '');
   const baseByIdQuery = useBaseById(baseId || '');
   const baseTablesQuery = useBaseTables(baseId || '');
-  // PAGINATION DISABLED - Uncomment below to re-enable pagination (30 records per page)
-  // const tableByIdQuery = useTable(tableId || '', {pageNumber:1, pageLimit: 30});
-  const tableByIdQuery = useTable(tableId || ''); // No pagination - fetches all records
+  const tableByIdQuery = useTable(tableId || ''); 
   const tableViewsQuery = useTableViews(tableId || '');
   const viewByIdQuery = useViewById(viewId || '');
 
@@ -28,7 +26,6 @@ export const useWorkspaceDataService = (workspaceId?: string, baseId?: string, t
   const updateWorkspaceMutation = useUpdateWorkspace();
   const deleteWorkspaceMutation = useDeleteWorkspace();
   const createBaseMutation = useCreateBase();
-  // const updateBaseMutation = useUpdateBase(); // Not available
   const deleteBaseMutation = useDeleteBase();
   const createTableMutation = useCreateTable();
   const updateTableMutation = useUpdateTable();

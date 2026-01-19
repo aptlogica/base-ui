@@ -26,19 +26,45 @@ function pad(n: number) {
   return n.toString().padStart(2, '0');
 }
 
+const getPeriod = (hour: number): string => {
+  if (hour >= 12) return 'PM';
+  return 'AM';
+};
+
+const getDisplayHour12 = (hour: number): number => {
+  if (hour === 0) return 12;
+  if (hour > 12) return hour - 12;
+  return hour;
+};
+
+const formatTime12Hour = (hour: number, minute: number): string => {
+  const period = getPeriod(hour);
+  const displayHour = getDisplayHour12(hour);
+  return `${displayHour}:${pad(minute)} ${period}`;
+};
+
+const formatTime24Hour = (hour: number, minute: number): string => {
+  return `${pad(hour)}:${pad(minute)}`;
+};
+
+const generateTimeOptionsForHour = (hour: number, step: number, hourFormat: '12' | '24'): string[] => {
+  const options: string[] = [];
+  for (let m = 0; m < 60; m += step) {
+    if (hourFormat === '12') {
+      options.push(formatTime12Hour(hour, m));
+    } else {
+      options.push(formatTime24Hour(hour, m));
+    }
+  }
+  return options;
+};
+
 function getTimeOptions(step = 30, hourFormat: '12' | '24' = '24') {
   // step in minutes
   const options: string[] = [];
   for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += step) {
-      if (hourFormat === '12') {
-        const period = h >= 12 ? 'PM' : 'AM';
-        const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
-        options.push(`${displayHour}:${pad(m)} ${period}`);
-      } else {
-        options.push(`${pad(h)}:${pad(m)}`);
-      }
-    }
+    const hourOptions = generateTimeOptionsForHour(h, step, hourFormat);
+    options.push(...hourOptions);
   }
   return options;
 }
@@ -180,14 +206,19 @@ export const Time: React.FC<TimeProps> = ({
   const timeOptions = getTimeOptions(30, hourFormat); // 30-min increments
 
   // Format display value
-  const displayValue = localValue ? (hourFormat === '12' ?
-    (() => {
-      const [hours, minutes] = localValue.split(':');
+  const formatDisplayValue = (value: string, format: '12' | '24'): string => {
+    if (!value) return '';
+    if (format === '12') {
+      const [hours, minutes] = value.split(':');
       const hour = Number.parseInt(hours);
-      const period = hour >= 12 ? 'PM' : 'AM';
-      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      const period = getPeriod(hour);
+      const displayHour = getDisplayHour12(hour);
       return `${displayHour}:${minutes} ${period}`;
-    })() : localValue) : '';
+    }
+    return value;
+  };
+
+  const displayValue = formatDisplayValue(localValue, hourFormat);
 
   return (
     <div className={`relative ${className} ${isBorder ? "field-component-border" : ""}`} ref={popoverRef}>

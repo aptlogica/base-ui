@@ -5,25 +5,13 @@ export interface UserProfile {
   last_name: string;
   display_name: string;
   avatar?: string;
-  auth_provider: string;
-  external_id: string;
-  mfa_enabled: boolean;
-  mfa_secret: string;
   email_verified: boolean;
-  phone: string;
-  phone_verified: boolean;
   status: 'active' | 'inactive' | 'pending';
   last_login_at: string | null;
   last_active_at: string | null;
   timezone: string;
   locale: string;
-  failed_login_attempts: number;
-  locked_until: string | null;
-  password_changed_at: string | null;
   created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-  is_deleted: boolean;
   country?: string;
   dob?: string;
 }

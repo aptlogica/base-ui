@@ -84,7 +84,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
     e.stopPropagation();
     
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file?.type.startsWith('image/')) {
       const validTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
       if (validTypes.includes(file.type)) {
         const img = new Image();
@@ -136,7 +136,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      await onCreate({
+      onCreate({
         name: name.trim(),
         description: description.trim(),
         image: image || null,
@@ -144,7 +144,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
       // Close the modal on successful creation
       onClose();
     } catch (err) {
-      setError('Failed to create base. Please try again.');
+      setError('Failed to create base. Please try again.' + (err instanceof Error ? err.message : ''));
     } finally {
       setIsSubmitting(false);
     }
@@ -154,6 +154,33 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
     if (e.key === 'Escape') {
       onClose();
     }
+  };
+
+  // Helper function to get help icon color based on validation state
+  const getHelpIconColor = (): string => {
+    if (validationError) {
+      return 'text-red-500';
+    }
+    if (name.trim().length >= 3) {
+      return 'text-green-600';
+    }
+    return 'text-gray-400';
+  };
+
+  // Helper function to get button text based on state
+  const getButtonText = (): string => {
+    if (isUpdate) {
+      return 'Update';
+    }
+    return 'Create Base';
+  };
+
+  // Helper function to get loading button text based on state
+  const getLoadingButtonText = (): string => {
+    if (isUpdate) {
+      return 'Updating...';
+    }
+    return 'Creating...';
   };
 
   if (!isOpen) return null;
@@ -215,9 +242,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
               />
               <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
                 <span className="relative inline-block group">
-                  <HelpCircle className={`w-4 h-4 ${
-                    validationError ? 'text-red-500' : name.trim().length >= 3 ? 'text-green-600' : 'text-gray-400'
-                  } cursor-help`} />
+                  <HelpCircle className={`w-4 h-4 ${getHelpIconColor()} cursor-help`} />
                   <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                     <h4 className="font-medium mb-2">Base name requirements:</h4>
                     <ul className="space-y-1">
@@ -251,7 +276,11 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
 
           {/* Image Upload Section */}
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
+            <label 
+              htmlFor="image-upload"
+              id="image-upload-label"
+              className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1"
+            >
               Image
             </label>
             {/* Image Error - Display here, not under Base Name */}
@@ -266,6 +295,8 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                 <div className="relative flex-shrink-0">
                   <div className="w-32 h-32 bg-green-100 rounded-xl flex items-center justify-center overflow-hidden">
                     <img
+                      id="image-upload"
+                      aria-labelledby="image-upload-label"
                       src={imagePreview}
                       alt="Preview"
                       className="w-full h-full object-cover"
@@ -287,7 +318,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                 </div>
                 
                 {/* Upload Area - Right Side */}
-                <div
+                <button
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
                   className="flex-1 relative border-2 border-dashed rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
@@ -307,13 +338,13 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                   <p className="text-xs text-gray-500">
                     SVG, PNG, JPG or GIF (max. 800 x 400px)
                   </p>
-                </div>
+                </button>
               </div>
             ) : (
-              <div
+              <button
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
-                className="relative border-2 border-dashed rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                className="relative w-full border-2 border-dashed rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
                 onClick={() => document.getElementById('image-upload')?.click()}
               >
                 <input
@@ -330,7 +361,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                 <p className="text-xs text-gray-500">
                   SVG, PNG, JPG or GIF (max. 800 x 400px)
                 </p>
-              </div>
+              </button>
             )}
           </div>
 
@@ -359,10 +390,10 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
             {isSubmitting ? (
               <>
                 <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"></div>
-                {isUpdate ? 'Updating...' : 'Creating...'}
+                {getLoadingButtonText()}
               </>
             ) : (
-              isUpdate ? 'Update' : 'Create Base'
+              getButtonText()
             )}
           </button>
         </div>

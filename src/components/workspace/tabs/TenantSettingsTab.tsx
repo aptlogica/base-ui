@@ -92,7 +92,7 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-       <Loader size={6} text='Loading Information' textPosition='bottom'/>
+        <Loader size={6} text='Loading Information' textPosition='bottom' />
       </div>
     );
   }
@@ -104,10 +104,11 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
         <h2 className="text-lg font-semibold text-primary mb-4">Organization Information</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-primary mb-2">
+            <label htmlFor='company-name' className="block text-sm font-medium text-primary mb-2">
               Company Name <span className="text-red-500">*</span>
             </label>
             <input
+              id='company-name'
               type="text"
               value={organizationName}
               onChange={(e) => setOrganizationName(e.target.value)}
@@ -116,7 +117,7 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-primary mb-2">
+            <label htmlFor='organization-description' className="block text-sm font-medium text-primary mb-2">
               Description <span className="text-red-500">*</span>
             </label>
             <MultiLineText

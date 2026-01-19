@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Mail, CheckCircle, Info } from "lucide-react";
+import { ArrowLeft, CheckCircle, Info } from "lucide-react";
 import { forgotPassword } from "../service/clientService";
-import formText from "../config/formText";
 
 const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -12,7 +11,69 @@ const ForgotPasswordPage: React.FC = () => {
   const [emailError, setEmailError] = useState<string | null>(null);
 
   const validateEmail = (value: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    // Limit input length to prevent ReDoS attacks (RFC 5321: max 254 chars for email)
+    if (value.length > 254 || value.length === 0) {
+      return false;
+    }
+    
+    // Split validation into simpler checks to avoid catastrophic backtracking
+    // Check for exactly one @ symbol
+    const atIndex = value.indexOf('@');
+    if (atIndex === -1 || atIndex !== value.lastIndexOf('@')) {
+      return false;
+    }
+    
+    const localPart = value.substring(0, atIndex);
+    const domain = value.substring(atIndex + 1);
+    
+    // Validate local part (before @): 1-64 characters, no spaces, no consecutive dots
+    if (localPart.length === 0 || localPart.length > 64) {
+      return false;
+    }
+    if (localPart.includes(' ') || localPart.startsWith('.') || localPart.endsWith('.') || localPart.includes('..')) {
+      return false;
+    }
+    
+    // Validate domain (after @): must have valid structure
+    if (domain.length === 0 || domain.length > 253) {
+      return false;
+    }
+    
+    // Check domain has at least one dot
+    if (!domain.includes('.')) {
+      return false;
+    }
+    
+    // Split domain by dots and validate each part
+    const domainParts = domain.split('.');
+    if (domainParts.length < 2) {
+      return false;
+    }
+    
+    // Validate each domain part (no spaces, reasonable length)
+    for (const part of domainParts) {
+      if (part.length === 0 || part.length > 63) {
+        return false;
+      }
+      if (/\s/.test(part)) {
+        return false;
+      }
+    }
+    
+    // Check TLD (last part) has at least 2 characters
+    const tld = domainParts[domainParts.length - 1];
+    if (tld.length < 2) {
+      return false;
+    }
+    
+    // Simple check: domain should contain only valid characters (letters, numbers, dots, hyphens)
+    // This avoids complex regex patterns that could cause backtracking
+    const validDomainChars = /^[a-zA-Z0-9.-]+$/;
+    if (!validDomainChars.test(domain)) {
+      return false;
+    }
+    
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,9 +155,8 @@ const ForgotPasswordPage: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
-            <label className="field-component-label">
-              Email Address
-              <span className="field-component-required">*</span>
+            <label htmlFor="forgot-password-email" className="field-component-label">
+              Email Address <span className="field-component-required">*</span>
             </label>
             <input
               type="email"
@@ -108,8 +168,8 @@ const ForgotPasswordPage: React.FC = () => {
               }}
               onBlur={() => {
                 if (!email.trim()) setEmailError("This field is required");
-                else if (!validateEmail(email.trim())) setEmailError("Please enter a valid email address");
-                else setEmailError(null);
+                else if (validateEmail(email.trim())) {setEmailError(null);}
+                else {setEmailError("Please enter a valid email address");}
               }}
               placeholder="Enter your email address"
               className={`field-component field-component-border field-component-focus placeholder-[var(--color-text-placeholder)] ${emailError ? "border-destructive bg-red-50" : ""} shadow-[var(--shadow-xs)]`}

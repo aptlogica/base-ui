@@ -24,14 +24,14 @@ describe('useSearch', () => {
   });
 
   it('should initialize with provided fields', () => {
-    const { result } = renderHook(() => useSearch(mockFields));
+    const { result } = renderHook(() => useSearch());
     
     expect(result.current.searchTerm).toBe('');
     expect(result.current.selectedField).toBeNull();
   });
 
   it('should handle search with term and field', () => {
-    const { result } = renderHook(() => useSearch(mockFields));
+    const { result } = renderHook(() => useSearch());
     
     act(() => {
       result.current.handleSearch('John', mockFields[0]);
@@ -42,7 +42,7 @@ describe('useSearch', () => {
   });
 
   it('should handle search with term and null field', () => {
-    const { result } = renderHook(() => useSearch(mockFields));
+    const { result } = renderHook(() => useSearch());
     
     act(() => {
       result.current.handleSearch('test', null);
@@ -53,7 +53,7 @@ describe('useSearch', () => {
   });
 
   it('should return all data when search term is empty', () => {
-    const { result } = renderHook(() => useSearch(mockFields));
+    const { result } = renderHook(() => useSearch());
     
     act(() => {
       result.current.filterData(mockData, mockFields);
@@ -63,7 +63,7 @@ describe('useSearch', () => {
   });
 
   it('should filter data by specific field', () => {
-    const { result } = renderHook(() => useSearch(mockFields));
+    const { result } = renderHook(() => useSearch());
     
     act(() => {
       result.current.setSearchTerm('John');
@@ -79,7 +79,7 @@ describe('useSearch', () => {
   });
 
   it('should filter data across all fields when no specific field is selected', () => {
-    const { result } = renderHook(() => useSearch(mockFields));
+    const { result } = renderHook(() => useSearch());
     
     act(() => {
       result.current.handleSearch('example', null);
@@ -90,7 +90,7 @@ describe('useSearch', () => {
   });
 
   it('should filter data case-insensitively', () => {
-    const { result } = renderHook(() => useSearch(mockFields));
+    const { result } = renderHook(() => useSearch());
     
     act(() => {
       result.current.setSearchTerm('JOHN');
@@ -111,7 +111,7 @@ describe('useSearch', () => {
       { id: 2, data: { name: 'Jane Smith', email: 'jane@example.com' } }
     ];
     
-    const { result } = renderHook(() => useSearch(mockFields));
+    const { result } = renderHook(() => useSearch());
     
     act(() => {
       result.current.handleSearch('John', mockFields[0]);
@@ -126,7 +126,7 @@ describe('useSearch', () => {
   });
 
   it('should return empty array when no matches found', () => {
-    const { result } = renderHook(() => useSearch(mockFields));
+    const { result } = renderHook(() => useSearch());
     
     act(() => {
       result.current.handleSearch('NonExistent', mockFields[0]);
@@ -140,7 +140,7 @@ describe('useSearch', () => {
   });
 
   it('should handle numeric search values', () => {
-    const { result } = renderHook(() => useSearch(mockFields));
+    const { result } = renderHook(() => useSearch());
     
     act(() => {
       result.current.handleSearch('30', mockFields[2]);
@@ -155,7 +155,7 @@ describe('useSearch', () => {
   });
 
   it('should update search term directly', () => {
-    const { result } = renderHook(() => useSearch(mockFields));
+    const { result } = renderHook(() => useSearch());
     
     act(() => {
       result.current.setSearchTerm('test');
@@ -165,7 +165,7 @@ describe('useSearch', () => {
   });
 
   it('should update selected field directly', () => {
-    const { result } = renderHook(() => useSearch(mockFields));
+    const { result } = renderHook(() => useSearch());
     
     act(() => {
       result.current.setSelectedField(mockFields[1]);
@@ -175,7 +175,7 @@ describe('useSearch', () => {
   });
 
   it('should handle search with whitespace-only term', () => {
-    const { result } = renderHook(() => useSearch(mockFields));
+    const { result } = renderHook(() => useSearch());
     
     act(() => {
       result.current.handleSearch('   ', null);

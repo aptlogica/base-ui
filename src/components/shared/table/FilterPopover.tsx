@@ -1,6 +1,6 @@
-import React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Filter, Trash2, Plus, Check, Type, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Filter, Trash2, Plus, Check, Type, ChevronDown, X } from 'lucide-react';
 import { useSmartPopover } from '../../../hooks/useSmartPopover';
 import { ColumnConfig } from '../../../plugins/GridViewPlugin/types/grid.types';
 import { getFieldTypeIconComponent } from '../../../types/fieldTypes';
@@ -29,34 +29,32 @@ const OPERATORS = [
 ];
 
 interface FilterPopoverProps {
-  columns: ColumnConfig[];
-  filters: FilterCondition[];
-  onAddFilter: (filter: FilterCondition) => void;
-  onRemoveFilter: (index: number) => void;
-  onUpdateFilter: (index: number, updates: Partial<FilterCondition>) => void;
-  onRealTimeFilter?: (filter: { column: string; operator: string; value: string } | null) => void;
-  viewId?: string;
+  readonly columns: ColumnConfig[];
+  readonly filters: FilterCondition[];
+  readonly onAddFilter: (filter: FilterCondition) => void;
+  readonly onRemoveFilter: (index: number) => void;
+  readonly onUpdateFilter: (index: number, updates: Partial<FilterCondition>) => void;
 }
 
-export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, onUpdateFilter, onRealTimeFilter }: FilterPopoverProps) {
-  const [open, setOpen] = React.useState(false);
-  const [newFilter, setNewFilter] = React.useState<FilterCondition>({
+export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, onUpdateFilter }: FilterPopoverProps) {
+  const [open, setOpen] = useState(false);
+  const [newFilter, setNewFilter] = useState<FilterCondition>({
     column: '',
     operator: 'is equal',
     value: '',
     logic: 'AND'
   });
   // Track dropdown states per filter index (use -1 for new filter)
-  const [fieldDropdownOpen, setFieldDropdownOpen] = React.useState<number | null>(null);
-  const [operatorDropdownOpen, setOperatorDropdownOpen] = React.useState<number | null>(null);
-  const [logicDropdownOpen, setLogicDropdownOpen] = React.useState<number | null>(null);
-  const [hasUserInteracted, setHasUserInteracted] = React.useState(false);
-  const [inputValue, setInputValue] = React.useState<string>('');
-  const [showNewFilterRow, setShowNewFilterRow] = React.useState(false);
-  const triggerRef = React.useRef<HTMLButtonElement>(null);
-  const panelRef = React.useRef<HTMLDivElement>(null);
+  const [fieldDropdownOpen, setFieldDropdownOpen] = useState<number | null>(null);
+  const [operatorDropdownOpen, setOperatorDropdownOpen] = useState<number | null>(null);
+  const [logicDropdownOpen, setLogicDropdownOpen] = useState<number | null>(null);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [inputValue, setInputValue] = useState<string>('');
+  const [showNewFilterRow, setShowNewFilterRow] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   // Track local input values for existing filters to avoid real-time updates
-  const [localFilterValues, setLocalFilterValues] = React.useState<Record<number, string>>({});
+  const [localFilterValues, setLocalFilterValues] = useState<Record<number, string>>({});
 
   // Function to close popover and clear form values
   const handleClosePopover = () => {
@@ -81,23 +79,23 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
   });
 
   // Clear inputValue when column changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (newFilter.column) {
       setInputValue('');
     }
   }, [newFilter.column]);
 
   // Show new filter row when popover opens and there are no filters
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       if (filters.length === 0) {
         setShowNewFilterRow(true);
       } else {
         // Only reset if user hasn't explicitly shown it
         // This prevents hiding it when user clicks "Add filter"
-        if (!hasUserInteracted) {
-          setShowNewFilterRow(false);
-        }
+      }
+      if (!hasUserInteracted) {
+        setShowNewFilterRow(false);
       }
     }
   }, [open]);
@@ -127,9 +125,12 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
     const column = visibleColumns.find(col => col.column_name === filter.column);
     if (!column) {
       // For existing filters, use local state while typing, filter.value when not editing
-      const currentValue = isNewFilter
-        ? inputValue
-        : (localFilterValues[filterIndex] !== undefined ? localFilterValues[filterIndex] : filter.value);
+      let currentValue: string;
+      if (isNewFilter) {
+        currentValue = inputValue;
+      } else {
+        currentValue = localFilterValues[filterIndex] ?? filter.value;
+      }
       return (
         <input
           className="flex-1 min-w-0 px-3 py-1.5 text-sm border rounded-xl bg-background text-primary placeholder-gray-400 focus:outline-none focus:border-[--color-brand-600]"
@@ -175,7 +176,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
       if (Array.isArray(column.config?.options)) return column.config.options;
       if (Array.isArray(column.options)) return column.options;
       if (Array.isArray(column.meta?.options)) return column.meta.options;
-      if (Array.isArray((column as any).config?.options)) return (column as any).config.options;
+      if (Array.isArray(column.config?.options)) return column.config.options;
       return [];
     };
     const options = getOptions();
@@ -289,9 +290,12 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
         );
       }
       // For existing filters, use local state while typing, filter.value when not editing
-      const currentValue = isNewFilter
-        ? inputValue
-        : (localFilterValues[filterIndex] !== undefined ? localFilterValues[filterIndex] : filter.value);
+      let currentValue: string;
+      if (isNewFilter) {
+        currentValue = inputValue;
+      } else {
+        currentValue = localFilterValues[filterIndex] ?? filter.value;
+      }
       return (
         <input
           type="number"
@@ -411,7 +415,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                 onUpdateFilter(filterIndex, { value: valStr });
               }
             }}
-            config={{ durationFormat: (column?.config?.durationFormat || 'h:mm') as any }}
+            config={{ durationFormat: (column?.config?.durationFormat || 'h:mm') }}
             allowEdit={true}
             isBorder={true}
           />
@@ -421,7 +425,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
 
     if (column.uidt === 'rating') {
       // Check if value exists and is not empty
-      const ratingValue = filter.value && filter.value.trim() ? Number(filter.value) : undefined;
+      const ratingValue = filter?.value.trim() ? Number(filter.value) : undefined;
       if (hasValue && ratingValue !== undefined) {
         return (
           <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-xl text-sm">

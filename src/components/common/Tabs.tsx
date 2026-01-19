@@ -18,7 +18,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeKey, onChange, className }) => 
   return (
     <div className={`flex items-center gap-6 border-b px-7 mt-0 ${className || ''}`}>
       {tabs.map(tab => (
-        <div
+        <button
           key={tab.key}
           className={`
               py-3 px-1 border-b-2 font-medium text-sm flex outline-none items-center gap-2 relative cursor-pointer
@@ -40,7 +40,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeKey, onChange, className }) => 
               {tab.count}
             </span>
           )}
-        </div>
+        </button>
       ))}
     </div>
   );

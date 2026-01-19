@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useRef, useMemo } from 'react';
 import { Plugin, PluginManager } from './types';
 import { PluginManagerImpl } from './PluginManager';
 import { registerCoreLayoutComponents } from './coreLayoutRegistrations';
@@ -42,20 +42,10 @@ export const PluginFrameworkProvider: React.FC<PluginFrameworkProviderProps> = (
         // Register core layout components first (these are essential, not plugins)
         const coreApi: any = {
           registerExtensionPoint: (pointId: string, schema?: any) => {
-            const fullPointId = pointId.includes(':') ? pointId : `core:${pointId}`;
-            (pluginManager as PluginManagerImpl).extensionPoints.set(fullPointId, schema || {});
+            pluginManager.registerCoreExtensionPoint(pointId, schema);
           },
           registerExtension: (pointId: string, extension: any) => {
-            const fullPointId = pointId.includes(':') ? pointId : `core:${pointId}`;
-            if (!(pluginManager as PluginManagerImpl).extensions.has(fullPointId)) {
-              (pluginManager as PluginManagerImpl).extensions.set(fullPointId, []);
-            }
-            const extensionWithId = {
-              ...extension,
-              _pluginId: 'core',
-              _extensionId: extension.id || `core-${Date.now()}`
-            };
-            (pluginManager as PluginManagerImpl).extensions.get(fullPointId)!.push(extensionWithId);
+            pluginManager.registerCoreExtension(pointId, extension);
           },
           getPlugin: () => null,
           getPluginConfig: () => defaultConfig,
@@ -107,11 +97,11 @@ export const PluginFrameworkProvider: React.FC<PluginFrameworkProviderProps> = (
     };
   }, []);
   
-  const getExtensions = (pointId: string) => {
+  const getExtensions = useMemo(() => (pointId: string) => {
     return (pluginManager as PluginManagerImpl).getExtensions(pointId);
-  };
+  }, [pluginManager]);
   
-  const contextValue: PluginFrameworkContextType = {
+  const contextValue: PluginFrameworkContextType = useMemo(() => ({
     pluginManager,
     loading,
     error,
@@ -119,7 +109,7 @@ export const PluginFrameworkProvider: React.FC<PluginFrameworkProviderProps> = (
     ...(typeof pluginManager.subscribeToExtensionChanges === 'function' && {
       subscribeToExtensionChanges: pluginManager.subscribeToExtensionChanges.bind(pluginManager)
     })
-  };
+  }), [pluginManager, loading, error, getExtensions]);
   
   return (
     <PluginFrameworkContext.Provider 

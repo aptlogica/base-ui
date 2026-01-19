@@ -1,22 +1,22 @@
-  
+
 export interface FieldBaseInput {
-    name: string;
-    type: FieldType;
-    config: FieldConfig;
-    position: number;
-    required: boolean;
-    unique: boolean;
-    description?: string;
-  }
-  
+  name: string;
+  type: FieldType;
+  config: FieldConfig;
+  position: number;
+  required: boolean;
+  unique: boolean;
+  description?: string;
+}
+
 export interface FieldDB extends FieldBaseInput {
-    id: string; // UUID
-    table_id: string; // UUID
-    created_at: Date;
-    updated_at: Date;
-    deleted_at: Date | null;
-    is_hidden?: boolean;
-  }
+  id: string; // UUID
+  table_id: string; // UUID
+  created_at: Date;
+  updated_at: Date;
+  deleted_at: Date | null;
+  is_hidden?: boolean;
+}
 
 export type FieldType =
   | 'text'
@@ -48,14 +48,14 @@ export type FieldType =
 
 // Base config interface
 interface BaseFieldConfig {
-    defaultValue?: string | number | boolean | string[] | null;
+  defaultValue?: string | number | boolean | string[] | null;
   description?: string;
   [key: string]: any;
 }
 
 // Text field config
 interface TextFieldConfig extends BaseFieldConfig {
-    placeholder?: string;
+  placeholder?: string;
   maxLength?: number;
 }
 
@@ -193,7 +193,7 @@ interface AuditFieldConfig extends BaseFieldConfig {
 }
 
 // Union type for all field configs
-export type FieldConfig = 
+export type FieldConfig =
   | TextFieldConfig
   | NumberFieldConfig
   | DecimalFieldConfig

@@ -7,13 +7,10 @@ import HeaderMembers from '../components/common/HeaderMembers';
 import UserDropdown from '../components/common/UserDropdown';
 import HomePage from '../pages/HomePage';
 
-/**
- * Core layout registrations that were previously in WorkspacePlugin
- * These are essential components that should always be registered
- */
+/** These are essential components that should always be registered */
 export const registerCoreLayoutComponents = (api: PluginAPI, config: any = {}) => {
   // Set workspace config on window for backward compatibility
-  (window as any).__workspaceConfig = config;
+  (globalThis as any).__workspaceConfig = config;
   
   // Register header-left components
   api.registerExtension('layout:header-left', {

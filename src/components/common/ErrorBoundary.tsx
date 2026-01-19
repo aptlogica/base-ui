@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -60,7 +60,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </details>
             <button 
               className="error-button"
-              onClick={() => window.location.reload()}
+              onClick={() => globalThis.location.reload()}
             >
               Reload Application
             </button>

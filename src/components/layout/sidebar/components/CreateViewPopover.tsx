@@ -116,6 +116,16 @@ export const CreateViewPopover: React.FC<CreateViewPopoverProps> = ({
     if (setPopoverRef && popoverRef.current) setPopoverRef(popoverRef.current);
   }, [setPopoverRef]);
 
+  const getTransform = () => {
+    if (!isAnimating) {
+      return 'translateY(0) scaleY(1)';
+    }
+    if (position.placement === 'above') {
+      return 'translateY(8px) scaleY(0.8)';
+    }
+    return 'translateY(-8px) scaleY(0.8)';
+  };
+
   return ReactDOM.createPortal(
     <div
       ref={popoverRef}
@@ -124,11 +134,7 @@ export const CreateViewPopover: React.FC<CreateViewPopoverProps> = ({
         top: `${position.top}px`,
         left: `${position.left}px`,
         transformOrigin: position.placement === 'above' ? 'bottom center' : 'top center',
-        transform: isAnimating 
-          ? (position.placement === 'above' 
-              ? 'translateY(8px) scaleY(0.8)' 
-              : 'translateY(-8px) scaleY(0.8)')
-          : 'translateY(0) scaleY(1)',
+        transform: getTransform(),
         opacity: isAnimating ? 0 : 1,
         transition: 'opacity 200ms ease-out, transform 200ms ease-out',
       }}

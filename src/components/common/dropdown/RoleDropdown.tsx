@@ -13,6 +13,8 @@ interface RoleDropdownProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  id?: string; // For label association via htmlFor
+  'aria-labelledby'?: string; // For label association
 }
 
 export const RoleDropdown: React.FC<RoleDropdownProps> = ({
@@ -21,6 +23,8 @@ export const RoleDropdown: React.FC<RoleDropdownProps> = ({
   onChange,
   placeholder = 'Select a role',
   className = '',
+  id,
+  'aria-labelledby': ariaLabelledBy,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState<{ 
@@ -161,6 +165,8 @@ export const RoleDropdown: React.FC<RoleDropdownProps> = ({
       <div className={`relative ${className}`} ref={dropdownRef}>
         <button
           ref={triggerRef}
+          id={id}
+          aria-labelledby={ariaLabelledBy}
           type="button"
           onClick={(e) => {
             e.stopPropagation();

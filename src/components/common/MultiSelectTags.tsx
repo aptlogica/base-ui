@@ -21,6 +21,8 @@ export interface MultiSelectTagsProps {
   getOptionLabel?: (option: MultiSelectTagsOption) => string;
   getOptionValue?: (option: MultiSelectTagsOption) => string | number;
   showDisabledAsSelected?: boolean; // Show disabled options as selected tags in input
+  id?: string; // For label association via htmlFor
+  'aria-labelledby'?: string; // For label association
 }
 
 export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
@@ -35,6 +37,8 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
   getOptionLabel = (option) => option.label,
   getOptionValue = (option) => option.value,
   showDisabledAsSelected = false,
+  id,
+  'aria-labelledby': ariaLabelledBy,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -218,10 +222,18 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
     setIsOpen(prev => !prev);
   };
 
+  // Generate unique ID for the dropdown menu if not provided
+  const dropdownId = id ? `${id}-dropdown` : undefined;
+
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       {/* Input Field */}
       <div
+        id={id}
+        aria-labelledby={ariaLabelledBy}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-controls={isOpen ? dropdownId : undefined}
         className={`
           min-h-[40px] px-4 py-2 border rounded-xl
           flex items-center gap-2 cursor-pointer
@@ -230,6 +242,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
         `}
         onClick={handleInputClick}
         onKeyDown={handleKeyDown}
+        tabIndex={disabled ? -1 : 0}
       >
         {/* Search Icon */}
         <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -287,6 +300,8 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
       {isOpen && dropdownPosition && createPortal(
         <div
           ref={dropdownRef}
+          id={dropdownId}
+          role="listbox"
           className="fixed z-[9999] bg-card border rounded-xl shadow-lg overflow-hidden"
           style={{
             top: `${dropdownPosition.top}px`,
