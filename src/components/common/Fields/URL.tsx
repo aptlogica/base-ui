@@ -2,6 +2,90 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { useClickHandler } from '../../../utils/helpers';
 
+// Safe URL validation helpers (no ReDoS vulnerabilities)
+const removeProtocol = (url: string): string => {
+  if (url.startsWith('https://')) return url.substring(8);
+  if (url.startsWith('http://')) return url.substring(7);
+  return url;
+};
+
+const isValidDomainChar = (char: string): boolean => {
+  const code = char.codePointAt(0) ?? 0;
+  return (code >= 48 && code <= 57) || // 0-9
+         (code >= 97 && code <= 122) || // a-z
+         char === '-' || char === '.';
+};
+
+const isValidTLDChar = (char: string): boolean => {
+  const code = char.codePointAt(0) ?? 0;
+  return (code >= 97 && code <= 122) || char === '.'; // a-z or .
+};
+
+const isValidPathChar = (char: string): boolean => {
+  const code = char.codePointAt(0) ?? 0;
+  return (code >= 48 && code <= 57) || // 0-9
+         (code >= 65 && code <= 90) || // A-Z
+         (code >= 97 && code <= 122) || // a-z
+         char === '/' || char === ' ' || char === '.' || char === '-' || char === '_';
+};
+
+const validateDomain = (domain: string): boolean => {
+  if (!domain || domain.length === 0) return false;
+  for (const char of domain) {
+    if (!isValidDomainChar(char)) return false;
+  }
+  return true;
+};
+
+const validateTLD = (tld: string): boolean => {
+  if (!tld || tld.length < 2 || tld.length > 6) return false;
+  for (const char of tld) {
+    if (!isValidTLDChar(char)) return false;
+  }
+  return true;
+};
+
+const validatePath = (path: string): boolean => {
+  if (!path) return true; // Path is optional
+  for (const char of path) {
+    if (!isValidPathChar(char)) return false;
+  }
+  return true;
+};
+
+const validateURLSafe = (url: string): boolean => {
+  if (!url.trim()) return true;
+  
+  const urlWithoutProtocol = removeProtocol(url.trim());
+  const parts = urlWithoutProtocol.split('.');
+  if (parts.length < 2) return false;
+  
+  const domainName = parts[0];
+  if (!validateDomain(domainName)) return false;
+  
+  const lastPartWithPath = parts[parts.length - 1];
+  const slashIndex = lastPartWithPath.indexOf('/');
+  const tld = slashIndex >= 0 ? lastPartWithPath.substring(0, slashIndex) : lastPartWithPath;
+  if (!validateTLD(tld)) return false;
+  
+  const pathStartIndex = urlWithoutProtocol.indexOf('/');
+  if (pathStartIndex >= 0) {
+    const path = urlWithoutProtocol.substring(pathStartIndex + 1);
+    if (!validatePath(path)) return false;
+  }
+  
+  return true;
+};
+
+const normalizeURL = (url: string): string => {
+  if (!url) return url;
+  const protocolRegex = /^https?:\/\//;
+  if (!protocolRegex.exec(url)) {
+    return `https://${url}`;
+  }
+  return url;
+};
+
 interface URLProps {
   label?: string;
   value: string;
@@ -61,9 +145,7 @@ export const URL: React.FC<URLProps> = ({
 
 
   const validateURL = (url: string) => {
-    if (!url.trim()) return true;
-    const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]+)?\/?$/;
-    return urlPattern.test(url);
+    return validateURLSafe(url);
   };
 
   const validate = (val: string) => {
@@ -73,19 +155,24 @@ export const URL: React.FC<URLProps> = ({
     return null;
   };
 
-  const normalizeURL = (url: string) => {
-    if (!url) return url;
-    const protocolRegex = /^https?:\/\//;
-    if (!protocolRegex.exec(url)) {
-      return `https://${url}`;
-    }
-    return url;
-  };
-
   const triggerOnChange = (newValue: string) => {
     if (newValue !== prevValueRef.current) {
       prevValueRef.current = newValue;
       onChange(newValue);
+    }
+  };
+
+  const handleValidationError = () => {
+    setLocalValue(prevValueRef.current);
+  };
+
+  const handleValidInput = () => {
+    const normalizedURL = normalizeURL(localValue);
+    if (normalizedURL === localValue) {
+      triggerOnChange(localValue);
+    } else {
+      setLocalValue(normalizedURL);
+      triggerOnChange(normalizedURL);
     }
   };
 
@@ -94,15 +181,9 @@ export const URL: React.FC<URLProps> = ({
     setError(validationError);
 
     if (validationError) {
-      setLocalValue(prevValueRef.current);
+      handleValidationError();
     } else {
-      const normalizedURL = normalizeURL(localValue);
-      if (normalizedURL === localValue) {
-        triggerOnChange(localValue);
-      } else {
-        setLocalValue(normalizedURL);
-        triggerOnChange(normalizedURL);
-      }
+      handleValidInput();
     }
     setIsEditing(false);
   };
@@ -134,6 +215,58 @@ export const URL: React.FC<URLProps> = ({
     () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // Double click when allowEdit=false
   );
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setIsEditing(true);
+    }
+  };
+
+  const renderIcon = () => {
+    if (error || !localValue || !showIcon) return null;
+    return (
+      <div className={`flex-shrink-0 w-7 h-7 bg-card flex items-center justify-center rounded-lg border shadow-lg hover:bg-gray-200 transition-all ${isEditing ? '' : 'mr-3'}`}>
+        <ExternalLink
+          className="w-4 h-4 cursor-pointer text-gray-400"
+          onClick={handleURLClick}
+        />
+      </div>
+    );
+  };
+
+  const renderInputView = () => (
+    <div className="flex items-center gap-2 min-w-0">
+      <input
+        type="text"
+        value={localValue}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        autoFocus
+        placeholder={placeholder}
+        disabled={disabled || readOnly}
+        className={`field-component flex-1 min-w-0
+          ${localValue ? "text-gray-900" : "text-gray-400"}
+          ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
+      />
+      {renderIcon()}
+    </div>
+  );
+
+  const renderDisplayView = () => (
+    <div className="flex items-center min-w-0">
+      <div
+        className={`field-component flex-1 min-w-0 overflow-hidden cursor-default
+          ${localValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400"}
+          ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
+      >
+        <span className="block w-full min-w-0 truncate whitespace-nowrap">
+          {localValue || placeholder}
+        </span>
+      </div>
+      {renderIcon()}
+    </div>
+  );
 
   return (
     <div className="w-full">
@@ -150,59 +283,10 @@ export const URL: React.FC<URLProps> = ({
         tabIndex={disabled || readOnly ? -1 : 0}
         aria-disabled={disabled || readOnly}
         onClick={readOnly ? undefined : handleClick}
-        onKeyDown={readOnly ? undefined : (e) => {
-          if (disabled) return;
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            setIsEditing(true);
-          }
-        }}
+        onKeyDown={readOnly ? undefined : handleKeyDown}
         style={readOnly ? { cursor: 'default' } : undefined}
       >
-        {isEditing ? (
-          <div className="flex items-center gap-2 min-w-0">
-            <input
-              type="text"
-              value={localValue}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              autoFocus
-              placeholder={placeholder}
-              disabled={disabled || readOnly}
-              className={`field-component flex-1 min-w-0
-                ${localValue ? "text-gray-900" : "text-gray-400"}
-                ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
-            />
-            {!error && localValue && showIcon && (
-              <div className="flex-shrink-0 w-7 h-7 bg-card flex items-center justify-center rounded-lg border shadow-lg hover:bg-gray-200 transition-all">
-                <ExternalLink
-                  className="w-4 h-4 cursor-pointer text-gray-400"
-                  onClick={handleURLClick}
-                />
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center min-w-0">
-            <div
-              className={`field-component flex-1 min-w-0 overflow-hidden cursor-default
-                ${localValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400"}
-                ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
-            >
-              <span className="block w-full min-w-0 truncate whitespace-nowrap">
-                {localValue || placeholder}
-              </span>
-            </div>
-            {!error && localValue && showIcon && (
-              <div className="flex-shrink-0 w-7 h-7 bg-card mr-3 flex items-center justify-center rounded-lg border shadow-lg hover:bg-gray-200 transition-all">
-                <ExternalLink
-                  className="w-4 h-4 cursor-pointer text-gray-400"
-                  onClick={handleURLClick}
-                />
-              </div>
-            )}
-          </div>
-        )}
+        {isEditing ? renderInputView() : renderDisplayView()}
       </div>
       {helperText && (
         <p className="text-xs text-gray-500 mt-1">{helperText}</p>

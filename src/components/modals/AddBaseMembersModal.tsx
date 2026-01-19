@@ -163,41 +163,6 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
     }
   };
 
-  // Handle updating all pending role changes
-  const handleUpdateRoles = async () => {
-    const roleChangeEntries = Object.entries(pendingRoleChanges);
-    
-    if (roleChangeEntries.length === 0) {
-      toast.info('No role changes to update');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const members = roleChangeEntries.map(([userId, role]) => ({
-        user_id: userId,
-        role: role, // base-member or base-read
-      }));
-
-      await bulkAddBaseMembersMutation.mutateAsync({
-        baseId,
-        workspaceId,
-        members
-      });
-
-      toast.success('Roles updated successfully');
-      setPendingRoleChanges({});
-      baseMembersQuery.refetch();
-    } catch (error: any) {
-      const errorMsg = error?.response?.data?.message || error?.message || 'Failed to update roles';
-      toast.error(errorMsg);
-      throw error; // Re-throw to allow caller to handle
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   // Combined handler for both adding members and updating roles
   const handleSaveAll = async () => {
     setIsSubmitting(true);
@@ -304,6 +269,28 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
 
   const isValid = selectedUserIds.length > 0;
 
+  // Helper function to get loading button text
+  const getLoadingButtonText = (): string => {
+    if (isValid && Object.keys(pendingRoleChanges).length > 0) {
+      return 'Saving...';
+    }
+    if (isValid) {
+      return 'Adding...';
+    }
+    return 'Updating...';
+  };
+
+  // Helper function to get normal button text
+  const getButtonText = (): string => {
+    if (isValid && Object.keys(pendingRoleChanges).length > 0) {
+      return 'Save Changes';
+    }
+    if (isValid) {
+      return 'Add';
+    }
+    return 'Update';
+  };
+
   return (
     <div
       className="bg-modal-backdrop"
@@ -343,10 +330,16 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
               <div className="space-y-4 bg-card p-4 lg:p-6">
                 {/* Select Member */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label 
+                    htmlFor="add-base-members-select-member"
+                    id="add-base-members-select-member-label"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Select Member
                   </label>
                   <MultiSelectTags
+                    id="add-base-members-select-member"
+                    aria-labelledby="add-base-members-select-member-label"
                     options={userDropdownOptions}
                     value={selectedUserIds}
                     onChange={(newValue) => setSelectedUserIds(newValue as string[])}
@@ -360,10 +353,16 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
                 {/* Select Role */}
                 {selectedUserIds.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label 
+                      htmlFor="add-base-members-select-role"
+                      id="add-base-members-select-role-label"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Select Role
                     </label>
                     <RoleDropdown
+                      id="add-base-members-select-role"
+                      aria-labelledby="add-base-members-select-role-label"
                       value={selectedRole}
                       options={baseRoleOptions}
                       onChange={(value) => setSelectedRole(value)}
@@ -424,20 +423,20 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
                                   value={pendingRoleChanges[member.user_id || member.id] || roleValue}
                                   options={baseRoleOptions}
                                   onChange={(value) => {
-                                    const newRole = value as string;
+                                    const newRole = value;
                                     const userId = member.user_id || member.id;
-                                    if (newRole !== roleValue) {
-                                      setPendingRoleChanges(prev => ({
-                                        ...prev,
-                                        [userId]: newRole
-                                      }));
-                                    } else {
+                                    if (newRole === roleValue) {
                                       // If changed back to original, remove from pending changes
                                       setPendingRoleChanges(prev => {
                                         const updated = { ...prev };
                                         delete updated[userId];
                                         return updated;
                                       });
+                                    } else {
+                                      setPendingRoleChanges(prev => ({
+                                        ...prev,
+                                        [userId]: newRole
+                                      }));
                                     }
                                   }}
                                   placeholder="Select a role"
@@ -491,18 +490,10 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
               {(isSubmitting || bulkAddBaseMembersMutation.isPending) ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {(isValid && Object.keys(pendingRoleChanges).length > 0) 
-                    ? 'Saving...' 
-                    : isValid 
-                      ? 'Adding...' 
-                      : 'Updating...'}
+                  {getLoadingButtonText()}
                 </>
               ) : (
-                (isValid && Object.keys(pendingRoleChanges).length > 0) 
-                  ? 'Save Changes' 
-                  : isValid 
-                    ? 'Add' 
-                    : 'Update'
+                getButtonText()
               )}
             </button>
           )}

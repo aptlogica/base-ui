@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { useClickOutside } from "../../../hooks/useClickOutside";
 
 interface YearProps {
@@ -12,8 +12,8 @@ interface YearProps {
   isBorder?: boolean;
   className?: string;
   allowEdit?: boolean;
+  readOnly?: boolean;
   helperText?: string;
-  icon?: string;
   config?: {
     defaultValue?: number | string;
     [key: string]: any;
@@ -22,6 +22,16 @@ interface YearProps {
 
 const YEARS_PER_PAGE = 12;
 const GRID_COLUMNS = 4;
+
+const getInitialYear = (defaultValue: number | string | null | undefined, currentYear: number): number => {
+  if (typeof defaultValue === "number") {
+    return defaultValue;
+  }
+  if (typeof defaultValue === "string") {
+    return Number.parseInt(defaultValue) || currentYear;
+  }
+  return currentYear;
+};
 
 export const Year: React.FC<YearProps> = ({
   label,
@@ -34,7 +44,6 @@ export const Year: React.FC<YearProps> = ({
   allowEdit = true,
   readOnly = false,
   helperText,
-  icon = "",
   config = {}
 }) => {
   const { defaultValue = null } = config;
@@ -51,14 +60,9 @@ export const Year: React.FC<YearProps> = ({
       setIsOpen(false);
     }
   }, [readOnly]);
-  const [dropdownPosition, setDropdownPosition] = useState<'below' | 'above'>('below');
   const [calculatedPosition, setCalculatedPosition] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const [selectedYear, setSelectedYear] = useState<number>(
-    typeof defaultValue === "number"
-      ? defaultValue
-      : typeof defaultValue === "string"
-        ? parseInt(defaultValue) || currentYear
-        : currentYear
+    getInitialYear(defaultValue, currentYear)
   );
   const [pageStart, setPageStart] = useState<number>(
     Math.floor(currentYear / YEARS_PER_PAGE) * YEARS_PER_PAGE
@@ -93,7 +97,6 @@ export const Year: React.FC<YearProps> = ({
     if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
       position = 'above';
     }
-    setDropdownPosition(position);
 
     // Calculate left position (align to left edge of trigger)
     let left = rect.left;
@@ -164,11 +167,11 @@ export const Year: React.FC<YearProps> = ({
         prevValueRef.current = newValue;
         onChange(newValue);
       }
-    } else {
-      if (normalizedPrev !== null) {
-        prevValueRef.current = null;
-        onChange(newValue);
-      }
+      return;
+    }
+    if (normalizedPrev !== null) {
+      prevValueRef.current = null;
+      onChange(newValue);
     }
   };
 
@@ -185,8 +188,8 @@ export const Year: React.FC<YearProps> = ({
     setInputValue(newValue);
 
     if (newValue) {
-      const year = parseInt(newValue);
-      if (!isNaN(year)) {
+      const year = Number.parseInt(newValue);
+      if (!Number.isNaN(year)) {
         triggerOnChange(year);
       }
     } else {
@@ -230,14 +233,14 @@ export const Year: React.FC<YearProps> = ({
     (y) => y >= 1000 && y <= 9999
   );
 
-  const displayValue =
-    value !== null && value !== undefined
-      ? value
-      : typeof defaultValue === "number"
-        ? defaultValue
-        : typeof defaultValue === "string"
-          ? parseInt(defaultValue) || ""
-          : "";
+  let defaultYearValue: number | string = "";
+  if (typeof defaultValue === "number") {
+    defaultYearValue = defaultValue;
+  } else if (typeof defaultValue === "string") {
+    defaultYearValue = Number.parseInt(defaultValue) || "";
+  }
+
+  const displayValue = value ?? defaultYearValue;
 
   return (
     <div className={`w-full relative rounded ${isBorder ? "field-component-border" : ""} ${className}`} ref={containerRef}>
@@ -268,11 +271,23 @@ export const Year: React.FC<YearProps> = ({
       ) : (
         <div
           ref={buttonRef}
-          tabIndex={0}
+          role="button"
+          tabIndex={disabled || readOnly ? -1 : 0}
           className={`field-component flex items-center justify-between ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : "text-gray-900"
             }`}
           onClick={() => {
             if (!disabled && !readOnly && allowEdit) setIsOpen((v) => !v);
+          }}
+          onKeyDown={(e) => {
+            if (disabled || readOnly) return;
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              if (allowEdit) setIsOpen((v) => !v);
+            }
+          }}
+          onTouchStart={(e) => {
+            if (disabled || readOnly) return;
+            e.stopPropagation();
           }}
           onDoubleClick={(e) => {
             if (!disabled && !readOnly) {
@@ -284,6 +299,7 @@ export const Year: React.FC<YearProps> = ({
           }}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
+          aria-disabled={disabled || readOnly}
           style={{ minHeight: 30 }}
         >
           <span className={displayValue ? "" : "text-gray-400"}>

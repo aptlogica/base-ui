@@ -102,6 +102,26 @@ export class PluginManagerImpl implements PluginManager {
       );
     }
   }
+
+  // Public methods for core extension registration
+  registerCoreExtensionPoint(pointId: string, schema?: Record<string, any>): void {
+    const fullPointId = pointId.includes(':') ? pointId : `core:${pointId}`;
+    this.extensionPoints.set(fullPointId, schema || {});
+  }
+
+  registerCoreExtension(pointId: string, extension: any): void {
+    const fullPointId = pointId.includes(':') ? pointId : `core:${pointId}`;
+    if (!this.extensions.has(fullPointId)) {
+      this.extensions.set(fullPointId, []);
+    }
+    const extensionWithId = {
+      ...extension,
+      _pluginId: 'core',
+      _extensionId: extension.id || `core-${Date.now()}`
+    };
+    this.extensions.get(fullPointId)!.push(extensionWithId);
+    this.notifyExtensionListeners(fullPointId);
+  }
   
   async load(pluginId: string): Promise<void> {
     const plugin = this.plugins.get(pluginId);

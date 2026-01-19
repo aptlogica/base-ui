@@ -77,7 +77,18 @@ export const useNormalizedTableData = (
   tableId: string,
   viewId?: string
 ): NormalizedTableData => {
-  const { data: tableData, isLoading: tableLoading, error: tableError } = useTable(tableId);
+  // Define the expected shape of the API response for tableData
+  interface TableApiResponse {
+    data?: {
+      model: any;
+      columns: any[];
+      records: any[];
+      views: any[];
+    };
+    [key: string]: any;
+  }
+
+  const { data: tableData, isLoading: tableLoading, error: tableError } = useTable(tableId) as { data?: TableApiResponse; isLoading: boolean; error: any };
   const { data: viewData, isLoading: viewLoading, error: viewError } = useViewById(viewId || '');
 
   return useMemo(() => {
@@ -176,32 +187,32 @@ export const useNormalizedTableData = (
  * Utility functions for working with normalized field data
  */
 export const fieldUtils = {
-  getFieldType: (field: NormalizedField | any): string => {
-    return field.type || field.uidt || field.dt || 'text';
+  getFieldType: (field: NormalizedField): string => {
+    return field.type || (field as any).uidt || (field as any).dt || 'text';
   },
 
-  getFieldConfig: (field: NormalizedField | any): any => {
-    return field.config || field.meta || {};
+  getFieldConfig: (field: NormalizedField): any => {
+    return field.config || (field as any).meta || {};
   },
 
-  getFieldOptions: (field: NormalizedField | any): string[] => {
+  getFieldOptions: (field: NormalizedField): string[] => {
     const config = fieldUtils.getFieldConfig(field);
     return config.options || [];
   },
 
-  isFieldRequired: (field: NormalizedField | any): boolean => {
+  isFieldRequired: (field: NormalizedField): boolean => {
     return !!field.required;
   },
 
-  isFieldSystem: (field: NormalizedField | any): boolean => {
+  isFieldSystem: (field: NormalizedField): boolean => {
     return !!field.system;
   },
 
-  isFieldHidden: (field: NormalizedField | any): boolean => {
-    return !!field.hidden || !!field.is_hidden || !!field.deleted;
+  isFieldHidden: (field: NormalizedField): boolean => {
+    return !!field.hidden;
   },
 
-  getFieldName: (field: NormalizedField | any): string => {
-    return field.name || field.title || field.column_name || 'Untitled';
+  getFieldName: (field: NormalizedField): string => {
+    return field.name || field.title || (field as any).column_name || 'Untitled';
   }
 };

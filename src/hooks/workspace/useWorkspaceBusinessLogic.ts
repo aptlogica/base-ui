@@ -81,7 +81,7 @@ export const useWorkspaceBusinessLogic = () => {
     popoverRef, setPopoverRef,
     navigate,
     // Plugin store state
-    flyoutMode, flyoutOpen, isTransitioning,
+    flyoutOpen,
   } = useWorkspaceStateManager();
 
   // Derived state with proper type guards
@@ -100,7 +100,6 @@ export const useWorkspaceBusinessLogic = () => {
   const enrichedBaseTables = baseTables;
 
   // State to force refetch of views when needed (used by Sidebar and TableViews components)
-  const [viewsRefetchTrigger, setViewsRefetchTrigger] = useState(0);
 
   
 
@@ -264,8 +263,7 @@ export const useWorkspaceBusinessLogic = () => {
       
       navigationHandleViewDeletion(view.id);
 
-      // Trigger refetch of views
-      setViewsRefetchTrigger(prev => prev + 1);
+      // Trigger refetch of views (removed setViewsRefetchTrigger)
 
       if (isCurrentlySelected) {
         if (selectedTableId && selectedBaseId && selectedWorkspaceId) {
@@ -281,7 +279,7 @@ export const useWorkspaceBusinessLogic = () => {
       toast.error('Failed to delete view. Please try again.');
       throw error;
     }
-  }, [selectedViewId, selectedTableId, selectedBaseId, selectedWorkspaceId, navigationHandleViewDeletion, navigateToTable, navigateToBase, toast, setViewsRefetchTrigger]);
+  }, [selectedViewId, selectedTableId, selectedBaseId, selectedWorkspaceId, navigationHandleViewDeletion, navigateToTable, navigateToBase, toast]);
 
   // Helper functions for active state
   const isTableActive = useCallback((baseId: string, tableId: string) => {
@@ -445,9 +443,6 @@ export const useWorkspaceBusinessLogic = () => {
     handleDeleteView,
     isTableActive,
     isViewActive,
-    // View refetch trigger (used by Sidebar components)
-    setViewsRefetchTrigger,
-    // Mutations (for direct access if needed)
     createWorkspaceMutation,
     createBaseMutation,
     createTableMutation,
@@ -467,7 +462,7 @@ export const useWorkspaceBusinessLogic = () => {
     isAnyBaseActive,
     findFirstBase,
     // Plugin store state
-    flyoutMode, flyoutOpen, isTransitioning,
+    flyoutOpen,
     // Navigation functions
     navigateToBase, navigateToTable, navigateToView,
   };

@@ -110,7 +110,7 @@ function determineRouteType(pathname: string): RouteType {
       const match = matchPath(pattern, pathname);
       // For homepage patterns, ensure exact match (not a sub-route)
       // Check that the matched pathname equals the input pathname
-      if (match && match.pathname === pathname) {
+      if (match?.pathname === pathname) {
         return 'homepage';
       }
     }

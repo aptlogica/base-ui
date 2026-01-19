@@ -34,9 +34,9 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
         <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b">
           <div className="flex items-center gap-4">
             {/* Profile Icon with Pencil */}
-              <div className="w-12 h-12 rounded-full bg-[var(--color-brand-100)] flex items-center justify-center">
-                <UserPen className="w-5 h-5 text-green-600" />
-              </div>
+            <div className="w-12 h-12 rounded-full bg-[var(--color-brand-100)] flex items-center justify-center">
+              <UserPen className="w-5 h-5 text-green-600" />
+            </div>
             <div>
               <h2 className="text-xl font-semibold text-primary">Profile Settings</h2>
               <p className="text-sm text-secondary mt-1">Manage your personal profile & security settings</p>

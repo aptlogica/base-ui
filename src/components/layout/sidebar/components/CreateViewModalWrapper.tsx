@@ -10,10 +10,7 @@ interface CreateViewModalWrapperProps {
   onCreate: (data: { name: string; description: string; type: string; fieldId?: string; startDateFieldId?: string; endDateFieldId?: string }) => Promise<void>;
 }
 
-/**
- * Wrapper component for CreateViewModal that fetches views on-demand
- * This prevents fetching views for all tables upfront
- */
+/** Wrapper component for CreateViewModal that fetches views on-demand for particular table */
 export const CreateViewModalWrapper: React.FC<CreateViewModalWrapperProps> = ({
   tableId,
   viewType,
@@ -21,10 +18,9 @@ export const CreateViewModalWrapper: React.FC<CreateViewModalWrapperProps> = ({
   onClose,
   onCreate
 }) => {
-  // Fetch views only for this specific table when modal opens
-  // This is needed for validation (checking duplicate view names)
   const { data: viewsResponse } = useTableViews(tableId);
-  const existingViews = viewsResponse?.data || [];
+  const response = viewsResponse as { data?: unknown[] } | undefined;
+  const existingViews = Array.isArray(response?.data) ? response.data : [];
 
   return (
     <CreateViewModal

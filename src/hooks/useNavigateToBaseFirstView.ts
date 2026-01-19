@@ -24,7 +24,9 @@ export const useNavigateToBaseFirstView = () => {
         queryFn: () => getTablesByBaseIdService(baseId),
       });
 
-      const tables = tablesResponse?.data || [];
+      // Type assertion to handle SDK response which may have data or be the array directly
+      const tablesData = tablesResponse as { data?: unknown[] } | unknown[] | undefined;
+      const tables = (Array.isArray(tablesData) ? tablesData : (tablesData as { data?: unknown[] })?.data) || [];
       
       if (tables.length === 0) {
         // No tables, navigate to workspace homepage
@@ -33,8 +35,8 @@ export const useNavigateToBaseFirstView = () => {
         return;
       }
 
-      const firstTable = tables[0];
-      const tableId = firstTable.id || firstTable.model?.id;
+      const firstTable = tables[0] as { id?: string; model?: { id?: string } } | undefined;
+      const tableId = firstTable?.id || firstTable?.model?.id;
       
       if (!tableId) {
         // Invalid table, navigate to workspace homepage
@@ -49,13 +51,17 @@ export const useNavigateToBaseFirstView = () => {
         queryFn: () => getViewsByModelIdService(tableId),
       });
 
-      const views = viewsResponse?.data || [];
+      // Type assertion to handle SDK response which may have data or be the array directly
+      const viewsData = viewsResponse as { data?: unknown[] } | unknown[] | undefined;
+      const views = (Array.isArray(viewsData) ? viewsData : (viewsData as { data?: unknown[] })?.data) || [];
       
       if (views.length > 0) {
         // Navigate to first view
-        const firstView = views[0];
-        navigateToView(selectedWorkspaceId, baseId, tableId, firstView.id);
-        navigate(`/workspace/${selectedWorkspaceId}/base/${baseId}/table/${tableId}/${firstView.id}`);
+        const firstView = views[0] as { id: string } | undefined;
+        if (firstView?.id) {
+          navigateToView(selectedWorkspaceId, baseId, tableId, firstView.id);
+          navigate(`/workspace/${selectedWorkspaceId}/base/${baseId}/table/${tableId}/${firstView.id}`);
+        }
       } else {
         // No views, navigate to table with grid view
         navigateToTable(selectedWorkspaceId, baseId, tableId);

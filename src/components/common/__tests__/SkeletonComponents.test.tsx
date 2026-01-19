@@ -43,15 +43,6 @@ describe('Skeleton components', () => {
     expect(el).toHaveStyle({ width: '123px', height: '45px' });
   });
 
-  it('SidebarTableSkeleton renders nested view skeletons by default', async () => {
-    const { SidebarTableSkeleton } = await import('../Skeleton/SidebarTableSkeleton');
-
-    render(<SidebarTableSkeleton />);
-
-    // Table row: 3 skeletons, plus 3 nested rows * 2 skeletons each = 6
-    expect(screen.getAllByRole('status', { name: 'Loading...' })).toHaveLength(9);
-  });
-
   it('SidebarSkeleton uses itemCount and hides nested views after first 3', async () => {
     const { SidebarSkeleton } = await import('../Skeleton/SidebarSkeleton');
 

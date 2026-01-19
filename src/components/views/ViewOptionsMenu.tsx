@@ -11,7 +11,6 @@ import {
 import { EditItemModal } from '../modals/EditItemModal';
 import DeleteConfirmModal from '../modals/DeleteConfirmModal';
 import { useUpdateView, useDeleteView } from '../../hooks/useApi';
-import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
 
 interface ViewOptionsMenuProps {
@@ -19,18 +18,15 @@ interface ViewOptionsMenuProps {
   onRename: (name: string) => void;
   onEditDescription: (desc: string) => void;
   onDelete: () => void;
-  onEditingChange?: (isEditing: boolean) => void;
   onPinToggle?: (viewId: string, newStatus: boolean) => void;
   portaled?: boolean;
   align?: 'left' | 'right' | 'auto';
   isPinned?: boolean;
-  workspaceId?: string; // Optional workspace ID to help determine access
 }
 
-const ViewOptionsMenu: React.FC<ViewOptionsMenuProps> = ({ view, onRename, onEditDescription, onDelete, onEditingChange, portaled = false, align = 'auto', onPinToggle, isPinned = false, workspaceId: propWorkspaceId }) => {
+const ViewOptionsMenu: React.FC<ViewOptionsMenuProps> = ({ view, onRename, onEditDescription, onDelete, portaled = false, align = 'auto', onPinToggle, isPinned = false }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   const updateViewMutation = useUpdateView();
   const deleteViewMutation = useDeleteView();
@@ -56,20 +52,17 @@ const ViewOptionsMenu: React.FC<ViewOptionsMenuProps> = ({ view, onRename, onEdi
       onEditDescription(description);
       setShowEditModal(false);
     } catch (error) {
-      alert(`Failed to update view "${view.title || view.name}". Please try again.`);
+      console.error(`Failed to update view "${view.title || view.name}". Please try again.`, error);
     }
   };
 
   const handleDeleteView = async () => {
-    setIsLoading(true);
     try {
       await deleteViewMutation.mutateAsync(view.id);
       onDelete();
       setShowDelete(false);
     } catch (error) {
-      alert(`Failed to delete view "${view.title || view.name || 'Unknown View'}". Please try again.`);
-    } finally {
-      setIsLoading(false);
+      console.error(`Failed to delete view "${view.title || view.name || 'Unknown View'}". Please try again.`, error);
     }
   };
 
@@ -86,17 +79,17 @@ const ViewOptionsMenu: React.FC<ViewOptionsMenuProps> = ({ view, onRename, onEdi
       onClick: handlePinClick
     }] : []),
     // Edit view - only show if user can update view and not read-only
-    ...(canUpdateView() && !isBaseReadOnly() ? [{ 
-      label: 'Edit view', 
-      icon: <Edit className="w-4 h-4 text-gray-500" />, 
-      onClick: () => setShowEditModal(true) 
+    ...(canUpdateView() && !isBaseReadOnly() ? [{
+      label: 'Edit view',
+      icon: <Edit className="w-4 h-4 text-gray-500" />,
+      onClick: () => setShowEditModal(true)
     }] : []),
     // Delete view - only show if user can delete
-    ...(canDeleteView() ? [{ 
-      label: 'Delete view', 
-      icon: <Trash2 className="w-4 h-4 text-red-600" />, 
-      onClick: () => setShowDelete(true), 
-      danger: true 
+    ...(canDeleteView() ? [{
+      label: 'Delete view',
+      icon: <Trash2 className="w-4 h-4 text-red-600" />,
+      onClick: () => setShowDelete(true),
+      danger: true
     }] : []),
   ];
 

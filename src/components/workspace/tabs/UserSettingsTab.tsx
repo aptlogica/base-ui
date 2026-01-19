@@ -10,7 +10,7 @@ interface UserSettingsTabProps {
   workspaceId: string;
 }
 
-export const UserSettingsTab: React.FC<UserSettingsTabProps> = ({ workspaceId }) => {
+export const UserSettingsTab: React.FC<UserSettingsTabProps> = () => {
   const { data: tenantUsers = [], isLoading, error } = useGetTenantUsers();
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<TenantUser | null>(null);
@@ -21,7 +21,7 @@ export const UserSettingsTab: React.FC<UserSettingsTabProps> = ({ workspaceId })
 
   // Filter out owner users
   const nonOwnerUsers = useMemo(() => {
-    return (tenantUsers as any[]).filter((u: any) => u.roles !== 'owner');
+    return tenantUsers.filter((u: any) => u.roles !== 'owner');
   }, [tenantUsers]);
 
   const handleRemoveUser = async (userId: string) => {

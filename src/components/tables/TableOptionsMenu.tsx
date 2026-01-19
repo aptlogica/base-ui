@@ -4,9 +4,8 @@ import { PopoverMenu } from '../common/PopoverMenu';
 import { Ellipsis, Edit, Trash2, Table2, Pin } from 'lucide-react';
 import { EditItemModal } from '../modals/EditItemModal';
 import DeleteConfirmModal from '../modals/DeleteConfirmModal';
-import { useUpdateTable, useDeleteTable } from '../../hooks/useApi';
+import { useUpdateTable } from '../../hooks/useApi';
 import { useNavigationActions } from '../../hooks/useNavigationActions';
-import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
 
 import { ExistingItem } from '../../utils/nameValidation';
@@ -16,7 +15,6 @@ interface TableOptionsMenuProps {
   onRename: (name: string) => void;
   onEditDescription: (desc: string) => void;
   onDelete: () => void;
-  onEditingChange?: (isEditing: boolean) => void;
   onPinToggle?: (tableId: string, newStatus: boolean) => void;
   portaled?: boolean;
   align?: 'left' | 'right' | 'auto';
@@ -25,13 +23,11 @@ interface TableOptionsMenuProps {
   existingTables?: ExistingItem[];
 }
 
-const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, onEditDescription, onDelete, onEditingChange, portaled = false, align = 'auto', onPinToggle, isPinned = false, baseId, existingTables = [] }) => {
+const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, onEditDescription, onDelete, portaled = false, align = 'auto', onPinToggle, isPinned = false, baseId, existingTables = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   // TanStack Query mutations
   const updateTableMutation = useUpdateTable();
-  const deleteTableMutation = useDeleteTable();
   const { handleTableDeletion } = useNavigationActions();
   const { canDeleteTable, isBaseReadOnly, canUpdateTable } = useBaseAccess(table?.base_id);
 
@@ -60,18 +56,15 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
   };
 
   const handleDeleteTable = async () => {
-    setIsLoading(true);
     try {
       // Only call the navigation handler - the API call should be handled by the parent component
       // to avoid duplicate API calls
-      await handleTableDeletion(table.id);
+      handleTableDeletion(table.id);
       onDelete();
       setShowDelete(false);
     } catch (error) {
       console.error('Delete error:', error);
       alert(`Failed to delete table "${table.title || table.name}". Please try again.`);
-    } finally {
-      setIsLoading(false);
     }
   };
 

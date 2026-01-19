@@ -18,9 +18,32 @@ interface UserConfig {
   [key: string]: any;
 }
 
+type UserValue = string | string[] | null;
+
+// Helper functions
+const isArrayValue = (val: any): val is string[] => Array.isArray(val);
+
+const normalizeToArray = (value: string | string[] | null): string[] => {
+  if (!value) return [];
+  if (isArrayValue(value)) return value;
+  return [value];
+};
+
+const parseCommaSeparatedValue = (value: string): string[] | null => {
+  const parsed = value.split(',').map(id => id.trim()).filter(id => id.length > 0);
+  return parsed.length > 0 ? parsed : null;
+};
+
+const processValueForMultiple = (value: UserValue, allowMultiple: boolean): UserValue => {
+  if (!allowMultiple || typeof value !== 'string' || !value.trim()) {
+    return value;
+  }
+  return parseCommaSeparatedValue(value);
+};
+
 interface UserProps {
-  value: string | string[] | null; // Support single user ID or array of user IDs
-  onChange: (value: string | string[] | null) => void;
+  value: UserValue; // Support single user ID or array of user IDs
+  onChange: (value: UserValue) => void;
   config?: UserConfig;
   placeholder?: string;
   disabled?: boolean;
@@ -53,13 +76,11 @@ export const User: React.FC<UserProps> = ({
     return null;
   };
 
-  // Helper to check if value is array
-  const isArrayValue = (val: any): val is string[] => Array.isArray(val);
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [calculatedPosition, setCalculatedPosition] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
-  const [selectedValue, setSelectedValue] = useState<string | string[] | null>(getInitialValue());
+  const [selectedValue, setSelectedValue] = useState<UserValue>(getInitialValue());
 
   // Helper to get selected user IDs as array (memoized)
   const selectedUserIds = useMemo((): string[] => {
@@ -69,7 +90,7 @@ export const User: React.FC<UserProps> = ({
   }, [selectedValue]);
   const [focusedUserIndex, setFocusedUserIndex] = useState<number>(-1);
   const userDropdownRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const buttonRef = useRef<HTMLButtonElement | HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const usersListRef = useRef<HTMLDivElement>(null);
@@ -155,25 +176,12 @@ export const User: React.FC<UserProps> = ({
   // Update selected value when value or defaultValue changes
   // Handle both array format and comma-separated string format (for allowMultiple)
   useEffect(() => {
-    let processedValue: string | string[] | null = null;
+    let processedValue: UserValue = null;
 
     if (value !== null && value !== undefined) {
-      // If allowMultiple is true, value might be a comma-separated string that needs parsing
-      if (allowMultiple && typeof value === 'string' && value.trim()) {
-        // Split by comma and filter out empty values
-        const parsed = value.split(',').map(id => id.trim()).filter(id => id.length > 0);
-        processedValue = parsed.length > 0 ? parsed : null;
-      } else {
-        processedValue = value;
-      }
+      processedValue = processValueForMultiple(value, allowMultiple);
     } else if (defaultValue?.trim()) {
-      // Handle defaultValue similarly
-      if (allowMultiple && typeof defaultValue === 'string' && defaultValue.trim()) {
-        const parsed = defaultValue.split(',').map(id => id.trim()).filter(id => id.length > 0);
-        processedValue = parsed.length > 0 ? parsed : null;
-      } else {
-        processedValue = defaultValue;
-      }
+      processedValue = processValueForMultiple(defaultValue, allowMultiple);
     } else if (defaultUser?.trim()) {
       processedValue = defaultUser;
     }
@@ -183,7 +191,7 @@ export const User: React.FC<UserProps> = ({
 
   // Transform ALL tenant users to UserOption format (for displaying selected users, including deactivated)
   const allUsers: UserOption[] = useMemo(() => {
-    return (tenantUsers as any[]).map((user: any) => {
+    return (tenantUsers).map((user: any) => {
       const displayName = user.display_name ||
         `${user.first_name || ''} ${user.last_name || ''}`.trim() ||
         user.email ||
@@ -200,7 +208,7 @@ export const User: React.FC<UserProps> = ({
 
   // Transform only ACTIVE tenant users to UserOption format (for dropdown selection)
   const activeUsers: UserOption[] = useMemo(() => {
-    return (tenantUsers as any[])
+    return (tenantUsers)
       .filter((user: any) => {
         // Only include active users (status === 'active' && email_verified === true)
         return user.status?.toLowerCase() === 'active' && user.email_verified === true;
@@ -234,7 +242,7 @@ export const User: React.FC<UserProps> = ({
     if (readOnly) return;
     if (allowMultiple) {
       setSelectedValue(prev => {
-        const currentSelected = prev ? (isArrayValue(prev) ? prev : [prev]) : [];
+        const currentSelected = normalizeToArray(prev);
         const newSelected = currentSelected.includes(user.id)
           ? currentSelected.filter(id => id !== user.id)
           : [...currentSelected, user.id];
@@ -309,14 +317,14 @@ export const User: React.FC<UserProps> = ({
     if (readOnly) return;
     if (allowMultiple) {
       setSelectedValue(prev => {
-        const currentSelected = prev ? (isArrayValue(prev) ? prev : [prev]) : [];
+        const currentSelected = normalizeToArray(prev);
         const newSelected = currentSelected.filter(id => id !== userId);
         const finalValue = newSelected.length > 0 ? newSelected : null;
         onChange(finalValue);
         return finalValue;
       });
     }
-  }, [allowMultiple, onChange]);
+  }, [allowMultiple, onChange, readOnly]);
 
   // Memoize selected users from ALL users (so deactivated users can still be displayed)
   const selectedUsers = useMemo(() => {
@@ -325,14 +333,22 @@ export const User: React.FC<UserProps> = ({
 
   return (
     <div className={`w-full relative ${isBorder ? "field-component-border" : ""}`} ref={userDropdownRef}>
-      <button
-        ref={buttonRef}
-        type="button"
-        className={`w-full field-component ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900 cursor-pointer'}`}
-        onClick={() => !disabled && !readOnly && setIsOpen(!isOpen)}
-        disabled={disabled || readOnly || loading}
-      >
-        {selectedUsers.length > 0 ? (
+      {selectedUsers.length > 0 ? (
+        <div
+          ref={buttonRef as unknown as React.RefObject<HTMLDivElement>}
+          role="button"
+          tabIndex={disabled || readOnly || loading ? -1 : 0}
+          className={`w-full field-component ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900 cursor-pointer'}`}
+          onClick={() => !disabled && !readOnly && setIsOpen(!isOpen)}
+          onKeyDown={(e) => {
+            if (disabled || readOnly || loading) return;
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsOpen(!isOpen);
+            }
+          }}
+          aria-disabled={disabled || readOnly || loading}
+        >
           <div className="flex items-center gap-1 min-w-0">
             <div className="flex items-center gap-1 overflow-hidden">
               {selectedUsers.slice(0, 3).map(user => (
@@ -345,16 +361,8 @@ export const User: React.FC<UserProps> = ({
                     </div>
                   )}
                   <span className="truncate">{user.name}</span>
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (readOnly) return;
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleRemoveUser(user.id);
-                      }
-                    }}
+                  <button
+                    type="button"
                     onClick={(e) => {
                       if (readOnly) return;
                       e.stopPropagation();
@@ -365,10 +373,18 @@ export const User: React.FC<UserProps> = ({
                         onChange(null);
                       }
                     }}
-                    className="ml-1 hover:bg-gray-300 rounded-full p-0.5 flex-shrink-0"
+                    onKeyDown={(e) => {
+                      if (readOnly) return;
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.stopPropagation();
+                      }
+                    }}
+                    disabled={readOnly}
+                    className="ml-1 hover:bg-gray-300 rounded-full p-0.5 flex-shrink-0 border-0 bg-transparent cursor-pointer"
+                    aria-label={`Remove ${user.name}`}
                   >
                     <X className="w-3 h-3" />
-                  </div>
+                  </button>
                 </span>
               ))}
               {selectedUsers.length > 3 && (
@@ -383,10 +399,18 @@ export const User: React.FC<UserProps> = ({
               </span>
             )}
           </div>
-        ) : (
+        </div>
+      ) : (
+        <button
+          ref={buttonRef as unknown as React.RefObject<HTMLButtonElement>}
+          type="button"
+          className={`w-full field-component ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900 cursor-pointer'}`}
+          onClick={() => !disabled && !readOnly && setIsOpen(!isOpen)}
+          disabled={disabled || readOnly || loading}
+        >
           <span className="text-sm text-gray-500">{loading ? 'Loading users...' : placeholder}</span>
-        )}
-      </button>
+        </button>
+      )}
       {/* User Dropdown Portal */}
       {!readOnly && isOpen && calculatedPosition && createPortal(
         <div
@@ -405,7 +429,7 @@ export const User: React.FC<UserProps> = ({
             {selectedUsers.length > 0 && (
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-xs text-gray-600">
-                  {selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''} selected
+                  {selectedUsers.length} user{selectedUsers.length === 1 ? '' : 's'} selected
                 </span>
                 <button
                   type="button"
@@ -461,23 +485,35 @@ export const User: React.FC<UserProps> = ({
           {/* Users List */}
           <div
             ref={usersListRef}
-            role="listbox"
             aria-label="Available users"
             className="flex-1 overflow-y-auto min-h-0"
           >
-            {loading ? (
-              <div className="p-3 text-center text-sm text-gray-500" role="status" aria-live="polite">
-                Loading users...
-              </div>
-            ) : error ? (
-              <div className="p-3 text-center text-sm text-red-500" role="status" aria-live="polite">
-                {String(error)}
-              </div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="p-3 text-center text-sm text-gray-500 font-bold" role="status" aria-live="polite">
-                {searchTerm ? 'No users found' : 'No users available'}
-              </div>
-            ) : (
+            {(() => {
+              if (loading) {
+                return (
+                  <output className="p-3 text-center text-sm text-gray-500 block" aria-live="polite">
+                    Loading users...
+                  </output>
+                );
+              }
+              if (error) {
+                return (
+                  <output className="p-3 text-center text-sm text-red-500 block" aria-live="polite">
+                    {String(error)}
+                  </output>
+                );
+              }
+              if (filteredUsers.length === 0) {
+                const message = searchTerm ? 'No users found' : 'No users available';
+                return (
+                  <output className="p-3 text-center text-sm text-gray-500 font-bold block" aria-live="polite">
+                    {message}
+                  </output>
+                );
+              }
+              return null;
+            })()}
+            {!loading && !error && filteredUsers.length > 0 && (
               <>
                 {filteredUsers.length > 100 && (
                   <div className="p-2 text-center text-xs text-gray-400 border-b">
@@ -489,12 +525,11 @@ export const User: React.FC<UserProps> = ({
                   const isFocused = index === focusedUserIndex;
 
                   return (
-                    <div
+                    <button
                       key={user.id}
-                      role="option"
-                      aria-selected={isSelected}
-                      tabIndex={-1}
-                      className={`px-3 py-2 border-b ${readOnly ? 'cursor-default' : 'hover:bg-gray-50 cursor-pointer'} bg-card transition-colors ${isSelected ? 'bg-blue-50 border-l-2 border-l-green-500' : ''
+                      type="button"
+                      disabled={readOnly}
+                      className={`w-full text-left px-3 py-2 border-b border-0 bg-transparent ${readOnly ? 'cursor-default' : 'hover:bg-gray-50 cursor-pointer'} bg-card transition-colors ${isSelected ? 'bg-blue-50 border-l-2 border-l-green-500' : ''
                         } ${isFocused ? 'bg-[var(--color-bg-brand-secondary)] text-black' : ''
                         }`}
                       onClick={() => {
@@ -502,8 +537,16 @@ export const User: React.FC<UserProps> = ({
                         setFocusedUserIndex(index);
                         handleSelect(user);
                       }}
-                      style={readOnly ? { cursor: 'default' } : undefined}
+                      onKeyDown={(e) => {
+                        if (readOnly) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setFocusedUserIndex(index);
+                          handleSelect(user);
+                        }
+                      }}
                       onMouseEnter={() => setFocusedUserIndex(index)}
+                      aria-label={user.email ? `Select ${user.name} (${user.email})` : `Select ${user.name}`}
                     >
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         {user.avatarUrl ? (
@@ -531,7 +574,7 @@ export const User: React.FC<UserProps> = ({
                           <div className="flex-shrink-0 w-1.5 h-1.5 bg-[var(--color-bg-brand-primary)] rounded-full"></div>
                         )}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </>

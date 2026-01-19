@@ -24,6 +24,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser, getUserDisplayName } from '../auth/useCurrentUser';
 import { useNavigateToBaseFirstView } from '../hooks/useNavigateToBaseFirstView';
 import { getInitials } from '../utils/helpers';
+import { Base } from '../types/api.types';
 
 // Wrapper component to handle hooks properly
 const BaseMenuWrapper: React.FC<{
@@ -48,9 +49,7 @@ const BaseMenuWrapper: React.FC<{
   }
 
   return (
-    <div
-      onClick={(e) => e.stopPropagation()}
-    >
+    <div onClick={(e) => e.stopPropagation()}>
       <BaseMenu
         base={base}
         onEdit={onEdit}
@@ -62,6 +61,13 @@ const BaseMenuWrapper: React.FC<{
       />
     </div>
   );
+};
+
+// Helper function to get sort option display label
+const getSortOptionLabel = (option: 'recent' | 'a-z' | 'z-a'): string => {
+  if (option === 'recent') return 'Recents';
+  if (option === 'a-z') return 'A-Z';
+  return 'Z-A';
 };
 
 const HomePage: React.FC = () => {
@@ -106,10 +112,10 @@ const HomePage: React.FC = () => {
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const sortButtonRef = useRef<HTMLButtonElement>(null);
-  const [editingBase, setEditingBase] = useState<any | null>(null);
-  const [deletingBase, setDeletingBase] = useState<any | null>(null);
+  const [editingBase, setEditingBase] = useState<Base | null>(null);
+  const [deletingBase, setDeletingBase] = useState<Base | null>(null);
   const [showAddMembers, setShowAddMembers] = useState(false);
-  const [baseForMembers, setBaseForMembers] = useState<any | null>(null);
+  const [baseForMembers, setBaseForMembers] = useState<Base | null>(null);
   const [showCreateTableBaseId, setShowCreateTableBaseId] = useState<string | null>(null);
   const [checkingBaseId, setCheckingBaseId] = useState<string | null>(null);
   const { data: checkingBaseTablesData } = useBaseTables(checkingBaseId || '');
@@ -222,11 +228,11 @@ const HomePage: React.FC = () => {
       // Only include fields that have actually changed
       const currentTitle = editingBase.title || editingBase.name || '';
       const currentDescription = editingBase.description || '';
-      
+
       if (name !== currentTitle) {
         updates.title = name;
       }
-      
+
       if (description !== currentDescription) {
         updates.description = description;
       }
@@ -293,7 +299,7 @@ const HomePage: React.FC = () => {
     }
 
     try {
-      const newBase = await createBaseMutation.mutateAsync({
+      await createBaseMutation.mutateAsync({
         title: name,
         description: description || '',
         workspace_id: selectedWorkspaceId,
@@ -307,10 +313,6 @@ const HomePage: React.FC = () => {
 
       toast.success('Base created successfully');
       setShowCreateBase(false);
-
-      // Navigate to the new base
-      const baseId = (newBase as any)?.data?.id;
-      if (baseId) {
         // COMMENTED OUT: Navigation to table on base creation
         // try {
         //   // Update navigation store first
@@ -326,13 +328,11 @@ const HomePage: React.FC = () => {
         //   navigateToBase(selectedWorkspaceId, baseId);
         //   navigate(`/base/${baseId}`);
         // }
-      } else {
-        console.error('Base created but no ID in response:', newBase);
-        // If no ID, just refresh the homepage
-        // navigate('/homepage');
-      }
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to create base. Please try again.');
+    } catch (err: unknown) {
+      const errorMessage = err && typeof err === 'object' && 'message' in err 
+        ? String(err.message) 
+        : 'Failed to create base. Please try again.';
+      toast.error(errorMessage);
     }
   };
 
@@ -512,7 +512,7 @@ const HomePage: React.FC = () => {
                 }`}
             >
               <span className="font-medium text-primary">
-                {sortOption === 'recent' ? 'Recents' : sortOption === 'a-z' ? 'A-Z' : 'Z-A'}
+                {getSortOptionLabel(sortOption)}
               </span>
               <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -597,6 +597,12 @@ const HomePage: React.FC = () => {
               <div
                 key={base.id}
                 onClick={() => handleBaseClick(base)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleBaseClick(base);
+                  }
+                }}
                 className="rounded-xl bg-card border cursor-pointer hover:shadow-md transition-all duration-200 relative group"
               >
                 {/* Top Section: Icon, Title, Description, Menu */}

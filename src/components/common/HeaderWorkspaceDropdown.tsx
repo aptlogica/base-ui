@@ -10,6 +10,26 @@ import { useBaseAccess } from '../../hooks/useBaseAccess';
 import { getRoleLabel } from '../../types/roles';
 import { getInitials } from '../../utils/helpers';
 
+const getAccessLevelBadgeClasses = (accessLevel: string | undefined): string => {
+  if (!accessLevel) {
+    return 'bg-gray-50 text-gray-700 border-gray-200';
+  }
+  
+  if (accessLevel === 'workspace-read' || accessLevel === 'base-read') {
+    return 'bg-green-50 text-green-700 border-green-200';
+  }
+  
+  if (accessLevel === 'base') {
+    return 'bg-blue-50 text-blue-700 border-blue-200';
+  }
+  
+  if (accessLevel === 'maintainer') {
+    return 'bg-purple-50 text-purple-700 border-purple-200';
+  }
+  
+  return 'bg-gray-50 text-gray-700 border-gray-200';
+};
+
 const HeaderWorkspaceDropdown: React.FC = () => {
   const [workspaceDropdownOpen, setWorkspaceDropdownOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -106,7 +126,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
   // This handles cases where workspace selection gets lost due to errors or other issues
   React.useEffect(() => {
     if (!workspaces || !Array.isArray(workspaces) || workspaces.length === 0) return;
-    
+
     // If no workspace is selected but workspaces are available, select the first one
     if (!selectedWorkspace && !selectedWorkspaceId) {
       const firstWorkspace = workspaces[0];
@@ -129,10 +149,10 @@ const HeaderWorkspaceDropdown: React.FC = () => {
       const found = workspaces.find((ws: any) => ws.id === selectedWorkspaceId);
       if (found) {
         // Update selectedWorkspace if it's null or if workspace data has changed (e.g., name update)
-        if (!selectedWorkspace || 
-            selectedWorkspace.id !== found.id || 
-            selectedWorkspace.title !== found.title || 
-            selectedWorkspace.name !== found.name) {
+        if (!selectedWorkspace ||
+          selectedWorkspace.id !== found.id ||
+          selectedWorkspace.title !== found.title ||
+          selectedWorkspace.name !== found.name) {
           setSelectedWorkspace(found);
         }
       }
@@ -276,19 +296,12 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                   const iconColor = colors[index % colors.length];
                   const textColor = textColors[index % textColors.length];
                   return (
-                    <div
+                    <button
                       key={workspace.id}
-                      role="button"
-                      tabIndex={0}
+                      type="button"
                       aria-pressed={isSelected}
                       className="w-full rounded-lg text-left p-1.5 hover:bg-gray-100 text-sm transition-all duration-200 cursor-pointer"
                       onClick={() => handleWorkspaceClick(workspace)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleWorkspaceClick(workspace);
-                        }
-                      }}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         {/* Workspace Icon */}
@@ -303,20 +316,12 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                           <span className="font-semibold text-primary truncate flex-1 min-w-0">
                             {workspace.title || workspace.name || workspace.slug || 'Untitled Workspace'}
                           </span>
-                          
+
                           {/* Right side: Badge and Status Indicator */}
                           <div className="flex items-center gap-2 flex-shrink-0">
                             {/* Access Level Badge - Don't show for owner/co-owner */}
                             {workspace.access_level && workspace.access_level !== 'owner' && workspace.access_level !== 'co-owner' && (
-                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${
-                                workspace.access_level === 'workspace-read' || workspace.access_level === 'base-read'
-                                  ? 'bg-green-50 text-green-700 border-green-200'
-                                  : workspace.access_level === 'base'
-                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                  : workspace.access_level === 'maintainer'
-                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                  : 'bg-gray-50 text-gray-700 border-gray-200'
-                              }`}>
+                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getAccessLevelBadgeClasses(workspace.access_level)}`}>
                                 {getRoleLabel(workspace.access_level)}
                               </span>
                             )}
@@ -328,7 +333,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </button>
                   );
                 })
               ) : (

@@ -25,7 +25,6 @@ export const SettingsTabs: React.FC<SettingsTabsProps> = ({
   };
 
   return (
-    <>
       <nav className="-mb-px flex space-x-8">
         {tabs.map((tab) => (
           <button
@@ -41,14 +40,8 @@ export const SettingsTabs: React.FC<SettingsTabsProps> = ({
           >
             {getIconComponent(tab.icon)}
             {tab.label}
-            {/* {tab.upcoming && (
-              <span className="ml-1 px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-600 rounded-full">
-                Coming Soon
-              </span>
-            )} */}
           </button>
         ))}
       </nav>
-    </>
   );
 };
