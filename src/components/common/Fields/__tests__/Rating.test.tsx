@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import React from 'react';
 import { Rating } from '../Rating';
 
 describe('Rating Component', () => {
@@ -11,250 +12,159 @@ describe('Rating Component', () => {
   });
 
   describe('Rendering', () => {
-    it('should render rating component', () => {
-      const { container } = render(
-        <Rating value={0} onChange={mockOnChange} />
-      );
-      expect(container.querySelector('.rating-stars')).toBeInTheDocument();
+    it('should render default number of rating icons', () => {
+      render(<Rating value={0} onChange={mockOnChange} />);
+      const buttons = screen.getAllByRole('button');
+      expect(buttons.length).toBe(6);
     });
 
-    it('should render label when provided', () => {
-      render(
-        <Rating label="Rate" value={0} onChange={mockOnChange} />
-      );
-      expect(screen.getByText('Rate')).toBeInTheDocument();
+    it('should render custom max rating', () => {
+      render(<Rating value={0} onChange={mockOnChange} max={3} />);
+      const buttons = screen.getAllByRole('button');
+      expect(buttons.length).toBe(4);
     });
 
-    it('should render required asterisk', () => {
-      render(
-        <Rating label="Rating" value={0} onChange={mockOnChange} required />
-      );
-      expect(screen.getByText('*')).toBeInTheDocument();
-    });
-
-    it('should display correct number of stars', () => {
-      const { container } = render(
-        <Rating value={3} onChange={mockOnChange} config={{ maxRating: 5 }} />
-      );
-      const stars = container.querySelectorAll('.star');
-      expect(stars.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('Interaction', () => {
-    it('should select rating on click', async () => {
-      const { container } = render(
-        <Rating value={0} onChange={mockOnChange} config={{ maxRating: 5 }} />
-      );
-      const stars = container.querySelectorAll('.star');
-
-      if (stars.length > 2) {
-        fireEvent.click(stars[2]);
-        await waitFor(() => {
-          expect(mockOnChange).toHaveBeenCalled();
-        });
-      }
-    });
-
-    it('should update rating when clicked', async () => {
-      const { container, rerender } = render(
-        <Rating value={2} onChange={mockOnChange} config={{ maxRating: 5 }} />
-      );
-
-      const stars = container.querySelectorAll('.star');
-      if (stars.length > 3) {
-        fireEvent.click(stars[3]);
-
-        await waitFor(() => {
-          expect(mockOnChange).toHaveBeenCalled();
-        });
-      }
-    });
-
-    it('should show hover effect', async () => {
-      const { container } = render(
-        <Rating value={0} onChange={mockOnChange} config={{ maxRating: 5 }} />
-      );
-      const stars = container.querySelectorAll('.star');
-
-      if (stars.length > 2) {
-        fireEvent.mouseEnter(stars[2]);
-        expect(stars[2]).toBeInTheDocument();
-
-        fireEvent.mouseLeave(stars[2]);
-        expect(stars[2]).toBeInTheDocument();
-      }
-    });
-  });
-
-  describe('Configuration', () => {
-    it('should use custom max rating', () => {
-      const { container } = render(
-        <Rating value={0} onChange={mockOnChange} config={{ maxRating: 10 }} />
-      );
-      const stars = container.querySelectorAll('.star');
-      expect(stars.length).toBeGreaterThanOrEqual(5);
-    });
-
-    it('should use default value from config', () => {
+    it('should use ratingMax from config over max prop', () => {
       render(
         <Rating
           value={0}
           onChange={mockOnChange}
-          config={{ defaultValue: 3, maxRating: 5 }}
+          max={5}
+          config={{ ratingMax: 7 }}
         />
       );
-      expect(screen.getByRole('presentation') || document.body).toBeInTheDocument();
+      const buttons = screen.getAllByRole('button');
+      expect(buttons.length).toBe(8);
     });
   });
 
-  describe('Disabled and ReadOnly States', () => {
-    it('should prevent interaction when disabled', () => {
-      const { container } = render(
-        <Rating value={2} onChange={mockOnChange} disabled />
-      );
-      const stars = container.querySelectorAll('.star');
-
-      if (stars.length > 0) {
-        fireEvent.click(stars[0]);
-        expect(mockOnChange).not.toHaveBeenCalled();
-      }
+  describe('Value Display Logic', () => {
+    it('should display filled icons based on value', () => {
+      render(<Rating value={3} onChange={mockOnChange} />);
+      const stars = screen.getAllByRole('button').slice(1);
+      expect(stars[0].querySelector('svg')).toHaveAttribute('fill', 'currentColor');
+      expect(stars[2].querySelector('svg')).toHaveAttribute('fill', 'currentColor');
+      expect(stars[4].querySelector('svg')).toHaveAttribute('fill', 'none');
     });
 
-    it('should prevent interaction when readOnly', () => {
-      const { container } = render(
-        <Rating value={2} onChange={mockOnChange} readOnly />
+    it('should use ratingDefault when value is zero', () => {
+      render(
+        <Rating
+          value={0}
+          onChange={mockOnChange}
+          config={{ ratingDefault: 2 }}
+        />
       );
-      const stars = container.querySelectorAll('.star');
+      const stars = screen.getAllByRole('button').slice(1);
+      expect(stars[1].querySelector('svg')).toHaveAttribute('fill', 'currentColor');
+    });
+  });
 
-      if (stars.length > 0) {
-        fireEvent.click(stars[0]);
-        expect(mockOnChange).not.toHaveBeenCalled();
-      }
+  describe('Interaction', () => {
+    it('should call onChange with selected value on click', async () => {
+      render(<Rating value={0} onChange={mockOnChange} />);
+      const star = screen.getAllByRole('button')[2];
+      await userEvent.click(star);
+      expect(mockOnChange).toHaveBeenCalledWith(2);
     });
 
-    it('should display value when readOnly', () => {
-      const { container } = render(
-        <Rating value={4} onChange={mockOnChange} readOnly config={{ maxRating: 5 }} />
-      );
-      expect(container.querySelector('.rating-stars')).toBeInTheDocument();
+    it('should toggle value to zero when clicking same value', async () => {
+      render(<Rating value={2} onChange={mockOnChange} />);
+      const star = screen.getAllByRole('button')[2];
+      await userEvent.click(star);
+      expect(mockOnChange).toHaveBeenCalledWith(0);
+    });
+
+    it('should not call onChange when disabled', async () => {
+      render(<Rating value={0} onChange={mockOnChange} disabled />);
+      const star = screen.getAllByRole('button')[1];
+      await userEvent.click(star);
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
+
+    it('should not call onChange when readOnly', async () => {
+      render(<Rating value={0} onChange={mockOnChange} readOnly />);
+      const star = screen.getAllByRole('button')[1];
+      await userEvent.click(star);
+      expect(mockOnChange).not.toHaveBeenCalled();
     });
   });
 
   describe('Validation', () => {
-    it('should validate required rating', () => {
-      render(
-        <Rating value={0} onChange={mockOnChange} required />
-      );
-      // Component should be rendered
-      expect(document.body).toBeInTheDocument();
+    it('should show error when required and value is toggled to zero', async () => {
+      render(<Rating value={1} onChange={mockOnChange} required />);
+      const star = screen.getAllByRole('button')[1];
+      await userEvent.click(star);
+      expect(screen.getByText('Please provide a rating')).toBeInTheDocument();
     });
 
-    it('should accept valid rating values', async () => {
-      const { container } = render(
-        <Rating value={0} onChange={mockOnChange} config={{ maxRating: 5 }} />
+    it('should not render range error for valid user interaction', async () => {
+      render(
+        <Rating
+          value={0}
+          onChange={mockOnChange}
+          config={{ ratingMax: 3 }}
+        />
       );
-      const stars = container.querySelectorAll('.star');
-
-      if (stars.length > 0) {
-        fireEvent.click(stars[0]);
-        await waitFor(() => {
-          expect(mockOnChange).toHaveBeenCalled();
-        });
-      }
+      const star = screen.getAllByRole('button')[3];
+      await userEvent.click(star);
+      expect(
+        screen.queryByText('Rating must be between 0 and 3')
+      ).not.toBeInTheDocument();
     });
   });
 
-  describe('Value Synchronization', () => {
-    it('should update when value prop changes', () => {
-      const { rerender, container } = render(
-        <Rating value={2} onChange={mockOnChange} config={{ maxRating: 5 }} />
+  describe('Config Options', () => {
+    it('should render custom icon from config', () => {
+      render(
+        <Rating
+          value={1}
+          onChange={mockOnChange}
+          config={{ ratingIcon: 'heart' }}
+        />
       );
-
-      rerender(
-        <Rating value={4} onChange={mockOnChange} config={{ maxRating: 5 }} />
-      );
-
-      expect(container.querySelector('.rating-stars')).toBeInTheDocument();
+      const svg = screen.getAllByRole('button')[1].querySelector('svg');
+      expect(svg).toBeInTheDocument();
     });
 
-    it('should handle rating changes', () => {
-      const { rerender } = render(
-        <Rating value={0} onChange={mockOnChange} config={{ maxRating: 5 }} />
+    it('should apply custom color class', () => {
+      render(
+        <Rating
+          value={1}
+          onChange={mockOnChange}
+          config={{ ratingColor: 'red' }}
+        />
       );
-
-      rerender(
-        <Rating value={1} onChange={mockOnChange} config={{ maxRating: 5 }} />
-      );
-
-      rerender(
-        <Rating value={5} onChange={mockOnChange} config={{ maxRating: 5 }} />
-      );
-
-      expect(document.body).toBeInTheDocument();
+      const span = screen.getAllByRole('button')[1].querySelector('span');
+      expect(span?.className).toContain('text-red-400');
     });
   });
 
   describe('Edge Cases', () => {
-    it('should handle zero rating', () => {
-      const { container } = render(
-        <Rating value={0} onChange={mockOnChange} config={{ maxRating: 5 }} />
-      );
-      expect(container.querySelector('.rating-stars')).toBeInTheDocument();
+    it('should handle value greater than max gracefully', () => {
+      render(<Rating value={10} onChange={mockOnChange} max={5} />);
+      const stars = screen.getAllByRole('button').slice(1);
+      expect(stars[4].querySelector('svg')).toHaveAttribute('fill', 'currentColor');
     });
 
-    it('should handle max rating', () => {
-      const { container } = render(
-        <Rating value={5} onChange={mockOnChange} config={{ maxRating: 5 }} />
-      );
-      expect(container.querySelector('.rating-stars')).toBeInTheDocument();
-    });
-
-    it('should handle custom max rating with matching value', () => {
-      const { container } = render(
-        <Rating value={10} onChange={mockOnChange} config={{ maxRating: 10 }} />
-      );
-      expect(container.querySelector('.rating-stars')).toBeInTheDocument();
-    });
-
-    it('should handle rapid clicks', async () => {
-      const { container } = render(
-        <Rating value={0} onChange={mockOnChange} config={{ maxRating: 5 }} />
-      );
-      const stars = container.querySelectorAll('.star');
-
-      if (stars.length > 3) {
-        fireEvent.click(stars[1]);
-        fireEvent.click(stars[2]);
-        fireEvent.click(stars[3]);
-
-        await waitFor(() => {
-          expect(mockOnChange.mock.calls.length).toBeGreaterThan(0);
-        });
-      }
+    it('should handle negative value', () => {
+      render(<Rating value={-1} onChange={mockOnChange} />);
+      const stars = screen.getAllByRole('button').slice(1);
+      expect(stars[0].querySelector('svg')).toHaveAttribute('fill', 'none');
     });
   });
 
   describe('Accessibility', () => {
-    it('should have accessible label', () => {
-      render(
-        <Rating label="Quality" value={0} onChange={mockOnChange} />
-      );
-      expect(screen.getByText('Quality')).toBeInTheDocument();
+    it('should render all stars as buttons', () => {
+      render(<Rating value={0} onChange={mockOnChange} />);
+      const buttons = screen.getAllByRole('button');
+      expect(buttons.length).toBeGreaterThan(1);
     });
 
-    it('should mark required fields', () => {
-      render(
-        <Rating label="Rating" value={0} onChange={mockOnChange} required />
-      );
-      expect(screen.getByText('*')).toBeInTheDocument();
-    });
-
-    it('should be keyboard accessible', () => {
-      const { container } = render(
-        <Rating value={0} onChange={mockOnChange} config={{ maxRating: 5 }} />
-      );
-      expect(container.querySelector('.rating-stars')).toBeInTheDocument();
+    it('should disable star buttons when disabled', () => {
+      render(<Rating value={0} onChange={mockOnChange} disabled />);
+      const star = screen.getAllByRole('button')[1];
+      expect(star).toBeDisabled();
     });
   });
 });

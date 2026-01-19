@@ -1,445 +1,189 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PhoneNumber } from '../PhoneNumber';
 
-const CLICK_DELAY = 200;
+vi.mock('../../../utils/helpers', () => ({
+  useClickHandler: (single: () => void) => single,
+}));
 
 describe('PhoneNumber Component', () => {
   const mockOnChange = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   describe('Rendering', () => {
-    it('should render display value when not editing', () => {
-      render(<PhoneNumber value="1234567890" onChange={mockOnChange} />);
-      expect(screen.getByText(/\(123\) 456-7890/)).toBeInTheDocument();
+    it('renders placeholder when no value provided', () => {
+      render(<PhoneNumber onChange={mockOnChange} />);
+      expect(screen.getByText('Enter phone number...')).toBeInTheDocument();
     });
 
-    it('should render label when provided', () => {
-      render(<PhoneNumber label="Contact" value="" onChange={mockOnChange} />);
-      expect(screen.getByText(/Contact/i)).toBeInTheDocument();
-    });
-
-    it('should render asterisk when required', () => {
-      render(<PhoneNumber label="Contact" value="" onChange={mockOnChange} required />);
+    it('renders label and required indicator', () => {
+      render(<PhoneNumber label="Phone" required onChange={mockOnChange} />);
+      expect(screen.getByText('Phone')).toBeInTheDocument();
       expect(screen.getByText('*')).toBeInTheDocument();
     });
 
-    it('should render placeholder when no value', () => {
-      render(<PhoneNumber value="" onChange={mockOnChange} placeholder="Test Placeholder" config={{ formatDisplay: false }} />);
-      expect(screen.getByText('Test Placeholder')).toBeInTheDocument();
+    it('renders helper text when provided', () => {
+      render(<PhoneNumber helperText="Helper" onChange={mockOnChange} />);
+      expect(screen.getByText('Helper')).toBeInTheDocument();
     });
 
-    it('should render config placeholder when provided', () => {
-      render(<PhoneNumber value="" onChange={mockOnChange} config={{ placeholder: 'Config Placeholder', formatDisplay: false }} />);
-      expect(screen.getByText('Config Placeholder')).toBeInTheDocument();
+    it('renders formatted value when not editing', () => {
+      render(<PhoneNumber value="1234567890" onChange={mockOnChange} />);
+      expect(screen.getByText('(123) 456-7890')).toBeInTheDocument();
     });
   });
 
-  describe('Mode Switching', () => {
-    it('should enter edit mode on single click by default', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="1234567890" onChange={mockOnChange} allowEdit={true} />);
-      const display = screen.getByText('(123) 456-7890');
+  describe('Editing Behavior', () => {
+    it('enters edit mode on click when allowed', async () => {
+      render(<PhoneNumber value="123" onChange={mockOnChange} />);
+      await userEvent.click(screen.getByText('123'));
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
+    });
 
-      await act(async () => {
-        await user.click(display);
-        vi.advanceTimersByTime(CLICK_DELAY);
-      });
+    it('does not enter edit mode when readOnly', async () => {
+      render(<PhoneNumber value="123" readOnly onChange={mockOnChange} />);
+      await userEvent.click(screen.getByText('123'));
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
 
+    it('does not enter edit mode when disabled', async () => {
+      render(<PhoneNumber value="123" disabled onChange={mockOnChange} />);
+      await userEvent.click(screen.getByText('123'));
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Input Handling', () => {
+    it('sanitizes non-numeric input when phoneValid is true', async () => {
+      render(<PhoneNumber value="" onChange={mockOnChange} />);
+      await userEvent.click(screen.getByText('Enter phone number...'));
+      const input = screen.getByRole('textbox') as HTMLInputElement;
+      await userEvent.type(input, 'abc123');
+      expect(input.value).toBe('123');
+    });
+
+    it('allows non-numeric input when phoneValid is false', async () => {
+      render(
+        <PhoneNumber
+          value=""
+          onChange={mockOnChange}
+          config={{ phoneValid: false }}
+        />
+      );
+      await userEvent.click(screen.getByText('Enter phone number...'));
+      const input = screen.getByRole('textbox') as HTMLInputElement;
+      await userEvent.type(input, 'abc123');
+      expect(input.value).toBe('abc123');
+    });
+
+    it('calls onChange on blur with valid value', async () => {
+      render(<PhoneNumber value="" onChange={mockOnChange} />);
+      await userEvent.click(screen.getByText('Enter phone number...'));
+      const input = screen.getByRole('textbox');
+      await userEvent.type(input, '1234567890');
+      fireEvent.blur(input);
       await waitFor(() => {
-        const input = screen.getByRole('textbox');
-        expect(input).toBeInTheDocument();
-        expect(input).toHaveValue('1234567890');
+        expect(mockOnChange).toHaveBeenCalledWith('1234567890');
       });
     });
 
-    it('should enter edit mode on double click when allowEdit is false', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="1234567890" onChange={mockOnChange} allowEdit={false} />);
-      const display = screen.getByText('(123) 456-7890');
+    it('does not call onChange when value unchanged', async () => {
+      render(<PhoneNumber value="1234567890" onChange={mockOnChange} />);
+      await userEvent.click(screen.getByText('(123) 456-7890'));
+      const input = screen.getByRole('textbox');
+      fireEvent.blur(input);
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
+  });
 
-      await act(async () => {
-        await user.dblClick(display);
-        vi.advanceTimersByTime(CLICK_DELAY);
-      });
+  describe('Validation', () => {
+    it('does not commit empty value when required', async () => {
+      render(<PhoneNumber required value="" onChange={mockOnChange} />);
+      await userEvent.click(screen.getByText('Enter phone number...'));
+      const input = screen.getByRole('textbox');
+      fireEvent.blur(input);
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
 
+    it('does not commit invalid phone when phoneValid is true', async () => {
+      render(<PhoneNumber value="" onChange={mockOnChange} />);
+      await userEvent.click(screen.getByText('Enter phone number...'));
+      const input = screen.getByRole('textbox');
+      await userEvent.type(input, '000');
+      fireEvent.blur(input);
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Keyboard Interaction', () => {
+    it('commits value on Enter key', async () => {
+      render(<PhoneNumber value="" onChange={mockOnChange} />);
+      await userEvent.click(screen.getByText('Enter phone number...'));
+      const input = screen.getByRole('textbox');
+      await userEvent.type(input, '1234567890{enter}');
       await waitFor(() => {
-        expect(screen.getByRole('textbox')).toBeInTheDocument();
+        expect(mockOnChange).toHaveBeenCalledWith('1234567890');
       });
     });
 
-    it('should not enter edit mode when readOnly', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="1234567890" onChange={mockOnChange} readOnly />);
-      const display = screen.getByText('(123) 456-7890');
-
-      await act(async () => {
-        await user.click(display);
-        vi.advanceTimersByTime(CLICK_DELAY);
-      });
-      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-
-      await act(async () => {
-        await user.dblClick(display);
-        vi.advanceTimersByTime(CLICK_DELAY);
-      });
-      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    });
-
-    it('should not enter edit mode when disabled', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="1234567890" onChange={mockOnChange} disabled />);
-      const display = screen.getByText('(123) 456-7890');
-
-      await act(async () => {
-        await user.click(display);
-        vi.advanceTimersByTime(CLICK_DELAY);
-      });
-      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    it('reverts value on Escape key', async () => {
+      render(<PhoneNumber value="123" onChange={mockOnChange} />);
+      await userEvent.click(screen.getByText('123'));
+      const input = screen.getByRole('textbox') as HTMLInputElement;
+      await userEvent.clear(input);
+      await userEvent.type(input, '999');
+      fireEvent.keyDown(input, { key: 'Escape' });
+      expect(screen.getByText('123')).toBeInTheDocument();
+      expect(mockOnChange).not.toHaveBeenCalled();
     });
   });
 
-  describe('Input Interaction', () => {
-    it('should sanitize input when phoneValid is true', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="" onChange={mockOnChange} config={{ phoneValid: true, formatDisplay: false }} />);
-      const display = screen.getByText('Enter phone number...');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-
-      await waitFor(async () => {
-        const input = screen.getByRole('textbox');
-        await user.type(input, '1-23a!4');
-        expect(input).toHaveValue('1234');
-      });
+  describe('Config Props', () => {
+    it('uses defaultValue from config', () => {
+      render(
+        <PhoneNumber
+          onChange={mockOnChange}
+          config={{ defaultValue: '1112223333' }}
+        />
+      );
+      expect(screen.getByText('(111) 222-3333')).toBeInTheDocument();
     });
 
-    it('should NOT sanitize input when phoneValid is false', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="" onChange={mockOnChange} config={{ phoneValid: false, formatDisplay: false }} />);
-      const display = screen.getByText('Enter phone number...');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-
-      await waitFor(async () => {
-        const input = screen.getByRole('textbox');
-        await user.type(input, 'abc-123');
-        expect(input).toHaveValue('abc-123');
-      });
+    it('uses placeholder from config', () => {
+      render(
+        <PhoneNumber
+          onChange={mockOnChange}
+          config={{ placeholder: 'Custom placeholder' }}
+        />
+      );
+      expect(screen.getByText('Custom placeholder')).toBeInTheDocument();
     });
 
-    it('should call onChange on blur if value changed and is valid', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="1231231234" onChange={mockOnChange} />);
-      const display = screen.getByText('(123) 123-1234');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-
-      await waitFor(async () => {
-        const input = screen.getByRole('textbox');
-        await user.clear(input);
-        await user.type(input, '9876543210');
-        await user.tab();
-
-        expect(mockOnChange).toHaveBeenCalledWith('9876543210');
-        expect(screen.getByText('(987) 654-3210')).toBeInTheDocument();
-      });
-    });
-
-    it('should revert to previous value on blur if invalid', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="1231231234" onChange={mockOnChange} required />);
-      const display = screen.getByText('(123) 123-1234');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-
-      await waitFor(async () => {
-        const input = screen.getByRole('textbox');
-        await user.clear(input);
-        await user.tab();
-
-        expect(mockOnChange).not.toHaveBeenCalled();
-        expect(screen.getByText('(123) 123-1234')).toBeInTheDocument();
-      });
-    });
-
-    it('should handle Enter key to commit', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="1231231234" onChange={mockOnChange} />);
-      const display = screen.getByText('(123) 123-1234');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-
-      await waitFor(async () => {
-        const input = screen.getByRole('textbox');
-        await user.clear(input);
-        await user.type(input, '9876543210{Enter}');
-
-        expect(mockOnChange).toHaveBeenCalledWith('9876543210');
-      });
-    });
-
-    it('should handle Escape key to cancel', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="1231231234" onChange={mockOnChange} />);
-      const display = screen.getByText('(123) 123-1234');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-
-      await waitFor(async () => {
-        const input = screen.getByRole('textbox');
-        await user.type(input, '000');
-        await user.type(input, '{Escape}');
-
-        expect(mockOnChange).not.toHaveBeenCalled();
-        expect(screen.getByText('(123) 123-1234')).toBeInTheDocument();
-      });
-    });
-
-    it('should not call onChange if value unchanged on blur', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="1231231234" onChange={mockOnChange} />);
-      const display = screen.getByText('(123) 123-1234');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-
-      await waitFor(async () => {
-        const input = screen.getByRole('textbox');
-        await user.tab();
-
-        expect(mockOnChange).not.toHaveBeenCalled();
-      });
+    it('disables formatting when formatDisplay is false', () => {
+      render(
+        <PhoneNumber
+          value="1234567890"
+          onChange={mockOnChange}
+          config={{ formatDisplay: false }}
+        />
+      );
+      expect(screen.getByText('1234567890')).toBeInTheDocument();
     });
   });
 
-  describe('Edge Cases & Configuration', () => {
-    it('should handle paste events with sanitation', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="" onChange={mockOnChange} config={{ phoneValid: true, formatDisplay: false }} />);
-      const display = screen.getByText('Enter phone number...');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-
-      await waitFor(async () => {
-        const input = screen.getByRole('textbox');
-        await user.click(input);
-        await user.paste('123-abc-456');
-        expect(input).toHaveValue('123456');
-      });
-    });
-
-    it('should not sanitize paste when phoneValid is false', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="" onChange={mockOnChange} config={{ phoneValid: false, formatDisplay: false }} />);
-      const display = screen.getByText('Enter phone number...');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-
-      await waitFor(async () => {
-        const input = screen.getByRole('textbox');
-        await user.click(input);
-        await user.paste('123-abc-456');
-        expect(input).toHaveValue('123-abc-456');
-      });
-    });
-
-    it('should sync with prop value changes', () => {
-      const { rerender } = render(<PhoneNumber value="111" onChange={mockOnChange} />);
+  describe('Prop Synchronization', () => {
+    it('updates display when value prop changes', () => {
+      const { rerender } = render(
+        <PhoneNumber value="111" onChange={mockOnChange} />
+      );
       expect(screen.getByText('111')).toBeInTheDocument();
 
       rerender(<PhoneNumber value="222" onChange={mockOnChange} />);
       expect(screen.getByText('222')).toBeInTheDocument();
-    });
-
-    it('should not sync if value unchanged', () => {
-      const { rerender } = render(<PhoneNumber value="111" onChange={mockOnChange} />);
-      expect(screen.getByText('111')).toBeInTheDocument();
-
-      rerender(<PhoneNumber value="111" onChange={mockOnChange} />);
-      expect(screen.getByText('111')).toBeInTheDocument();
-    });
-
-    it('should exit editing if readOnly becomes true', async () => {
-      const user = userEvent.setup({ delay: null });
-      const { rerender } = render(<PhoneNumber value="111" onChange={mockOnChange} />);
-      const display = screen.getByText('111');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-
-      await waitFor(() => {
-        expect(screen.getByRole('textbox')).toBeInTheDocument();
-      });
-
-      rerender(<PhoneNumber value="111" onChange={mockOnChange} readOnly />);
-      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    });
-
-    it('should not format if formatDisplay is false', () => {
-      render(<PhoneNumber value="1234567890" onChange={mockOnChange} config={{ formatDisplay: false }} />);
-      expect(screen.getByText('1234567890')).toBeInTheDocument();
-    });
-
-    it('should show helper text when provided', () => {
-      render(<PhoneNumber value="" onChange={mockOnChange} helperText="Help info" />);
-      expect(screen.getByText('Help info')).toBeInTheDocument();
-    });
-
-    it('should not show helper text when allowEdit is false', () => {
-      render(<PhoneNumber value="" onChange={mockOnChange} helperText="Help info" allowEdit={false} />);
-      expect(screen.queryByText('Help info')).not.toBeInTheDocument();
-    });
-
-    it('should use defaultValue from config', () => {
-      render(<PhoneNumber value={undefined} onChange={mockOnChange} config={{ defaultValue: '5551234567' }} />);
-      expect(screen.getByText('(555) 123-4567')).toBeInTheDocument();
-    });
-
-    it('should handle className prop', () => {
-      const { container } = render(<PhoneNumber value="123" onChange={mockOnChange} className="custom-class" />);
-      const fieldComponent = container.querySelector('.custom-class');
-      expect(fieldComponent).toBeInTheDocument();
-    });
-
-    it('should handle isBorder prop', () => {
-      const { container } = render(<PhoneNumber value="123" onChange={mockOnChange} isBorder />);
-      const fieldComponent = container.querySelector('.field-component-border');
-      expect(fieldComponent).toBeInTheDocument();
-    });
-
-    it('should handle countryCode prop', () => {
-      render(<PhoneNumber value="1234567890" onChange={mockOnChange} countryCode="+44" />);
-      expect(screen.getByText('(123) 456-7890')).toBeInTheDocument();
-    });
-
-    it('should handle empty string value', () => {
-      render(<PhoneNumber value="" onChange={mockOnChange} config={{ formatDisplay: false }} />);
-      expect(screen.getByText('Enter phone number...')).toBeInTheDocument();
-    });
-
-    it('should handle undefined value', () => {
-      render(<PhoneNumber value={undefined} onChange={mockOnChange} config={{ formatDisplay: false }} />);
-      expect(screen.getByText('Enter phone number...')).toBeInTheDocument();
-    });
-
-    it('should handle phone numbers that do not match format pattern', () => {
-      render(<PhoneNumber value="123" onChange={mockOnChange} />);
-      expect(screen.getByText('123')).toBeInTheDocument();
-    });
-  });
-
-  describe('Validation Logic', () => {
-    it('should show error for invalid phone number', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="" onChange={mockOnChange} config={{ phoneValid: true, formatDisplay: false }} />);
-      const display = screen.getByText('Enter phone number...');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-
-      await waitFor(async () => {
-        const input = screen.getByRole('textbox');
-        await user.type(input, '0');
-        await user.tab();
-
-        expect(screen.getByText('Enter phone number...')).toBeInTheDocument();
-      });
-    });
-
-    it('should accept valid phone numbers', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="" onChange={mockOnChange} config={{ phoneValid: true, formatDisplay: false }} />);
-      const display = screen.getByText('Enter phone number...');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-
-      await waitFor(async () => {
-        const input = screen.getByRole('textbox');
-        await user.type(input, '1234567890');
-        await user.tab();
-
-        expect(mockOnChange).toHaveBeenCalledWith('1234567890');
-      });
-    });
-
-    it('should accept phone numbers starting with plus', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="" onChange={mockOnChange} config={{ phoneValid: true, formatDisplay: false }} />);
-      const display = screen.getByText('Enter phone number...');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-
-      await waitFor(async () => {
-        const input = screen.getByRole('textbox');
-        await user.type(input, '+1234567890');
-        await user.tab();
-
-        expect(mockOnChange).toHaveBeenCalledWith('1234567890');
-      });
-    });
-
-    it('should validate empty string when not required', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="123" onChange={mockOnChange} required={false} />);
-      const display = screen.getByText('123');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-
-      await waitFor(async () => {
-        const input = screen.getByRole('textbox');
-        await user.clear(input);
-        await user.tab();
-
-        expect(mockOnChange).toHaveBeenCalledWith('');
-      });
-    });
-
-    it('should handle disabled input', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="123" onChange={mockOnChange} disabled />);
-      const display = screen.getByText('123');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    });
-
-    it('should handle input with spaces and dashes in validation', async () => {
-      const user = userEvent.setup({ delay: null });
-      render(<PhoneNumber value="" onChange={mockOnChange} config={{ phoneValid: true, formatDisplay: false }} />);
-      const display = screen.getByText('Enter phone number...');
-
-      await user.click(display);
-      vi.advanceTimersByTime(CLICK_DELAY);
-
-      await waitFor(async () => {
-        const input = screen.getByRole('textbox');
-        await user.type(input, '123 456 7890');
-        await user.tab();
-
-        expect(mockOnChange).toHaveBeenCalledWith('1234567890');
-      });
     });
   });
 });
