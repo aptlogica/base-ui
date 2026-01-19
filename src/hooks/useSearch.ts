@@ -8,7 +8,7 @@ export interface SearchField {
 }
 
 // Hook for managing search state
-export const useSearch = (initialFields: SearchField[] = []) => {
+export const useSearch = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedField, setSelectedField] = useState<SearchField | null>(null);
   const [filteredData, setFilteredData] = useState<any[]>([]);
@@ -25,7 +25,7 @@ export const useSearch = (initialFields: SearchField[] = []) => {
     }
 
     const filtered = data.filter(item => {
-      if (selectedField && selectedField.key) {
+      if (selectedField?.key) {
         // Search in specific field
         const value = item.data?.[selectedField.key] ?? item[selectedField.key];
         return value?.toString().toLowerCase().includes(searchTerm.toLowerCase());

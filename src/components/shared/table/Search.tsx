@@ -5,7 +5,6 @@ import { FIELD_TYPES } from '../../../types/fieldTypes';
 import { useClickOutside } from '../../../hooks/useClickOutside';
 import { SearchField } from '../../../hooks/useSearch';
 import { fieldsToExcludeInFilter } from '../../../types/constants';
-import { useDebounce } from '../../../utils/helpers';
 
 export interface SearchProps {
   columns: ColumnConfig[];

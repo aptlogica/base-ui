@@ -18,6 +18,17 @@ const UserDropdown: React.FC = () => {
   const { data: profileResponse, isLoading: isLoadingProfile } = useUserProfile(authUser?.id || '');
   const userProfile = (profileResponse as any)?.data;
 
+  // Theme application helpers
+  const applyDarkTheme = () => {
+    document.documentElement.classList.add('dark');
+    document.documentElement.dataset.theme = 'dark';
+  };
+
+  const applyLightTheme = () => {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.dataset.theme = 'light';
+  };
+
   // Theme initialization - more robust
   useEffect(() => {
     const initializeTheme = () => {
@@ -28,38 +39,40 @@ const UserDropdown: React.FC = () => {
         // Use saved preference
         const isDarkMode = savedTheme === 'dark';
         setIsDark(isDarkMode);
-        applyTheme(isDarkMode);
+        if (isDarkMode) {
+          applyDarkTheme();
+        } else {
+          applyLightTheme();
+        }
       } else {
         // No saved preference - check system preference
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const prefersDark = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
         setIsDark(prefersDark);
-        applyTheme(prefersDark);
+        if (prefersDark) {
+          applyDarkTheme();
+        } else {
+          applyLightTheme();
+        }
         // Save the initial preference
         localStorage.setItem('theme', prefersDark ? 'dark' : 'light');
-      }
-    };
-
-    const applyTheme = (isDark: boolean) => {
-      if (isDark) {
-        document.documentElement.classList.add('dark');
-        document.documentElement.setAttribute('data-theme', 'dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-        document.documentElement.setAttribute('data-theme', 'light');
       }
     };
 
     initializeTheme();
 
     // Listen for system theme changes when no explicit preference is set
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const mediaQuery = globalThis.matchMedia('(prefers-color-scheme: dark)');
     const handleSystemThemeChange = () => {
       const savedTheme = localStorage.getItem('theme');
       // Only respond to system changes if no explicit preference is saved
       if (!savedTheme) {
         const prefersDark = mediaQuery.matches;
         setIsDark(prefersDark);
-        applyTheme(prefersDark);
+        if (prefersDark) {
+          applyDarkTheme();
+        } else {
+          applyLightTheme();
+        }
         localStorage.setItem('theme', prefersDark ? 'dark' : 'light');
       }
     };
@@ -73,7 +86,6 @@ const UserDropdown: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      // AuthContext.logout() now handles everything including API call and cleanup
       await logout();
       navigate('/login');
     } catch (error) {
@@ -90,12 +102,10 @@ const UserDropdown: React.FC = () => {
 
     // Apply theme changes
     if (newTheme) {
-      document.documentElement.classList.add('dark');
-      document.documentElement.setAttribute('data-theme', 'dark');
+      applyDarkTheme();
       localStorage.setItem('theme', 'dark');
     } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.setAttribute('data-theme', 'light');
+      applyLightTheme();
       localStorage.setItem('theme', 'light');
     }
 

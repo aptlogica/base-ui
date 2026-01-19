@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Plus, Loader2, Edit2, ChevronsUpDown } from 'lucide-react';
 import { useUpdateWorkspace, useWorkspaces, useWorkspaceMembers, useRemoveUserFromWorkspace } from '../../../hooks/useApi';
 import { useToast } from '../../common/Toast';
@@ -18,14 +18,14 @@ interface WorkspaceTabProps {
 }
 
 export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = React.useState<string>('');
-  const [editWorkspaceName, setEditWorkspaceName] = React.useState('');
-  const [editDescription, setEditDescription] = React.useState('');
-  const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = React.useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
-  const [isAssignUserModalOpen, setIsAssignUserModalOpen] = React.useState(false);
-  const [editingMemberId, setEditingMemberId] = React.useState<string | null>(null);
-  const [workspaceDropdownOpen, setWorkspaceDropdownOpen] = React.useState(false);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>('');
+  const [editWorkspaceName, setEditWorkspaceName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAssignUserModalOpen, setIsAssignUserModalOpen] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [workspaceDropdownOpen, setWorkspaceDropdownOpen] = useState(false);
   const workspaceDropdownRef = useRef<HTMLDivElement>(null);
   const workspaceButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -43,14 +43,14 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
   const selectedWorkspace = workspaces.find((ws: any) => ws.id === selectedWorkspaceId);
 
   // Set default selected workspace on load
-  React.useEffect(() => {
+  useEffect(() => {
     if (workspaces.length > 0 && !selectedWorkspaceId) {
       setSelectedWorkspaceId(workspaces[0].id);
     }
   }, [workspaces, selectedWorkspaceId]);
 
   // Initialize edit form when modal opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (isEditModalOpen && selectedWorkspace) {
       setEditWorkspaceName(selectedWorkspace.title || '');
       setEditDescription(selectedWorkspace.description || '');
@@ -91,7 +91,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
   };
 
   // Map API response to Member interface
-  const members: Member[] = React.useMemo(() => {
+  const members: Member[] = useMemo(() => {
     const queryData = workspaceMembersQuery.data as any;
     if (!queryData?.data) return [];
 
@@ -170,6 +170,60 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
   };
 
   const workspaceIcon = getWorkspaceIcon(selectedWorkspace);
+
+  // Helper function to get error message
+  const getErrorMessage = (): string => {
+    if (workspaceMembersQuery.error instanceof Error) {
+      return workspaceMembersQuery.error.message;
+    }
+    return 'An error occurred';
+  };
+
+  // Helper function to render members table content
+  const renderMembersContent = () => {
+    if (workspaceMembersQuery.isLoading) {
+      return (
+        <div className="bg-card rounded-xl border p-12">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
+            <p className="text-primary font-medium">Loading members...</p>
+          </div>
+        </div>
+      );
+    }
+    if (workspaceMembersQuery.error) {
+      return (
+        <div className="bg-card rounded-xl border p-12">
+          <div className="text-center border border-dashed border-red-200 rounded-xl bg-red-50 py-8">
+            <p className="text-red-600 font-medium">Failed to load members</p>
+            <p className="text-sm text-red-500 mt-1">
+              {getErrorMessage()}
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <MembersTable
+        members={members}
+        onRemoveMember={canAssignUsers() && !isWorkspaceReadOnly() ? handleRemoveMember : undefined}
+        workspaceId={selectedWorkspaceId}
+        onEditMember={canAssignUsers() && !isWorkspaceReadOnly() ? handleEditMember : undefined}
+        showSearch={true}
+        headerActions={
+          canAssignUsers() && !isWorkspaceReadOnly() ? (
+            <button
+              onClick={() => setIsAssignUserModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 btn-primary text-sm"
+            >
+              <Plus size={14} />
+              Add Member
+            </button>
+          ) : undefined
+        }
+      />
+    );
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -310,44 +364,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
       {/* Members Table */}
       {selectedWorkspaceId && (
         <div>
-          {workspaceMembersQuery.isLoading ? (
-            <div className="bg-card rounded-xl border p-12">
-              <div className="text-center">
-                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
-                <p className="text-primary font-medium">Loading members...</p>
-              </div>
-            </div>
-          ) : workspaceMembersQuery.error ? (
-            <div className="bg-card rounded-xl border p-12">
-              <div className="text-center border border-dashed border-red-200 rounded-xl bg-red-50 py-8">
-                <p className="text-red-600 font-medium">Failed to load members</p>
-                <p className="text-sm text-red-500 mt-1">
-                  {workspaceMembersQuery.error instanceof Error
-                    ? workspaceMembersQuery.error.message
-                    : 'An error occurred'}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <MembersTable
-              members={members}
-              onRemoveMember={canAssignUsers() && !isWorkspaceReadOnly() ? handleRemoveMember : undefined}
-              workspaceId={selectedWorkspaceId}
-              onEditMember={canAssignUsers() && !isWorkspaceReadOnly() ? handleEditMember : undefined}
-              showSearch={true}
-              headerActions={
-                canAssignUsers() && !isWorkspaceReadOnly() ? (
-                  <button
-                    onClick={() => setIsAssignUserModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 btn-primary text-sm"
-                  >
-                    <Plus size={14} />
-                    Add Member
-                  </button>
-                ) : undefined
-              }
-            />
-          )}
+          {renderMembersContent()}
         </div>
       )}
 

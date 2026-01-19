@@ -41,7 +41,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
     // Check workspace-specific role
     if (currentUserWorkspaceAccess && Array.isArray(currentUserWorkspaceAccess) && workspaceId) {
       const workspace = currentUserWorkspaceAccess.find((ws: any) => ws.workspace_id === workspaceId);
-      if (workspace && workspace.access === 'maintainer') {
+      if (workspace?.access === 'maintainer') {
         return true; // User is maintainer in this workspace
       }
     }
@@ -690,8 +690,16 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
                   <>
                     {/* Select Member Section */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Select Member</label>
+                      <label 
+                        htmlFor="assign-workspace-select-member"
+                        id="assign-workspace-select-member-label"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        Select Member
+                      </label>
                       <MultiSelectTags
+                        id="assign-workspace-select-member"
+                        aria-labelledby="assign-workspace-select-member-label"
                         options={userDropdownOptions}
                         value={selectedUserIds}
                         onChange={(newValue) => setSelectedUserIds(newValue as string[])}
@@ -748,7 +756,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
                 {/* Bases List (when Specific Base is selected) - Only in add mode */}
                 {!editMode && selectedUserIds.length > 0 && roleAllowsBaseSelection(selectedRole) && baseSelectionType === 'specific_base' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Bases</label>
+                    <div className="block text-sm font-medium text-gray-700 mb-2">Bases</div>
                     <div className="space-y-2 max-h-48 overflow-y-auto border rounded-xl p-3">
                       {bases.length > 0 ? (
                         bases.map((base: any) => (

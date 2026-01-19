@@ -13,17 +13,11 @@ export const useWorkspaceStateManager = () => {
   // Plugin Store (UI state)
   const {
     flyoutOpen,
-    flyoutMode,
-    flyoutWidth,
     currentPlugin,
-    isTransitioning,
     selectedWorkspace: pluginStoreSelectedWorkspace,
     openFlyout,
     closeFlyout,
-    setFlyoutMode,
-    setFlyoutWidth,
     toggleFlyout,
-    setTransitioning,
     setSelectedWorkspace: setPluginStoreSelectedWorkspace,
   } = usePluginStore();
 
@@ -64,9 +58,9 @@ export const useWorkspaceStateManager = () => {
     currentUser,
     restoreCompleted,
     // Plugin Store
-    flyoutOpen, flyoutMode, flyoutWidth, currentPlugin, isTransitioning,
+    flyoutOpen, currentPlugin,
     pluginStoreSelectedWorkspace,
-    openFlyout, closeFlyout, setFlyoutMode, setFlyoutWidth, toggleFlyout, setTransitioning, setPluginStoreSelectedWorkspace,
+    openFlyout, closeFlyout, toggleFlyout, setPluginStoreSelectedWorkspace,
     // Navigation Store
     selectedWorkspaceId, selectedBaseId, selectedTableId, selectedViewId,
     expandedBases, expandedTables,

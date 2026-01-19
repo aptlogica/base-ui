@@ -2,7 +2,7 @@ import { Plugin } from './types';
 
 class PluginRegistry {
   private static instance: PluginRegistry;
-  private plugins: Map<string, Plugin> = new Map();
+  private readonly plugins: Map<string, Plugin> = new Map();
   
   private constructor() {}
   
@@ -15,7 +15,6 @@ class PluginRegistry {
   
   registerPlugin(plugin: Plugin): void {
     if (this.plugins.has(plugin.manifest.id)) {
-      // console.warn(`Plugin ${plugin.manifest.id} is already registered. Skipping.`);
       return;
     }
     

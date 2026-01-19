@@ -1,4 +1,4 @@
-import { Plugin, PluginManifest } from './types';
+import { Plugin } from './types';
 
 interface PluginModule {
   default: Plugin;
@@ -6,7 +6,6 @@ interface PluginModule {
 
 export const loadPlugin = async (url: string): Promise<Plugin> => {
   try {
-    // In a real app, you'd need to handle CORS and security concerns
     const module = await import(/* webpackIgnore: true */  /* @vite-ignore */ url) as PluginModule;
     return module.default;
   } catch (error) {
@@ -18,11 +17,6 @@ export const loadPlugin = async (url: string): Promise<Plugin> => {
 export const loadPlugins = async (manifestUrls: string[]): Promise<Plugin[]> => {
   const pluginPromises = manifestUrls.map(async (url) => {
     try {
-      const response = await fetch(url);
-      const manifest = await response.json() as PluginManifest;
-      
-      // Construct plugin URL from manifest URL
-      // Assuming plugin.js is in the same directory as manifest.json
       const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
       const pluginUrl = `${baseUrl}plugin.js`;
       const plugin = await loadPlugin(pluginUrl);

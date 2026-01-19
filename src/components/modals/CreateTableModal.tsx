@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table2, X, HelpCircle } from 'lucide-react';
-import { SingleLineText } from '../common/Fields/SingleLineText';
 import { MultiLineText } from '../common/Fields/MultiLineText';
 import { validateTableName, getDefaultTableName } from '../../utils/nameValidation';
-import { Loader } from '../ui/Loader';
 
 interface CreateTableModalProps {
   isOpen: boolean;
@@ -68,9 +66,13 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      await onCreate({ name: name.trim(), description: description.trim() });
-    } catch (err) {
-      setError('Failed to create table. Please try again.');
+      onCreate({ name: name.trim(), description: description.trim() });
+    } catch (err: any) {
+      if (err && typeof err === 'object' && 'message' in err) {
+        setError((err as Error).message || 'Failed to create table. Please try again.');
+      } else {
+        setError('Failed to create table. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -88,6 +90,9 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
   return (
     <div
       className="bg-modal-backdrop relative"
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
       onKeyDown={handleKeyDown}
     >
       <button

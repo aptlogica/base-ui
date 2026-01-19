@@ -60,7 +60,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     createTableMutation,
     createViewMutation,
     // Plugin store state
-    flyoutOpen, isTransitioning,
+    flyoutOpen,
   } = useWorkspaceBusinessLogic();
 
   // Use propSelectedWorkspace if available, otherwise fall back to currentWorkspace from business logic
@@ -413,8 +413,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       {flyoutOpen ? (
         <div
           ref={ref}
-          className={`flyout-content bg-gray-50 border-r shadow-inner layout transition-all ease-in-out duration-300 h-full flex flex-col sb-flyout-open overflow-x-hidden ${isTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
-            }`}
+          className="flyout-content bg-gray-50 border-r shadow-inner layout transition-all ease-in-out duration-300 h-full flex flex-col sb-flyout-open overflow-x-hidden opacity-100 scale-100"
         >
           <style>{slideStyles}</style>
           {renderFlyoutContent()}

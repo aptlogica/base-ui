@@ -41,18 +41,72 @@ export function useSmartPopover({
     const horizPref = preferred?.horizontal;
     const vertPref = preferred?.vertical;
 
-    const horizontal: 'right' | 'left' =
-      (horizPref && ((horizPref === 'right' && spaceRight >= panelW) || (horizPref === 'left' && spaceLeft >= panelW)))
-        ? horizPref
-        : (spaceRight >= panelW ? 'right' : (spaceLeft >= panelW ? 'left' : (spaceRight >= spaceLeft ? 'right' : 'left')));
+    // Helper function to determine horizontal position
+    const getHorizontalPosition = (): 'right' | 'left' => {
+      // Check if preferred direction is available and fits
+      if (horizPref === 'right' && spaceRight >= panelW) {
+        return 'right';
+      }
+      if (horizPref === 'left' && spaceLeft >= panelW) {
+        return 'left';
+      }
+      
+      // Fallback: use whichever side has enough space
+      if (spaceRight >= panelW) {
+        return 'right';
+      }
+      if (spaceLeft >= panelW) {
+        return 'left';
+      }
+      
+      // Last resort: use side with more space
+      if (spaceRight >= spaceLeft) {
+        return 'right';
+      }
+      return 'left';
+    };
 
-    const vertical: 'bottom' | 'top' =
-      (vertPref && ((vertPref === 'bottom' && spaceBelow >= panelH) || (vertPref === 'top' && spaceAbove >= panelH)))
-        ? vertPref
-        : (spaceBelow >= panelH ? 'bottom' : (spaceAbove >= panelH ? 'top' : (spaceBelow >= spaceAbove ? 'bottom' : 'top')));
+    // Helper function to determine vertical position
+    const getVerticalPosition = (): 'bottom' | 'top' => {
+      // Check if preferred direction is available and fits
+      if (vertPref === 'bottom' && spaceBelow >= panelH) {
+        return 'bottom';
+      }
+      if (vertPref === 'top' && spaceAbove >= panelH) {
+        return 'top';
+      }
+      
+      // Fallback: use whichever side has enough space
+      if (spaceBelow >= panelH) {
+        return 'bottom';
+      }
+      if (spaceAbove >= panelH) {
+        return 'top';
+      }
+      
+      // Last resort: use side with more space
+      if (spaceBelow >= spaceAbove) {
+        return 'bottom';
+      }
+      return 'top';
+    };
 
-    let left = horizontal === 'right' ? rect.left : rect.right - panelW;
-    let top = vertical === 'bottom' ? rect.bottom + margin : rect.top - panelH - margin;
+    const horizontal = getHorizontalPosition();
+    const vertical = getVerticalPosition();
+
+    let left: number;
+    if (horizontal === 'right') {
+      left = rect.left;
+    } else {
+      left = rect.right - panelW;
+    }
+    
+    let top: number;
+    if (vertical === 'bottom') {
+      top = rect.bottom + margin;
+    } else {
+      top = rect.top - panelH - margin;
+    }
 
     left = Math.max(8, Math.min(left, vw - panelW - 8));
     top = Math.max(8, Math.min(top, vh - panelH - 8));
@@ -78,9 +132,9 @@ export function useSmartPopover({
     if (!open || !onOutsideClick) return;
     function handleClickOutside(e: MouseEvent) {
       const t = e.target as Node;
-      if (panelRef.current && panelRef.current.contains(t)) return;
-      if (triggerRef.current && triggerRef.current.contains(t)) return;
-      if (ignoreRefs.some(r => r.current && r.current.contains(t))) return;
+      if (panelRef.current?.contains(t)) return;
+      if (triggerRef.current?.contains(t)) return;
+      if (ignoreRefs.some(r => r.current?.contains(t))) return;
       
       
       if (onOutsideClick) onOutsideClick();

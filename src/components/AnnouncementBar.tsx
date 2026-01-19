@@ -31,21 +31,25 @@ export const AnnouncementBar: React.FC<AnnouncementBarProps> = ({
     <div className={`fixed top-0 left-0 right-0 w-screen px-4 py-2 flex items-center justify-between ${typeColor} border-b border-gray-200 z-[9999]`}>
       <div>{message}</div>
       <div className="flex gap-2">
-        {buttons.map((btn, i) => (
-          <button
-            key={i}
-            className={`px-3 py-1 rounded ${
-              btn.style === 'danger'
-                ? 'bg-red-500 text-white'
-                : btn.style === 'primary'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-800'
-            }`}
-            onClick={btn.onClick}
-          >
-            {btn.label}
-          </button>
-        ))}
+        {buttons.map((btn) => {
+          let btnClass = '';
+          if (btn.style === 'danger') {
+            btnClass = 'bg-red-500 text-white';
+          } else if (btn.style === 'primary') {
+            btnClass = 'bg-blue-600 text-white';
+          } else {
+            btnClass = 'bg-gray-200 text-gray-800';
+          }
+          return (
+            <button
+              key={btn.label}
+              className={`px-3 py-1 rounded ${btnClass}`}
+              onClick={btn.onClick}
+            >
+              {btn.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

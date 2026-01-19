@@ -85,17 +85,11 @@ vi.mock('../../../stores/navigationStore', () => ({
 vi.mock('../../../stores/pluginStore', () => ({
   usePluginStore: vi.fn(() => ({
     flyoutOpen: false,
-    flyoutMode: 'normal',
-    flyoutWidth: 300,
     currentPlugin: null,
-    isTransitioning: false,
     selectedWorkspace: null,
     openFlyout: vi.fn(),
     closeFlyout: vi.fn(),
-    setFlyoutMode: vi.fn(),
-    setFlyoutWidth: vi.fn(),
     toggleFlyout: vi.fn(),
-    setTransitioning: vi.fn(),
     setSelectedWorkspace: vi.fn(),
   })),
 }));
@@ -328,9 +322,7 @@ const setupMocks = (dataServiceOverrides?: any, stateManagerOverrides?: any) => 
     popoverRef: null,
     setPopoverRef: vi.fn(),
     navigate: vi.fn(),
-    flyoutMode: 'normal',
     flyoutOpen: false,
-    isTransitioning: false,
     ...stateManagerOverrides,
   };
 
@@ -1270,17 +1262,13 @@ describe('Loading & Error States', () => {
 describe('Plugin Store State', () => {
   it('should expose plugin store state', () => {
     setupMocks({}, {
-      flyoutMode: 'details',
       flyoutOpen: true,
-      isTransitioning: true,
       pluginStoreSelectedWorkspace: 'plugin-ws-1',
     });
 
     const { result } = renderHook(() => useWorkspaceBusinessLogic());
 
-    expect(result.current.flyoutMode).toBe('details');
     expect(result.current.flyoutOpen).toBe(true);
-    expect(result.current.isTransitioning).toBe(true);
     expect(result.current.pluginStoreSelectedWorkspace).toBe('plugin-ws-1');
   });
 

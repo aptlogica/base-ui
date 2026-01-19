@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
-import { ArrowLeft, Lock, Eye, EyeOff, CheckCircle, Info, HelpCircle } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, CheckCircle, Info, HelpCircle } from "lucide-react";
 import { resetPassword } from "../service/clientService";
 import { validatePasswordStrength } from "../utils/validation";
 
@@ -35,19 +35,21 @@ const ResetPasswordPage: React.FC = () => {
     setPasswordError(null);
     setConfirmPasswordError(null);
 
-    if (!formData.password.trim()) {
+    const trimmedPassword = formData.password.trim();
+    if (trimmedPassword.length === 0) {
       setPasswordError("This field is required");
       return;
     }
 
-    if (!formData.confirmPassword.trim()) {
+    const trimmedConfirmPassword = formData.confirmPassword.trim();
+    if (trimmedConfirmPassword.length === 0) {
       setConfirmPasswordError("This field is required");
       return;
     }
 
     // Use validatePasswordStrength (no user data available for reset password)
     const passwordValidation = validatePasswordStrength(formData.password, '', '', '');
-    if (!passwordValidation.isValid) {
+    if (passwordValidation.isValid === false) {
       setPasswordError(passwordValidation.errorMessage || "Password doesn't meet requirements");
       return;
     }
@@ -69,8 +71,11 @@ const ResetPasswordPage: React.FC = () => {
         new_password: formData.password 
       });
       setIsSuccess(true);
-    } catch (err: any) {
-      setError(err?.message || "Failed to reset password");
+    } catch (err: unknown) {
+      const errorMessage = err && typeof err === 'object' && 'message' in err 
+        ? String(err.message) 
+        : 'Failed to reset password';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -117,12 +122,13 @@ const ResetPasswordPage: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
-            <label className="field-component-label">
-              New Password
+            <label htmlFor="reset-password-new" className="field-component-label">
+              New Password{' '}
               <span className="field-component-required">*</span>
             </label>
             <div className="relative">
               <input
+                id="reset-password-new"
                 type={showPassword ? "text" : "password"}
                 value={formData.password}
                 onChange={(e) => {
@@ -131,11 +137,12 @@ const ResetPasswordPage: React.FC = () => {
                   if (error) setError("");
                 }}
                 onBlur={() => {
-                  if (!formData.password.trim()) {
+                  const trimmedPassword = formData.password.trim();
+                  if (trimmedPassword.length === 0) {
                     setPasswordError("This field is required");
                   } else {
                     const validation = validatePasswordStrength(formData.password, '', '', '');
-                    if (!validation.isValid) {
+                    if (validation.isValid === false) {
                       setPasswordError(validation.errorMessage || "Password doesn't meet requirements");
                     } else {
                       setPasswordError(null);
@@ -213,12 +220,13 @@ const ResetPasswordPage: React.FC = () => {
           </div>
 
           <div className="relative">
-            <label className="field-component-label">
-              Confirm New Password
+            <label htmlFor="reset-password-confirm" className="field-component-label">
+              Confirm New Password{' '}
               <span className="field-component-required">*</span>
             </label>
             <div className="relative">
               <input
+                id="reset-password-confirm"
                 type={showConfirmPassword ? "text" : "password"}
                 value={formData.confirmPassword}
                 onChange={(e) => {
@@ -227,9 +235,17 @@ const ResetPasswordPage: React.FC = () => {
                   if (error) setError("");
                 }}
                 onBlur={() => {
-                  if (!formData.confirmPassword.trim()) setConfirmPasswordError("This field is required");
-                  else if (formData.confirmPassword !== formData.password) setConfirmPasswordError("Passwords do not match");
-                  else setConfirmPasswordError(null);
+                  const trimmedConfirm = formData.confirmPassword.trim();
+                  if (trimmedConfirm.length === 0) {
+                    setConfirmPasswordError("This field is required");
+                  } else {
+                    const passwordsMatch = formData.password === formData.confirmPassword;
+                    if (passwordsMatch === false) {
+                      setConfirmPasswordError("Passwords do not match");
+                    } else {
+                      setConfirmPasswordError(null);
+                    }
+                  }
                 }}
                 placeholder="Confirm your new password"
                 className={`field-component field-component-border field-component-focus placeholder-[var(--color-text-placeholder)] ${confirmPasswordError ? "border-destructive bg-red-50" : ""} shadow-[var(--shadow-xs)]`}
@@ -264,15 +280,18 @@ const ResetPasswordPage: React.FC = () => {
 
           <button
             type="submit"
-            disabled={
-              isLoading ||
-              !formData.password.trim() ||
-              !formData.confirmPassword.trim() ||
-              formData.password !== formData.confirmPassword ||
-              !validatePasswordStrength(formData.password, '', '', '').isValid ||
-              !!passwordError ||
-              !!confirmPasswordError
-            }
+            disabled={(() => {
+              const trimmedPassword = formData.password.trim();
+              const trimmedConfirm = formData.confirmPassword.trim();
+              const passwordValidation = validatePasswordStrength(formData.password, '', '', '');
+              return isLoading ||
+                trimmedPassword.length === 0 ||
+                trimmedConfirm.length === 0 ||
+                formData.password !== formData.confirmPassword ||
+                passwordValidation.isValid === false ||
+                passwordError !== null ||
+                confirmPasswordError !== null;
+            })()}
             className="w-full btn-primary py-2 px-4 rounded-xl font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? "Resetting..." : "Reset Password"}

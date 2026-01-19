@@ -27,9 +27,7 @@ export const updateUserActivity = async (userId: string, activityData: UserActiv
     const currentActivity = await getUserActivity(userId);
     const mergedActivity: UserActivityData = {
       ...activityData,
-      login_sessions: activityData.login_sessions !== undefined 
-        ? activityData.login_sessions 
-        : currentActivity?.login_sessions
+      login_sessions: activityData.login_sessions ?? currentActivity?.login_sessions
     };
     
     const result = await client.userService.updateProfile(userId, {
@@ -40,6 +38,117 @@ export const updateUserActivity = async (userId: string, activityData: UserActiv
     console.error('❌ Failed to update user activity:', error);
     throw error;
   }
+};
+
+// Type definitions for userAgentData API
+interface NavigatorUAData {
+  brands?: Array<{ brand: string; version: string }>;
+}
+
+interface NavigatorWithUAData extends Navigator {
+  userAgentData?: NavigatorUAData;
+  deviceMemory?: number;
+}
+
+// Helper: Extract browser info from userAgentData API
+const getBrowserFromUserAgentData = (userAgentData: NavigatorUAData | undefined): { browser: string; version?: string } => {
+  if (!userAgentData?.brands || userAgentData.brands.length === 0) {
+    return { browser: 'Unknown' };
+  }
+
+  // Check for Microsoft Edge first (Edge is Chromium-based, so it also has Chrome/Chromium brands)
+  const edgeBrand = userAgentData.brands.find(b => 
+    b.brand === 'Microsoft Edge' || b.brand === 'msedge'
+  );
+  if (edgeBrand) {
+    return { browser: 'Edge', version: edgeBrand.version };
+  }
+
+  // Then check for Chrome
+  const chromeBrand = userAgentData.brands.find(b => 
+    b.brand === 'Google Chrome' || b.brand === 'Chromium'
+  );
+  if (chromeBrand) {
+    return { browser: 'Chrome', version: chromeBrand.version };
+  }
+
+  return { browser: 'Unknown' };
+};
+
+// Helper: Extract browser version from user agent string using RegExp.exec()
+const extractBrowserVersion = (userAgent: string, pattern: RegExp): string | undefined => {
+  const match = pattern.exec(userAgent);
+  return match ? match[1] : undefined;
+};
+
+// Helper: Detect Edge browser from user agent
+const detectEdgeBrowser = (userAgent: string): { browser: string; version?: string } | null => {
+  if (!userAgent.includes('Edg')) return null;
+  const edgePattern = /Edg\/(\d+)/;
+  const version = extractBrowserVersion(userAgent, edgePattern);
+  return { browser: 'Edge', version };
+};
+
+// Helper: Detect Chrome browser from user agent
+const detectChromeBrowser = (userAgent: string): { browser: string; version?: string } | null => {
+  const hasChrome = userAgent.includes('Chrome');
+  const hasEdge = userAgent.includes('Edg');
+  if (!hasChrome || hasEdge) return null;
+  const chromePattern = /Chrome\/(\d+)/;
+  const version = extractBrowserVersion(userAgent, chromePattern);
+  return { browser: 'Chrome', version };
+};
+
+// Helper: Detect Firefox browser from user agent
+const detectFirefoxBrowser = (userAgent: string): { browser: string; version?: string } | null => {
+  if (!userAgent.includes('Firefox')) return null;
+  const firefoxPattern = /Firefox\/(\d+)/;
+  const version = extractBrowserVersion(userAgent, firefoxPattern);
+  return { browser: 'Firefox', version };
+};
+
+// Helper: Detect Safari browser from user agent
+const detectSafariBrowser = (userAgent: string): { browser: string; version?: string } | null => {
+  const hasSafari = userAgent.includes('Safari');
+  const hasChrome = userAgent.includes('Chrome');
+  if (!hasSafari || hasChrome) return null;
+  const safariPattern = /Version\/(\d+)/;
+  const version = extractBrowserVersion(userAgent, safariPattern);
+  return { browser: 'Safari', version };
+};
+
+// Helper: Detect browser from user agent string
+const detectBrowserFromUserAgent = (userAgent: string): { browser: string; version?: string } => {
+  const edgeResult = detectEdgeBrowser(userAgent);
+  if (edgeResult) return edgeResult;
+  
+  const chromeResult = detectChromeBrowser(userAgent);
+  if (chromeResult) return chromeResult;
+  
+  const firefoxResult = detectFirefoxBrowser(userAgent);
+  if (firefoxResult) return firefoxResult;
+  
+  const safariResult = detectSafariBrowser(userAgent);
+  if (safariResult) return safariResult;
+  
+  return { browser: 'Unknown' };
+};
+
+// Helper: Detect operating system from user agent
+const detectOS = (userAgent: string): string => {
+  if (userAgent.includes('Win')) return 'Windows';
+  if (userAgent.includes('Mac')) return 'macOS';
+  if (userAgent.includes('Linux') && !userAgent.includes('Android')) return 'Linux';
+  if (userAgent.includes('Android')) return 'Android';
+  if (userAgent.includes('iPhone') || userAgent.includes('iPad')) return 'iOS';
+  return 'Unknown';
+};
+
+// Helper: Detect device type from user agent
+const detectDeviceType = (userAgent: string): string => {
+  if (/Mobile|Android|iPhone/.test(userAgent)) return 'mobile';
+  if (/Tablet|iPad/.test(userAgent)) return 'tablet';
+  return 'desktop';
 };
 
 /**
@@ -55,73 +164,28 @@ export function getDeviceInfo(): {
   device_memory?: number;
 } {
   const ua = navigator.userAgent;
-  
-  let browser = 'Unknown';
-  let browser_version: string | undefined;
+  const navigatorWithUAData = navigator as NavigatorWithUAData;
   
   // Try to get browser version from userAgentData first (more accurate)
   // IMPORTANT: Check for Edge FIRST since Edge is Chromium-based and contains Chrome/Chromium brands
-  const userAgentData = (navigator as any).userAgentData;
-  if (userAgentData?.brands && userAgentData.brands.length > 0) {
-    // Check for Microsoft Edge first (Edge is Chromium-based, so it also has Chrome/Chromium brands)
-    const edgeBrand = userAgentData.brands.find((b: any) => 
-      b.brand === 'Microsoft Edge' || b.brand === 'msedge'
-    );
-    if (edgeBrand) {
-      browser = 'Edge';
-      browser_version = edgeBrand.version;
-    } else {
-      // Then check for Chrome
-      const chromeBrand = userAgentData.brands.find((b: any) => 
-        b.brand === 'Google Chrome' || b.brand === 'Chromium'
-      );
-      if (chromeBrand) {
-        browser = 'Chrome';
-        browser_version = chromeBrand.version;
-      }
-    }
-  }
+  let browserInfo = getBrowserFromUserAgentData(navigatorWithUAData.userAgentData);
   
   // Fallback to userAgent parsing (check Edge BEFORE Chrome since Edge UA contains "Chrome")
-  if (browser === 'Unknown') {
-    if (ua.includes('Edg')) {
-      browser = 'Edge';
-      const match = ua.match(/Edg\/(\d+)/);
-      if (match) browser_version = match[1];
-    } else if (ua.includes('Chrome') && !ua.includes('Edg')) {
-      browser = 'Chrome';
-      const match = ua.match(/Chrome\/(\d+)/);
-      if (match) browser_version = match[1];
-    } else if (ua.includes('Firefox')) {
-      browser = 'Firefox';
-      const match = ua.match(/Firefox\/(\d+)/);
-      if (match) browser_version = match[1];
-    } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
-      browser = 'Safari';
-      const match = ua.match(/Version\/(\d+)/);
-      if (match) browser_version = match[1];
-    }
+  if (browserInfo.browser === 'Unknown') {
+    browserInfo = detectBrowserFromUserAgent(ua);
   }
   
-  let os = 'Unknown';
-  if (ua.includes('Win')) os = 'Windows';
-  else if (ua.includes('Mac')) os = 'macOS';
-  else if (ua.includes('Linux') && !ua.includes('Android')) os = 'Linux';
-  else if (ua.includes('Android')) os = 'Android';
-  else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
-  
-  let device_type = 'desktop';
-  if (/Mobile|Android|iPhone/.test(ua)) device_type = 'mobile';
-  else if (/Tablet|iPad/.test(ua)) device_type = 'tablet';
+  const os = detectOS(ua);
+  const device_type = detectDeviceType(ua);
   
   // Get additional info
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const language = navigator.language;
-  const device_memory = (navigator as any).deviceMemory; // in GB
+  const device_memory = navigatorWithUAData.deviceMemory;
   
   return { 
-    browser, 
-    browser_version,
+    browser: browserInfo.browser, 
+    browser_version: browserInfo.version,
     os, 
     device_type,
     timezone,

@@ -13,7 +13,7 @@ import { registerPlugin } from './core/PluginRegistry';
 import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-import { usePluginStore } from './stores/pluginStore';
+import { usePluginStore, FLYOUT_WIDTH } from './stores/pluginStore';
 import { ExtensionPoint } from './core/ExtensionPoint';
 import { ToastProvider } from './components/common/Toast';
 import Sidebar from './components/layout/sidebar/Sidebar';
@@ -63,7 +63,7 @@ declare global {
 
 const Layout = () => {
   const { saving } = useAuth();
-  const { flyoutOpen, flyoutMode, flyoutWidth, setFlyoutMode, selectedWorkspace, openFlyout, closeFlyout, currentPlugin } = usePluginStore();
+  const { flyoutOpen, selectedWorkspace, openFlyout, closeFlyout, currentPlugin } = usePluginStore();
   const location = useLocation();
 
   // Update client headers when workspace/base changes
@@ -72,11 +72,6 @@ const Layout = () => {
   // Track sidebar position and width (for flyout menu)
   const [sidebarPosition] = useState('left');
   const [sidebarWidth] = useState(56);
-
-  // Force layout mode only (disable floating mode entirely)
-  useEffect(() => {
-    setFlyoutMode('layout');
-  }, [setFlyoutMode]);
 
   // Auto-open flyout menu when on base/table/view routes
   useEffect(() => {
@@ -118,9 +113,9 @@ const Layout = () => {
         {/* Below header: Sidebar on left, View on right */}
         <div className="flex-1 flex min-h-0 overflow-hidden">
           {/* Layout-Integrated Flyout Menu - Left Side */}
-          {sidebarPosition === 'left' && flyoutMode === 'layout' && flyoutOpen && (
+          {sidebarPosition === 'left' && flyoutOpen && (
             <aside
-              style={{ width: flyoutWidth, minWidth: flyoutWidth, maxWidth: flyoutWidth }}
+              style={{ width: FLYOUT_WIDTH, minWidth: FLYOUT_WIDTH, maxWidth: FLYOUT_WIDTH }}
               className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out"
             >
               <Sidebar
@@ -137,9 +132,9 @@ const Layout = () => {
           </main>
 
           {/* Layout-Integrated Flyout Menu - Right Side */}
-          {sidebarPosition === 'right' && flyoutMode === 'layout' && flyoutOpen && (
+          {sidebarPosition === 'right' && flyoutOpen && (
             <aside
-              style={{ width: flyoutWidth, minWidth: flyoutWidth, maxWidth: flyoutWidth }}
+              style={{ width: FLYOUT_WIDTH, minWidth: FLYOUT_WIDTH, maxWidth: FLYOUT_WIDTH }}
               className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out"
             >
               <Sidebar

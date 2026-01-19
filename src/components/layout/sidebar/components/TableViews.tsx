@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { VIEW_ICONS } from '../../../../types/viewTypes';
 import ViewOptionsMenu from '../../../../components/views/ViewOptionsMenu';
 import { CreateViewButton } from './CreateViewButton';
@@ -19,25 +19,24 @@ export const TableViews: React.FC<TableViewsProps> = ({
   isViewActive,
   handleViewDeletion,
   setShowCreateViewModal,
-  setEditingViewId,
   setPopoverRef,
   setViewsRefetchTrigger
 }) => {
   const updateTable = useUpdateTable();
   const { isWorkspaceReadOnly } = useWorkspaceAccess(table.workspace_id);
   const { canCreateView } = useBaseAccess(table.base_id);
-  const [pinnedViews, setPinnedViews] = React.useState<PinnedViews>(() => {
+  const [pinnedViews, setPinnedViews] = useState<PinnedViews>(() => {
     return table.meta?.pinnedViews || {};
   });
 
   // Use ref to track the latest pinnedViews without triggering effect
-  const pinnedViewsRef = React.useRef(pinnedViews);
-  React.useEffect(() => {
+  const pinnedViewsRef = useRef(pinnedViews);
+  useEffect(() => {
     pinnedViewsRef.current = pinnedViews;
   }, [pinnedViews]);
 
   // Clean up orphaned pinned view IDs when views change
-  React.useEffect(() => {
+  useEffect(() => {
     if (!views || views.length === 0) {
       // If no views, clear all pinned views
       if (Object.keys(pinnedViewsRef.current).length > 0) {
@@ -82,7 +81,7 @@ export const TableViews: React.FC<TableViewsProps> = ({
     // Only run when views change, not when pinnedViews changes
   }, [views, table.id, table.meta, updateTable]);
 
-  const viewsData = React.useMemo(() => {
+  const viewsData = useMemo(() => {
     if (!views) return [];
 
     return [...views].sort((a, b) => {
@@ -140,9 +139,18 @@ export const TableViews: React.FC<TableViewsProps> = ({
             className={`sidebar flex items-center gap-3 py-2 pr-3 pl-10 mt-1 first:mt-0 hover:bg-[var(--color-gray-100)] transition-all ease-in duration-200 rounded-xl ${isViewActive(table.base_id, table.id, view.id) ? 'bg-blue-25 ' : ''} relative`}
           >
             {/* View icon and name - click to navigate */}
-            <div
-              className="flex items-center gap-3 flex-1 cursor-pointer "
+            <button
+              type="button"
+              className="flex items-center gap-3 flex-1 cursor-pointer bg-transparent border-0 p-0 text-left focus:outline-none"
               onClick={() => navigateToView(table.workspace_id, table.base_id, table.id, view.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigateToView(table.workspace_id, table.base_id, table.id, view.id);
+                }
+              }}
+              tabIndex={0}
+              aria-label={`Go to view ${view.title}`}
             >
               <span className="cursor-pointer h-5 w-5">
                 <IconComponent size={15} style={{ color: viewIconInfo.color }} />
@@ -157,13 +165,12 @@ export const TableViews: React.FC<TableViewsProps> = ({
               {pinnedViews[view.id] && (
                 <Pin className="w-3 h-3 text-primary-brand fill-current rotate-45" />
               )}
-            </div>
+            </button>
             {/* Three dots menu for view */}
             {!isWorkspaceReadOnly() && (
               <div className='flex items-center gap-2'>
                 <ViewOptionsMenu
                   view={view}
-                  workspaceId={table.workspace_id}
                   align="auto"
                   isPinned={pinnedViews[view.id] || false}
                   onPinToggle={handlePinToggle}
@@ -195,9 +202,6 @@ export const TableViews: React.FC<TableViewsProps> = ({
                     } catch (err) {
                       console.error('Failed to delete view:', err);
                     }
-                  }}
-                  onEditingChange={(isEditing) => {
-                    setEditingViewId(isEditing ? view.id : null);
                   }}
                   portaled={true}
                 />

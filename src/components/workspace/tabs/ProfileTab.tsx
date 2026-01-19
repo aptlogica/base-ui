@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useAuth } from '../../../auth/AuthContext';
 import { useCurrentUser, getUserInitials, getUserDisplayName } from '../../../auth/useCurrentUser';
 import { useUserProfile } from '../../../hooks/useApi';
@@ -7,13 +7,14 @@ interface ProfileTabProps {
   workspaceId: string;
 }
 
-export const ProfileTab: React.FC<ProfileTabProps> = ({ workspaceId }) => {
+export const ProfileTab: React.FC<ProfileTabProps> = () => {
   const { user: authUser } = useAuth();
   const currentUser = useCurrentUser();
   
   // Get user profile data for avatar
   const { data: profileResponse } = useUserProfile(authUser?.id || '');
-  const userProfile = profileResponse?.data;
+  const response = profileResponse as { data?: any } | undefined;
+  const userProfile = response?.data;
 
   const userName = getUserDisplayName(currentUser);
   const userEmail = currentUser?.email || 'user@example.com';
@@ -25,7 +26,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({ workspaceId }) => {
   return (
     <div className="space-y-6">
       {/* Profile Information Card */}
-      <div className="bg-card rounded-xl border border p-6">
+      <div className="bg-card rounded-xl border p-6">
         <h2 className="text-xl font-medium text-primary mb-4">Profile Information</h2>
         
         <div className="flex items-start space-x-4">
@@ -50,47 +51,75 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({ workspaceId }) => {
           <div className="flex-1 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label 
+                  htmlFor="profile-full-name"
+                  id="profile-full-name-label"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Full Name
                 </label>
-                <div className="px-3 py-2 bg-[var(--color-muted-bg)] border border rounded-md text-gray-900">
+                <output 
+                  id="profile-full-name"
+                  className="block px-3 py-2 bg-[var(--color-muted-bg)] border rounded-md text-gray-900"
+                >
                   {userName}
-                </div>
+                </output>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label 
+                  htmlFor="profile-user-id"
+                  id="profile-user-id-label"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   User ID
                 </label>
-                <div className="px-3 py-2 bg-[var(--color-muted-bg)] border border rounded-md text-gray-900 font-mono text-sm">
+                <output 
+                  id="profile-user-id"
+                  className="block px-3 py-2 bg-[var(--color-muted-bg)] border rounded-md text-gray-900 font-mono text-sm"
+                >
                   {authUser?.id || 'Not available'}
-                </div>
+                </output>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label 
+                htmlFor="profile-email"
+                id="profile-email-label"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Email
               </label>
-              <div className="px-3 py-2 bg-[var(--color-muted-bg)] border border rounded-md text-gray-900">
+              <output 
+                id="profile-email"
+                className="block px-3 py-2 bg-[var(--color-muted-bg)] border rounded-md text-gray-900"
+              >
                 {userEmail}
-              </div>
+              </output>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label 
+                htmlFor="profile-user-initials"
+                id="profile-user-initials-label"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 User Initials
               </label>
-              <div className="px-3 py-2 bg-[var(--color-muted-bg)] border border rounded-md text-gray-900 font-mono text-sm">
+              <output 
+                id="profile-user-initials"
+                className="block px-3 py-2 bg-[var(--color-muted-bg)] border rounded-md text-gray-900 font-mono text-sm"
+              >
                 {getUserInitials(currentUser)}
-              </div>
+              </output>
             </div>
           </div>
         </div>
       </div>
 
       {/* Account Settings */}
-      <div className="bg-card rounded-xl border border p-6">
+      <div className="bg-card rounded-xl border p-6">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Account Settings</h2>
         
         <div className="space-y-4">

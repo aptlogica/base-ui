@@ -83,10 +83,9 @@ const LoaderComponent: React.FC<LoaderProps> = ({
 
   return (
     <div className={`${getContainerClass()} ${className}`} style={{ gap }}>
-      <div
+      <output
         className="flex flex-row flex-shrink-0"
         style={{ gap: dotGap }}
-        role="status"
         aria-live="polite"
         aria-label="Loading"
       >
@@ -116,7 +115,7 @@ const LoaderComponent: React.FC<LoaderProps> = ({
             animationDelay: '-0.5s',
           }}
         />
-      </div>
+      </output>
       {text && (
         <span
           className={`${textSize} ${textColor.startsWith('text-') ? textColor : ''}`}

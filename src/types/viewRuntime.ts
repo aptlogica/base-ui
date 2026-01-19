@@ -1,7 +1,7 @@
 // Shared runtime types for all view plugins
 // Views should consume these shapes and stay UI-only (no data fetching inside views)
 
-export type ViewTypeId = 'grid' | 'form' | 'gallery' | 'kanban' | 'calendar' | 'gantt' | string;
+export type ViewTypeId = 'grid' | 'form' | 'gallery' | 'kanban' | 'calendar' | 'gantt';
 
 export interface ViewField {
   id: string;

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AuthContext, useAuth } from '../auth/AuthContext';
+import { AuthContext} from '../auth/AuthContext';
 import { useWorkspaces, useWorkspaceBases, useBaseTables, useTableViews } from '../hooks/useApi';
 import { useNavigationStore } from '../stores/navigationStore';
 import { replaceNavigate } from '../utils/navigationRedirect';
@@ -37,8 +37,7 @@ export const NavigationResolver: React.FC = () => {
     selectedBaseId,
     selectedTableId,
     selectedViewId,
-    getNavigationPath,
-  } = useNavigationStore();
+    } = useNavigationStore();
 
   // Flyout management
   const { openFlyout, closeFlyout } = usePluginStore();
@@ -49,19 +48,6 @@ export const NavigationResolver: React.FC = () => {
   const { data: baseTablesData, isLoading: tablesLoading } = useBaseTables(selectedBaseId || '');
   // Fetch views for the selected table (needed to validate view exists)
   const { data: tableViewsData, isLoading: viewsLoading } = useTableViews(selectedTableId || '');
-  
-  const debug = (...args: any[]) => {
-    try {
-      const w: any = window as any;
-      const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-      const enabled = !!(
-        (w && w.__NAV_DEBUG__) ||
-        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('NAV_DEBUG') === '1') ||
-        (q && q.get('navdebug') === '1')
-      );
-      if (enabled) console.log('[NAV][Resolver]', ...args);
-    } catch {}
-  };
   
   useEffect(() => {
     // Reset navigation flags when user changes
@@ -109,23 +95,6 @@ export const NavigationResolver: React.FC = () => {
       ? `/workspace/${selectedWorkspaceId}/base/${selectedBaseId}/table/${selectedTableId}/${selectedViewId}`
       : null;
     
-    debug('NavigationResolver: useEffect triggered', {
-      pathname: location.pathname,
-      isPublicRoute,
-      isExcludedRoute: currentExcluded,
-      hasUser: !!user?.id,
-      userId: user?.id,
-      restoreCompleted,
-      alreadyResolved: resolvedRef.current,
-      hasNavigationState,
-      expectedPath,
-      selectedIds: {
-        workspace: selectedWorkspaceId,
-        base: selectedBaseId,
-        table: selectedTableId,
-        view: selectedViewId
-      }
-    });
     
     // Check if this is initial navigation (coming from / or /workspace after login)
     const isInitialPath = currentPath === '/' || currentPath === '/workspace';
@@ -139,17 +108,12 @@ export const NavigationResolver: React.FC = () => {
     const shouldSkipExcluded = currentExcluded && !(isWorkspaceRoot && isInitialNavigation);
     
     if (shouldSkipExcluded) {
-      debug('NavigationResolver: Skipping - excluded route', {
-        currentPath,
-        isInitialNavigation,
-        isWorkspaceRoot,
-        hasNavigationState,
-        expectedPath
-      });
-      setIsResolving(false);
-      // Mark as resolved so we don't try to redirect when they're intentionally on this page
-      resolvedRef.current = true;
-      initialNavigationDoneRef.current = true;
+      // Only update state if not already resolved to prevent infinite loops
+      if (!resolvedRef.current || isResolving) {
+        setIsResolving(false);
+        resolvedRef.current = true;
+        initialNavigationDoneRef.current = true;
+      }
       return;
     }
     
@@ -157,30 +121,30 @@ export const NavigationResolver: React.FC = () => {
     // This allows the resolver to run again when activity_data loads after initial mount
     // BUT only if this is initial navigation AND user is not on an excluded route (or is on /workspace during initial nav)
     if (hasNavigationState && currentPath !== expectedPath && resolvedRef.current && restoreCompleted && isInitialNavigation && !shouldSkipExcluded) {
-      debug('NavigationResolver: Resetting resolved flag - navigation state appeared and path mismatch', {
-        currentPath,
-        expectedPath,
-        hasNavigationState,
-        reason: 'Navigation state loaded after initial resolution'
-      });
-      resolvedRef.current = false;
-      setIsResolving(true);
+      // Only reset if not already resolving to prevent loops
+      if (!isResolving) {
+        resolvedRef.current = false;
+        setIsResolving(true);
+      }
       // Continue execution to retry navigation
     }
     
     if (isPublicRoute || !user?.id || !restoreCompleted) {
       if (isPublicRoute) {
-        debug('NavigationResolver: Skipping - public route');
-        setIsResolving(false);
+        // Only update state if currently resolving to prevent unnecessary re-renders
+        if (isResolving) {
+          setIsResolving(false);
+        }
         return;
       }
       if (!user?.id) {
-        debug('NavigationResolver: Skipping - no user');
-        setIsResolving(false);
+        // Only update state if currently resolving to prevent unnecessary re-renders
+        if (isResolving) {
+          setIsResolving(false);
+        }
         return;
       }
       if (!restoreCompleted) {
-        debug('NavigationResolver: Skipping - restore not completed yet');
         return;
       }
       return;
@@ -189,12 +153,10 @@ export const NavigationResolver: React.FC = () => {
     // Skip if already resolved AND we're on the correct path
     // Also skip if on excluded route (settings, account, administrator), but allow /workspace during initial nav
     if (resolvedRef.current && (location.pathname === expectedPath || shouldSkipExcluded)) {
-      debug('NavigationResolver: Skipping - already resolved', {
-        onCorrectPath: location.pathname === expectedPath,
-        onExcludedRoute: shouldSkipExcluded,
-        pathname: location.pathname
-      });
-      setIsResolving(false);
+      // Only update state if currently resolving to prevent unnecessary re-renders
+      if (isResolving) {
+        setIsResolving(false);
+      }
       return;
     }
     
@@ -205,50 +167,32 @@ export const NavigationResolver: React.FC = () => {
     if (resolvedRef.current && currentPath !== expectedPath) {
       // If on excluded route (but not /workspace during initial nav), don't redirect - user intentionally navigated here
       if (shouldSkipExcluded) {
-        debug('NavigationResolver: User on excluded route, not redirecting', {
-          currentPath,
-          expectedPath
-        });
-        setIsResolving(false);
+        // Only update state if currently resolving to prevent unnecessary re-renders
+        if (isResolving) {
+          setIsResolving(false);
+        }
         return;
       }
       
       if (isInitialNavigation && hasNavigationState) {
         // Initial navigation - allow redirect to saved view
-        debug('NavigationResolver: Resetting - resolved but path mismatch on initial path, will retry', {
-          currentPath,
-          expectedPath
-        });
-        resolvedRef.current = false;
-        setIsResolving(true);
+        // Only reset if not already in the process of resolving to prevent loops
+        if (!isResolving) {
+          resolvedRef.current = false;
+          setIsResolving(true);
+        }
       } else {
         // Subsequent navigation - user navigated intentionally, don't redirect
-        debug('NavigationResolver: User on different page, not redirecting', {
-          currentPath,
-          expectedPath,
-          isInitialNavigation,
-          initialNavigationDone: initialNavigationDoneRef.current
-        });
-        setIsResolving(false);
+        // Only update state if currently resolving to prevent unnecessary re-renders
+        if (isResolving) {
+          setIsResolving(false);
+        }
         return;
       }
     }
     
-    debug('NavigationResolver: Starting resolution', {
-      currentPath,
-      hasNavigationState,
-      expectedPath,
-      selectedIds: {
-        workspace: selectedWorkspaceId,
-        base: selectedBaseId,
-        table: selectedTableId,
-        view: selectedViewId
-      }
-    });
-    
     // If we're already on the expected path, no need to resolve
     if (hasNavigationState && currentPath === expectedPath) {
-      debug('NavigationResolver: Already on expected path, skipping resolution');
       resolvedRef.current = true;
       setIsResolving(false);
       return;
@@ -256,20 +200,10 @@ export const NavigationResolver: React.FC = () => {
     
     // Wait for workspaces to load
     if (workspacesLoading || !workspacesData) {
-      debug('NavigationResolver: Waiting for workspaces to load', {
-        workspacesLoading,
-        hasWorkspacesData: !!workspacesData,
-        workspacesDataType: typeof workspacesData,
-        workspacesDataIsArray: Array.isArray(workspacesData)
-      });
       return;
     }
     
     const workspaces = Array.isArray(workspacesData) ? workspacesData : [];
-    debug('NavigationResolver: Workspaces loaded', {
-      workspacesCount: workspaces.length,
-      workspaceIds: workspaces.map((w: any) => w?.id).filter(Boolean)
-    });
     
     // PRIORITY 1: Navigate to saved view if we have activity_data
     if (hasNavigationState && selectedWorkspaceId) {
@@ -277,39 +211,29 @@ export const NavigationResolver: React.FC = () => {
       // EXCEPTION: Allow navigation from /workspace during initial navigation
       // This prevents redirecting users away from settings pages when they intentionally navigate there
       if (shouldSkipExcluded) {
-        debug('NavigationResolver: Skipping navigation - user on excluded route', {
-          currentPath,
-          expectedPath
-        });
-        setIsResolving(false);
+        // Only update state if currently resolving to prevent unnecessary re-renders
+        if (isResolving) {
+          setIsResolving(false);
+        }
         return;
       }
       
       // CRITICAL: Ensure we have ALL required IDs before proceeding
       if (!selectedBaseId || !selectedTableId || !selectedViewId) {
-        debug('NavigationResolver: Waiting for complete navigation state', {
-          hasWorkspace: !!selectedWorkspaceId,
-          hasBase: !!selectedBaseId,
-          hasTable: !!selectedTableId,
-          hasView: !!selectedViewId
-        });
         return; // Wait for activity_data to fully populate the store
       }
       
       // Wait for bases and tables to load for validation
       if (selectedWorkspaceId && basesLoading) {
-        debug('NavigationResolver: Waiting for bases to load', { workspaceId: selectedWorkspaceId });
         return;
       }
       
       if (selectedBaseId && tablesLoading) {
-        debug('NavigationResolver: Waiting for tables to load', { baseId: selectedBaseId });
         return;
       }
       
       // Wait for views to load if we have a table (needed for view validation)
       if (selectedTableId && viewsLoading) {
-        debug('NavigationResolver: Waiting for views to load', { tableId: selectedTableId });
         return;
       }
       
@@ -363,19 +287,10 @@ export const NavigationResolver: React.FC = () => {
       const allViews = viewsFromApi.length > 0 ? viewsFromApi : viewsFromTable;
       
       const isGrid = selectedViewId === 'grid';
-      const viewOk = isGrid || !!(
+      const viewOk = isGrid || (
         Array.isArray(allViews) &&
-        allViews.find((v: any) => v?.id === selectedViewId)
+        allViews.some((v: any) => v?.id === selectedViewId)
       );
-      
-      debug('NavigationResolver: Validation check', {
-        foundBase: !!base,
-        foundTable: !!table,
-        viewOk,
-        baseId: selectedBaseId,
-        tableId: selectedTableId,
-        viewId: selectedViewId
-      });
       
       if (base && table && viewOk && selectedWorkspaceId) {
         // Valid saved view - navigate directly
@@ -385,23 +300,13 @@ export const NavigationResolver: React.FC = () => {
         // EXCEPTION: Allow navigation from /workspace during initial navigation
         // This is a safety check in case the earlier check was missed
         if (shouldSkipExcluded) {
-          debug('NavigationResolver: Skipping navigation - user on excluded route (safety check)', {
-            currentPath,
-            targetPath
-          });
-          setIsResolving(false);
+          // Only update state if currently resolving to prevent unnecessary re-renders
+          if (isResolving) {
+            setIsResolving(false);
+          }
           return;
         }
         
-        debug('NavigationResolver: ✅ Navigating to saved view', {
-          targetPath,
-          workspaceId: selectedWorkspaceId,
-          baseId: selectedBaseId,
-          tableId: selectedTableId,
-          viewId: selectedViewId,
-          currentPath,
-          willNavigate: currentPath !== targetPath
-        });
         if (currentPath !== targetPath) {
           // Update navigation store BEFORE navigating to ensure consistency
           const { navigateToView } = useNavigationStore.getState();
@@ -410,41 +315,25 @@ export const NavigationResolver: React.FC = () => {
           openFlyout('workspace-flyout-menu');
           replaceNavigate(navigate, targetPath);
         }
-        resolvedRef.current = true;
-        initialNavigationDoneRef.current = true;
-        setIsResolving(false);
+        // Only update state if not already resolved to prevent unnecessary re-renders
+        if (!resolvedRef.current || isResolving) {
+          resolvedRef.current = true;
+          initialNavigationDoneRef.current = true;
+          setIsResolving(false);
+        }
         return;
       } else {
         // Saved view invalid - fall through to auto-select
-        const reason = !base ? 'base not found' : !table ? 'table not found' : !viewOk ? 'view not found' : 'unknown';
-        debug('NavigationResolver: ❌ Saved view invalid, will auto-select', {
-          reason,
-          searchedBaseId: selectedBaseId,
-          searchedTableId: selectedTableId,
-          searchedViewId: selectedViewId,
-          availableBases: allBases.map((b: any) => ({ id: b?.id, name: b?.name })),
-          availableTables: tablesForBase.map((t: any) => ({ 
-            id: t?.model?.id || t?.id, 
-            name: t?.name || t?.model?.name 
-          })),
-          availableViews: allViews.map((v: any) => ({ id: v?.id, type: v?.type, name: v?.title || v?.name }))
-        });
       }
     }
     
     // PRIORITY 2: Handle new users (no saved navigation state)
     // If no saved view, navigate to /workspace and auto-select first base for better UX
     if (!hasNavigationState && isInitialNavigation) {
-      debug('NavigationResolver: No saved navigation state', {
-        currentPath,
-        workspacesCount: workspaces.length
-      });
-      
       // If user has no saved view, navigate to first workspace
       // But also auto-select first base so workspace page has something to show
       if (workspaces.length > 0 && (currentPath === '/' || currentPath === '/workspace')) {
         const firstWorkspace = workspaces[0];
-        debug('NavigationResolver: No saved view - navigating to first workspace');
         // Close flyout on workspace homepage
         closeFlyout();
         // Set workspace in store first
@@ -460,36 +349,26 @@ export const NavigationResolver: React.FC = () => {
           const firstBase = firstWorkspace.bases[0];
           const { setWorkspace, setBase } = useNavigationStore.getState();
           if (selectedWorkspaceId !== firstWorkspace.id || selectedBaseId !== firstBase.id) {
-            debug('NavigationResolver: Auto-selecting first workspace and base for new user', {
-              workspaceId: firstWorkspace.id,
-              baseId: firstBase.id
-            });
             setWorkspace(firstWorkspace.id);
             setBase(firstBase.id);
           }
         }
       }
       
-      resolvedRef.current = true;
-      initialNavigationDoneRef.current = true;
-      setIsResolving(false);
+      // Only update state if not already resolved to prevent unnecessary re-renders
+      if (!resolvedRef.current || isResolving) {
+        resolvedRef.current = true;
+        initialNavigationDoneRef.current = true;
+        setIsResolving(false);
+      }
       return;
     }
     
     // PRIORITY 2: Auto-select first workspace/base/table/view only if invalid saved state
     // Only if we're on root or workspace path AND initial navigation AND not on excluded route (or /workspace is allowed)
     if (isInitialNavigation && (currentPath === '/' || currentPath === '/workspace') && !shouldSkipExcluded) {
-      debug('NavigationResolver: Checking for auto-select (invalid saved state)', {
-        currentPath,
-        workspacesCount: workspaces.length
-      });
-      
       if (workspaces.length > 0) {
         const targetPath = getBestNavigationTarget(workspaces);
-        debug('NavigationResolver: Auto-select target calculated', {
-          targetPath,
-          willNavigate: !!targetPath && currentPath !== targetPath
-        });
         
         if (targetPath && currentPath !== targetPath && targetPath !== '/workspace') {
           // Extract IDs from target path and update navigation store
@@ -504,49 +383,37 @@ export const NavigationResolver: React.FC = () => {
               navigateToView(workspaceId, baseId, tableId, viewId);
               // Open flyout for base/table/view routes
               openFlyout('workspace-flyout-menu');
-              debug('NavigationResolver: ✅ Auto-selecting first available view', {
-                targetPath,
-                workspaceId,
-                baseId,
-                tableId,
-                viewId
-              });
               replaceNavigate(navigate, targetPath);
-              resolvedRef.current = true;
-              initialNavigationDoneRef.current = true;
-              setIsResolving(false);
+              // Only update state if not already resolved to prevent unnecessary re-renders
+              if (!resolvedRef.current || isResolving) {
+                resolvedRef.current = true;
+                initialNavigationDoneRef.current = true;
+                setIsResolving(false);
+              }
               return;
             }
           } else {
             // Fallback: navigate anyway, useNavigation hook will sync from URL
-            debug('NavigationResolver: ✅ Auto-selecting first available view (fallback)', targetPath);
             replaceNavigate(navigate, targetPath);
-            resolvedRef.current = true;
-            initialNavigationDoneRef.current = true;
-            setIsResolving(false);
+            // Only update state if not already resolved to prevent unnecessary re-renders
+            if (!resolvedRef.current || isResolving) {
+              resolvedRef.current = true;
+              initialNavigationDoneRef.current = true;
+              setIsResolving(false);
+            }
             return;
           }
-        } else if (targetPath) {
-          debug('NavigationResolver: Already on auto-select target, skipping navigation');
-        } else {
-          debug('NavigationResolver: ⚠️ No valid target found for auto-select');
         }
-      } else {
-        debug('NavigationResolver: ⚠️ No workspaces available for auto-select');
       }
-    } else {
-      debug('NavigationResolver: Not on root/workspace path, skipping auto-select', { currentPath });
     }
     
     // Resolution complete (either navigated or staying on current path)
-    debug('NavigationResolver: ✅ Resolution complete', {
-      finalPath: location.pathname,
-      resolved: resolvedRef.current,
-      initialNavigationDone: initialNavigationDoneRef.current
-    });
-    resolvedRef.current = true;
-    initialNavigationDoneRef.current = true;
-    setIsResolving(false);
+    // Only update state if not already resolved to prevent unnecessary re-renders
+    if (!resolvedRef.current || isResolving) {
+      resolvedRef.current = true;
+      initialNavigationDoneRef.current = true;
+      setIsResolving(false);
+    }
   }, [
     user?.id,
     restoreCompleted,
@@ -583,7 +450,6 @@ export const NavigationResolver: React.FC = () => {
     
     // If no workspaces at all, stay on /workspace and let HomePage show "no workspaces" message
     if (workspaces.length === 0) {
-      debug('NavigationResolver: No workspaces available, staying on /workspace');
       // Clear any invalid navigation state
       const { setWorkspace, setBase, setTable, setView } = useNavigationStore.getState();
       setWorkspace(null);
@@ -605,7 +471,6 @@ export const NavigationResolver: React.FC = () => {
       const currentWorkspace = workspaces.find((ws: any) => ws.id === selectedWorkspaceId);
       if (!currentWorkspace) {
         // Current workspace no longer accessible - redirect to safe location
-        debug('NavigationResolver: Current workspace no longer accessible, redirecting to fallback');
         const targetPath = getBestNavigationTarget(workspaces);
         if (targetPath) {
           replaceNavigate(navigate, targetPath);
