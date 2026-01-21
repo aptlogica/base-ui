@@ -170,7 +170,7 @@ describe('Number Component', () => {
 
       // Should limit to 10 digits
       const value = (input as HTMLInputElement).value;
-      const digits = value.replaceAll(/[.-]/, '');
+      const digits = value.replaceAll(/[.-]/g, '');
       expect(digits.length).toBeLessThanOrEqual(10);
     });
   });

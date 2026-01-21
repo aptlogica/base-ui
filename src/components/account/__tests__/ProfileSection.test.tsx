@@ -782,8 +782,17 @@ describe('ProfileSection', () => {
     });
 
     it('stores timezone in sessionStorage when profile loads', async () => {
-      // Arrange & Act
+      // Arrange
       renderProfileSection(queryClient);
+      const lastCall = mockRegisterFooter.mock.calls[mockRegisterFooter.mock.calls.length - 1];
+      const footerContent = lastCall[0] as React.ReactElement;
+      const { getByText: getFooterText } = render(footerContent);
+      const editButton = getFooterText('Edit');
+
+      // Act - Enter edit mode to trigger sessionStorage
+      await act(async () => {
+        fireEvent.click(editButton);
+      });
 
       // Assert
       await waitFor(() => {
@@ -792,8 +801,17 @@ describe('ProfileSection', () => {
     });
 
     it('stores country in sessionStorage when profile loads', async () => {
-      // Arrange & Act
+      // Arrange
       renderProfileSection(queryClient);
+      const lastCall = mockRegisterFooter.mock.calls[mockRegisterFooter.mock.calls.length - 1];
+      const footerContent = lastCall[0] as React.ReactElement;
+      const { getByText: getFooterText } = render(footerContent);
+      const editButton = getFooterText('Edit');
+
+      // Act - Enter edit mode to trigger sessionStorage
+      await act(async () => {
+        fireEvent.click(editButton);
+      });
 
       // Assert
       await waitFor(() => {
@@ -1029,8 +1047,8 @@ describe('ProfileSection', () => {
 
     it('disables avatar input when upload is pending', () => {
       // Arrange
-      vi.mocked(useAddOrUpdateAvatar).mockReturnValue({
-        mutateAsync: mockAddAvatarMutate,
+      vi.mocked(useUpdateUserProfile).mockReturnValue({
+        mutateAsync: mockUpdateProfileMutate,
         mutate: vi.fn(),
         isPending: true,
         isSuccess: false,
@@ -1039,7 +1057,7 @@ describe('ProfileSection', () => {
         data: undefined,
         reset: vi.fn(),
         status: 'pending',
-      } as unknown as ReturnType<typeof useAddOrUpdateAvatar>);
+      } as unknown as ReturnType<typeof useUpdateUserProfile>);
 
       // Act
       renderProfileSection(queryClient);
@@ -1049,10 +1067,10 @@ describe('ProfileSection', () => {
       expect(fileInput).toBeDisabled();
     });
 
-    it('shows loading indicator during avatar upload', () => {
+    it('shows loading indicator during avatar upload', async () => {
       // Arrange
-      vi.mocked(useAddOrUpdateAvatar).mockReturnValue({
-        mutateAsync: mockAddAvatarMutate,
+      vi.mocked(useUpdateUserProfile).mockReturnValue({
+        mutateAsync: mockUpdateProfileMutate,
         mutate: vi.fn(),
         isPending: true,
         isSuccess: false,
@@ -1061,14 +1079,16 @@ describe('ProfileSection', () => {
         data: undefined,
         reset: vi.fn(),
         status: 'pending',
-      } as unknown as ReturnType<typeof useAddOrUpdateAvatar>);
+      } as unknown as ReturnType<typeof useUpdateUserProfile>);
 
       // Act
       const { container } = renderProfileSection(queryClient);
 
       // Assert
-      const spinners = container.querySelectorAll('.animate-spin');
-      expect(spinners.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const spinners = container.querySelectorAll('.animate-spin');
+        expect(spinners.length).toBeGreaterThan(0);
+      });
     });
   });
 

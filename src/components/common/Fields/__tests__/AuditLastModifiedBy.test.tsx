@@ -1,13 +1,12 @@
-import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AuditLastModifiedBy } from '../AuditLastModifiedBy';
-import { useCurrentUser } from '../../../auth/useCurrentUser';
-import { useUserProfile } from '../../../hooks/useApi';
+import { useCurrentUser } from '@/auth/useCurrentUser';
+import { useUserProfile } from '@/hooks/useApi';
 
-vi.mock('../../../auth/useCurrentUser');
-vi.mock('../../../hooks/useApi');
+vi.mock('@/auth/useCurrentUser');
+vi.mock('@/hooks/useApi');
 
 describe('AuditLastModifiedBy Component', () => {
   beforeEach(() => {

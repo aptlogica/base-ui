@@ -181,7 +181,9 @@ describe('Percent Component', () => {
                 expect(mockOnChange).toHaveBeenCalledWith(50);
             });
             // Component should show the reset value back in display mode
-            expect(screen.getByText('50')).toBeInTheDocument();
+            await waitFor(() => {
+                expect(screen.getByText('50')).toBeInTheDocument();
+            });
         });
 
         it('should reset to previous valid value if input is < 0', async () => {
