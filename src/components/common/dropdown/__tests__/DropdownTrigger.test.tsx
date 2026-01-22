@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest';
-import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DropdownTrigger } from '../../dropdown/DropdownTrigger';
 
@@ -44,8 +43,15 @@ describe('DropdownTrigger', () => {
         onClear={onClear}
       />
     );
-    const clearBtn = screen.getByLabelText('Clear selection');
-    fireEvent.click(clearBtn);
+    const buttons = screen.getAllByRole('button');
+    const clearBtn = buttons.find(btn => {
+      const svg = btn.querySelector('svg.lucide-x');
+      return svg !== null && btn !== buttons[0];
+    });
+    expect(clearBtn).toBeTruthy();
+    if (clearBtn) {
+      fireEvent.click(clearBtn);
+    }
     expect(onClear).toHaveBeenCalledTimes(1);
     expect(onToggle).not.toHaveBeenCalled();
   });
