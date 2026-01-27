@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTable, useAddRow, useDeleteRecord, useBulkDeleteRecords, useInsertRowData, useUpdateField, useDeleteColumn, useCreateField, useUpdateView } from '../../../hooks/useApi';
-import type { TableData, TableResponse } from '../../../types/api.types';
+import type { TableData } from '../../../types/api.types';
 
 // Data layer for Grid: fetch + CRUD orchestration; keeps UI components clean
 export interface UseGridDataOptions {
@@ -27,16 +27,9 @@ export interface UseGridDataReturn {
   updateRowOrder: (orderedRecordIds: number[]) => Promise<void>;
 }
 
-export function useGridData({ tableId, viewId }: UseGridDataOptions): UseGridDataReturn {
-  // PAGINATION DISABLED - Uncomment below to re-enable pagination (30 records per page)
-  // const tableQuery = useTable(String(tableId), {pageNumber:1, pageLimit: 30});
-  const tableQuery = useTable(String(tableId)); // No pagination - fetches all records
+export function useGridData({ tableId}: UseGridDataOptions): UseGridDataReturn {
+  const tableQuery = useTable(String(tableId));
 
-  
-  // Transform API response to TableData format
-  // Include dataUpdatedAt to force recalculation when query is refetched
-  // This is critical because React Query's structural sharing may keep the same object reference
-  // even after refetch, so we need dataUpdatedAt to detect when data actually changed
   const tableData = useMemo(() => {
     const raw = tableQuery.data as any;
     if (!raw) return undefined;
@@ -45,7 +38,7 @@ export function useGridData({ tableId, viewId }: UseGridDataOptions): UseGridDat
     const data = raw.data ?? raw;
     
     // Ensure we have the expected structure
-    if (data && data.model && data.columns) {
+    if (data?.model && data?.columns) {
       return data as TableData;
     }
     
@@ -108,7 +101,11 @@ export function useGridData({ tableId, viewId }: UseGridDataOptions): UseGridDat
     tableData,
     isLoading,
     error: tableQuery.error,
-    refresh: () => tableQuery.refetch(),
+    refresh: (): void => {
+      tableQuery.refetch().catch(() => {
+        // Silently handle refetch errors - they're non-critical
+      });
+    },
     addRow,
     insertRowData,
     deleteRecord,

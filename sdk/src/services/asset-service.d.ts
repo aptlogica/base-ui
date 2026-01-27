@@ -28,5 +28,6 @@ export declare class AssetService {
      * DELETE /asset/:id
      */
     deleteById(id: string): Promise<import("..").StandardResponse<any>>;
+    addImage(params: types.AddImage, extra?: (progressEvent: ProgressEvent) => void): Promise<import("..").StandardResponse<any>>;
 }
 //# sourceMappingURL=asset-service.d.ts.map

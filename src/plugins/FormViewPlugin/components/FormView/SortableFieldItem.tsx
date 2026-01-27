@@ -1,6 +1,6 @@
 import React from 'react';
 import { FormField } from '../../../../types/form';
-import { 
+import {
   GripVertical,
   Trash2,
   Eye,
@@ -31,10 +31,10 @@ export const SortableFieldItem: React.FC<SortableFieldItemProps> = ({
   draggable = false,
   isDragging = false,
   isDragOver = false,
-  onDragStart = () => {},
-  onDragOver = () => {},
-  onDrop = () => {},
-  onDragEnd = () => {},
+  onDragStart = () => { },
+  onDragOver = () => { },
+  onDrop = () => { },
+  onDragEnd = () => { },
   onDelete,
 }) => {
   return (
@@ -50,34 +50,47 @@ export const SortableFieldItem: React.FC<SortableFieldItemProps> = ({
         ${isDragging ? 'opacity-50 border-dashed border-2 border-primary' : ''}
         ${isDragOver ? 'bg-muted/50' : ''}
         ${field.is_hidden ? 'bg-muted/30 text-muted-foreground cursor-not-allowed' : ''}`}
-      // onClick={(e) => {
-      //   // Only trigger select if not dragging
-      //   if (!isDragging) {
-      //     onSelect(field.id);
-      //   }
-      // }}
+      onClick={() => {
+        // Only trigger select if not dragging
+        if (!isDragging) {
+          onSelect(field.id);
+        }
+      }}
+      onKeyDown={(e) => {
+        // Support keyboard interaction (Enter or Space to select)
+        if ((e.key === 'Enter' || e.key === ' ') && !isDragging) {
+          e.preventDefault();
+          onSelect(field.id);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Select field ${field.name}`}
     >
       <div className="flex items-center gap-3 flex-1">
-        <div 
-          className="flex items-center cursor-grab active:cursor-grabbing p-1 rounded"
+        <button
+          type="button"
+          className="flex items-center cursor-grab active:cursor-grabbing p-1 rounded bg-transparent border-none"
           onMouseDown={(e) => {
             // Prevent the click event from firing when starting drag
             e.stopPropagation();
           }}
+          aria-label="Drag to reorder field"
+          tabIndex={0}
         >
           <GripVertical className="w-4 h-4 text-muted-foreground mr-2" />
-            {(() => {
-              const fieldType = FIELD_TYPES.find(type => type?.key === field?.type);
-              const IconComponent = fieldType?.icon;
-              return IconComponent ? <IconComponent className="w-4 h-4 text-muted-foreground" /> : null;
-            })()}
-        </div>
+          {(() => {
+            const fieldType = FIELD_TYPES.find(type => type?.key === field?.type);
+            const IconComponent = fieldType?.icon;
+            return IconComponent ? <IconComponent className="w-4 h-4 text-gray-500" /> : null;
+          })()}
+        </button>
         <div className="flex-1">
-          <p className="text-sm font-medium text-foreground">{field.name}</p>
-          <p className="text-xs text-muted-foreground capitalize">{field.type}</p>
+          <p className="text-sm font-medium text-primary">{field.name}</p>
+          <p className="text-xs text-secondary capitalize">{field.type}</p>
         </div>
       </div>
-      
+
       <div className="flex items-center gap-2 ml-2">
         {onToggle && (
           <button
@@ -88,13 +101,13 @@ export const SortableFieldItem: React.FC<SortableFieldItemProps> = ({
               onToggle(field.id);
             }}
           >
-           {field.is_hidden ? <EyeOff className="w-4 h-4 text-muted-foreground" /> :  <Eye className="w-4 h-4 text-muted-foreground" />} 
+            {field.is_hidden ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
           </button>
         )}
         {onDelete && (
           <button
             type='button'
-            className="p-1.5 text-destructive hover:text-destructive/80 bg-background border rounded-md hover:bg-gray-200 transition-colors"
+            className="p-1.5 text-red-500 hover:text-red-700 bg-background border rounded-md hover:bg-red-200 transition-colors"
             title="Delete field"
             onClick={e => {
               e.stopPropagation();

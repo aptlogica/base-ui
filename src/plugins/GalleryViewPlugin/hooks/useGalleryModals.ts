@@ -87,8 +87,7 @@ export function useGalleryModals() {
     isEditModalOpen,
     isDeleteModalOpen,
     selectedRecord,
-    
-    // Handlers
+     // Handlers
     handleCreateRecord,
     handleEditRecord,
     handleDeleteRecord,

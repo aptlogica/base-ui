@@ -3,7 +3,7 @@ import { FormField, FormConfig } from '../../../../types/form';
 import { FieldsList } from './FieldsList';
 import { FieldEditor } from '../shared/FieldEditor';
 import { AppearanceSettings } from '../shared/AppearanceSettings';
-import { Plus, SquareArrowLeft } from 'lucide-react';
+import { SquareArrowLeft } from 'lucide-react';
 import { FIELD_TYPES } from '../../../../types/fieldTypes';
 
 interface RightPanelProps {
@@ -11,7 +11,6 @@ interface RightPanelProps {
   selectedFieldId: string | null;
   editingFieldId: string | null;
   onFieldSelect: (fieldId: string) => void;
-  onAddField?: () => void;
   onConfigChange?: (config: FormConfig) => void;
   onFieldUpdate?: (fieldId: string, updates: Partial<FormField>) => void;
   onBackToFieldsList: () => void;
@@ -19,6 +18,7 @@ interface RightPanelProps {
   onFieldToggle?: (fieldId: string) => void;
   onFieldOrderChange?: (fields: any[]) => void;
   setVisibleAllFields?: (newState: boolean) => void;
+  isReadOnly?: boolean;
 }
 
 export const RightPanel: React.FC<RightPanelProps> = ({
@@ -26,14 +26,14 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   selectedFieldId,
   editingFieldId,
   onFieldSelect,
-  onAddField,
   onConfigChange,
   onFieldUpdate,
   onBackToFieldsList,
   onDeleteField,
   onFieldToggle,
   setVisibleAllFields,
-  onFieldOrderChange
+  onFieldOrderChange,
+  isReadOnly = false
 }) => {
   const [activeTab, setActiveTab] = useState<'fields' | 'appearance'>('fields');
 
@@ -111,20 +111,25 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             fields={config.fields}
             selectedFieldId={selectedFieldId}
             onFieldSelect={onFieldSelect}
-            onFieldOrderChange={onFieldOrderChange}
-            onFieldToggle={onFieldToggle ? (fieldId: string) => onFieldToggle(fieldId) : undefined}
-            onDeleteField={onDeleteField}
-            setVisibleAllFields={setVisibleAllFields}
+            onFieldOrderChange={isReadOnly ? undefined : onFieldOrderChange}
+            onFieldToggle={isReadOnly || !onFieldToggle ? undefined : (fieldId: string) => onFieldToggle(fieldId)}
+            onDeleteField={isReadOnly ? undefined : onDeleteField}
+            setVisibleAllFields={isReadOnly ? undefined : setVisibleAllFields}
           />
         )}
 
         {activeTab === 'appearance' && (
           <div className="p-4 overflow-y-auto h-full">
-            {onConfigChange && (
+            {onConfigChange && !isReadOnly && (
               <AppearanceSettings
                 appearance={config.appearance}
-                onChange={(appearance) => onConfigChange({ appearance })}
+                onChange={(appearance) => onConfigChange({ ...config, appearance })}
               />
+            )}
+            {isReadOnly && (
+              <div className="text-sm text-muted-foreground">
+                Appearance settings are not available in read-only mode.
+              </div>
             )}
           </div>
         )}

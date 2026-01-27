@@ -34,9 +34,6 @@ export const FieldsList: React.FC<FieldsListProps> = ({
   const handleSelectAllToggle = () => {
     if (!setVisibleAllFields) return;
     const newState = !allFieldsEnabled;
-    // Instead of toggling one by one, update all at once
-  //   const updatedFields = fields.map(field => ({ ...field, is_hidden: !newState }));
-  //   onFieldOrderChange?.(updatedFields);
     setVisibleAllFields(newState);
   };
 
@@ -72,8 +69,8 @@ export const FieldsList: React.FC<FieldsListProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredFields = fields.filter(
-    (field:any) =>{
-      return field?.name?.toLowerCase().includes(searchTerm.toLowerCase()) && !field.system && !field.isSystem
+    (field: FormField) => {
+      return field?.name?.toLowerCase().includes(searchTerm.toLowerCase()) && !field.system && !field.isSystem;
     }
   );
 
@@ -106,15 +103,7 @@ export const FieldsList: React.FC<FieldsListProps> = ({
                 disabled={!setVisibleAllFields}
                 className="checkbox-primary-brand "
               />
-               {/* <div className={`w-11 h-6 rounded-full transition-colors ${
-                allFieldsEnabled ? 'bg-primary' : 'bg-muted'
-              }`}>
-                <div className={`w-5 h-5 bg-background rounded-full shadow transform transition-transform ${
-                  allFieldsEnabled ? 'translate-x-5' : 'translate-x-0.5'
-                } mt-0.5`} /> 
-              </div>  */}
-                
-              <span className="text-sm text-foreground">Select all</span>
+            <span className="text-sm text-foreground">Select all</span>
             </label>
           </div>
         </div>
@@ -133,10 +122,10 @@ export const FieldsList: React.FC<FieldsListProps> = ({
               draggable={onFieldOrderChange !== undefined}
               isDragging={draggedFieldId === field.id}
               isDragOver={dragOverFieldId === field.id}
-              onDragStart={onFieldOrderChange !== undefined ? () => handleDragStart(field.id) : undefined}
-              onDragOver={onFieldOrderChange !== undefined ? () => handleDragOver(field.id) : undefined}
-              onDrop={onFieldOrderChange !== undefined ? () => handleDrop(field.id) : undefined}
-              onDragEnd={onFieldOrderChange !== undefined ? handleDragEnd : undefined}
+              onDragStart={onFieldOrderChange === undefined ? undefined : () => handleDragStart(field.id)}
+              onDragOver={onFieldOrderChange === undefined ? undefined : () => handleDragOver(field.id)}
+              onDrop={onFieldOrderChange === undefined ? undefined : () => handleDrop(field.id)}
+              onDragEnd={onFieldOrderChange === undefined ? undefined : handleDragEnd}
               onDelete={onDeleteField}
             />
           ))}

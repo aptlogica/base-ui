@@ -29,7 +29,7 @@ export function useGanttTaskProcessing({ tableData }: { tableData?: TableRespons
       };
     }
 
-    const { model, columns, records, views } = tableData.data;
+    const { columns, records, views } = tableData.data;
 
     // Filter out unwanted columns
     const filteredColumns = columns.filter(
@@ -50,22 +50,17 @@ export function useGanttTaskProcessing({ tableData }: { tableData?: TableRespons
       }
     });
 
+    // Helper to get field by ID from meta (field IDs are always strings per API contract)
+    const getFieldById = (fieldId: unknown): any => {
+      return typeof fieldId === 'string' && fieldId ? columnMap.get(fieldId) : undefined;
+    };
+
     // Find field columns using Map for O(1) lookups
-    const startDateField = viewMeta.start_date_field_id
-      ? columnMap.get(String(viewMeta.start_date_field_id))
-      : undefined;
-    const endDateField = viewMeta.end_date_field_id
-      ? columnMap.get(String(viewMeta.end_date_field_id))
-      : undefined;
-    const titleField = viewMeta.title_field_id
-      ? columnMap.get(String(viewMeta.title_field_id))
-      : columnNameMap.get('title');
-    const progressField = viewMeta.progress_field_id
-      ? columnMap.get(String(viewMeta.progress_field_id))
-      : undefined;
-    const completionField = viewMeta.completion_field_id
-      ? columnMap.get(String(viewMeta.completion_field_id))
-      : undefined;
+    const startDateField = getFieldById(viewMeta.start_date_field_id);
+    const endDateField = getFieldById(viewMeta.end_date_field_id);
+    const titleField = getFieldById(viewMeta.title_field_id) || columnNameMap.get('title');
+    const progressField = getFieldById(viewMeta.progress_field_id);
+    const completionField = getFieldById(viewMeta.completion_field_id);
 
     // Process tasks from records
     const tasks: GanttTask[] = records.map((record: any, idx: number) => {

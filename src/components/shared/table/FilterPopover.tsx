@@ -186,7 +186,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
         const option = options.find((opt: any) => {
           const optValue = typeof opt === 'string' ? opt : (opt.value || opt.title || opt.option);
           return optValue === filter.value || optValue === String(filter.value);
-        }) as any;
+        });
         const displayValue = typeof option === 'string' ? option : (option?.title || option?.option || option?.value || filter.value);
         return (
           <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm whitespace-nowrap">
@@ -210,7 +210,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
         );
       }
       return (
-        <div className="flex-1 min-w-0 w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="flex-1 min-w-0 w-full" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
           <SingleSelect
             value={filter.value}
             onChange={(val) => {

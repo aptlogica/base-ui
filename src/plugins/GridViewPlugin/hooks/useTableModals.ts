@@ -89,8 +89,6 @@ export function useTableModals() {
     contextMenu,
     handleContextMenu,
     handleCloseContextMenu,
-    
-    // Column context menu
     colMenu,
     handleColContextMenu,
     handleCloseColMenu,

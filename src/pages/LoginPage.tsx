@@ -184,9 +184,9 @@ const LogIn: React.FC = () => {
                     className="text-gray-500 hover:text-gray-700 focus:outline-none"
                   >
                     {showPassword ? (
-                      <EyeOff className="w-4 h-4 text-gray-500" />
-                    ) : (
                       <Eye className="w-4 h-4 text-gray-500" />
+                    ) : (
+                      <EyeOff className="w-4 h-4 text-gray-500" />
                     )}
                   </button>
                 </div>

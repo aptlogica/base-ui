@@ -894,6 +894,10 @@ export const useUpdateViewAppearance = () => {
 
       // Snapshot previous value for rollback
       const previousView = queryClient.getQueryData(['view', String(viewId)]);
+      
+      // Get model_id from view data if available (for updating specific table query)
+      const viewData = previousView as any;
+      const modelId = viewData?.model_id;
 
       // Optimistically update the view cache
       queryClient.setQueryData(['view', String(viewId)], (old: any) => {
@@ -907,6 +911,53 @@ export const useUpdateViewAppearance = () => {
         };
       });
 
+      // ALSO update the view within the table's views array (used by FormView)
+      // Update the specific table query if we have model_id
+      if (modelId) {
+        queryClient.setQueryData(['tables', String(modelId)], (old: any) => {
+          if (!old || !old.views || !Array.isArray(old.views)) return old;
+          
+          const updatedViews = old.views.map((v: any) => 
+            v.id === viewId 
+              ? {
+                  ...v,
+                  meta: {
+                    ...v.meta || {},
+                    formViewAppearance: appearance
+                  }
+                }
+              : v
+          );
+          return { ...old, views: updatedViews };
+        });
+      }
+      
+      // Also update any other table queries that might contain this view (fallback)
+      queryClient.setQueriesData(
+        { queryKey: ['tables'] },
+        (old: any) => {
+          if (!old) return old;
+          
+          // Check if this is a table data object with views array
+          if (old.views && Array.isArray(old.views)) {
+            const updatedViews = old.views.map((v: any) => 
+              v.id === viewId 
+                ? {
+                    ...v,
+                    meta: {
+                      ...v.meta || {},
+                      formViewAppearance: appearance
+                    }
+                  }
+                : v
+            );
+            return { ...old, views: updatedViews };
+          }
+          
+          return old;
+        }
+      );
+
       return { previousView };
     },
     onError: (_err, variables, context) => {
@@ -916,11 +967,15 @@ export const useUpdateViewAppearance = () => {
       }
     },
     onSuccess: (_, { viewId }) => {
-      // Only invalidate the specific view query to ensure consistency
-      // No need to invalidate all views, tables, bases, or workspaces for appearance changes
+      // Invalidate both the view query and table queries to ensure consistency
       queryClient.invalidateQueries({ 
         queryKey: ['view', String(viewId)],
         refetchType: 'none' // Don't refetch, we already updated optimistically
+      });
+      // Also invalidate table queries so they refetch with fresh data when needed
+      queryClient.invalidateQueries({ 
+        queryKey: ['tables'],
+        refetchType: 'none' // Don't refetch immediately, but mark as stale
       });
     },
   });

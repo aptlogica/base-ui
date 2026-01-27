@@ -157,7 +157,7 @@ export const Email: React.FC<EmailProps> = ({
 
       {/* Input or Display */}
       <button
-        className={`relative ${className} ${isBorder ? "field-component-border" : ""}`}
+        className={`relative w-full ${className} ${isBorder ? "field-component-border" : ""}`}
         onClick={readOnly ? undefined : handleClick}
         style={readOnly ? { cursor: 'default' } : undefined}
       >

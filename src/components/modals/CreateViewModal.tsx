@@ -180,6 +180,137 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
     }
   }, [startDateField, endDateField, viewType]);
 
+  // Helper to get field label for error messages - extracted to reduce complexity
+  const getFieldLabel = (): string => {
+    if (viewType === 'calendar') return 'Date field';
+    if (viewType === 'kanban') return 'Group by field';
+    return 'Field';
+  };
+
+  // Validate Gantt chart fields - extracted to reduce complexity
+  const validateGanttFields = (): string | null => {
+    if (!startDateField) {
+      return 'Start date field is required for Gantt charts';
+    }
+    if (!endDateField) {
+      return 'End date field is required for Gantt charts';
+    }
+    const startFieldId = getFieldId(startDateField);
+    const endFieldId = getFieldId(endDateField);
+    if (startFieldId && endFieldId && startFieldId === endFieldId) {
+      return 'Start date and end date fields must be different';
+    }
+    return null;
+  };
+
+  // Validate field selection - extracted to reduce complexity
+  const validateFieldSelection = (): string | null => {
+    if (!showFieldDropdown) {
+      return null;
+    }
+
+    if (viewType === 'ganttChart') {
+      return validateGanttFields();
+    }
+
+    if (!selectedField) {
+      return `${getFieldLabel()} is required for ${viewType} views`;
+    }
+
+    return null;
+  };
+
+  // Validate available fields - extracted to reduce complexity
+  const validateAvailableFields = (): string | null => {
+    if (showFieldDropdown && filteredFields.length === 0) {
+      return `No suitable fields available for ${viewType} view. Please add the required field type to your table first.`;
+    }
+    return null;
+  };
+
+  // Build Gantt chart payload - extracted to reduce complexity
+  const buildGanttPayload = (finalName: string) => {
+    const startDateFieldId = getFieldId(startDateField);
+    const endDateFieldId = getFieldId(endDateField);
+
+    if (!startDateFieldId || !endDateFieldId) {
+      throw new Error('Start and end date fields are required');
+    }
+
+    return {
+      name: finalName,
+      description: description.trim(),
+      type: viewType,
+      startDateFieldId,
+      endDateFieldId,
+    };
+  };
+
+  // Build standard view payload - extracted to reduce complexity
+  const buildStandardPayload = (finalName: string) => {
+    const normalizedFieldId = getFieldId(selectedField);
+
+    if (showFieldDropdown && !normalizedFieldId) {
+      throw new Error('Field selection is required');
+    }
+
+    const payload: {
+      name: string;
+      description: string;
+      type: string;
+      fieldId?: string;
+    } = {
+      name: finalName,
+      description: description.trim(),
+      type: viewType,
+    };
+
+    if (normalizedFieldId) {
+      payload.fieldId = normalizedFieldId;
+    }
+
+    return payload;
+  };
+
+  // Check if basic validation fails - extracted to reduce complexity
+  const hasBasicValidationErrors = (): boolean => {
+    if (isSubmitting) return true;
+    if (name.trim() && name.trim().length < 3) return true;
+    if (validationError) return true;
+    if (fieldError) return true;
+    return false;
+  };
+
+  // Check if Gantt chart fields are invalid - extracted to reduce complexity
+  const areGanttFieldsInvalid = (): boolean => {
+    if (!startDateField || !endDateField) return true;
+    const startId = getFieldId(startDateField);
+    const endId = getFieldId(endDateField);
+    return startId !== null && endId !== null && startId === endId;
+  };
+
+  // Check if field selection is invalid - extracted to reduce complexity
+  const isFieldSelectionInvalid = (
+    fieldDropdownOptions: Array<{ value: string; label: string }>,
+    showFieldDropdown: boolean
+  ): boolean => {
+    if (!showFieldDropdown) return false;
+    if (fieldDropdownOptions.length === 0) return true;
+    if (viewType === 'ganttChart') {
+      return areGanttFieldsInvalid();
+    }
+    return !selectedField;
+  };
+
+  // Check if submit button should be disabled - extracted to reduce complexity
+  const isSubmitDisabled = (
+    fieldDropdownOptions: Array<{ value: string; label: string }>,
+    showFieldDropdown: boolean
+  ): boolean => {
+    if (hasBasicValidationErrors()) return true;
+    return isFieldSelectionInvalid(fieldDropdownOptions, showFieldDropdown);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -200,96 +331,30 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
     setError('');
     setFieldError('');
 
-    // Helper to get field label for error messages
-    const getFieldLabel = (): string => {
-      if (viewType === 'calendar') return 'Date field';
-      if (viewType === 'kanban') return 'Group by field';
-      return 'Field';
-    };
-
-    // Validation for field selection based on view type
-    if (showFieldDropdown) {
-      if (viewType === 'ganttChart') {
-        if (!startDateField) {
-          setFieldError('Start date field is required for Gantt charts');
-          return;
-        }
-        if (!endDateField) {
-          setFieldError('End date field is required for Gantt charts');
-          return;
-        }
-        // Check if start and end date fields are the same
-        const startFieldId = getFieldId(startDateField);
-        const endFieldId = getFieldId(endDateField);
-        if (startFieldId && endFieldId && startFieldId === endFieldId) {
-          setFieldError('Start date and end date fields must be different');
-          return;
-        }
-      } else if (!selectedField) {
-        // For other view types that require field selection
-        setFieldError(`${getFieldLabel()} is required for ${viewType} views`);
-          return;
-      }
+    // Validate field selection
+    const fieldValidationError = validateFieldSelection();
+    if (fieldValidationError) {
+      setFieldError(fieldValidationError);
+      return;
     }
 
-    // Additional validation: Check if fields are available for the view type
-    if (showFieldDropdown && filteredFields.length === 0) {
-      setFieldError(`No suitable fields available for ${viewType} view. Please add the required field type to your table first.`);
+    // Validate available fields
+    const availableFieldsError = validateAvailableFields();
+    if (availableFieldsError) {
+      setFieldError(availableFieldsError);
       return;
     }
 
     setIsSubmitting(true);
     try {
+      let payload;
       if (viewType === 'ganttChart') {
-        // For Gantt charts, pass both start and end date field IDs
-        const startDateFieldId = getFieldId(startDateField);
-        const endDateFieldId = getFieldId(endDateField);
-
-        if (!startDateFieldId || !endDateFieldId) {
-          setError('Start and end date fields are required');
-          setIsSubmitting(false);
-          return;
-        }
-
-        onCreate({
-          name: finalName,
-          description: description.trim(),
-          type: viewType,
-          startDateFieldId,
-          endDateFieldId,
-        });
+        payload = buildGanttPayload(finalName);
       } else {
-        // For other view types, use the single field selection (only if required)
-        const normalizedFieldId = getFieldId(selectedField);
-
-        // Only require field selection if showFieldDropdown is true
-        if (showFieldDropdown && !normalizedFieldId) {
-          setError('Field selection is required');
-          setIsSubmitting(false);
-          return;
-        }
-
-        // Build the onCreate payload - only include fieldId if it exists
-        const onCreatePayload: {
-          name: string;
-          description: string;
-          type: string;
-          fieldId?: string;
-        } = {
-          name: finalName,
-          description: description.trim(),
-          type: viewType,
-        };
-
-        // Only add fieldId if it exists (for view types that require it)
-        if (normalizedFieldId) {
-          onCreatePayload.fieldId = normalizedFieldId;
-        }
-
-        onCreate(onCreatePayload);
+        payload = buildStandardPayload(finalName);
       }
 
-      // Close the modal on successful creation
+      onCreate(payload);
       onClose();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create view. Please try again.';
@@ -337,6 +402,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
       <div
         className="bg-modal !max-w-2xl !p-0 flex flex-col relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
@@ -534,26 +600,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
               e.preventDefault();
               handleSubmit(e);
             }}
-            disabled={(() => {
-              if (isSubmitting) return true;
-              if (name.trim() && name.trim().length < 3) return true;
-              if (validationError) return true;
-              if (fieldError) return true;
-              
-              if (showFieldDropdown) {
-                if (fieldDropdownOptions.length === 0) return true;
-                if (viewType === 'ganttChart') {
-                  if (!startDateField || !endDateField) return true;
-                  const startId = getFieldId(startDateField);
-                  const endId = getFieldId(endDateField);
-                  if (startId && endId && startId === endId) return true;
-                } else if (!selectedField) {
-                  return true;
-                }
-              }
-              
-              return false;
-            })()}
+            disabled={isSubmitDisabled(fieldDropdownOptions, showFieldDropdown)}
               className="px-16 py-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? (

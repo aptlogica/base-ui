@@ -113,7 +113,8 @@ export function useInfiniteScroll({
         pageSize: 30,
         pageNumber: currentPage + 1
       });
-      const newRecords = result?.data?.records || [];
+      const response = result as { data?: { records?: unknown[] } } | undefined;
+      const newRecords = Array.isArray(response?.data?.records) ? response.data.records : [];
 
       if (newRecords.length < 30) {
         setHasMore(false);

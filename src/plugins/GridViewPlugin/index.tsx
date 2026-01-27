@@ -1,12 +1,18 @@
-import React, { useMemo, Suspense, lazy } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Plugin, PluginManifest, PluginAPI } from '../../core/types';
 import { matchesViewType } from '../../utils/viewType';
 import { useGridData } from './hooks/useGridData';
 // LAZY LOAD: Table component is huge - only load when GridView is actually rendered
-const Table = lazy(() => 
+const Table = lazy(() =>
   import('./components/Table/Table').then(m => ({ default: m.Table }))
 );
 import { Loader } from '../../components/ui/Loader';
+
+interface ViewExtensionProps {
+  table?: { id?: string };
+  view?: { id?: string; type?: string };
+  viewType?: string;
+}
 
 const manifest: PluginManifest = {
   id: 'grid-view-plugin',
@@ -17,7 +23,7 @@ const manifest: PluginManifest = {
 
 const GridViewPlugin: Plugin = {
   manifest,
-  initialize: async (api: PluginAPI, config: any) => {
+  initialize: async (api: PluginAPI) => {
     const GridView: React.FC<{ tableId: string; viewId?: string }> = ({ tableId, viewId }) => {
       const { tableData, isLoading, error, refresh, addRow, insertRowData, deleteRecord, bulkDeleteRecords, updateField, deleteColumn, createField, updateView, updateRowOrder } = useGridData({ tableId, viewId });
 
@@ -25,16 +31,15 @@ const GridViewPlugin: Plugin = {
         return (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
-              <div className="text-red-500 text-lg mb-2">⚠️ Error Loading Table</div>
-              <p className="text-muted-foreground mb-4">{String(error)}</p>
+              <div className="text-red-500 text-lg mb-2">Something went wrong while loading the table.</div>
               <button onClick={() => refresh()} className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90">Retry</button>
             </div>
           </div>
         );
       }
-      
+
       // Show loading state while data is being fetched
-      if (isLoading || !tableData || !tableData.model) {
+      if (isLoading || !tableData?.model) {
         return <div className="h-full flex items-center justify-center">
           <Loader size={10} />
         </div>;
@@ -49,7 +54,7 @@ const GridViewPlugin: Plugin = {
           </div>
         }>
           <Table
-            tableData={tableData!}
+            tableData={tableData}
             viewId={viewId}
             onRefresh={() => refresh()}
             enableVirtualization={enableVirtualization} // Virtualization control (separate from view metadata)
@@ -62,7 +67,7 @@ const GridViewPlugin: Plugin = {
     api.registerExtension('view', {
       id: 'grid-view',
       order: 50,
-      render: (props: any) => {
+      render: (props: ViewExtensionProps) => {
         const tableId = props?.table?.id;
         const viewId = props?.view?.id;
         const rawType = props?.viewType ?? props?.view?.type;

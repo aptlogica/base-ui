@@ -1,7 +1,6 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { EditableTableCell } from '../../../../../components/shared/table/EditableTableCell';
 import { GridRecord as TableData, GridColumn as ColumnConfig } from '../../../types/grid.types';
-import { Trash2 } from 'lucide-react';
 
 interface TableRowProps {
   row: TableData;
@@ -11,15 +10,24 @@ interface TableRowProps {
   isSelected: boolean;
   onSelect: (rowId: string, selected: boolean) => void;
   onCellChange: (rowId: string, columnKey: string, value: any) => void;
-  onDelete?: (rowId: string) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
-   activeCell?: { rowId: string; colKey: string } | null;
+  activeCell?: { rowId: string; colKey: string } | null;
   setActiveCell?: React.Dispatch<React.SetStateAction<{ rowId: string; colKey: string } | null>>;
   tableId?: string;
   displayRowNumber?: number; // Optional: override the displayed row number (for grouped rows)
   allColumns?: ColumnConfig[]; // All columns for formula field name mapping
   canEdit?: boolean; // Permission to edit cells
 }
+
+// Helper to extract row ID
+const getRowId = (row: TableData): string => {
+  return (row as any)._meta?.id || (row as any).id?.toString() || '';
+};
+
+// Helper to get cell value from row
+const getCellValue = (row: TableData, columnKey: string): any => {
+  return (row as any)[columnKey] ?? (row as any).data?.[columnKey] ?? (row as any)._meta?.[columnKey];
+};
 
 export const TableRow: React.FC<TableRowProps> = ({
   row,
@@ -29,9 +37,8 @@ export const TableRow: React.FC<TableRowProps> = ({
   isSelected,
   onSelect,
   onCellChange,
-  onDelete,
   onContextMenu,
-    activeCell,
+  activeCell,
   setActiveCell,
   tableId,
   displayRowNumber,
@@ -39,10 +46,7 @@ export const TableRow: React.FC<TableRowProps> = ({
   canEdit = true
 }) => {
   // Memoize rowId to avoid recalculating on every render
-  const rowId = useMemo(() => 
-    (row as any)._meta?.id || (row as any).id?.toString(),
-    [row]
-  );
+  const rowId = useMemo(() => getRowId(row), [row]);
 
   const handleCellChange = useCallback((columnKey: string, value: any) => {
     if (rowId) onCellChange(rowId, columnKey, value);
@@ -56,9 +60,9 @@ export const TableRow: React.FC<TableRowProps> = ({
   // Memoize column objects to prevent recreating them on every render
   const memoizedColumnProps = useMemo(() => {
     return columns.map((column, index) => {
-      const value = (row as any)[column.key] ?? (row as any).data?.[column.key] ?? (row as any)._meta?.[column.key];
+      const value = getCellValue(row, column.key);
       const isActive = activeCell?.rowId === rowId && activeCell?.colKey === column.key;
-      
+
       return {
         column: {
           id: column.id || '',
@@ -77,61 +81,103 @@ export const TableRow: React.FC<TableRowProps> = ({
         isLast: index === columns.length - 1,
         isSystemField: column.isSystem || column.system || false,
         isActive,
-        currentRowId: parseInt(rowId),
+        currentRowId: Number.parseInt(rowId),
       };
     });
   }, [columns, row, columnWidths, activeCell, rowId, tableId]);
 
+  // Handle row click to deselect active cell
+  const handleRowClick = useCallback(() => {
+    setActiveCell?.(null);
+  }, [setActiveCell]);
+
+  // Handle row keyboard events
+  const handleRowKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setActiveCell?.(null);
+    }
+  }, [setActiveCell]);
+
+  // Handle cell click to set active cell
+  const handleCellClick = useCallback((e: React.MouseEvent, columnKey: string) => {
+    e.stopPropagation();
+    setActiveCell?.({ rowId, colKey: columnKey });
+  }, [rowId, setActiveCell]);
+
+  // Handle cell keyboard events
+  const handleCellKeyDown = useCallback((e: React.KeyboardEvent, columnKey: string) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setActiveCell?.({ rowId, colKey: columnKey });
+    }
+  }, [rowId, setActiveCell]);
+
   return (
+    // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
     <div
-      className={`group grid transition-colors min-w-full ${isRowActive ? 'bg-[var(--color-brand-50)]' : ''}`}
-      style={{ gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`, height: '40px', minHeight: '40px', maxHeight: '40px' }}
+      className={`group grid transition-colors min-w-full ${isRowActive ? 'border-t border-b border-[var(--color-brand-600)]' : ' border-transparent'}`}
+      style={{ gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`, height: '40px', minHeight: '40px', maxHeight: '40px', boxSizing: 'border-box' }}
       onContextMenu={onContextMenu}
-      onClick={() => setActiveCell?.(null)}
+      onClick={handleRowClick}
+      onKeyDown={handleRowKeyDown}
+      role="row"
+      tabIndex={0}
     >
-      <div className={`flex-shrink-0 w-13 h-10 border-r border-b flex items-center justify-center relative select-none gap-2 ${isRowActive ? 'bg-[var(--color-brand-50)]' : 'bg-background bg-muted/30'}`} style={{height: '40px', position: 'sticky', left: 0, zIndex: 11, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)'}}>
+      <div className={`flex-shrink-0 w-13 bg-background border-r ${isRowActive ? '' : 'border-b border-border/30'} flex items-center justify-center relative select-none gap-2`} style={{ height: '39px', position: 'sticky', left: 0, zIndex: 11, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)', boxSizing: 'border-box' }}>
         {/* Row number always visible, but fades out on hover or when selected */}
-        <span className={`text-xs text-muted-foreground font-normal absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none transition-opacity duration-150 ${
-          isSelected ? 'opacity-0' : 'group-hover:opacity-0'
-        }`} style={{zIndex: 1}}>{displayRowNumber !== undefined ? displayRowNumber : rowIndex + 1}</span>
+        <span className={`text-xs text-muted-foreground font-normal absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none transition-opacity duration-150 ${isSelected ? 'opacity-0' : 'group-hover:opacity-0'}`} style={{ zIndex: 1 }}>{displayRowNumber ?? rowIndex + 1}</span>
         <input
           type="checkbox"
-          className={`checkbox-primary-brand ${
-            isSelected 
-              ? 'opacity-100 pointer-events-auto' 
+          className={`checkbox-primary-brand ${isSelected
+              ? 'opacity-100 pointer-events-auto'
               : 'opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto'
-          }`}
+            }`}
           checked={isSelected}
           onChange={(e) => {
-            const rowId = (row as any)._meta?.id || (row as any).id?.toString();
-            if (rowId) onSelect(rowId, e.target.checked);
+            const currentRowId = getRowId(row);
+            if (currentRowId) onSelect(currentRowId, e.target.checked);
           }}
-          style={{zIndex: 2}}
+          style={{ zIndex: 2 }}
         />
       </div>
       {memoizedColumnProps.map((props, index) => {
         const column = columns[index];
+        // Single border that changes color - no double borders
+        // When row is selected, row-level border handles top/bottom, so remove cell bottom border
+        // When cell is active, show full border
+        // Default: only bottom border for grid lines
+        let borderClass: string;
+        if (props.isActive) {
+          borderClass = 'border border-[var(--color-brand-600)]';
+        } else if (isRowActive) {
+          borderClass = ''; // Row border handles top/bottom, no cell border needed
+        } else {
+          borderClass = 'border-b border-border/30';
+        }
+        
         return (
+          // eslint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role
           <div
-           key={column.key}
-            className={`${props.isActive ? 'border border-[var(--color-brand-600)]' : ''} ${isRowActive ? 'bg-[var(--color-brand-50)]' : ''}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              setActiveCell?.({ rowId, colKey: column.key });
-            }}
-            >
-          <EditableTableCell
+            key={column.key}
+            className={borderClass}
+            style={{ height: '40px', minHeight: '40px', maxHeight: '40px', overflow: 'hidden', boxSizing: 'border-box' }}
+            onClick={(e) => handleCellClick(e, column.key)}
+            onKeyDown={(e) => handleCellKeyDown(e, column.key)}
+            role="gridcell"
+            tabIndex={0}
+          >
+            <EditableTableCell
               column={props.column}
               value={props.value}
-            onChange={(value) => handleCellChange(column.key, value)}
+              onChange={(value) => handleCellChange(column.key, value)}
               width={props.width}
               isLast={props.isLast}
               isSystemField={props.isSystemField}
-            allowEdit={canEdit}
+              allowEdit={canEdit}
               currentRowId={props.currentRowId}
               rowData={row as any} // Pass entire row object for formula evaluation
               allColumns={allColumns || columns} // Pass all columns for formula field name mapping
-          />
+            />
           </div>
         );
       })}
@@ -141,142 +187,151 @@ export const TableRow: React.FC<TableRowProps> = ({
   );
 };
 
-// Memoize TableRow to prevent unnecessary re-renders
-export const MemoizedTableRow = React.memo(TableRow, (prevProps, nextProps) => {
-  // Custom comparison for better performance
-  if (
-    prevProps.rowIndex !== nextProps.rowIndex ||
-    prevProps.isSelected !== nextProps.isSelected ||
-    prevProps.columns.length !== nextProps.columns.length ||
-    prevProps.columnWidths.length !== nextProps.columnWidths.length ||
-    prevProps.activeCell?.rowId !== nextProps.activeCell?.rowId ||
-    prevProps.activeCell?.colKey !== nextProps.activeCell?.colKey
-  ) {
-    return false; // Props changed, should re-render
+// Helper functions for memo comparison to reduce cognitive complexity
+const compareBasicProps = (prevProps: TableRowProps, nextProps: TableRowProps): boolean => {
+  return (
+    prevProps.rowIndex === nextProps.rowIndex &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.columns.length === nextProps.columns.length &&
+    prevProps.columnWidths.length === nextProps.columnWidths.length &&
+    prevProps.activeCell?.rowId === nextProps.activeCell?.rowId &&
+    prevProps.activeCell?.colKey === nextProps.activeCell?.colKey
+  );
+};
+
+const compareRowIds = (prevProps: TableRowProps, nextProps: TableRowProps): boolean => {
+  const prevRowId = getRowId(prevProps.row);
+  const nextRowId = getRowId(nextProps.row);
+  return prevRowId === nextRowId;
+};
+
+const compareArrayValue = (prevValue: any[], nextValue: any[]): boolean => {
+  if (prevValue.length !== nextValue.length) return false;
+  if (prevValue.length === 0) return true;
+  return JSON.stringify(prevValue) === JSON.stringify(nextValue);
+};
+
+const compareObjectValue = (prevValue: Record<string, any>, nextValue: Record<string, any>): boolean => {
+  const prevKeys = Object.keys(prevValue);
+  const nextKeys = Object.keys(nextValue);
+  if (prevKeys.length !== nextKeys.length) return false;
+  if (prevKeys.length === 0) return true;
+  return JSON.stringify(prevValue) === JSON.stringify(nextValue);
+};
+
+const isPrimitive = (value: any): boolean => {
+  return value === null || typeof value !== 'object';
+};
+
+const compareSingleCellValue = (prevValue: any, nextValue: any): boolean => {
+  // Fast path: Reference equality check first
+  if (prevValue === nextValue) return true;
+
+  // Check primitives
+  if (isPrimitive(prevValue) || isPrimitive(nextValue)) {
+    return prevValue === nextValue;
   }
 
-  // Compare row ID
-  const prevRowId = (prevProps.row as any)._meta?.id || (prevProps.row as any).id?.toString();
-  const nextRowId = (nextProps.row as any)._meta?.id || (nextProps.row as any).id?.toString();
-  if (prevRowId !== nextRowId) {
-    return false;
+  // Check arrays
+  if (Array.isArray(prevValue) && Array.isArray(nextValue)) {
+    return compareArrayValue(prevValue, nextValue);
   }
 
-  // CRITICAL: Compare row data values to detect changes
-  // This ensures UI updates when cell values change after API calls
-  // OPTIMIZED: Only do deep comparison when references are equal (likely unchanged)
-  // This prevents expensive JSON.stringify on every comparison
-  for (let i = 0; i < prevProps.columns.length; i++) {
-    const column = prevProps.columns[i];
+  // Check objects (both are objects at this point)
+  return compareObjectValue(prevValue, nextValue);
+};
+
+const compareCellValues = (prevProps: TableRowProps, nextProps: TableRowProps): boolean => {
+  for (const column of prevProps.columns) {
     const columnKey = column.key;
-    
-    // Get values from both rows
-    const prevValue = (prevProps.row as any)[columnKey] ?? (prevProps.row as any).data?.[columnKey] ?? (prevProps.row as any)._meta?.[columnKey];
-    const nextValue = (nextProps.row as any)[columnKey] ?? (nextProps.row as any).data?.[columnKey] ?? (nextProps.row as any)._meta?.[columnKey];
-    
-    // Fast path: Reference equality check first (most common case - no change)
-    if (prevValue === nextValue) {
-      continue; // Same reference, definitely unchanged
-    }
-    
-    // If references differ, check if values are actually different
-    // For primitives, !== is sufficient
-    if (prevValue === null || nextValue === null || 
-        typeof prevValue !== 'object' || typeof nextValue !== 'object') {
-      if (prevValue !== nextValue) {
-        return false; // Primitive values changed, should re-render
-      }
-      continue;
-    }
-    
-    // For arrays/objects, only do expensive comparison if references differ
-    // This is the rare case where content changed but we need to verify
-    if (Array.isArray(prevValue) && Array.isArray(nextValue)) {
-      // Quick length check first
-      if (prevValue.length !== nextValue.length) {
-        return false; // Different lengths, definitely changed
-      }
-      // Only do deep comparison if lengths match (expensive but necessary)
-      if (prevValue.length > 0 && JSON.stringify(prevValue) !== JSON.stringify(nextValue)) {
-        return false; // Array contents changed, should re-render
-      }
-    } else if (typeof prevValue === 'object' && typeof nextValue === 'object') {
-      // For objects, compare keys first (cheaper than full stringify)
-      const prevKeys = Object.keys(prevValue);
-      const nextKeys = Object.keys(nextValue);
-      if (prevKeys.length !== nextKeys.length) {
-        return false; // Different number of keys, changed
-      }
-      // Only do deep comparison if key counts match
-      if (prevKeys.length > 0 && JSON.stringify(prevValue) !== JSON.stringify(nextValue)) {
-        return false; // Object contents changed, should re-render
-      }
-    } else {
-      // Type mismatch
+    const prevValue = getCellValue(prevProps.row, columnKey);
+    const nextValue = getCellValue(nextProps.row, columnKey);
+
+    if (!compareSingleCellValue(prevValue, nextValue)) {
       return false;
     }
   }
+  return true;
+};
 
-  // Compare columns - check if any column changed (including meta/config for icon/color updates)
+const compareColumnBasic = (prevCol: ColumnConfig, nextCol: ColumnConfig): boolean => {
+  return (
+    prevCol.key === nextCol.key &&
+    prevCol.id === nextCol.id &&
+    prevCol.title === nextCol.title &&
+    prevCol.uidt === nextCol.uidt
+  );
+};
+
+const compareColumnConfig = (prevConfig: any, nextConfig: any): boolean => {
+  if (prevConfig === nextConfig) return true;
+  if (typeof prevConfig !== 'object' || typeof nextConfig !== 'object' || prevConfig === null || nextConfig === null) {
+    return prevConfig === nextConfig;
+  }
+  const prevKeys = Object.keys(prevConfig);
+  const nextKeys = Object.keys(nextConfig);
+  if (prevKeys.length !== nextKeys.length) return false;
+  for (const key of prevKeys) {
+    if (prevConfig[key] !== nextConfig[key]) return false;
+  }
+  return true;
+};
+
+const compareColumnMeta = (prevMeta: any, nextMeta: any): boolean => {
+  if (prevMeta === nextMeta) return true;
+  if (typeof prevMeta !== 'object' || typeof nextMeta !== 'object' || prevMeta === null || nextMeta === null) {
+    return prevMeta === nextMeta;
+  }
+  const prevKeys = Object.keys(prevMeta);
+  const nextKeys = Object.keys(nextMeta);
+  if (prevKeys.length !== nextKeys.length) return false;
+  for (const key of prevKeys) {
+    if (prevMeta[key] !== nextMeta[key]) return false;
+  }
+  return true;
+};
+
+const compareColumns = (prevProps: TableRowProps, nextProps: TableRowProps): boolean => {
   for (let i = 0; i < prevProps.columns.length; i++) {
     const prevCol = prevProps.columns[i];
     const nextCol = nextProps.columns[i];
-    
-    if (
-      prevCol.key !== nextCol.key ||
-      prevCol.id !== nextCol.id ||
-      prevCol.title !== nextCol.title ||
-      prevCol.uidt !== nextCol.uidt
-    ) {
-      return false;
-    }
-    
-    // Deep compare config (contains icon, color, etc.) - critical for UI updates
-    const prevConfig = prevCol.config;
-    const nextConfig = nextCol.config;
-    if (prevConfig !== nextConfig) {
-      if (typeof prevConfig === 'object' && typeof nextConfig === 'object' && prevConfig !== null && nextConfig !== null) {
-        const prevKeys = Object.keys(prevConfig);
-        const nextKeys = Object.keys(nextConfig);
-        if (prevKeys.length !== nextKeys.length) {
-          return false;
-        }
-        for (const key of prevKeys) {
-          if (prevConfig[key] !== nextConfig[key]) {
-            return false; // Config changed (icon, color, etc.)
-          }
-        }
-      } else if (prevConfig !== nextConfig) {
-        return false;
-      }
-    }
-    
-    // Also compare meta
-    const prevMeta = prevCol.meta;
-    const nextMeta = nextCol.meta;
-    if (prevMeta !== nextMeta) {
-      if (typeof prevMeta === 'object' && typeof nextMeta === 'object' && prevMeta !== null && nextMeta !== null) {
-        const prevKeys = Object.keys(prevMeta);
-        const nextKeys = Object.keys(nextMeta);
-        if (prevKeys.length !== nextKeys.length) {
-          return false;
-        }
-        for (const key of prevKeys) {
-          if (prevMeta[key] !== nextMeta[key]) {
-            return false;
-          }
-        }
-      } else if (prevMeta !== nextMeta) {
-        return false;
-      }
-    }
+
+    if (!compareColumnBasic(prevCol, nextCol)) return false;
+    if (!compareColumnConfig(prevCol.config, nextCol.config)) return false;
+    if (!compareColumnMeta(prevCol.meta, nextCol.meta)) return false;
+  }
+  return true;
+};
+
+const compareColumnWidths = (prevProps: TableRowProps, nextProps: TableRowProps): boolean => {
+  if (prevProps.columnWidths.length !== nextProps.columnWidths.length) return false;
+  for (let i = 0; i < prevProps.columnWidths.length; i++) {
+    if (prevProps.columnWidths[i] !== nextProps.columnWidths[i]) return false;
+  }
+  return true;
+};
+
+// Memoize TableRow to prevent unnecessary re-renders
+export const MemoizedTableRow = React.memo(TableRow, (prevProps, nextProps) => {
+  // Custom comparison for better performance
+  if (!compareBasicProps(prevProps, nextProps)) {
+    return false; // Props changed, should re-render
   }
 
-  // Compare column widths
-  for (let i = 0; i < prevProps.columnWidths.length; i++) {
-    if (prevProps.columnWidths[i] !== nextProps.columnWidths[i]) {
+  if (!compareRowIds(prevProps, nextProps)) {
+          return false;
+        }
+
+  if (!compareCellValues(prevProps, nextProps)) {
+            return false;
+          }
+
+  if (!compareColumns(prevProps, nextProps)) {
+        return false;
+  }
+
+  if (!compareColumnWidths(prevProps, nextProps)) {
       return false;
-    }
   }
 
   return true; // Props are equal, skip re-render

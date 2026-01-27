@@ -119,7 +119,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
     e.stopPropagation();
     
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file?.type.startsWith('image/')) {
       const validTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
       if (validTypes.includes(file.type)) {
         // Set image and preview immediately (so it's available for submission)
@@ -144,6 +144,17 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
         setError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
       }
     }
+  };
+
+  // Get help icon color class based on validation state - extracted to avoid nested ternary
+  const getHelpIconColorClass = (): string => {
+    if (validationError) {
+      return 'text-red-500';
+    }
+    if (name.trim().length >= 3) {
+      return 'text-green-600';
+    }
+    return 'text-gray-400';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -190,7 +201,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
         saveData.image = image;
       }
       
-      await onSave(saveData);
+      onSave(saveData);
       // Close the modal on successful save
       onClose();
     } catch (err) {
@@ -223,6 +234,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
       <div
         className="bg-modal !p-0 flex flex-col relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
@@ -266,8 +278,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
               />
               <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
                 <span className="relative inline-block group">
-                  <HelpCircle className={`w-4 h-4 ${validationError ? 'text-red-500' : name.trim().length >= 3 ? 'text-green-600' : 'text-gray-400'
-                    } cursor-help`} />
+                  <HelpCircle className={`w-4 h-4 ${getHelpIconColorClass()} cursor-help`} />
                   <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                     <h4 className="font-medium mb-2">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} name requirements:</h4>
                     <ul className="space-y-1">
@@ -301,9 +312,17 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
           {/* Image Upload Section - Only for base type */}
           {itemType === 'base' && (
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
+              <label htmlFor="edit-image-upload" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
                 Image
               </label>
+              <input
+                type="file"
+                id="edit-image-upload"
+                accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
+                onChange={handleImageChange}
+                className="hidden"
+                aria-label="Upload image"
+              />
               {imagePreview ? (
                 <div className="flex gap-4">
                   {/* Image Preview - Left Side */}
@@ -334,16 +353,10 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
                   <div
                     onDragOver={handleDragOver}
                     onDrop={handleDrop}
-                    className="flex-1 relative border-2 border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                    className="flex-1 relative border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
                     onClick={() => document.getElementById('edit-image-upload')?.click()}
+                    onKeyDown={(e) => e.stopPropagation()}
                   >
-                    <input
-                      type="file"
-                      id="edit-image-upload"
-                      accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
                     <CloudUpload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                     <p className="text-sm text-gray-600 mb-1">
                       <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
@@ -357,16 +370,10 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
                 <div
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
-                  className="relative border-2 border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                  className="relative border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
                   onClick={() => document.getElementById('edit-image-upload')?.click()}
+                  onKeyDown={(e) => e.stopPropagation()}
                 >
-                  <input
-                    type="file"
-                    id="edit-image-upload"
-                    accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
                   <CloudUpload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                   <p className="text-sm text-gray-600 mb-1">
                     <span className="text-green-500 font-medium">Click to upload</span> or drag and drop

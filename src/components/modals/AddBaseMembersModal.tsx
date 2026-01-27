@@ -123,7 +123,6 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
       });
 
       toast.success('Members added successfully');
-      
       // Reset form
       setSelectedUserIds([]);
       setSelectedRole('base-member');

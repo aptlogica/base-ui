@@ -95,20 +95,20 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const validateFile = (file: File): string | null => {
     // Check file size
-    // if (file.size > config.maxSize) {
-    //   return `File size exceeds ${formatFileSize(config.maxSize)}. Please select a smaller file.`;
-    // }
+    if (file.size > config.maxSize) {
+      return `File size exceeds ${formatFileSize(config.maxSize)}. Please select a smaller file.`;
+    }
 
     // Check file extension
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
     const acceptedExtensions = config.accept.split(',').map(ext => ext.trim().toLowerCase());
 
-    if (!acceptedExtensions.some(ext => fileExtension === ext)) {
+    if (!acceptedExtensions.includes(fileExtension)) {
       return `Invalid file type. Please select a ${config.label} file (${config.accept}).`;
     }
 
@@ -267,6 +267,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       <div
         className="bg-modal min-h-[500px] max-h-[90vh] !p-0 flex flex-col relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
@@ -291,168 +292,163 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         {/* Scrollable Content Area */}
         <form id="import-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="p-4 space-y-4">
-          {/* File Upload Area */}
-          <div className="space-y-1">
-            <label htmlFor="file-upload-input" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
-              Select File <span className="text-red-500">*</span>
-            </label>
-            <div
-              id="file-upload-input"
-              className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
-                isDragOver
+            {/* File Upload Area */}
+            <div className="space-y-1">
+              <label htmlFor="file-upload-input" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
+                Select File <span className="text-red-500">*</span>
+              </label>
+              <div
+                id="file-upload-input"
+                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${isDragOver
                   ? 'border-[var(--color-bg-brand-primary)] bg-[var(--color-bg-brand-primary)]/10'
-                  : selectedFile
-                  ? 'border-green-400 bg-green-50 hover:border-green-500'
-                  : 'border-gray-300 hover:border-gray-400 bg-gray-50/50'
-              }`}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onClick={() => fileInputRef.current?.click()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  fileInputRef.current?.click();
-                }
-              }}
-              role="button"
-              tabIndex={0}
-              aria-label="Click or drag and drop to upload file"
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept={config.accept}
-                onChange={handleFileInputChange}
-                className="hidden"
-              />
-              {selectedFile ? (
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                    <FileText size={32} className="text-green-600" />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-sm font-semibold text-primary">{selectedFile.name}</div>
-                    <div className="text-xs text-secondary">{formatFileSize(selectedFile.size)}</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedFile(null);
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = '';
-                      }
-                    }}
-                    className="text-xs text-red-600 hover:text-red-800 hover:underline mt-1 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                  >
-                    Remove file
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                    <Upload size={32} className="text-gray-400" />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium text-primary">
-                      Drop your document here or{' '}
-                      <span className="text-[var(--color-bg-brand-primary)] hover:underline font-semibold">
-                        browse files
-                      </span>
+                  : selectedFile ? 'border-green-400 hover:border-green-500' : 'border-gray-300 hover:border-gray-400 bg-gray-50/50'}`}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label="Click or drag and drop to upload file"
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={config.accept}
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                />
+                {selectedFile ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                      <FileText size={32} className="text-green-600" />
                     </div>
-                    {/* <div className="text-xs text-secondary">
+                    <div className="space-y-1">
+                      <div className="text-sm font-semibold text-primary">{selectedFile.name}</div>
+                      <div className="text-xs text-secondary">{formatFileSize(selectedFile.size)}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedFile(null);
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = '';
+                        }
+                      }}
+                      className="text-xs text-red-600 hover:text-red-800 hover:underline mt-1 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      Remove file
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                      <Upload size={32} className="text-gray-400" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium text-primary">
+                        Drop your document here or{' '}
+                        <span className="text-[var(--color-bg-brand-primary)] hover:underline font-semibold">
+                          browse files
+                        </span>
+                      </div>
+                      {/* <div className="text-xs text-secondary">
                       {config.label} file (max {formatFileSize(config.maxSize)})
                     </div> */}
+                    </div>
                   </div>
+                )}
+              </div>
+            </div>
+
+            {/* Title Input */}
+            <div className="space-y-1">
+              <label htmlFor="tableTitle" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
+                Table Title <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  id="tableTitle"
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Enter table title"
+                  className={`field-component field-component-border field-component-focus ${error && !selectedFile ? 'border-red-500' : 'border'}`}
+                  required
+                  minLength={3}
+                  maxLength={50}
+                  autoFocus
+                />
+                <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
+                  <span className="relative inline-block group">
+                    <HelpCircle
+                      className={`w-4 h-4 ${error && !selectedFile ? 'text-red-500' : title.trim().length >= 3 ? 'text-green-600' : 'text-gray-400'
+                        } cursor-help`}
+                    />
+                    <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
+                      <h4 className="font-medium mb-2">Table title requirements:</h4>
+                      <ul className="space-y-1">
+                        <li className={`flex items-center ${title.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
+                          • Minimum 3 characters
+                        </li>
+                        <li className="flex items-center text-gray-500">• Must be unique</li>
+                      </ul>
+                    </div>
+                  </span>
+                </div>
+              </div>
+              {error && !selectedFile && (
+                <div className="mt-1 text-sm text-red-600">
+                  <span>{error}</span>
                 </div>
               )}
+              <p className="mt-1 text-xs text-gray-500">
+                {title.length}/50 characters
+              </p>
             </div>
-          </div>
 
-          {/* Title Input */}
-          <div className="space-y-1">
-            <label htmlFor="tableTitle" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
-              Table Title <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <input
-                id="tableTitle"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter table title"
-                className={`field-component field-component-border field-component-focus ${error && !selectedFile ? 'border-red-500' : 'border'}`}
-                required
-                minLength={3}
-                maxLength={50}
-                autoFocus
-              />
-              <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
-                <span className="relative inline-block group">
-                  <HelpCircle
-                    className={`w-4 h-4 ${
-                      error && !selectedFile ? 'text-red-500' : title.trim().length >= 3 ? 'text-green-600' : 'text-gray-400'
-                    } cursor-help`}
-                  />
-                  <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
-                    <h4 className="font-medium mb-2">Table title requirements:</h4>
-                    <ul className="space-y-1">
-                      <li className={`flex items-center ${title.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
-                        • Minimum 3 characters
-                      </li>
-                      <li className="flex items-center text-gray-500">• Must be unique</li>
-                    </ul>
-                  </div>
-                </span>
-              </div>
-            </div>
-            {error && !selectedFile && (
-              <div className="mt-1 text-sm text-red-600">
-                <span>{error}</span>
+            {/* Description Input */}
+            <MultiLineText
+              label="Description"
+              value={description}
+              onChange={setDescription}
+              placeholder="Enter table description"
+              rows={5}
+              isBorder={true}
+            />
+
+            {/* Error Message - Only show if not related to file or title */}
+            {error && selectedFile && title.trim().length >= 3 && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+                {error}
               </div>
             )}
-            <p className="mt-1 text-xs text-gray-500">
-              {title.length}/50 characters
-            </p>
-          </div>
 
-          {/* Description Input */}
-          <MultiLineText
-            label="Description"
-            value={description}
-            onChange={setDescription}
-            placeholder="Enter table description"
-            rows={5}
-            isBorder={true}
-          />
-
-          {/* Error Message - Only show if not related to file or title */}
-          {error && selectedFile && title.trim().length >= 3 && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
-              {error}
-            </div>
-          )}
-
-          {/* Progress Bar */}
-          {(importMutation.isPending || isSubmitting) && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-secondary">
-                  {uploadProgress >= 100 ? 'Processing...' : 'Uploading...'}
-                </span>
-                <span className="text-primary font-medium">
-                  {uploadProgress > 0 ? `${uploadProgress}%` : '0%'}
-                </span>
+            {/* Progress Bar */}
+            {(importMutation.isPending || isSubmitting) && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-secondary">
+                    {uploadProgress >= 100 ? 'Processing...' : 'Uploading...'}
+                  </span>
+                  <span className="text-primary font-medium">
+                    {uploadProgress > 0 ? `${uploadProgress}%` : '0%'}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-[var(--color-brand-500)] h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress > 0 ? uploadProgress : 10}%` }}
+                  />
+                </div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-[var(--color-bg-brand-primary)] h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress > 0 ? uploadProgress : 10}%` }}
-                />
-              </div>
-            </div>
-          )}
+            )}
           </div>
         </form>
 

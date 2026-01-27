@@ -15,6 +15,8 @@ interface LongTextProps {
   allowEdit?: boolean;
   readOnly?: boolean;
   helperText?: string;
+  onModalOpen?: (modalRef: React.RefObject<HTMLDivElement>) => void;
+  onModalClose?: () => void;
   config?: {
     defaultValue?: string;
     maxLength?: number;
@@ -37,6 +39,8 @@ export const LongText: React.FC<LongTextProps> = ({
   allowEdit = true,
   readOnly = false,
   helperText,
+  onModalOpen,
+  onModalClose,
   config = {}
 }) => {
   const { defaultValue = '', maxLength: configMaxLength = maxLength, placeholder: configPlaceholder = placeholder, richText = false } = config;
@@ -46,6 +50,7 @@ export const LongText: React.FC<LongTextProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalValue, setModalValue] = useState(value || '');
   const richTextEditorRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   const [isLinkPopupOpen, setIsLinkPopupOpen] = useState(false);
   const [linkPopupPosition, setLinkPopupPosition] = useState<{ top: number; left: number } | null>(null);
   const [linkEditData, setLinkEditData] = useState<{ link: HTMLAnchorElement | null; text: string; url: string; isEditing: boolean }>({
@@ -177,6 +182,13 @@ export const LongText: React.FC<LongTextProps> = ({
     }
   };
 
+  // Notify parent when modal opens and ref is available
+  useEffect(() => {
+    if (isModalOpen && modalRef.current && onModalOpen) {
+      onModalOpen(modalRef);
+    }
+  }, [isModalOpen, onModalOpen]);
+
   const closeModal = () => {
     // For rich text, get HTML content from the editor
     let finalValue = modalValue;
@@ -189,6 +201,8 @@ export const LongText: React.FC<LongTextProps> = ({
     }
 
     setIsModalOpen(false);
+    // Notify parent about modal closing
+    onModalClose?.();
     // Save changes if valid
     const validationError = validate(finalValue);
     setError(validationError);
@@ -563,7 +577,7 @@ export const LongText: React.FC<LongTextProps> = ({
           {/* Backdrop */}
           <div className="absolute inset-0 backdrop-blur-sm bg-opacity-40" onClick={closeModal} />
           {/* Modal Content */}
-          <div className="relative bg-[var(--color-card)] border rounded-xl shadow-xl w-full max-w-5xl h-[85vh] p-6 flex flex-col z-10">
+          <div ref={modalRef} className="relative bg-[var(--color-card)] border rounded-xl shadow-xl w-full max-w-5xl h-[85vh] p-6 flex flex-col z-10">
             <div className="flex items-center mb-4 flex-shrink-0">
               <AlignLeft className="w-8 h-8 rounded icon-primary p-1 mr-2" />
               <span className="text-lg font-medium text-muted-foreground">Long Text</span>
@@ -652,7 +666,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   ref={richTextEditorRef}
                   contentEditable={!readOnly}
                   suppressContentEditableWarning
-                  onInput={!readOnly ? handleRichTextChange : undefined}
+                  onInput={readOnly ? undefined : handleRichTextChange}
                   onPaste={!readOnly ? handlePaste : undefined}
                   onKeyDown={(e) => {
                     // Handle keyboard shortcuts

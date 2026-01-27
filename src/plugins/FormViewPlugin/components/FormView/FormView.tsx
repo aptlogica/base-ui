@@ -2,14 +2,13 @@ import React, { useMemo, Suspense, lazy } from 'react';
 import { FormPreview } from './FormPreview';
 import { RightPanel } from './RightPanel';
 import { useToast } from '../../../../components/common/Toast';
-// LAZY LOAD: NewColumnModal is huge (3862 lines) - only load when needed
 const NewColumnModal = lazy(() => 
   import('../../../../components/modals/NewColumnModal').then(m => ({ default: m.NewColumnModal }))
 );
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
 import { normalizeFieldType } from '../../../../utils/fieldType';
-import { parseApiColumnMeta } from '../../../../components/shared/table/tableUtils';
 import type { TableData } from '../../../../types/api.types';
+import type { FormField } from '../../../../types/form';
 import { Plus, PanelRight, PanelRightClose } from 'lucide-react';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../../../utils/fieldUsageUtils';
 import { useAllViews } from '../../../../hooks/useApi';
@@ -47,6 +46,171 @@ interface FormViewProps {
     deleteFieldData: (fieldId: string) => Promise<void>;
   };
 }
+
+// Extract field filtering logic
+const shouldIncludeFieldInForm = (column: any): boolean => {
+  // Always allow Title field even if marked as system
+  if (column.column_name === 'title' || column.title === 'Title' || column.title?.toLowerCase().includes('title')) {
+    return true;
+  }
+  
+  // Exclude formula fields - they are calculated, not editable
+  if (isFormulaField(column)) {
+    return false;
+  }
+  
+  // Exclude audit fields by type (uidt)
+  const auditFieldTypesSet = new Set(['createdTime', 'lastModifiedTime', 'createdBy', 'lastModifiedBy']);
+  if (auditFieldTypesSet.has(column.uidt)) {
+    return false;
+  }
+  
+  // Exclude system fields by name
+  const systemFieldNamesSet = new Set(['id', 'created_at', 'updated_at']);
+  const isSystemFieldToExclude = column.system && systemFieldNamesSet.has(column.column_name?.toLowerCase());
+  if (isSystemFieldToExclude) {
+    return false;
+  }
+  
+  // Include all other fields (both system and non-system)
+  return true;
+};
+
+// Extract field transformation logic
+const transformColumnToFormField = (column: any): FormField => {
+  return {
+    id: String(column.id),
+    key: String(column.column_name || column.title || column.id),
+    name: column.title || column.column_name,
+    title: column.title || column.column_name,
+    label: column.title || column.column_name,
+    type: normalizeFieldType(column.uidt || 'text'),
+    uidt: column.uidt,
+    position: column.position || column.order_index || 0,
+    order_index: column.order_index || 0,
+    required: Boolean(column.required),
+    enabled: !column.isHidden && !column.is_hidden,
+    description: column.description || '',
+    config: column.meta || {},
+    isSystem: Boolean(column.system),
+    system: Boolean(column.system),
+    hidden: Boolean(column.hidden),
+    is_hidden: Boolean(column.isHidden || column.is_hidden),
+    column_name: column.column_name,
+    meta: column.meta || {},
+    virtual: column.virtual
+  };
+};
+
+// Extract view filtering logic
+const getCurrentTableViews = (tableId: string, allViews: any[]): any[] => {
+  if (!tableId || !allViews) return [];
+  return allViews.filter((view: any) => {
+    const viewTableId = String(view.model_id || view.modelId || '');
+    return viewTableId === String(tableId);
+  });
+};
+
+const getViewsToUse = (tableData: TableData, allViews: any[]): any[] => {
+  if (tableData?.views && Array.isArray(tableData.views) && tableData.views.length > 0) {
+    return tableData.views;
+  }
+  return allViews;
+};
+
+// Extract field usage validation logic
+const validateFieldUsageForDelete = (
+  fieldId: string,
+  tableId: string,
+  allViews: any[],
+  tableData: TableData,
+  toast: any
+): boolean => {
+  const currentTableViews = getCurrentTableViews(tableId, allViews);
+  const viewsToUse = getViewsToUse(tableData, allViews);
+  
+  const criticalFieldUsage = checkCriticalFieldUsageInViews(fieldId, viewsToUse, tableId);
+  if (criticalFieldUsage.isUsedInViews) {
+    const viewNames = criticalFieldUsage.usedInViews.map(v => `${v.viewName} (${v.usageType})`).join(', ');
+    toast.error(
+      `Cannot delete field. It is used as a critical field in: ${viewNames}. Please change the view configuration first.`,
+      { title: 'Field in Use' }
+    );
+    return false;
+  }
+  
+  const fieldUsage = checkFieldUsageInViews(fieldId, currentTableViews);
+  if (fieldUsage.isUsedInViews) {
+    const viewNames = fieldUsage.usedInViews.map(v => v.viewName).join(', ');
+    toast.error(
+      `Cannot delete field. It is currently used in: ${viewNames}. Please remove the field from these views first.`,
+      { title: 'Field in Use' }
+    );
+    return false;
+  }
+  
+  return true;
+};
+
+const validateFieldUsageForTypeChange = (
+  fieldId: string,
+  tableId: string,
+  allViews: any[],
+  tableData: TableData,
+  toast: any
+): boolean => {
+  const currentTableViews = getCurrentTableViews(tableId, allViews);
+  const viewsToUse = getViewsToUse(tableData, allViews);
+  
+  const criticalFieldUsage = checkCriticalFieldUsageInViews(fieldId, viewsToUse, tableId);
+  if (criticalFieldUsage.isUsedInViews) {
+    const viewNames = criticalFieldUsage.usedInViews.map(v => `${v.viewName} (${v.usageType})`).join(', ');
+    toast.error(
+      `Cannot change field type. This field is used as a critical field in: ${viewNames}. Please change the view configuration first.`,
+      { title: 'Field in Use' }
+    );
+    return false;
+  }
+  
+  const fieldUsage = checkFieldUsageInViews(fieldId, currentTableViews);
+  if (fieldUsage.isUsedInViews) {
+    const viewNames = fieldUsage.usedInViews.map(v => v.viewName).join(', ');
+    toast.error(
+      `Cannot change field type. This field is currently used in: ${viewNames}. Please remove the field from these views first, or change the field type in the view settings.`,
+      { title: 'Field in Use' }
+    );
+    return false;
+  }
+  
+  return true;
+};
+
+// Extract change detection logic
+const detectFieldChanges = (editingField: FormField, updates: any): any => {
+  const changes: any = {};
+  const uidtChanged = String(editingField.uidt || '').toLowerCase() !== String(updates.type || '').toLowerCase();
+
+  if (editingField.title !== updates.title) {
+    changes.title = updates.title;
+  }
+  if ((editingField?.description ?? '') !== (updates.description ?? '')) {
+    changes.description = updates.description;
+  }
+  if (uidtChanged) {
+    changes.uidt = updates.type;
+    changes.meta = updates.meta || {};
+  } else if (JSON.stringify(editingField.meta ?? {}) !== JSON.stringify(updates.meta ?? {})) {
+    changes.meta = updates.meta;
+  }
+  if (editingField.required !== updates.required) {
+    changes.required = updates.required;
+  }
+  if (JSON.stringify(editingField.config ?? {}) !== JSON.stringify(updates.config ?? {})) {
+    changes.config = updates.config;
+  }
+
+  return { changes, uidtChanged };
+};
 
 export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId, onRefresh, actions }) => {
   // Get all views for field usage validation
@@ -100,26 +264,18 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
   // Use actions passed from hook (no need to re-instantiate)
   const toast = useToast();
 
-  const view = tableData.views?.find((v: any) => v.id === viewId) as any;
-  if (!view) {
-    return null; // Match GridView: don't render anything if view not found
-  }
-
-  // Form data state hook
+  // Form data state hook - MUST be called before any early returns
   const {
     rowData,
     formError,
-    submitting,
-    submitSuccess,
     setFormError,
     setSubmitting,
     setSubmitSuccess,
     handleRowDataChange,
     clearFormData,
-    resetSuccess,
   } = useFormDataState();
 
-  // Form modals hook
+  // Form modals hook - MUST be called before any early returns
   const {
     isNewColumnModalOpen,
     deleteConfirmModalOpen,
@@ -143,7 +299,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
     setUpdateFieldConfirmModalOpen,
   } = useFormModals();
 
-  // Form panel hook
+  // Form panel hook - MUST be called before any early returns
   const {
     sidebarOpen,
     selectedFieldId,
@@ -152,8 +308,14 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
     handleBackToFieldsList,
   } = useFormPanel();
 
+  // Get view - compute before hooks that depend on it
+  const view = useMemo(() => {
+    return tableData.views?.find((v: any) => v.id === viewId) as any;
+  }, [tableData?.views, viewId]);
+
   // Get processed data from local transformation (consistent with GridView pattern)
   // Optimized with Map for O(1) fieldConfig lookups instead of O(n) find() calls
+  // MUST be called before early return
   const allColumns = useMemo(() => {
     if (!tableData?.columns) return [];
     
@@ -179,77 +341,39 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
   }, [tableData?.columns, view?.meta?.fieldConfig]);
 
   const formFields = useMemo(() => {
-    // Transform columns to form fields format, excluding system fields and formula fields
-    // Optimized with Set for O(1) lookups instead of O(n) includes() calls
-    const auditFieldTypesSet = new Set(['createdTime', 'lastModifiedTime', 'createdBy', 'lastModifiedBy']);
-    const systemFieldNamesSet = new Set(['id', 'created_at', 'updated_at']);
-    
     return allColumns
-      .filter((column: any) => {
-        // Always allow Title field even if marked as system
-        if (column.column_name === 'title' || column.title === 'Title' || column.title?.toLowerCase().includes('title')) {
-          return true;
-        }
-        
-        // Exclude formula fields - they are calculated, not editable
-        if (isFormulaField(column)) {
-          return false;
-        }
-        
-        // Exclude audit fields by type (uidt) - O(1) lookup with Set
-        if (auditFieldTypesSet.has(column.uidt)) {
-          return false;
-        }
-        
-        // Exclude system fields by name - O(1) lookup with Set
-        const isSystemFieldToExclude = column.system && systemFieldNamesSet.has(column.column_name?.toLowerCase());
-        if (isSystemFieldToExclude) {
-          return false;
-        }
-        
-        // Include all other fields (both system and non-system)
-        return true;
-      })
-      .map((column: any) => ({
-        id: String(column.id),
-        key: String(column.column_name || column.title || column.id),
-        name: column.title || column.column_name,
-        title: column.title || column.column_name,
-        label: column.title || column.column_name,
-        // Normalize type using normalizeFieldType to match FIELD_TYPES keys (handles aliases and camelCase)
-        type: normalizeFieldType(column.uidt || 'text'),
-        uidt: column.uidt,
-        position: column.position || column.order_index || 0,
-        order_index: column.order_index || 0,
-        required: Boolean(column.required),
-        enabled: !column.isHidden && !column.is_hidden,
-        description: column.description || '',
-        config: column.meta || {},
-        isSystem: Boolean(column.system),
-        system: Boolean(column.system),
-        hidden: Boolean(column.hidden),
-        is_hidden: Boolean(column.isHidden || column.is_hidden),
-        // Additional API properties needed by FieldEditor
-        column_name: column.column_name,
-        meta: column.meta || {},
-        virtual: column.virtual
-      }));
+      .filter(shouldIncludeFieldInForm)
+      .map(transformColumnToFormField);
   }, [allColumns]);
 
   // Create formFieldsMap for O(1) lookups in handler functions
+  // MUST be called before early return
   const formFieldsMap = useMemo(() => {
     return new Map(formFields.map(f => [f.id, f]));
   }, [formFields]);
 
   // Form view config hook (needs formFields to be defined first)
+  // MUST be called before early return
   const {
     formConfig,
     handleConfigChange,
   } = useFormViewConfig({
-    view,
+    view: view || {} as any,
     formFields,
     updateAppearance: actions.updateAppearance,
   });
+
+  // Extract sidebar class name - MUST be before early return
+  const sidebarClassName = useMemo(() => {
+    return sidebarOpen 
+      ? 'bg-card border-l flex flex-col transition-all duration-300 ease-in-out w-[400px] opacity-100'
+      : 'bg-card border-l flex flex-col transition-all duration-300 ease-in-out w-0 opacity-0 overflow-hidden';
+  }, [sidebarOpen]);
+
+  // Early return after all hooks
+  if (!view) {
+    return null; // Match GridView: don't render anything if view not found
+  }
 
   // Handle form submit - delegate to data layer
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -307,50 +431,18 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
   };
 
   // Wrapper for handleDeleteField to add validation
-  // Optimized with Map for O(1) lookup instead of O(n) find()
   const handleDeleteField = (fieldId: string) => {
     const fieldToDelete = formFieldsMap.get(fieldId);
     
-    // Check if it's a system field
     if (fieldToDelete?.isSystem || fieldToDelete?.system) {
       toast.error('System fields cannot be deleted', { title: 'Error' });
       return;
     }
     
-    // Filter views to only current table
-    const currentTableViews = tableId && allViews
-      ? allViews.filter((view: any) => {
-          const viewTableId = String(view.model_id || view.modelId || '');
-          return viewTableId === String(tableId);
-        })
-      : [];
-
-    // Prefer tableData.views (fresh) over allViews (cached)
-    const viewsToUse = tableData?.views && Array.isArray(tableData.views) && tableData.views.length > 0
-      ? tableData.views
-      : allViews;
-    
-    // Check if field is used as a CRITICAL field
-    const criticalFieldUsage = checkCriticalFieldUsageInViews(fieldId, viewsToUse, tableId);
-    if (criticalFieldUsage.isUsedInViews) {
-      const viewNames = criticalFieldUsage.usedInViews.map(v => `${v.viewName} (${v.usageType})`).join(', ');
-      toast.error(
-        `Cannot delete field. It is used as a critical field in: ${viewNames}. Please change the view configuration first.`,
-        { title: 'Field in Use' }
-      );
+    if (!validateFieldUsageForDelete(fieldId, tableId, allViews, tableData, toast)) {
       return;
     }
     
-    // Check general field usage
-    const fieldUsage = checkFieldUsageInViews(fieldId, currentTableViews);
-    if (fieldUsage.isUsedInViews) {
-      const viewNames = fieldUsage.usedInViews.map(v => v.viewName).join(', ');
-      toast.error(
-        `Cannot delete field. It is currently used in: ${viewNames}. Please remove the field from these views first.`,
-        { title: 'Field in Use' }
-      );
-      return;
-    }
     handleDeleteFieldFromHook(fieldId);
   };
 
@@ -384,15 +476,14 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
     }
   };
 
-  const handleFieldOrderChange = async (newFields: any[]) => {
-    try {
-      await actions.updateFieldOrder(newFields, view);
+  const handleFieldOrderChange = (newFields: FormField[]) => {
+    actions.updateFieldOrder(newFields, view).then(() => {
       toast.success('Field order updated!');
       onRefresh();
-    } catch (err: any) {
+    }).catch((err: any) => {
       toast.error('Failed to update field order');
       console.error('Field order error:', err);
-    }
+    });
   };
 
   // Wrapper for handleFieldEdit to add validation
@@ -410,11 +501,47 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
     handleFieldEditFromHook(field);
   };
 
-const handleEditModalSave = async (updates: any) => {
-  if (!editColumn) return;
+  // Wrapper for handleFieldUpdate that captures necessary context
+  const handleFieldUpdate = async (fieldId: string, updates: any) => {
+    const editingField = formFieldsMap.get(fieldId);
+    if (!editingField) return;
 
-  try {
-    // Build the update object with all possible field properties
+    const { changes, uidtChanged } = detectFieldChanges(editingField, updates);
+
+    if (Object.keys(changes).length === 0) {
+      setEditModalOpen(false);
+      setEditColumn(null);
+      return;
+    }
+
+    try {
+      if (uidtChanged) {
+        if (!validateFieldUsageForTypeChange(fieldId, tableId, allViews, tableData, toast)) {
+          return;
+        }
+
+        setPendingEditColumnChanges(changes);
+        setUpdateFieldConfirmModalOpen(true);
+        setEditModalOpen(false);
+      } else {
+        await actions.updateField.mutateAsync({
+          fieldId: fieldId,
+          updatedValue: changes
+        });
+        
+        handleCloseEditModal();
+        toast.success('Field updated successfully');
+        onRefresh?.();
+      }
+    } catch (err) {
+      console.error('Failed to update field:', err);
+      toast.error('Failed to update field');
+    }
+  };
+
+  const handleEditModalSave = async (updates: any) => {
+    if (!editColumn) return;
+
     const updateData = {
       title: updates.title,
       description: updates.description,
@@ -422,238 +549,181 @@ const handleEditModalSave = async (updates: any) => {
       meta: updates.meta,
       required: updates.required,
       config: updates.config,
-      // Add any additional field properties that need to be updated
       column_name: updates.column_name,
       order_index: updates.order_index
     };
 
-    // Call handleFieldUpdate with complete update data
     await handleFieldUpdate(editColumn.id, updateData);
-  } catch (err) {
-    console.error('Failed to save field updates:', err);
-    toast.error('Failed to update field');
-  }
-};
+  };
 
-// Optimized with Map for O(1) lookup instead of O(n) find()
-const handleFieldUpdate = async (fieldId: string, updates: any) => {
-  const editingField = formFieldsMap.get(fieldId);
-  if (!editingField) return;
+  const handleConfirmUpdateField = async () => {
+    if (!pendingEditColumnChanges || !editColumn) return;
 
-  // Compare fields for changes
-  const changes: any = {};
-  // Normalize both sides for case-insensitive comparison (uidt might be uppercase, type from modal is lowercase)
-  const uidtChanged = String(editingField.uidt || '').toLowerCase() !== String(updates.type || '').toLowerCase();
-
-  // Build comprehensive changes object
-  if (editingField.title !== updates.title) {
-    changes.title = updates.title;
-  }
-  if ((editingField?.description ?? '') !== (updates.description ?? '')) {
-    changes.description = updates.description;
-  }
-  if (uidtChanged) {
-    changes.uidt = updates.type;
-    // When type changes, use the new meta from the modal (which contains the new type's config)
-    changes.meta = updates.meta || {};
-  } else if (JSON.stringify(editingField.meta ?? {}) !== JSON.stringify(updates.meta ?? {})) {
-    changes.meta = updates.meta;
-  }
-  if (editingField.required !== updates.required) {
-    changes.required = updates.required;
-  }
-  if (JSON.stringify(editingField.config ?? {}) !== JSON.stringify(updates.config ?? {})) {
-    changes.config = updates.config;
-  }
-
-  const hasChanges = Object.keys(changes).length > 0;
-
-  if (!hasChanges) {
-    setEditModalOpen(false);
-    setEditColumn(null);
-    return;
-  }
-
-  try {
-    if (uidtChanged) {
-      // Filter views to only current table
-      const currentTableViews = tableId && allViews
-        ? allViews.filter((view: any) => 
-            String(view.model_id || view.modelId || '') === String(tableId)
-          )
-        : [];
-
-      // Prefer tableData.views (fresh) over allViews (cached)
-      const viewsToUse = tableData?.views && Array.isArray(tableData.views) && tableData.views.length > 0
-        ? tableData.views
-        : allViews;
-
-      // Check if field is used as a CRITICAL field - block type change
-      const criticalFieldUsage = checkCriticalFieldUsageInViews(fieldId, viewsToUse, tableId);
-      
-      if (criticalFieldUsage.isUsedInViews) {
-        const viewNames = criticalFieldUsage.usedInViews.map(v => `${v.viewName} (${v.usageType})`).join(', ');
-        toast.error(
-          `Cannot change field type. This field is used as a critical field in: ${viewNames}. Please change the view configuration first.`,
-          { title: 'Field in Use' }
-        );
-        return;
-      }
-
-      // Check general field usage
-      const fieldUsage = checkFieldUsageInViews(fieldId, currentTableViews);
-      if (fieldUsage.isUsedInViews) {
-        const viewNames = fieldUsage.usedInViews.map(v => v.viewName).join(', ');
-        toast.error(
-          `Cannot change field type. This field is currently used in: ${viewNames}. Please remove the field from these views first, or change the field type in the view settings.`,
-          { title: 'Field in Use' }
-        );
-        return;
-      }
-
-      // Store changes and show confirmation modal for type changes
-      // Don't clear editColumn yet - we need it for the confirmation handler
-      setPendingEditColumnChanges(changes);
-      setUpdateFieldConfirmModalOpen(true);
-      setEditModalOpen(false); // Only close the modal, don't clear editColumn
-    } else {
-      // Direct update for non-type changes
+    try {
       await actions.updateField.mutateAsync({
-        fieldId: fieldId,
-        updatedValue: changes
+        fieldId: editColumn.id,
+        updatedValue: pendingEditColumnChanges
       });
       
-      handleCloseEditModal();
       toast.success('Field updated successfully');
+    } catch (err) {
+      console.error('Failed to update field:', err);
+      toast.error('Failed to update field');
+    } finally {
+      handleCloseUpdateFieldConfirmModal();
+      setEditModalOpen(false);
+      setEditColumn(null);
       onRefresh?.();
     }
-  } catch (err) {
-    console.error('Failed to update field:', err);
-    toast.error('Failed to update field');
-  }
-};
+  };
 
-const handleConfirmUpdateField = async () => {
-  if (!pendingEditColumnChanges || !editColumn) return;
+  // Extract header rendering
+  const renderHeader = () => (
+    <div className="flex-shrink-0 bg-background border-b border-border/50 px-4 py-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <h1 className="text-lg font-semibold text-foreground truncate">Form View</h1>
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            {formFields.length} field{formFields.length === 1 ? '' : 's'}
+          </span>
+        </div>
+        
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {canCreateColumn() && !isReadOnly && (
+            <button
+              ref={addFieldButtonRef}
+              onClick={handleAddField}
+              className="flex items-center gap-1 btn-primary p-2 rounded transition"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Field</span>
+            </button>
+          )}
+          
+          {!isReadOnly && (
+            <button
+              onClick={toggleSidebar}
+              className="p-2 border rounded-xl hover:bg-gray-200 outline-none hover:text-black transition-all duration-200 hover:scale-105"
+              title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+            >
+              {sidebarOpen ? (
+                <PanelRightClose className="w-5 h-5" />
+              ) : (
+                <PanelRight className="w-5 h-5" />
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
-  try {
-    await actions.updateField.mutateAsync({
-      fieldId: editColumn.id,
-      updatedValue: pendingEditColumnChanges
-    });
-    
-    toast.success('Field updated successfully');
-  } catch (err) {
-    console.error('Failed to update field:', err);
-    toast.error('Failed to update field');
-  } finally {
-    handleCloseUpdateFieldConfirmModal();
-    setEditModalOpen(false);
-    setEditColumn(null);
-    onRefresh?.();
-  }
-};
+  // Extract main content rendering - compute props inline to reduce complexity
+  const renderFormPreview = () => {
+    const previewHandlers = isReadOnly ? {
+      onClear: undefined,
+      onSubmit: undefined,
+      onEdit: undefined,
+      onConfigChange: undefined
+    } : {
+      onClear: clearFormData,
+      onSubmit: (e: React.FormEvent) => {
+        e.preventDefault();
+        handleFormSubmit(e);
+      },
+      onEdit: handleFieldEdit,
+      onConfigChange: handleConfigChange
+    };
+
+    return (
+      <div className="flex-1 overflow-y-auto bg-background">
+        <FormPreview
+          config={formConfig}
+          onClear={previewHandlers.onClear}
+          selectedFieldId={selectedFieldId}
+          rowData={rowData}
+          onRowDataChange={handleRowDataChange}
+          onFieldOrderChange={handleFieldOrderChange}
+          onSubmit={previewHandlers.onSubmit}
+          onDeleteField={handleDeleteField}
+          formError={formError}
+          model_id={tableData?.model?.id}
+          row_id={record?.id ? Number(record.id) : undefined}
+          onEdit={previewHandlers.onEdit}
+          onConfigChange={previewHandlers.onConfigChange}
+          isReadOnly={isReadOnly}
+        />
+      </div>
+    );
+  };
+
+  const renderRightPanel = () => {
+    const panelHandlers = isReadOnly ? {
+      onFieldToggle: undefined,
+      onConfigChange: undefined,
+      onFieldUpdate: undefined,
+      onDeleteField: undefined,
+      setVisibleAllFields: undefined,
+      onFieldOrderChange: undefined
+    } : {
+      onFieldToggle: handleFieldToggle,
+      onConfigChange: handleConfigChange,
+      onFieldUpdate: handleFieldUpdate,
+      onDeleteField: handleDeleteField,
+      setVisibleAllFields: handleSetVisibleAllFields,
+      onFieldOrderChange: handleFieldOrderChange
+    };
+
+    return (
+      <div className={sidebarClassName}>
+        {sidebarOpen && (
+          <RightPanel
+            config={formConfig}
+            selectedFieldId={selectedFieldId}
+            editingFieldId={selectedFieldId}
+            onFieldSelect={setSelectedFieldId}
+            onFieldToggle={panelHandlers.onFieldToggle}
+            onConfigChange={panelHandlers.onConfigChange}
+            onFieldUpdate={panelHandlers.onFieldUpdate}
+            onBackToFieldsList={handleBackToFieldsList}
+            onDeleteField={panelHandlers.onDeleteField}
+            setVisibleAllFields={panelHandlers.setVisibleAllFields}
+            onFieldOrderChange={panelHandlers.onFieldOrderChange}
+            isReadOnly={isReadOnly}
+          />
+        )}
+      </div>
+    );
+  };
+
+  const renderMainContent = () => (
+    <div className="flex-1 flex overflow-hidden">
+      {renderFormPreview()}
+      {renderRightPanel()}
+    </div>
+  );
 
   return (
     <div
       className="h-full flex flex-col"
       style={{ backgroundColor: formConfig.appearance?.backgroundColor }}
     >
-      {/* Header with Toggle and Add Field Button */}
-      <div className="flex-shrink-0 bg-background border-b border-border/50 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <h1 className="text-lg font-semibold text-foreground truncate">Form View</h1>
-            <span className="text-sm text-muted-foreground whitespace-nowrap">
-              {formFields.length} field{formFields.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-          
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Inline Add Field Button - only show if user can create columns and not read-only */}
-            {canCreateColumn() && !isReadOnly && (
-              <button
-                ref={addFieldButtonRef}
-                onClick={handleAddField}
-                className="flex items-center gap-1 btn-primary p-2 rounded transition"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Add Field</span>
-              </button>
-            )}
-            
-            {/* Sidebar Toggle Button - hide for read-only users */}
-            {!isReadOnly && (
-              <button
-                onClick={toggleSidebar}
-                className="p-2 border rounded-xl hover:bg-[var(--color-bg-brand-primary)] outline-none hover:text-black transition-all duration-200 hover:scale-105"
-                title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-              >
-                {sidebarOpen ? (
-                  <PanelRightClose className="w-5 h-5" />
-                ) : (
-                  <PanelRight className="w-5 h-5" />
-                )}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Form Preview */}
-        <div className="flex-1 overflow-y-auto bg-background">
-          <FormPreview
-            config={formConfig}
-            onClear={isReadOnly ? undefined : clearFormData}
-            selectedFieldId={selectedFieldId}
-            onFieldSelect={setSelectedFieldId}
-            rowData={rowData}
-            onRowDataChange={handleRowDataChange}
-            onFieldOrderChange={isReadOnly ? undefined : handleFieldOrderChange}
-            onSubmit={isReadOnly ? undefined : (e) => {
-              e.preventDefault(); // Prevent default form submission
-              handleFormSubmit(e);
-            }}
-            onDeleteField={isReadOnly ? undefined : handleDeleteField}
-            formError={formError}
-            // Pass attachment-specific props
-            model_id={tableData?.model?.id}
-            column_id={undefined} // Will be set per field in SortableFormField
-            row_id={record?.id ? Number(record.id) : undefined}
-            onEdit={isReadOnly ? undefined : handleFieldEdit}
-            onConfigChange={isReadOnly ? undefined : handleConfigChange}
-            isReadOnly={isReadOnly}
-          />
-        </div>
-
-        {/* Right Panel - Fields List and Editor */}
-        <div className={`bg-card border-l flex flex-col transition-all duration-300 ease-in-out ${
-          sidebarOpen ? 'w-[400px] opacity-100' : 'w-0 opacity-0 overflow-hidden'
-        }`}>
-          {sidebarOpen && (
-            <RightPanel
-              config={formConfig}
-              selectedFieldId={selectedFieldId}
-              editingFieldId={selectedFieldId}
-              onFieldSelect={setSelectedFieldId}
-              onFieldToggle={isReadOnly ? undefined : handleFieldToggle}
-              onAddField={isReadOnly ? undefined : handleAddField}
-              onConfigChange={isReadOnly ? undefined : handleConfigChange}
-              onFieldUpdate={isReadOnly ? undefined : handleFieldUpdate}
-              onBackToFieldsList={handleBackToFieldsList}
-              onDeleteField={isReadOnly ? undefined : handleDeleteField}
-              setVisibleAllFields={isReadOnly ? undefined : handleSetVisibleAllFields}
-              onFieldOrderChange={isReadOnly ? undefined : handleFieldOrderChange}
-            />
-          )}
-        </div>
-      </div>
+      {renderHeader()}
+      {renderMainContent()}
 
       {/* New Column Modal */}
       {isNewColumnModalOpen && modalPosition && (
-        <div className="fixed inset-0 z-50 bg-modal-backdrop" onClick={handleCloseNewColumnModal} />
+        <button
+          type="button"
+          className="fixed inset-0 z-50 bg-modal-backdrop border-0 p-0 cursor-pointer"
+          onClick={handleCloseNewColumnModal}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              handleCloseNewColumnModal();
+            }
+          }}
+          aria-label="Close modal"
+        />
       )}
       {isNewColumnModalOpen && modalPosition && (
         <Suspense fallback={
@@ -688,9 +758,17 @@ const handleConfirmUpdateField = async () => {
 
       {editModalOpen && editColumn && (
         <>
-          <div
-            className="fixed inset-0 z-50 bg-modal-backdrop"
+          <button
+            type="button"
+            className="fixed inset-0 z-50 bg-modal-backdrop border-0 p-0 cursor-pointer"
             onClick={handleCloseEditModal}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                handleCloseEditModal();
+              }
+            }}
+            aria-label="Close modal"
+            tabIndex={0}
           />
           <Suspense fallback={
             <div className="fixed z-50">

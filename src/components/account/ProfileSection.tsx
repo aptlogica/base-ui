@@ -456,7 +456,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
                 value={isEditing ? (formData.first_name || '') : (userProfile.first_name || '')}
                 onChange={(e) => handleInputChange('first_name', e.target.value)}
                 disabled={isEditing === false}
-                className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 border rounded-xl bg-alpha-white focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
                 placeholder="Enter first name"
               />
             </label>
@@ -471,7 +471,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
                 value={isEditing ? (formData.last_name || '') : (userProfile.last_name || '')}
                 onChange={(e) => handleInputChange('last_name', e.target.value)}
                 disabled={isEditing === false}
-                className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 border rounded-xl bg-alpha-white focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
                 placeholder="Enter last name"
               />
             </label>
@@ -487,7 +487,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
               value={isEditing ? (formData.display_name || '') : (userProfile.display_name || '')}
               onChange={(e) => handleInputChange('display_name', e.target.value)}
               disabled={isEditing === false}
-              className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border rounded-xl bg-alpha-white focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
               placeholder="Enter display name"
             />
           </label>
@@ -561,7 +561,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
                   onDragOver={isEditing ? handleDragOver : undefined}
                   onDrop={isEditing ? handleDrop : undefined}
                   onDragLeave={isEditing ? handleDragLeave : undefined}
-                  className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${avatarUploadStateClass} ${avatarUploadBusyClass}`}
+                  className={`border-2 w-full border-dashed rounded-xl p-8 text-center transition-colors ${avatarUploadStateClass} ${avatarUploadBusyClass}`}
                   onClick={isEditing ? triggerAvatarInput : undefined}
                 >
                   <input
@@ -587,7 +587,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
               onDragOver={isEditing ? handleDragOver : undefined}
               onDrop={isEditing ? handleDrop : undefined}
               onDragLeave={isEditing ? handleDragLeave : undefined}
-              className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${avatarUploadStateClass} ${avatarUploadBusyClass}`}
+              className={`border-2 w-full border-dashed rounded-xl p-8 text-center transition-colors ${avatarUploadStateClass} ${avatarUploadBusyClass}`}
               onClick={isEditing ? triggerAvatarInput : undefined}
             >
               <input

@@ -57,7 +57,7 @@ function convertToISO(date: string, fromFormat: string): string {
     const parts = dateStr.split(separator);
     if (parts.length !== 3) return '';
     const [first, second, third] = parts;
-    return order === 'DD-MM-YYYY' 
+    return order === 'DD-MM-YYYY'
       ? `${third}-${second}-${first}`
       : `${third}-${first}-${second}`;
   };
@@ -112,7 +112,7 @@ function convertFromISO(isoDate: string, toFormat: string): string {
 // Convert date from one format to another
 function convertDateFormat(date: string, fromFormat: string, toFormat: string): string {
   if (!date) return '';
-  
+
   const isoDate = convertToISO(date, fromFormat);
   if (!isoDate) return date;
 
@@ -259,7 +259,7 @@ export const DateField: React.FC<DateProps> = ({
   const prevValueRef = useRef<string | undefined>(undefined);
   const prevDateFormatRef = useRef<string | undefined>(undefined);
   const dateRef = useRef<string>(date);
-  
+
   // Keep ref in sync with state
   useEffect(() => {
     dateRef.current = date;
@@ -550,7 +550,7 @@ export const DateField: React.FC<DateProps> = ({
     const daysInMonth = lastDay.getDate();
     const weeks: (string | null)[][] = [];
     let week: (string | null)[] = new Array(startDay).fill(null);
-    
+
     for (let d = 1; d <= daysInMonth; d++) {
       const dayISO = `${year}-${pad(month + 1)}-${pad(d)}`;
       week.push(dayISO);
@@ -559,12 +559,12 @@ export const DateField: React.FC<DateProps> = ({
         week = [];
       }
     }
-    
+
     if (week.length > 0) {
       while (week.length < 7) week.push(null);
       weeks.push(week);
     }
-    
+
     return weeks;
   };
 
@@ -732,7 +732,6 @@ export const DateField: React.FC<DateProps> = ({
                         onClick={(e) => {
                           e.stopPropagation();
                           handleYearSelect(yearOption);
-                          // Optionally: setStartYear(yearOption); // to re-page on select
                         }}
                       >
                         {yearOption}
@@ -762,20 +761,28 @@ export const DateField: React.FC<DateProps> = ({
       </div>
 
       <div className="grid grid-cols-7 gap-1">
-        {weeks.flat().map((day, idx) => (
-          <button
-            type="button"
-            key={idx}
-            className={`w-9 h-9 rounded-full text-center text-sm font-medium hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${day === convertDateFormat(date, dateFormat, 'YYYY-MM-DD') ? 'bg-[var(--color-bg-brand-solid)] text-black font-bold' :
-              day === todayISO ? 'border border-[var(--color-bg-brand-primary)] text-primary' :
-                'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)]'
-              } ${day ? '' : 'opacity-0 pointer-events-none'}`}
-            onClick={() => day && !readOnly && handleDateSelect(day)}
-            disabled={!day || readOnly || (min && day < convertDateFormat(min, dateFormat, 'YYYY-MM-DD')) || (max && day > convertDateFormat(max, dateFormat, 'YYYY-MM-DD')) ? true : false}
-          >
-            {day ? Number(day.split('-')[2]) : ''}
-          </button>
-        ))}
+        {weeks.flat().map((day, idx) => {
+          let dayClasses = '';
+          if (day === convertDateFormat(date, dateFormat, 'YYYY-MM-DD')) {
+            dayClasses = 'bg-[var(--color-bg-brand-solid)] text-black font-bold';
+          } else if (day === todayISO) {
+            dayClasses = 'border border-[var(--color-bg-brand-primary)] text-primary';
+          } else {
+            dayClasses = 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)]';
+          }
+
+          return (
+            <button
+              type="button"
+              key={idx}
+              className={`w-9 h-9 rounded-full text-center text-sm font-medium hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${dayClasses} ${day ? '' : 'opacity-0 pointer-events-none'}`}
+              onClick={() => day && !readOnly && handleDateSelect(day)}
+              disabled={!!(!day || readOnly || (min && day < convertDateFormat(min, dateFormat, 'YYYY-MM-DD')) || (max && day > convertDateFormat(max, dateFormat, 'YYYY-MM-DD')))}
+            >
+              {day ? Number(day.split('-')[2]) : ''}
+            </button>
+          );
+        })}
       </div>
 
       {/* Footer with Today button */}

@@ -20,10 +20,246 @@ import { formatCompactNumber } from '../../../utils/helpers';
 import { Loader } from '../../../components/ui/Loader';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
 import type { GanttTask } from '../hooks/useGanttData';
+import { normalizeFieldType } from '../../../utils/fieldType';
+import { ColumnConfig } from '../../../plugins/GridViewPlugin/types/grid.types';
+
+// TaskCard component - moved outside to prevent recreation on every render
+const TaskCard = React.memo(({ task, onEdit, onDelete }: { task: GanttTask; onEdit?: () => void; onDelete?: (e: React.MouseEvent) => void }) => {
+  const duration = React.useMemo(() => 
+    Math.ceil((task.endDate.getTime() - task.startDate.getTime()) / (1000 * 60 * 60 * 24)),
+    [task.endDate, task.startDate]
+  );
+  const isOverdue = task.status === 'overdue';
+  const isCompleted = task.status === 'completed';
+  
+  return (
+    <div
+      className={`bg-card border rounded-xl transition-all duration-200 relative overflow-hidden ${onEdit ? 'hover:border-gray-300 hover:shadow-md cursor-pointer group' : ''}`}
+      onClick={onEdit}
+    >
+      {/* Color accent bar */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-1 rounded-tl-xl rounded-bl-xl"
+        style={{ backgroundColor: task.color }}
+      />
+      
+      <div className="pl-4 pr-3 py-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            {/* Task Title */}
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="font-semibold text-gray-900 text-sm truncate flex-1">
+                {task.name}
+              </h3>
+              {/* Status Badges */}
+              {isOverdue && (
+                <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-semibold rounded-full flex-shrink-0">
+                  OVERDUE
+                </span>
+              )}
+              {isCompleted && (
+                <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-semibold rounded-full flex-shrink-0">
+                  DONE
+                </span>
+              )}
+            </div>
+
+            {/* Date Range */}
+            <div className="flex items-center gap-1.5 mb-2 text-xs text-gray-600">
+              <Calendar className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+              <span className="font-medium">
+                {task.startDate.toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric'
+                })} - {task.endDate.toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric'
+                })}
+              </span>
+            </div>
+
+            {/* Duration and Progress */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                <span className="font-medium">{duration}</span>
+                <span>days</span>
+              </div>
+              
+              {task.progress > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${Math.min(100, Math.max(0, task.progress))}%`,
+                        backgroundColor: task.progress >= 100 ? '#10b981' : task.color
+                      }}
+                    />
+                  </div>
+                  <span className="text-xs font-semibold text-gray-600 min-w-[2.5rem]">
+                    {task.progress}%
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Delete Button */}
+          {onDelete && (
+            <button
+              className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md flex-shrink-0 ml-1"
+              onClick={onDelete}
+              title="Delete Record"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+TaskCard.displayName = 'TaskCard';
+
+// ChartTask component - moved outside to prevent recreation on every render
+const ChartTask = React.memo(({ 
+  task, 
+  position, 
+  rowTop,
+  onEdit,
+  onMouseEnter,
+  onMouseLeave,
+  showTooltip,
+  tooltipTask,
+  tooltipLines,
+  tooltipRef,
+  getTooltipClasses,
+  getTooltipArrowClasses
+}: {
+  task: GanttTask;
+  position: { left: number; width: number };
+  rowTop: number;
+  onEdit?: () => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  showTooltip: boolean;
+  tooltipTask: GanttTask | null;
+  tooltipLines: string[];
+  tooltipRef: React.RefObject<HTMLDivElement | null>;
+  getTooltipClasses: () => string;
+  getTooltipArrowClasses: () => string;
+}) => {
+  const isMilestone = position.width < 5;
+  const progress = Math.min(Math.max(task.progress || 0, 0), 100);
+  const isOverdue = task.status === 'overdue';
+  const isCompleted = task.status === 'completed';
+  
+  return (
+    <div
+      className={`absolute group transition-all duration-200 ${
+        onEdit ? 'cursor-pointer' : ''
+      } ${
+        isMilestone ? 'w-0 h-0' : 'bg-background border rounded-xl'
+      }`}
+      style={{
+        left: position.left,
+        top: rowTop,
+        width: isMilestone ? 0 : position.width,
+        height: isMilestone ? 0 : 40,
+      }}
+      onClick={onEdit}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      {/* Color accent bar */}
+      {!isMilestone && (
+        <div
+          className="absolute left-0 top-0 bottom-0 w-0 rounded-tl-xl rounded-bl-xl"
+          style={{ backgroundColor: task.color }}
+        />
+      )}
+
+      {/* Task Content */}
+      {!isMilestone && (
+        <div className="relative pl-4 pr-3 py-2.5 h-full flex items-center bg-card border-l-4 rounded-tr-xl rounded-br-xl" style={{ borderColor: task.color }}>
+          <div className="flex items-center justify-between gap-2 flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <h3 className="font-semibold text-gray-900 text-sm truncate">
+                {task.name}
+              </h3>
+              {/* Status Badges */}
+              {isOverdue && (
+                <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-semibold rounded-full flex-shrink-0">
+                  OVERDUE
+                </span>
+              )}
+              {isCompleted && (
+                <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-semibold rounded-full flex-shrink-0">
+                  DONE
+                </span>
+              )}
+            </div>
+            
+            {/* Progress indicator */}
+            {task.progress > 0 && (
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${progress}%`,
+                      backgroundColor: task.progress >= 100 ? '#10b981' : task.color
+                    }}
+                  />
+                </div>
+                <span className="text-xs font-semibold text-gray-600 min-w-[2rem]">
+                  {task.progress}%
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tooltip */}
+      {showTooltip && tooltipTask?.id === task.id && tooltipLines.length > 0 && (
+        <div ref={tooltipRef} className={getTooltipClasses()}>
+          <div className="space-y-1">
+            {tooltipLines.map((line, idx) => {
+              // Use line content + index as key since lines might not be unique
+              const lineKey = `${line}-${idx}`;
+              return (
+                <div key={lineKey} className={idx === 0 ? 'font-semibold text-primary text-sm' : 'text-secondary text-xs'}>
+                  {line}
+                </div>
+              );
+            })}
+          </div>
+          <div className={getTooltipArrowClasses()}></div>
+        </div>
+      )}
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if position or task data actually changed
+  return (
+    prevProps.position.left === nextProps.position.left &&
+    prevProps.position.width === nextProps.position.width &&
+    prevProps.rowTop === nextProps.rowTop &&
+    prevProps.task.id === nextProps.task.id &&
+    prevProps.task.progress === nextProps.task.progress &&
+    prevProps.task.status === nextProps.task.status &&
+    prevProps.showTooltip === nextProps.showTooltip &&
+    prevProps.tooltipTask?.id === nextProps.tooltipTask?.id
+  );
+});
+ChartTask.displayName = 'ChartTask';
 
 interface GanttChartProps {
   tableData?: TableResponse;
-  onRefresh: () => void;
+  onRefresh?: () => void;
   actions?: {
     addRow: any;
     insertRowData: any;
@@ -43,7 +279,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
   const baseId = useMemo(() => String(tableData?.data?.model?.base_id ?? ''), [tableData?.data?.model?.base_id]);
   
   // Check permissions for read-only access
-  const { isBaseReadOnly, canCreateRecord, canUpdateRecord, canDeleteRecord } = useBaseAccess(baseId || undefined);
+  const { 
+    isBaseReadOnly, 
+    canCreateRecord, 
+    canUpdateRecord, 
+    canDeleteRecord 
+  } = useBaseAccess(baseId || undefined);
   
   // Safe handlers pattern: Check read-only once at top level
   const isReadOnly = isBaseReadOnly();
@@ -56,16 +297,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
     filters,
     sorts,
     localFieldConfig,
-    visibleColumns,
     filteredTasks,
     sortedTasksForSidebar,
-    handleRealTimeFilter,
     handleAddFilter,
     handleRemoveFilter,
     handleUpdateFilter,
     handleSortChange,
-    handleFieldToggle,
-    handleFieldOrderChange,
+    handleFieldToggle
   } = useGanttViewConfig({
     view: processedData.currentView,
     columns: processedData.columns,
@@ -76,12 +314,9 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
 
   // Timeline hook
   const {
-    timelineStart,
-    timelineEnd,
     dayWidth,
     timelineDays,
     showTooltip,
-    tooltipPosition,
     tooltipTask,
     tooltipRef,
     tooltipLines,
@@ -121,7 +356,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
     tasks: processedData.tasks,
     tableData,
     actions,
-    onRefresh,
+    onRefresh: onRefresh || (() => {}),
     columns: processedData.columns,
     rawRecords: tableData?.data?.records || [],
     startDateField: processedData.startDateField,
@@ -139,39 +374,52 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
   } = useGanttFieldConfig({
     currentView: processedData.currentView,
     updateView: actions?.updateView,
-    onRefresh,
-    startDateField: processedData.startDateField,
-    endDateField: processedData.endDateField,
-    progressField: processedData.progressField,
-    completionField: processedData.completionField,
+    onRefresh: onRefresh || (() => {}),
   });
 
   // Memoize column mappings to prevent recreation on every render
-  const fieldsPopoverColumns = useMemo(() => {
-    return processedData.columns.map(col => ({
-      key: col.id,
-      id: col.id,
-      title: col.title,
-      type: col.uidt,
-      system: col.system || false
-    }));
+  const fieldsPopoverColumns = useMemo((): ColumnConfig[] => {
+    return processedData.columns.map((col): ColumnConfig => {
+      const colAny = col as unknown as Record<string, unknown>;
+      return {
+        key: col.id || '',
+        id: col.id ? String(col.id) : undefined,
+        column_name: col.column_name,
+        title: col.title || col.column_name || '',
+        type: normalizeFieldType(col.uidt || 'text') as any,
+        uidt: col.uidt,
+        position: col.order_index || 0,
+        order_index: col.order_index || 0,
+        isSystem: col.system || false,
+        system: col.system || false,
+        hidden: Boolean(colAny.hidden),
+        is_hidden: Boolean(colAny.isHidden || colAny.is_hidden),
+        meta: col.meta,
+        config: (colAny.config || col.meta || {}),
+      };
+    });
   }, [processedData.columns]);
 
-  const filterPopoverColumns = useMemo(() => {
-    return processedData.columns.map((col: any) => ({
-      key: col.column_name,
-      column_name: col.column_name,
-      title: col.title,
-      type: col.uidt,
-      uidt: col.uidt,
-      id: col.id,
-      config: col.config || col.meta || {}, // Include config for SingleSelect/MultiSelect options
-      options: col.options || col.config?.options || col.meta?.options, // Include options directly
-      meta: col.meta, // Include meta as fallback
-      hidden: col.hidden,
-      isHidden: col.isHidden,
-      system: col.system
-    }));
+  const filterPopoverColumns = useMemo((): ColumnConfig[] => {
+    return processedData.columns.map((col: any): ColumnConfig => {
+      const colAny = col as unknown as Record<string, unknown>;
+      return {
+        key: col.column_name || col.id || '',
+        id: col.id ? String(col.id) : undefined,
+        column_name: col.column_name,
+        title: col.title || col.column_name || '',
+        type: normalizeFieldType(col.uidt || 'text') as any,
+        uidt: col.uidt,
+        position: col.order_index || 0,
+        order_index: col.order_index || 0,
+        isSystem: col.system || false,
+        system: col.system || false,
+        hidden: Boolean(colAny.hidden),
+        is_hidden: Boolean(colAny.isHidden || colAny.is_hidden),
+        meta: col.meta,
+        config: (colAny.config || col.meta || {}),
+      };
+    });
   }, [processedData.columns]);
 
   const sortPopoverColumns = useMemo(() => {
@@ -225,235 +473,42 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
     return () => container.removeEventListener('scroll', handleScroll);
   }, [hasMore, isLoadingMore, handleLoadMore]);
 
-  // Memoize task card component to prevent unnecessary re-renders
-  const TaskCard = React.memo(({ task, onEdit, onDelete }: { task: GanttTask; onEdit?: () => void; onDelete?: (e: React.MouseEvent) => void }) => {
-    const duration = useMemo(() => 
-      Math.ceil((task.endDate.getTime() - task.startDate.getTime()) / (1000 * 60 * 60 * 24)),
-      [task.endDate, task.startDate]
-    );
-    const isOverdue = task.status === 'overdue';
-    const isCompleted = task.status === 'completed';
-    
-    return (
-      <div
-        className={`bg-card border rounded-xl transition-all duration-200 relative overflow-hidden ${onEdit ? 'hover:border-gray-300 hover:shadow-md cursor-pointer group' : ''}`}
-        onClick={onEdit}
-      >
-        {/* Color accent bar */}
-        <div
-          className="absolute left-0 top-0 bottom-0 w-1 rounded-tl-xl rounded-bl-xl"
-          style={{ backgroundColor: task.color }}
-        />
-        
-        <div className="pl-4 pr-3 py-3.5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              {/* Task Title */}
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="font-semibold text-gray-900 text-sm truncate flex-1">
-                  {task.name}
-                </h3>
-                {/* Status Badges */}
-                {isOverdue && (
-                  <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-semibold rounded-full flex-shrink-0">
-                    OVERDUE
-                  </span>
-                )}
-                {isCompleted && (
-                  <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-semibold rounded-full flex-shrink-0">
-                    DONE
-                  </span>
-                )}
-              </div>
+  // Helper functions to extract nested ternary operations
+  const getTaskCardEditHandler = useCallback((task: GanttTask) => {
+    if (isReadOnly) return undefined;
+    if (!canUpdateRecord()) return undefined;
+    return () => handleEditTask(task);
+  }, [isReadOnly, canUpdateRecord, handleEditTask]);
 
-              {/* Date Range */}
-              <div className="flex items-center gap-1.5 mb-2 text-xs text-gray-600">
-                <Calendar className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                <span className="font-medium">
-                  {task.startDate.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric'
-                  })} - {task.endDate.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric'
-                  })}
-                </span>
-              </div>
+  const getTaskCardDeleteHandler = useCallback((task: GanttTask) => {
+    if (isReadOnly) return undefined;
+    if (!canDeleteRecord()) return undefined;
+    return (e: React.MouseEvent) => {
+      e.stopPropagation();
+      handleDeleteTask(task);
+    };
+  }, [isReadOnly, canDeleteRecord, handleDeleteTask]);
 
-              {/* Duration and Progress */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <span className="font-medium">{duration}</span>
-                  <span>days</span>
-                </div>
-                
-                {task.progress > 0 && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-300"
-                        style={{
-                          width: `${Math.min(100, Math.max(0, task.progress))}%`,
-                          backgroundColor: task.progress >= 100 ? '#10b981' : task.color
-                        }}
-                      />
-                    </div>
-                    <span className="text-xs font-semibold text-gray-600 min-w-[2.5rem]">
-                      {task.progress}%
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
+  const getChartTaskEditHandler = useCallback((task: GanttTask) => {
+    if (isReadOnly) return undefined;
+    if (!canUpdateRecord()) return undefined;
+    return () => handleEditTask(task);
+  }, [isReadOnly, canUpdateRecord, handleEditTask]);
 
-            {/* Delete Button */}
-            {onDelete && (
-              <button
-                className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md flex-shrink-0 ml-1"
-                onClick={onDelete}
-                title="Delete Record"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  });
-  TaskCard.displayName = 'TaskCard';
+  const getEditModalDeleteHandler = useCallback((): ((recordId: string) => void) | undefined => {
+    if (isReadOnly) return undefined;
+    if (!canDeleteRecord()) return undefined;
+    return (recordId: string) => {
+      void handleDeleteRecord(recordId);
+    };
+  }, [isReadOnly, canDeleteRecord, handleDeleteRecord]);
 
-  // Memoized Chart Task component - only re-renders when position or task data changes
-  const ChartTask = React.memo(({ 
-    task, 
-    position, 
-    rowTop,
-    onEdit,
-    onMouseEnter,
-    onMouseLeave,
-    showTooltip,
-    tooltipTask,
-    tooltipLines,
-    tooltipRef,
-    getTooltipClasses,
-    getTooltipArrowClasses
-  }: {
-    task: GanttTask;
-    position: { left: number; width: number };
-    rowTop: number;
-    onEdit?: () => void;
-    onMouseEnter: () => void;
-    onMouseLeave: () => void;
-    showTooltip: boolean;
-    tooltipTask: GanttTask | null;
-    tooltipLines: string[];
-    tooltipRef: React.RefObject<HTMLDivElement | null>;
-    getTooltipClasses: () => string;
-    getTooltipArrowClasses: () => string;
-  }) => {
-    const isMilestone = position.width < 5;
-    const progress = Math.min(Math.max(task.progress || 0, 0), 100);
-    const isOverdue = task.status === 'overdue';
-    const isCompleted = task.status === 'completed';
-    
-    return (
-      <div
-        className={`absolute group transition-all duration-200 ${
-          onEdit ? 'cursor-pointer' : ''
-        } ${
-          isMilestone ? 'w-0 h-0' : 'bg-background border rounded-xl'
-        }`}
-        style={{
-          left: position.left,
-          top: rowTop,
-          width: isMilestone ? 0 : position.width,
-          height: isMilestone ? 0 : 40,
-        }}
-        onClick={onEdit}
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={onMouseLeave}
-      >
-        {/* Color accent bar */}
-        {!isMilestone && (
-          <div
-            className="absolute left-0 top-0 bottom-0 w-0 rounded-tl-xl rounded-bl-xl"
-            style={{ backgroundColor: task.color }}
-          />
-        )}
-
-        {/* Task Content */}
-        {!isMilestone && (
-          <div className="relative pl-4 pr-3 py-2.5 h-full flex items-center bg-card border-l-4 rounded-tr-xl rounded-br-xl" style={{ borderColor: task.color }}>
-            <div className="flex items-center justify-between gap-2 flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <h3 className="font-semibold text-gray-900 text-sm truncate">
-                  {task.name}
-                </h3>
-                {/* Status Badges */}
-                {isOverdue && (
-                  <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-semibold rounded-full flex-shrink-0">
-                    OVERDUE
-                  </span>
-                )}
-                {isCompleted && (
-                  <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-semibold rounded-full flex-shrink-0">
-                    DONE
-                  </span>
-                )}
-              </div>
-              
-              {/* Progress indicator */}
-              {task.progress > 0 && (
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{
-                        width: `${progress}%`,
-                        backgroundColor: task.progress >= 100 ? '#10b981' : task.color
-                      }}
-                    />
-                  </div>
-                  <span className="text-xs font-semibold text-gray-600 min-w-[2rem]">
-                    {task.progress}%
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Tooltip */}
-        {showTooltip && tooltipTask?.id === task.id && tooltipLines.length > 0 && (
-          <div ref={tooltipRef} className={getTooltipClasses()}>
-            <div className="space-y-1">
-              {tooltipLines.map((line, idx) => (
-                <div key={idx} className={idx === 0 ? 'font-semibold text-primary text-sm' : 'text-secondary text-xs'}>
-                  {line}
-                </div>
-              ))}
-            </div>
-            <div className={getTooltipArrowClasses()}></div>
-          </div>
-        )}
-      </div>
-    );
-  }, (prevProps, nextProps) => {
-    // Custom comparison: only re-render if position or task data actually changed
-    return (
-      prevProps.position.left === nextProps.position.left &&
-      prevProps.position.width === nextProps.position.width &&
-      prevProps.rowTop === nextProps.rowTop &&
-      prevProps.task.id === nextProps.task.id &&
-      prevProps.task.progress === nextProps.task.progress &&
-      prevProps.task.status === nextProps.task.status &&
-      prevProps.showTooltip === nextProps.showTooltip &&
-      prevProps.tooltipTask?.id === nextProps.tooltipTask?.id
-    );
-  });
-  ChartTask.displayName = 'ChartTask';
+  const getEditModalDuplicateHandler = useCallback((): ((recordId: string) => void) | undefined => {
+    if (isReadOnly) return undefined;
+    return (recordId: string) => {
+      void handleDuplicateRecord(recordId);
+    };
+  }, [isReadOnly, handleDuplicateRecord]);
 
   // Virtualization for chart tasks
   const chartScrollParentRef = useRef<HTMLDivElement>(null);
@@ -551,19 +606,17 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
                 columns={fieldsPopoverColumns}
                 fieldConfig={localFieldConfig}
                 onFieldToggle={handleFieldToggle}
-                tableId={String(tableData?.data?.model?.id || '')}
                 label="Fields"
                 iconComponent={Layers}
               />
             )}
-            {handleAddFilter && (
+            {handleAddFilter && handleRemoveFilter && handleUpdateFilter && (
               <FilterPopover
                 columns={filterPopoverColumns}
                 filters={filters}
                 onAddFilter={handleAddFilter}
                 onRemoveFilter={handleRemoveFilter}
                 onUpdateFilter={handleUpdateFilter}
-                onRealTimeFilter={handleRealTimeFilter}
               />
             )}
             {/* New Record Button - only show if user can create records and not read-only */}
@@ -655,11 +708,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
                     <TaskCard
                       key={task.id}
                       task={task}
-                      onEdit={isReadOnly ? undefined : (canUpdateRecord() ? () => handleEditTask(task) : undefined)}
-                      onDelete={isReadOnly ? undefined : (canDeleteRecord() ? (e) => {
-                        e.stopPropagation();
-                        handleDeleteTask(task);
-                      } : undefined)}
+                      onEdit={getTaskCardEditHandler(task)}
+                      onDelete={getTaskCardDeleteHandler(task)}
                     />
                   ))}
                 </div>
@@ -727,7 +777,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
                   task={task}
                   position={position}
                   rowTop={rowTop}
-                  onEdit={isReadOnly ? undefined : (canUpdateRecord() ? () => handleEditTask(task) : undefined)}
+                  onEdit={getChartTaskEditHandler(task)}
                   onMouseEnter={() => handleTaskMouseEnter(task)}
                   onMouseLeave={handleTaskMouseLeave}
                   showTooltip={showTooltip}
@@ -788,8 +838,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
           title="Edit record"
           submitLabel="Update record"
           onSuccess={handleEditSuccess}
-          onDelete={isReadOnly ? undefined : (canDeleteRecord() ? handleDeleteRecord : undefined)}
-          onDuplicate={isReadOnly ? undefined : handleDuplicateRecord}
+          onDelete={getEditModalDeleteHandler()}
+          onDuplicate={getEditModalDuplicateHandler()}
           initialValues={getEditInitialValues()}
         />
       )}

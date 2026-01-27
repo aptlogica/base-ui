@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import type { FormField } from '../../../types/form';
 
 export function useFormModals() {
   // Modal states
@@ -6,10 +7,10 @@ export function useFormModals() {
   const [deleteConfirmModalOpen, setDeleteConfirmModalOpen] = useState(false);
   const [fieldToDelete, setFieldToDelete] = useState<string | null>(null);
   const [modalPosition, setModalPosition] = useState<{ top: number; left: number } | null>(null);
-  const [editColumn, setEditColumn] = useState<any | null>(null);
+  const [editColumn, setEditColumn] = useState<FormField | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [updateFieldConfirmModalOpen, setUpdateFieldConfirmModalOpen] = useState(false);
-  const [pendingEditColumnChanges, setPendingEditColumnChanges] = useState<any | null>(null);
+  const [pendingEditColumnChanges, setPendingEditColumnChanges] = useState<Record<string, unknown> | null>(null);
   
   const addFieldButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -37,7 +38,7 @@ export function useFormModals() {
   }, []);
 
   // Handle field edit
-  const handleFieldEdit = useCallback((field: any) => {
+  const handleFieldEdit = useCallback((field: FormField) => {
     setEditColumn(field);
     setEditModalOpen(true);
   }, []);

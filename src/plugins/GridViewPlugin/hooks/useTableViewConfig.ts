@@ -68,12 +68,12 @@ export function useTableViewConfig({
   // Sync local view state from external viewConfig/meta when it changes
   useEffect(() => {
     const configObj = getConfigObj(baseMeta);
-    setViewConfigState(prev => ({
+    setViewConfigState({
       filters: Array.isArray(configObj.filters) ? configObj.filters as FilterType[] : [],
       groupBy: Array.isArray(configObj.groupBy) ? configObj.groupBy as GroupByItem[] : [],
       sorts: Array.isArray(configObj.sorts) ? configObj.sorts as SortType[] : [],
       columnWidths: configObj.columnWidths || {},
-    }));
+    });
   }, [baseMeta, getConfigObj]);
 
   // Initialize local field config from view meta or generate from columns
@@ -227,7 +227,7 @@ export function useTableViewConfig({
   const handleGroupByChange = useCallback(async (newGroupBy: GroupByItem[] | ((prev: GroupByItem[]) => GroupByItem[])) => {
     const resolvedGroupBy = typeof newGroupBy === 'function' ? newGroupBy(viewConfigState.groupBy) : newGroupBy;
     // Filter out empty groups (with empty column) before saving
-    const validGroupBy = Array.isArray(resolvedGroupBy) ? resolvedGroupBy.filter(g => g.column && g.column.trim()) : [];
+    const validGroupBy = Array.isArray(resolvedGroupBy) ? resolvedGroupBy.filter(g => g.column?.trim()) : [];
     const newConfig = { ...viewConfigState, groupBy: validGroupBy };
     setViewConfigState(newConfig); // Always update local state
     // Only persist to backend if NOT read-only
@@ -265,7 +265,7 @@ export function useTableViewConfig({
           id: c.id,
           position: maxPosition + 1 + idx,
           // Hide system fields by default, except Title field
-          isHidden: c.isSystem && c.key?.toLowerCase() !== 'title' ? true : false
+          isHidden: c.isSystem && c.key?.toLowerCase() !== 'title'
         }))
       ];
 
@@ -292,7 +292,7 @@ export function useTableViewConfig({
     setLocalFieldConfig(prevConfig => {
       const updatedFieldConfig = prevConfig.map((fc: any) => {
         if (String(fc.id) === String(fieldId)) {
-          return { ...fc, isHidden: !Boolean(fc.isHidden) };
+          return { ...fc, isHidden: !fc.isHidden };
         }
         return fc;
       });
@@ -359,8 +359,9 @@ export function useTableViewConfig({
             }
           }
         });
-      } catch (error: any) {
-        console.error('Failed to save field order:', error);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Failed to save field order:', errorMessage);
       }
     }
   }, [localFieldConfig, baseMeta, effectiveViewId, updateViewMutation]);

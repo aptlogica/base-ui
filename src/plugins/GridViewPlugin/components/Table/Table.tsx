@@ -647,7 +647,6 @@ export const Table: React.FC<TableProps> = ({
                   fieldConfig={localFieldConfig}
                   onFieldToggle={handleFieldToggle}
                   onEnsureAllFieldsRegistered={handleEnsureAllFieldsRegistered}
-                  tableId={String(tableId || '')}
                   label="Fields"
                   iconComponent={List}
                 />
@@ -658,7 +657,6 @@ export const Table: React.FC<TableProps> = ({
                 onAddFilter={handleAddFilter}
                 onRemoveFilter={handleRemoveFilter}
                 onUpdateFilter={handleUpdateFilter}
-                onRealTimeFilter={handleRealTimeFilter}
               />
               {!isBaseReadOnly() && (
                 <GroupPopover
@@ -837,14 +835,12 @@ export const Table: React.FC<TableProps> = ({
                     selectedRows={selectedRows}
                     onRowSelect={handleRowSelect}
                     onCellChange={handleCellChange}
-                    onDelete={handleDelete}
                     onContextMenu={handleContextMenu}
                     activeCell={activeCell}
                     setActiveCell={setActiveCell}
                     tableId={tableId}
                     height={tableBodyHeight}
                     width={totalWidth}
-                    rowHeight={40}
                     groupedData={groupedData}
                     expandedGroups={expandedGroups}
                     setExpandedGroups={setExpandedGroups}
@@ -908,7 +904,19 @@ export const Table: React.FC<TableProps> = ({
         <div className="ml-auto flex items-center gap-3 text-sm">
           {/* Virtualization is always enabled - indicator removed to reduce UI clutter */}
           <div className="text-muted-foreground">
-            {selectedRows?.size > 0 ? `${formatCompactNumber(selectedRows?.size)} selected` : ''} {selectedRows?.size > 0 ? `•` : ''} {formatCompactNumber(filteredAndSortedData.length)} rows{hasMore && ` (${formatCompactNumber(paginatedData.length)} loaded)`}
+            {selectedRows?.size > 0 && (
+              <>
+                <span>{formatCompactNumber(selectedRows.size)} selected</span>
+                <span className="mx-2">•</span>
+              </>
+            )}
+            {hasMore ? (
+              <span>
+                Showing {formatCompactNumber(paginatedData.length)} of {formatCompactNumber(filteredAndSortedData.length)} rows
+              </span>
+            ) : (
+              <span>{formatCompactNumber(filteredAndSortedData.length)} {filteredAndSortedData.length === 1 ? 'row' : 'rows'}</span>
+            )}
           </div>
         </div>
       </div>

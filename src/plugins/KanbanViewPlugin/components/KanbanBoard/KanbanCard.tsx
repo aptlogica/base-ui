@@ -1,8 +1,6 @@
 import React, { memo, useMemo, useState, useEffect } from 'react';
-import { MoreHorizontal, Pencil, Trash2, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getFieldTypeIconWithMargin } from '../../../../types/fieldTypes';
-import FieldRenderer from '../../../FormViewPlugin/components/shared/FieldRenderer';
-import { normalizeFieldType } from '../../../../utils/fieldType';
 import { GridColumn } from '../../../GridViewPlugin/types/grid.types';
 import { FieldDisplay } from '../../../../components/shared/FieldDisplay';
 
@@ -10,11 +8,9 @@ interface KanbanCardProps {
   card: any;
   columns: GridColumn[];
   fieldConfig?: Array<{ id: string; position: number; isHidden: boolean }>;
-  groupCol?: GridColumn | null; // The field used for grouping (should be excluded from display)
+  groupCol?: GridColumn | null;
   isDragging?: boolean;
   onEdit?: (cardId: string) => void;
-  onDelete?: (cardId: string) => void;
-  onDuplicate?: (cardId: string) => void;
 }
 
 const KanbanCard = memo<KanbanCardProps>((props) => {
@@ -25,8 +21,6 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
     groupCol,
     isDragging = false,
     onEdit,
-    onDelete,
-    onDuplicate
   } = props;
 
   // Create fieldConfig Map for O(1) lookups (shared across multiple useMemos)
@@ -46,29 +40,16 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
       return aPosition - bPosition;
     });
 
-    // Filter by visibility using fieldConfig (like Grid view)
     return sortedColumns.filter(column => {
-      if (!column.id) return true; // Show columns without IDs (fallback)
-
-      // Skip the grouping column (only the one actually used for grouping, not all select fields)
-      // This allows single select fields that aren't used for grouping to be displayed
+      if (!column.id) return true;
       if (groupCol && String(column.id) === String(groupCol.id)) return false;
-
-      // Include attachment fields - they can be toggled and shown as fields (like Gallery)
-
       const fieldConfigEntry = fieldConfigMap.get(String(column.id));
       if (fieldConfigEntry) {
-        return !fieldConfigEntry.isHidden; // Show if not hidden in fieldConfig
+        return !fieldConfigEntry.isHidden;
       }
-
-      // If no fieldConfig entry exists, default to hidden (consistent with Gallery view)
       return false;
     });
   }, [columns, fieldConfigMap, groupCol]);
-
-  const titleCol = useMemo(() => {
-    return visibleColumns.find(c => c.uidt === 'text') || visibleColumns[0];
-  }, [visibleColumns]);
 
   // Include Title in detailCols so it displays like other fields
   const detailCols = useMemo(() => visibleColumns, [visibleColumns]);
@@ -88,7 +69,7 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
 
   // Get all image attachments from card data
   const allImages = useMemo(() => {
-    if (!imageColumn || !imageColumn.column_name) return [];
+    if (!imageColumn?.column_name) return [];
 
     const attachmentValue = card?.[imageColumn.column_name] || card?.data?.[imageColumn.column_name];
     if (!attachmentValue || (typeof attachmentValue === 'object' && Object.keys(attachmentValue).length === 0)) return [];
@@ -168,7 +149,7 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
     e.dataTransfer.setData('sourceIndex', card._meta.position.toString());
     // Get source stack ID from the card's parent stack (passed via props or context)
     const stackElement = e.currentTarget.closest('.kanban-stack');
-    const sourceStackId = stackElement?.getAttribute('data-stack-id') || '';
+    const sourceStackId = stackElement?.dataset?.stackId || '';
     if (sourceStackId) {
       e.dataTransfer.setData('sourceStackId', sourceStackId);
     }
@@ -182,13 +163,11 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
   }, [card._meta.id, card._meta.position]);
 
   const handleDragEnd = React.useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    // Remove the drag effect classes
     const element = e.currentTarget;
     element.classList.remove('opacity-50', 'rotate-2', 'shadow-lg');
   }, []);
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const menuRef = React.useRef<HTMLDivElement>(null);
   const menuOwnerId = React.useRef(Symbol('kanban-card-menu'));
 
@@ -218,34 +197,9 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
         setMenuOpen(false);
       }
     };
-    window.addEventListener('kanban-menu-open', onOtherMenuOpen as EventListener);
-    return () => window.removeEventListener('kanban-menu-open', onOtherMenuOpen as EventListener);
+    globalThis.addEventListener('kanban-menu-open', onOtherMenuOpen as EventListener);
+    return () => globalThis.removeEventListener('kanban-menu-open', onOtherMenuOpen as EventListener);
   }, []);
-
-  const handleMenuMouseDown = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-
-  const handleMenuButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-    setMenuPos({ x: rect.right, y: rect.bottom + 4 });
-    // Inform others to close their menus
-    window.dispatchEvent(new CustomEvent('kanban-menu-open', { detail: { source: menuOwnerId.current } }));
-    setMenuOpen(v => !v);
-  };
-
-  const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setMenuOpen(false);
-    onEdit?.(card._meta.id);
-  };
-
-  const handleDeleteClick = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setMenuOpen(false);
-    onDelete?.(card._meta.id);
-  };
 
   // Check if card is editable (for drag and click)
   const isEditable = onEdit !== undefined;
@@ -263,7 +217,7 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
           className="absolute inset-0 z-10 bg-transparent cursor-pointer"
           onClick={e => {
             if (
-              (menuRef.current && menuRef.current.contains(e.target as Node)) ||
+              (menuRef.current?.contains(e.target as Node)) ||
               (e.target instanceof HTMLElement && e.target.closest('[aria-label="Card menu"]'))
             ) {
               return;
@@ -271,7 +225,6 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
             e.stopPropagation();
             onEdit(card._meta.id);
           }}
-          tabIndex={0}
           aria-label="Edit record"
         />
       )}
@@ -282,7 +235,7 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
           <div className="relative">
             <img
               src={getImageUrl}
-              alt={`Card image ${currentImageIndex + 1}`}
+              alt={`Card ${currentImageIndex + 1}`}
               className="w-full h-56 object-contain rounded-tl-2xl rounded-tr-2xl"
               onError={() => {
                 setImageError(true);
@@ -327,9 +280,9 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
             {/* Navigation Dots - Only show if multiple images and editable */}
             {hasMultipleImages && onEdit && (
               <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10 bg-black/40 backdrop-blur-sm px-2 py-1.5 rounded-full">
-                {allImages.map((_, index) => (
+                {allImages.map((img, index) => (
                   <button
-                    key={index}
+                    key={img.id}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -368,23 +321,12 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
           if (raw === undefined || raw === '') {
             raw = null;
           }
-
-          // Check field types that handle empty states (FieldDisplay will show "-" for empty)
-          const isTitleField = col.column_name === (titleCol?.column_name ?? '') || col.id === titleCol?.id;
-          const isLinksField = col.type === 'links' || col.uidt === 'links';
-          const isLookupField = col.type === 'lookup' || col.uidt === 'lookup';
-          const isJsonField = col.type === 'json' || col.uidt === 'json';
-          const isAttachmentField = col.type === 'attachment' || col.uidt === 'attachment';
-
-          // Show all fields (including empty ones) - FieldDisplay will show "-" for empty values
-          // Don't skip empty fields, let FieldDisplay handle the empty state display
-
           // Include attachment fields - they can be displayed using FieldDisplay (like Gallery)
-          // Skip complex objects that can't be displayed (except json, links, lookup, attachment, etc.)
-          const isComplexField = col.type === 'json' || col.uidt === 'json' ||
-            col.type === 'links' || col.uidt === 'links' ||
-            col.type === 'lookup' || col.uidt === 'lookup' ||
-            col.type === 'attachment' || col.uidt === 'attachment';
+          // Skip complex objects that can't be displayed (but allow json, links, lookup, attachment, etc.)
+          // Only consider type/uidt if those fields are defined (due to possible undefined at runtime)
+          const isComplexField =
+            (col.type && ['json', 'links', 'lookup', 'attachment'].includes(col.type)) ||
+            (col.uidt && ['json', 'links', 'lookup', 'attachment'].includes(col.uidt));
 
           if (
             typeof raw === 'object' &&
@@ -421,7 +363,7 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
                     system: col.system,
                     meta: col.config,
                     config: col.config,
-                    model_id: (card as any)?.model_id || undefined,
+                    model_id: card?.model_id || undefined,
                   }}
                   value={raw}
                   className=""

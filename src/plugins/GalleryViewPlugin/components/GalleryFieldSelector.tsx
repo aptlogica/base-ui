@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Image } from 'lucide-react';
+import { Layers } from 'lucide-react';
 import { AdvancedDropdown } from '../../../components/common/dropdown/AdvancedDropdown';
 import { getFieldTypeIconWithMargin } from '../../../types/fieldTypes';
 import { useSmartPopover } from '../../../hooks/useSmartPopover';

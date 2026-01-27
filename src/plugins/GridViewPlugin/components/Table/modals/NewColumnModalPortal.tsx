@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
-// LAZY LOAD: NewColumnModal is huge (3862 lines) - only load when modal opens
 const NewColumnModal = lazy(() => 
   import('../../../../../components/modals/NewColumnModal').then(m => ({ default: m.NewColumnModal }))
 );
