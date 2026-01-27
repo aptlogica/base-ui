@@ -61,3 +61,17 @@ const sessionStorageMock = {
   clear: vi.fn(),
 };
 globalThis.sessionStorage = sessionStorageMock as any;
+
+// Mock window.location to prevent jsdom navigation errors
+delete (globalThis as any).location;
+(globalThis as any).location = {
+  href: '',
+  pathname: '/',
+  search: '',
+  hash: '',
+  hostname: 'localhost',
+  protocol: 'http:',
+  assign: vi.fn(),
+  replace: vi.fn(),
+  reload: vi.fn(),
+};

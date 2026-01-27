@@ -46,7 +46,6 @@ export const LongText: React.FC<LongTextProps> = ({
   const { defaultValue = '', maxLength: configMaxLength = maxLength, placeholder: configPlaceholder = placeholder, richText = false } = config;
   const [localValue, setLocalValue] = useState(value || '');
   const [error, setError] = useState<string | null>(null);
-  const [isFocused, setIsFocused] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalValue, setModalValue] = useState(value || '');
   const richTextEditorRef = useRef<HTMLDivElement>(null);
@@ -164,7 +163,6 @@ export const LongText: React.FC<LongTextProps> = ({
   };
 
   const handleBlur = () => {
-    setIsFocused(false);
     const validationError = validate(localValue);
     if (validationError) {
       setError(validationError);
@@ -534,7 +532,6 @@ export const LongText: React.FC<LongTextProps> = ({
           type="text"
           value={localValue}
           onChange={handleChange}
-          onFocus={() => setIsFocused(true)}
           onBlur={handleBlur}
           placeholder={configPlaceholder}
           maxLength={configMaxLength}

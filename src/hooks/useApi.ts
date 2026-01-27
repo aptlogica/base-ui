@@ -1299,7 +1299,11 @@ export const useUpdateUserProfile = (userId: string) => {
   return useMutation({
     mutationFn: async (params: { first_name?: string; last_name?: string; display_name?: string; country?: string; dob?: string; timezone?: string; locale?: string; avatarFile?: File }) => {
       const { avatarFile, ...profileParams } = params;
-      const result = await updateUserProfileService(userId, profileParams, avatarFile);
+      // Filter out empty strings and undefined values
+      const filteredParams = Object.fromEntries(
+        Object.entries(profileParams).filter(([_, value]) => value !== '' && value !== undefined)
+      );
+      const result = await updateUserProfileService(userId, filteredParams, avatarFile);
       return result;
     },
     onSuccess: (_, variables) => {

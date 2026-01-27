@@ -2680,7 +2680,7 @@ describe('User Profile Mutations', () => {
         first_name: 'John',
         last_name: 'Doe',
         display_name: 'Johnny',
-      });
+      }, undefined);
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
       });
@@ -2706,7 +2706,7 @@ describe('User Profile Mutations', () => {
       // Assert
       expect(clientService.updateUserProfileService).toHaveBeenCalledWith('user-123', {
         first_name: 'John',
-      });
+      }, undefined);
     });
 
     it('should update sessionStorage with display_name', async () => {

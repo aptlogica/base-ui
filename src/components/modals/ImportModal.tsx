@@ -392,7 +392,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                         } cursor-help`}
                     />
                     <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
-                      <h4 className="font-medium mb-2">Table title requirements:</h4>
+                      <h4 className="font-medium text-primary mb-2">Table title requirements:</h4>
                       <ul className="space-y-1">
                         <li className={`flex items-center ${title.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
                           • Minimum 3 characters
