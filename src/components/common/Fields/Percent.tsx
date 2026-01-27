@@ -271,13 +271,13 @@ export const Percent: React.FC<PercentProps> = ({
   const progress = Math.max(0, Math.min(100, percentValue));
   const inputClassName = getInputClassName(error, showError, disabled, readOnly);
   const displayClassName = getDisplayClassName(localValue, disabled, readOnly);
-  const borderClassName = isBorder ? "field-component-border" : "";
+  const borderClassName = isBorder ? "field-component-border-" : "";
   const baseClassName = `w-full relative ${borderClassName}`;
 
   if (displayAsProgress) {
     const progressBar = (
-      <div className="w-full flex align-center justify-center">
-        <div className="w-[90%] h-1 bg-gray-200 rounded-full overflow-hidden">
+      <div className="w-full p-3 flex align-center justify-center">
+        <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
           <div
             className={`h-1 rounded-full ${getProgressColorClass(progressColor)}`}
             style={{ width: `${progress}%` }}

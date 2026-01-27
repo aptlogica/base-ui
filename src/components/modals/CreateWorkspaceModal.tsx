@@ -55,7 +55,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const isEditMode = !!currentWorkspaceId;
-  const isControlled = typeof controlledName !== 'undefined' && typeof setControlledName === 'function';
+  const isControlled = controlledName !== undefined && setControlledName !== undefined && typeof setControlledName === 'function';
   
   // Get existing workspaces for validation
   const existingWorkspaces = Array.isArray(workspacesData) ? workspacesData : [];
@@ -63,15 +63,15 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      if (!isControlled) {
+      if (isControlled) {
+        // when controlled, keep local fields in sync with controlled values
+        setName(controlledName || '');
+        setDescription(controlledDescription || '');
+      } else {
         setName('');
         setDescription('');
         setError('');
         setValidationError('');
-      } else {
-        // when controlled, keep local fields in sync with controlled values
-        setName(controlledName || '');
-        setDescription(controlledDescription || '');
       }
       // Reset to information tab when modal opens
       setActiveTab('information');
@@ -99,23 +99,30 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
 
   const submitting = internalMutation.isPending;
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault();
+  // Get form values - extracted to reduce complexity
+  const getFormValues = () => {
+    return {
+      title: isControlled ? (controlledName || '') : name,
+      description: isControlled ? (controlledDescription || '') : description,
+    };
+  };
 
-    const title = isControlled ? (controlledName || '') : name;
-    const desc = isControlled ? (controlledDescription || '') : description;
-
+  // Handle empty title error - extracted to reduce complexity
+  const handleEmptyTitleError = (): boolean => {
+    const { title } = getFormValues();
     if (!title.trim()) {
       if (isControlled) {
         controlledError && toast.error(controlledError);
       } else {
         setError('Workspace name is required');
       }
-      return;
+      return true;
     }
+    return false;
+  };
 
-    // Check for validation errors
-    const validation = validateWorkspaceName(title, existingWorkspaces, currentWorkspaceId);
+  // Handle validation error - extracted to reduce complexity
+  const handleValidationError = (validation: { isValid: boolean; error?: string }): boolean => {
     if (!validation.isValid) {
       if (isControlled) {
         toast.error(validation.error || 'Invalid workspace name');
@@ -123,37 +130,69 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
         setError(validation.error || 'Invalid workspace name');
         setValidationError(validation.error || '');
       }
+      return true;
+    }
+    return false;
+  };
+
+  // Clear uncontrolled state - extracted to reduce complexity
+  const clearUncontrolledState = () => {
+    if (!isControlled) {
+      setName('');
+      setDescription('');
+      setError('');
+      setValidationError('');
+    }
+  };
+
+  // Submit workspace - extracted to reduce complexity
+  const submitWorkspace = async (e: React.FormEvent | undefined, title: string, desc: string) => {
+    if (controlledSubmit) {
+      await controlledSubmit(e);
+    } else {
+      await internalMutation.mutateAsync({
+        workspace: {
+          title: title.trim(),
+          description: desc.trim(),
+        },
+      });
+      toast.success('Workspace created successfully');
+    }
+  };
+
+  // Handle submission error - extracted to reduce complexity
+  const handleSubmissionError = (err: any) => {
+    const errorMsg = err?.message || 'Failed to create workspace';
+    if (!isControlled) setError(errorMsg);
+    toast.error(errorMsg);
+  };
+
+  // Handle successful submission - extracted to reduce complexity
+  const handleSuccessfulSubmission = () => {
+    clearUncontrolledState();
+    onClose();
+    onSuccess?.();
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+
+    const { title, description: desc } = getFormValues();
+
+    if (handleEmptyTitleError()) {
+      return;
+    }
+
+    const validation = validateWorkspaceName(title, existingWorkspaces, currentWorkspaceId);
+    if (handleValidationError(validation)) {
       return;
     }
 
     try {
-      if (controlledSubmit) {
-        await controlledSubmit(e);
-      } else {
-        await internalMutation.mutateAsync({
-          workspace: {
-            title: title.trim(),
-            description: desc.trim(),
-          },
-        });
-
-        toast.success('Workspace created successfully');
-      }
-
-      // clear local state only if uncontrolled
-      if (!isControlled) {
-        setName('');
-        setDescription('');
-        setError('');
-        setValidationError('');
-      }
-
-      onClose();
-      onSuccess?.();
+      await submitWorkspace(e, title, desc);
+      handleSuccessfulSubmission();
     } catch (err: any) {
-      const errorMsg = err?.message || 'Failed to create workspace';
-      if (!isControlled) setError(errorMsg);
-      toast.error(errorMsg);
+      handleSubmissionError(err);
     }
   };
 
@@ -184,6 +223,36 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
     }
   };
 
+  // Get button text based on submitting state - extracted to avoid nested ternary
+  let buttonText: string;
+  if (submitting) {
+    buttonText = submitButtonText.includes('Save') ? 'Saving...' : 'Creating...';
+  } else {
+    buttonText = submitButtonText;
+  }
+
+  // Get help icon color class based on validation state - extracted to avoid nested ternary
+  const getHelpIconColorClass = (): string => {
+    const hasError = validationError || ((!isControlled && error) || (isControlled && controlledError));
+    if (hasError) {
+      return 'text-red-500';
+    }
+    const nameLength = isControlled ? (controlledName || '').trim().length : name.trim().length;
+    if (nameLength >= 3) {
+      return 'text-green-600';
+    }
+    return 'text-gray-400';
+  };
+
+  // Get list item color class based on name length - extracted to avoid nested ternary
+  const getListItemColorClass = (): string => {
+    const nameLength = isControlled ? (controlledName || '').trim().length : name.trim().length;
+    if (nameLength >= 3) {
+      return 'text-green-600';
+    }
+    return 'text-gray-500';
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -201,6 +270,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
         <div
           className="bg-modal !max-w-3xl min-h-[80vh] !p-0 flex flex-col relative overflow-hidden"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
@@ -281,11 +351,11 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
               />
               <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
                 <span className="relative inline-block group">
-                  <HelpCircle className={`w-4 h-4 ${validationError || ((!isControlled && error) || (isControlled && controlledError)) ? 'text-red-500' : ((isControlled ? (controlledName || '').trim().length >=3 : name.trim().length >=3) ? 'text-green-600' : 'text-gray-400')} cursor-help`} />
+                  <HelpCircle className={`w-4 h-4 ${getHelpIconColorClass()} cursor-help`} />
                   <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                     <h4 className="font-medium mb-2">Workspace name requirements:</h4>
                     <ul className="space-y-1">
-                      <li className={`flex items-center ${(isControlled ? (controlledName || '').trim().length >= 3 : name.trim().length >= 3) ? 'text-green-600' : 'text-gray-500'}`}>
+                      <li className={`flex items-center ${getListItemColorClass()}`}>
                         • Minimum 3 characters
                       </li>
                       <li className="flex items-center text-gray-500">
@@ -365,7 +435,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
               className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {submitting && <Loader2 size={16} className="animate-spin" />}
-              {submitting ? (submitButtonText.includes('Save') ? 'Saving...' : 'Creating...') : submitButtonText}
+              {buttonText}
             </button>
           </div>
         ) : (

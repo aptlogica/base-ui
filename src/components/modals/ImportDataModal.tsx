@@ -92,6 +92,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
       <div
         className="bg-modal"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

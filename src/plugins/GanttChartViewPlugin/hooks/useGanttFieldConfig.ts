@@ -5,20 +5,12 @@ interface UseGanttFieldConfigOptions {
   currentView?: any;
   updateView?: any;
   onRefresh: () => void;
-  startDateField?: Column;
-  endDateField?: Column;
-  progressField?: Column;
-  completionField?: Column;
 }
 
 export function useGanttFieldConfig({
   currentView,
   updateView,
   onRefresh,
-  startDateField,
-  endDateField,
-  progressField,
-  completionField,
 }: UseGanttFieldConfigOptions) {
   const handleStartDateFieldChange = useCallback(async (field: Column | undefined) => {
     if (updateView && currentView?.id) {

@@ -24,8 +24,35 @@ export const useClickOutside = ({ isOpen, onClose, excludeRefs = [] }: UseClickO
       // Check if click is inside the all-functions-modal (rendered via portal)
       const isInsideFunctionsModal = (target as HTMLElement).closest?.('.all-functions-modal');
       
-      // Only close if click is outside main ref, excluded refs, and functions modal
-      if (!isInsideMain && !isInsideExcluded && !isInsideFunctionsModal) {
+      // Check if click is inside any portal that originated from within this modal
+      // This handles dropdowns and popups from components inside the modal
+      let isInsideModalPortal = false;
+      if (ref.current) {
+        const modalRect = ref.current.getBoundingClientRect();
+        const targetRect = (target as Element).getBoundingClientRect?.();
+        
+        // If the target has a bounding rect and the modal has a bounding rect,
+        // check if the click is within a reasonable distance of the modal
+        // This handles portals that are positioned relative to the modal
+        if (targetRect && modalRect.width > 0 && modalRect.height > 0) {
+          // Allow clicks within 50px of the modal boundaries to account for dropdowns
+          const extendedRect = {
+            left: modalRect.left - 50,
+            right: modalRect.right + 50,
+            top: modalRect.top - 50,
+            bottom: modalRect.bottom + 50
+          };
+          
+          isInsideModalPortal = 
+            targetRect.left >= extendedRect.left &&
+            targetRect.right <= extendedRect.right &&
+            targetRect.top >= extendedRect.top &&
+            targetRect.bottom <= extendedRect.bottom;
+        }
+      }
+      
+      // Only close if click is outside main ref, excluded refs, functions modal, and modal portals
+      if (!isInsideMain && !isInsideExcluded && !isInsideFunctionsModal && !isInsideModalPortal) {
         onClose();
       }
     };

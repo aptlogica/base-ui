@@ -112,7 +112,7 @@ export const SingleLineText: React.FC<SingleLineTextProps> = ({
       <div
         className={`relative ${className} ${isBorder && !isEditing ? "field-component-border" : ""}`}
         onClick={readOnly ? undefined : handleClick}
-        onKeyDown={readOnly ? undefined : handleKeyDown}
+        onKeyDown={readOnly || isEditing ? undefined : handleKeyDown}
         role={readOnly ? undefined : "button"}
         tabIndex={readOnly || disabled ? -1 : 0}
         aria-label={readOnly ? undefined : "Edit text"}

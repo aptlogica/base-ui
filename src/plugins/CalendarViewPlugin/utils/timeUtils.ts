@@ -21,7 +21,8 @@ export function toShortTimeCondensed(formatted: string | undefined | null, opts?
   const base = toShortTime(formatted);
   if (!opts?.hideMinutesIfZero) return base;
   // base looks like h:mm[a|p]
-  const match = base.match(/^(\d+):00([ap])$/i);
+  const timeRegex = /^(\d+):00([ap])$/i;
+  const match = timeRegex.exec(base);
   if (match) return `${match[1]}${match[2]}`; // 3p
   return base;
 }

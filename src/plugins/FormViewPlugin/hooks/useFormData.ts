@@ -67,7 +67,7 @@ export interface UseFormDataReturn {
   deleteFieldData: (fieldId: string) => Promise<void>;
 }
 
-export function useFormData({ tableId, viewId, recordId }: UseFormDataOptions): UseFormDataReturn {
+export function useFormData({ tableId }: UseFormDataOptions): UseFormDataReturn {
   const tableQuery = useTable(String(tableId));
 
   // Transform API response to TableData format
@@ -79,7 +79,7 @@ export function useFormData({ tableId, viewId, recordId }: UseFormDataOptions): 
     const data = raw.data ?? raw;
 
     // Ensure we have the expected structure (records can be null or empty array)
-    if (data && data.model && data.columns) {
+    if (data?.model && data?.columns) {
       const filteredColumns = data.columns.filter((col: any) => !fieldsToFilter.includes(col.uidt));
       // Example filter, adjust as needed
       return { ...data, columns: filteredColumns, records: data.records || [] } as TableData;
@@ -100,9 +100,8 @@ export function useFormData({ tableId, viewId, recordId }: UseFormDataOptions): 
   const insertRelationData = useInsertRelationData();
   const addAttachmentMutation = useAddAttachment();
 
-  // Business logic operations
-  const submitForm = async (formData: Record<string, any>, formFields: FormField[]) => {
-    // Basic validation - check for required fields
+  // Helper functions for submitForm to reduce cognitive complexity
+  const validateRequiredFields = (formData: Record<string, any>, formFields: FormField[]): void => {
     const requiredFields = formFields.filter((field) => field.required);
     const missingRequired = requiredFields.filter((field) => !formData[field.id]);
 
@@ -110,215 +109,232 @@ export function useFormData({ tableId, viewId, recordId }: UseFormDataOptions): 
       console.warn('Missing required fields:', missingRequired);
       throw new Error('Required field(s) must not be left empty.');
     }
+  };
 
-    // Create the record in the backend first
+  const createRecord = async (): Promise<string> => {
     const createdRecord = await addRow.mutateAsync({
       model_id: tableData?.model?.id || ''
     });
 
-    const backendRowId = createdRecord.id || createdRecord.data?.record?.id;
+    const backendRowId = createdRecord.id ?? createdRecord.data?.record?.id;
 
     if (!backendRowId) {
       throw new Error('Failed to create record - no ID returned');
     }
 
-    // Process and insert each field value into backend
-    const insertPromises: Promise<any>[] = [];
-    for (const field of formFields) {
-      // Skip attachment fields - they handle their own API calls
-      if (field.type === 'attachment' || field.uidt === 'attachment') {
-        continue;
+    return String(backendRowId);
+  };
+
+  const shouldSkipField = (field: FormField): boolean => {
+    return field.type === 'attachment' || field.uidt === 'attachment' ||
+           field.type === 'links' || field.uidt === 'links' ||
+           isFormulaField(field);
+  };
+
+  const ensureTitleValue = (field: FormField, formData: Record<string, any>, backendRowId: string): void => {
+    const isTitleField = field.title?.toLowerCase().includes('title') || field.column_name === 'title';
+    if (isTitleField && !formData[field.id]) {
+      formData[field.id] = `Record ${backendRowId}`;
+    }
+  };
+
+  const processDateTimeValue = (value: string, field: FormField): string | null => {
+    if (value.includes('T')) {
+      return value; // Already in ISO format
+    }
+    if (!value.trim()) {
+      return null;
+    }
+    try {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        console.warn(`Invalid date format for field ${field.title}: ${value}`);
+        return null;
       }
+      return date.toISOString();
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.warn(`Failed to parse date for field ${field.title}: ${value}`, errorMessage);
+      return null;
+    }
+  };
 
-      // Skip links fields - they are handled separately with insertRelationData API
-      if (field.type === 'links' || field.uidt === 'links') {
-        continue;
+  const processDateValue = (value: string, field: FormField): string | null => {
+    if (!value.trim()) {
+      return null;
+    }
+    try {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        console.warn(`Invalid date format for field ${field.title}: ${value}`);
+        return null;
       }
+      return date.toISOString().split('T')[0];
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.warn(`Failed to parse date for field ${field.title}: ${value}`, errorMessage);
+      return null;
+    }
+  };
 
-      // Skip formula fields - they are calculated, not stored
-      if (isFormulaField(field)) {
-        continue;
-      }
-
-      const value = formData[field.id];
-
-      // For Title field, ensure we have a value
-      if ((field.title?.toLowerCase().includes('title') || field.column_name === 'title') && !value) {
-        const titleValue = `Record ${backendRowId}`;
-        formData[field.id] = titleValue;
-      }
-
-      // Only insert if we have a value
-      if (value !== undefined && value !== null && value !== '') {
-        // Process value based on field type
-        let processedValue = value;
-
-        // Handle different field types
-        if (field.type === 'json' && typeof value === 'object' && value !== null) {
-          processedValue = JSON.stringify(value);
-        } else if (field.type === 'datetime' || field.uidt === 'datetime') {
-          // Ensure DateTime values are in proper ISO format
-          if (typeof value === 'string' && value.includes('T')) {
-            // Already in ISO format, keep as is
-            processedValue = value;
-          } else if (typeof value === 'string' && value.trim()) {
-            // Try to convert to ISO format
-            try {
-              const date = new Date(value);
-              if (!isNaN(date.getTime())) {
-                processedValue = date.toISOString();
-              } else {
-                console.warn(`Invalid date format for field ${field.title}: ${value}`);
-                continue; // Skip this field
-              }
-            } catch (e) {
-              console.warn(`Failed to parse date for field ${field.title}: ${value}`);
-              continue; // Skip this field
-            }
-          }
-        } else if (field.type === 'date' || field.uidt === 'date') {
-          // Ensure Date values are in proper format
-          if (typeof value === 'string' && value.trim()) {
-            try {
-              const date = new Date(value);
-              if (!isNaN(date.getTime())) {
-                // Format as YYYY-MM-DD for date fields
-                processedValue = date.toISOString().split('T')[0];
-              } else {
-                console.warn(`Invalid date format for field ${field.title}: ${value}`);
-                continue; // Skip this field
-              }
-            } catch (e) {
-              console.warn(`Failed to parse date for field ${field.title}: ${value}`);
-              continue; // Skip this field
-            }
-          }
-        }
-
-        const insertPromise = insertRowData.mutateAsync({
-          model_id: tableData?.model?.id || '',
-          column_id: field.id,
-          row_id: Number(backendRowId),
-          value: processedValue
-        }).then(result => {
-          return result;
-        }).catch(err => {
-          console.error(`Failed to insert field ${field.title} (${field.id}):`, err);
-          console.error(`Field value was:`, processedValue);
-          console.error(`Field type:`, field.type, field.uidt);
-          throw err;
-        });
-
-        insertPromises.push(insertPromise);
+  const processFieldValue = (value: any, field: FormField): any => {
+    if (field.type === 'json' && typeof value === 'object' && value !== null) {
+      return JSON.stringify(value);
+    }
+    if (field.type === 'datetime' || field.uidt === 'datetime') {
+      if (typeof value === 'string') {
+        const processed = processDateTimeValue(value, field);
+        return processed;
       }
     }
+    if (field.type === 'date' || field.uidt === 'date') {
+      if (typeof value === 'string') {
+        const processed = processDateValue(value, field);
+        return processed;
+      }
+    }
+    return value;
+  };
 
-    // Execute all inserts in parallel
+  const createInsertPromise = (field: FormField, processedValue: any, backendRowId: string): Promise<any> => {
+    return insertRowData.mutateAsync({
+      model_id: tableData?.model?.id || '',
+      column_id: field.id,
+      row_id: Number(backendRowId),
+      value: processedValue
+    }).catch((err: unknown) => {
+      console.error(`Failed to insert field ${field.title} (${field.id}):`, err);
+      console.error(`Field value was:`, processedValue);
+      console.error(`Field type:`, field.type, field.uidt);
+      throw err;
+    });
+  };
+
+  const processRegularFields = async (formData: Record<string, any>, formFields: FormField[], backendRowId: string): Promise<void> => {
+    const insertPromises: Promise<any>[] = [];
+
+    for (const field of formFields) {
+      if (shouldSkipField(field)) {
+        continue;
+      }
+
+      ensureTitleValue(field, formData, backendRowId);
+      const value = formData[field.id];
+
+      if (value === undefined || value === null || value === '') {
+        continue;
+      }
+
+      const processedValue = processFieldValue(value, field);
+      if (processedValue === null) {
+        continue; // Field processing failed, skip it
+      }
+
+      const insertPromise = createInsertPromise(field, processedValue, backendRowId);
+      insertPromises.push(insertPromise);
+    }
+
     if (insertPromises.length > 0) {
       try {
         await Promise.all(insertPromises);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Some field insertions failed:', error);
-        // Don't throw here - let individual field errors be handled
-        // The form submission will still succeed if at least one field was inserted
       }
     }
+  };
 
-    // Handle links fields separately using insertRelationData API
+  const processLinksFields = async (formData: Record<string, any>, formFields: FormField[], backendRowId: string): Promise<void> => {
     const linksPromises: Promise<any>[] = [];
-    for (const field of formFields) {
-      // Only process links fields
-      if (field.type === 'links' || field.uidt === 'links') {
-        const linksValue = formData[field.id];
 
-        // Skip if no links data or if it's an empty object
-        if (!linksValue || !Array.isArray(linksValue) || linksValue.length === 0 ||
-          (typeof linksValue === 'object' && !Array.isArray(linksValue))) {
+    for (const field of formFields) {
+      if (field.type !== 'links' && field.uidt !== 'links') {
+        continue;
+      }
+
+      const linksValue = formData[field.id];
+      if (!Array.isArray(linksValue) || linksValue.length === 0) {
+        continue;
+      }
+
+      for (const linkedRecord of linksValue) {
+        if (!linkedRecord?.id) {
           continue;
         }
 
-        // Process each linked record
-        for (const linkedRecord of linksValue) {
-          if (linkedRecord && linkedRecord.id) {
-            const linkPromise = insertRelationData.mutateAsync({
-              model_id: tableData?.model?.id || '',
-              column_id: field.id,
-              source_row_id: Number(backendRowId),
-              target_row_id: Number(linkedRecord.id),
-              action: 'link'
-            }).then(result => {
-              return result;
-            }).catch(err => {
-              console.error(`Failed to link record ${linkedRecord.id} to field ${field.title} (${field.id}):`, err);
-              throw err;
-            });
+        const linkPromise = insertRelationData.mutateAsync({
+          model_id: tableData?.model?.id || '',
+          column_id: field.id,
+          source_row_id: Number(backendRowId),
+          target_row_id: Number(linkedRecord.id),
+          action: 'link'
+        }).catch((err: unknown) => {
+          console.error(`Failed to link record ${linkedRecord.id} to field ${field.title} (${field.id}):`, err);
+          throw err;
+        });
 
-            linksPromises.push(linkPromise);
-          }
-        }
+        linksPromises.push(linkPromise);
       }
     }
 
-    // Execute all links operations in parallel
     if (linksPromises.length > 0) {
       try {
         await Promise.all(linksPromises);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Some links operations failed:', error);
-        // Don't throw here - let individual link errors be handled
-        // The form submission will still succeed if at least one field was inserted
       }
     }
+  };
 
-    // Handle attachment fields - upload files after record is created
+  const processAttachmentFields = async (formData: Record<string, any>, formFields: FormField[], backendRowId: string): Promise<void> => {
     const attachmentPromises: Promise<any>[] = [];
+
     for (const field of formFields) {
-      // Only process attachment fields
-      if (field.type === 'attachment' || field.uidt === 'attachment') {
-        const attachmentValue = formData[field.id];
-
-        // Skip if no attachment data or empty array
-        if (!attachmentValue || !Array.isArray(attachmentValue) || attachmentValue.length === 0) {
-          continue;
-        }
-
-
-        // Upload each file that hasn't been uploaded yet (has a .file property)
-        const filesToUpload = attachmentValue
-          .filter((file: any) => {
-            const hasFile = file.file instanceof File;
-            return hasFile;
-          })
-          .map((file: any) => file.file);
-
-        if (filesToUpload.length > 0) {
-          const uploadPromise = addAttachmentMutation.mutateAsync({
-            model_id: tableData?.model?.id || '',
-            column_id: field.id,
-            row_id: Number(backendRowId),
-            files: filesToUpload
-          }).then(result => {
-            return result;
-          }).catch(err => {
-            console.error(`Failed to upload attachments for field ${field.title} (${field.id}):`, err);
-            throw err;
-          });
-
-          attachmentPromises.push(uploadPromise);
-        }
+      if (field.type !== 'attachment' && field.uidt !== 'attachment') {
+        continue;
       }
+
+      const attachmentValue = formData[field.id];
+      if (!Array.isArray(attachmentValue) || attachmentValue.length === 0) {
+        continue;
+      }
+
+      const filesToUpload = attachmentValue
+        .filter((file: any) => file.file instanceof File)
+        .map((file: any) => file.file);
+
+      if (filesToUpload.length === 0) {
+        continue;
+      }
+
+      const uploadPromise = addAttachmentMutation.mutateAsync({
+        model_id: tableData?.model?.id || '',
+        column_id: field.id,
+        row_id: Number(backendRowId),
+        files: filesToUpload
+      }).catch((err: unknown) => {
+        console.error(`Failed to upload attachments for field ${field.title} (${field.id}):`, err);
+        throw err;
+      });
+
+      attachmentPromises.push(uploadPromise);
     }
 
-    // Execute all attachment uploads in parallel
     if (attachmentPromises.length > 0) {
       try {
         await Promise.all(attachmentPromises);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Some attachment uploads failed:', error);
-        // Don't throw here - let individual attachment errors be handled
-        // The form submission will still succeed if at least one field was inserted
       }
     }
+  };
+
+  // Business logic operations
+  const submitForm = async (formData: Record<string, any>, formFields: FormField[]): Promise<void> => {
+    validateRequiredFields(formData, formFields);
+    const backendRowId = await createRecord();
+    await processRegularFields(formData, formFields, backendRowId);
+    await processLinksFields(formData, formFields, backendRowId);
+    await processAttachmentFields(formData, formFields, backendRowId);
   };
 
   const createNewField = async (fieldConfig: any, allColumns: any[]) => {
@@ -328,14 +344,14 @@ export function useFormData({ tableId, viewId, recordId }: UseFormDataOptions): 
       config: {
         title: fieldConfig.title || fieldConfig.key,
         uidt: fieldConfig.type || fieldConfig.uidt,
-        meta: fieldConfig.meta || {},
+        meta: fieldConfig.meta ?? {},
         order_index: allColumns.length,
         description: fieldConfig.description || ''
       }
     });
   };
 
-  const updateFieldData = async (fieldId: string, updates: any, formFields: FormField[]) => {
+  const updateFieldData = async (fieldId: string, updates: any) => {
     // Map FieldEditor updates to API field format
     const apiUpdates: any = {};
 
@@ -361,7 +377,7 @@ export function useFormData({ tableId, viewId, recordId }: UseFormDataOptions): 
     });
   };
 
-  const toggleFieldVisibility = async (fieldId: string, view: any, formFields: FormField[]) => {
+  const toggleFieldVisibility = async (fieldId: string, view: any) => {
     const currentFieldConfig = view.meta?.fieldConfig || [];
     
     // Optimized with Map for O(1) lookup instead of O(n) find()
@@ -378,7 +394,7 @@ export function useFormData({ tableId, viewId, recordId }: UseFormDataOptions): 
         )
       : [...currentFieldConfig, { id: fieldId, isHidden: true, position: currentFieldConfig.length }];
 
-    const newMeta = { ...(view.meta || {}), fieldConfig: updatedFieldConfig };
+    const newMeta = { ...view.meta, fieldConfig: updatedFieldConfig };
     await updateView.mutateAsync({ viewId: view.id, view: { meta: newMeta } });
   };
 
@@ -389,7 +405,7 @@ export function useFormData({ tableId, viewId, recordId }: UseFormDataOptions): 
       position: index
     }));
 
-    const newMeta = { ...(view.meta || {}), fieldConfig: updatedFieldConfig };
+    const newMeta = { ...view.meta, fieldConfig: updatedFieldConfig };
     await updateView.mutateAsync({ viewId: view.id, view: { meta: newMeta } });
   };
 
@@ -449,7 +465,7 @@ export function useFormData({ tableId, viewId, recordId }: UseFormDataOptions): 
       position: idx
     }));
 
-    const newMeta = { ...(view.meta || {}), fieldConfig: finalFieldConfig };
+    const newMeta = { ...view.meta, fieldConfig: finalFieldConfig };
     await updateView.mutateAsync({ viewId: view.id, view: { meta: newMeta } });
   };
 
@@ -475,7 +491,11 @@ export function useFormData({ tableId, viewId, recordId }: UseFormDataOptions): 
     tableData,
     isLoading: tableQuery.isLoading,
     error: tableQuery.error,
-    refresh: () => tableQuery.refetch(),
+    refresh: (): void => {
+      tableQuery.refetch().catch(() => {
+        // Silently handle refetch errors - they're non-critical
+      });
+    },
     addRow,
     insertRowData,
     deleteRecord,

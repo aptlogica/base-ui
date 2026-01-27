@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTable, useAddRow, useDeleteRecord, useInsertRowData, useUpdateField, useUpdateView } from '../../../hooks/useApi';
-import type { TableResponse, TableData, Column, View } from '../../../types/api.types';
+import type { TableResponse, Column, View } from '../../../types/api.types';
 import { fieldsToFilter } from '../../../types/constants';
 
 // Gantt-specific types
@@ -12,7 +12,7 @@ export interface GanttTask {
   color: string;
   progress: number;
   status: 'active' | 'completed' | 'overdue' | 'pending';
-  rawData: any;
+  rawData: Record<string, unknown>;
 }
 
 export interface GanttViewConfig {
@@ -21,9 +21,9 @@ export interface GanttViewConfig {
   titleFieldId?: string;
   progressFieldId?: string;
   groupByFieldId?: string;
-  filters: any[];
-  sorts: any[];
-  fieldConfig: any[];
+  filters: Array<Record<string, unknown>>;
+  sorts: Array<Record<string, unknown>>;
+  fieldConfig: Array<Record<string, unknown>>;
 }
 
 export interface UseGanttDataOptions {
@@ -48,21 +48,87 @@ export interface UseGanttDataReturn {
   
   // State
   isLoading: boolean;
-  error: any;
+  error: unknown;
   
   // Actions
   refresh: () => void;
-  addRow: any;
-  insertRowData: any;
-  deleteRecord: any;
-  updateField: any;
-  updateView: any;
+  addRow: ReturnType<typeof useAddRow>;
+  insertRowData: ReturnType<typeof useInsertRowData>;
+  deleteRecord: ReturnType<typeof useDeleteRecord>;
+  updateField: ReturnType<typeof useUpdateField>;
+  updateView: (viewId: string, view: Record<string, unknown>) => Promise<unknown>;
   moveTask: (taskId: string, newStartDate: Date, newEndDate: Date) => Promise<void>;
   createTask: (taskData: Partial<GanttTask>) => Promise<string>;
   deleteTask: (taskId: string) => Promise<void>;
   updateTaskProgress: (taskId: string, progress: number) => Promise<void>;
-  updateViewConfig: (viewId: string, updates: any) => Promise<void>;
+  updateViewConfig: (viewId: string, updates: Record<string, unknown>) => Promise<void>;
 }
+
+// Helper function to extract view configuration
+const extractViewConfig = (viewMeta: Record<string, unknown>): GanttViewConfig => {
+  const getStringField = (key: string): string | undefined => {
+    const value = viewMeta[key];
+    return typeof value === 'string' ? value : undefined;
+  };
+
+  const getGroupByFieldId = (): string | undefined => {
+    const groupBy = viewMeta.groupBy;
+    if (typeof groupBy === 'object' && groupBy !== null && 'column' in groupBy) {
+      return String((groupBy as Record<string, unknown>).column);
+    }
+    return undefined;
+  };
+
+  const getArrayField = (key: string): Array<Record<string, unknown>> => {
+    const value = viewMeta[key];
+    return Array.isArray(value) ? value as Array<Record<string, unknown>> : [];
+  };
+
+  return {
+    startDateFieldId: getStringField('start_date_field_id'),
+    endDateFieldId: getStringField('end_date_field_id'),
+    titleFieldId: getStringField('title_field_id'),
+    progressFieldId: getStringField('progress_field_id'),
+    groupByFieldId: getGroupByFieldId(),
+    filters: getArrayField('filters'),
+    sorts: getArrayField('sorts'),
+    fieldConfig: getArrayField('fieldConfig')
+  };
+};
+
+// Helper function to create column maps
+const createColumnMaps = (columns: Column[]): { columnMap: Map<string, Column>; columnNameMap: Map<string, Column> } => {
+  const columnMap = new Map<string, Column>();
+  const columnNameMap = new Map<string, Column>();
+  
+  columns.forEach((col: Column) => {
+    columnMap.set(String(col.id), col);
+    if (col.column_name) {
+      columnNameMap.set(col.column_name.toLowerCase(), col);
+    }
+  });
+  
+  return { columnMap, columnNameMap };
+};
+
+// Helper function to find field columns
+const findFieldColumns = (
+  viewConfig: GanttViewConfig,
+  columnMap: Map<string, Column>,
+  columnNameMap: Map<string, Column>
+) => {
+  const getFieldById = (fieldId: string | undefined): Column | undefined => {
+    return fieldId ? columnMap.get(String(fieldId)) : undefined;
+  };
+
+  return {
+    startDateField: getFieldById(viewConfig.startDateFieldId),
+    endDateField: getFieldById(viewConfig.endDateFieldId),
+    titleField: getFieldById(viewConfig.titleFieldId) || columnNameMap.get('title'),
+    progressField: getFieldById(viewConfig.progressFieldId),
+    groupByField: getFieldById(viewConfig.groupByFieldId)
+  };
+};
 
 export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGanttDataReturn => {
   // Fetch table data
@@ -77,7 +143,8 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
 
   // Process data into Gantt-ready format
   const processedData = useMemo(() => {
-    if (!tableData?.data) {
+    const tableDataTyped = tableData as TableResponse | undefined;
+    if (!tableDataTyped?.data) {
       return {
         tasks: [],
         columns: [],
@@ -95,82 +162,125 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
       };
     }
 
-    const { model, columns, records, views } = tableData.data;
+    const { columns, records, views } = tableDataTyped.data;
 
     // Filter out unwanted columns
     const filteredColumns = columns.filter(
-      (col: any) => !fieldsToFilter.includes(col.uidt)
+      (col: Column) => !fieldsToFilter.includes(col.uidt)
     );
+    
     // Find current view
-    const currentView = views?.find(v => v.id === viewId) || views?.find(v => v.type === 'ganttChart') || views?.[0];
-    const viewMeta = currentView?.meta || {};
+    const currentView = views?.find((v: View) => v.id === viewId) || views?.find((v: View) => v.type === 'ganttChart') || views?.[0];
+    const viewMeta = currentView?.meta ?? ({} as Record<string, unknown>);
 
     // Extract view configuration
-    const viewConfig: GanttViewConfig = {
-      startDateFieldId: viewMeta.start_date_field_id,
-      endDateFieldId: viewMeta.end_date_field_id,
-      titleFieldId: viewMeta.title_field_id,
-      progressFieldId: viewMeta.progress_field_id,
-      groupByFieldId: viewMeta.groupBy?.column,
-      filters: viewMeta.filters || [],
-      sorts: viewMeta.sorts || [],
-      fieldConfig: viewMeta.fieldConfig || []
-    };
+    const viewConfig = extractViewConfig(viewMeta);
 
-    // Create a Map for O(1) column lookups instead of O(n) find() calls
-    const columnMap = new Map<string, any>();
-    const columnNameMap = new Map<string, any>();
-    filteredColumns.forEach(col => {
-      columnMap.set(String(col.id), col);
-      if (col.column_name) {
-        columnNameMap.set(col.column_name.toLowerCase(), col);
-      }
-    });
+    // Create column maps for O(1) lookups
+    const { columnMap, columnNameMap } = createColumnMaps(filteredColumns);
 
     // Find field columns using Map for O(1) lookups
-    const startDateField = viewConfig.startDateFieldId ? 
-      columnMap.get(String(viewConfig.startDateFieldId)) : undefined;
-    const endDateField = viewConfig.endDateFieldId ? 
-      columnMap.get(String(viewConfig.endDateFieldId)) : undefined;
-    const titleField = viewConfig.titleFieldId ? 
-      columnMap.get(String(viewConfig.titleFieldId)) : 
-      columnNameMap.get('title');
-    const progressField = viewConfig.progressFieldId ? 
-      columnMap.get(String(viewConfig.progressFieldId)) : undefined;
-    const groupByField = viewConfig.groupByFieldId ? 
-      columnMap.get(String(viewConfig.groupByFieldId)) : undefined;
+    const { startDateField, endDateField, titleField, progressField, groupByField } = 
+      findFieldColumns(viewConfig, columnMap, columnNameMap);
 
+
+    // Helper functions to reduce cognitive complexity
+    const parseDate = (value: unknown, defaultValue: Date): Date => {
+      if (value && (typeof value === 'string' || value instanceof Date)) {
+        return new Date(value);
+      }
+      return defaultValue;
+    };
+
+    const getTaskName = (titleValue: unknown, idx: number): string => {
+      if (typeof titleValue === 'string') {
+        return titleValue;
+      }
+      if (titleValue === null || titleValue === undefined) {
+        return `Task ${idx + 1}`;
+      }
+      // Handle objects and other types safely - avoid stringifying objects
+      if (typeof titleValue === 'object') {
+        return `Task ${idx + 1}`;
+      }
+      // Only stringify primitive types (number, boolean, symbol, bigint)
+      if (typeof titleValue === 'number' || typeof titleValue === 'boolean' || typeof titleValue === 'symbol' || typeof titleValue === 'bigint') {
+        return String(titleValue);
+      }
+      return `Task ${idx + 1}`;
+    };
+
+    const getTaskId = (recordId: unknown, idx: number): string | number => {
+      if (recordId === undefined || recordId === null) {
+        return idx;
+      }
+      if (typeof recordId === 'string' || typeof recordId === 'number') {
+        return recordId;
+      }
+      // Handle objects and other types safely - avoid stringifying objects
+      if (typeof recordId === 'object') {
+        return idx;
+      }
+      // Only stringify primitive types (boolean, symbol, bigint)
+      if (typeof recordId === 'boolean' || typeof recordId === 'symbol' || typeof recordId === 'bigint') {
+        return String(recordId);
+      }
+      // For any other unknown type, return index as fallback
+      return idx;
+    };
+
+    const determineStatus = (
+      endDate: Date,
+      progressValue: unknown,
+      startDateValue: unknown,
+      endDateValue: unknown
+    ): 'active' | 'completed' | 'overdue' | 'pending' => {
+      const now = new Date();
+      if (endDate < now) {
+        return 'overdue';
+      }
+      const progressNum = typeof progressValue === 'number' ? progressValue : Number(progressValue) || 0;
+      if (progressNum >= 100) {
+        return 'completed';
+      }
+      if (!startDateValue && !endDateValue) {
+        return 'pending';
+      }
+      return 'active';
+    };
 
     // Process tasks from records
-    const tasks: GanttTask[] = records.map((record: any, idx: number) => {
-      const startDateValue = record?.[startDateField?.column_name || ''];
-      const endDateValue = record?.[endDateField?.column_name || ''];
-      const titleValue = record?.[titleField?.column_name || ''] || record?.title || `Task ${idx + 1}`;
-      const progressValue = record?.[progressField?.column_name || ''] || 0;
+    const tasks: GanttTask[] = records.map((record: Record<string, unknown>, idx: number) => {
+      const startDateFieldName = startDateField?.column_name || '';
+      const endDateFieldName = endDateField?.column_name || '';
+      const titleFieldName = titleField?.column_name || '';
+      const progressFieldName = progressField?.column_name || '';
+      
+      const startDateValue = startDateFieldName ? record[startDateFieldName] : undefined;
+      const endDateValue = endDateFieldName ? record[endDateFieldName] : undefined;
+      const titleValue = titleFieldName ? record[titleFieldName] : record.title || `Task ${idx + 1}`;
+      const progressValue = progressFieldName ? record[progressFieldName] : 0;
 
-
-      // Parse dates
-      const startDate = startDateValue ? new Date(startDateValue) : new Date();
-      const endDate = endDateValue ? new Date(endDateValue) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      // Parse dates with proper type checking
+      const startDate = parseDate(startDateValue, new Date());
+      const endDate = parseDate(endDateValue, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
 
       // Determine status
-      const now = new Date();
-      let status: 'active' | 'completed' | 'overdue' | 'pending' = 'active';
-      if (endDate < now) {
-        status = 'overdue';
-      } else if (progressValue >= 100) {
-        status = 'completed';
-      } else if (!startDateValue && !endDateValue) {
-        status = 'pending';
-      }
+      const status = determineStatus(endDate, progressValue, startDateValue, endDateValue);
+
+      // Ensure title is a string
+      const taskName = getTaskName(titleValue, idx);
+
+      // Ensure id is string or number
+      const taskId = getTaskId(record.id, idx);
 
       return {
-        id: record?.id || idx,
-        name: String(titleValue),
+        id: taskId,
+        name: taskName,
         startDate,
         endDate,
         color: `hsl(${(idx * 137.5) % 360}, 70%, 50%)`,
-        progress: Number(progressValue) || 0,
+        progress: typeof progressValue === 'number' ? progressValue : Number(progressValue) || 0,
         status,
         rawData: record
       };
@@ -189,19 +299,17 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
     };
   }, [tableData, viewId]);
 
-  // Task operations
-  const moveTask = async (taskId: string, newStartDate: Date, newEndDate: Date) => {
-    // Implementation for moving tasks
-  };
 
   const createTask = async (taskData: Partial<GanttTask>) => {
-    if (!tableData?.data?.model?.id) return String(Date.now());
+    const tableDataTyped = tableData as TableResponse | undefined;
+    if (!tableDataTyped?.data?.model?.id) return String(Date.now());
     
     const { startDateField, endDateField, titleField, progressField } = processedData;
+    const modelId = String(tableDataTyped.data.model.id);
     
     // Create a new row first
     const result = await addRow.mutateAsync({
-      model_id: String(tableData.data.model.id)
+      model_id: modelId
     });
     
     const recordId = String(result?.id || result);
@@ -209,7 +317,7 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
     // Update the row with task data
     if (taskData.name && titleField) {
       await insertRowData.mutateAsync({
-        model_id: String(tableData.data.model.id),
+        model_id: modelId,
         column_id: String(titleField.id),
         row_id: Number(recordId),
         value: taskData.name
@@ -218,7 +326,7 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
     
     if (taskData.startDate && startDateField) {
       await insertRowData.mutateAsync({
-        model_id: String(tableData.data.model.id),
+        model_id: modelId,
         column_id: String(startDateField.id),
         row_id: Number(recordId),
         value: taskData.startDate.toISOString().split('T')[0]
@@ -227,7 +335,7 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
     
     if (taskData.endDate && endDateField) {
       await insertRowData.mutateAsync({
-        model_id: String(tableData.data.model.id),
+        model_id: modelId,
         column_id: String(endDateField.id),
         row_id: Number(recordId),
         value: taskData.endDate.toISOString().split('T')[0]
@@ -236,7 +344,7 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
     
     if (taskData.progress !== undefined && progressField) {
       await insertRowData.mutateAsync({
-        model_id: String(tableData.data.model.id),
+        model_id: modelId,
         column_id: String(progressField.id),
         row_id: Number(recordId),
         value: taskData.progress
@@ -247,29 +355,56 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
   };
 
   const deleteTask = async (taskId: string) => {
-    if (!tableData?.data?.model?.id) return;
+    const tableDataTyped = tableData as TableResponse | undefined;
+    if (!tableDataTyped?.data?.model?.id) return;
     
     await deleteRecord.mutateAsync({
-      model_id: String(tableData.data.model.id),
+      model_id: String(tableDataTyped.data.model.id),
       row_id: Number(taskId)
     });
   };
 
   const updateTaskProgress = async (taskId: string, progress: number) => {
-    if (!tableData?.data?.model?.id) return;
+    const tableDataTyped = tableData as TableResponse | undefined;
+    if (!tableDataTyped?.data?.model?.id) return;
     
     const { progressField } = processedData;
     if (!progressField) return;
     
     await insertRowData.mutateAsync({
-      model_id: String(tableData.data.model.id),
+      model_id: String(tableDataTyped.data.model.id),
       column_id: String(progressField.id),
       row_id: Number(taskId),
       value: progress
     });
   };
 
-  const updateViewConfig = async (viewId: string, updates: any) => {
+  const moveTask = async (taskId: string, newStartDate: Date, newEndDate: Date) => {
+    const tableDataTyped = tableData as TableResponse | undefined;
+    if (!tableDataTyped?.data?.model?.id) return;
+    
+    const { startDateField, endDateField } = processedData;
+    
+    if (startDateField) {
+      await insertRowData.mutateAsync({
+        model_id: String(tableDataTyped.data.model.id),
+        column_id: String(startDateField.id),
+        row_id: Number(taskId),
+        value: newStartDate.toISOString().split('T')[0]
+      });
+    }
+    
+    if (endDateField) {
+      await insertRowData.mutateAsync({
+        model_id: String(tableDataTyped.data.model.id),
+        column_id: String(endDateField.id),
+        row_id: Number(taskId),
+        value: newEndDate.toISOString().split('T')[0]
+      });
+    }
+  };
+
+  const updateViewConfig = async (viewId: string, updates: Record<string, unknown>) => {
     await updateViewMutation.mutateAsync({
       viewId: String(viewId),
       view: updates
@@ -277,13 +412,13 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
   };
 
   // Wrapper function for updateView mutation
-  const updateView = async (viewId: string, view: any) => {
+  const updateView = async (viewId: string, view: Record<string, unknown>) => {
     return await updateViewMutation.mutateAsync({ viewId, view });
   };
 
   return {
     // Data
-    tableData,
+    tableData: tableData as TableResponse | undefined,
     ...processedData,
     
     // State
@@ -291,7 +426,9 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
     error,
     
     // Actions
-    refresh: refetch,
+    refresh: () => {
+      void refetch();
+    },
     addRow,
     insertRowData,
     deleteRecord,

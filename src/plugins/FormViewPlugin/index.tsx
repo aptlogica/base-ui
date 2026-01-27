@@ -8,6 +8,13 @@ const FormView = lazy(() =>
 );
 import { Loader } from '../../components/ui/Loader';
 
+interface ViewExtensionProps {
+  table?: { id?: string };
+  view?: { id?: string; type?: string };
+  viewType?: string;
+  recordId?: string;
+}
+
 const manifest: PluginManifest = {
   id: 'form-view-plugin',
   name: 'Form View Plugin',
@@ -17,7 +24,7 @@ const manifest: PluginManifest = {
 
 const FormViewPlugin: Plugin = {
   manifest,
-  initialize: async (api: PluginAPI, config: any) => {
+  initialize: async (api: PluginAPI) => {
     // Single component: fetch and render FormView directly (no extra wrappers)
     const FormViewComponent: React.FC<{ tableId: string; viewId?: string; recordId?: string }> = ({ tableId, viewId, recordId }) => {
       const { tableData, isLoading, error, refresh, addRow, insertRowData, deleteRecord, updateField, deleteColumn, createField, updateView, submitForm, createNewField, updateFieldData, toggleFieldVisibility, setAllFieldsVisibility, updateFieldOrder, updateAppearance, deleteFieldData } = useFormData({ tableId, viewId, recordId });
@@ -25,24 +32,30 @@ const FormViewPlugin: Plugin = {
       if (isLoading) return <div className="h-full flex items-center justify-center">Loading form…</div>;
       
       if (error) {
+        let errorMessage = 'Unknown error occurred';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        }
         return (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
-              <div className="text-red-500 text-lg mb-2">⚠️ Error Loading Form</div>
-              <p className="text-muted-foreground mb-4">{String(error)}</p>
+              <div className="text-red-500 text-lg mb-2">Something went wrong while loading the form.</div>
+              <p className="text-muted-foreground mb-4">{errorMessage}</p>
               <button onClick={() => refresh()} className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90">Retry</button>
             </div>
           </div>
         );
       }
       
-      if (!tableData || !tableData.model || !tableData.columns) {
+      if (!tableData?.model || !tableData?.columns) {
         return (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
-              <div className="text-muted-foreground text-lg mb-2">📋 No Form Data</div>
+              <div className="text-muted-foreground text-lg mb-2">No form data</div>
               <p className="text-muted-foreground mb-4">Form could not be loaded</p>
-              <button onClick={() => refresh()} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">🔄 Retry Loading</button>
+              <button onClick={() => refresh()} className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90">Retry</button>
             </div>
           </div>
         );
@@ -57,7 +70,7 @@ const FormViewPlugin: Plugin = {
           </div>
         }>
           <FormView
-            tableData={tableData!}
+            tableData={tableData}
             viewId={viewId}
             recordId={recordId}
             onRefresh={() => refresh()}
@@ -70,7 +83,7 @@ const FormViewPlugin: Plugin = {
     api.registerExtension('view', {
       id: 'form-view',
       order: 52,
-      render: (props: any) => {
+      render: (props: ViewExtensionProps) => {
         const tableId = props?.table?.id;
         const viewId = props?.view?.id;
         const recordId = props?.recordId; // Optional specific record

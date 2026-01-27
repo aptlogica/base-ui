@@ -49,7 +49,8 @@ const BaseMenuWrapper: React.FC<{
   }
 
   return (
-    <div onClick={(e) => e.stopPropagation()}>
+    <div onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}>
       <BaseMenu
         base={base}
         onEdit={onEdit}
@@ -313,24 +314,24 @@ const HomePage: React.FC = () => {
 
       toast.success('Base created successfully');
       setShowCreateBase(false);
-        // COMMENTED OUT: Navigation to table on base creation
-        // try {
-        //   // Update navigation store first
-        //   const { navigateToBase } = useNavigationStore.getState();
-        //   navigateToBase(selectedWorkspaceId, baseId);
+      // COMMENTED OUT: Navigation to table on base creation
+      // try {
+      //   // Update navigation store first
+      //   const { navigateToBase } = useNavigationStore.getState();
+      //   navigateToBase(selectedWorkspaceId, baseId);
 
-        //   // Try to navigate to first view, but fallback to base page if no tables exist
-        //   await navigateToFirstView(baseId);
-        // } catch (err) {
-        //   console.error('Navigation error after base creation:', err);
-        //   // Fallback: navigate directly to base page
-        //   const { navigateToBase } = useNavigationStore.getState();
-        //   navigateToBase(selectedWorkspaceId, baseId);
-        //   navigate(`/base/${baseId}`);
-        // }
+      //   // Try to navigate to first view, but fallback to base page if no tables exist
+      //   await navigateToFirstView(baseId);
+      // } catch (err) {
+      //   console.error('Navigation error after base creation:', err);
+      //   // Fallback: navigate directly to base page
+      //   const { navigateToBase } = useNavigationStore.getState();
+      //   navigateToBase(selectedWorkspaceId, baseId);
+      //   navigate(`/base/${baseId}`);
+      // }
     } catch (err: unknown) {
-      const errorMessage = err && typeof err === 'object' && 'message' in err 
-        ? String(err.message) 
+      const errorMessage = err && typeof err === 'object' && 'message' in err
+        ? String(err.message)
         : 'Failed to create base. Please try again.';
       toast.error(errorMessage);
     }
@@ -722,7 +723,12 @@ const HomePage: React.FC = () => {
             name: b.title || b.name || '',
           }))}
           currentItemId={editingBase.id}
-          initialImage={editingBase.image || editingBase.logo || editingBase.meta?.image || null}
+          initialImage={
+            (typeof editingBase.image === 'string' ? editingBase.image : null) ||
+            (typeof editingBase.logo === 'string' ? editingBase.logo : null) ||
+            (typeof editingBase.meta?.image === 'string' ? editingBase.meta.image : null) ||
+            null
+          }
         />
       )}
 
@@ -747,7 +753,6 @@ const HomePage: React.FC = () => {
           onSuccess={() => {
             setShowAddMembers(false);
             setBaseForMembers(null);
-            toast.success('Members added successfully');
           }}
           workspaceId={baseForMembers.workspace_id || selectedWorkspaceId || ''}
           baseId={baseForMembers.id}

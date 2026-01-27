@@ -15,6 +15,7 @@ dist-ssr
 # Test coverage reports
 coverage/
 coverage-vitest/
+scripts/
 
 # Editor directories and files
 .vscode/*
@@ -26,8 +27,6 @@ coverage-vitest/
 *.njsproj
 *.sln
 *.sw?
-coverage/
-coverage-vitest/
 
 # Environment variables
 .env

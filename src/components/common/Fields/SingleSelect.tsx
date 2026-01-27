@@ -250,20 +250,22 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
               normalizedOptions.map((opt, index) => {
                 const label = opt.option;
                 return (
-                <button
-                  key={`${label}-${index}`}
-                  onClick={() => handleSelect(label)}
-                  disabled={readOnly}
-                  className={`w-full text-left text-sm rounded-xl focus:bg-[var(--color-bg-brand-secondary)] transition-colors flex items-center justify-between ${readOnly ? 'cursor-default opacity-75' : 'cursor-pointer'}`}
-                >
-                  <div
-                    className={`inline-flex justify-between items-center w-full p-1 px-2 rounded-full text-xs min-w-0 ${opt.color ? '' : getOptionColor(index)}`}
-                    style={opt.color ? { backgroundColor: opt.color, color: getReadableTextColor(opt.color) } : undefined}
+                  <button
+                    key={`${label}-${index}`}
+                    onClick={() => handleSelect(label)}
+                    disabled={readOnly}
+                    className={`w-full text-left text-sm rounded-xl focus:bg-[var(--color-bg-brand-secondary)] transition-colors flex items-center justify-between ${readOnly
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : 'cursor-pointer'}`}
                   >
-                    <span className="truncate" title={label}>{label}</span>
-                    {value === label && <Check className="w-4 h-4 flex-shrink-0 ml-1" style={{ color: opt.color ? getReadableTextColor(opt.color) : '#000000' }} />}
-                  </div>
-                </button>
+                    <div
+                      className={`inline-flex justify-between items-center w-full p-1 px-2 rounded-full text-xs min-w-0 ${opt.color ? '' : getOptionColor(index)}`}
+                      style={opt.color ? { backgroundColor: opt.color, color: getReadableTextColor(opt.color) } : undefined}
+                    >
+                      <span className="truncate" title={label}>{label}</span>
+                      {value === label && <Check className="w-4 h-4 flex-shrink-0 ml-1" style={{ color: opt.color ? getReadableTextColor(opt.color) : '#000000' }} />}
+                    </div>
+                  </button>
                 );
               })
             )}

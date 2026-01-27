@@ -45,7 +45,7 @@ interface NewColumnModalProps {
   currentTableId?: string; // Add current table ID to exclude from target selection
 }
 
-export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields = [], isAddNewColumn = false, isAddNewField = false, excludeRefs = [], currentTableId }: NewColumnModalProps) {
+export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields = [], isAddNewColumn = false, isAddNewField = false, excludeRefs = [], currentTableId }: Readonly<NewColumnModalProps>) {
   const [step, setStep] = useState<number | null>(initialValues ? 2 : 1);
   const [fieldName, setFieldName] = useState(initialValues?.title || '');
   const [search, setSearch] = useState('');
@@ -186,7 +186,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   // Add state for text config
   const [showTextDefault, setShowTextDefault] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
-  const [showThousandsToggle, setShowThousandsToggle] = useState(false);
   const [showIconDropdown, setShowIconDropdown] = useState(false);
   const [showColorDropdown, setShowColorDropdown] = useState(false);
   const [showRatingIconDropdown, setShowRatingIconDropdown] = useState(false);
@@ -223,7 +222,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             // Boolean/checkbox fields: check both saved format (icon/color/defaultValue) and state format (checkboxIcon/checkboxColor/checkboxDefault)
             setCheckboxIcon(initialValues.config.checkboxIcon || initialValues.config.icon || 'check');
             setCheckboxColor(initialValues.config.checkboxColor || initialValues.config.color || 'green');
-            setCheckboxDefault(initialValues.config.checkboxDefault !== undefined ? !!initialValues.config.checkboxDefault : (initialValues.config.defaultValue !== undefined ? !!initialValues.config.defaultValue : false));
+            setCheckboxDefault(initialValues.config.checkboxDefault === undefined ? (initialValues.config.defaultValue !== undefined ? !!initialValues.config.defaultValue : false) : !!initialValues.config.checkboxDefault);
             break;
           case 'formula':
             setFormulaText(initialValues.config.formula || '');
@@ -439,15 +438,25 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const [isSaving, setIsSaving] = useState(false);
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const fieldNameInputRef = useRef<HTMLInputElement>(null);
+  const [longtextModalRef, setLongtextModalRef] = useState<React.RefObject<HTMLDivElement> | null>(null);
   const modalRef = useClickOutside({
     isOpen,
     onClose,
-    excludeRefs: excludeRefs
+    excludeRefs: longtextModalRef ? [...excludeRefs, longtextModalRef] : excludeRefs
   });
 
   //select, multi-select input state - track which option is being edited
   const [editingOptionIndex, setEditingOptionIndex] = useState<number | null>(null);
   const [editingOptionValue, setEditingOptionValue] = useState<string>('');
+
+  // Longtext modal handlers
+  const handleLongtextModalOpen = (modalRef: React.RefObject<HTMLDivElement>) => {
+    setLongtextModalRef(modalRef);
+  };
+
+  const handleLongtextModalClose = () => {
+    setLongtextModalRef(null);
+  };
   const [optionError, setOptionError] = useState<string>('');
   const editInputRef = useRef<HTMLInputElement>(null);
 
@@ -505,7 +514,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         // Boolean/checkbox fields: check both saved format (icon/color/defaultValue) and state format (checkboxIcon/checkboxColor/checkboxDefault)
         setCheckboxIcon(config.checkboxIcon || config.icon || 'check');
         setCheckboxColor(config.checkboxColor || config.color || 'green');
-        setCheckboxDefault(config.checkboxDefault !== undefined ? !!config.checkboxDefault : (config.defaultValue !== undefined ? !!config.defaultValue : false));
+        setCheckboxDefault(config.checkboxDefault === undefined ? (config.defaultValue !== undefined ? !!config.defaultValue : false) : !!config.checkboxDefault);
         setSelectOptions(
           (config.options || config.selectOptions || []).map((o: any) =>
             typeof o === 'string' ? { option: o, color: '' } : { option: o.option, color: o.color || '' }
@@ -544,7 +553,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         setShowDateTimeDefault(false);
         // For year: check defaultValue first (where it's saved), then fallback to yearDefault
         if (fieldType === 'year') {
-          setYearDefault(config.defaultValue !== undefined && config.defaultValue !== null ? config.defaultValue : (config.yearDefault || null));
+          setYearDefault(config.defaultValue ?? (config.yearDefault || null));
         } else {
         setYearDefault(config.yearDefault || null);
         }
@@ -622,7 +631,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         }
         setShowTextDefault(false);
         setShowDescription(false);
-        setShowThousandsToggle(false);
         setSearch('');
       } else {
         setStep(1);
@@ -680,7 +688,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         setShowCurrencyDefault(false);
         setShowTextDefault(false);
         setShowDescription(false);
-        setShowThousandsToggle(false);
         // Reset user field config state
         setAllowMultipleUsers(false);
         // Reset links field config state
@@ -756,7 +763,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       setShowCurrencyDefault(false);
       setShowTextDefault(false);
       setShowDescription(false);
-      setShowThousandsToggle(false);
       setAllowMultipleUsers(false);
       setRelationType('one-to-one');
       setSelectedTableId('');
@@ -894,7 +900,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     // Reset text config state
     setShowTextDefault(false);
     setShowDescription(false);
-    setShowThousandsToggle(false);
     // Reset user field config state
     setAllowMultipleUsers(false);
     // Reset links field config state
@@ -1387,6 +1392,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 placeholder="Enter default text value"
                 minRows={4} // Minimum rows for the input
                 isBorder={true}
+                onModalOpen={handleLongtextModalOpen}
+                onModalClose={handleLongtextModalClose}
               />
             )}
             <div className="relative">
@@ -3725,9 +3732,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         } z-50 transition-all duration-300 ease-in-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
         }`}
     >
-      {/* {isAddNewField && (
-        <div className="absolute bg-modal" onClick={onClose} />
-      )} */}
       <div className={`relative bg-[var(--color-alpha-white)] min-h-[400px] max-h-[max(70vh,400px)] ${selectedType?.key === 'formula' ? 'w-[500px]' : 'w-[416px]'}  shadow-lg shadow-gray-300 border rounded-xl p-3.5 flex flex-col overflow-hidden`} >
         <div className="flex items-center mb-4">
           <span className="text-lg font-semibold text-gray-900 flex-1">

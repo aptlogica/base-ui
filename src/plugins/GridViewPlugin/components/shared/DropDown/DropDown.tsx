@@ -73,8 +73,8 @@ const Dropdown: React.FC<DropdownProps> = ({
               key={option.value}
               onClick={() => handleSelect(option.value)}
               className={`px-3 py-2 cursor-pointer hover:bg-[var(--color-bg-brand-primary)] hover:text-black ${isSelected(option.value)
-                  ? "bg-[var(--color-bg-brand-secondary)] text-black font-bold"
-                  : "text-[var(--text-color-secondary)]"
+                ? "bg-[var(--color-bg-brand-secondary)] text-black font-bold"
+                : "text-[var(--text-color-secondary)]"
                 }`}
             >
               {option.label}

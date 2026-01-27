@@ -87,7 +87,26 @@ export const Attachment: React.FC<AttachmentProps> = ({
   const getFileIcon = (file: any) => {
     const mimeType: string = file?.mime_type || file?.type || '';
     const fileName: string = (file?.name || file?.title || '').toLowerCase();
-    const ext = fileName.includes('.') ? fileName.split('.').pop() : '';
+    const ext: string = fileName.includes('.') ? (fileName.split('.').pop() || '') : '';
+
+    // Check for images first (as fallback if mime_type check in renderInlineThumbnails failed)
+    if (mimeType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'].includes(ext)) {
+      // Return a generic image icon or try to show thumbnail
+      const fileTitle = file?.title || file?.name || 'Attachment';
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-card">
+          <img
+            src={getThumbnailSrc(file) || '/assets/image.png'}
+            alt={fileTitle}
+            className="w-full h-full object-contain"
+            onError={(e) => {
+              // Fallback to generic image icon if thumbnail fails
+              e.currentTarget.src = '/assets/image.png';
+            }}
+          />
+        </div>
+      );
+    }
 
     // Prefer mime when available
     if (mimeType.startsWith('application/pdf') || ext === 'pdf') {
@@ -260,11 +279,15 @@ export const Attachment: React.FC<AttachmentProps> = ({
     };
 
     return (
-      <div className={`relative flex items-center px-2 pr-20 ${isBorder ? "field-component-border" : ""}`}>
+      <div className={`relative flex items-center px-2 pr-20 h-11 ${isBorder ? "field-component-border" : ""}`}>
         {/* Thumbnails row - Show only first 3 images */}
         <div className="flex items-center gap-1 min-h-8 overflow-hidden flex-wrap">
           {attachmentArray?.slice(0, 3).map((file, idx) => {
-            const isImage = file.mime_type?.startsWith('image/');
+            // Check if file is an image by MIME type or extension
+            const mimeType: string = file?.mime_type || file?.type || '';
+            const fileName: string = (file?.name || file?.title || '').toLowerCase();
+            const ext: string = fileName.includes('.') ? (fileName.split('.').pop() || '') : '';
+            const isImage = mimeType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'].includes(ext);
             return (
               <div
                 className="w-8 h-8 rounded-lg bg-card flex items-center justify-center overflow-hidden cursor-pointer transition-all hover:border-[var(--color-brand-600)] focus:outline-none flex-shrink-0 shadow-md"

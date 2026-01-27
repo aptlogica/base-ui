@@ -3,6 +3,13 @@ import { Plugin, PluginManifest, PluginAPI } from '../../core/types';
 import { matchesViewType } from '../../utils/viewType';
 import { useCalendarData } from './hooks/useCalendarData';
 import CalendarView from './components/CalendarView';
+import { Loader } from '../../components/ui/Loader';
+
+interface ViewExtensionProps {
+  table?: { id?: string };
+  view?: { id?: string; type?: string };
+  viewType?: string;
+}
 
 const manifest: PluginManifest = {
   id: 'calendar-view-plugin',
@@ -13,40 +20,43 @@ const manifest: PluginManifest = {
 
 const CalendarViewPlugin: Plugin = {
   manifest,
-  initialize: async (api: PluginAPI, config: any) => {
-    // Single component: fetch and render CalendarView directly (no extra wrappers)
+  initialize: async (api: PluginAPI) => {
+    // Single component: fetch and render CalendarView directly
     const CalendarViewWrapper: React.FC<{ tableId: string; viewId?: string }> = ({ tableId, viewId }) => {
       const { tableData, isLoading, error, refresh, addRow, insertRowData, deleteRecord, updateField, updateView, updateEvent, createEvent, deleteEvent, changeDateField, updateViewConfig } = useCalendarData({ tableId, viewId });
 
-      if (isLoading) return <div className="h-full flex items-center justify-center">Loading calendar…</div>;
-      
       if (error) {
+        let errorMessage: string;
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        } else {
+          errorMessage = 'An unknown error occurred';
+        }
         return (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
-              <div className="text-red-500 text-lg mb-2">⚠️ Error Loading Calendar</div>
-              <p className="text-muted-foreground mb-4">{String(error)}</p>
+              <div className="text-red-500 text-lg mb-2">Something went wrong while loading the calendar view.</div>
+              <p className="text-muted-foreground mb-4">{errorMessage}</p>
               <button onClick={() => refresh()} className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90">Retry</button>
             </div>
           </div>
         );
       }
       
-      if (!tableData || !tableData.model || !tableData.columns) {
+      // Show loading state while data is being fetched
+      if (isLoading || !tableData?.model) {
         return (
           <div className="h-full flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-muted-foreground text-lg mb-2">📅 No Calendar Data</div>
-              <p className="text-muted-foreground mb-4">Calendar could not be loaded</p>
-              <button onClick={() => refresh()} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">🔄 Retry Loading</button>
-            </div>
+            <Loader size={10} />
           </div>
         );
       }
 
       return (
         <CalendarView
-          tableData={tableData!}
+          tableData={tableData}
           viewId={viewId}
           onRefresh={() => refresh()}
           actions={{ addRow, insertRowData, deleteRecord, updateField, updateView, updateEvent, createEvent, deleteEvent, changeDateField, updateViewConfig }}
@@ -57,15 +67,17 @@ const CalendarViewPlugin: Plugin = {
     api.registerExtension('view', {
       id: 'calendar-view',
       order: 51,
-      render: (props: any) => {
+      render: (props: ViewExtensionProps) => {
         const tableId = props?.table?.id;
         const viewId = props?.view?.id;
         const rawType = props?.viewType ?? props?.view?.type;
         const validCalendarTypes = ['calendar', 'calendarview', 'calendar-view'];
         
+        // Allow rendering when type matches calendar even if viewId is absent (slug-based route)
         if (!tableId) return null;
         if (!matchesViewType(rawType, validCalendarTypes)) return null;
         
+        // Fetch once and pass calendar data; no ViewHost/context path
         return <CalendarViewWrapper tableId={tableId} viewId={viewId} />;
       },
     });

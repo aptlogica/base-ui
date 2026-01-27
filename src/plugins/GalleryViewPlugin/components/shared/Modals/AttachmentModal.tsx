@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Upload, Download, Eye, Trash2, File, Image, Edit2, Check, X as XIcon, Loader2 } from 'lucide-react';
+import { X, Upload, Download, Eye, Trash2, Check, X as XIcon, Loader2 } from 'lucide-react';
 import { AttachmentFile } from '../../../../GridViewPlugin/types/grid.types';
 import { useUpdateAssetById, useAddAttachment } from '../../../../../hooks/useApi';
 
@@ -11,7 +11,6 @@ interface AttachmentModalProps {
   onChange: (value: any[]) => void;
   maxFiles?: number;
   maxFileSize?: number;
-  allowedTypes?: string[];
   model_id?: string;
   column_id?: string;
   row_id?: number;
@@ -25,7 +24,6 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
   onChange,
   maxFiles = 10,
   maxFileSize = 5 * 1024 * 1024,
-  allowedTypes,
   model_id,
   column_id,
   row_id,
@@ -34,11 +32,11 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string | null>(null);
   const [editingTitleValue, setEditingTitleValue] = useState<string>('');
   const [selectedFiles, setSelectedFiles] = useState<AttachmentFile[]>([]);
-  const [uploadingFiles, setUploadingFiles] = useState<Set<number>>(new Set());
-  const [uploadProgress, setUploadProgress] = useState<Record<number, number>>({});
+  const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,7 +53,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
     } else {
       // Cleanup blob URLs when modal closes
       selectedFiles.forEach(file => {
-        if (file.url && file.url.startsWith('blob:')) {
+        if (file?.url?.startsWith('blob:')) {
           URL.revokeObjectURL(file.url);
         }
       });
@@ -67,7 +65,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const getFileIcon = (file: any) => {
@@ -210,39 +208,6 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
     );
   };
 
-  // Simulate upload progress based on file size
-  const simulateUploadProgress = (fileIndex: number, fileSize: number) => {
-    const startTime = Date.now();
-    const duration = Math.min(Math.max(fileSize / 100000, 1000), 5000); // 1-5 seconds based on file size
-
-    const updateProgress = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min((elapsed / duration) * 100, 100);
-
-      setUploadProgress(prev => ({
-        ...prev,
-        [fileIndex]: progress
-      }));
-
-      if (progress < 100) {
-        requestAnimationFrame(updateProgress);
-      } else {
-        // Upload complete
-        setUploadingFiles(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(fileIndex);
-          return newSet;
-        });
-        setUploadProgress(prev => {
-          const newProgress = { ...prev };
-          delete newProgress[fileIndex];
-          return newProgress;
-        });
-      }
-    };
-
-    requestAnimationFrame(updateProgress);
-  };
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
@@ -255,22 +220,6 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
         errors.push(`${file.name} is too large (max ${formatFileSize(maxFileSize)})`);
         return;
       }
-
-      // const isAllowed = allowedTypes.some(type => {
-      //   if (type.startsWith('.')) {
-      //     return file.name.toLowerCase().endsWith(type.toLowerCase());
-      //   }
-      //   if (type.includes('*')) {
-      //     const baseType = type.split('/')[0];
-      //     return file.type.startsWith(baseType);
-      //   }
-      //   return file.type === type;
-      // });
-
-      // if (!isAllowed) {
-      //   errors.push(`${file.name} is not an allowed file type`);
-      //   return;
-      // }
 
       const fileObj: AttachmentFile = {
         name: file.name,
@@ -298,18 +247,13 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
     setError(null);
   };
 
-  const handleRemoveSelectedFile = (index: number) => {
+  const handleRemoveSelectedFile = (fileUrl: string) => {
     // Revoke blob URL to prevent memory leak
-    const fileToRemove = selectedFiles[index];
-    if (fileToRemove && fileToRemove.url && fileToRemove.url.startsWith('blob:')) {
+    const fileToRemove = selectedFiles.find(f => f.url === fileUrl);
+    if (fileToRemove?.url?.startsWith('blob:')) {
       URL.revokeObjectURL(fileToRemove.url);
     }
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleRemoveUploadedFile = (index: number) => {
-    const updatedFiles = value.filter((_, i) => i !== index);
-    onChange(updatedFiles);
+    setSelectedFiles(prev => prev.filter(f => f.url !== fileUrl));
   };
 
   const handleUploadFiles = async () => {
@@ -338,8 +282,8 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
     setError(null);
 
     // Set all files as uploading
-    const uploadingIndices = new Set(selectedFiles.map((_, index) => index));
-    setUploadingFiles(uploadingIndices);
+    const uploadingUrls = new Set(selectedFiles.map(file => file.url));
+    setUploadingFiles(uploadingUrls);
 
     try {
       const fileObjects = selectedFiles.map(file => file.file).filter((file): file is File => file !== undefined);
@@ -354,11 +298,8 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
             (progressEvent.loaded * 100) / progressEvent.total
           );
           // Update progress for all files
-          selectedFiles.forEach((_, index) => {
-            setUploadProgress(prev => ({
-              ...prev,
-              [index]: percent
-            }));
+          selectedFiles.forEach(file => {
+            setUploadProgress(prev => ({...prev,[file.url]: percent}));
           });
         }
       });
@@ -382,18 +323,18 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
     onClose();
   };
 
-  const handleStartEditTitle = (index: number) => {
-    setEditingTitle(index);
-    setEditingTitleValue(value[index]?.title || value[index]?.name || '');
-  };
-
   const handleCancelEditTitle = () => {
     setEditingTitle(null);
     setEditingTitleValue('');
   };
 
-  const handleSaveTitle = async (index: number) => {
-    const file = value[index];
+  const handleSaveTitle = async (fileUrl: string) => {
+    const fileIndex = value.findIndex(f => f.url === fileUrl);
+    if (fileIndex === -1) {
+      console.error('File not found for title update');
+      return;
+    }
+    const file = value[fileIndex];
     if (!file?.id) {
       console.error('No asset ID found for title update');
       return;
@@ -407,7 +348,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
 
       // Update local state
       const updatedFiles = [...value];
-      updatedFiles[index] = { ...file, title: editingTitleValue.trim() };
+      updatedFiles[fileIndex] = { ...file, title: editingTitleValue.trim() };
       onChange(updatedFiles);
 
       setEditingTitle(null);
@@ -434,235 +375,255 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
     handleFileSelect(e.dataTransfer.files);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="bg-modal-backdrop" onClick={onClose}>
+    <div
+      className="bg-modal-backdrop relative"
+      onKeyDown={handleKeyDown}
+    >
+      <button
+        type="button"
+        aria-label="Close modal"
+        className="absolute inset-0"
+        onClick={onClose}
+      />
       <div
-        className="bg-[var(--color-card)] border rounded-xl shadow-2xl p-6 w-full transform transition-all duration-200 scale-100 relative max-w-4xl mx-4 h-[80vh] max-h-[80vh] flex flex-col"
+        className="bg-modal !max-w-4xl !p-0 flex flex-col relative overflow-hidden h-[80vh] max-h-[80vh] mx-4"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center">
+        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center flex-shrink-0">
               <Upload size={20} className="icon-primary" />
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-primary">Manage Attachments</h2>
-              <p className="text-sm text-secondary">Upload and manage your files</p>
+            <div className="min-w-0">
+              <h2 className="text-xl font-semibold text-primary truncate">Manage Attachments</h2>
+              <p className="text-sm text-secondary truncate">Upload and manage your files</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
+            aria-label="Close"
           >
             <X size={16} className="text-[var(--text-color-tertiary)]" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          {/* Upload Area - Always visible */}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all mb-6 ${isDragOver
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+          <div className="p-4 space-y-4">
+            {/* Upload Area - Always visible */}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all mb-6 ${isDragOver
                 ? 'border-blue-500 bg-blue-50'
                 : selectedFiles.length >= maxFiles
                   ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-50'
                   : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-              }`}
-          >
-            <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <div className="text-xl font-medium text-gray-900 mb-2">
-              {selectedFiles.length >= maxFiles
-                ? `Maximum ${maxFiles} files selected`
-                : 'Drop files here or click to select'
-              }
-            </div>
-            <div className="text-sm text-gray-500 mb-1">
-              Max {maxFiles} files, {formatFileSize(maxFileSize)} each
-            </div>
-            {/* <div className="text-xs text-gray-400">
+                }`}
+              onKeyDown={(e) => e.stopPropagation()}
+
+            >
+              <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <div className="text-xl font-medium text-gray-900 mb-2">
+                {selectedFiles.length >= maxFiles
+                  ? `Maximum ${maxFiles} files selected`
+                  : 'Drop files here or click to select'
+                }
+              </div>
+              <div className="text-sm text-gray-500 mb-1">
+                Max {maxFiles} files, {formatFileSize(maxFileSize)} each
+              </div>
+              {/* <div className="text-xs text-gray-400">
               Supported: {allowedTypes.join(', ')}
             </div> */}
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
-              {error}
             </div>
-          )}
 
-          {/* Selected Files List */}
-          {selectedFiles.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-gray-900">
-                Selected Files ({selectedFiles.length}/{maxFiles})
-              </h3>
-              <div className="space-y-2">
-                {selectedFiles.map((file, index) => {
-                  const isUploading = uploadingFiles.has(index);
-                  const progress = uploadProgress[index] || 0;
+            {/* Error Message */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+                {error}
+              </div>
+            )}
 
-                  return (
-                    <div
-                      key={index}
-                      className={`flex gap-3 p-3 rounded-xl border transition-all ${isUploading ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'
-                        }`}
-                    >
-                      {/* Image Preview or File Icon */}
-                      <div className="flex-shrink-0 relative">
-                        {file.type?.startsWith('image/') ? (
-                          <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-200 flex items-center justify-center">
-                            <img
-                              src={file.url}
-                              alt={file.name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                console.error('Image load error:', e);
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                            {isUploading && (
-                              <div className="absolute inset-0 bg-[#0000002b] flex items-center justify-center backdrop-blur-sm">
-                                <Loader2 className="w-6 h-6 text-white animate-spin" />
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="w-16 h-16 rounded-xl bg-gray-200 flex items-center justify-center relative">
-                            {isUploading ? (
-                              <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                            ) : (
-                              getFileIcon(file)
-                            )}
-                          </div>
-                        )}
-                      </div>
+            {/* Selected Files List */}
+            {selectedFiles.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-gray-900">
+                  Selected Files ({selectedFiles.length}/{maxFiles})
+                </h3>
+                <div className="space-y-2">
+                  {selectedFiles.map((file) => {
+                    const isUploading = uploadingFiles.has(file.url);
+                    const progress = uploadProgress[file.url] || 0;
 
-                      {/* File Info */}
-                      <div className="flex-1 min-w-0">
-                        {editingTitle === index ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              value={editingTitleValue}
-                              onChange={(e) => setEditingTitleValue(e.target.value)}
-                              className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              placeholder="Enter title..."
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  handleSaveTitle(index);
-                                } else if (e.key === 'Escape') {
-                                  handleCancelEditTitle();
-                                }
-                              }}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleSaveTitle(index)}
-                              disabled={updateAssetMutation.isPending}
-                              className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50"
-                            >
-                              <Check size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleCancelEditTitle}
-                              className="p-1 text-red-600 hover:text-red-700"
-                            >
-                              <XIcon size={16} />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="font-medium text-gray-900 truncate">
-                            {file.name}
-                          </div>
-                        )}
-                        <div className="text-sm text-gray-500">
-                          {formatFileSize(file.size)}
-                          {isUploading && (
-                            <span className="ml-2 text-blue-600 font-medium">
-                              Uploading... {Math.round(progress)}%
-                            </span>
+                    return (
+                      <div
+                        key={file.url}
+                        className="flex gap-3 p-3 rounded-xl border transition-all"
+                      >
+                        {/* Image Preview or File Icon */}
+                        <div className="flex-shrink-0 relative">
+                          {file.type?.startsWith('image/') ? (
+                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-200 flex items-center justify-center">
+                              <img
+                                src={file.url}
+                                alt={file.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  console.error('Image load error:', e);
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                              {isUploading && (
+                                <div className="absolute inset-0 bg-[#0000002b] flex items-center justify-center backdrop-blur-sm">
+                                  <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="w-16 h-16 rounded-xl bg-gray-200 flex items-center justify-center relative">
+                              {isUploading ? (
+                                <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                              ) : (
+                                getFileIcon(file)
+                              )}
+                            </div>
                           )}
                         </div>
-                        {file.type && (
-                          <div className="text-xs text-gray-400 mt-1">{file.type}</div>
-                        )}
-                      </div>
 
-                      {/* Action Buttons */}
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => window.open(file.url, '_blank')}
-                          disabled={isUploading}
-                          className={`p-2 transition-colors rounded ${isUploading
+                        {/* File Info */}
+                        <div className="flex-1 min-w-0">
+                          {editingTitle === file.url ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={editingTitleValue}
+                                onChange={(e) => setEditingTitleValue(e.target.value)}
+                                className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                placeholder="Enter title..."
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleSaveTitle(file.url);
+                                  } else if (e.key === 'Escape') {
+                                    handleCancelEditTitle();
+                                  }
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSaveTitle(file.url)}
+                                disabled={updateAssetMutation.isPending}
+                                className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50"
+                              >
+                                <Check size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleCancelEditTitle}
+                                className="p-1 text-red-600 hover:text-red-700"
+                              >
+                                <XIcon size={16} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="font-medium text-gray-900 truncate">
+                              {file.name}
+                            </div>
+                          )}
+                          <div className="text-sm text-gray-500">
+                            {formatFileSize(file.size)}
+                            {isUploading && (
+                              <span className="ml-2 text-blue-600 font-medium">
+                                Uploading... {Math.round(progress)}%
+                              </span>
+                            )}
+                          </div>
+                          {file.type && (
+                            <div className="text-xs text-gray-400 mt-1">{file.type}</div>
+                          )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => window.open(file.url, '_blank')}
+                            disabled={isUploading}
+                            className={`p-2 transition-colors rounded ${isUploading
                               ? 'text-gray-300 cursor-not-allowed'
                               : 'text-gray-400 hover:text-blue-600'
-                            }`}
-                          title={isUploading ? "Preview unavailable during upload" : "Preview"}
-                        >
-                          <Eye className="w-4 h-4 text-gray-700" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const a = document.createElement('a');
-                            a.href = file.url;
-                            a.download = file.name;
-                            a.click();
-                          }}
-                          disabled={isUploading}
-                          className={`p-2 transition-colors rounded ${isUploading
+                              }`}
+                            title={isUploading ? "Preview unavailable during upload" : "Preview"}
+                          >
+                            <Eye className="w-4 h-4 text-gray-700" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const a = document.createElement('a');
+                              a.href = file.url;
+                              a.download = file.name;
+                              a.click();
+                            }}
+                            disabled={isUploading}
+                            className={`p-2 transition-colors rounded ${isUploading
                               ? 'text-gray-300 cursor-not-allowed'
                               : 'text-gray-400 hover:text-green-600'
-                            }`}
-                          title={isUploading ? "Download unavailable during upload" : "Download"}
-                        >
-                          <Download className="w-4 h-4 text-gray-700" />
-                        </button>
-                        {/* Edit button disabled for selected files - they don't have IDs yet */}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSelectedFile(index)}
-                          disabled={isUploading}
-                          className={`p-2 transition-colors rounded ${isUploading
+                              }`}
+                            title={isUploading ? "Download unavailable during upload" : "Download"}
+                          >
+                            <Download className="w-4 h-4 text-gray-700" />
+                          </button>
+                          {/* Edit button disabled for selected files - they don't have IDs yet */}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSelectedFile(file.url)}
+                            disabled={isUploading}
+                            className={`p-2 transition-colors rounded ${isUploading
                               ? 'text-gray-300 cursor-not-allowed'
                               : 'text-gray-400 hover:text-red-600'
-                            }`}
-                          title={isUploading ? "Remove unavailable during upload" : "Remove"}
-                        >
-                          <Trash2 className="w-4 h-4 text-gray-700" />
-                        </button>
+                              }`}
+                            title={isUploading ? "Remove unavailable during upload" : "Remove"}
+                          >
+                            <Trash2 className="w-4 h-4 text-gray-700" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Hidden File Input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            onChange={(e) => handleFileSelect(e.target.files)}
-            className="hidden"
-          />
+            {/* Hidden File Input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={(e) => handleFileSelect(e.target.files)}
+              className="hidden"
+            />
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 pt-3 border-t">
+        <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
           <button
             type="button"
             onClick={handleCancel}

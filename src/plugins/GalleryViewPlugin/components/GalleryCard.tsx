@@ -164,100 +164,88 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
     [item.allImages]
   );
 
-  // Create a Map for O(1) column lookups (optimized)
-  const columnMap = useMemo(() => {
-    if (!visibleColumns) return new Map();
-    const map = new Map<string, any>();
-    visibleColumns.forEach(col => {
-      const colName = col.column_name?.toLowerCase();
-      const colTitle = col.title?.toLowerCase();
-      const colKey = col.key?.toLowerCase();
-      if (colName) map.set(colName, col);
-      if (colTitle) map.set(colTitle, col);
-      if (colKey) map.set(colKey, col);
-      // Also add exact matches
-      if (col.column_name) map.set(col.column_name, col);
-      if (col.title) map.set(col.title, col);
-      if (col.key) map.set(col.key, col);
-    });
-    return map;
-  }, [visibleColumns]);
-
-  // Memoize formatMetadata to prevent recalculation on every render
-  // Iterate over visibleColumns (like Kanban) instead of metadata entries to show all fields including empty ones
-  const formatMetadata = useMemo(() => {
-    if (!visibleColumns || visibleColumns.length === 0) return null;
-    
-    // Iterate over visible columns (like KanbanCard does) to ensure all visible fields are shown
-    return visibleColumns.map(col => {
-      // Prefer rawData[column_name], then metadata[column_name] or metadata[key]
-      let raw = col.column_name ? item.rawData?.[col.column_name] : undefined;
-      if (raw === undefined || raw === null || raw === '') {
-        // Try metadata by column_name
-        raw = col.column_name ? item.metadata?.[col.column_name] : undefined;
+  // Helper functions to reduce cognitive complexity
+  const getRawValue = useCallback((col: any): any => {
+    // Prefer rawData[column_name], then metadata[column_name] or metadata[key]
+    let raw = col.column_name ? item.rawData?.[col.column_name] : undefined;
+    if (raw === undefined || raw === null || raw === '') {
+      raw = col.column_name ? item.metadata?.[col.column_name] : undefined;
+    }
+    if (raw === undefined || raw === null || raw === '') {
+      raw = col.key ? item.metadata?.[col.key] : undefined;
+    }
+    if (raw === undefined || raw === null || raw === '') {
+      const titleKey = Object.keys(item.metadata || {}).find(
+        key => key.toLowerCase() === (col.title || '').toLowerCase()
+      );
+      if (titleKey) {
+        raw = item.metadata?.[titleKey];
       }
-      if (raw === undefined || raw === null || raw === '') {
-        // Try metadata by key
-        raw = col.key ? item.metadata?.[col.key] : undefined;
-      }
-      if (raw === undefined || raw === null || raw === '') {
-        // Try metadata by title (case-insensitive)
-        const titleKey = Object.keys(item.metadata || {}).find(
-          key => key.toLowerCase() === (col.title || '').toLowerCase()
-        );
-        if (titleKey) {
-          raw = item.metadata?.[titleKey];
-        }
-      }
+    }
+    // Normalize empty values to null
+    return raw === undefined || raw === '' ? null : raw;
+  }, [item]);
 
-      // Normalize empty values to null so FieldDisplay can show "-"
-      if (raw === undefined || raw === '') {
-        raw = null;
-      }
+  const getFieldTypeFlags = useCallback((col: any) => {
+    return {
+      fieldType: col.type || 'text',
+      isLinksField: col.type === 'links' || col.uidt === 'links',
+      isLookupField: col.type === 'lookup' || col.uidt === 'lookup',
+      isJsonField: col.type === 'json' || col.uidt === 'json',
+      isAttachmentField: col.type === 'attachment' || col.uidt === 'attachment',
+    };
+  }, []);
 
-      // Check field types
-      const fieldType = col.type || 'text';
-      const isLinksField = col.type === 'links' || col.uidt === 'links';
-      const isLookupField = col.type === 'lookup' || col.uidt === 'lookup';
-      const isJsonField = col.type === 'json' || col.uidt === 'json';
-      const isAttachmentField = col.type === 'attachment' || col.uidt === 'attachment';
+  const shouldShowAttachmentField = useCallback((raw: any): boolean => {
+    if (Array.isArray(raw)) {
+      return raw.length > 0;
+    }
+    if (raw !== null && raw !== undefined && typeof raw === 'object') {
+      return Object.keys(raw).length > 0;
+    }
+    return false;
+  }, []);
 
-      // For attachment fields, only show if they have actual attachments
-      if (isAttachmentField) {
-        const hasAttachmentValue = Array.isArray(raw) ? raw.length > 0 : (raw !== null && raw !== undefined && typeof raw === 'object' && Object.keys(raw).length > 0);
-        if (!hasAttachmentValue) {
-          return null;
-        }
-      }
+  const shouldSkipComplexObject = useCallback((raw: any, isComplexField: boolean): boolean => {
+    return (
+      typeof raw === 'object' &&
+      raw !== null &&
+      !Array.isArray(raw) &&
+      !isComplexField &&
+      Object.keys(raw).length > 0
+    );
+  }, []);
 
-      // Skip complex objects that can't be displayed (except json, links, lookup, attachment which are handled by FieldDisplay)
-      const isComplexField = isJsonField || isLinksField || isLookupField || isAttachmentField;
-      if (
-        typeof raw === 'object' &&
-        raw !== null &&
-        !Array.isArray(raw) &&
-        !isComplexField &&
-        Object.keys(raw).length > 0
-      ) {
-        return null;
-      }
+  // Process a single column and return JSX or null
+  const renderFieldColumn = useCallback((col: any) => {
+    const raw = getRawValue(col);
+    const { fieldType, isLinksField, isLookupField, isJsonField, isAttachmentField } = getFieldTypeFlags(col);
+    const isComplexField = isJsonField || isLinksField || isLookupField || isAttachmentField;
 
-      // Show all visible fields (including empty ones) - FieldDisplay will show "-" for empty values
-      // Don't skip empty fields, let FieldDisplay handle the empty state display (like Kanban)
-      
-      return (
-        <div key={col.id || col.key || `field-${col.column_name}`} className="group/metadata">
-          {/* Field Title with Icon */}
-          <div className="flex items-center gap-2 mb-1">
-            <div className="text-gray-400 flex-shrink-0">
-              {getFieldTypeIconWithMargin(fieldType === 'checkbox' ? 'boolean' : fieldType)}
-            </div>
-            <div className="text-gray-600 text-base">
-              {col.title}
-            </div>
+    // For attachment fields, only show if they have actual attachments
+    if (isAttachmentField && !shouldShowAttachmentField(raw)) {
+      return null;
+    }
+
+    // Skip complex objects that can't be displayed (except json, links, lookup, attachment which are handled by FieldDisplay)
+    if (shouldSkipComplexObject(raw, isComplexField)) {
+      return null;
+    }
+
+    // Show all visible fields (including empty ones) - FieldDisplay will show "-" for empty values
+    return (
+      <div key={col.id || col.key || `field-${col.column_name}`} className="group/metadata">
+        {/* Field Title with Icon */}
+        <div className="flex items-center gap-2 mb-1">
+          <div className="text-gray-400 flex-shrink-0">
+            {getFieldTypeIconWithMargin(fieldType === 'checkbox' ? 'boolean' : fieldType)}
           </div>
-          {/* Field Value */}
-          <div className="ml-5 text-gray-900">
+          <div className="text-gray-600 text-base">
+            {col.title}
+          </div>
+        </div>
+        {/* Field Value */}
+        <div className="ml-5 text-gray-900">
             <FieldDisplay
               field={{
                 id: col.id,
@@ -276,8 +264,15 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
           </div>
         </div>
       );
-    }).filter(Boolean); // Filter out null entries (attachment fields without values, complex objects)
-  }, [item.rawData, item.metadata, item.id, visibleColumns]);
+  }, [getRawValue, getFieldTypeFlags, shouldShowAttachmentField, shouldSkipComplexObject]);
+
+  // Iterate over visibleColumns (like Kanban) instead of metadata entries to show all fields including empty ones
+  const formatMetadata = useMemo(() => {
+    if (!visibleColumns || visibleColumns.length === 0) return null;
+    
+    // Iterate over visible columns (like KanbanCard does) to ensure all visible fields are shown
+    return visibleColumns.map(renderFieldColumn).filter(Boolean); // Filter out null entries (attachment fields without values, complex objects)
+  }, [visibleColumns, renderFieldColumn]);
 
   // Memoize image checks to prevent recalculation
   const hasImages = useMemo(() => item.allImages && item.allImages.length > 0, [item.allImages]);
@@ -292,10 +287,19 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
     });
   }, [hasImages, item.allImages]);
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (onEdit && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      onEdit();
+    }
+  };
+
   return (
     <div 
-      className={`group relative bg-card rounded-2xl border shadow-sm overflow-hidden transition-all duration-300 transform ${onEdit ? 'hover:border-[var(--color-bg-brand-primary)] cursor-pointer hover:-translate-y-1' : ''}`}
+      className={`group relative bg-card rounded-2xl border shadow-sm overflow-hidden transition-all duration-300 transform ${onEdit ? 'cursor-pointer hover:-translate-y-1' : ''}`}
       onClick={onEdit}
+      onKeyDown={onEdit ? handleKeyDown : undefined}
+      role={onEdit ? 'button' : undefined}
     >
       {/* Image Section with Carousel - Only show if we have image files */}
       {hasImageFiles && (
@@ -304,7 +308,7 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
             <img
               src={currentImage.thumbnail_url}
               alt={currentImage.title || currentImage.name || `${item.title} - Image ${currentImageIndex + 1}`}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              className="w-full h-full object-cover"
               onError={handleImageError}
             />
           ) : (
@@ -345,13 +349,12 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
               {currentImageIndex + 1} / {item.allImages.length}
             </div>
           )}
-
           {/* Navigation Dots - Only show if multiple images */}
           {hasMultipleImages && item.allImages && (
             <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10 bg-black/40 backdrop-blur-sm px-2 py-1.5 rounded-full">
-              {item.allImages.map((_, index) => (
+              {item.allImages.map((image, index) => (
                 <button
-                  key={index}
+                  key={image.id}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();

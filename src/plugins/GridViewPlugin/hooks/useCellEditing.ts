@@ -9,6 +9,13 @@ interface UseCellEditingOptions {
   onRecordsUpdate: (updater: (prev: any[]) => any[]) => void;
 }
 
+interface RecordWithId {
+  id?: string | number;
+  _meta?: { id?: string | number; created_at?: string };
+  data?: Record<string, any>;
+  [key: string]: any;
+}
+
 export function useCellEditing({
   data,
   columns,
@@ -38,6 +45,205 @@ export function useCellEditing({
     return val;
   }, []);
 
+  // Helper to get record ID as string
+  const getRecordId = useCallback((record: RecordWithId): string => {
+    return String(record.id ?? record._meta?.id ?? '');
+  }, []);
+
+  // Helper to check if value is empty
+  const isEmptyValue = useCallback((val: any): boolean => {
+    return val === null || val === undefined ||
+      (typeof val === 'string' && val.trim() === '') ||
+      (Array.isArray(val) && val.length === 0);
+  }, []);
+
+  // Helper to update attachment field in records
+  const updateAttachmentField = useCallback((prevRecords: any[], rowId: string, columnKey: string, value: any) => {
+    return prevRecords.map(record => {
+      const recordId = getRecordId(record);
+      if (recordId === String(rowId)) {
+        let attachmentValue: any[] | null = null;
+        if (Array.isArray(value) && value.length > 0) {
+          attachmentValue = [...value];
+        } else if (value && !Array.isArray(value)) {
+          attachmentValue = [value];
+        }
+        return {
+          ...record,
+          [columnKey]: attachmentValue
+        };
+      }
+      return record;
+    });
+  }, [getRecordId]);
+
+  // Helper to update links field in records
+  const updateLinksField = useCallback((prevRecords: any[], rowId: string, columnKey: string, value: any) => {
+    return prevRecords.map(record => {
+      const recordId = getRecordId(record);
+      if (recordId === rowId) {
+        const updatedRecord = { ...record };
+        updatedRecord[columnKey] = value;
+        if (updatedRecord.data) {
+          updatedRecord.data = {
+            ...updatedRecord.data,
+            [columnKey]: value
+          };
+        }
+        return updatedRecord;
+      }
+      return record;
+    });
+  }, [getRecordId]);
+
+  // Helper to prepare backend value
+  const prepareBackendValue = useCallback((value: any, column: ColumnConfig): any => {
+    if (column.type === 'json' && typeof value === 'object' && value !== null) {
+      return JSON.stringify(value);
+    }
+    if (column.type === 'user') {
+      const userConfig = column.meta || {};
+      if (userConfig.allowMultiple && Array.isArray(value)) {
+        return value.filter(id => id?.toString().trim()).join(',');
+      }
+    }
+    return value;
+  }, []);
+
+  // Helper to compare values for change detection
+  const hasValueChanged = useCallback((newVal: any, oldVal: any): boolean => {
+    const normalizedNew = normalizeEmpty(newVal, oldVal);
+    const normalizedOld = normalizeEmpty(oldVal);
+
+    // If both are empty/null, no change
+    if (normalizedNew === null && normalizedOld === null) {
+      return false;
+    }
+    
+    // If new is 0 and old was null/undefined, treat as no change
+    if (normalizedNew === 0 && (normalizedOld === null || normalizedOld === undefined)) {
+      return false;
+    }
+
+    // Handle arrays/objects (for multi-select, JSON, etc.)
+    if (Array.isArray(normalizedNew) || Array.isArray(normalizedOld)) {
+      if (Array.isArray(normalizedNew) && Array.isArray(normalizedOld)) {
+        if (normalizedNew.length === 0 && normalizedOld.length === 0) {
+          return false; // Both empty arrays, no change
+        }
+        return JSON.stringify(normalizedNew) !== JSON.stringify(normalizedOld);
+      }
+      return true; // One is array, one is not - changed
+    }
+
+    // Handle objects
+    if (typeof normalizedNew === 'object' && typeof normalizedOld === 'object' && normalizedNew !== null && normalizedOld !== null) {
+      return JSON.stringify(normalizedNew) !== JSON.stringify(normalizedOld);
+    }
+
+    // Primitive comparison
+    return normalizedNew !== normalizedOld;
+  }, [normalizeEmpty]);
+
+  // Helper to check if row is newly created
+  const isNewlyCreatedRow = useCallback((row: TableData, thresholdMs = 2000): boolean => {
+    const rowCreationTime = row._meta?.created_at;
+    if (!rowCreationTime) return false;
+    const created = new Date(rowCreationTime).getTime();
+    const now = Date.now();
+    return (now - created) < thresholdMs;
+  }, []);
+
+  // Helper to update record in local state
+  const updateLocalRecord = useCallback((prevRecords: any[], rowId: string, columnKey: string, value: any) => {
+    return prevRecords.map(record => {
+      const recordId = getRecordId(record);
+      if (recordId === rowId) {
+        const updatedRecord = { ...record };
+        updatedRecord[columnKey] = value;
+        if (updatedRecord.data) {
+          updatedRecord.data = {
+            ...updatedRecord.data,
+            [columnKey]: value
+          };
+        }
+        return updatedRecord;
+      }
+      return record;
+    });
+  }, [getRecordId]);
+
+  // Helper to get original value from row
+  const getOriginalValue = useCallback((row: TableData, columnKey: string): any => {
+    return row[columnKey] ?? row.data?.[columnKey] ?? row._meta?.[columnKey];
+  }, []);
+
+  // Helper to handle attachment field updates
+  const handleAttachmentField = useCallback((rowId: string, columnKey: string, value: any) => {
+    if (!onRecordsUpdate) return;
+    onRecordsUpdate(prevRecords => updateAttachmentField(prevRecords, rowId, columnKey, value));
+  }, [onRecordsUpdate, updateAttachmentField]);
+
+  // Helper to handle links field updates
+  const handleLinksField = useCallback((rowId: string, columnKey: string, value: any) => {
+    if (!onRecordsUpdate) return;
+    onRecordsUpdate(prevRecords => updateLinksField(prevRecords, rowId, columnKey, value));
+  }, [onRecordsUpdate, updateLinksField]);
+
+  // Helper to process debounced cell update
+  const processDebouncedUpdate = useCallback(async (
+    change: { rowId: string; columnKey: string; value: any },
+    column: ColumnConfig,
+    row: TableData
+  ) => {
+    const originalValue = originalValues.current.get(`${change.rowId}-${change.columnKey}`);
+    
+    if (!hasValueChanged(change.value, originalValue)) {
+      return;
+    }
+
+    const isEmpty = isEmptyValue(change.value);
+    const isOldEmpty = isEmptyValue(originalValue);
+
+    // Skip empty-to-empty transitions
+    if (isEmpty && isOldEmpty) {
+      return;
+    }
+
+    // Skip empty values for newly created rows
+    if (isEmpty && isNewlyCreatedRow(row)) {
+      return;
+    }
+
+    // Validate rowId before API call
+    const numericRowId = Number(change.rowId);
+    if (!tableId || Number.isNaN(numericRowId) || numericRowId <= 0) {
+      return;
+    }
+
+    try {
+      await insertRowDataMutation.mutateAsync({
+        model_id: String(tableId),
+        column_id: String(column.id),
+        row_id: numericRowId,
+        value: change.value,
+      });
+      
+      // Update original value after successful save
+      originalValues.current.set(`${change.rowId}-${change.columnKey}`, change.value);
+      
+      // Update local state immediately
+      if (onRecordsUpdate) {
+        onRecordsUpdate(prevRecords => updateLocalRecord(prevRecords, change.rowId, change.columnKey, change.value));
+      }
+    } catch (err) {
+      // Handle error - but don't spam console for invalid row operations
+      if (err instanceof Error && !err.message.includes('500')) {
+        console.error('Failed to update cell:', err);
+      }
+    }
+  }, [tableId, insertRowDataMutation, onRecordsUpdate, hasValueChanged, isEmptyValue, isNewlyCreatedRow, updateLocalRecord]);
+
   // Update a single cell value (debounced to reduce API calls)
   const handleCellChange = useCallback(async (rowId: string, columnKey: string, value: any) => {
     // Find the row and column
@@ -50,63 +256,15 @@ export function useCellEditing({
     if (column.isSystem) return;
 
     // Skip attachment fields - they handle their own API calls
-    // But we still need to update local state for optimistic UI updates
     if (column.type === 'attachment' || column.uidt === 'attachment') {
-      if (onRecordsUpdate) {
-        onRecordsUpdate(prevRecords => {
-          const updatedRecords = prevRecords.map(record => {
-            // allRecords are in raw API format (id at top level, not _meta.id)
-            const recordId = String((record as any).id || '');
-            // rowId comes from _meta.id (string), so compare as strings
-            if (recordId === String(rowId)) {
-              // Update in raw API format (allRecords format)
-              // Attachment values from API are arrays of objects or null (never empty array)
-              // Match API format: array of attachment objects, or null if empty
-              let attachmentValue: any[] | null = null;
-              if (Array.isArray(value) && value.length > 0) {
-                // Create new array reference to ensure React detects the change
-                attachmentValue = [...value];
-              } else if (value && !Array.isArray(value)) {
-                attachmentValue = [value];
-              }
-              // Return new record object with new array reference to trigger React re-render
-              return {
-                ...record,
-                [columnKey]: attachmentValue
-              };
-            }
-            return record;
-          });
-          // Return new array reference to ensure React detects the change
-          return updatedRecords;
-        });
-      }
+      handleAttachmentField(rowId, columnKey, value);
       return;
     }
 
     // Skip links fields - they handle their own API calls via insertRelationData
-    if (column.type === 'links' || column.uidt === 'links') {
-      // Links fields use insertRelationData API, not insertRowData
-      // But we still need to update local state for optimistic UI updates
-      if (onRecordsUpdate) {
-        onRecordsUpdate(prevRecords => {
-          return prevRecords.map(record => {
-            const recordId = record.id?.toString() || (record as any)._meta?.id?.toString();
-            if (recordId === rowId) {
-              const updatedRecord = { ...record };
-              (updatedRecord as any)[columnKey] = value;
-              if ((updatedRecord as any).data) {
-                (updatedRecord as any).data = {
-                  ...(updatedRecord as any).data,
-                  [columnKey]: value
-                };
-              }
-              return updatedRecord;
-            }
-            return record;
-          });
-        });
-      }
+    // Only check uidt since 'links' is not in GridFieldType
+    if (column.uidt === 'links') {
+      handleLinksField(rowId, columnKey, value);
       return;
     }
 
@@ -115,7 +273,6 @@ export function useCellEditing({
     // Validate rowId - must be a valid number for existing rows
     const numericRowId = Number(rowId);
     if (!rowId || Number.isNaN(numericRowId) || numericRowId <= 0) {
-      // Row ID is invalid or row not yet saved - skip API call
       return;
     }
 
@@ -124,7 +281,7 @@ export function useCellEditing({
 
     // Get the original value if we haven't stored it yet
     if (!originalValues.current.has(cellKey)) {
-      const originalValue = (row as any)[columnKey] ?? (row as any).data?.[columnKey] ?? (row as any)._meta?.[columnKey];
+      const originalValue = getOriginalValue(row, columnKey);
       const normalizedOriginal = normalizeEmpty(originalValue);
       originalValues.current.set(cellKey, normalizedOriginal);
     }
@@ -135,165 +292,50 @@ export function useCellEditing({
 
     // If both are empty/null, skip entirely (prevents API calls during initialization)
     // EXCEPTION: Allow formula fields to save initial calculated value even if original is null
-    const isFormulaField = column.type === 'formula' || column.uidt === 'formula';
+    // Only check uidt since 'formula' is not in GridFieldType
+    const isFormulaField = column.uidt === 'formula';
     if (normalizedValue === null && normalizeEmpty(storedOriginal) === null && !isFormulaField) {
-      return; // Don't proceed with debounced update
+      return;
     }
 
     // For formula fields, allow saving if we have a non-null value even if original was null
-    // This allows initial calculation to be saved to backend
     if (isFormulaField && normalizedValue === null) {
-      return; // Still skip if formula result is null/empty
+      return;
     }
 
-    // Prepare value for backend - convert objects/arrays appropriately
-    let backendValue = value;
-    if (column.type === 'json' && typeof value === 'object' && value !== null) {
-      backendValue = JSON.stringify(value);
-    } else if (column.type === 'user') {
-      // Check if user field allows multiple selection - convert array to comma-separated string
-      const userConfig = (column.meta as any) || {};
-      if (userConfig.allowMultiple && Array.isArray(value)) {
-        backendValue = value.filter(id => id && id.toString().trim()).join(',');
-      }
-    }
+    // Prepare value for backend
+    const backendValue = prepareBackendValue(value, column);
 
-    // Store the pending change only if value is not empty (or explicitly different)
+    // Store the pending change
     pendingChanges.current.set(cellKey, { rowId, columnKey, value: backendValue });
 
     // Clear existing timeout for this cell
-    if (debounceTimeouts.current.has(cellKey)) {
-      clearTimeout(debounceTimeouts.current.get(cellKey)!);
+    const existingTimeout = debounceTimeouts.current.get(cellKey);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
     }
 
     // Set new timeout to send API call after 500ms of no typing
     const timeout = setTimeout(async () => {
       const change = pendingChanges.current.get(cellKey);
-      const originalValue = originalValues.current.get(cellKey);
-
       if (change && column.id) {
-        // Compare new value with original value
-        const hasChanged = (() => {
-          const newVal = change.value;
-          const oldVal = originalValue;
-
-          const normalizedNew = normalizeEmpty(newVal, oldVal);
-          const normalizedOld = normalizeEmpty(oldVal);
-
-          // If both are empty/null, no change
-          if (normalizedNew === null && normalizedOld === null) {
-            return false;
-          }
-          
-          // If new is 0 and old was null/undefined, treat as no change
-          if (normalizedNew === 0 && (normalizedOld === null || normalizedOld === undefined)) {
-            return false;
-          }
-
-          // Handle arrays/objects (for multi-select, JSON, etc.)
-          if (Array.isArray(normalizedNew) || Array.isArray(normalizedOld)) {
-            if (Array.isArray(normalizedNew) && Array.isArray(normalizedOld)) {
-              if (normalizedNew.length === 0 && normalizedOld.length === 0) {
-                return false; // Both empty arrays, no change
-              }
-              return JSON.stringify(normalizedNew) !== JSON.stringify(normalizedOld);
-            }
-            return true; // One is array, one is not - changed
-          }
-
-          // Handle objects
-          if (typeof normalizedNew === 'object' && typeof normalizedOld === 'object' && normalizedNew !== null && normalizedOld !== null) {
-            return JSON.stringify(normalizedNew) !== JSON.stringify(normalizedOld);
-          }
-
-          // Primitive comparison
-          return normalizedNew !== normalizedOld;
-        })();
-
-        // Only make API call if value actually changed AND is not just empty-to-empty
-        if (hasChanged) {
-          // Additional check: Don't send empty values for new rows unless explicitly set
-          const isEmptyValue = change.value === null || change.value === undefined ||
-            (typeof change.value === 'string' && change.value.trim() === '') ||
-            (Array.isArray(change.value) && change.value.length === 0);
-
-          const isOldEmpty = originalValue === null || originalValue === undefined ||
-            (typeof originalValue === 'string' && originalValue.trim() === '') ||
-            (Array.isArray(originalValue) && originalValue.length === 0);
-
-          if (isEmptyValue && isOldEmpty) {
-            // Skip API call for empty-to-empty transitions
-            pendingChanges.current.delete(cellKey);
-            return;
-          }
-
-          // Additional validation: Skip API call if value is empty and row is newly created
-          if (isEmptyValue) {
-            const rowCreationTime = (row as any)._meta?.created_at;
-            if (rowCreationTime) {
-              const created = new Date(rowCreationTime).getTime();
-              const now = Date.now();
-              const timeSinceCreation = now - created;
-
-              // If row was created very recently (< 2 seconds), skip empty value updates
-              if (timeSinceCreation < 2000) {
-                pendingChanges.current.delete(cellKey);
-                return;
-              }
-            }
-          }
-
-          try {
-            // Double-check rowId validity before making API call
-            const numericRowId = Number(change.rowId);
-            if (tableId && !Number.isNaN(numericRowId) && numericRowId > 0) {
-              await insertRowDataMutation.mutateAsync({
-                model_id: String(tableId),
-                column_id: String(column.id),
-                row_id: numericRowId,
-                value: change.value,
-              });
-              
-              // Update original value after successful save
-              originalValues.current.set(cellKey, change.value);
-              
-              // CRITICAL: Update local state immediately so UI reflects the change
-              if (onRecordsUpdate) {
-                onRecordsUpdate(prevRecords => {
-                  return prevRecords.map(record => {
-                    const recordId = record.id?.toString() || (record as any)._meta?.id?.toString();
-                    if (recordId === change.rowId) {
-                      const updatedRecord = { ...record };
-                      (updatedRecord as any)[columnKey] = change.value;
-                      if ((updatedRecord as any).data) {
-                        (updatedRecord as any).data = {
-                          ...(updatedRecord as any).data,
-                          [columnKey]: change.value
-                        };
-                      }
-                      return updatedRecord;
-                    }
-                    return record;
-                  });
-                });
-              }
-            }
-          } catch (err) {
-            // Handle error - but don't spam console for invalid row operations
-            if (err instanceof Error && !err.message.includes('500')) {
-              console.error('Failed to update cell:', err);
-            }
-          }
-        }
-
-        // Clean up regardless of whether API was called
-        pendingChanges.current.delete(cellKey);
+        await processDebouncedUpdate(change, column, row);
       }
+      pendingChanges.current.delete(cellKey);
       debounceTimeouts.current.delete(cellKey);
-    }, 500); // 500ms debounce delay
+    }, 500);
 
     debounceTimeouts.current.set(cellKey, timeout);
-  }, [data, columns, insertRowDataMutation, tableId, normalizeEmpty, onRecordsUpdate]);
+  }, [
+    data,
+    columns,
+    normalizeEmpty,
+    getOriginalValue,
+    prepareBackendValue,
+    handleAttachmentField,
+    handleLinksField,
+    processDebouncedUpdate
+  ]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -309,4 +351,3 @@ export function useCellEditing({
     handleCellChange,
   };
 }
-

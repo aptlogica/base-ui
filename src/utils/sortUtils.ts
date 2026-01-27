@@ -70,13 +70,13 @@ export function buildComparator<T>(columns: MinimalColumn[], sorts: SortItem[], 
 // Filter out invalid sorts (empty column or missing direction)
 export function filterValidSorts(sorts: SortItem[]): SortItem[] {
   if (!Array.isArray(sorts)) return [];
-  return sorts.filter(s => s.column && s.column.trim() && s.direction);
+  return sorts.filter(s => s?.column.trim() && s.direction);
 }
 
 // Filter out invalid groups (empty column or missing direction)
 export function filterValidGroups<T extends { column: string; direction?: string }>(groups: T[]): T[] {
   if (!Array.isArray(groups)) return [];
-  return groups.filter(g => g.column && g.column.trim() && (g.direction !== undefined && g.direction !== null));
+  return groups.filter(g => g?.column.trim() && (g.direction !== undefined && g.direction !== null));
 }
 
 // Convenience: if all views share rows shaped like { data: Record<string, any> }
