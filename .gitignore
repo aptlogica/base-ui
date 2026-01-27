@@ -15,7 +15,6 @@ dist-ssr
 # Test coverage reports
 coverage/
 coverage-vitest/
-scripts/
 
 # Editor directories and files
 .vscode/*

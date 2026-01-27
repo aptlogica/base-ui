@@ -11,7 +11,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reportsDirectory: 'coverage-vitest',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'lcov'],
       exclude: [
         'node_modules/',
         'src/test/',
@@ -28,7 +28,10 @@ export default defineConfig({
         branches: 80,
         statements: 80
       }
-    }
+    },
+    outputFile: {
+      junit: 'coverage-vitest/test-results.xml'
+    },
   },
   resolve: {
     alias: {
