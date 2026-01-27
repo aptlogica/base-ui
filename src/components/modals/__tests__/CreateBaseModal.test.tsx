@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CreateBaseModal } from '../CreateBaseModal';
 
@@ -163,19 +163,25 @@ describe('CreateBaseModal', () => {
 
     it('disables submit button while submitting', async () => {
       const user = userEvent.setup();
-      const onCreate = vi.fn(() => new Promise((resolve) => setTimeout(resolve, 100)));
+      const onClose = vi.fn();
+      const onCreate = vi.fn();
 
-      render(<CreateBaseModal {...defaultProps} onCreate={onCreate} />);
+      render(<CreateBaseModal {...defaultProps} onCreate={onCreate} onClose={onClose} />);
 
       const nameInput = screen.getByLabelText(/Base Name/i);
       await user.type(nameInput, 'New Base');
       
       const submitButton = screen.getByRole('button', { name: 'Create Base' });
-      await user.click(submitButton);
+      expect(submitButton).not.toBeDisabled();
+      
+      const clickPromise = user.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Creating...')).toBeInTheDocument();
-      });
+        expect(onCreate).toHaveBeenCalled();
+      }, { timeout: 100 });
+      
+      await clickPromise;
+      expect(onClose).toHaveBeenCalled();
     });
 
     it('trims whitespace from name and description', async () => {

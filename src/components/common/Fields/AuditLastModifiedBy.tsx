@@ -15,7 +15,8 @@ export const AuditLastModifiedBy: React.FC<AuditLastModifiedByProps> = ({
   const currentUser = useCurrentUser();
 
   // Get user profile data for avatar
-  const { data: profileResponse } = useUserProfile(currentUser?.id || '');
+  const profileData = useUserProfile(currentUser?.id || '');
+  const profileResponse = profileData?.data;
   const userProfile = profileResponse?.data;
 
   if (!currentUser) {

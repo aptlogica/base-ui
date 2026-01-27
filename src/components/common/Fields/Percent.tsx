@@ -20,6 +20,7 @@ interface PercentProps {
   allowEdit?: boolean;
   readOnly?: boolean;
   helperText?: string;
+  className?: string;
 }
 
 // Utility functions
@@ -236,6 +237,7 @@ export const Percent: React.FC<PercentProps> = ({
   allowEdit = true,
   readOnly = false,
   helperText,
+  className = '',
 }) => {
   const { displayAsProgress = false, defaultValue, progressColor = 'blue' } = config;
 

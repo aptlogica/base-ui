@@ -41,7 +41,7 @@ describe('useWorkspaceAccess', () => {
 
       const { result } = renderHook(() => useWorkspaceAccess());
 
-      expect(result.current.accessLevel).toBe('admin');
+      expect(result.current.wsAccess).toBe('owner');
       expect(result.current.isAdmin).toBe(true);
       expect(result.current.hasFullWorkspaceAccess).toBe(true);
     });
@@ -56,7 +56,7 @@ describe('useWorkspaceAccess', () => {
 
       const { result } = renderHook(() => useWorkspaceAccess());
 
-      expect(result.current.accessLevel).toBe('full_access');
+      expect(result.current.wsAccess).toBe('maintainer');
       expect(result.current.isAdmin).toBe(false);
       expect(result.current.isFullAccess).toBe(true);
       expect(result.current.isLimitedAccess).toBe(false);
@@ -72,7 +72,7 @@ describe('useWorkspaceAccess', () => {
 
       const { result } = renderHook(() => useWorkspaceAccess());
 
-      expect(result.current.accessLevel).toBe('limited_access');
+      expect(result.current.wsAccess).toBe('base');
       expect(result.current.isLimitedAccess).toBe(true);
     });
 
@@ -86,7 +86,8 @@ describe('useWorkspaceAccess', () => {
 
       const { result } = renderHook(() => useWorkspaceAccess());
 
-      expect(result.current.accessLevel).toBe('limited_access');
+      expect(result.current.wsAccess).toBeNull();
+      expect(result.current.isLimitedAccess).toBe(true);
       expect(result.current.currentWorkspace).toBeNull();
     });
 
@@ -96,7 +97,8 @@ describe('useWorkspaceAccess', () => {
 
       const { result } = renderHook(() => useWorkspaceAccess());
 
-      expect(result.current.accessLevel).toBe('limited_access');
+      expect(result.current.wsAccess).toBeNull();
+      expect(result.current.isLimitedAccess).toBe(true);
     });
 
     it('should use provided workspaceId over selectedWorkspaceId', () => {
@@ -110,7 +112,8 @@ describe('useWorkspaceAccess', () => {
 
       const { result } = renderHook(() => useWorkspaceAccess('ws-2'));
 
-      expect(result.current.accessLevel).toBe('full_access');
+      expect(result.current.wsAccess).toBe('maintainer');
+      expect(result.current.isFullAccess).toBe(true);
       expect(result.current.currentWorkspace?.id).toBe('ws-2');
     });
   });
@@ -231,7 +234,8 @@ describe('useWorkspaceAccess', () => {
 
       const { result } = renderHook(() => useWorkspaceAccess());
 
-      expect(result.current.accessLevel).toBe('limited_access');
+      expect(result.current.wsAccess).toBeNull();
+      expect(result.current.isLimitedAccess).toBe(true);
       expect(result.current.currentWorkspace).toBeNull();
     });
 
@@ -241,7 +245,8 @@ describe('useWorkspaceAccess', () => {
 
       const { result } = renderHook(() => useWorkspaceAccess());
 
-      expect(result.current.accessLevel).toBe('limited_access');
+      expect(result.current.wsAccess).toBeNull();
+      expect(result.current.isLimitedAccess).toBe(true);
     });
 
     it('should handle undefined selectedWorkspaceId', () => {
@@ -255,7 +260,8 @@ describe('useWorkspaceAccess', () => {
 
       const { result } = renderHook(() => useWorkspaceAccess());
 
-      expect(result.current.accessLevel).toBe('limited_access');
+      expect(result.current.wsAccess).toBeNull();
+      expect(result.current.isLimitedAccess).toBe(true);
       expect(result.current.currentWorkspace).toBeNull();
     });
   });

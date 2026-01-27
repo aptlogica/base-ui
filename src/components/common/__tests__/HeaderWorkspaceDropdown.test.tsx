@@ -116,10 +116,12 @@ describe('HeaderWorkspaceDropdown', () => {
     expect(dropdown).not.toBeNull();
     expect(dropdown).toHaveClass('pointer-events-none');
 
-    await user.click(screen.getByRole('button', { name: /alpha workspace/i }));
+    const triggerButtons = screen.getAllByRole('button', { name: /alpha workspace/i });
+    await user.click(triggerButtons[0]);
     expect(dropdown).not.toHaveClass('pointer-events-none');
 
-    await user.click(screen.getByRole('button', { name: /alpha workspace/i }));
+    const triggerButtonsAfterOpen = screen.getAllByRole('button', { name: /alpha workspace/i });
+    await user.click(triggerButtonsAfterOpen[0]);
     expect(dropdown).toHaveClass('pointer-events-none');
   });
 
@@ -147,7 +149,8 @@ describe('HeaderWorkspaceDropdown', () => {
     const user = userEvent.setup();
     renderWithPath('/workspace/w1/database');
 
-    await user.click(screen.getByRole('button', { name: /alpha workspace/i }));
+    const triggerButtons = screen.getAllByRole('button', { name: /alpha workspace/i });
+    await user.click(triggerButtons[0]);
     await user.click(screen.getByText('Beta Workspace'));
 
     expect(navigationState.navigateToWorkspace).toHaveBeenCalledWith('w2');

@@ -92,7 +92,7 @@ export function DropdownTrigger({
             </>
           )}
         </div>
-      </div>
-    </button>
+    </div>
+      </button>
   );
 }
