@@ -144,12 +144,12 @@ export const Rating: React.FC<RatingProps> = ({
 
   return (
     <div className="w-full">
-      <button
-        className="flex items-center justify-center gap-1 py-1"
+      <div
+        className="w-full flex items-center justify-center gap-1 py-1"
         onMouseLeave={handleMouseLeave}
       >
         {Array.from({ length: ratingMax }, (_, index) => renderStar(index + 1))}
-      </button>
+      </div>
       {error && (
         <div className="text-xs text-red-600 mt-1 px-2">{error}</div>
       )}

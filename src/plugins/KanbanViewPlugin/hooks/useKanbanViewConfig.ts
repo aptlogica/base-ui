@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDebounce } from '../../../utils/helpers';
 import { SortItem, filterValidSorts } from '../../../utils/sortUtils';
 import { extractFieldConfigFromMeta, generateDefaultFieldConfig, mergeFieldConfigWithColumns } from '../../../utils/viewFieldConfigUtils';
@@ -56,14 +56,16 @@ export function useKanbanViewConfig({
     if (!columns.length) return;
 
     const existingFieldConfig = extractFieldConfigFromMeta(view?.meta);
-    const backendConfigStr = JSON.stringify(existingFieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+    const sortedExistingConfig = [...existingFieldConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
+    const backendConfigStr = JSON.stringify(sortedExistingConfig);
 
     if (!initializedRef.current) {
       if (existingFieldConfig.length > 0) {
         const completeConfig = mergeFieldConfigWithColumns(existingFieldConfig, columns);
+        const sortedCompleteConfig = [...completeConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
         
         setLocalFieldConfig(completeConfig);
-        lastBackendConfigRef.current = JSON.stringify(completeConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+        lastBackendConfigRef.current = JSON.stringify(sortedCompleteConfig);
         initializedRef.current = true;
       } else {
         const defaultFieldConfig = generateDefaultFieldConfig(
@@ -81,7 +83,8 @@ export function useKanbanViewConfig({
           }
         );
 
-        const defaultConfigStr = JSON.stringify(defaultFieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+        const sortedDefaultConfig = [...defaultFieldConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
+        const defaultConfigStr = JSON.stringify(sortedDefaultConfig);
         setLocalFieldConfig(defaultFieldConfig);
         lastBackendConfigRef.current = defaultConfigStr;
         initializedRef.current = true;
@@ -91,9 +94,10 @@ export function useKanbanViewConfig({
 
     if (initializedRef.current && backendConfigStr !== lastBackendConfigRef.current && existingFieldConfig.length > 0) {
       const mergedConfig = mergeFieldConfigWithColumns(existingFieldConfig, columns);
+      const sortedMergedConfig = [...mergedConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
       
       setLocalFieldConfig(mergedConfig);
-      lastBackendConfigRef.current = JSON.stringify(mergedConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+      lastBackendConfigRef.current = JSON.stringify(sortedMergedConfig);
     } else if (initializedRef.current && existingFieldConfig.length === 0 && localFieldConfig.length > 0) {
       const mergedConfig = mergeFieldConfigWithColumns(localFieldConfig, columns);
       
@@ -119,7 +123,8 @@ export function useKanbanViewConfig({
         await updateViewConfigRef.current(viewRef.current.id, {
           fieldConfig
         });
-        lastBackendConfigRef.current = JSON.stringify(fieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+        const sortedFieldConfig = [...fieldConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
+        lastBackendConfigRef.current = JSON.stringify(sortedFieldConfig);
       } catch (error) {
         console.error('Failed to save field config:', error);
       }
@@ -211,7 +216,7 @@ export function useKanbanViewConfig({
           updatedFieldConfig.push({
             id: String(col.id),
             position: idx,
-            isHidden: isSystemField || isSelectField || isAttachmentField || isFormulaFieldType ? true : true
+            isHidden: isSystemField || isSelectField || isAttachmentField || isFormulaFieldType
           });
           configFieldIds.add(String(col.id));
         }
@@ -243,8 +248,8 @@ export function useKanbanViewConfig({
         }
       }
       
-      updatedFieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0));
-      updatedFieldConfig = updatedFieldConfig.map((fc, idx) => ({
+      const sortedFieldConfig = [...updatedFieldConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
+      updatedFieldConfig = sortedFieldConfig.map((fc, idx) => ({
         ...fc,
         position: idx
       }));
@@ -302,8 +307,8 @@ export function useKanbanViewConfig({
       }
     });
 
-    updatedFieldConfig.sort((a: any, b: any) => (a.position || 0) - (b.position || 0));
-    const finalFieldConfig = updatedFieldConfig.map((fc: any, idx: number) => ({
+    const sortedFieldConfig = [...updatedFieldConfig].sort((a: any, b: any) => (a.position || 0) - (b.position || 0));
+    const finalFieldConfig = sortedFieldConfig.map((fc: any, idx: number) => ({
       ...fc,
       position: idx
     }));

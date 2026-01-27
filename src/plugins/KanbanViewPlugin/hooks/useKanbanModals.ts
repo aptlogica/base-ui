@@ -48,7 +48,6 @@ export function useKanbanModals() {
   return {
     // State
     modalState,
-    
     // Handlers
     handleOpenCreateRecord,
     handleOpenEditRecord,

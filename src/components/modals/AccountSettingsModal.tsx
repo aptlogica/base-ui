@@ -29,6 +29,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
       <div
         className="bg-card rounded-xl border shadow-xl w-full max-w-5xl h-[90vh] max-h-[900px] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Modal Header - Fixed */}
         <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b">

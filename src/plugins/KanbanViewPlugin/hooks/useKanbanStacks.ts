@@ -6,11 +6,7 @@ interface UseKanbanStacksOptions {
   onRefresh: () => void;
 }
 
-export function useKanbanStacks({
-  view,
-  updateView,
-  onRefresh,
-}: UseKanbanStacksOptions) {
+export function useKanbanStacks(_options: UseKanbanStacksOptions) {
   // UI state for stack creation
   const [uiState, setUiState] = useState({
     isCreateStack: false,

@@ -55,7 +55,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
         setImageError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
         return;
       }
-      
+
       // Validate dimensions (max 800x400)
       const img = new Image();
       img.onload = () => {
@@ -82,7 +82,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const file = e.dataTransfer.files?.[0];
     if (file?.type.startsWith('image/')) {
       const validTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
@@ -223,106 +223,132 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
         {/* Scrollable Content Area */}
         <form id="create-base-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="p-4 space-y-4">
-          <div className="space-y-1">
-            <label htmlFor="baseName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
-              Base Name <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                id="baseName"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter base name"
-                className={`field-component field-component-border field-component-focus ${error || validationError ? 'border-red-500' : 'border'}`}
-                required
-                minLength={3}
-                maxLength={50}
-                autoFocus
-              />
-              <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
-                <span className="relative inline-block group">
-                  <HelpCircle className={`w-4 h-4 ${getHelpIconColor()} cursor-help`} />
-                  <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
-                    <h4 className="font-medium mb-2">Base name requirements:</h4>
-                    <ul className="space-y-1">
-                      <li className={`flex items-center ${name.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
-                        • Minimum 3 characters
-                      </li>
-                    </ul>
-                  </div>
-                </span>
+            <div className="space-y-1">
+              <label htmlFor="baseName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
+                Base Name <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="baseName"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter base name"
+                  className={`field-component field-component-border field-component-focus ${error || validationError ? 'border-red-500' : 'border'}`}
+                  required
+                  minLength={3}
+                  maxLength={50}
+                  autoFocus
+                />
+                <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
+                  <span className="relative inline-block group">
+                    <HelpCircle className={`w-4 h-4 ${getHelpIconColor()} cursor-help`} />
+                    <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
+                      <h4 className="font-medium mb-2">Base name requirements:</h4>
+                      <ul className="space-y-1">
+                        <li className={`flex items-center ${name.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
+                          • Minimum 3 characters
+                        </li>
+                      </ul>
+                    </div>
+                  </span>
+                </div>
               </div>
+              {/* Validation Error - Only show name-related errors here */}
+              {(error || validationError) && (
+                <div className="mt-1 text-sm text-red-600">
+                  <span>{validationError || error}</span>
+                </div>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                {name.length}/50 characters
+              </p>
             </div>
-            {/* Validation Error - Only show name-related errors here */}
-            {(error || validationError) && (
-              <div className="mt-1 text-sm text-red-600">
-                <span>{validationError || error}</span>
-              </div>
-            )}
-            <p className="mt-1 text-xs text-gray-500">
-              {name.length}/50 characters
-            </p>
-          </div>
 
-          <MultiLineText
-            label="Description"
-            value={description}
-            onChange={value => setDescription(value)}
-            placeholder="Enter base description"
-            rows={5}
-            isBorder={true}
-          />
+            <MultiLineText
+              label="Description"
+              value={description}
+              onChange={value => setDescription(value)}
+              placeholder="Enter base description"
+              rows={5}
+              isBorder={true}
+            />
 
-          {/* Image Upload Section */}
-          <div className="space-y-1">
-            <label 
-              htmlFor="image-upload"
-              id="image-upload-label"
-              className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1"
-            >
-              Image
-            </label>
-            {/* Image Error - Display here, not under Base Name */}
-            {imageError && (
-              <div className="mb-2 text-sm text-red-600">
-                <span>{imageError}</span>
-              </div>
-            )}
-            {imagePreview ? (
-              <div className="flex gap-4">
-                {/* Image Preview - Left Side */}
-                <div className="relative flex-shrink-0">
-                  <div className="w-32 h-32 bg-green-100 rounded-xl flex items-center justify-center overflow-hidden">
-                    <img
-                      id="image-upload"
-                      aria-labelledby="image-upload-label"
-                      src={imagePreview}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
+            {/* Image Upload Section */}
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
+                Image
+              </label>
+              {imagePreview ? (
+                <div className="flex gap-4">
+                  {/* Image Preview - Left Side */}
+                  <div className="relative flex-shrink-0">
+                    <button
+                      type="button"
+                      className="w-32 h-32 bg-green-100 rounded-xl flex items-center justify-center overflow-hidden cursor-pointer hover:bg-green-200 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        document.getElementById('image-upload')?.click();
+                      }}
+                    >
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setImage(null);
+                        setImagePreview(null);
+                        const input = document.getElementById('image-upload') as HTMLInputElement;
+                        if (input) input.value = '';
+                      }}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-primary rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                    >
+                      <X size={12} />
+                    </button>
                   </div>
+
+                  {/* Upload Area - Right Side */}
                   <button
                     type="button"
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    className="flex-1 relative border-2 border-dashed rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setImage(null);
-                      setImagePreview(null);
-                      const input = document.getElementById('image-upload') as HTMLInputElement;
-                      if (input) input.value = '';
+                      document.getElementById('image-upload')?.click();
                     }}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-primary rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
                   >
-                    <X size={12} />
+                    <input
+                      type="file"
+                      id="image-upload"
+                      accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                    <CloudUpload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-sm text-gray-600 mb-1">
+                      <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      SVG, PNG, JPG or GIF (max. 800 x 400px)
+                    </p>
                   </button>
                 </div>
-                
-                {/* Upload Area - Right Side */}
+              ) : (
                 <button
+                  type="button"
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
-                  className="flex-1 relative border-2 border-dashed rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
-                  onClick={() => document.getElementById('image-upload')?.click()}
+                  className="relative w-full border-2 border-dashed rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    document.getElementById('image-upload')?.click();
+                  }}
                 >
                   <input
                     type="file"
@@ -339,31 +365,14 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                     SVG, PNG, JPG or GIF (max. 800 x 400px)
                   </p>
                 </button>
-              </div>
-            ) : (
-              <button
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-                className="relative w-full border-2 border-dashed rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
-                onClick={() => document.getElementById('image-upload')?.click()}
-              >
-                <input
-                  type="file"
-                  id="image-upload"
-                  accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-                <CloudUpload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-sm text-gray-600 mb-1">
-                  <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
-                </p>
-                <p className="text-xs text-gray-500">
-                  SVG, PNG, JPG or GIF (max. 800 x 400px)
-                </p>
-              </button>
-            )}
-          </div>
+              )}
+              {/* Image Error - Display here, not under Base Name */}
+              {imageError && (
+                <div className="mb-2 text-sm text-red-600">
+                  <span>{imageError}</span>
+                </div>
+              )}
+            </div>
 
           </div>
         </form>

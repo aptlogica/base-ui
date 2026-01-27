@@ -174,10 +174,12 @@ export const Duration: React.FC<DurationProps> = ({
   const { durationFormat = "h:mm", defaultValue } = config;
 
   const getInitialValue = () => {
-    const isEmptyString = typeof value === 'string' && value === '';
-    if (isEmptyString || value === null || value === undefined) return null;
+    // If value is explicitly null/undefined, check for default
+    if (value === null || value === undefined) {
+      return defaultValue ? parseDuration(defaultValue, durationFormat) : null;
+    }
+    // If value is a number, use it directly
     if (typeof value === 'number') return value;
-    if (defaultValue && value !== undefined) return parseDuration(defaultValue, durationFormat);
     return null;
   };
 
@@ -315,7 +317,7 @@ export const Duration: React.FC<DurationProps> = ({
 
       {/* Input or Display */}
       <button
-        className={`relative ${className} ${isBorder ? "field-component-border" : ""}`}
+        className={`relative w-full ${className} ${isBorder ? "field-component-border" : ""}`}
         onClick={readOnly ? undefined : handleClick}
         style={readOnly ? { cursor: 'default' } : undefined}
       >

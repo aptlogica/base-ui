@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Download, Image, File, Paperclip, Edit, Trash2, Save, FileText, FileSpreadsheet, Archive, Copy, Check } from 'lucide-react';
+import { X, Download, Image, Paperclip, Edit, Trash2, Copy, Check } from 'lucide-react';
 import { ImageCarousel } from './ImageCarousel';
 import { useRemoveAttachments, useUpdateAssetById } from '../../../../../hooks/useApi';
 
@@ -52,8 +52,8 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    globalThis.addEventListener('keydown', handleKeyDown);
+    return () => globalThis.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, carouselOpen, editingIndex, onClose]);
 
   // Format file size helper
@@ -62,7 +62,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   // Copy URL to clipboard

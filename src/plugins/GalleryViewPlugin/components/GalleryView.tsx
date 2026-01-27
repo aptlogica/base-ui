@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import { Plus, Image as ImageIcon } from 'lucide-react';
-import { GalleryItem, useGalleryData } from '../hooks/useGalleryData';
+import { useGalleryData } from '../hooks/useGalleryData';
 import { GalleryHeader } from './GalleryHeader';
 import { MemoizedGalleryCard } from './GalleryCard';
 import CreateRecordModal from '../../../components/modals/CreateRecordModal';
@@ -9,7 +9,6 @@ import DeleteConfirmModal from '../../../components/modals/DeleteConfirmModal';
 import { applyFilters } from '../../../utils/filterUtils';
 import { buildComparator } from '../../../utils/sortUtils';
 import { buildInitialValuesForEdit } from '../../../utils/initialValues';
-import { useRemoveAttachments } from '../../../hooks/useApi';
 import { fieldsToExcludeInFilter } from '../../../types/constants';
 import { useFrontendPagination } from '../../../hooks/useFrontendPagination';
 import { formatCompactNumber } from '../../../utils/helpers';
@@ -23,11 +22,7 @@ interface GalleryViewProps {
   tableData: any;
   onRefresh: () => void;
   actions: {
-    addRow: (data: Record<string, unknown>) => Promise<void>;
-    insertRowData: (data: Record<string, unknown>) => Promise<void>;
     deleteRecord: (recordId: string) => Promise<void>;
-    updateField: (fieldId: string, data: Record<string, unknown>) => Promise<void>;
-    updateView: (viewId: string, updates: Record<string, unknown>) => Promise<void>;
     updateViewConfig: (viewId: string, updates: any) => Promise<void>;
   };
 }
@@ -38,14 +33,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   actions
 }) => {
   // Extract actions
-  const { addRow, insertRowData, deleteRecord, updateField, updateView, updateViewConfig } = actions;
-  const removeAttachmentsMutation = useRemoveAttachments();
+  const { deleteRecord, updateViewConfig } = actions;
   
   // Extract base ID for permission checks
   const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
   
   // Check permissions for read-only access
-  const { isBaseReadOnly, canCreateRecord, canUpdateRecord, canDeleteRecord } = useBaseAccess(baseId || undefined);
+  const { isBaseReadOnly, canCreateRecord } = useBaseAccess(baseId || undefined);
   const isReadOnly = isBaseReadOnly();
 
   // Use the useGalleryData hook for consistent data processing
@@ -74,13 +68,11 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     setSelectedSearchField,
     localFieldConfig,
     visibleColumns,
-    handleRealTimeFilter,
     handleAddFilter,
     handleRemoveFilter,
     handleUpdateFilter,
     handleSortChange,
     handleFieldToggle,
-    handleFieldOrderChange,
   } = useGalleryViewConfig({
     view: galleryData.view,
     columns: galleryData.columns,
@@ -97,7 +89,6 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     selectedRecord,
     handleCreateRecord,
     handleEditRecord,
-    handleDeleteRecord,
     handleDeleteRecordFromModal,
     handleCloseCreateModal,
     handleCloseEditModal,
@@ -131,7 +122,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
 
   // Delete confirmation handler
   const handleConfirmDelete = useCallback(async () => {
-    if (selectedRecord && selectedRecord.id) {
+    if (selectedRecord?.id) {
       try {
       await deleteRecord(String(selectedRecord.id));
         handleCloseDeleteModal();
@@ -280,27 +271,6 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     return initialValues;
   }, [selectedRecord, galleryData]);
 
-  // const filteredFields = useMemo(() => {
-  //   return galleryData.columns.filter(col => col.id !== galleryData.view?.meta?.attachment_field_id);
-  // }, [galleryData.columns]);
-
-  // Memoized attachment delete handler
-  const handleAttachmentDelete = useCallback(async (item: any, fileUrls: string[]) => {
-    const model_id = tableData?.model?.id;
-    const column_id = galleryData.view?.meta?.attachment_field_id;
-    const row_id = item?.id;
-
-    // if (!model_id || !column_id || !row_id || !Array.isArray(fileUrls) || fileUrls.length === 0) return;
-
-    await removeAttachmentsMutation.mutateAsync({
-      model_id,
-      column_id,
-      row_id,
-      attachments: fileUrls
-    });
-
-    onRefresh();
-  }, [tableData?.model?.id, galleryData.view?.meta?.attachment_field_id, removeAttachmentsMutation, onRefresh]);
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -317,17 +287,12 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         sortableColumns={sortableColumns}
         fieldConfig={localFieldConfig}
         onFieldToggle={isReadOnly ? undefined : handleFieldToggle}
-        onFieldOrderChange={isReadOnly ? undefined : handleFieldOrderChange}
         filters={filters}
         onAddFilter={handleAddFilter}
         onRemoveFilter={handleRemoveFilter}
         onUpdateFilter={handleUpdateFilter}
-        onRealTimeFilter={handleRealTimeFilter}
         sorts={sorts}
         onSortChange={handleSortChange}
-        tableId={String(galleryData.view?.id || '')}
-        searchTerm={searchTerm}
-        selectedSearchField={selectedSearchField}
         onSearch={handleSearch}
       />
 

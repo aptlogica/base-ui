@@ -7,6 +7,7 @@ interface JSONFieldProps {
   onChange: (value: any) => void;
   placeholder?: string;
   disabled?: boolean;
+  readOnly?: boolean;
   isBorder?: boolean;
   config?: {
     defaultValue?: any;
@@ -276,6 +277,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
   onChange,
   placeholder = '',
   disabled = false,
+  readOnly = false,
   isBorder = false,
   config = {}
 }) => {
@@ -333,8 +335,8 @@ export const JSONField: React.FC<JSONFieldProps> = ({
     const jsonString = formatJsonString(displayValue, prettyPrint);
     setModalValue(jsonString);
     setError(null);
-    setViewMode('tree');
-  }, [isModalOpen, value, defaultValue, prettyPrint, parseJsonValue]);
+    setViewMode(readOnly ? 'tree' : 'tree'); // Always start with tree view
+  }, [isModalOpen, value, defaultValue, prettyPrint, parseJsonValue, readOnly]);
 
   const handleModalChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
@@ -409,7 +411,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
         }}
         style={{ fontFamily: 'monospace', fontSize: 13 }}
         tabIndex={disabled ? -1 : 0}
-        aria-label="Open JSON editor"
+        aria-label="Open JSON viewer"
         disabled={disabled}
       >
         <span className="truncate overflow-hidden whitespace-nowrap block flex-1 text-gray-800" title={localValue || placeholder}>
@@ -442,27 +444,29 @@ export const JSONField: React.FC<JSONFieldProps> = ({
           <div className="relative bg-[var(--color-card)] border rounded-xl shadow-xl w-full max-w-5xl h-[85vh] p-6 flex flex-col z-10">
             <div className="flex items-center mb-4">
               <FileJson className="w-8 h-8 rounded icon-primary p-1 mr-2" />
-              <span className="text-lg font-medium text-[var(--color-text-primary)]">Edit JSON</span>
-              <div className="flex items-center gap-2 ml-4">
-                <button
-                  onClick={() => setViewMode('tree')}
-                  className={`px-3 py-1 text-xs rounded-xl transition-colors ${viewMode === 'tree'
-                    ? 'bg-[var(--color-brand-600)] text-black'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                >
-                  Tree
-                </button>
-                <button
-                  onClick={() => setViewMode('text')}
-                  className={`px-3 py-1 text-xs rounded-xl transition-colors ${viewMode === 'text'
-                    ? 'bg-[var(--color-brand-600)] text-black'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                >
-                  Text
-                </button>
-              </div>
+              <span className="text-lg font-medium text-[var(--color-text-primary)]">{readOnly ? 'View JSON' : 'Edit JSON'}</span>
+              {!readOnly && (
+                <div className="flex items-center gap-2 ml-4">
+                  <button
+                    onClick={() => setViewMode('tree')}
+                    className={`px-3 py-1 text-xs rounded-xl transition-colors ${viewMode === 'tree'
+                      ? 'bg-[var(--color-brand-600)] text-black'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                  >
+                    Tree
+                  </button>
+                  <button
+                    onClick={() => setViewMode('text')}
+                    className={`px-3 py-1 text-xs rounded-xl transition-colors ${viewMode === 'text'
+                      ? 'bg-[var(--color-brand-600)] text-black'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                  >
+                    Text
+                  </button>
+                </div>
+              )}
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="ml-auto text-gray-400 hover:text-gray-600 transition-colors text-xl font-bold"
@@ -472,7 +476,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
               </button>
             </div>
             <div className="flex-1 overflow-auto min-h-[400px]">
-              {viewMode === 'tree' ? (
+              {readOnly || viewMode === 'tree' ? (
                 <div className="w-full h-full bg-[var(--background)] border rounded-xl p-4 text-sm font-mono overflow-auto">
                   {jsonData !== null && jsonData !== undefined ? (
                     <JSONTreeNode
@@ -504,21 +508,23 @@ export const JSONField: React.FC<JSONFieldProps> = ({
                 {error}
               </div>
             )}
-            <div className="flex justify-end mt-4 gap-2">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] border border-gray-300 rounded-xl hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 text-sm font-medium btn-primary rounded transition-colors"
-                disabled={!!error}
-              >
-                Save & Close
-              </button>
-            </div>
+            {!readOnly && (
+              <div className="flex justify-end mt-4 gap-2">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] border border-gray-300 rounded-xl hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-2 text-sm font-medium btn-primary rounded transition-colors"
+                  disabled={!!error}
+                >
+                  Save & Close
+                </button>
+              </div>
+            )}
           </div>
         </div>,
         document.body

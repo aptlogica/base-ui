@@ -31,7 +31,7 @@ export interface UseKanbanDataReturn {
   createCard: (initialValues: Record<string, any>) => Promise<string>;
   duplicateCard: (cardId: string) => Promise<string>;
   deleteCard: (cardId: string) => Promise<void>;
-  updateFieldOptions: (fieldId: string, options: string[]) => Promise<void>;
+  updateFieldOptions: (fieldId: string, options: string[] | Array<{ option: string; color: string }>) => Promise<void>;
   persistStackOrder: (newOrder: string[]) => Promise<void>;
   changeGroupByColumn: (col: GridColumn) => Promise<void>;
   updateViewConfig: (viewId: string, updates: any) => Promise<void>;
@@ -39,13 +39,13 @@ export interface UseKanbanDataReturn {
 
 export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKanbanDataReturn {
   const tableQuery = useTable(String(tableId));
-  
+
   // SDK returns a StandardResponse with `data`; unwrap it to our canonical TableData
   const tableData = useMemo(() => {
     const raw = tableQuery.data as any;
     if (!raw) return undefined;
-    const filteredColumns = raw.data.columns.filter((col :any) => !fieldsToFilter.includes(col.uidt));
-    raw.data = {...raw.data, columns: filteredColumns}  as TableData;
+    const filteredColumns = raw.data.columns.filter((col: any) => !fieldsToFilter.includes(col.uidt));
+    raw.data = { ...raw.data, columns: filteredColumns } as TableData;
     // Prefer nested data if present; otherwise assume raw is already TableData
     return (raw.data ?? raw) as TableData;
   }, [tableQuery.data]);
@@ -66,7 +66,7 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
   const createCard = async (initialValues: Record<string, any>): Promise<string> => {
     const created = await addRow.mutateAsync({ model_id: String(tableId) });
     const recordId = created?.data?.id || created?.id || String(Date.now());
-    
+
     // Set initial values for each field
     if (tableData?.columns) {
       await Promise.all(tableData.columns.map(async (field: any) => {
@@ -77,7 +77,7 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
 
         const value = initialValues[field.id] ?? initialValues[field.column_name];
         if (value === undefined || value === null || value === '') return;
-        
+
         try {
           await insertRowData.mutateAsync({
             model_id: String(tableId),
@@ -90,7 +90,7 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
         }
       }));
     }
-    
+
     return recordId;
   };
 
@@ -100,9 +100,9 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
   };
 
   const deleteCard = async (cardId: string): Promise<void> => {
-    await deleteRecord.mutateAsync({ 
-      model_id: String(tableId), 
-      row_id: Number(cardId) 
+    await deleteRecord.mutateAsync({
+      model_id: String(tableId),
+      row_id: Number(cardId)
     });
   };
 
@@ -120,13 +120,13 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
     if (!field) {
       return;
     }
-    
+
     // Update the field's meta options
     await updateField.mutateAsync({
       fieldId: String(fieldId),
       updatedValue: {
         meta: {
-          ...(field.meta || {}),
+          ...field.meta,
           options: options
         }
       }
@@ -145,7 +145,7 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
   const persistStackOrder = async (newOrder: string[]): Promise<void> => {
     const viewIdToUpdate = viewId;
     if (!viewIdToUpdate) return;
-    
+
     const currentView = viewsMap.get(String(viewIdToUpdate));
     const currentMeta = currentView?.meta ?? currentView?.config ?? {};
     await updateView.mutateAsync({
@@ -162,16 +162,20 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
   const changeGroupByColumn = async (col: GridColumn): Promise<void> => {
     const viewIdToUpdate = viewId;
     if (!viewIdToUpdate || !col.id) return;
-    
+
     const currentView = viewsMap.get(String(viewIdToUpdate));
     const currentMeta = currentView?.meta ?? currentView?.config ?? {};
-    // Use updateViewMeta for meta-only updates (doesn't invalidate table queries)
-    await updateViewMeta.mutateAsync({
+    // Use updateView (not updateViewMeta) to ensure table query is invalidated
+    // The table query contains the views array, and we need it to refetch with updated view meta
+    await updateView.mutateAsync({
       viewId: viewIdToUpdate,
-      meta: {
-        view_target_field: col.id
-      },
-      currentMeta: currentMeta as any
+      view: {
+        model_id: tableId,
+        meta: {
+          ...currentMeta,
+          view_target_field: col.id
+        }
+      }
     });
   };
 
@@ -182,34 +186,34 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
       await updateView.mutateAsync({ viewId, view: updates });
       return;
     }
-    
+
     // If updates contains meta, we need to merge it properly
     if (updates.meta) {
-      const currentMeta = currentView.meta || {};
+      const currentMeta = currentView.meta ?? {};
       // Remove any nested meta.meta structure to prevent double nesting
-      const { meta: nestedMeta, ...cleanMeta } = currentMeta as any;
-      
+      const { meta: nestedMeta, ...cleanMeta } = currentMeta ?? {};
+
       // Merge clean meta with updates.meta
       const newMeta = { ...cleanMeta, ...updates.meta };
-      
-      await updateView.mutateAsync({ 
-        viewId, 
-        view: { 
+
+      await updateView.mutateAsync({
+        viewId,
+        view: {
           ...updates,
           meta: newMeta
-        } 
+        }
       });
     } else {
       // If updates doesn't contain meta, but we need to add properties to meta, do so
-      const currentMeta = currentView.meta || {};
-      const { meta: nestedMeta, ...cleanMeta } = currentMeta as any;
-      
+      const currentMeta = currentView.meta ?? {};
+      const { meta: nestedMeta, ...cleanMeta } = currentMeta ?? {};
+
       // Merge updates into clean meta
       const newMeta = { ...cleanMeta, ...updates };
-      
-      await updateView.mutateAsync({ 
-        viewId, 
-        view: { meta: newMeta } 
+
+      await updateView.mutateAsync({
+        viewId,
+        view: { meta: newMeta }
       });
     }
   };
@@ -218,7 +222,7 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
     tableData,
     isLoading: tableQuery.isLoading,
     error: tableQuery.error,
-    refresh: () => tableQuery.refetch(),
+    refresh: () => { void tableQuery.refetch(); },
     addRow,
     insertRowData,
     deleteRecord,

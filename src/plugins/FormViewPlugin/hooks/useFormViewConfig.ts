@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useDebounce } from '../../../utils/helpers';
-import { FormConfig } from '../../../types/form';
+import { FormConfig, FormField } from '../../../types/form';
 import { useToast } from '../../../components/common/Toast';
 
 interface UseFormViewConfigOptions {
   view: any;
-  formFields: any[];
-  updateAppearance: (appearanceUpdates: any, view: any) => Promise<void>;
+  formFields: FormField[];
+  updateAppearance: (appearanceUpdates: Record<string, unknown>, view: any) => Promise<void>;
 }
 
 export function useFormViewConfig({
@@ -17,7 +16,7 @@ export function useFormViewConfig({
   const toast = useToast();
 
   // Form configuration state
-  const persistedAppearance = (view?.meta as any)?.formViewAppearance;
+  const persistedAppearance = view?.meta?.formViewAppearance;
   const initialAppearance = persistedAppearance || view.appearance || {};
 
   // Load form-specific title and description from formViewAppearance, fallback to view title/description
@@ -71,6 +70,82 @@ export function useFormViewConfig({
     setFormConfig(prev => ({ ...prev, fields: formFields }));
   }, [formFields]);
 
+  // Track the last synced view appearance to detect external changes
+  const lastSyncedAppearanceRef = useRef<string>(JSON.stringify(view?.meta?.formViewAppearance || {}));
+  
+  // Sync formConfig with view when formViewAppearance changes externally (not during our own updates)
+  useEffect(() => {
+    // Skip if we're currently updating (to avoid overwriting our own changes)
+    if (isUpdatingRef.current) {
+      return;
+    }
+    
+    const currentPersistedAppearance = view?.meta?.formViewAppearance;
+    const currentAppearanceString = JSON.stringify(currentPersistedAppearance || {});
+    const lastSyncedString = lastSyncedAppearanceRef.current;
+    
+    // Only sync if the view appearance actually changed externally
+    if (currentAppearanceString !== lastSyncedString) {
+      const currentFormTitle = currentPersistedAppearance?.formTitle;
+      const currentFormDescription = currentPersistedAppearance?.formDescription;
+      
+      setFormConfig(prev => {
+        // Check what changed
+        const titleChanged = currentFormTitle !== undefined && currentFormTitle !== prev.title;
+        const descriptionChanged = currentFormDescription !== undefined && currentFormDescription !== (prev.description || '');
+        
+        // Check if appearance properties changed
+        const currentAppearance = prev.appearance || {};
+        const appearanceChanged = currentPersistedAppearance && (
+          currentAppearance.backgroundColor !== currentPersistedAppearance.backgroundColor ||
+          currentAppearance.hideNocoBranding !== currentPersistedAppearance.hideNocoBranding ||
+          currentAppearance.hideBanner !== currentPersistedAppearance.hideBanner ||
+          currentAppearance.logoUrl !== currentPersistedAppearance.logoUrl ||
+          currentAppearance.bannerUrl !== currentPersistedAppearance.bannerUrl ||
+          currentAppearance.primaryColor !== currentPersistedAppearance.primaryColor ||
+          currentAppearance.textColor !== currentPersistedAppearance.textColor ||
+          currentAppearance.layoutWidth !== currentPersistedAppearance.layoutWidth ||
+          currentAppearance.labelPosition !== currentPersistedAppearance.labelPosition ||
+          currentAppearance.fieldLayout !== currentPersistedAppearance.fieldLayout ||
+          currentAppearance.cardStyle !== currentPersistedAppearance.cardStyle ||
+          currentAppearance.align !== currentPersistedAppearance.align ||
+          currentAppearance.rounded !== currentPersistedAppearance.rounded
+        );
+        
+        if (titleChanged || descriptionChanged || appearanceChanged) {
+          const updated = {
+            ...prev,
+            ...(titleChanged && { title: currentFormTitle ?? view.title ?? 'Form' }),
+            ...(descriptionChanged && { description: currentFormDescription ?? view.description ?? '' }),
+            ...(appearanceChanged && {
+              appearance: {
+                backgroundColor: currentPersistedAppearance.backgroundColor ?? view.appearance?.backgroundColor ?? '#f8fafc',
+                hideNocoBranding: currentPersistedAppearance.hideNocoBranding ?? view.appearance?.hideNocoBranding ?? false,
+                hideBanner: currentPersistedAppearance.hideBanner ?? view.appearance?.hideBanner ?? false,
+                logoUrl: currentPersistedAppearance.logoUrl ?? view.appearance?.logoUrl ?? undefined,
+                bannerUrl: currentPersistedAppearance.bannerUrl ?? view.appearance?.bannerUrl ?? undefined,
+                primaryColor: currentPersistedAppearance.primaryColor ?? view.appearance?.primaryColor ?? undefined,
+                textColor: currentPersistedAppearance.textColor ?? view.appearance?.textColor ?? undefined,
+                layoutWidth: currentPersistedAppearance.layoutWidth ?? view.appearance?.layoutWidth ?? 'medium',
+                labelPosition: currentPersistedAppearance.labelPosition ?? view.appearance?.labelPosition ?? 'top',
+                fieldLayout: currentPersistedAppearance.fieldLayout ?? view.appearance?.fieldLayout ?? 'list',
+                cardStyle: currentPersistedAppearance.cardStyle ?? view.appearance?.cardStyle ?? 'flat',
+                align: currentPersistedAppearance.align ?? view.appearance?.align ?? 'left',
+                rounded: currentPersistedAppearance.rounded ?? view.appearance?.rounded ?? 'lg'
+              }
+            })
+          };
+          // Update the ref to track what we've synced
+          lastSyncedAppearanceRef.current = currentAppearanceString;
+          return updated;
+        }
+        // Update ref even if no changes needed
+        lastSyncedAppearanceRef.current = currentAppearanceString;
+        return prev;
+      });
+    }
+  }, [view?.meta?.formViewAppearance, view?.title, view?.description, view?.appearance]);
+
   // Unified handler for all config changes - prevents duplicate API calls
   const handleConfigChange = useCallback((updatedConfig: Partial<FormConfig>) => {
     setFormConfig((prev) => {
@@ -98,6 +173,7 @@ export function useFormViewConfig({
           }
 
           try {
+            // Mark that we're updating to prevent sync useEffect from interfering
             isUpdatingRef.current = true;
 
             // Get current formViewAppearance from meta
@@ -111,7 +187,7 @@ export function useFormViewConfig({
             const mergedAppearance = {
               ...currentFormViewAppearance,
               // Include appearance updates
-              ...(latestConfig.appearance || {}),
+              ...latestConfig.appearance,
               // Include title/description if they exist in config
               ...(latestConfig.title !== undefined && { formTitle: latestConfig.title }),
               ...(latestConfig.description !== undefined && { formDescription: latestConfig.description }),
@@ -126,6 +202,9 @@ export function useFormViewConfig({
             }
             
             await updateAppearanceRef.current(mergedAppearance, viewRef.current);
+            
+            // Update the last synced appearance ref to match what we just saved
+            lastSyncedAppearanceRef.current = JSON.stringify(mergedAppearance);
             
             // Show appropriate success message
             const hasTitleOrDesc = latestConfig.title !== undefined || latestConfig.description !== undefined;

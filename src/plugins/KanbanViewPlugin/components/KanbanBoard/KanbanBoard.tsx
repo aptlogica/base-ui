@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useCallback, useRef } from 'react';
+import React, { useMemo, useCallback, useRef } from 'react';
 import { buildInitialValuesForEdit } from '../../../../utils/initialValues';
 import { Plus, List } from 'lucide-react';
 import { useToast } from '../../../../components/common/Toast';
@@ -18,6 +18,8 @@ import { normalizeFieldType } from '../../../../utils/fieldType';
 import { parseApiColumnMeta } from '../../../../components/shared/table/tableUtils';
 import { fieldsToExcludeInFilter } from '../../../../types/constants';
 import { useBaseAccess } from '../../../../hooks/useBaseAccess';
+import { ColumnConfig } from '../../../../plugins/GridViewPlugin/types/grid.types';
+import { useAddRow, useInsertRowData, useDeleteRecord, useUpdateField, useUpdateView, useUpdateViewMeta } from '../../../../hooks/useApi';
 // Custom hooks
 import { useKanbanViewConfig } from '../../hooks/useKanbanViewConfig';
 import { useKanbanModals } from '../../hooks/useKanbanModals';
@@ -27,30 +29,20 @@ import { useKanbanStacks } from '../../hooks/useKanbanStacks';
 type Column = BaseColumn;
 
 type KanbanActions = {
-  moveCard: (cardId: string, targetStackId: string) => Promise<void>;
-  createCard: (initialValues: Record<string, unknown>) => Promise<string>;
+  moveCard?: (cardId: string, targetStackId: string) => Promise<void>;
+  createCard?: (initialValues: Record<string, any>) => Promise<string>;
   deleteCard: (cardId: string) => Promise<void>;
   duplicateCard: (cardId: string) => Promise<string>;
   updateFieldOptions: (fieldId: string, options: string[] | Array<{ option: string; color: string }>) => Promise<void>;
-  persistStackOrder: (newOrder: string[]) => Promise<void>;
-  changeGroupByColumn: (col: Column) => Promise<void>;
+  persistStackOrder?: (newOrder: string[]) => Promise<void>;
+  changeGroupByColumn: (col: Column | any) => Promise<void>;
   updateViewConfig: (viewId: string, updates: Record<string, unknown>) => Promise<void>;
-  addRow: {
-    mutateAsync: (data: Record<string, unknown>) => Promise<any>;
-  };
-  insertRowData: {
-    mutateAsync: (data: Record<string, unknown>) => Promise<any>;
-  };
-  deleteRecord: (recordId: string) => Promise<void>;
-  updateField: {
-    mutateAsync: (data: Record<string, unknown>) => Promise<any>;
-  };
-  updateView: {
-    mutateAsync: (data: Record<string, unknown>) => Promise<any>;
-  };
-  updateViewMeta: {
-    mutateAsync: (data: Record<string, unknown>) => Promise<any>;
-  };
+  addRow: ReturnType<typeof useAddRow>;
+  insertRowData: ReturnType<typeof useInsertRowData>;
+  deleteRecord: ReturnType<typeof useDeleteRecord>;
+  updateField: ReturnType<typeof useUpdateField>;
+  updateView: ReturnType<typeof useUpdateView>;
+  updateViewMeta: ReturnType<typeof useUpdateViewMeta>;
 };
 
 interface KanbanBoardProps {
@@ -62,8 +54,6 @@ interface KanbanBoardProps {
   };
   viewId?: string;
   onRefresh: () => void;
-  // Optional view meta override; when provided, it supersedes tableData.view.meta
-  viewConfig?: Record<string, unknown>;
   actions?: KanbanActions;
 }
 
@@ -71,20 +61,19 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   tableData,
   viewId,
   onRefresh,
-  viewConfig,
   actions,
 }) => {
   const toast = useToast();
-  
+
   // Extract base ID for permission checks
   const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
-  
+
   // Check permissions for read-only access
   const { isBaseReadOnly, canCreateRecord, canDeleteRecord, canUpdateRecord } = useBaseAccess(baseId || undefined);
-  
+
   // Safe handlers pattern: Check read-only once at top level
   const isReadOnly = isBaseReadOnly();
-  
+
   // Transform API data to UI-ready format (similar to Table and FormView components)
   const columns = useMemo(() => {
     if (!tableData?.columns || !Array.isArray(tableData.columns)) return [];
@@ -151,6 +140,46 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       }));
   }, [columns]);
 
+  // Convert BaseColumn[] to ColumnConfig[] for FieldsPopover
+  const columnConfigs = useMemo((): ColumnConfig[] => {
+    return columns.map((col): ColumnConfig => ({
+      id: col.id ? String(col.id) : undefined,
+      key: col.key || col.column_name || '',
+      column_name: col.column_name,
+      title: col.title || col.column_name || '',
+      type: normalizeFieldType(col.type || col.uidt || 'text') as any,
+      uidt: col.uidt,
+      position: col.position || col.order_index || 0,
+      order_index: col.order_index || 0,
+      isSystem: col.isSystem || col.system || false,
+      system: col.system || false,
+      hidden: col.hidden || false,
+      is_hidden: col.isHidden || col.is_hidden || false,
+      meta: col.meta,
+      config: col.config || col.meta,
+    }));
+  }, [columns]);
+
+  // Convert sortableColumns to ColumnConfig[] for FilterPopover
+  const sortableColumnConfigs = useMemo((): ColumnConfig[] => {
+    return sortableColumns.map((col): ColumnConfig => ({
+      id: col.id ? String(col.id) : undefined,
+      key: col.key || col.column_name || '',
+      column_name: col.column_name || col.key,
+      title: col.title || col.column_name || '',
+      type: normalizeFieldType(col.type || col.uidt || 'text') as any,
+      uidt: col.uidt,
+      position: 0,
+      order_index: 0,
+      isSystem: col.system || false,
+      system: col.system || false,
+      hidden: col.hidden || false,
+      is_hidden: col.isHidden || false,
+      meta: col.meta,
+      config: col.config || col.meta,
+    }));
+  }, [sortableColumns]);
+
   // Get current view
   const view = useMemo(() => {
     if (viewId) {
@@ -186,21 +215,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     return groupCol.options || [];
   }, [groupCol]);
 
-  const fields = useMemo(() => {
-    return columns.filter((c) => !(c as any).deleted);
-  }, [columns]);
-
   const tableId = useMemo(() => String(tableData?.model?.id ?? ''), [tableData?.model?.id]);
   const tableName = useMemo(() => String(tableData?.model?.title ?? ''), [tableData?.model?.title]);
 
   // Extract actions with proper defaults
   const {
-    moveCard: onMoveCard = async () => { },
-    createCard: onCreateCard = async () => '',
     deleteCard: onDeleteCard = async () => { },
     duplicateCard: onDuplicateCard = async () => '',
     updateFieldOptions: onUpdateFieldOptions = async () => { },
-    persistStackOrder: onPersistStackOrder = async () => { },
     changeGroupByColumn: onChangeGroupByColumn = async () => { },
     updateViewConfig: onUpdateView = async () => { }
   } = actions || {};
@@ -214,13 +236,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     draftFilter,
     localFieldConfig,
     handleSearch,
-    handleRealTimeFilter,
     handleAddFilter,
     handleRemoveFilter,
     handleUpdateFilter,
     handleSortChange,
     handleFieldToggle,
-    handleFieldOrderChange,
   } = useKanbanViewConfig({
     view,
     columns,
@@ -248,10 +268,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     setUiState,
     handleStackCollapse,
     handleCreateStackClick,
-    handleCancelCreateStack,
     handleNewOptionChange,
     handleStackDragStart,
-    handleStackDrop,
   } = useKanbanStacks({
     view,
     updateView: actions?.updateView,
@@ -261,7 +279,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   // PERFORMANCE: Extract field options and color map separately (only recalc when groupCol changes)
   const { fieldOptions, optionColorMap } = useMemo(() => {
     if (!groupCol) return { fieldOptions: [], optionColorMap: new Map<string, string>() };
-    
+
     // Get options from the group column (this is the source of truth for stacks)
     const options = (groupCol.options || []).map((opt: any) => {
       if (typeof opt === 'string') return opt;
@@ -278,7 +296,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       } else {
         optionName = opt.option || opt.value || opt.label || opt.name || String(opt);
       }
-      
+
       // Extract color if available (only if color is a non-empty string)
       if (typeof opt === 'object' && opt.color && typeof opt.color === 'string' && opt.color.trim() !== '') {
         colorMap.set(optionName, opt.color.trim());
@@ -293,7 +311,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     if (val === null || val === undefined) return '';
     if (typeof val === 'string') return val;
     if (typeof val === 'number' || typeof val === 'boolean') return String(val);
-    
+
     // Handle arrays
     if (Array.isArray(val)) {
       if (val.length === 0) return '';
@@ -321,20 +339,20 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       }
       return '';
     }
-    
+
     // Handle objects
     if (typeof val === 'object') {
       // Try common properties that might contain displayable text
       return val.title || val.label || val.name || val.id || val.value || '';
     }
-    
+
     return '';
   }, []);
 
   // PERFORMANCE: Memoize search-filtered records separately
   const searchFilteredRecords = useMemo(() => {
     if (!tableData?.records || !Array.isArray(tableData.records)) return [];
-    
+
     // Apply search filter first
     if (searchTerm && selectedSearchField) {
       const searchLower = searchTerm.toLowerCase();
@@ -344,7 +362,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         return String(fieldValue).toLowerCase().includes(searchLower);
       });
     }
-    
+
     return tableData.records;
   }, [tableData?.records, searchTerm, selectedSearchField]);
 
@@ -367,9 +385,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         // Only use the value if it exists in field options, otherwise use Uncategorized
         if (stringValue && fieldOptionsSet.has(stringValue)) {
           stackName = stringValue;
-        } else {
-          stackName = 'Uncategorized';
         }
+        // If not found in options, stackName remains 'Uncategorized' (already set above)
       }
 
       if (!stackMap.has(stackName)) {
@@ -377,19 +394,19 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       }
 
       // PERFORMANCE: Only normalize if record doesn't already have _meta
-      const normalizedRecord = record._meta 
-        ? record 
+      const normalizedRecord = record._meta
+        ? record
         : {
-            _meta: {
-              id: String(record.id || ''),
-              created_at: record.created_at || new Date().toISOString(),
-              updated_at: record.updated_at || new Date().toISOString(),
-              deleted_at: null,
-              position: 0,
-            },
-            ...record,
-            title: record.title || ''
-          };
+          _meta: {
+            id: String(record.id || ''),
+            created_at: record.created_at || new Date().toISOString(),
+            updated_at: record.updated_at || new Date().toISOString(),
+            deleted_at: null,
+            position: 0,
+          },
+          ...record,
+          title: record.title || ''
+        };
 
       stackMap.get(stackName)!.push(normalizedRecord);
     }
@@ -418,7 +435,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       } else {
         stackColor = optionColorMap.get(stackName) || defaultColors[(index - 1) % defaultColors.length];
       }
-      
+
       return {
         id: stackName,
         name: stackName,
@@ -437,12 +454,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     if (!item) return;
 
     try {
-      // Persist to backend
+      // Persist to backend - updateView will automatically invalidate table query
       await onChangeGroupByColumn(item);
-      // REMOVED: onRefresh() - updateViewMeta doesn't invalidate table queries, but changing group column
-      // requires a full table refetch to rebuild stacks. However, since this is a structural change,
-      // we should let the component re-render naturally from the view meta update.
-      // If needed, the table will be refetched when the view changes.
+      // No need for manual refresh - updateView invalidates the table query automatically
     } catch (error) {
       console.error('Failed to change group by column:', error);
     }
@@ -548,22 +562,20 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     const applyCardOrder = (stackId: string, cards: Record<string, unknown>[]): Record<string, unknown>[] => {
       const customOrder = cardOrderConfig[stackId];
       if (!customOrder || customOrder.length === 0) return cards;
-      
+
       // Single pass: Create map and build ordered array efficiently
       const cardMap = new Map<string, Record<string, unknown>>();
-      const cardIds = new Set<string>();
-      
-      // Build map and track all card IDs
+
+      // Build map
       for (const card of cards) {
         const cardId = String((card as any)?._meta?.id || (card as any)?.id || '');
         cardMap.set(cardId, card);
-        cardIds.add(cardId);
       }
-      
+
       // Build ordered array: custom order first, then remaining cards
       const ordered: Record<string, unknown>[] = [];
       const seen = new Set<string>();
-      
+
       // Add cards in custom order (single iteration)
       for (const cardId of customOrder) {
         const cardIdStr = String(cardId);
@@ -573,7 +585,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           seen.add(cardIdStr);
         }
       }
-      
+
       // Add remaining cards not in custom order (single iteration)
       for (const card of cards) {
         const cardId = String((card as any)?._meta?.id || (card as any)?.id || '');
@@ -581,12 +593,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           ordered.push(card);
         }
       }
-      
+
       return ordered;
     };
 
     // Combine saved filters with draft filter (if any) for real-time preview
-    const allFilters = hasDraftFilter 
+    const allFilters = hasDraftFilter
       ? [...filters, draftFilter]
       : filters;
 
@@ -597,17 +609,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
     const sortCards = (cards: Record<string, unknown>[]) => {
       if (!hasSorts || cards.length === 0) return cards;
-      
+
       // PERFORMANCE: Use pre-computed sortColumnsForSorting
       const byKey = (key: string) => sortColumnsForSorting.find(c => c.key === key);
       const getValue = (row: Record<string, unknown>, key: string) => {
         if (!row || !key) return undefined;
         return row[key];
       };
-      
+
       const cmp = (ra: Record<string, unknown>, rb: Record<string, unknown>) => {
         if (!ra || !rb) return 0;
-        
+
         for (const s of sorts) {
           if (!s.column) continue;
           const col = byKey(s.column);
@@ -619,7 +631,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         }
         return 0;
       };
-      
+
       return [...cards].sort(cmp);
     };
 
@@ -627,9 +639,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       // Apply filters first
       const filtered = applyFilters(stack.cards);
       // Then apply custom card order (if no sorts, preserve custom order; if sorts exist, sorts take precedence)
-      const ordered = hasSorts
-        ? sortCards(filtered) // If sorts exist, apply them (they override custom order)
-        : (hasCardOrder ? applyCardOrder(stack.id, filtered) : filtered); // If no sorts, use custom order if available
+      let ordered: Record<string, unknown>[];
+      if (hasSorts) {
+        ordered = sortCards(filtered); // If sorts exist, apply them (they override custom order)
+      } else if (hasCardOrder) {
+        ordered = applyCardOrder(stack.id, filtered); // If no sorts, use custom order if available
+      } else {
+        ordered = filtered;
+      }
       return { ...stack, cards: ordered, isCollapsed: collapsedStacks.has(stack.id) };
     });
   }, [stacks, filters, draftFilter, columns, sorts, collapsedStacks, cardOrderConfig, hasFilters, hasDraftFilter, hasSorts, hasCardOrder, sortColumnsForSorting]);
@@ -639,29 +656,29 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     try {
       // First, update the group field value to move card to target stack
       await handleMoveCard(cardId, targetStackId);
-      
+
       // Then update the card order in view meta (using optimized hook that doesn't invalidate table queries)
       if (view?.id && actions?.updateViewMeta) {
         const viewMeta = view?.meta || {};
         const cardOrder = (viewMeta.cardOrder || {}) as Record<string, string[]>;
-        
+
         // Get the target stack's current order (or empty array if none)
         const targetStackOrder = cardOrder[targetStackId] || [];
-        
+
         // Remove card from any existing stack orders (in case it's being moved from another stack)
         Object.keys(cardOrder).forEach(stackId => {
           cardOrder[stackId] = cardOrder[stackId].filter(id => id !== cardId);
         });
-        
+
         // Insert card at the specified position in target stack
         const newTargetOrder = [...targetStackOrder];
         // Clamp position to valid range
         const clampedPosition = Math.max(0, Math.min(position, newTargetOrder.length));
         newTargetOrder.splice(clampedPosition, 0, cardId);
-        
+
         // Update card order
         cardOrder[targetStackId] = newTargetOrder;
-        
+
         // Persist to view meta using optimized hook (no table invalidation)
         await actions.updateViewMeta.mutateAsync({
           viewId: view.id,
@@ -669,7 +686,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           currentMeta: viewMeta // Pass current meta to avoid cache lookup
         });
       }
-      
+
       // REMOVED: onRefresh() - redundant, insertRowData already invalidates table with refetchType: 'active'
       // The table will be refetched automatically via query invalidation from insertRowData
     } catch (error) {
@@ -691,13 +708,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     // Flatten cards as rawRecords-like list for the helper
     const allCards: Record<string, unknown>[] = (filteredStacks || []).flatMap((s) => Array.isArray(s.cards) ? s.cards : []);
     const matched = allCards.find(c => {
-      const cardMeta = c._meta as Record<string, unknown> | undefined;
-      return String(cardMeta?.id || c.id) === String(modalState.edit.recordId);
+      const cardMeta = c._meta;
+      if (cardMeta && typeof cardMeta === 'object' && 'id' in cardMeta) {
+        return String(cardMeta.id) === String(modalState.edit.recordId);
+      }
+      return String(c.id) === String(modalState.edit.recordId);
     });
     return buildInitialValuesForEdit({
       record: matched,
-      recordId: modalState.edit.recordId as string,
-      columns: columns as Parameters<typeof buildInitialValuesForEdit>[0]['columns'],
+      recordId: String(modalState.edit.recordId),
+      columns: columns,
       // Kanban doesn't have normalizedColumns; keys are typically in col.column_name
     });
   };
@@ -730,19 +750,23 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       // Get existing option names to check for duplicates
       const existingOptionNames = localOptions.map((opt: any) => {
         if (typeof opt === 'string') return opt;
-        return (opt as any)?.option || (opt as any)?.value || (opt as any)?.label || String(opt);
+        return opt?.option || opt?.value || opt?.label || String(opt);
       });
 
       // Add new option if it doesn't exist
-      if (!existingOptionNames.includes(trimmed)) {
+      if (existingOptionNames.includes(trimmed)) {
+        // Show toast for duplicate stack name
+        toast.error(`Stack "${trimmed}" already exists`);
+        setUiState(prev => ({ ...prev, newOption: '' }));
+      } else {
         // Preserve existing options structure (with colors)
         const preservedOptions = localOptions.map((opt: any) => {
           if (typeof opt === 'string') {
             return { option: opt, color: '' };
           }
           return {
-            option: (opt as any)?.option || (opt as any)?.value || (opt as any)?.label || String(opt),
-            color: (opt as any)?.color || ''
+            option: opt?.option || opt?.value || opt?.label || String(opt),
+            color: opt?.color || ''
           };
         });
 
@@ -759,10 +783,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         // Refresh to update the UI immediately
         onRefresh();
         setUiState(prev => ({ ...prev, newOption: '', isCreateStack: false }));
-      } else {
-        // Show toast for duplicate stack name
-        toast.error(`Stack "${trimmed}" already exists`);
-      setUiState(prev => ({ ...prev, newOption: '' }));
       }
     } catch (error) {
       console.error('Failed to create stack:', error);
@@ -777,19 +797,23 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       // Get existing option names to check for duplicates
       const existingOptionNames = localOptions.map((opt: any) => {
         if (typeof opt === 'string') return opt;
-        return (opt as any)?.option || (opt as any)?.value || (opt as any)?.label || String(opt);
+        return opt?.option || opt?.value || opt?.label || String(opt);
       });
 
       // Add new option if it doesn't exist
-      if (!existingOptionNames.includes(trimmed)) {
+      if (existingOptionNames.includes(trimmed)) {
+        // Show toast for duplicate stack name
+        toast.error(`Stack "${trimmed}" already exists`);
+        setUiState(prev => ({ ...prev, newOption: '' }));
+      } else {
         // Preserve existing options structure (with colors)
         const preservedOptions = localOptions.map((opt: any) => {
           if (typeof opt === 'string') {
             return { option: opt, color: '' };
           }
           return {
-            option: (opt as any)?.option || (opt as any)?.value || (opt as any)?.label || String(opt),
-            color: (opt as any)?.color || ''
+            option: opt?.option || opt?.value || opt?.label || String(opt),
+            color: opt?.color || ''
           };
         });
 
@@ -805,11 +829,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         await onUpdateFieldOptions(groupCol.id, next);
         // Refresh to update the UI immediately
         onRefresh();
-      setUiState(prev => ({ ...prev, newOption: '', isCreateStack: false }));
-      } else {
-        // Show toast for duplicate stack name
-        toast.error(`Stack "${trimmed}" already exists`);
-        setUiState(prev => ({ ...prev, newOption: '' }));
+        setUiState(prev => ({ ...prev, newOption: '', isCreateStack: false }));
       }
     } catch (error) {
       console.error('Failed to create stack:', error);
@@ -861,7 +881,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       // Get existing option names to check if stack exists
       const existingOptionNames = localOptions.map((opt: any) => {
         if (typeof opt === 'string') return opt;
-        return (opt as any)?.option || (opt as any)?.value || (opt as any)?.label || String(opt);
+        return opt?.option || opt?.value || opt?.label || String(opt);
       });
 
       // Only delete if it's a field option (proper Kanban behavior)
@@ -892,12 +912,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               return { option: opt, color: '' };
             }
             return {
-              option: (opt as any)?.option || (opt as any)?.value || (opt as any)?.label || String(opt),
-              color: (opt as any)?.color || ''
+              option: opt?.option || opt?.value || opt?.label || String(opt),
+              color: opt?.color || ''
             };
           })
           .filter((opt: { option: string; color: string }) => opt.option !== stackId);
-        
+
         await onUpdateFieldOptions(groupCol.id, preservedOptions);
 
         // Refresh to update the UI immediately
@@ -915,33 +935,33 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     try {
       // Convert options to strings for comparison
       const stringOptions = localOptions.map((opt: any) =>
-        typeof opt === 'string' ? opt : (opt as any)?.value || (opt as any)?.label || String(opt)
+        typeof opt === 'string' ? opt : opt?.value || opt?.label || String(opt)
       );
 
       // Only edit if the old name exists in field options (proper Kanban behavior)
       if (stringOptions.includes(oldName)) {
         // 1. Update field options (preserve structure with colors)
         const preservedOptions = localOptions.map((opt: any) => {
-          const optionName = typeof opt === 'string' 
-            ? opt 
-            : (opt as any)?.option || (opt as any)?.value || (opt as any)?.label || String(opt);
-          
+          const optionName = typeof opt === 'string'
+            ? opt
+            : opt?.option || opt?.value || opt?.label || String(opt);
+
           if (optionName === oldName) {
             // Update the option name but preserve the color
             const existingColor = typeof opt === 'object' && opt.color ? opt.color : '';
             return { option: newName.trim(), color: existingColor };
           }
-          
+
           // Preserve existing option structure
           if (typeof opt === 'string') {
             return { option: opt, color: '' };
           }
           return {
             option: optionName,
-            color: (opt as any)?.color || ''
+            color: opt?.color || ''
           };
         });
-        
+
         await onUpdateFieldOptions(groupCol.id, preservedOptions);
 
         // 2. Update all records that have the old value to use the new value
@@ -988,22 +1008,20 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             />
             {!isReadOnly && handleFieldToggle && (
               <FieldsPopover
-                columns={columns}
+                columns={columnConfigs}
                 fieldConfig={localFieldConfig}
                 onFieldToggle={handleFieldToggle}
-                tableId={String(tableId || '')}
                 label="Fields"
                 iconComponent={List}
               />
             )}
             {handleAddFilter && (
               <FilterPopover
-                columns={sortableColumns}
+                columns={sortableColumnConfigs}
                 filters={filters}
                 onAddFilter={handleAddFilter}
                 onRemoveFilter={handleRemoveFilter}
                 onUpdateFilter={handleUpdateFilter}
-                onRealTimeFilter={handleRealTimeFilter}
               />
             )}
             {handleSortChange && (
@@ -1050,9 +1068,18 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               groupCol={groupCol}
               groupFieldTitle={(groupCol?.title as string) || (groupCol?.key as string) || 'Status'}
               onCardMove={isReadOnly ? undefined : handleCardMove}
-              onCardCreate={isReadOnly ? undefined : (canCreateRecord() ? handleOpenCreateRecord : undefined)}
-              onCardEdit={isReadOnly ? undefined : (canUpdateRecord() ? handleOpenEditRecord : undefined)}
-              onCardDelete={isReadOnly ? undefined : (canDeleteRecord() ? handleOpenDeleteRecord : undefined)}
+              onCardCreate={(() => {
+                if (isReadOnly) return undefined;
+                return canCreateRecord() ? handleOpenCreateRecord : undefined;
+              })()}
+              onCardEdit={(() => {
+                if (isReadOnly) return undefined;
+                return canUpdateRecord() ? handleOpenEditRecord : undefined;
+              })()}
+              onCardDelete={(() => {
+                if (isReadOnly) return undefined;
+                return canDeleteRecord() ? handleOpenDeleteRecord : undefined;
+              })()}
               onDuplicate={isReadOnly ? undefined : handleDuplicateCard}
               onStackCollapse={handleStackCollapse}
               onStackEdit={isReadOnly ? undefined : handleStackEdit}
@@ -1064,9 +1091,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           ))}
 
           {/* Add New Stack */}
-          {!isReadOnly && (
+          {isReadOnly ? null : (
             <div className="w-full md:w-80 md:flex-shrink-0">
-              {!uiState.isCreateStack ? (
+              {uiState.isCreateStack ? (
                 <button
                   onClick={handleCreateStackClick}
                   className="w-full h-14 border border-dashed rounded text-gray-500 hover:text-gray-700 hover:border-gray-400 transition-colors flex items-center justify-center gap-2 text-sm"
@@ -1075,23 +1102,23 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   New stack
                 </button>
               ) : (
-              <div className="p-1.5 border border-dashed rounded-xl flex items-center justify-between gap-2" ref={dropdownRef}>
-                <input
-                  className="flex-1 p-2 border border-primary bg-[var(--color-alpha-white)] text-primary rounded-xl text-sm outline-none field-component-focus"
-                  placeholder="Add New Stack"
-                  value={uiState.newOption}
-                  onChange={(e) => handleNewOptionChange(e.target.value)}
-                  onKeyDown={handleCreateStackKeyDown}
-                />
-                <button
-                  type="button"
-                  className="p-2 btn-add-option"
-                  onClick={handleCreateStackClickSave}
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+                <div className="p-1.5 border border-dashed rounded-xl flex items-center justify-between gap-2" ref={dropdownRef}>
+                  <input
+                    className="flex-1 p-2 border border-primary bg-[var(--color-alpha-white)] text-primary rounded-xl text-sm outline-none field-component-focus"
+                    placeholder="Add New Stack"
+                    value={uiState.newOption}
+                    onChange={(e) => handleNewOptionChange(e.target.value)}
+                    onKeyDown={handleCreateStackKeyDown}
+                  />
+                  <button
+                    type="button"
+                    className="p-2 btn-add-option"
+                    onClick={handleCreateStackClickSave}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -97,10 +97,6 @@ export function useGanttTimeline({ filteredTasks, columns, fieldConfig }: UseGan
       if (tooltipRect.bottom + 10 <= viewportHeight) {
         position = 'bottom';
       }
-      // Check if there's space above
-      else if (tooltipRect.top - 10 >= 0) {
-        position = 'top';
-      }
       // Check if there's space to the right
       else if (tooltipRect.right + 10 <= viewportWidth) {
         position = 'right';
@@ -109,6 +105,7 @@ export function useGanttTimeline({ filteredTasks, columns, fieldConfig }: UseGan
       else if (tooltipRect.left - 10 >= 0) {
         position = 'left';
       }
+      // Otherwise, keep 'top' as default (already set above)
 
       setTooltipPosition(position);
     }
@@ -161,10 +158,20 @@ export function useGanttTimeline({ filteredTasks, columns, fieldConfig }: UseGan
       options: {
         formatTime: (time: string) => {
           const [hours, minutes] = time.split(':');
-          const hour = parseInt(hours, 10);
-          const minute = parseInt(minutes, 10);
+          const hour = Number.parseInt(hours, 10);
+          const minute = Number.parseInt(minutes, 10);
           const period = hour >= 12 ? 'PM' : 'AM';
-          const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+          
+          // Convert 24-hour format to 12-hour format
+          let displayHour: number;
+          if (hour === 0) {
+            displayHour = 12;
+          } else if (hour > 12) {
+            displayHour = hour - 12;
+          } else {
+            displayHour = hour;
+          }
+          
           return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
         },
         fieldConfig,

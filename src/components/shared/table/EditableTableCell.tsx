@@ -357,7 +357,16 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
         const numValue = normalizedValue ? parseFloat(normalizedValue) : null;
         return <Percent value={numValue} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       }
-      case 'duration': return <Duration value={value} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+      case 'duration': {
+        // Use default value fallback, but preserve null/undefined for format placeholder
+        let valueWithDefault = value;
+        if (value === null || value === undefined || value === '') {
+          const defaultValue = getDefaultValueFromConfig(parsedConfig, fieldType);
+          // Only use default if it's not an empty string, otherwise keep null for format placeholder
+          valueWithDefault = defaultValue && defaultValue !== '' ? defaultValue : null;
+        }
+        return <Duration value={valueWithDefault} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+      }
       case 'year': {
         // Normalize value to year number - handle old text values when field type was changed
         const normalizedValue = normalizeYearValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
@@ -389,7 +398,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
       case 'multiSelect': return <MultiSelect value={Array.isArray(value) ? value : (typeof value === 'string' ? JSON.parse(value || '[]') : [])} onChange={(newValue) => onChange(newValue)} options={parsedConfig?.options || []} maxSelections={10} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       case 'rating': return <Rating {...commonProps} value={value} max={parsedConfig?.ratingMax || 5} readOnly={!allowEdit} config={parsedConfig} />;
       case 'user': return <User {...commonProps} readOnly={!allowEdit} config={parsedConfig} />;
-      case 'json': return <JSONField {...commonProps} value={value} config={parsedConfig} />;
+      case 'json': return <JSONField {...commonProps} value={value} config={parsedConfig} readOnly={!allowEdit} />;
       case 'createdTime': {
         const tz = getSelectedTimeZone();
         return <AuditCreatedTime {...commonProps} config={{ ...parsedConfig, timeZone: tz }} allowEdit={allowEdit} isBorder={isBorder} />;
@@ -439,7 +448,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
 
   return (
     <div
-      className={`flex-shrink-0 h-10 flex items-center px-0 ${!isLast ? 'border-r border-border/20' : 'border-r border-border/20'} ${isLast ? 'border-b border-border/20' : 'border-b border-border/20'}`}
+      className={`flex-shrink-0 h-10 flex items-center px-0 ${isLast ? 'border-r border-border/20' : 'border-r border-border/20'} ${isLast ? 'border-b border-border/20' : 'border-b border-border/20'}`}
       style={{ width: `${width}px`, height: '40px', minHeight: '40px', maxHeight: '40px' }}
     >
       <div className="w-full min-w-0">

@@ -1,12 +1,13 @@
-import React, { memo, useEffect, useRef, useState, useCallback } from 'react';
+import React, { memo, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Plus, MoreHorizontal, GripVertical, ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
 import { KanbanStack as Stack, Row } from './types';
 import { BaseColumn } from '../../../../types/column.types';
 import KanbanCard from './KanbanCard';
 import { formatCompactNumber } from '../../../../utils/helpers';
-// FRONTEND PAGINATION: Using frontend pagination for per-stack card pagination
 import { useFrontendPagination } from '../../../../hooks/useFrontendPagination';
+import { GridColumn } from '../../../GridViewPlugin/types/grid.types';
+import { normalizeFieldType } from '../../../../utils/fieldType';
 
 // Type alias for compatibility
 type Column = BaseColumn;
@@ -25,8 +26,8 @@ interface KanbanStackProps {
   onStackEdit?: (oldName: string, newName: string) => void;
   onStackDragStart?: (stackId: string, index: number, e: React.DragEvent) => void;
   onStackDrop?: (stackId: string, e: React.DragEvent) => void;
-    onStackDelete?: (stackId: string) => void;
-    onDuplicate?: (cardId: string) => void;
+  onStackDelete?: (stackId: string) => void;
+  onDuplicate?: (cardId: string) => void;
   index?: number;
 }
 
@@ -39,13 +40,11 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     onCardMove,
     onCardCreate,
     onCardEdit,
-    onCardDelete,
     onStackCollapse,
     onStackEdit,
     onStackDragStart,
     onStackDrop,
     onStackDelete,
-    onDuplicate,
     index,
     groupFieldTitle
   } = props;
@@ -65,9 +64,25 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
   const [dropIndicatorPosition, setDropIndicatorPosition] = useState<number | null>(null);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
 
+  // Convert BaseColumn[] to GridColumn[] for KanbanCard
+  const gridColumns = useMemo((): GridColumn[] => {
+    return columns.map((col): GridColumn => ({
+      ...col,
+      type: normalizeFieldType(col.type || col.uidt || 'text') as any,
+    }));
+  }, [columns]);
+
+  // Convert groupCol to GridColumn if it exists
+  const gridGroupCol = useMemo((): GridColumn | null => {
+    if (!groupCol) return null;
+    return {
+      ...groupCol,
+      type: normalizeFieldType(groupCol.type || groupCol.uidt || 'text') as any,
+    };
+  }, [groupCol]);
+
   // Calculate visible cards and pagination BEFORE handleDrop callback (which uses these)
   // NOTE: stack.cards already contains only cards for THIS specific stack (filtered per stack in KanbanBoard)
-  const totalCards = stack.cards.length;
   const visibleCards = stack.cards.filter(card => !card._meta.deleted_at);
 
   // FRONTEND PAGINATION: Paginate cards per stack (only when not collapsed)
@@ -76,11 +91,9 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     allLoadedData: paginatedCards,
     loadNextPage,
     hasMore,
-    currentPage,
-    totalPages,
   } = useFrontendPagination({
     data: visibleCards,
-    pageSize: 30, // Same as GridView
+    pageSize: 30,
     initialPage: 1,
   });
 
@@ -118,7 +131,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
       // Filter out the dragged card if it's being dragged from this stack
       if (sourceStackId === stack.id) {
         const cardData = el.querySelector('[data-card-id]');
-        return cardData?.getAttribute('data-card-id') !== cardId;
+        return cardData?.dataset.cardId !== cardId;
       }
       return true;
     }) as HTMLElement[];
@@ -198,39 +211,24 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
 
     const cardId = e.dataTransfer.getData('cardId') || e.dataTransfer.getData('text/plain');
     const sourceStackId = e.dataTransfer.getData('sourceStackId') || '';
-    const sourceIndex = parseInt(e.dataTransfer.getData('sourceIndex') || '0', 10);
+    const sourceIndex = Number.parseInt(e.dataTransfer.getData('sourceIndex') || '0', 10);
 
     if (cardId && onCardMove) {
-      // FRONTEND PAGINATION: Map drop position from paginated cards to full array
-      // dropIndicatorPosition is relative to cardsToRender (paginated), but we need position in visibleCards (full)
       let targetPosition: number;
       if (dropIndicatorPosition === null) {
         // Append to end
         targetPosition = visibleCards.length;
       } else if (stack.isCollapsed) {
-        // If collapsed, use position directly (no pagination)
+        targetPosition = dropIndicatorPosition;
+      } else if (dropIndicatorPosition < paginatedCards.length) {
         targetPosition = dropIndicatorPosition;
       } else {
-        // Since paginatedCards is a prefix of visibleCards (slice from 0 to currentPage * pageSize),
-        // positions in paginatedCards directly correspond to positions in visibleCards for loaded cards
-        // If dropping at or before the last loaded card, use the position directly
-        if (dropIndicatorPosition < paginatedCards.length) {
-          targetPosition = dropIndicatorPosition;
-        } else {
-          // Dropping after the last loaded card - append to end of full array
-          targetPosition = visibleCards.length;
-        }
+        targetPosition = visibleCards.length;
       }
-
-      // Adjust position if moving within same stack
       if (sourceStackId === stack.id) {
-        // If moving within the same stack, we need to account for the card being removed
         if (sourceIndex < targetPosition) {
-          // Moving down: the target position needs to be adjusted because the card will be removed first
           targetPosition -= 1;
         }
-        // If moving up (sourceIndex >= targetPosition), no adjustment needed
-        // because the card removal doesn't affect positions before it
       }
 
       // Prevent duplicate: Don't call onCardMove if dropping in the same stack at the same position
@@ -261,6 +259,18 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     if (isUncategorized) return;
     onStackDragStart?.(stack.id, typeof index === 'number' ? index : 0, e);
   }, [isUncategorized, onStackDragStart, stack.id, index]);
+
+  const handleHeaderKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+    }
+  }, []);
+
+  const handleCardKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+    }
+  }, []);
 
   const handleHeaderDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -309,7 +319,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
     setMenuPos({ x: rect.right, y: rect.bottom + 4 });
-    window.dispatchEvent(new CustomEvent('kanban-menu-open', { detail: { source: menuOwnerId.current } }));
+    globalThis.dispatchEvent(new CustomEvent('kanban-menu-open', { detail: { source: menuOwnerId.current } }));
     setShowMenu(v => !v);
   };
 
@@ -345,27 +355,6 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     setDraggedCardId(c._meta.id);
   };
 
-  // Assign a color based on a hash of the stack name for consistent but random color
-  const getOptionColor = (option: string) => {
-    const colors = [
-      'bg-blue-100 text-blue-800',
-      'bg-green-100 text-green-800',
-      'bg-purple-100 text-purple-800',
-      'bg-orange-100 text-orange-800',
-      'bg-pink-100 text-pink-800',
-      'bg-indigo-100 text-indigo-800',
-      'bg-cyan-100 text-cyan-800',
-      'bg-red-100 text-red-800'
-    ];
-    // Simple hash function based on string chars
-    let hash = 0;
-    for (let i = 0; i < option.length; i++) {
-      hash = option.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const colorIdx = Math.abs(hash) % colors.length;
-    return colors[colorIdx];
-  };
-
   // Close menu on outside click / ESC
   useEffect(() => {
     if (!showMenu) return;
@@ -399,28 +388,36 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
       const src = e?.detail?.source;
       if (src !== menuOwnerId.current) setShowMenu(false);
     };
-    window.addEventListener('kanban-menu-open', onOtherMenuOpen as EventListener);
-    return () => window.removeEventListener('kanban-menu-open', onOtherMenuOpen as EventListener);
+    globalThis.addEventListener('kanban-menu-open', onOtherMenuOpen as EventListener);
+    return () => globalThis.removeEventListener('kanban-menu-open', onOtherMenuOpen as EventListener);
   }, []);
 
+  const ContainerTag = onCardMove === undefined ? 'div' : 'section';
+  
   return (
-    <div
+    <ContainerTag
       ref={containerRef}
       data-stack-id={stack.id}
-      className={`kanban-stack bg-[var(--color-bg-secondary-subtle)] rounded-xl w-full md:w-96 transition-all duration-200 ${stack.isCollapsed ? 'self-start' : ''} border border-primary relative overflow-hidden ${!stack.isCollapsed ? 'pb-12' : ''}`}
-      onDragEnter={onCardMove !== undefined ? handleDragEnter : undefined}
-      onDragOver={onCardMove !== undefined ? handleDragOver : undefined}
-      onDragLeave={onCardMove !== undefined ? handleDragLeave : undefined}
-      onDrop={onCardMove !== undefined ? handleContainerDrop : undefined}
+      className={`kanban-stack bg-[var(--color-bg-secondary-subtle)] rounded-xl w-full md:w-96 transition-all duration-200 ${stack.isCollapsed ? 'self-start' : ''} border border-primary relative overflow-hidden ${stack.isCollapsed ? '' : 'pb-12'}`}
+      aria-label={onCardMove === undefined ? undefined : `Drop zone for ${stack.name} stack`}
+      onDragEnter={onCardMove === undefined ? undefined : handleDragEnter}
+      onDragOver={onCardMove === undefined ? undefined : handleDragOver}
+      onDragLeave={onCardMove === undefined ? undefined : handleDragLeave}
+      onDrop={onCardMove === undefined ? undefined : handleContainerDrop}
     >
       {/* Stack Header */}
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/interactive-supports-focus */}
       <div className={`flex items-center justify-between border-b p-3 ${!isUncategorized && onStackDragStart ? 'cursor-grab' : 'cursor-default'}`}
+        role={!isUncategorized && onStackDragStart !== undefined ? 'button' : undefined}
+        aria-label={!isUncategorized && onStackDragStart !== undefined ? `Drag ${stack.name} stack to reorder` : undefined}
+        tabIndex={!isUncategorized && onStackDragStart !== undefined ? 0 : undefined}
         draggable={!isUncategorized && onStackDragStart !== undefined}
         onDragStart={handleHeaderDragStart}
         onDragEnter={handleDragEnter}
         onDragOver={handleHeaderDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleHeaderDrop}
+        onKeyDown={!isUncategorized && onStackDragStart !== undefined ? handleHeaderKeyDown : undefined}
       >
         <div className="flex items-center gap-2">
           {!isUncategorized && onStackDragStart ? <GripVertical className='w-5 h-5 text-gray-500' /> : null}
@@ -451,7 +448,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
           {/* Record count - hide when editing to avoid overlap with input */}
           {!isEditing && (
             <span className="text-xs text-gray-500 font-medium">
-              {formatCompactNumber(visibleCards.length)} card{visibleCards.length !== 1 ? 's' : ''}
+              {formatCompactNumber(visibleCards.length)} card{visibleCards.length === 1 ? '' : 's'}
               {!stack.isCollapsed && hasMore && ` (${formatCompactNumber(paginatedCards.length)} loaded)`}
             </span>
           )}
@@ -558,19 +555,21 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
                           }}
                         />
                       )}
+                      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/interactive-supports-focus, jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-tabindex */}
                       <div
+                        role={onCardMove === undefined ? undefined : 'button'}
+                        aria-label={onCardMove === undefined ? undefined : 'Drag card to move'}
                         draggable={onCardMove !== undefined}
-                        onDragStart={onCardMove !== undefined ? getCardDragStartHandler(card) : undefined}
+                        onDragStart={onCardMove === undefined ? undefined : getCardDragStartHandler(card)}
+                        onKeyDown={onCardMove === undefined ? undefined : handleCardKeyDown}
                       >
                         <div data-card-id={card._meta.id}>
                           <KanbanCard
                             card={card}
-                            columns={columns}
+                            columns={gridColumns}
                             fieldConfig={fieldConfig}
-                            groupCol={groupCol}
+                            groupCol={gridGroupCol}
                             onEdit={onCardEdit}
-                            onDelete={onCardDelete}
-                            onDuplicate={onDuplicate}
                           />
                         </div>
                       </div>
@@ -618,17 +617,27 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
       )}
 
       {/* Delete confirmation modal */}
-      <DeleteConfirmModal
-        isOpen={confirmOpen}
-        title="Delete Stack"
-        message={stack.cards && stack.cards.length > 0 
-          ? `This stack contains ${stack.cards.length} ${stack.cards.length === 1 ? 'card' : 'cards'}. Deleting this stack will:\n\n• Remove the "${stack.name}" option from the "${groupFieldTitle || 'Status'}" field\n• Move all ${stack.cards.length} ${stack.cards.length === 1 ? 'card' : 'cards'} to the Uncategorized stack\n\nThis action cannot be undone.`
-          : `This action will remove the "${stack.name}" option from the "${groupFieldTitle || 'Status'}" field. This cannot be undone.`
-        }
-        onClose={closeConfirm}
-        onConfirm={confirmDelete}
-      />
-    </div>
+      {(() => {
+        const hasCards = stack.cards && stack.cards.length > 0;
+        const cardCount = stack.cards?.length || 0;
+        const cardWord = cardCount === 1 ? 'card' : 'cards';
+        const fieldTitle = groupFieldTitle || 'Status';
+        
+        const deleteMessage = hasCards
+          ? `This stack contains ${cardCount} ${cardWord}. Deleting this stack will:\n\n• Remove the "${stack.name}" option from the "${fieldTitle}" field\n• Move all ${cardCount} ${cardWord} to the Uncategorized stack\n\nThis action cannot be undone.`
+          : `This action will remove the "${stack.name}" option from the "${fieldTitle}" field. This cannot be undone.`;
+        
+        return (
+          <DeleteConfirmModal
+            isOpen={confirmOpen}
+            title="Delete Stack"
+            message={deleteMessage}
+            onClose={closeConfirm}
+            onConfirm={confirmDelete}
+          />
+        );
+      })()}
+    </ContainerTag>
   );
 });
 

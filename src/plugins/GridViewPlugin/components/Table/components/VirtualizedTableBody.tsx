@@ -11,14 +11,12 @@ interface VirtualizedTableBodyProps {
   selectedRows: Set<string>;
   onRowSelect: (rowId: string, selected: boolean) => void;
   onCellChange: (rowId: string, columnKey: string, value: any) => void;
-  onDelete: (rowId: string) => void;
   onContextMenu: (e: React.MouseEvent, rowId: string) => void;
   activeCell: { rowId: string; colKey: string } | null;
   setActiveCell: React.Dispatch<React.SetStateAction<{ rowId: string; colKey: string } | null>>;
   tableId?: string;
   height: number;
   width: number;
-  rowHeight?: number;
   onScroll?: (scrollOffset: number) => void;
   outerRef?: React.RefObject<HTMLDivElement | null>; 
   groupedData?: any[] | null;
@@ -91,14 +89,12 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
   selectedRows,
   onRowSelect,
   onCellChange,
-  onDelete,
   onContextMenu,
   activeCell,
   setActiveCell,
   tableId,
   height,
   width,
-  rowHeight = ROW_HEIGHT,
   canEdit = true,
   onScroll,
   outerRef,
@@ -171,10 +167,23 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
     virtualizer.measure();
   }, [flattenedItems.length, expandedGroups.size, virtualizer]);
 
-  // Ensure we have valid dimensions
-  if (!height || !width) {
-    return null;
-  }
+  // Helper to get group background color
+  const getGroupBackgroundColor = useCallback((level: number, isHover: boolean = false): string => {
+    if (level === 0) {
+      return isHover ? 'var(--color-utility-purple-100)' : 'var(--color-utility-purple-50)';
+    }
+    if (level === 1) {
+      return isHover ? 'var(--color-utility-gray-blue-100)' : 'var(--color-utility-gray-blue-50)';
+    }
+    return isHover ? 'var(--color-gray-100)' : 'var(--color-gray-50)';
+  }, []);
+
+  // Helper to get border left style
+  const getBorderLeftStyle = useCallback((level: number): string => {
+    if (level === 0) return 'none';
+    if (level === 1) return '3px solid var(--color-utility-purple-300)';
+    return '3px solid var(--color-gray-300)';
+  }, []);
 
   // Render group header
   const renderGroupHeader = useCallback((item: FlattenedItem & { type: 'group' }) => {
@@ -199,7 +208,23 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
       }
     };
 
+    const handleGroupKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleGroup();
+      }
+    };
+
+    const handleGroupMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+      e.currentTarget.style.backgroundColor = getGroupBackgroundColor(level, true);
+    };
+
+    const handleGroupMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+      e.currentTarget.style.backgroundColor = getGroupBackgroundColor(level, false);
+    };
+
     return (
+      // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
       <div
         className="grid border-b border-primary/10 font-semibold text-foreground text-sm cursor-pointer transition-all duration-200"
         style={{
@@ -207,30 +232,19 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
           height: '40px',
           minHeight: '40px',
           maxHeight: '40px',
-          backgroundColor: level === 0
-            ? 'var(--color-utility-purple-50)'
-            : level === 1
-              ? 'var(--color-utility-gray-blue-50)'
-              : 'var(--color-gray-50)',
-          borderLeft: level > 0 ? `3px solid ${level === 1 ? 'var(--color-utility-purple-300)' : 'var(--color-gray-300)'}` : 'none',
+          backgroundColor: getGroupBackgroundColor(level, false),
+          borderLeft: getBorderLeftStyle(level),
           paddingLeft: `${12 + level * 24}px`,
           boxShadow: level === 0 ? 'var(--shadow-xs)' : 'none'
         }}
         onClick={toggleGroup}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = level === 0
-            ? 'var(--color-utility-purple-100)'
-            : level === 1
-              ? 'var(--color-utility-gray-blue-100)'
-              : 'var(--color-gray-100)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = level === 0
-            ? 'var(--color-utility-purple-50)'
-            : level === 1
-              ? 'var(--color-utility-gray-blue-50)'
-              : 'var(--color-gray-50)';
-        }}
+        onKeyDown={handleGroupKeyDown}
+        onMouseEnter={handleGroupMouseEnter}
+        onMouseLeave={handleGroupMouseLeave}
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        aria-label={`Toggle group ${columnTitle}: ${group.groupValue}`}
       >
         <div className="col-span-full flex items-center px-4 py-2 gap-3">
           <div
@@ -258,13 +272,13 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
                 borderColor: 'var(--color-utility-purple-300)'
               }}
             >
-              {isNestedGroup ? group.rows.length : group.rows.length} {isNestedGroup ? 'group' : 'row'}{group.rows.length !== 1 ? 's' : ''}
+              {group.rows.length} {isNestedGroup ? 'group' : 'row'}{group.rows.length > 1 ? 's' : ''}
             </span>
           </div>
         </div>
       </div>
     );
-  }, [visibleColumns, columnWidths, expandedGroups, setExpandedGroups]);
+  }, [visibleColumns, columnWidths, expandedGroups, setExpandedGroups, getGroupBackgroundColor, getBorderLeftStyle]);
 
   // Render regular row
   const renderRow = useCallback((item: FlattenedItem & { type: 'row' }) => {
@@ -272,7 +286,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
     const rowId =
       typeof row._meta?.id === 'string'
         ? row._meta.id
-        : String(row._meta?.id || row.id || `row-${rowIndex}`);
+        : String(row._meta?.id ?? row.id ?? `row-${rowIndex}`);
 
     return (
       <MemoizedTableRow
@@ -284,32 +298,35 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
         isSelected={selectedRows.has(rowId)}
         onSelect={onRowSelect}
         onCellChange={onCellChange}
-        onDelete={onDelete}
         onContextMenu={e => onContextMenu(e, rowId)}
         activeCell={activeCell}
         setActiveCell={setActiveCell}
         tableId={tableId}
-        allColumns={allColumns || columns}
+        allColumns={allColumns ?? columns}
         canEdit={canEdit}
       />
     );
-  }, [columns, columnWidths, selectedRows, onRowSelect, onCellChange, onDelete, onContextMenu, activeCell, setActiveCell, tableId, allColumns]);
+  }, [columns, columnWidths, selectedRows, onRowSelect, onCellChange, onContextMenu, activeCell, setActiveCell, tableId, allColumns, canEdit]);
 
   const virtualItems = virtualizer.getVirtualItems();
+
+  // Ensure we have valid dimensions
+  if (!height || !width) {
+    return null;
+  }
 
   // Render only the virtualized content - no inner scroll container
   // The outer container (tableRef) handles all scrolling
   return (
-    <>
-      <div
-        data-virtualized="true"
-        data-virtualizer="tanstack-react-virtual"
-        style={{
-          height: `${virtualizer.getTotalSize()}px`,
-          width: `${totalWidth}px`,
-          position: 'relative',
-        }}
-      >
+    <div
+      data-virtualized="true"
+      data-virtualizer="tanstack-react-virtual"
+      style={{
+        height: `${virtualizer.getTotalSize()}px`,
+        width: `${totalWidth}px`,
+        position: 'relative',
+      }}
+    >
         {virtualItems.map((virtualItem) => {
           const item = flattenedItems[virtualItem.index];
           if (!item) return null;
@@ -334,7 +351,6 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
             </div>
           );
         })}
-      </div>
-    </>
+    </div>
   );
 };

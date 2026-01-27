@@ -93,13 +93,6 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
     setIsOpen(false);
   };
 
-  const handleDuplicate = () => {
-    if (onDuplicate) {
-      onDuplicate();
-      setIsOpen(false);
-    }
-  };
-
   return (
     <>
       <button
@@ -119,7 +112,7 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
           ref={(node) => {
             // Set both refs to the same node
             if (clickOutsideRef) {
-              (clickOutsideRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+              (clickOutsideRef as { current: HTMLDivElement | null }).current = node;
             }
             dropdownRef.current = node;
           }}

@@ -1,11 +1,10 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDebounce } from '../../../utils/helpers';
-import { SortItem } from '../../../utils/sortUtils';
+import { SortItem, compareValues } from '../../../utils/sortUtils';
 import { extractFieldConfigFromMeta, generateDefaultFieldConfig, mergeFieldConfigWithColumns } from '../../../utils/viewFieldConfigUtils';
 import { applyFilters } from '../../../utils/filterUtils';
 import { isFormulaField } from '../../../utils/fieldUtils';
 import { GanttTask } from './useGanttData';
-import type { Column } from '../../../types/api.types';
 
 export type FilterType = { column: string; operator: string; value: string };
 
@@ -57,16 +56,18 @@ export function useGanttViewConfig({
     if (!columns.length) return;
 
     const existingFieldConfig = extractFieldConfigFromMeta(view?.meta);
-    const backendConfigStr = JSON.stringify(existingFieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+    const sortedExistingConfig = [...existingFieldConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
+    const backendConfigStr = JSON.stringify(sortedExistingConfig);
 
     // If we haven't initialized yet, initialize from backend or generate default
     if (!initializedRef.current) {
       if (existingFieldConfig.length > 0) {
         // Use backend config if it exists, but ensure all columns are included
         const completeConfig = mergeFieldConfigWithColumns(existingFieldConfig, columns);
+        const sortedCompleteConfig = [...completeConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
         
         setLocalFieldConfig(completeConfig);
-        lastBackendConfigRef.current = JSON.stringify(completeConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+        lastBackendConfigRef.current = JSON.stringify(sortedCompleteConfig);
         initializedRef.current = true;
       } else {
         // Generate default config (first 3-4 fields visible by default)
@@ -82,7 +83,8 @@ export function useGanttViewConfig({
           }
         );
 
-        const defaultConfigStr = JSON.stringify(defaultFieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+        const sortedDefaultConfig = [...defaultFieldConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
+        const defaultConfigStr = JSON.stringify(sortedDefaultConfig);
         setLocalFieldConfig(defaultFieldConfig);
         lastBackendConfigRef.current = defaultConfigStr;
         initializedRef.current = true;
@@ -93,9 +95,10 @@ export function useGanttViewConfig({
     // After initialization, only update if backend config actually changed
     if (initializedRef.current && backendConfigStr !== lastBackendConfigRef.current && existingFieldConfig.length > 0) {
       const mergedConfig = mergeFieldConfigWithColumns(existingFieldConfig, columns);
+      const sortedMergedConfig = [...mergedConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
       
       setLocalFieldConfig(mergedConfig);
-      lastBackendConfigRef.current = JSON.stringify(mergedConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+      lastBackendConfigRef.current = JSON.stringify(sortedMergedConfig);
     } else if (initializedRef.current && existingFieldConfig.length === 0 && localFieldConfig.length > 0) {
       // No backend config but we have local config - check for new columns
       const mergedConfig = mergeFieldConfigWithColumns(localFieldConfig, columns);
@@ -125,7 +128,8 @@ export function useGanttViewConfig({
             fieldConfig
           }
         });
-        lastBackendConfigRef.current = JSON.stringify(fieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+        const sortedFieldConfig = [...fieldConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
+        lastBackendConfigRef.current = JSON.stringify(sortedFieldConfig);
       } catch (error) {
         console.error('Failed to save field config:', error);
       }
@@ -237,7 +241,7 @@ export function useGanttViewConfig({
     setLocalFieldConfig(prevConfig => {
       const updatedFieldConfig = prevConfig.map((fc: any) => {
         if (String(fc.id) === String(fieldId)) {
-          return { ...fc, isHidden: !Boolean(fc.isHidden) };
+          return { ...fc, isHidden: !fc.isHidden };
         }
         return fc;
       });
@@ -268,14 +272,18 @@ export function useGanttViewConfig({
       const newPosition = newColumnMap.get(String(fc.id));
       if (newPosition !== undefined) {
         const col = newColumnDataMap.get(String(fc.id));
+        let isHidden: boolean;
+        if (typeof col?.hidden === 'boolean') {
+          isHidden = col.hidden;
+        } else if (typeof col?.isHidden === 'boolean') {
+          isHidden = col.isHidden;
+        } else {
+          isHidden = fc.isHidden;
+        }
         return { 
           ...fc, 
           position: newPosition,
-          isHidden: typeof (col?.hidden) === 'boolean' 
-            ? !!col.hidden
-            : typeof (col?.isHidden) === 'boolean'
-            ? !!col.isHidden
-            : fc.isHidden
+          isHidden
         };
       }
       return fc;
@@ -357,21 +365,29 @@ export function useGanttViewConfig({
   const sortedTasksForSidebar = useMemo(() => {
     if (!sorts || sorts.length === 0) return filteredTasks;
     
+    // Create a map for O(1) column lookups
+    const columnMap = new Map(columns.map(col => [col.column_name, col]));
+    
     const sorted = [...filteredTasks].sort((a, b) => {
       for (const sort of sorts) {
+        if (!sort.column) continue;
+        
+        const column = columnMap.get(sort.column);
+        if (!column) continue;
+        
         const aValue = a.rawData?.[sort.column];
         const bValue = b.rawData?.[sort.column];
         
-        if (aValue === bValue) continue;
-        
-        const comparison = aValue < bValue ? -1 : 1;
-        return sort.direction === 'asc' ? comparison : -comparison;
+        const comparison = compareValues(aValue, bValue, column.uidt || 'string');
+        if (comparison !== 0) {
+          return sort.direction === 'asc' ? comparison : -comparison;
+        }
       }
       return 0;
     });
     
     return sorted;
-  }, [filteredTasks, sorts]);
+  }, [filteredTasks, sorts, columns]);
 
   return {
     // State

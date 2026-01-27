@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDebounce } from '../../../utils/helpers';
-import { filterValidSorts } from '../../../utils/sortUtils';
-import { SortItem } from '../../../utils/sortUtils';
+import { filterValidSorts, SortItem } from '../../../utils/sortUtils';
 import { BaseColumn } from '../../../types/column.types';
 import { extractFieldConfigFromMeta, generateDefaultFieldConfig, mergeFieldConfigWithColumns } from '../../../utils/viewFieldConfigUtils';
 import { isFormulaField } from '../../../utils/fieldUtils';
@@ -73,7 +72,8 @@ export function useGalleryViewConfig({
     if (!columns.length) return;
 
     const existingFieldConfig = extractFieldConfigFromMeta(view?.meta);
-    const backendConfigStr = JSON.stringify(existingFieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+    const sortedConfig = [...existingFieldConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
+    const backendConfigStr = JSON.stringify(sortedConfig);
 
     // If we haven't initialized yet, initialize from backend or generate default
     if (!initializedRef.current) {
@@ -82,7 +82,8 @@ export function useGalleryViewConfig({
         const completeConfig = mergeFieldConfigWithColumns(existingFieldConfig, columns);
         
         setLocalFieldConfig(completeConfig);
-        lastBackendConfigRef.current = JSON.stringify(completeConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+        const sortedCompleteConfig = [...completeConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
+        lastBackendConfigRef.current = JSON.stringify(sortedCompleteConfig);
         initializedRef.current = true;
       } else {
         // Generate default config (first 3-4 fields visible)
@@ -96,7 +97,8 @@ export function useGalleryViewConfig({
           }
         );
 
-        const defaultConfigStr = JSON.stringify(defaultFieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+        const sortedDefaultConfig = [...defaultFieldConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
+        const defaultConfigStr = JSON.stringify(sortedDefaultConfig);
         setLocalFieldConfig(defaultFieldConfig);
         lastBackendConfigRef.current = defaultConfigStr;
         initializedRef.current = true;
@@ -104,14 +106,14 @@ export function useGalleryViewConfig({
       return;
     }
 
-    // After initialization, only update if backend config actually changed (from a completed save)
     // This prevents overwriting local user changes
     if (initializedRef.current && backendConfigStr !== lastBackendConfigRef.current && existingFieldConfig.length > 0) {
       // Backend config changed - update local state (this happens after our save completes)
       const mergedConfig = mergeFieldConfigWithColumns(existingFieldConfig, columns);
       
       setLocalFieldConfig(mergedConfig);
-      lastBackendConfigRef.current = JSON.stringify(mergedConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+      const sortedMergedConfig = [...mergedConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
+      lastBackendConfigRef.current = JSON.stringify(sortedMergedConfig);
     } else if (initializedRef.current && existingFieldConfig.length === 0 && localFieldConfig.length > 0) {
       // No backend config but we have local config - check for new columns
       const mergedConfig = mergeFieldConfigWithColumns(localFieldConfig, columns);
@@ -133,7 +135,7 @@ export function useGalleryViewConfig({
   }, [updateView, view]);
 
   // Debounced API call for field config updates
-  const debouncedUpdateFieldConfig = useDebounce(async (fieldConfig: any[]) => {
+  const debouncedUpdateFieldConfig = useDebounce(async (fieldConfig: Array<{ id: string; position: number; isHidden: boolean }>) => {
     if (updateViewRef.current && viewRef.current?.id) {
       try {
         // Pass fieldConfig directly - updateView will merge it into meta
@@ -141,7 +143,8 @@ export function useGalleryViewConfig({
           fieldConfig
         });
         // Update ref after successful save so we know the backend has the new config
-        lastBackendConfigRef.current = JSON.stringify(fieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+        const sortedFieldConfig = [...fieldConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
+        lastBackendConfigRef.current = JSON.stringify(sortedFieldConfig);
       } catch (error) {
         console.error('Failed to save field config:', error);
       }
@@ -250,14 +253,10 @@ export function useGalleryViewConfig({
       const configFieldIds = new Set(updatedFieldConfig.map(fc => String(fc.id)));
       columns.forEach((col, idx) => {
         if (col.id && !configFieldIds.has(String(col.id))) {
-          const isSystemField = col.system || col.hidden || false;
-          const isAttachmentField = col.type === 'attachment' || col.uidt === 'attachment';
-          const isFormulaFieldType = isFormulaField(col);
-          
           updatedFieldConfig.push({
             id: String(col.id),
             position: idx,
-            isHidden: isSystemField || isAttachmentField || isFormulaFieldType ? true : true // Default to hidden for new columns
+            isHidden: true // Default to hidden for new columns (system, attachment, or formula fields)
           });
           configFieldIds.add(String(col.id));
         }
@@ -286,8 +285,8 @@ export function useGalleryViewConfig({
       }
       
       // Sort by position and re-index
-      updatedFieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0));
-      updatedFieldConfig = updatedFieldConfig.map((fc, idx) => ({
+      const sortedFieldConfig = [...updatedFieldConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
+      updatedFieldConfig = sortedFieldConfig.map((fc, idx) => ({
         ...fc,
         position: idx
       }));
@@ -304,7 +303,7 @@ export function useGalleryViewConfig({
     if (!updateView || !view?.id) return;
 
     // Get existing fieldConfig from view meta
-    const existingFieldConfig = (view?.meta?.fieldConfig || []) as any[];
+    const existingFieldConfig = (view?.meta?.fieldConfig || []) as Array<{ id: string; position: number; isHidden: boolean }>;
 
     // Create a map of new positions from reordered columns
     const newColumnMap = new Map<string, number>();
@@ -345,8 +344,8 @@ export function useGalleryViewConfig({
     });
 
     // Sort by position and re-index to ensure no gaps
-    updatedFieldConfig.sort((a: any, b: any) => (a.position || 0) - (b.position || 0));
-    const finalFieldConfig = updatedFieldConfig.map((fc: any, idx: number) => ({
+    const sortedFieldConfig = [...updatedFieldConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
+    const finalFieldConfig = sortedFieldConfig.map((fc, idx) => ({
       ...fc,
       position: idx
     }));

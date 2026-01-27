@@ -107,7 +107,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
     if (isOpen) {
       const position = calculateDropdownPosition();
       setDropdownPosition(position);
-      
+
       // Focus search input when dropdown opens
       setTimeout(() => {
         searchInputRef.current?.focus();
@@ -165,7 +165,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
       case 'ArrowDown':
         e.preventDefault();
         if (isOpen) {
-          setFocusedIndex(prev => 
+          setFocusedIndex(prev =>
             prev < filteredOptions.length - 1 ? prev + 1 : prev
           );
         } else {
@@ -208,16 +208,16 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
   // Handle input click
   const handleInputClick = (e: React.MouseEvent) => {
     if (disabled) return;
-    
+
     // Check if click is on a tag or remove button
     const target = e.target as HTMLElement;
     const clickedElement = target.closest('button, .inline-flex');
-    
+
     // If clicking on a tag or remove button, don't toggle
     if (clickedElement && (clickedElement.classList.contains('inline-flex') || clickedElement.getAttribute('aria-label')?.startsWith('Remove'))) {
       return;
     }
-    
+
     // Otherwise, toggle the dropdown
     setIsOpen(prev => !prev);
   };
@@ -230,10 +230,6 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
       {/* Input Field */}
       <div
         id={id}
-        aria-labelledby={ariaLabelledBy}
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
-        aria-controls={isOpen ? dropdownId : undefined}
         className={`
           min-h-[40px] px-4 py-2 border rounded-xl
           flex items-center gap-2 cursor-pointer
@@ -242,7 +238,8 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
         `}
         onClick={handleInputClick}
         onKeyDown={handleKeyDown}
-        tabIndex={disabled ? -1 : 0}
+        role="button"
+        tabIndex={0}
       >
         {/* Search Icon */}
         <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -260,11 +257,10 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
                 return (
                   <div
                     key={optionValue}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm flex-shrink-0 ${
-                      isDisabled 
-                        ? 'bg-gray-200 text-gray-500 border border-gray-300' 
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm flex-shrink-0 ${isDisabled
+                        ? 'bg-gray-200 text-gray-500 border border-gray-300'
                         : 'bg-gray-100 text-gray-700'
-                    }`}
+                      }`}
                   >
                     <span className="truncate max-w-[150px]">{label}</span>
                     {isDisabled && (
@@ -326,7 +322,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
                   e.stopPropagation();
                 }}
                 placeholder={searchPlaceholder}
-                className="w-full pl-10 pr-3 py-2 text-sm border rounded-xl outline-none focus:border focus:border-[--color-brand-600] bg-[--color-alpha-white]"
+                className="w-full pl-10 pr-3 py-2 text-sm border rounded-xl text-primary outline-none focus:border focus:border-[--color-brand-600] bg-[--color-alpha-white]"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>

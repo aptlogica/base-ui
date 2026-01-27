@@ -208,6 +208,7 @@ interface AddUserRequest {
     profile_pic?: File;
     is_coowner?: boolean;
     membership?: MembershipRequest[];
+    locale?: string;
 }
 interface EditUserRequest {
     user_id: string;
@@ -565,6 +566,9 @@ interface UpdateAsset {
     description?: string;
     tags?: string[];
 }
+interface AddImage {
+    files: File[];
+}
 
 declare class TableService {
     private readonly http;
@@ -860,6 +864,7 @@ declare class AssetService {
      * DELETE /asset/:id
      */
     deleteById(id: string): Promise<StandardResponse<any>>;
+    addImage(params: AddImage, extra?: (progressEvent: ProgressEvent) => void): Promise<StandardResponse<any>>;
 }
 
 /**

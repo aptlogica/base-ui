@@ -1,14 +1,15 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { Plus, Filter, List } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Plus, List } from 'lucide-react';
 import { FilterPopover } from '../../../components/shared/table/FilterPopover';
 import { FieldsPopover } from '../../../components/shared/table/FieldsPopover';
 import { SortPopover } from '../../../components/shared/table/SortPopover';
 import { Search } from '../../../components/shared/table/Search';
 import { BaseColumn } from '../../../types/column.types';
 import { SortItem } from '../../../utils/sortUtils';
-import { fieldsToExcludeInFilter } from '../../../types/constants';
 import { GalleryFieldConfiguration } from './GalleryFieldSelector';
 import { formatCompactNumber } from '../../../utils/helpers';
+import { ColumnConfig } from '../../../plugins/GridViewPlugin/types/grid.types';
+import { normalizeFieldType } from '../../../utils/fieldType';
 
 interface GalleryHeaderProps {
   itemCount: number;
@@ -23,18 +24,12 @@ interface GalleryHeaderProps {
   sortableColumns?: any[]; // Filtered columns for sort/filter popovers
   fieldConfig: Array<{ id: string; position: number; isHidden: boolean }>;
   onFieldToggle?: (fieldId: string) => void;
-  onFieldOrderChange?: (newColumns: BaseColumn[]) => void;
   filters: { column: string; operator: string; value: string }[];
   onAddFilter?: (filter: { column: string; operator: string; value: string }) => void;
   onRemoveFilter?: (index: number) => void;
   onUpdateFilter?: (index: number, updates: Partial<{ column: string; operator: string; value: string }>) => void;
-  onRealTimeFilter?: (filter: { column: string; operator: string; value: string } | null) => void;
   sorts: SortItem[];
   onSortChange?: (newSorts: SortItem[]) => void;
-  tableId: string;
-  // Search props
-  searchTerm: string;
-  selectedSearchField: any;
   onSearch: (searchTerm: string, selectedField: any) => void;
 }
 
@@ -50,20 +45,14 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
   sortableColumns = columns, // Default to columns if not provided
   fieldConfig,
   onFieldToggle,
-  onFieldOrderChange,
   filters,
   onAddFilter,
   onRemoveFilter,
   onUpdateFilter,
-  onRealTimeFilter,
   sorts,
   onSortChange,
-  tableId,
-  searchTerm,
-  selectedSearchField,
   onSearch
 }) => {
-  const [showAttachmentSelector, setShowAttachmentSelector] = useState(false);
 
   // Get searchable columns (exclude system fields except Title)
   const searchableColumns = useMemo(() => {
@@ -73,6 +62,49 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
       return !isSystemField || isTitle;
     });
   }, [columns]);
+
+  // Convert BaseColumn[] to ColumnConfig[] for FieldsPopover and FilterPopover
+  const columnConfigs = useMemo((): ColumnConfig[] => {
+    return columns.map((col): ColumnConfig => ({
+      id: col.id ? String(col.id) : undefined,
+      key: col.key || col.column_name || '',
+      column_name: col.column_name,
+      title: col.title || col.column_name || '',
+      type: normalizeFieldType(col.type || col.uidt || 'text') as any,
+      uidt: col.uidt,
+      position: col.position || col.order_index || 0,
+      order_index: col.order_index || 0,
+      isSystem: col.isSystem || col.system || false,
+      system: col.system || false,
+      hidden: col.hidden || false,
+      is_hidden: col.isHidden || col.is_hidden || false,
+      meta: col.meta,
+      config: col.config || col.meta,
+    }));
+  }, [columns]);
+
+  // Convert sortableColumns to ColumnConfig[] if provided
+  const sortableColumnConfigs = useMemo((): ColumnConfig[] => {
+    if (!sortableColumns || sortableColumns === columns) {
+      return columnConfigs;
+    }
+    return sortableColumns.map((col): ColumnConfig => ({
+      id: col.id ? String(col.id) : undefined,
+      key: col.key || col.column_name || '',
+      column_name: col.column_name || col.key,
+      title: col.title || col.column_name || '',
+      type: normalizeFieldType(col.type || col.uidt || 'text') as any,
+      uidt: col.uidt,
+      position: col.position || col.order_index || 0,
+      order_index: col.order_index || 0,
+      isSystem: col.isSystem || col.system || false,
+      system: col.system || false,
+      hidden: col.hidden || false,
+      is_hidden: col.isHidden || col.is_hidden || false,
+      meta: col.meta,
+      config: col.config || col.meta,
+    }));
+  }, [sortableColumns, columnConfigs]);
 
   return (
     <div className="bg-background border-b px-4 py-2">
@@ -88,22 +120,20 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
           )}
           {onFieldToggle && (
             <FieldsPopover
-              columns={columns}
+              columns={columnConfigs}
               fieldConfig={fieldConfig}
               onFieldToggle={onFieldToggle}
-              tableId={tableId}
               label="Fields"
               iconComponent={List}
             />
           )}
-          {onAddFilter && (
+          {onAddFilter && onRemoveFilter && onUpdateFilter && (
             <FilterPopover
-              columns={sortableColumns}
+              columns={sortableColumnConfigs}
               filters={filters}
               onAddFilter={onAddFilter}
               onRemoveFilter={onRemoveFilter}
               onUpdateFilter={onUpdateFilter}
-              onRealTimeFilter={onRealTimeFilter}
             />
           )}
           {onSortChange && (

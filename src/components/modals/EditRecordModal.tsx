@@ -3,14 +3,15 @@ import { X, Pencil, MoreHorizontal, Trash2 } from 'lucide-react';
 import FieldRenderer from '../../plugins/FormViewPlugin/components/shared/FieldRenderer';
 import { useInsertRowData } from '../../hooks/useApi';
 import { getFieldTypeIconWithMargin } from '../../types/fieldTypes';
-import { 
-  createFieldRendererProps, 
-  getFieldDisplayName, 
+import {
+  createFieldRendererProps,
+  getFieldDisplayName,
   getFieldDefaultValue,
-  getStandardFieldType 
+  getStandardFieldType
 } from '../../utils/standardFieldUtils';
 import { isFormulaField } from '../../utils/fieldUtils';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
+import { useToast } from '../../components/common/Toast';
 
 type EditRecordModalProps = {
   isOpen: boolean;
@@ -53,7 +54,8 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   const isReadOnly = isBaseReadOnly();
 
   const insertValueMutation = useInsertRowData();
-  
+  const toast = useToast();
+
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -69,28 +71,28 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
       };
     }
   }, [menuOpen]);
-  
+
   // Check if field is an audit field (separate from system fields)
   const isAuditField = (field: any): boolean => {
     const auditFieldTypes = ['createdTime', 'lastModifiedTime', 'createdBy', 'lastModifiedBy'];
     return auditFieldTypes.includes(field.uidt);
   };
-  
+
   // Filter out system fields except Title (audit fields are now completely hidden)
   const isSystemField = (field: any): boolean => {
     const fieldName = field.name?.toLowerCase() || '';
     const fieldTitle = field.title?.toLowerCase() || '';
-    
+
     // Keep Title field visible (it's required for records) - check both name and title
     if (fieldName.includes('title') || fieldTitle.includes('title')) {
       return false;
     }
-    
+
     // Hide audit fields completely - backend will auto-assign them
     if (isAuditField(field)) {
       return true;
     }
-    
+
     // Hide other system fields
     return field.system;
   };
@@ -126,8 +128,11 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     (fields || []).forEach(field => {
       const byId = initialValues[field.id as string];
       const byName = initialValues[field.name as string];
-      const initial = byId !== undefined ? byId : (byName !== undefined ? byName : undefined);
-      const value = initial !== undefined ? initial : getDefaultValueFromConfig(field);
+
+      // Get initial value - extracted to avoid nested ternary
+      const initial = byId ?? byName;
+
+      const value = initial === undefined ? getDefaultValueFromConfig(field) : initial;
       data[field.id] = value;
       original[field.id] = value;
     });
@@ -164,9 +169,9 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
       return JSON.stringify(value);
     } else if (fieldType === 'user') {
       // For user fields with allowMultiple, convert array to comma-separated string
-      const userConfig = (field.meta as any) || {};
+      const userConfig = (field.meta) || {};
       if (userConfig.allowMultiple && Array.isArray(value)) {
-        return value.filter(id => id && id.toString().trim()).join(',');
+        return value.filter(id => id?.toString().trim()).join(',');
       }
       return value;
     } else if ((fieldType === 'date' || field.uidt === 'date') && value instanceof Date) {
@@ -225,6 +230,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
         )
       );
 
+      toast.success('Record updated successfully');
       setSubmitting(false);
       onSuccess?.({ recordId });
       onClose();
@@ -239,25 +245,25 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
 
   const renderField = (field: any) => {
     let value = rowData[field.id];
-    
+
     // Handle links fields - ensure value is always an array
     if (field.type === 'links' || field.uidt === 'links') {
       if (!value || (typeof value === 'object' && !Array.isArray(value))) {
         value = [];
       }
     }
-    
+
     const fieldRendererProps = createFieldRendererProps(
       field,
-      value, 
-      isReadOnly ? () => {} : (v: any) => handleFieldChange(field, v),
-      { 
+      value,
+      isReadOnly ? () => { } : (v: any) => handleFieldChange(field, v),
+      {
         isBorder: true,
         readOnly: isReadOnly,
         allowEdit: !isReadOnly,
       }
     );
-    
+
     // For attachment fields, pass model_id, column_id, and row_id
     const attachmentProps = (field.type === 'attachment' || field.uidt === 'attachment') ? {
       model_id: String(table.id),
@@ -268,7 +274,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
       readOnly: isReadOnly,
       allowEdit: !isReadOnly
     } : {};
-    
+
     // For links fields, pass the field object and context
     const linksProps = (field.type === 'links' || field.uidt === 'links') ? {
       field: {
@@ -282,21 +288,27 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
       isBorder: true,
       disabled: isReadOnly
     } : {};
-    
+
     return (
       <FieldRenderer key={field.id} {...fieldRendererProps} {...attachmentProps} {...linksProps} />
     );
   };
 
   return (
-    <div className="bg-modal-backdrop relative" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="bg-modal-backdrop relative"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
       <button
         type="button"
         aria-label="Close modal"
         className="absolute inset-0"
         onClick={onClose}
       />
-      <div className="bg-modal w-full relative !p-0 flex flex-col overflow-hidden" style={{ maxWidth: '50vw' }} onClick={(e) => e.stopPropagation()}>
+      <div className="bg-modal w-full relative !p-0 flex flex-col overflow-hidden" style={{ maxWidth: '50vw' }}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
@@ -337,25 +349,18 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                   }}
                   className="select-none border p-2 space-y-1 animate-fade-in"
                   onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
                 >
-                  {/* Duplicate functionality disabled for now */}
-                  {/* <button
-                    className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors text-sm"
-                    onClick={() => { onDuplicate?.(recordId); setMenuOpen(false); }}
-                  >
-                    <Copy className="w-4 h-4" /> Duplicate record
-                  </button>
-                  <div className="border-t my-1" /> */}
                   {canDeleteRecord() && onDelete && (
                     <button
                       className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
-                      onClick={(e) => { 
+                      onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         if (onDelete && recordId) {
                           onDelete(recordId);
                         }
-                        setMenuOpen(false); 
+                        setMenuOpen(false);
                       }}
                     >
                       <Trash2 className="w-4 h-4" /> Delete record
@@ -373,66 +378,66 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="p-6">
-           {/* Visible fields */}
-           <div className="space-y-4">
-             {visibleFields.map((field) => {
-               const isTitleField = titleField && field.id === titleField.id;
-               return (
-                 <div key={field.id} className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-4 items-center">
-                   <div className="text-gray-600 flex items-center gap-2">
-                     {getFieldTypeIconWithMargin(getStandardFieldType(field))}
-                     <span className="text-sm">{getFieldDisplayName(field)}</span>
-                     {field.required && <span className="text-red-500 ml-1 field-component-required">*</span>}
-                     {isTitleField && (
-                       <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                         Title Field
-                       </span>
-                     )}
-                   </div>
-                   <div className="max-w-[560px] w-full">
-                     {renderField(field)}
-                   </div>
-                 </div>
-               );
-             })}
-           </div>
-
-          {/* Hidden fields toggle */}
-          {hiddenFields.length > 0 && (
-            <div className="flex items-center gap-3 my-8">
-              <div className="h-px bg-gray-200 flex-1" />
-              <button
-                type="button"
-                className="px-4 py-2 rounded-full border text-sm text-gray-700 bg-white hover:bg-gray-50"
-                onClick={() => setShowHidden(v => !v)}
-              >
-                {showHidden ? `Hide ${hiddenFields.length} hidden fields` : `Show ${hiddenFields.length} hidden fields`}
-              </button>
-              <div className="h-px bg-gray-200 flex-1" />
-            </div>
-          )}
-
-          {/* Hidden fields */}
-          {showHidden && hiddenFields.length > 0 && (
+            {/* Visible fields */}
             <div className="space-y-4">
-              {hiddenFields.map((field) => {
+              {visibleFields.map((field) => {
+                const isTitleField = titleField && field.id === titleField.id;
                 return (
                   <div key={field.id} className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-4 items-center">
                     <div className="text-gray-600 flex items-center gap-2">
                       {getFieldTypeIconWithMargin(getStandardFieldType(field))}
                       <span className="text-sm">{getFieldDisplayName(field)}</span>
                       {field.required && <span className="text-red-500 ml-1 field-component-required">*</span>}
+                      {isTitleField && (
+                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                          Title Field
+                        </span>
+                      )}
                     </div>
-                    <div className="max-w-[560px] w-full">{renderField(field)}</div>
+                    <div className="max-w-[560px] w-full">
+                      {renderField(field)}
+                    </div>
                   </div>
                 );
               })}
             </div>
-          )}
 
-          {formError && (
-            <div className="mt-4 text-red-600 text-sm">{formError}</div>
-          )}
+            {/* Hidden fields toggle */}
+            {hiddenFields.length > 0 && (
+              <div className="flex items-center gap-3 my-8">
+                <div className="h-px bg-gray-200 flex-1" />
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-full border text-sm text-gray-700 bg-white hover:bg-gray-50"
+                  onClick={() => setShowHidden(v => !v)}
+                >
+                  {showHidden ? `Hide ${hiddenFields.length} hidden fields` : `Show ${hiddenFields.length} hidden fields`}
+                </button>
+                <div className="h-px bg-gray-200 flex-1" />
+              </div>
+            )}
+
+            {/* Hidden fields */}
+            {showHidden && hiddenFields.length > 0 && (
+              <div className="space-y-4">
+                {hiddenFields.map((field) => {
+                  return (
+                    <div key={field.id} className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-4 items-center">
+                      <div className="text-gray-600 flex items-center gap-2">
+                        {getFieldTypeIconWithMargin(getStandardFieldType(field))}
+                        <span className="text-sm">{getFieldDisplayName(field)}</span>
+                        {field.required && <span className="text-red-500 ml-1 field-component-required">*</span>}
+                      </div>
+                      <div className="max-w-[560px] w-full">{renderField(field)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {formError && (
+              <div className="mt-4 text-red-600 text-sm">{formError}</div>
+            )}
           </div>
         </div>
 
@@ -451,9 +456,8 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
               type="button"
               disabled={submitting}
               onClick={handleSave}
-              className={`px-16 py-2 rounded-xl btn-primary ${
-                submitting ? 'opacity-60 cursor-not-allowed' : ''
-              }`}
+              className={`px-16 py-2 rounded-xl btn-primary ${submitting ? 'opacity-60 cursor-not-allowed' : ''
+                }`}
             >
               {submitLabel}
             </button>

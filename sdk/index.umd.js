@@ -5,10 +5,10 @@
 })(this, (function (exports, axios, eventemitter3) { 'use strict';
 
     function encodeToBase64(value) {
-        if (typeof globalThis.Buffer !== 'undefined') {
+        if (globalThis.Buffer !== undefined) {
             return globalThis.Buffer.from(value, 'utf8').toString('base64');
         }
-        if (typeof globalThis.btoa !== 'undefined') {
+        if (globalThis.btoa !== undefined) {
             return globalThis.btoa(value);
         }
         throw new Error('No base64 encoder available in this environment.');
@@ -797,6 +797,26 @@
          */
         deleteById(id) {
             return this.http.delete(`/asset/${id}`);
+        }
+        // Add image
+        addImage(params, extra) {
+            const formData = new FormData();
+            if (Array.isArray(params.files)) {
+                params.files.forEach((file) => {
+                    formData.append('files', file);
+                });
+            }
+            const config = {
+                headers: {
+                    'content-type': 'multipart/form-data'
+                },
+                maxContentLength: Infinity,
+                maxBodyLength: Infinity,
+            };
+            if (typeof extra === 'function') {
+                config.onUploadProgress = extra;
+            }
+            return this.http.post(`/asset/upload-image`, formData, config);
         }
     }
 

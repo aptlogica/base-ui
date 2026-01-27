@@ -1,5 +1,3 @@
-import { Plugin } from '../core/types';
-
 interface PluginConfig {
   id: string;
   path?: string;
@@ -23,7 +21,7 @@ interface PluginsConfig {
 
 export class PluginConfigManager {
   private config: PluginsConfig | null = null;
-  private configPath: string;
+  private readonly configPath: string;
 
   constructor(configPath: string = '/config/plugins.json') {
     this.configPath = configPath;
@@ -80,7 +78,6 @@ export class PluginConfigManager {
     if (externalPlugin) {
       externalPlugin.config = { ...externalPlugin.config, ...newConfig };
       this.saveConfig();
-      return;
     }
   }
 
@@ -110,7 +107,6 @@ export class PluginConfigManager {
     if (externalPlugin) {
       externalPlugin.enabled = enabled;
       this.saveConfig();
-      return;
     }
   }
 

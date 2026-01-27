@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, File, FileText, FileSpreadsheet, Archive } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
 
 interface ImageCarouselProps {
   isOpen: boolean;
@@ -117,8 +117,6 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
     const name: string = String(file?.name || file?.title || '').toLowerCase();
     const ext = name.includes('.') ? name.split('.').pop() : '';
 
-    const iconSize = size === 'large' ? 'w-16 h-16' : 'w-8 h-8';
-
     if (mime.startsWith('application/pdf') || ext === 'pdf') {
       return (
        <iframe
@@ -234,15 +232,15 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
       </div>
 
           <div className="flex  gap-2 px-2 py-2 bg-transparent">
-        {images.map((img, i) => (
+        {images.map((img) => (
           <button
-            key={i}
+            key={img.url}
             onClick={(e) => {
               e.stopPropagation();
-              setCurrentIndex(i);
+              setCurrentIndex(images.findIndex(i => i.url === img.url));
             }}
             className={`w-14 h-14 rounded overflow-hidden border ${
-              i === currentIndex
+              img.url === currentImage?.url
                 ? "border-black shadow-sm"
                 : "border-gray-300 opacity-70 hover:opacity-100"
             } transition`}

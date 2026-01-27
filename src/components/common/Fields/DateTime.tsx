@@ -53,11 +53,11 @@ function getTimeOptions(step = 30, hourFormat: '12' | '24' = '24', timeFormat: s
           options.push(`${displayHour}:${pad(m)} ${period}`);
         }
       } else if (timeFormat === 'HH:mm:ss' || timeFormat === 'HH:mm:ss.SSS') {
-          // For seconds format, show seconds as 00
-          options.push(`${pad(h)}:${pad(m)}:00`);
-        } else {
-          options.push(`${pad(h)}:${pad(m)}`);
-        }
+        // For seconds format, show seconds as 00
+        options.push(`${pad(h)}:${pad(m)}:00`);
+      } else {
+        options.push(`${pad(h)}:${pad(m)}`);
+      }
     }
   }
   return options;
@@ -562,7 +562,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
         if (timeFormat === 'hh:mm:ss' || timeFormat === 'HH:mm:ss') {
           timeStr = `${displayHour}:${min}:${sec || '00'} ${period}`.trim();
         } else if (timeFormat === 'hh:mm:ss.SSS' || timeFormat === 'HH:mm:ss.SSS') {
-          timeStr = `${displayHour}:${min}:${sec ? sec : '00'}.000 ${period}`.trim();
+          timeStr = `${displayHour}:${min}:${sec || '00'}.000 ${period}`.trim();
         } else {
           timeStr = `${displayHour}:${min} ${period}`.trim();
         }
@@ -571,7 +571,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
         if (timeFormat === 'hh:mm:ss' || timeFormat === 'HH:mm:ss') {
           timeStr = `${hh}:${min}:${sec || '00'}`;
         } else if (timeFormat === 'hh:mm:ss.SSS' || timeFormat === 'HH:mm:ss.SSS') {
-          timeStr = `${hh}:${min}:${sec ? sec : '00'}.000`;
+          timeStr = `${hh}:${min}:${sec || '00'}.000`;
         } else {
           timeStr = `${hh}:${min}`;
         }
@@ -603,9 +603,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
-
-    // Don't save immediately - only update display
-    // Save will happen on blur if valid
   };
 
   const handleInputBlur = () => {
@@ -683,10 +680,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
           return;
         }
       }
-
-      // Invalid input: keep what the user typed, but show error instead of clearing
-      // setError('Invalid date/time format');
-      return;
     } else {
       // Empty input - clear the value
       setInputValue('');
@@ -1085,7 +1078,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
 
 
   return (
-    <div className={`w-full relative ${className} ${isBorder ? "field-component-border" : ""}`} onDoubleClick={!readOnly ? handleDoubleClick : undefined}>
+    <div className={`w-full relative ${className} ${isBorder ? "field-component-border" : ""}`} onDoubleClick={readOnly ? undefined : handleDoubleClick}>
       {/* Label */}
       {label && (
         <label className="field-component-label">
@@ -1150,7 +1143,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
               disabled={disabled || readOnly}
             >
               {displayOriginalTime ||
-                <span className="text-gray-400">  {/* hello2 */}
+                <span className="text-gray-400"> 
                   {timeFormat}
                 </span>
               }
@@ -1191,14 +1184,11 @@ export const DateTime: React.FC<DateTimeProps> = ({
                 <div className="border-t border-gray-100 px-2 py-2 flex justify-center bg-background">
                   <button
                     type="button"
-                    className="px-3 py-1 rounded bg-[var(--color-bg-brand-primary)] text-black 
-            hover:bg-[var(--color-bg-brand-secondary)] text-xs font-medium"
+                    className="px-3 py-1 rounded-xl bg-[var(--color-bg-brand-primary)] text-black  hover:bg-[var(--color-bg-brand-secondary)] text-xs font-medium"
                     onClick={() =>
                       handleNowUtc()
                     }
-                  >
-                    Now
-                  </button>
+                  >Now</button>
                 </div>
               </div>
             </div>,

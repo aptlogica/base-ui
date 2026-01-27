@@ -31,6 +31,11 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
     }
   }, [organizationData]);
 
+  // Check if there are any changes
+  const hasChanges = useMemo(() => {
+    return organizationName !== originalOrganizationName || organizationDescription !== originalOrganizationDescription;
+  }, [organizationName, originalOrganizationName, organizationDescription, originalOrganizationDescription]);
+
   const isLoading = isLoadingOrganization;
 
   const handleSave = async () => {
@@ -43,8 +48,6 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
       toast.error('Description is required');
       return;
     }
-
-    const hasChanges = organizationName !== originalOrganizationName || organizationDescription !== originalOrganizationDescription;
 
     if (!hasChanges) {
       toast.info('No changes to save');
@@ -72,8 +75,11 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
   };
 
   const handleCancel = () => {
-    setOrganizationName(originalOrganizationName);
-    setOrganizationDescription(originalOrganizationDescription);
+    if (hasChanges) {
+      setOrganizationName(originalOrganizationName);
+      setOrganizationDescription(originalOrganizationDescription);
+      toast.info('Changes discarded');
+    }
   };
 
   const owner = useMemo(() => {
@@ -132,14 +138,14 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
         <div className="w-full mt-6 flex justify-end items-center gap-3">
           <button
             onClick={handleCancel}
-            disabled={updateOrganizationMutation.isPending}
+            disabled={updateOrganizationMutation.isPending || !hasChanges}
             className="px-6 py-2.5 border text-gray-700 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            disabled={updateOrganizationMutation.isPending || !organizationName.trim() || !organizationDescription.trim()}
+            disabled={updateOrganizationMutation.isPending || !hasChanges || !organizationName.trim() || !organizationDescription.trim()}
             className="px-6 py-2.5 bg-[var(--color-brand-600)] text-black rounded-xl hover:bg-[var(--color-brand-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {updateOrganizationMutation.isPending ? 'Saving...' : 'Save changes'}

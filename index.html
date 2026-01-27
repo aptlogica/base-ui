@@ -22,14 +22,14 @@
     // Initialize theme immediately to prevent flash
     (function() {
       const savedTheme = localStorage.getItem('theme');
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const prefersDark = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
       
       if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
         document.documentElement.classList.add('dark');
-        document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.dataset.theme = 'dark';
       } else {
         document.documentElement.classList.remove('dark');
-        document.documentElement.setAttribute('data-theme', 'light');
+        document.documentElement.dataset.theme = 'light';
       }
     })();
   </script>

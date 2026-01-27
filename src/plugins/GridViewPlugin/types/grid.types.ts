@@ -1,8 +1,3 @@
-/**
- * Unified type definitions for GridView Plugin
- * Consolidated from core/types/grid.types.ts and components/Table/types.ts
- * Provides comprehensive TypeScript interfaces for all grid operations
- */
 
 import { BaseColumn } from '../../../types/column.types';
 
@@ -15,10 +10,10 @@ export interface GridTable {
 }
 
 // Grid-specific column interface extending BaseColumn
-export interface GridColumn extends BaseColumn {
-  type: GridFieldType | string; // Support both strict and flexible typing
+export interface GridColumn extends Omit<BaseColumn, 'type' | 'meta'> {
+  type: GridFieldType; // Use strict typing for better type safety
   options?: string[] | GridSelectOption[]; // Support both formats
-  meta?: GridColumnMeta | any; // Can be object or string in new API
+  meta?: GridColumnMeta; // Column metadata
   config?: GridColumnConfig;
 }
 

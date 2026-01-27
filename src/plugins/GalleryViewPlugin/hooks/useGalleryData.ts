@@ -64,7 +64,6 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
       };
     }
 
-    const model = tableData.model || {};
     const columns = tableData.columns.filter(col => !fieldsToFilter.includes(col.uidt)) || [];
     const records = tableData.records || [];
     const views = tableData.views || [];
@@ -90,9 +89,9 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
     }));
 
     // Find attachment fields
-    const attachmentFieldTypes = ['attachment'];
+    const attachmentFieldTypes = new Set(['attachment']);
     const attachmentFields = uiColumns.filter(col => 
-      attachmentFieldTypes.includes(col.type || '') || attachmentFieldTypes.includes(col.uidt || '')
+      attachmentFieldTypes.has(col.type || '') || attachmentFieldTypes.has(col.uidt || '')
     );
 
     // Get selected attachment field from view config
@@ -134,19 +133,13 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
       // Build metadata from all fields (include Title, attachment fields, JSON fields if visible, exclude system fields)
       const metadata: Record<string, any> = {};
       uiColumns.forEach(col => {
-        const isAttachmentField = col.type === 'attachment' || col.uidt === 'attachment';
         const isTitleField = col.key?.toLowerCase() === 'title' || col.title?.toLowerCase() === 'title';
         const isJsonField = col.type === 'json' || col.uidt === 'json';
         const isLinksField = col.type === 'links' || col.uidt === 'links';
         const isLookupField = col.type === 'lookup' || col.uidt === 'lookup';
         
-        // Include all fields in metadata (Title even if system, attachment fields, JSON, etc. - they can be toggled to show/hide)
-        // For Title field, include it even if it's a system field (like in Kanban)
         if (!col.system || isTitleField) {
           const value = rowData?.[col.key || ''] || record?.[col.key || ''];
-          // For Title field, always include it (even if empty, we'll provide fallback in display)
-          // For JSON, Links, Lookup fields, include even if empty (they handle empty states)
-          // For other fields, only include if they have a value
           if (isTitleField || isJsonField || isLinksField || isLookupField || 
               (value !== null && value !== undefined && value !== '')) {
             // Use column title as key for metadata (this matches how we look it up in GalleryCard)
@@ -177,12 +170,12 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
   }, [tableData, viewId]);
 
   // Placeholder actions (these would be implemented with actual API calls)
-  const addRow = async (data: Record<string, unknown>) => {
+  const addRow = async (_data: Record<string, unknown>) => {
     // Implementation would go here
     // Note: This is a placeholder - actual implementation would use API mutations
   };
 
-  const insertRowData = async (data: Record<string, unknown>) => {
+  const insertRowData = async (_data: Record<string, unknown>) => {
     // Implementation would go here
     // Note: This is a placeholder - actual implementation would use API mutations
   };
@@ -198,7 +191,7 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
     });
   };
 
-  const updateField = async (fieldId: string, data: Record<string, unknown>) => {
+  const updateField = async (_fieldId: string, _data: Record<string, unknown>) => {
     // Implementation would go here
     // Note: This is a placeholder - actual implementation would use API mutations
   };
@@ -262,7 +255,11 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
     tableData,
     isLoading: tableQuery.isLoading,
     error: tableQuery.error,
-    refresh: tableQuery.refetch,
+    refresh: () => {
+      void tableQuery.refetch().catch(() => {
+        // Error handling is done by the query itself
+      });
+    },
     addRow,
     insertRowData,
     deleteRecord,

@@ -16,8 +16,6 @@ interface UseGanttModalsOptions {
   rawRecords?: any[]; // Original records array for buildInitialValuesForEdit
   startDateField?: Column;
   endDateField?: Column;
-  titleField?: Column;
-  progressField?: Column;
 }
 
 export function useGanttModals({
@@ -29,8 +27,6 @@ export function useGanttModals({
   rawRecords = [],
   startDateField,
   endDateField,
-  titleField,
-  progressField,
 }: UseGanttModalsOptions) {
   const toast = useToast();
   
@@ -109,8 +105,8 @@ export function useGanttModals({
       toast.success('Record deleted successfully');
       onRefresh();
     } catch (error) {
-      toast.error('Failed to delete record. Please try again.');
-      // Don't close modal on error so user can retry
+      toast.error('Failed to delete record. Please try again.', { title: 'Error', duration: 3500 });
+      throw error;
     }
   }, [actions, onRefresh, taskToDelete, tableData, toast]);
 

@@ -56,7 +56,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     handleDeleteView,
     isTableActive,
     isViewActive,
-    setViewsRefetchTrigger,
     createTableMutation,
     createViewMutation,
     // Plugin store state
@@ -324,9 +323,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                           console.error('Failed to delete table:', err);
                         }
                       }}
-                      onEditingChange={(_isEditing) => {
-                        // Editing state is handled internally by TableOptionsMenu
-                      }}
                       portaled={true}
                     />
                   </div>
@@ -342,7 +338,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                     setShowCreateViewModal={setShowCreateViewModal}
                     setEditingViewId={() => { }}
                     setPopoverRef={setPopoverRef}
-                    setViewsRefetchTrigger={setViewsRefetchTrigger}
                   />
                 )}
 
@@ -581,8 +576,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 await createViewMutation.mutateAsync(payload);
                 setShowCreateViewModal(null);
                 toast.success('View created successfully');
-                // React Query mutations already invalidate view queries, so this is redundant but harmless
-                setViewsRefetchTrigger(prev => prev + 1);
+                // React Query mutations already invalidate view queries automatically
               } catch (err) {
                 console.error('Failed to create view:', err);
                 toast.error('Failed to create view. Please try again.', { title: 'Error' });

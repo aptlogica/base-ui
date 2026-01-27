@@ -157,8 +157,7 @@ const Breadcrumb: React.FC = () => {
 
     const targetRef =
       openDropdown === 'base' ? baseDropdownRef :
-        openDropdown === 'table' ? tableDropdownRef :
-          viewDropdownRef;
+        openDropdown === 'table' ? tableDropdownRef : viewDropdownRef;
 
     if (targetRef.current) {
       const rect = targetRef.current.getBoundingClientRect();

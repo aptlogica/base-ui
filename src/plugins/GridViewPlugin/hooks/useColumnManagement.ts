@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { GridColumn as ColumnConfig } from '../types/grid.types';
-import { normalizeFieldType } from '../../../utils/fieldType';
 import { parseApiColumnMeta } from '../../../components/shared/table/tableUtils';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../../utils/fieldUsageUtils';
 import type { FieldType as FieldTypeUnion } from '../../../types/interfaces/field.interface';
@@ -21,6 +20,13 @@ interface UseColumnManagementOptions {
   updateViewConfigBackend?: (config: any) => Promise<void>;
   viewConfigState?: any;
   setViewConfigState?: (config: any) => void;
+}
+
+interface PendingEditColumnChanges {
+  title?: string;
+  description?: string;
+  uidt?: string;
+  meta?: any;
 }
 
 export function useColumnManagement({
@@ -44,13 +50,98 @@ export function useColumnManagement({
   const [deleteConfirmModalOpen, setDeleteConfirmModalOpen] = useState(false);
   const [columnToDelete, setColumnToDelete] = useState<string | null>(null);
   const [updateFieldConfirmModalOpen, setUpdateFieldConfirmModalOpen] = useState(false);
-  const [pendingEditColumnChanges, setPendingEditColumnChanges] = useState<any | null>(null);
+  const [pendingEditColumnChanges, setPendingEditColumnChanges] = useState<PendingEditColumnChanges | null>(null);
   const [dragColumnIndex, setDragColumnIndex] = useState<number | null>(null);
   const [hoverColumnIndex, setHoverColumnIndex] = useState<number | null>(null);
 
   const createFieldMutation = actions?.createField;
   const deleteColumnMutation = actions?.deleteColumn;
   const updateFieldMutation = actions?.updateField;
+
+  // Helper to safely call onRefresh
+  const safeRefresh = useCallback(() => {
+    try {
+      onRefresh?.();
+    } catch (err) {
+      // Silently handle refresh errors - they're non-critical
+      if (err instanceof Error) {
+        console.warn('Refresh callback error:', err.message);
+      }
+    }
+  }, [onRefresh]);
+
+  // Helper to get current table views
+  const getCurrentTableViews = useCallback(() => {
+    if (!tableId || !allViews) return [];
+    return allViews.filter((view: any) => 
+      String(view.model_id || view.modelId || '') === String(tableId)
+    );
+  }, [tableId, allViews]);
+
+  // Helper to get views to use (prefer fresh over cached)
+  const getViewsToUse = useCallback(() => {
+    if (tableData?.views && Array.isArray(tableData.views) && tableData.views.length > 0) {
+      return tableData.views;
+    }
+    return allViews;
+  }, [tableData, allViews]);
+
+  // Helper to check critical field usage and show error
+  const checkAndBlockCriticalFieldUsage = useCallback((
+    fieldId: string,
+    viewsToUse: any[],
+    operation: 'change type' | 'delete'
+  ): boolean => {
+    const criticalFieldUsage = checkCriticalFieldUsageInViews(fieldId, viewsToUse, tableId);
+    
+    if (criticalFieldUsage.isUsedInViews) {
+      const viewNames = criticalFieldUsage.usedInViews.map(v => `${v.viewName} (${v.usageType})`).join(', ');
+      const message = operation === 'change type'
+        ? `Cannot change field type. This field is used as a critical field in: ${viewNames}. Please change the view configuration first.`
+        : `Cannot delete field. It is used as a critical field in: ${viewNames}. Please change the view configuration first.`;
+      toast?.error(message, { title: 'Field in Use' });
+      return true; // Block the operation
+    }
+    return false; // Allow the operation
+  }, [tableId, toast]);
+
+  // Helper to check general field usage and show error
+  const checkAndBlockGeneralFieldUsage = useCallback((
+    fieldId: string,
+    currentTableViews: any[],
+    operation: 'change type' | 'delete'
+  ): boolean => {
+    const fieldUsage = checkFieldUsageInViews(fieldId, currentTableViews);
+    
+    if (fieldUsage.isUsedInViews) {
+      const viewNames = fieldUsage.usedInViews.map(v => v.viewName).join(', ');
+      const message = operation === 'change type'
+        ? `Cannot change field type. This field is currently used in: ${viewNames}. Please remove the field from these views first, or change the field type in the view settings.`
+        : `Cannot delete field. It is currently used in: ${viewNames}. Please remove the field from these views first.`;
+      toast?.error(message, { title: 'Field in Use' });
+      return true; // Block the operation
+    }
+    return false; // Allow the operation
+  }, [toast]);
+
+  // Helper to validate field type change
+  const validateFieldTypeChange = useCallback((
+    fieldId: string,
+    currentTableViews: any[],
+    viewsToUse: any[]
+  ): boolean => {
+    // Check critical field usage first
+    if (checkAndBlockCriticalFieldUsage(fieldId, viewsToUse, 'change type')) {
+      return false;
+    }
+    
+    // Check general field usage
+    if (checkAndBlockGeneralFieldUsage(fieldId, currentTableViews, 'change type')) {
+      return false;
+    }
+    
+    return true; // Allow type change
+  }, [checkAndBlockCriticalFieldUsage, checkAndBlockGeneralFieldUsage]);
 
   // Create a new column (field) using the column creation modal output
   const handleAddColumn = useCallback(async (newCol: any) => {
@@ -81,34 +172,20 @@ export function useColumnManagement({
         config: fieldConfig
       });
 
-      const created: any = (createdField as any)?.data ?? createdField ?? {};
+      const created: any = createdField?.data ?? createdField ?? {};
       const createdMeta = created?.meta ?? config ?? {};
-      const parsedMeta = parseApiColumnMeta(createdMeta);
-
-      const newColumn: ColumnConfig = {
-        id: created.id,
-        key: String(newCol.key || created.column_name || created.title || created.name || ''),
-        title: String(created.title || newCol.title || newCol.key || ''),
-        type: normalizeFieldType(String(created.uidt || newCol.type || 'text')) as any,
-        uidt: String(created.uidt || newCol.type || 'text') as any,
-        width: 220,
-        position: typeof created.order_index === 'number' ? created.order_index : (maxPosition + 1),
-        order_index: typeof created.order_index === 'number' ? created.order_index : (maxPosition + 1),
-        isSystem: Boolean(created.system),
-        system: Boolean(created.system),
-        hidden: false,
-        is_hidden: false,
-        config: parsedMeta,
-      } as unknown as ColumnConfig;
+      parseApiColumnMeta(createdMeta);
 
       toast?.success('Column created', { title: 'Success' });
 
       setIsColumnModalOpen(false);
-      try { onRefresh?.(); } catch { }
+      safeRefresh();
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Failed to create column:', errorMessage);
       toast?.error('Failed to create column', { title: 'Error' });
     }
-  }, [tableId, baseId, columns, createFieldMutation, toast, onRefresh]);
+  }, [tableId, baseId, columns, createFieldMutation, toast, safeRefresh]);
 
   // Open the column edit modal for the given column
   const handleEditColumn = useCallback((col: ColumnConfig, index: number, event?: { target: HTMLElement }) => {
@@ -136,60 +213,44 @@ export function useColumnManagement({
     setEditModalOpen(true);
   }, [toast]);
 
+  // Helper to detect changes in column edit
+  const detectColumnChanges = useCallback((editColumn: ColumnConfig, newCol: any) => {
+    const changes: PendingEditColumnChanges = {};
+    const uidtChanged = editColumn.uidt !== newCol.type;
+
+    if (editColumn.title !== newCol.title) {
+      changes.title = newCol.title;
+    }
+    
+    const newDescription = newCol.description ?? '';
+    const currentDescription = editColumn.description ?? '';
+    if (currentDescription !== newDescription) {
+      changes.description = newDescription;
+    }
+    
+    if (uidtChanged) {
+      changes.uidt = newCol.type;
+      changes.meta = newCol.meta || {};
+    } else if (JSON.stringify(editColumn.meta ?? {}) !== JSON.stringify(newCol.meta ?? {})) {
+      changes.meta = newCol.meta;
+    }
+
+    return { changes, uidtChanged };
+  }, []);
+
   // Persist column edits; only calls API if actual changes exist.
   const handleSaveEditColumn = useCallback(async (newCol: any) => {
     if (editColumnIndex === null || !editColumn) return;
     
-    // Compare fields for changes
-    const changes: any = {};
-    const uidtChanged = editColumn.uidt !== newCol.type;
+    const { changes, uidtChanged } = detectColumnChanges(editColumn, newCol);
 
-    if (editColumn.title !== newCol.title) changes.title = newCol.title;
-    if ((editColumn?.description ?? '') !== ((newCol as any)?.description ?? '')) changes.description = (newCol as any).description;
     if (uidtChanged) {
-      // Check if field is used in any views before allowing type change
-      // Filter views to only current table
-      const currentTableViews = tableId && allViews
-        ? allViews.filter((view: any) => 
-            String(view.model_id || view.modelId || '') === String(tableId)
-          )
-        : [];
-
-      // Prefer tableData.views (fresh) over allViews (cached)
-      const viewsToUse = tableData?.views && Array.isArray(tableData.views) && tableData.views.length > 0
-        ? tableData.views
-        : allViews;
+      const currentTableViews = getCurrentTableViews();
+      const viewsToUse = getViewsToUse();
       
-      // Check if field is used as a CRITICAL field - block type change
-      const criticalFieldUsage = checkCriticalFieldUsageInViews(editColumn.id!, viewsToUse, tableId);
-      
-      if (criticalFieldUsage.isUsedInViews) {
-        const viewNames = criticalFieldUsage.usedInViews.map(v => `${v.viewName} (${v.usageType})`).join(', ');
-        toast?.error(
-          `Cannot change field type. This field is used as a critical field in: ${viewNames}. Please change the view configuration first.`,
-          { title: 'Field in Use' }
-        );
+      if (!validateFieldTypeChange(editColumn.id!, currentTableViews, viewsToUse)) {
         return; // Block the update
       }
-      
-      // Check general field usage
-      const fieldUsage = checkFieldUsageInViews(editColumn.id!, currentTableViews);
-      
-      if (fieldUsage.isUsedInViews) {
-        const viewNames = fieldUsage.usedInViews.map(v => v.viewName).join(', ');
-        toast?.error(
-          `Cannot change field type. This field is currently used in: ${viewNames}. Please remove the field from these views first, or change the field type in the view settings.`,
-          { title: 'Field in Use' }
-        );
-        return; // Block the update
-      }
-      
-      changes.uidt = newCol.type;
-      // When type changes, include the new meta config (icon, color, defaultValue, etc.)
-      // Don't reset to empty - the new type needs its config
-      changes.meta = newCol.meta || {};
-    } else if (JSON.stringify(editColumn.meta ?? {}) !== JSON.stringify(newCol.meta ?? {})) {
-      changes.meta = newCol.meta;
     }
 
     const hasChanges = Object.keys(changes).length > 0;
@@ -205,7 +266,7 @@ export function useColumnManagement({
           fieldId: editColumn.id!,
           updatedValue: changes,
         });
-        try { onRefresh?.(); } catch { }
+        safeRefresh();
         setEditModalOpen(false);
         setEditColumn(null);
         setEditColumnIndex(null);
@@ -215,7 +276,7 @@ export function useColumnManagement({
       setEditColumn(null);
       setEditColumnIndex(null);
     }
-  }, [editColumnIndex, editColumn, updateFieldMutation, onRefresh, allViews, toast]);
+  }, [editColumnIndex, editColumn, updateFieldMutation, safeRefresh, detectColumnChanges, getCurrentTableViews, getViewsToUse, validateFieldTypeChange]);
 
   // Confirm handler for UpdateFieldConfirmModal
   const handleConfirmUpdateField = useCallback(async () => {
@@ -224,14 +285,14 @@ export function useColumnManagement({
         fieldId: editColumn.id!,
         updatedValue: pendingEditColumnChanges,
       });
-      try { onRefresh?.(); } catch { }
+      safeRefresh();
     }
     setUpdateFieldConfirmModalOpen(false);
     setPendingEditColumnChanges(null);
     setEditModalOpen(false);
     setEditColumn(null);
     setEditColumnIndex(null);
-  }, [pendingEditColumnChanges, editColumn, updateFieldMutation, onRefresh]);
+  }, [pendingEditColumnChanges, editColumn, updateFieldMutation, safeRefresh]);
 
   // Ask for confirmation then delete a column
   const handleDeleteColumn = useCallback(async (columnId: string) => {
@@ -243,86 +304,39 @@ export function useColumnManagement({
       return;
     }
 
-    // Filter views to only current table
-    const currentTableViews = tableId && allViews
-      ? allViews.filter((view: any) => {
-          const viewTableId = String(view.model_id || view.modelId || '');
-          return viewTableId === String(tableId);
-        })
-      : [];
+    const currentTableViews = getCurrentTableViews();
+    const viewsToUse = getViewsToUse();
 
-    // Prefer tableData.views (fresh) over allViews (cached)
-    const viewsToUse = tableData?.views && Array.isArray(tableData.views) && tableData.views.length > 0
-      ? tableData.views
-      : allViews;
-
-    // Check if field is used as a CRITICAL field in kanban, gantt, gallery, or calendar views
-    const criticalFieldUsage = checkCriticalFieldUsageInViews(columnId, viewsToUse, tableId);
-    
-    if (criticalFieldUsage.isUsedInViews) {
-      const viewNames = criticalFieldUsage.usedInViews.map(v => `${v.viewName} (${v.usageType})`).join(', ');
-      toast?.error(
-        `Cannot delete field. It is used as a critical field in: ${viewNames}. Please change the view configuration first.`,
-        { title: 'Field in Use' }
-      );
+    // Check if field is used as a CRITICAL field
+    if (checkAndBlockCriticalFieldUsage(columnId, viewsToUse, 'delete')) {
       return;
     }
     
-    // Also check general field usage in current table views
-    const fieldUsage = checkFieldUsageInViews(columnId, currentTableViews);
-    
-    if (fieldUsage.isUsedInViews) {
-      const viewNames = fieldUsage.usedInViews.map(v => v.viewName).join(', ');
-      toast?.error(
-        `Cannot delete field. It is currently used in: ${viewNames}. Please remove the field from these views first.`,
-        { title: 'Field in Use' }
-      );
+    // Check general field usage
+    if (checkAndBlockGeneralFieldUsage(columnId, currentTableViews, 'delete')) {
       return;
     }
 
     setDeleteConfirmModalOpen(true);
     setColumnToDelete(columnId);
-  }, [columns, allViews, tableId, toast]);
+  }, [columns, toast, getCurrentTableViews, getViewsToUse, checkAndBlockCriticalFieldUsage, checkAndBlockGeneralFieldUsage]);
 
   // Finalize column deletion after confirmation
   const handleConfirmDeleteColumn = useCallback(async () => {
     if (!columnToDelete) return;
     
-    // Filter views to only current table
-    const currentTableViews = tableId && allViews
-      ? allViews.filter((view: any) => 
-          String(view.model_id || view.modelId || '') === String(tableId)
-        )
-      : [];
-
-    // Prefer tableData.views (fresh) over allViews (cached)
-    const viewsToUse = tableData?.views && Array.isArray(tableData.views) && tableData.views.length > 0
-      ? tableData.views
-      : allViews;
+    const currentTableViews = getCurrentTableViews();
+    const viewsToUse = getViewsToUse();
     
     // Double-check critical field usage before deletion
-    const criticalFieldUsage = checkCriticalFieldUsageInViews(columnToDelete, viewsToUse, tableId);
-    
-    if (criticalFieldUsage.isUsedInViews) {
-      const viewNames = criticalFieldUsage.usedInViews.map(v => `${v.viewName} (${v.usageType})`).join(', ');
-      toast?.error(
-        `Cannot delete field. It is used as a critical field in: ${viewNames}. Please change the view configuration first.`,
-        { title: 'Field in Use' }
-      );
+    if (checkAndBlockCriticalFieldUsage(columnToDelete, viewsToUse, 'delete')) {
       setDeleteConfirmModalOpen(false);
       setColumnToDelete(null);
       return;
     }
     
     // Double-check general field usage
-    const fieldUsage = checkFieldUsageInViews(columnToDelete, currentTableViews);
-    
-    if (fieldUsage.isUsedInViews) {
-      const viewNames = fieldUsage.usedInViews.map(v => v.viewName).join(', ');
-      toast?.error(
-        `Cannot delete field. It is currently used in: ${viewNames}. Please remove the field from these views first.`,
-        { title: 'Field in Use' }
-      );
+    if (checkAndBlockGeneralFieldUsage(columnToDelete, currentTableViews, 'delete')) {
       setDeleteConfirmModalOpen(false);
       setColumnToDelete(null);
       return;
@@ -356,12 +370,13 @@ export function useColumnManagement({
       setDeleteConfirmModalOpen(false);
       setColumnToDelete(null);
       toast?.success(`Successfully deleted column "${deletedColumn?.title || 'Unknown'}"`, { title: 'Success' });
-      try { onRefresh?.(); } catch { }
+      safeRefresh();
     } catch (err) {
       console.error('Failed to delete column:', err);
-      toast?.error(`Failed to delete column. Please try again. ${err instanceof Error ? err.message : ''}`, { title: 'Error' });
+      const errorMessage = err instanceof Error ? err.message : '';
+      toast?.error(`Failed to delete column. Please try again. ${errorMessage}`, { title: 'Error' });
     }
-  }, [columnToDelete, columns, deleteColumnMutation, tableId, viewConfigState, setViewConfigState, updateViewConfigBackend, toast, onRefresh, allViews]);
+  }, [columnToDelete, columns, deleteColumnMutation, tableId, viewConfigState, setViewConfigState, updateViewConfigBackend, toast, safeRefresh, getCurrentTableViews, getViewsToUse, checkAndBlockCriticalFieldUsage, checkAndBlockGeneralFieldUsage]);
 
   // Duplicate a column
   const handleDuplicateColumn = useCallback(async (column: any) => {
@@ -442,9 +457,10 @@ export function useColumnManagement({
             toast?.success('Column order updated for this view', { title: 'Success' });
           }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Failed to reorder column:', error);
-        toast?.error(error?.message || 'Failed to reorder column', { title: 'Error' });
+        const errorMessage = error instanceof Error ? error.message : 'Failed to reorder column';
+        toast?.error(errorMessage, { title: 'Error' });
       }
     }
 
@@ -488,4 +504,3 @@ export function useColumnManagement({
     setEditColumnIndex,
   };
 }
-

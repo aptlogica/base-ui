@@ -474,7 +474,7 @@ export const SecuritySection: React.FC = () => {
                     setCurrentPasswordError('Current password is required');
                   }
                 }}
-                className={`w-full px-4 py-3 pr-20 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-card ${currentPasswordError ? "border-red-500 bg-red-50" : ""}`}
+                className={`w-full px-4 py-3 pr-20 border rounded-xl text-primary focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-card ${currentPasswordError ? "border-red-500 bg-red-50" : ""}`}
                 placeholder="Enter your current password"
                 autoComplete="off"
                 data-form-type="other"
@@ -526,7 +526,7 @@ export const SecuritySection: React.FC = () => {
                       setNewPasswordError('New password is required');
                     }
                   }}
-                  className={`w-full px-4 py-3 pr-20 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-card ${newPasswordError ? "border-red-500 bg-red-50" : ""}`}
+                  className={`w-full px-4 py-3 pr-20 border text-primary rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-card ${newPasswordError ? "border-red-500 bg-red-50" : ""}`}
                   placeholder="Enter new password"
                   autoComplete="new-password"
                 />
@@ -574,7 +574,7 @@ export const SecuritySection: React.FC = () => {
                       setConfirmPasswordError('Passwords do not match');
                     }
                   }}
-                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-card ${confirmPasswordError ? "border-red-500 bg-red-50" : ""}`}
+                  className={`w-full px-4 py-3 pr-12 border text-primary rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-card ${confirmPasswordError ? "border-red-500 bg-red-50" : ""}`}
                   placeholder="Confirm new password"
                   autoComplete="new-password"
                 />

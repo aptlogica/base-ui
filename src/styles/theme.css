@@ -253,8 +253,8 @@
     /* BACKGROUND COLORS */
     --color-bg-primary: var(--color-white);
     --color-bg-secondary: var(--color-gray-50);
-    --color-bg-brand-primary: var(--color-brand-400);
-    --color-bg-brand-secondary: var(--color-brand-100);
+    --color-bg-brand-primary: var(--color-brand-500);
+    --color-bg-brand-secondary: var(--color-brand-400);
 
     /* BORDER COLORS */
     --color-border-primary: rgb(237, 237, 237);
