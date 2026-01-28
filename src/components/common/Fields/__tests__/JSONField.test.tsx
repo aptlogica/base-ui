@@ -570,7 +570,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -604,7 +604,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -627,7 +627,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -650,7 +650,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -672,7 +672,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -701,7 +701,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -733,7 +733,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -797,7 +797,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -823,7 +823,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -839,7 +839,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -862,7 +862,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -889,7 +889,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -911,7 +911,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -930,7 +930,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -958,7 +958,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -984,7 +984,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -1002,7 +1002,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -1030,7 +1030,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -1051,7 +1051,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -1076,7 +1076,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -1099,7 +1099,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -1118,7 +1118,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -1137,7 +1137,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -1155,7 +1155,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -1173,7 +1173,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {
@@ -1190,7 +1190,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       expect(expandButton).toBeDisabled();
     });
 
@@ -1202,7 +1202,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      const expandButton = screen.getByLabelText('Open JSON editor');
+      const expandButton = screen.getByLabelText('Open JSON viewer');
       fireEvent.click(expandButton);
       
       await waitFor(() => {

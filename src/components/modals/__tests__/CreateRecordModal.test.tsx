@@ -50,6 +50,10 @@ vi.mock('../../../utils/fieldUtils', () => ({
   isFormulaField: vi.fn(() => false),
 }));
 
+vi.mock('../../common/Toast', () => ({
+  useToast: () => ({ success: vi.fn(), error: vi.fn() }),
+}));
+
 vi.mock('../../../utils/standardFieldUtils', () => ({
   getStandardFieldType: vi.fn((type) => type),
   getFieldDisplayName: vi.fn((field) => field.title || field.name),
@@ -208,6 +212,3 @@ describe('CreateRecordModal', () => {
     });
   });
 });
-
-// Export default for CommonJS compatibility
-export default CreateRecordModal;
