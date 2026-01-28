@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CreateWorkspaceModal } from '../CreateWorkspaceModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -413,30 +413,28 @@ describe('CreateWorkspaceModal', () => {
     });
 
     it('calls onClose when Escape key is pressed', async () => {
-      const user = userEvent.setup();
       const onClose = vi.fn();
 
-      renderWithQueryClient(<CreateWorkspaceModal {...defaultProps} onClose={onClose} />);
+      const { container } = renderWithQueryClient(<CreateWorkspaceModal {...defaultProps} onClose={onClose} />);
 
-      const modal = screen.getByRole('heading', { name: 'Create Workspace' }).closest('.bg-modal-backdrop');
-      if (modal) {
-        await user.keyboard('{Escape}');
+      const backdrop = container.querySelector('.bg-modal-backdrop');
+      if (backdrop) {
+        fireEvent.keyDown(backdrop, { key: 'Escape', code: 'Escape' });
         expect(onClose).toHaveBeenCalled();
       }
     });
 
     it('submits form when Ctrl+Enter is pressed', async () => {
       const user = userEvent.setup();
-      const onClose = vi.fn();
 
-      renderWithQueryClient(<CreateWorkspaceModal {...defaultProps} onClose={onClose} />);
+      const { container } = renderWithQueryClient(<CreateWorkspaceModal {...defaultProps} />);
 
       const input = screen.getByLabelText(/Workspace Name/i);
       await user.type(input, 'Test Workspace');
 
-      const modal = screen.getByRole('heading', { name: 'Create Workspace' }).closest('.bg-modal-backdrop');
-      if (modal) {
-        await user.keyboard('{Control>}{Enter}{/Control}');
+      const backdrop = container.querySelector('.bg-modal-backdrop');
+      if (backdrop) {
+        fireEvent.keyDown(backdrop, { key: 'Enter', code: 'Enter', ctrlKey: true });
         await waitFor(() => {
           expect(mockMutateAsync).toHaveBeenCalled();
         });

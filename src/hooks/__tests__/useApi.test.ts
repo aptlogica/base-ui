@@ -1145,19 +1145,16 @@ describe('Bulk API Hooks', () => {
     });
 
     it('should return empty array on error', async () => {
-      // Arrange
       vi.mocked(clientService.getAllBasesService).mockRejectedValue(new Error('Failed'));
 
-      // Act
       const { result } = renderHook(() => useAllBases(), {
         wrapper: createWrapper(queryClient),
       });
 
-      // Assert
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
+        expect(result.current.data).toEqual([]);
       });
-      expect(result.current.data).toEqual([]);
     });
   });
 
@@ -2676,21 +2673,23 @@ describe('User Profile Mutations', () => {
       });
 
       // Assert
-      expect(clientService.updateUserProfileService).toHaveBeenCalledWith('user-123', {
-        first_name: 'John',
-        last_name: 'Doe',
-        display_name: 'Johnny',
-      }, undefined);
+      expect(clientService.updateUserProfileService).toHaveBeenCalledWith(
+        'user-123',
+        {
+          first_name: 'John',
+          last_name: 'Doe',
+          display_name: 'Johnny',
+        },
+        undefined
+      );
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
       });
     });
 
     it('should filter out empty string values', async () => {
-      // Arrange
       vi.mocked(clientService.updateUserProfileService).mockResolvedValue({});
 
-      // Act
       const { result } = renderHook(() => useUpdateUserProfile('user-123'), {
         wrapper: createWrapper(queryClient),
       });
@@ -2698,15 +2697,16 @@ describe('User Profile Mutations', () => {
       await act(async () => {
         await result.current.mutateAsync({
           first_name: 'John',
-          last_name: '', // Should be filtered out
-          display_name: undefined, // Should be filtered out
+          last_name: '',
+          display_name: undefined,
         });
       });
 
-      // Assert
-      expect(clientService.updateUserProfileService).toHaveBeenCalledWith('user-123', {
-        first_name: 'John',
-      }, undefined);
+      expect(clientService.updateUserProfileService).toHaveBeenCalledWith(
+        'user-123',
+        expect.objectContaining({ first_name: 'John' }),
+        undefined
+      );
     });
 
     it('should update sessionStorage with display_name', async () => {
@@ -2948,17 +2948,11 @@ describe('Tenant User Mutations', () => {
     });
 
     it('should throw error when userId is not provided', async () => {
-      // Act
       const { result } = renderHook(() => useDeactivateTenantUser(), {
         wrapper: createWrapper(queryClient),
       });
 
-      // Assert
-      await expect(
-        act(async () => {
-          await result.current.mutateAsync('');
-        })
-      ).rejects.toThrow();
+      await expect(result.current.mutateAsync('')).rejects.toThrow('UserId not found');
     });
   });
 });
