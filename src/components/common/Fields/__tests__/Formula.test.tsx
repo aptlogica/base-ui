@@ -922,6 +922,7 @@ describe('Formula Component', () => {
     it('should handle negative numbers', async () => {
       const { textarea, onChange } = setup();
       if (!textarea) throw new Error('Textarea not found');
+      await userEvent.clear(textarea);
       await userEvent.type(textarea, '-10 + 5');
       fireEvent.blur(textarea);
       await waitFor(() => {

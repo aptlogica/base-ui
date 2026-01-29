@@ -182,7 +182,7 @@ describe('AuditCreatedTime Component', () => {
     it('should handle null value', () => {
       render(
         <AuditCreatedTime
-          value={null as any}
+          value={(null as unknown) as string}
           onChange={mockOnChange}
         />
       );
@@ -193,7 +193,7 @@ describe('AuditCreatedTime Component', () => {
     it('should handle undefined value', () => {
       render(
         <AuditCreatedTime
-          value={undefined as any}
+          value={undefined}
           onChange={mockOnChange}
         />
       );

@@ -554,7 +554,7 @@ describe('User Component', () => {
     it('should handle undefined value', () => {
       renderWithProviders(
         <User
-          value={undefined as any}
+          value={undefined}
           onChange={mockOnChange}
           config={{}}
         />

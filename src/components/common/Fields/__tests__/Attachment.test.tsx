@@ -578,7 +578,7 @@ describe('Attachment Component', () => {
     it('should handle null value', () => {
       renderWithProviders(
         <Attachment
-          value={null as any}
+          value={(null as unknown) as File[]}
           onChange={mockOnChange}
         />
       );
@@ -590,7 +590,7 @@ describe('Attachment Component', () => {
     it('should handle undefined value', () => {
       renderWithProviders(
         <Attachment
-          value={undefined as any}
+          value={undefined}
           onChange={mockOnChange}
         />
       );
@@ -650,7 +650,7 @@ describe('Attachment Component', () => {
 
       renderWithProviders(
         <Attachment
-          value={files as any}
+          value={(files as unknown) as any[]}
           onChange={mockOnChange}
         />
       );
@@ -1234,7 +1234,7 @@ describe('Attachment Component', () => {
 
       renderWithProviders(
         <Attachment
-          value={singleFile as any}
+          value={(singleFile as unknown) as any[]}
           onChange={mockOnChange}
         />
       );

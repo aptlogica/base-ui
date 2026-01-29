@@ -376,6 +376,7 @@ describe('UserDropdown', () => {
   });
 
   it('navigates to login after logout error', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const user = userEvent.setup();
     const mockLogoutError = vi.fn().mockRejectedValue(new Error('Logout failed'));
     vi.mocked(useAuth).mockReturnValue({
@@ -390,6 +391,7 @@ describe('UserDropdown', () => {
     await user.click(screen.getByText('Sign out'));
 
     expect(mockLogoutError).toHaveBeenCalledTimes(1);
+    consoleErrorSpy.mockRestore();
   });
 
   it('closes account modal when close is triggered', async () => {

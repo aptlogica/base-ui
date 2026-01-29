@@ -90,6 +90,12 @@ vi.mock('jose', () => ({
   decodeJwt: vi.fn(),
 }));
 
+vi.mock('../../stores/navigationStore', () => ({
+  useNavigationStore: {
+    getState: () => ({ selectedWorkspaceId: null, selectedBaseId: null }),
+  },
+}));
+
 // Helper to create memory storage
 function createMemoryStorage(): Storage {
   let store = new Map<string, string>();

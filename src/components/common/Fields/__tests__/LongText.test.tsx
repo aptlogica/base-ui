@@ -493,7 +493,7 @@ describe('LongText Component', () => {
   describe('Edge Cases', () => {
     it('should handle null value', () => {
       render(
-        <LongText value={null as any} onChange={mockOnChange} />
+        <LongText value={(null as unknown) as string} onChange={mockOnChange} />
       );
 
       const input = screen.getByDisplayValue('');
@@ -502,7 +502,7 @@ describe('LongText Component', () => {
 
     it('should handle undefined value', () => {
       render(
-        <LongText value={undefined as any} onChange={mockOnChange} />
+        <LongText value={undefined} onChange={mockOnChange} />
       );
 
       const input = screen.getByDisplayValue('');

@@ -285,7 +285,7 @@ describe('AuditLastModifiedTime Component', () => {
     it('should handle null value', () => {
       render(
         <AuditLastModifiedTime
-          value={null as any}
+          value={(null as unknown) as string}
           onChange={mockOnChange}
         />
       );
@@ -296,7 +296,7 @@ describe('AuditLastModifiedTime Component', () => {
     it('should handle undefined value', () => {
       render(
         <AuditLastModifiedTime
-          value={undefined as any}
+          value={undefined}
           onChange={mockOnChange}
         />
       );

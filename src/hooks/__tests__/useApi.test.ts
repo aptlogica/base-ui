@@ -1145,6 +1145,7 @@ describe('Bulk API Hooks', () => {
     });
 
     it('should return empty array on error', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       vi.mocked(clientService.getAllBasesService).mockRejectedValue(new Error('Failed'));
 
       const { result } = renderHook(() => useAllBases(), {
@@ -1155,6 +1156,7 @@ describe('Bulk API Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
         expect(result.current.data).toEqual([]);
       });
+      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -2948,11 +2950,13 @@ describe('Tenant User Mutations', () => {
     });
 
     it('should throw error when userId is not provided', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const { result } = renderHook(() => useDeactivateTenantUser(), {
         wrapper: createWrapper(queryClient),
       });
 
       await expect(result.current.mutateAsync('')).rejects.toThrow('UserId not found');
+      consoleErrorSpy.mockRestore();
     });
   });
 });

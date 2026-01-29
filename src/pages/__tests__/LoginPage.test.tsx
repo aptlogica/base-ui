@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 
@@ -61,10 +61,6 @@ const renderWithRouter = () => {
 
 describe('LoginPage', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
     vi.clearAllMocks();
   });
 
@@ -250,35 +246,83 @@ describe('LoginPage', () => {
     });
 
     it('should accept valid email formats', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithRouter();
 
       const emailInput = screen.getByPlaceholderText('Email');
-      const validEmails = ['user@example.com', 'test.user@example.co.uk', 'user+tag@example.com'];
+      await user.clear(emailInput);
+      await user.type(emailInput, 'user@example.com');
+      await user.tab();
 
-      for (const email of validEmails) {
-        await user.clear(emailInput);
-        await user.type(emailInput, email);
-        await user.tab();
+      expect(screen.queryByText('Please enter a valid email address')).not.toBeInTheDocument();
+    }, 10000);
 
-        expect(screen.queryByText('Please enter a valid email address')).not.toBeInTheDocument();
-      }
+    it('should accept valid email with subdomain', async () => {
+      const user = userEvent.setup({ delay: null });
+      renderWithRouter();
+
+      const emailInput = screen.getByPlaceholderText('Email');
+      await user.clear(emailInput);
+      await user.type(emailInput, 'test.user@example.co.uk');
+      await user.tab();
+
+      expect(screen.queryByText('Please enter a valid email address')).not.toBeInTheDocument();
+    }, 10000);
+
+    it('should accept valid email with plus addressing', async () => {
+      const user = userEvent.setup({ delay: null });
+      renderWithRouter();
+
+      const emailInput = screen.getByPlaceholderText('Email');
+      await user.clear(emailInput);
+      await user.type(emailInput, 'user+tag@example.com');
+      await user.tab();
+
+      expect(screen.queryByText('Please enter a valid email address')).not.toBeInTheDocument();
+    }, 10000);
+
+    it('should reject invalid email when missing domain', async () => {
+      const user = userEvent.setup({ delay: null });
+      renderWithRouter();
+
+      const emailInput = screen.getByPlaceholderText('Email');
+      await user.type(emailInput, 'user@');
+      await user.tab();
+
+      expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
     });
 
-    it('should reject invalid email formats', async () => {
-      const user = userEvent.setup();
+    it('should reject invalid email when missing local part', async () => {
+      const user = userEvent.setup({ delay: null });
       renderWithRouter();
 
       const emailInput = screen.getByPlaceholderText('Email');
-      const invalidEmails = ['user@', '@example.com', 'user', 'user @example.com'];
+      await user.type(emailInput, '@example.com');
+      await user.tab();
 
-      for (const email of invalidEmails) {
-        await user.clear(emailInput);
-        await user.type(emailInput, email);
-        await user.tab();
+      expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
+    });
 
-        expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
-      }
+    it('should reject invalid email when no at sign', async () => {
+      const user = userEvent.setup({ delay: null });
+      renderWithRouter();
+
+      const emailInput = screen.getByPlaceholderText('Email');
+      await user.type(emailInput, 'user');
+      await user.tab();
+
+      expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
+    });
+
+    it('should reject invalid email with space before at sign', async () => {
+      const user = userEvent.setup({ delay: null });
+      renderWithRouter();
+
+      const emailInput = screen.getByPlaceholderText('Email');
+      await user.type(emailInput, 'user @example.com');
+      await user.tab();
+
+      expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
     });
 
     it('should handle email with leading/trailing spaces', async () => {
@@ -687,6 +731,7 @@ describe('LoginPage', () => {
     });
 
     it('should handle OTP send failure gracefully', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const user = userEvent.setup();
       mockApiLogin.mockResolvedValue({
         data: {
@@ -711,6 +756,8 @@ describe('LoginPage', () => {
           'OTP sent to your email. Please check your inbox.'
         );
       });
+
+      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -1015,7 +1062,13 @@ describe('LoginPage', () => {
         expect(screen.getByText(/sending otp/i)).toBeInTheDocument();
       });
 
-      resendOtpResolve!();
+      await act(async () => {
+        resendOtpResolve!();
+      });
+
+      await waitFor(() => {
+        expect(submitButton).not.toBeDisabled();
+      });
     });
 
     it('should show "Sign in" text after OTP sending completes', async () => {

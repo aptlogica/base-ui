@@ -144,7 +144,7 @@ describe('Currency Component', () => {
     });
 
     it('should handle undefined value', () => {
-      render(<Currency value={undefined as any} onChange={mockOnChange} />);
+      render(<Currency value={undefined} onChange={mockOnChange} />);
       expect(getDisplay()).toBeInTheDocument();
     });
 

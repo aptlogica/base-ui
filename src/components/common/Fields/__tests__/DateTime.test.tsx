@@ -4,8 +4,11 @@ import { DateTime } from '../DateTime';
 
 const mockOnChange = vi.fn();
 
+// Match date button: formatted date (YYYY-MM-DD) or placeholder (YYYY-MM-DD)
 const getDateButton = () =>
-  screen.getByRole('button', { name: /YYYY|202\d-/i });
+  screen.getByRole('button', {
+    name: /\d{4}-\d{2}-\d{2}|YYYY-MM-DD/,
+  });
 
 const getTimeButton = () =>
   screen.getByRole('button', { name: /HH:mm|\d{1,2}:\d{2}/i });
@@ -322,7 +325,7 @@ describe('DateTime Component', () => {
           );
           if (yearOptions.length > 0) {
             const firstYear = yearOptions[0] as HTMLButtonElement;
-            if (firstYear && firstYear.textContent?.match(/\d{4}/)) {
+            if (firstYear?.textContent && /\d{4}/.exec(firstYear.textContent)) {
               fireEvent.click(firstYear);
             }
           }
@@ -364,7 +367,7 @@ describe('DateTime Component', () => {
             );
             if (monthOptions.length > 0) {
               const firstMonth = monthOptions[0] as HTMLButtonElement;
-              if (firstMonth && firstMonth.textContent?.match(/Jan|Feb|Mar/i)) {
+              if (firstMonth?.textContent && /Jan|Feb|Mar/i.exec(firstMonth.textContent)) {
                 fireEvent.click(firstMonth);
               }
             }
@@ -668,13 +671,13 @@ describe('DateTime Component', () => {
 
   describe('Edge Cases', () => {
     it('should handle null value safely', () => {
-      render(<DateTime value={null as any} onChange={mockOnChange} />);
+      render(<DateTime value={(null as unknown) as string} onChange={mockOnChange} />);
       expect(getDateButton()).toBeInTheDocument();
       expect(getTimeButton()).toBeInTheDocument();
     });
 
     it('should handle undefined value safely', () => {
-      render(<DateTime value={undefined as any} onChange={mockOnChange} />);
+      render(<DateTime value="" onChange={mockOnChange} />);
       expect(getDateButton()).toBeInTheDocument();
       expect(getTimeButton()).toBeInTheDocument();
     });
@@ -1269,7 +1272,7 @@ describe('DateTime Component', () => {
           if (yearOptions.length > 0) {
             // Find a different year
             const differentYear = Array.from(yearOptions).find(
-              (btn) => btn.textContent !== '2024' && btn.textContent?.match(/\d{4}/)
+              (btn) => btn.textContent !== '2024' && btn.textContent && /\d{4}/.exec(btn.textContent)
             ) as HTMLButtonElement;
             if (differentYear) {
               fireEvent.click(differentYear);
@@ -1741,7 +1744,7 @@ describe('DateTime Component', () => {
       fireEvent.click(getDateButton());
 
       await waitFor(() => {
-        const dropdown = document.querySelector('.fixed.z-\\[9999\\]');
+        const dropdown = document.querySelector(String.raw`.fixed.z-\[9999\]`);
         expect(dropdown).toBeInTheDocument();
       });
     });
@@ -1754,7 +1757,7 @@ describe('DateTime Component', () => {
       fireEvent.click(getTimeButton());
 
       await waitFor(() => {
-        const dropdown = document.querySelector('.fixed.z-\\[9999\\]');
+        const dropdown = document.querySelector(String.raw`.fixed.z-\[9999\]`);
         expect(dropdown).toBeInTheDocument();
       });
     });

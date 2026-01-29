@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
@@ -73,7 +73,8 @@ const renderWithProviders = (ui: React.ReactElement) => {
 
 describe('LinksField Component', () => {
   let mockOnChange: ReturnType<typeof vi.fn>;
-  
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
   const mockField = {
     id: 'field-1',
     title: 'Related Records',
@@ -86,6 +87,15 @@ describe('LinksField Component', () => {
   };
 
   beforeEach(() => {
+    const originalError = console.error;
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+      const first = args[0];
+      const str = typeof first === 'string' ? first : (first as Error)?.message ?? '';
+      const name = (first as Error)?.name ?? '';
+      const stack = (first as Error)?.stack ?? '';
+      if (name === 'AggregateError' || str.includes('AggregateError') || stack.includes('xhr-utils') || stack.includes('dispatchError')) return;
+      originalError.apply(console, args as [string?, ...unknown[]]);
+    });
     mockOnChange = vi.fn();
     vi.clearAllMocks();
     // Reset mocks to default - use mockImplementation for consistency
@@ -111,6 +121,10 @@ describe('LinksField Component', () => {
       invalidateQueries: mockInvalidateQueries,
       refetchQueries: mockRefetchQueries
     }));
+  });
+
+  afterEach(() => {
+    consoleErrorSpy?.mockRestore();
   });
 
   describe('Rendering', () => {
@@ -585,7 +599,7 @@ describe('LinksField Component', () => {
     it('should handle undefined value', async () => {
       renderWithProviders(
         <LinksField
-          value={undefined as any}
+          value={undefined}
           onChange={mockOnChange}
           field={mockField}
         />

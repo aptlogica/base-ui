@@ -20,6 +20,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import React from 'react';
 import { renderHook, waitFor, act } from '@testing-library/react';
 
 // Import the hook under test
@@ -37,6 +38,11 @@ vi.mock('../useWorkspaceDataService', () => ({
 // Mock useWorkspaceStateManager
 vi.mock('../useWorkspaceStateManager', () => ({
   useWorkspaceStateManager: vi.fn(),
+}));
+
+// Mock useWorkspaceSelection
+vi.mock('../useWorkspaceSelection', () => ({
+  useWorkspaceSelection: vi.fn(),
 }));
 
 // Mock AuthContext
@@ -139,24 +145,6 @@ vi.mock('../../../hooks/useNavigationActions', () => ({
   }),
 }));
 
-// Mock AuthContext
-vi.mock('../../../auth/AuthContext', () => ({
-  useAuth: () => ({
-    user: { id: 'user-1', email: 'test@example.com', name: 'Test User' },
-    restoreCompleted: true,
-    loading: false,
-    saving: false,
-    userRole: null,
-    login: vi.fn(),
-    logout: vi.fn(),
-  }),
-}));
-
-// Mock useCurrentUser
-vi.mock('../../../auth/useCurrentUser', () => ({
-  useCurrentUser: () => ({ id: 'user-1', email: 'test@example.com', name: 'Test User' }),
-}));
-
 // Import mocked modules
 import * as useWorkspaceDataServiceModule from '../useWorkspaceDataService';
 import * as useWorkspaceStateManagerModule from '../useWorkspaceStateManager';
@@ -165,7 +153,7 @@ import * as useWorkspaceStateManagerModule from '../useWorkspaceStateManager';
 // Test Data & Helpers
 // ============================================================================
 
-const createMockWorkspace = (overrides?: any) => ({
+const createMockWorkspace = (overrides?: Record<string, unknown>) => ({
   id: 'workspace-1',
   title: 'Test Workspace',
   description: 'A test workspace',
@@ -175,7 +163,7 @@ const createMockWorkspace = (overrides?: any) => ({
   ...overrides,
 });
 
-const createMockBase = (overrides?: any) => ({
+const createMockBase = (overrides?: Record<string, unknown>) => ({
   id: 'base-1',
   title: 'Test Base',
   description: 'A test base',
@@ -185,7 +173,7 @@ const createMockBase = (overrides?: any) => ({
   ...overrides,
 });
 
-const createMockTable = (overrides?: any) => ({
+const createMockTable = (overrides?: Record<string, unknown>) => ({
   id: 'table-1',
   title: 'Test Table',
   name: 'test_table',
@@ -198,7 +186,7 @@ const createMockTable = (overrides?: any) => ({
   ...overrides,
 });
 
-const createMockView = (overrides?: any) => ({
+const createMockView = (overrides?: Record<string, unknown>) => ({
   id: 'view-1',
   title: 'Test View',
   name: 'test_view',
@@ -208,14 +196,14 @@ const createMockView = (overrides?: any) => ({
   ...overrides,
 });
 
-const createMockUser = (overrides?: any) => ({
+const createMockUser = (overrides?: Record<string, unknown>) => ({
   id: 'user-1',
   email: 'test@example.com',
   name: 'Test User',
   ...overrides,
 });
 
-const createMockMutation = (overrides?: any) => ({
+const createMockMutation = (overrides?: Record<string, unknown>) => ({
   mutate: vi.fn(),
   mutateAsync: vi.fn(),
   isPending: false,
@@ -227,7 +215,7 @@ const createMockMutation = (overrides?: any) => ({
   ...overrides,
 });
 
-const createMockQuery = (overrides?: any) => ({
+const createMockQuery = (overrides?: Record<string, unknown>) => ({
   data: null,
   isLoading: false,
   isError: false,
@@ -240,10 +228,13 @@ const createMockQuery = (overrides?: any) => ({
 // Shared Setup
 // ============================================================================
 
-let mockDataService: any;
-let mockStateManager: any;
+let mockDataService: Record<string, unknown>;
+let mockStateManager: Record<string, unknown>;
 
-const setupMocks = (dataServiceOverrides?: any, stateManagerOverrides?: any) => {
+const setupMocks = (
+  dataServiceOverrides?: Record<string, unknown>,
+  stateManagerOverrides?: Record<string, unknown>
+) => {
   // Default data service mock
   mockDataService = {
     workspacesQuery: createMockQuery(),
@@ -332,6 +323,12 @@ const setupMocks = (dataServiceOverrides?: any, stateManagerOverrides?: any) => 
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockHandleTableDeletion.mockImplementation(vi.fn());
+  mockHandleViewDeletion.mockImplementation(vi.fn());
+  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+    (cb as (time: number) => void)(0);
+    return 0;
+  });
   setupMocks();
 });
 
@@ -441,6 +438,7 @@ describe('Workspace Operations', () => {
   });
 
   it('should handle workspace creation mutation error', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const onSuccess = vi.fn();
     const onError = vi.fn();
 
@@ -464,6 +462,7 @@ describe('Workspace Operations', () => {
 
     expect(onError).toHaveBeenCalledWith('Failed to create workspace. Please try again.');
     expect(onSuccess).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
   });
 
   it('should update workspace selection and navigate after creation', async () => {
@@ -474,7 +473,7 @@ describe('Workspace Operations', () => {
         {
           id: 'new-base',
           tables: [
-            { id: 'new-table', views: [{ id: 'new-view' }] },
+            { model: { id: 'new-table', workspace_id: 'new-ws', base_id: 'new-base' } },
           ],
         },
       ],
@@ -503,15 +502,46 @@ describe('Workspace Operations', () => {
       await result.current.handleCreateWorkspace('New Workspace', 'Description');
     });
 
-    // Wait for async navigation
-    await waitFor(() => {
-      expect(mockSetWorkspace).toHaveBeenCalledWith('new-ws');
+    expect(mockSetWorkspace).toHaveBeenCalledWith('new-ws');
+    expect(mockNavigate).toHaveBeenCalled();
+  });
+
+  it('should pass trimmed description and empty string when description is undefined', async () => {
+    const newWorkspace = createMockWorkspace({ id: 'ws-1', title: 'New' });
+    const mockCreateMutation = createMockMutation();
+    mockCreateMutation.mutateAsync.mockResolvedValue({ data: newWorkspace });
+
+    setupMocks({ createWorkspaceMutation: mockCreateMutation });
+
+    const { result } = renderHook(() => useWorkspaceBusinessLogic());
+
+    await act(async () => {
+      await result.current.handleCreateWorkspace('New', undefined as unknown as string);
     });
 
-    // Navigation happens in requestAnimationFrame, verify navigate was called
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalled();
+    expect(mockCreateMutation.mutateAsync).toHaveBeenCalledWith({
+      workspace: { title: 'New', description: '' },
     });
+  });
+
+  it('should navigate to workspace homepage when created workspace has no bases', async () => {
+    const newWorkspace = createMockWorkspace({ id: 'ws-1', bases: [] });
+    const mockCreateMutation = createMockMutation();
+    mockCreateMutation.mutateAsync.mockResolvedValue({ data: newWorkspace });
+    const mockNavigate = vi.fn();
+
+    setupMocks(
+      { createWorkspaceMutation: mockCreateMutation },
+      { navigate: mockNavigate }
+    );
+
+    const { result } = renderHook(() => useWorkspaceBusinessLogic());
+
+    await act(async () => {
+      await result.current.handleCreateWorkspace('New', '');
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('/workspace/ws-1', { replace: true });
   });
 });
 
@@ -566,6 +596,7 @@ describe('Base Operations', () => {
   });
 
   it('should handle base creation mutation error', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const mockCreateMutation = createMockMutation();
     mockCreateMutation.mutateAsync.mockRejectedValue(new Error('API error'));
 
@@ -586,6 +617,7 @@ describe('Base Operations', () => {
     });
 
     expect(mockToast.error).toHaveBeenCalledWith('Failed to create base. Please try again.');
+    consoleErrorSpy.mockRestore();
   });
 
   it('should create base with image file', async () => {
@@ -840,6 +872,45 @@ describe('Table Operations', () => {
     expect(mockToast.error).toHaveBeenCalledWith('Failed to delete table. Please try again.');
   });
 
+  it('should call toggleTableExpansion with table id when table is deleted', async () => {
+    const table = createMockTable({ id: 'table-1' });
+    const mockDeleteMutation = createMockMutation();
+    mockDeleteMutation.mutateAsync.mockResolvedValue({ success: true });
+    const mockToggleTableExpansion = vi.fn();
+
+    setupMocks(
+      { deleteTableMutation: mockDeleteMutation },
+      { toggleTableExpansion: mockToggleTableExpansion, selectedTableId: 'table-2' }
+    );
+
+    const { result } = renderHook(() => useWorkspaceBusinessLogic());
+
+    await act(async () => {
+      await result.current.handleDeleteTable(table);
+    });
+
+    expect(mockToggleTableExpansion).toHaveBeenCalledWith('table-1');
+  });
+
+  it('should show table name in success toast when table title is missing', async () => {
+    const table = createMockTable({ title: undefined, name: 'my_table' });
+    const mockDeleteMutation = createMockMutation();
+    mockDeleteMutation.mutateAsync.mockResolvedValue({ success: true });
+
+    setupMocks(
+      { deleteTableMutation: mockDeleteMutation },
+      { selectedTableId: 'other-table' }
+    );
+
+    const { result } = renderHook(() => useWorkspaceBusinessLogic());
+
+    await act(async () => {
+      await result.current.handleDeleteTable(table);
+    });
+
+    expect(mockToast.success).toHaveBeenCalledWith('Table "my_table" deleted successfully');
+  });
+
   it('should expose base tables', () => {
     const tables = [{ model: createMockTable() }];
     setupMocks({
@@ -949,24 +1020,38 @@ describe('View Operations', () => {
     expect(mockNavigateToBase).toHaveBeenCalledWith('workspace-1', 'base-1');
   });
 
-  it.skip('should handle view deletion error', async () => {
+  it('should handle view deletion error when navigation action throws', async () => {
     const view = createMockView();
-    const mockDeleteMutation = createMockMutation();
-    mockDeleteMutation.mutateAsync.mockRejectedValue(new Error('Delete failed'));
-
-    mockHandleViewDeletion.mockRejectedValue(new Error('Delete failed'));
-
-    setupMocks({
-      deleteViewMutation: mockDeleteMutation,
+    mockHandleViewDeletion.mockImplementation(() => {
+      throw new Error('Delete failed');
     });
+
+    setupMocks();
 
     const { result } = renderHook(() => useWorkspaceBusinessLogic());
 
     await act(async () => {
-      await expect(result.current.handleDeleteView(view)).rejects.toThrow();
+      await expect(result.current.handleDeleteView(view)).rejects.toThrow('Delete failed');
     });
 
     expect(mockToast.error).toHaveBeenCalledWith('Failed to delete view. Please try again.');
+  });
+
+  it('should show view name in success toast when view title is missing', async () => {
+    const view = createMockView({ title: undefined, name: 'my_view' });
+
+    setupMocks(
+      {},
+      { selectedViewId: 'other-view', selectedTableId: 't1', selectedBaseId: 'b1', selectedWorkspaceId: 'w1' }
+    );
+
+    const { result } = renderHook(() => useWorkspaceBusinessLogic());
+
+    await act(async () => {
+      await result.current.handleDeleteView(view);
+    });
+
+    expect(mockToast.success).toHaveBeenCalledWith('View "my_view" deleted successfully');
   });
 
   it('should expose table views', () => {
@@ -1072,6 +1157,19 @@ describe('State Management', () => {
     expect(result.current.toggleTableExpansion).toBe(toggleTableExpansion);
   });
 
+  it('should expose initial workspace form and dropdown state', () => {
+    const { result } = renderHook(() => useWorkspaceBusinessLogic());
+
+    expect(result.current.workspaceDropdownOpen).toBe(false);
+    expect(result.current.newWorkspaceName).toBe('');
+    expect(result.current.newWorkspaceDescription).toBe('');
+    expect(result.current.workspaceError).toBe('');
+    expect(result.current.isError).toBe(false);
+    expect(result.current.config).toEqual({});
+    expect(typeof result.current.setWorkspaceDropdownOpen).toBe('function');
+    expect(typeof result.current.setSelectedWorkspace).toBe('function');
+  });
+
   it('should expose set functions for selection', () => {
     const setWorkspace = vi.fn();
     const setBase = vi.fn();
@@ -1148,8 +1246,7 @@ describe('Helper Functions', () => {
   });
 
   it('should determine if any base is active when on base path', () => {
-    // Mock window.location for base path
-    Object.defineProperty(window, 'location', {
+    Object.defineProperty(globalThis, 'location', {
       value: { pathname: '/base/base-1/table/table-1' },
       writable: true,
       configurable: true,
@@ -1160,9 +1257,20 @@ describe('Helper Functions', () => {
     expect(result.current.isAnyBaseActive()).toBe(true);
   });
 
+  it('should determine if any base is active when path starts with workspace', () => {
+    Object.defineProperty(globalThis, 'location', {
+      value: { pathname: '/workspace/ws-1/base/base-1' },
+      writable: true,
+      configurable: true,
+    });
+
+    const { result } = renderHook(() => useWorkspaceBusinessLogic());
+
+    expect(result.current.isAnyBaseActive()).toBe(true);
+  });
+
   it('should determine if any base is not active when on other path', () => {
-    // Mock window.location for non-base path
-    Object.defineProperty(window, 'location', {
+    Object.defineProperty(globalThis, 'location', {
       value: { pathname: '/homepage' },
       writable: true,
       configurable: true,
@@ -1171,6 +1279,128 @@ describe('Helper Functions', () => {
     const { result } = renderHook(() => useWorkspaceBusinessLogic());
 
     expect(result.current.isAnyBaseActive()).toBe(false);
+  });
+
+  it('should return null from findFirstBase', () => {
+    const { result } = renderHook(() => useWorkspaceBusinessLogic());
+
+    expect(result.current.findFirstBase()).toBeNull();
+  });
+});
+
+// ============================================================================
+// CONFIG & EFFECTS TESTS
+// ============================================================================
+
+describe('Config and Effects', () => {
+  it('should initialize config from globalThis.__workspaceConfig', () => {
+    const initialConfig = { theme: 'dark' };
+    vi.stubGlobal('__workspaceConfig', initialConfig);
+
+    const { result } = renderHook(() => useWorkspaceBusinessLogic());
+
+    expect(result.current.config).toEqual(initialConfig);
+  });
+
+  it('should update config when workspace-config-changed event fires', () => {
+    const initialConfig = { theme: 'light' };
+    vi.stubGlobal('__workspaceConfig', initialConfig);
+
+    const { result } = renderHook(() => useWorkspaceBusinessLogic());
+
+    expect(result.current.config).toEqual(initialConfig);
+
+    const newConfig = { theme: 'dark' };
+    (globalThis as any).__workspaceConfig = newConfig;
+
+    act(() => {
+      globalThis.dispatchEvent(new Event('workspace-config-changed'));
+    });
+
+    expect(result.current.config).toEqual(newConfig);
+  });
+
+  it('should not auto-select first base when nav_initialized is already true', () => {
+    vi.mocked(sessionStorage.getItem).mockReturnValue('true');
+    const mockNavigateToBase = vi.fn();
+    const firstBase = { id: 'base-1' };
+
+    setupMocks(
+      {
+        workspaceBasesQuery: createMockQuery({ data: { data: [firstBase] } }),
+      },
+      {
+        restoreCompleted: true,
+        selectedWorkspaceId: 'workspace-1',
+        selectedBaseId: null,
+        navigateToBase: mockNavigateToBase,
+      }
+    );
+
+    renderHook(() => useWorkspaceBusinessLogic());
+
+    expect(mockNavigateToBase).not.toHaveBeenCalled();
+  });
+
+  it('should not call navigateToBase for auto-select when restoreCompleted is false', () => {
+    const mockNavigateToBase = vi.fn();
+    const firstBase = { id: 'base-1' };
+
+    setupMocks(
+      {
+        workspaceBasesQuery: createMockQuery({ data: { data: [firstBase] } }),
+      },
+      {
+        restoreCompleted: false,
+        selectedWorkspaceId: 'workspace-1',
+        selectedBaseId: null,
+        navigateToBase: mockNavigateToBase,
+      }
+    );
+
+    renderHook(() => useWorkspaceBusinessLogic());
+
+    expect(mockNavigateToBase).not.toHaveBeenCalled();
+  });
+
+  it('should fallback select first workspace when none selected after restore', () => {
+    const firstWorkspace = createMockWorkspace({ id: 'ws-1' });
+    const mockSetWorkspace = vi.fn();
+    const mockNavigateAndPersist = vi.fn();
+
+    setupMocks(
+      { workspacesQuery: createMockQuery({ data: [firstWorkspace] }) },
+      {
+        restoreCompleted: true,
+        selectedWorkspaceId: null,
+        setWorkspace: mockSetWorkspace,
+        navigateAndPersist: mockNavigateAndPersist,
+        authUser: createMockUser({ id: 'user-1' }),
+      }
+    );
+
+    renderHook(() => useWorkspaceBusinessLogic());
+
+    expect(mockSetWorkspace).toHaveBeenCalledWith('ws-1');
+    expect(mockNavigateAndPersist).toHaveBeenCalledWith('ws-1', null, null, 'user-1');
+  });
+
+  it('should not run fallback workspace selection when restoreCompleted is false', () => {
+    const firstWorkspace = createMockWorkspace({ id: 'ws-1' });
+    const mockSetWorkspace = vi.fn();
+
+    setupMocks(
+      { workspacesQuery: createMockQuery({ data: [firstWorkspace] }) },
+      {
+        restoreCompleted: false,
+        selectedWorkspaceId: null,
+        setWorkspace: mockSetWorkspace,
+      }
+    );
+
+    renderHook(() => useWorkspaceBusinessLogic());
+
+    expect(mockSetWorkspace).not.toHaveBeenCalled();
   });
 });
 
@@ -1252,6 +1482,14 @@ describe('Loading & Error States', () => {
     const { result } = renderHook(() => useWorkspaceBusinessLogic());
 
     expect(result.current.loading).toBe(true);
+  });
+
+  it('should expose basesLoading from data service', () => {
+    setupMocks({ basesLoading: true });
+
+    const { result } = renderHook(() => useWorkspaceBusinessLogic());
+
+    expect(result.current.basesLoading).toBe(true);
   });
 });
 
@@ -1420,30 +1658,82 @@ describe('Edge Cases & Error Recovery Tests', () => {
     });
   });
 
-  it('should handle form submission with valid workspace data', async () => {
-    const mockCreateWorkspace = vi.fn();
+  it('should call handleCreateWorkspace and close modal on successful form submit', async () => {
     const mockSetShowCreateWorkspace = vi.fn();
-    const mockSetNewWorkspaceName = vi.fn();
-    const mockSetNewWorkspaceDescription = vi.fn();
-    const mockSetWorkspaceError = vi.fn();
+    const newWorkspace = createMockWorkspace({ id: 'ws-new', title: 'New WS' });
+    const mockCreateMutation = createMockMutation();
+    mockCreateMutation.mutateAsync.mockResolvedValue({ data: newWorkspace });
 
-    setupMocks({}, {
-      setShowCreateWorkspace: mockSetShowCreateWorkspace,
-      newWorkspaceName: 'Test WS',
-      setNewWorkspaceName: mockSetNewWorkspaceName,
-      newWorkspaceDescription: 'Test Desc',
-      setNewWorkspaceDescription: mockSetNewWorkspaceDescription,
-      workspaceError: '',
-      setWorkspaceError: mockSetWorkspaceError,
-    });
+    setupMocks(
+      { createWorkspaceMutation: mockCreateMutation },
+      { setShowCreateWorkspace: mockSetShowCreateWorkspace }
+    );
 
     const { result } = renderHook(() => useWorkspaceBusinessLogic());
 
-    // Mock the handleCreateWorkspace to avoid full execution
-    result.current.handleCreateWorkspace = mockCreateWorkspace;
+    await act(() => {
+      result.current.setNewWorkspaceName('New WS');
+      result.current.setNewWorkspaceDescription('Description');
+    });
 
-    // Simulate form submission would call handlers
-    expect(typeof result.current.handleFormSubmit).toBe('function');
+    await act(async () => {
+      await result.current.handleFormSubmit({
+        preventDefault: vi.fn(),
+      } as React.FormEvent);
+    });
+
+    expect(mockCreateMutation.mutateAsync).toHaveBeenCalledWith({
+      workspace: { title: 'New WS', description: 'Description' },
+    });
+    expect(mockSetShowCreateWorkspace).toHaveBeenCalledWith(false);
+  });
+
+  it('should set workspace error and not call mutation when form submit has empty name', () => {
+    const mockCreateMutation = createMockMutation();
+
+    setupMocks({ createWorkspaceMutation: mockCreateMutation });
+
+    const { result } = renderHook(() => useWorkspaceBusinessLogic());
+
+    act(() => {
+      result.current.setNewWorkspaceName('');
+      result.current.setNewWorkspaceDescription('Desc');
+    });
+
+    const preventDefault = vi.fn();
+    act(() => {
+      result.current.handleFormSubmit({
+        preventDefault,
+      } as React.FormEvent);
+    });
+
+    expect(preventDefault).toHaveBeenCalled();
+    expect(mockCreateMutation.mutateAsync).not.toHaveBeenCalled();
+    expect(result.current.workspaceError).toBe('Workspace name is required');
+    expect(result.current.isError).toBe(true);
+  });
+
+  it('should not call mutation when form submit has whitespace-only name', () => {
+    const mockCreateMutation = createMockMutation();
+
+    setupMocks({ createWorkspaceMutation: mockCreateMutation });
+
+    const { result } = renderHook(() => useWorkspaceBusinessLogic());
+
+    act(() => {
+      result.current.setNewWorkspaceName('   ');
+      result.current.setNewWorkspaceDescription('Desc');
+    });
+
+    act(() => {
+      result.current.handleFormSubmit({
+        preventDefault: vi.fn(),
+      } as React.FormEvent);
+    });
+
+    expect(mockCreateMutation.mutateAsync).not.toHaveBeenCalled();
+    expect(result.current.workspaceError).toBe('Workspace name is required');
+    expect(result.current.isError).toBe(true);
   });
 
   it('should handle multiple rapid edits to same table', async () => {

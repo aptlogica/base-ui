@@ -3,9 +3,15 @@ import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { CreateBaseModal } from '../CreateBaseModal';
 
-// Mock the MultiLineText component
+interface MultiLineTextMockProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}
+
 vi.mock('../../common/Fields/MultiLineText', () => ({
-  MultiLineText: ({ label, value, onChange, placeholder }: any) => (
+  MultiLineText: ({ label, value, onChange, placeholder }: MultiLineTextMockProps) => (
     <div>
       <label>{label}</label>
       <textarea
@@ -18,14 +24,13 @@ vi.mock('../../common/Fields/MultiLineText', () => ({
   ),
 }));
 
-// Mock nameValidation
 vi.mock('../../../utils/nameValidation', () => ({
-  validateBaseName: vi.fn((name, existingBases, _currentItemId) => {
+  validateBaseName: vi.fn((name: string, existingBases: { name?: string }[], _currentItemId?: string) => {
     if (!name || name.trim().length < 3) {
       return { isValid: false, error: 'Base name must be at least 3 characters' };
     }
     const isDuplicate = existingBases?.some(
-      (base: any) => base.name?.toLowerCase() === name.toLowerCase()
+      (base: { name?: string }) => base.name?.toLowerCase() === name.toLowerCase()
     );
     if (isDuplicate) {
       return { isValid: false, error: 'A base with this name already exists' };
@@ -40,7 +45,7 @@ describe('CreateBaseModal', () => {
     onClose: vi.fn(),
     onCreate: vi.fn(),
     workspaceId: 'ws-123',
-    existingBases: [],
+    existingBases: [] as { id?: string; name?: string }[],
   };
 
   beforeEach(() => {
@@ -93,10 +98,23 @@ describe('CreateBaseModal', () => {
       render(<CreateBaseModal {...defaultProps} onCreate={onCreate} />);
 
       const submitButton = screen.getByRole('button', { name: 'Create Base' });
-      
-      // Button should be disabled when name is empty
+
       expect(submitButton).toBeDisabled();
       expect(onCreate).not.toHaveBeenCalled();
+    });
+
+    it('shows Base name is required when form is submitted with empty name', async () => {
+      render(<CreateBaseModal {...defaultProps} />);
+
+      const form = document.getElementById('create-base-form');
+      expect(form).toBeTruthy();
+      if (form) {
+        fireEvent.submit(form);
+      }
+
+      await waitFor(() => {
+        expect(screen.getByText('Base name is required')).toBeInTheDocument();
+      });
     });
 
     it('shows validation error for short name', async () => {
@@ -170,16 +188,16 @@ describe('CreateBaseModal', () => {
 
       const nameInput = screen.getByLabelText(/Base Name/i);
       await user.type(nameInput, 'New Base');
-      
+
       const submitButton = screen.getByRole('button', { name: 'Create Base' });
       expect(submitButton).not.toBeDisabled();
-      
+
       const clickPromise = user.click(submitButton);
 
       await waitFor(() => {
         expect(onCreate).toHaveBeenCalled();
       }, { timeout: 100 });
-      
+
       await clickPromise;
       expect(onClose).toHaveBeenCalled();
     });
@@ -205,6 +223,32 @@ describe('CreateBaseModal', () => {
         });
       });
     });
+
+  });
+
+  describe('Update mode', () => {
+    it('shows Update button and Updating... when submitting', async () => {
+      const user = userEvent.setup();
+      const onCreate = vi.fn();
+
+      render(<CreateBaseModal {...defaultProps} isUpdate={true} onCreate={onCreate} />);
+
+      expect(screen.getByRole('button', { name: 'Update' })).toBeInTheDocument();
+
+      const nameInput = screen.getByLabelText(/Base Name/i);
+      await user.type(nameInput, 'Updated Base');
+
+      const submitButton = screen.getByRole('button', { name: 'Update' });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(onCreate).toHaveBeenCalledWith({
+          name: 'Updated Base',
+          description: '',
+          image: null,
+        });
+      });
+    });
   });
 
   describe('interactions', () => {
@@ -219,20 +263,19 @@ describe('CreateBaseModal', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it.skip('calls onClose when clicking backdrop', async () => {
+    it('calls onClose when clicking backdrop', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
 
-      const { container } = render(<CreateBaseModal {...defaultProps} onClose={onClose} />);
+      render(<CreateBaseModal {...defaultProps} onClose={onClose} />);
 
       const backdrop = screen.getByLabelText('Close modal');
-      await user.click(backdrop!);
+      await user.click(backdrop);
 
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onClose when pressing Escape key', async () => {
-      const user = userEvent.setup();
+    it('calls onClose when pressing Escape key', () => {
       const onClose = vi.fn();
 
       const { container } = render(
@@ -288,6 +331,290 @@ describe('CreateBaseModal', () => {
       await waitFor(() => {
         expect(screen.getByLabelText(/Base Name/i)).toHaveValue('Reset Test');
       });
+    });
+  });
+
+  describe('image upload', () => {
+    it('shows error for invalid file type', async () => {
+      render(<CreateBaseModal {...defaultProps} />);
+
+      const file = new File(['test'], 'invalid.bmp', { type: 'image/bmp' });
+      const fileInput = document.getElementById('image-upload') as HTMLInputElement;
+      Object.defineProperty(fileInput, 'files', { value: [file], configurable: true });
+      fireEvent.change(fileInput);
+
+      await waitFor(() => {
+        expect(screen.getByText('Please upload a valid image file (SVG, PNG, JPG, or GIF)')).toBeInTheDocument();
+      });
+    });
+
+    it('shows preview and includes image in onCreate when valid file is selected', async () => {
+      const user = userEvent.setup();
+      const onCreate = vi.fn();
+      const mockObjectUrl = 'blob:http://localhost/test-image';
+      global.URL.createObjectURL = vi.fn(() => mockObjectUrl);
+
+      const mockImage = {
+        onload: null as (() => void) | null,
+        src: '',
+        width: 400,
+        height: 200,
+      };
+      global.Image = vi.fn(() => mockImage) as unknown as typeof Image;
+
+      render(<CreateBaseModal {...defaultProps} onCreate={onCreate} />);
+
+      const nameInput = screen.getByLabelText(/Base Name/i);
+      await user.type(nameInput, 'New Base');
+
+      const file = new File(['test'], 'test-image.png', { type: 'image/png' });
+      const fileInput = document.getElementById('image-upload') as HTMLInputElement;
+      await user.upload(fileInput, file);
+
+      await waitFor(() => {
+        expect(mockImage.onload).toBeDefined();
+      });
+      await act(async () => {
+        if (mockImage.onload) {
+          mockImage.onload();
+        }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByAltText('Preview')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Create Base' }));
+
+      await waitFor(() => {
+        expect(onCreate).toHaveBeenCalledWith({
+          name: 'New Base',
+          description: '',
+          image: expect.any(File),
+        });
+      });
+    });
+
+    it('shows error for image exceeding max dimensions', async () => {
+      const user = userEvent.setup();
+      global.URL.createObjectURL = vi.fn(() => 'blob:http://localhost/large-image');
+
+      const mockImage = {
+        onload: null as (() => void) | null,
+        src: '',
+        width: 1000,
+        height: 500,
+      };
+      global.Image = vi.fn(() => mockImage) as unknown as typeof Image;
+
+      render(<CreateBaseModal {...defaultProps} />);
+
+      const file = new File(['test'], 'large-image.png', { type: 'image/png' });
+      const fileInput = document.getElementById('image-upload') as HTMLInputElement;
+      await user.upload(fileInput, file);
+
+      await waitFor(() => {
+        expect(mockImage.onload).toBeDefined();
+      });
+      await act(async () => {
+        if (mockImage.onload) {
+          mockImage.onload();
+        }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Image dimensions must be max 800 x 400px')).toBeInTheDocument();
+      });
+    });
+
+    it('shows error when image fails to load', async () => {
+      const user = userEvent.setup();
+      global.URL.createObjectURL = vi.fn(() => 'blob:http://localhost/failed-image');
+
+      const mockImage = {
+        onload: null as (() => void) | null,
+        onerror: null as (() => void) | null,
+        src: '',
+        width: 400,
+        height: 200,
+      };
+      global.Image = vi.fn(() => mockImage) as unknown as typeof Image;
+
+      render(<CreateBaseModal {...defaultProps} />);
+
+      const file = new File(['test'], 'failed-image.png', { type: 'image/png' });
+      const fileInput = document.getElementById('image-upload') as HTMLInputElement;
+      await user.upload(fileInput, file);
+
+      await waitFor(() => {
+        expect(mockImage.onerror).toBeDefined();
+      });
+      await act(async () => {
+        if (mockImage.onerror) {
+          mockImage.onerror();
+        }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to load image. Please try again.')).toBeInTheDocument();
+      });
+    });
+
+    it('handles dragOver without error', () => {
+      render(<CreateBaseModal {...defaultProps} />);
+
+      const dropZone = screen.getByText(/Click to upload/i).closest('button');
+      expect(dropZone).toBeTruthy();
+      if (dropZone) {
+        fireEvent.dragOver(dropZone, { preventDefault: vi.fn(), stopPropagation: vi.fn() });
+      }
+    });
+
+    it('handles drop with valid image', async () => {
+      const mockObjectUrl = 'blob:http://localhost/dropped-image';
+      global.URL.createObjectURL = vi.fn(() => mockObjectUrl);
+
+      const mockImage = {
+        onload: null as (() => void) | null,
+        src: '',
+        width: 400,
+        height: 200,
+      };
+      global.Image = vi.fn(() => mockImage) as unknown as typeof Image;
+
+      render(<CreateBaseModal {...defaultProps} />);
+
+      const file = new File(['test'], 'dropped-image.png', { type: 'image/png' });
+      const dropZone = screen.getByText(/Click to upload/i).closest('button');
+      expect(dropZone).toBeTruthy();
+      if (dropZone) {
+        fireEvent.dragOver(dropZone, { preventDefault: vi.fn(), stopPropagation: vi.fn() });
+        fireEvent.drop(dropZone, {
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+          dataTransfer: { files: [file] },
+        });
+      }
+
+      await act(async () => {
+        if (mockImage.onload) {
+          mockImage.onload();
+        }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByAltText('Preview')).toBeInTheDocument();
+      });
+    });
+
+    it('shows error for invalid file type in drop', async () => {
+      render(<CreateBaseModal {...defaultProps} />);
+
+      const file = new File(['test'], 'invalid.bmp', { type: 'image/bmp' });
+      const dropZone = screen.getByText(/Click to upload/i).closest('button');
+      expect(dropZone).toBeTruthy();
+      if (dropZone) {
+        fireEvent.drop(dropZone, {
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+          dataTransfer: { files: [file] },
+        });
+      }
+
+      await waitFor(() => {
+        expect(screen.getByText('Please upload a valid image file (SVG, PNG, JPG, or GIF)')).toBeInTheDocument();
+      });
+    });
+
+    it('clears image when remove button is clicked', async () => {
+      const user = userEvent.setup();
+      const onCreate = vi.fn();
+      const mockObjectUrl = 'blob:http://localhost/test-image';
+      global.URL.createObjectURL = vi.fn(() => mockObjectUrl);
+
+      const mockImage = {
+        onload: null as (() => void) | null,
+        src: '',
+        width: 400,
+        height: 200,
+      };
+      global.Image = vi.fn(() => mockImage) as unknown as typeof Image;
+
+      render(<CreateBaseModal {...defaultProps} onCreate={onCreate} />);
+
+      const nameInput = screen.getByLabelText(/Base Name/i);
+      await user.type(nameInput, 'New Base');
+
+      const file = new File(['test'], 'test-image.png', { type: 'image/png' });
+      const fileInput = document.getElementById('image-upload') as HTMLInputElement;
+      await user.upload(fileInput, file);
+
+      await act(async () => {
+        if (mockImage.onload) {
+          mockImage.onload();
+        }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByAltText('Preview')).toBeInTheDocument();
+      });
+
+      const previewImg = screen.getByAltText('Preview');
+      const previewContainer = previewImg.closest('.relative');
+      const removeImageButton = previewContainer?.querySelector('button.bg-red-500');
+      if (removeImageButton instanceof HTMLElement) {
+        await user.click(removeImageButton);
+      }
+
+      await waitFor(() => {
+        expect(screen.queryByAltText('Preview')).not.toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Create Base' }));
+
+      await waitFor(() => {
+        expect(onCreate).toHaveBeenCalledWith({
+          name: 'New Base',
+          description: '',
+          image: null,
+        });
+      });
+    });
+
+    it('displays initial image preview when initialImage is provided', () => {
+      render(<CreateBaseModal {...defaultProps} initialImage="https://example.com/image.png" />);
+
+      expect(screen.getByAltText('Preview')).toHaveAttribute('src', 'https://example.com/image.png');
+    });
+  });
+
+  describe('help icon color', () => {
+    it('shows red help icon when there is validation error', async () => {
+      const user = userEvent.setup();
+
+      render(<CreateBaseModal {...defaultProps} />);
+
+      const input = screen.getByLabelText(/Base Name/i);
+      await user.type(input, 'AB');
+
+      await waitFor(() => {
+        expect(screen.getByText(/at least 3 characters/i)).toBeInTheDocument();
+      });
+
+      const helpIcon = document.querySelector('.text-red-500');
+      expect(helpIcon).toBeInTheDocument();
+    });
+
+    it('shows green help icon when name meets minimum length', async () => {
+      const user = userEvent.setup();
+
+      render(<CreateBaseModal {...defaultProps} />);
+
+      const input = screen.getByLabelText(/Base Name/i);
+      await user.type(input, 'Valid');
+
+      const helpIcon = document.querySelector('.text-green-600');
+      expect(helpIcon).toBeInTheDocument();
     });
   });
 });

@@ -13,6 +13,7 @@ type Opt<T> = {
 
 describe('DropdownOption', () => {
   it('renders label, description, and icon', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const option: Opt<string> = {
       label: 'Alpha',
       value: 'alpha',
@@ -31,6 +32,7 @@ describe('DropdownOption', () => {
     expect(screen.getByRole('option')).toHaveTextContent('Alpha');
     expect(screen.getByText('First')).toBeInTheDocument();
     expect(screen.getByTestId('icon')).toBeInTheDocument();
+    consoleErrorSpy.mockRestore();
   });
 
   it('calls onClick when enabled, not when disabled', () => {

@@ -205,6 +205,7 @@ describe('PluginManager', () => {
     });
 
     it('should throw error if plugin has missing dependency', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const plugin = createMockPlugin('plugin-a', '1.0.0', {
         'missing-plugin': '1.0.0',
       });
@@ -213,9 +214,11 @@ describe('PluginManager', () => {
       await expect(pluginManager.load('plugin-a')).rejects.toThrow(
         'Failed to resolve dependencies for plugin plugin-a'
       );
+      consoleErrorSpy.mockRestore();
     });
 
     it('should throw error if dependency version does not match', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const depPlugin = createMockPlugin('dep-plugin', '1.0.0');
       const plugin = createMockPlugin('plugin-a', '1.0.0', {
         'dep-plugin': '^2.0.0',
@@ -227,6 +230,7 @@ describe('PluginManager', () => {
       await expect(pluginManager.load('plugin-a')).rejects.toThrow(
         /Failed to resolve dependencies/
       );
+      consoleErrorSpy.mockRestore();
     });
 
     it('should not call activate if plugin does not have activate method', async () => {
@@ -414,15 +418,18 @@ describe('PluginManager', () => {
     });
 
     it('should fail for missing dependency', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const plugin = createMockPlugin('plugin-a', '1.0.0', {
         'missing-dep': '1.0.0',
       });
 
       const result = pluginManager.resolvePluginDependencies(plugin);
       expect(result).toBe(false);
+      consoleErrorSpy.mockRestore();
     });
 
     it('should fail for unsatisfied version dependency', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const depPlugin = createMockPlugin('dep-plugin', '1.0.0');
       pluginManager.register(depPlugin);
 
@@ -432,6 +439,7 @@ describe('PluginManager', () => {
 
       const result = pluginManager.resolvePluginDependencies(plugin);
       expect(result).toBe(false);
+      consoleErrorSpy.mockRestore();
     });
 
     it('should resolve multiple dependencies', () => {
@@ -469,11 +477,13 @@ describe('PluginManager', () => {
     });
 
     it('should fail for incompatible framework version', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const plugin = createMockPlugin('plugin-a');
       (plugin.manifest as any).frameworkVersion = '2.0.0';
 
       const result = pluginManager.validatePluginCompatibility(plugin);
       expect(result).toBe(false);
+      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -880,6 +890,7 @@ describe('PluginManager', () => {
     });
 
     it('should handle listener errors gracefully', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const plugin = createMockPlugin('plugin-a');
       pluginManager.register(plugin);
       const errorListener = vi.fn().mockImplementation(() => {
@@ -895,6 +906,7 @@ describe('PluginManager', () => {
       }).not.toThrow();
 
       expect(normalListener).toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -929,6 +941,7 @@ describe('PluginManager', () => {
     });
 
     it('should handle listener errors gracefully', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const plugin = createMockPlugin('plugin-a');
       pluginManager.register(plugin);
       const errorListener = vi.fn().mockImplementation(() => {
@@ -944,6 +957,7 @@ describe('PluginManager', () => {
       }).not.toThrow();
 
       expect(normalListener).toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
     });
   });
 
