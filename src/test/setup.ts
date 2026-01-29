@@ -44,23 +44,33 @@ globalThis.ResizeObserver = class ResizeObserver {
 // Mock scrollTo
 window.scrollTo = vi.fn();
 
-// Mock localStorage
-const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-};
-globalThis.localStorage = localStorageMock as any;
+// Create storage mock factory that returns vi.fn() with real storage implementation
+function createStorageMock() {
+  const store: Record<string, string> = {};
+  
+  return {
+    getItem: vi.fn((key: string) => store[key] ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = String(value);
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key];
+    }),
+    clear: vi.fn(() => {
+      Object.keys(store).forEach(key => delete store[key]);
+    }),
+    key: vi.fn((index: number) => {
+      const keys = Object.keys(store);
+      return keys[index] ?? null;
+    }),
+    get length() {
+      return Object.keys(store).length;
+    },
+  };
+}
 
-// Mock sessionStorage
-const sessionStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-};
-globalThis.sessionStorage = sessionStorageMock as any;
+globalThis.localStorage = createStorageMock() as any;
+globalThis.sessionStorage = createStorageMock() as any;
 
 // Mock window.location to prevent jsdom navigation errors
 delete (globalThis as any).location;

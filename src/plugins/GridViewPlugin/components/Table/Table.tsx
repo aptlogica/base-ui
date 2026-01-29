@@ -220,7 +220,6 @@ export const Table: React.FC<TableProps> = ({
     realTimeFilter,
     localFieldConfig,
     visibleColumns,
-    handleRealTimeFilter,
     handleAddFilter,
     handleRemoveFilter,
     handleUpdateFilter: handleUpdateFilterFromHook,

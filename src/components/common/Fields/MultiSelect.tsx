@@ -228,7 +228,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                   const cls = opt.color ? '' : getOptionColor(item, colorIndex);
                   return (
                     <div
-                      key={item}
+                      key={`${index}-${item}`}
                       className={`min-w-8 h-6 max-w-32 inline-flex items-center justify-center gap-0.5 p-1 px-2 rounded-xl truncate overflow-hidden whitespace-nowrap flex-shrink-0 ${cls}`}
                       style={style}
                       title={item}
@@ -275,7 +275,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                 return (
                   <button
                     type="button"
-                    key={`${label}-${index}`}
+                    key={`option-${index}-${label}`}
                     onClick={() => !isDisabled && !readOnly && handleToggleOption(label)}
                     disabled={disabled || readOnly}
                     className={`w-full text-left text-sm rounded-xl flex items-center justify-between ${isDisabled || readOnly

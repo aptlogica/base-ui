@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CreateBaseModal } from '../CreateBaseModal';
 
@@ -223,16 +223,15 @@ describe('CreateBaseModal', () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
 
-      const { container } = render(<CreateBaseModal {...defaultProps} onClose={onClose} />);
+      render(<CreateBaseModal {...defaultProps} onClose={onClose} />);
 
       const backdrop = screen.getByLabelText('Close modal');
-      await user.click(backdrop!);
+      await user.click(backdrop);
 
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('calls onClose when pressing Escape key', async () => {
-      const user = userEvent.setup();
       const onClose = vi.fn();
 
       const { container } = render(

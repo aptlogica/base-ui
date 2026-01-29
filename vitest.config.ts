@@ -11,16 +11,14 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reportsDirectory: 'coverage-vitest',
-      reporter: ['text', 'json', 'html', 'lcov'],
+      reporter: ['lcov'],
       exclude: [
         'node_modules/',
         'src/test/',
         '**/*.d.ts',
         '**/*.config.*',
         '**/dist/**',
-        '**/sdk/**',
-        '**/*.test.{ts,tsx}',
-        '**/*.spec.{ts,tsx}'
+        '**/sdk/**'
       ],
       thresholds: {
         lines: 80,

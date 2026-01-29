@@ -513,10 +513,7 @@ describe('CreateWorkspaceModal', () => {
     });
 
     it('shows error when name is empty on submit', async () => {
-      const user = userEvent.setup();
-
       renderWithQueryClient(<CreateWorkspaceModal {...defaultProps} />);
-
       const submitButton = screen.getByRole('button', { name: 'Create Workspace' });
       expect(submitButton).toBeDisabled();
     });

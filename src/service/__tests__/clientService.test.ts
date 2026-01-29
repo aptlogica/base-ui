@@ -154,6 +154,7 @@ describe('clientService', () => {
     sessionStorageMock.clear();
     localStorageMock.clear();
     vi.clearAllMocks();
+    vi.clearAllTimers();
   });
 
   describe('Token Storage & Retrieval', () => {

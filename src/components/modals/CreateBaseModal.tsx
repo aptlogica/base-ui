@@ -393,7 +393,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
               e.preventDefault();
               handleSubmit(e);
             }}
-            disabled={isSubmitting || !name.trim() || name.trim().length < 3}
+            disabled={isSubmitting || !name.trim() || name.trim().length < 3 || !!imageError}
             className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             {isSubmitting ? (

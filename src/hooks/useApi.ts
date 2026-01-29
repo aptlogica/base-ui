@@ -915,14 +915,14 @@ export const useUpdateViewAppearance = () => {
       // Update the specific table query if we have model_id
       if (modelId) {
         queryClient.setQueryData(['tables', String(modelId)], (old: any) => {
-          if (!old || !old.views || !Array.isArray(old.views)) return old;
+          if (!old?.views || !Array.isArray(old.views)) return old;
           
           const updatedViews = old.views.map((v: any) => 
             v.id === viewId 
               ? {
                   ...v,
                   meta: {
-                    ...v.meta || {},
+                    ...v.meta,
                     formViewAppearance: appearance
                   }
                 }
@@ -945,7 +945,7 @@ export const useUpdateViewAppearance = () => {
                 ? {
                     ...v,
                     meta: {
-                      ...v.meta || {},
+                      ...v.meta,
                       formViewAppearance: appearance
                     }
                   }
@@ -1299,11 +1299,7 @@ export const useUpdateUserProfile = (userId: string) => {
   return useMutation({
     mutationFn: async (params: { first_name?: string; last_name?: string; display_name?: string; country?: string; dob?: string; timezone?: string; locale?: string; avatarFile?: File }) => {
       const { avatarFile, ...profileParams } = params;
-      // Filter out empty strings and undefined values
-      const filteredParams = Object.fromEntries(
-        Object.entries(profileParams).filter(([_, value]) => value !== '' && value !== undefined)
-      );
-      const result = await updateUserProfileService(userId, filteredParams, avatarFile);
+      const result = await updateUserProfileService(userId, profileParams, avatarFile);
       return result;
     },
     onSuccess: (_, variables) => {

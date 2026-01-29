@@ -14,7 +14,7 @@ dist-ssr
 
 # Test coverage reports
 coverage/
-coverage-vitest/
+!coverage-vitest/lcov.info
 
 # Editor directories and files
 .vscode/*
