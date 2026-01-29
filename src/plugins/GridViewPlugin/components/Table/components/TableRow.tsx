@@ -115,7 +115,7 @@ export const TableRow: React.FC<TableRowProps> = ({
   return (
     // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
     <div
-      className={`group grid transition-colors min-w-full ${isRowActive ? 'border-t border-b border-[var(--color-brand-600)]' : ' border-transparent'}`}
+      className={`group grid transition-colors min-w-full ${isRowActive ? 'border border-[var(--color-brand-600)]' : ' border-transparent'}`}
       style={{ gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`, height: '40px', minHeight: '40px', maxHeight: '40px', boxSizing: 'border-box' }}
       onContextMenu={onContextMenu}
       onClick={handleRowClick}
@@ -124,13 +124,12 @@ export const TableRow: React.FC<TableRowProps> = ({
       tabIndex={0}
     >
       <div className={`flex-shrink-0 w-13 bg-background border-r ${isRowActive ? '' : 'border-b border-border/30'} flex items-center justify-center relative select-none gap-2`} style={{ height: '39px', position: 'sticky', left: 0, zIndex: 11, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)', boxSizing: 'border-box' }}>
-        {/* Row number always visible, but fades out on hover or when selected */}
         <span className={`text-xs text-muted-foreground font-normal absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none transition-opacity duration-150 ${isSelected ? 'opacity-0' : 'group-hover:opacity-0'}`} style={{ zIndex: 1 }}>{displayRowNumber ?? rowIndex + 1}</span>
         <input
           type="checkbox"
           className={`checkbox-primary-brand ${isSelected
-              ? 'opacity-100 pointer-events-auto'
-              : 'opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto'
+            ? 'opacity-100 pointer-events-auto'
+            : 'opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto'
             }`}
           checked={isSelected}
           onChange={(e) => {
@@ -142,10 +141,6 @@ export const TableRow: React.FC<TableRowProps> = ({
       </div>
       {memoizedColumnProps.map((props, index) => {
         const column = columns[index];
-        // Single border that changes color - no double borders
-        // When row is selected, row-level border handles top/bottom, so remove cell bottom border
-        // When cell is active, show full border
-        // Default: only bottom border for grid lines
         let borderClass: string;
         if (props.isActive) {
           borderClass = 'border border-[var(--color-brand-600)]';
@@ -154,7 +149,7 @@ export const TableRow: React.FC<TableRowProps> = ({
         } else {
           borderClass = 'border-b border-border/30';
         }
-        
+
         return (
           // eslint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role
           <div
@@ -181,8 +176,6 @@ export const TableRow: React.FC<TableRowProps> = ({
           </div>
         );
       })}
-      {/* Empty cell for the last column - no border to terminate grid lines properly */}
-      {/* <div className="flex-shrink-0 w-13 h-10 flex items-center justify-center bg-background relative border-b-0" style={{height: '40px'}} /> */}
     </div>
   );
 };
@@ -319,19 +312,19 @@ export const MemoizedTableRow = React.memo(TableRow, (prevProps, nextProps) => {
   }
 
   if (!compareRowIds(prevProps, nextProps)) {
-          return false;
-        }
+    return false;
+  }
 
   if (!compareCellValues(prevProps, nextProps)) {
-            return false;
-          }
+    return false;
+  }
 
   if (!compareColumns(prevProps, nextProps)) {
-        return false;
+    return false;
   }
 
   if (!compareColumnWidths(prevProps, nextProps)) {
-      return false;
+    return false;
   }
 
   return true; // Props are equal, skip re-render

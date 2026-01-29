@@ -210,10 +210,10 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
         <button
           ref={buttonRef}
           type="button"
-          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onClick={() => !disabled && allowEdit && setIsOpen(!isOpen)}
           disabled={disabled}
           className={`field-component ${error ? 'border-red-500 bg-red-50' : ''
-            } ${disabled || readOnly ? 'text-gray-400' : 'text-gray-900'} ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900 cursor-pointer'}`}
         >
           <div className="w-full flex items-center justify-between min-w-0">
             <div className="flex gap-1 min-w-0 flex-1 overflow-hidden max-h-20 overflow-y-auto">

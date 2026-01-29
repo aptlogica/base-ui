@@ -105,7 +105,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
   allColumns,
 }) => {
   // Calculate total table width (selector + columns + add column button)
-  const totalWidth = 48 + columnWidths.reduce((sum, w) => sum + w, 0) + 48;
+  const totalWidth = 48 + columnWidths.reduce((sum, w) => sum + w, 0);
 
   // Use outerRef if provided (from Table.tsx tableRef), otherwise create our own
   // This ensures we use the outer container for scrolling, not an inner one

@@ -317,6 +317,7 @@ export const Duration: React.FC<DurationProps> = ({
 
       {/* Input or Display */}
       <button
+        type="button"
         className={`relative w-full ${className} ${isBorder ? "field-component-border" : ""}`}
         onClick={readOnly ? undefined : handleClick}
         style={readOnly ? { cursor: 'default' } : undefined}

@@ -1,19 +1,14 @@
 import React, { useState } from 'react';
-import { FormField, FormConfig } from '../../../../types/form';
+import { FormConfig } from '../../../../types/form';
 import { FieldsList } from './FieldsList';
-import { FieldEditor } from '../shared/FieldEditor';
 import { AppearanceSettings } from '../shared/AppearanceSettings';
-import { SquareArrowLeft } from 'lucide-react';
 import { FIELD_TYPES } from '../../../../types/fieldTypes';
 
 interface RightPanelProps {
   config: FormConfig;
   selectedFieldId: string | null;
-  editingFieldId: string | null;
   onFieldSelect: (fieldId: string) => void;
   onConfigChange?: (config: FormConfig) => void;
-  onFieldUpdate?: (fieldId: string, updates: Partial<FormField>) => void;
-  onBackToFieldsList: () => void;
   onDeleteField?: (fieldId: string) => void;
   onFieldToggle?: (fieldId: string) => void;
   onFieldOrderChange?: (fields: any[]) => void;
@@ -24,11 +19,8 @@ interface RightPanelProps {
 export const RightPanel: React.FC<RightPanelProps> = ({
   config,
   selectedFieldId,
-  editingFieldId,
   onFieldSelect,
   onConfigChange,
-  onFieldUpdate,
-  onBackToFieldsList,
   onDeleteField,
   onFieldToggle,
   setVisibleAllFields,
@@ -36,38 +28,6 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   isReadOnly = false
 }) => {
   const [activeTab, setActiveTab] = useState<'fields' | 'appearance'>('fields');
-
-  const editingField = config.fields.find(field => field.id === editingFieldId);
-
-  if (editingFieldId && editingField) {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="p-4 border-b">
-          <div className="flex items-center gap-2 text-sm">
-            <button
-              onClick={onBackToFieldsList}
-              className="transition-colors border-r pr-2 text-primary-brand hover:text-text"
-            >
-            <SquareArrowLeft size={16} />
-            </button>
-            <span className="text-md font-medium text-primary ">Form</span>
-            <span className="text-secondary">/</span>
-            <span className="text-md font-medium text-primary">{editingField.name}</span>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {onFieldUpdate && (
-            <FieldEditor
-              field={editingField}
-              fields={config.fields}
-              onFieldUpdate={(updates) => onFieldUpdate(editingField.id, updates)}
-            />
-          )}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full">

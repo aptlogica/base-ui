@@ -15,7 +15,7 @@ interface LongTextProps {
   allowEdit?: boolean;
   readOnly?: boolean;
   helperText?: string;
-  onModalOpen?: (modalRef: React.RefObject<HTMLDivElement>) => void;
+  onModalOpen?: (modalRef: React.RefObject<HTMLDivElement | null>) => void;
   onModalClose?: () => void;
   config?: {
     defaultValue?: string;
@@ -187,7 +187,7 @@ export const LongText: React.FC<LongTextProps> = ({
     }
   }, [isModalOpen, onModalOpen]);
 
-  const closeModal = () => {
+  const closeModal = (save: boolean = true) => {
     // For rich text, get HTML content from the editor
     let finalValue = modalValue;
     if (richText && richTextEditorRef.current) {
@@ -201,11 +201,13 @@ export const LongText: React.FC<LongTextProps> = ({
     setIsModalOpen(false);
     // Notify parent about modal closing
     onModalClose?.();
-    // Save changes if valid
-    const validationError = validate(finalValue);
-    setError(validationError);
-    if (!validationError && finalValue !== value) {
-      onChange(finalValue);
+    // Save changes if requested and valid
+    if (save) {
+      const validationError = validate(finalValue);
+      setError(validationError);
+      if (!validationError && finalValue !== value) {
+        onChange(finalValue);
+      }
     }
   };
 
@@ -572,7 +574,7 @@ export const LongText: React.FC<LongTextProps> = ({
       {isModalOpen && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onContextMenu={(e) => e.preventDefault()}>
           {/* Backdrop */}
-          <div className="absolute inset-0 backdrop-blur-sm bg-opacity-40" onClick={closeModal} />
+          <div className="absolute inset-0 backdrop-blur-sm bg-opacity-40" onClick={() => closeModal(false)} />
           {/* Modal Content */}
           <div ref={modalRef} className="relative bg-[var(--color-card)] border rounded-xl shadow-xl w-full max-w-5xl h-[85vh] p-6 flex flex-col z-10">
             <div className="flex items-center mb-4 flex-shrink-0">
@@ -650,7 +652,7 @@ export const LongText: React.FC<LongTextProps> = ({
                 </div>
               )}
               <button
-                onClick={closeModal}
+                onClick={() => closeModal(true)}
                 className="ml-auto text-gray-400 hover:text-gray-600 transition-colors text-xl font-bold"
                 aria-label="Close"
               >
@@ -666,6 +668,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   onInput={readOnly ? undefined : handleRichTextChange}
                   onPaste={!readOnly ? handlePaste : undefined}
                   onKeyDown={(e) => {
+                    e.stopPropagation();
                     // Handle keyboard shortcuts
                     if (e.ctrlKey || e.metaKey) {
                       if (e.key === 'b') {
@@ -735,6 +738,7 @@ export const LongText: React.FC<LongTextProps> = ({
               <textarea
                 value={modalValue}
                 onChange={handleModalChange}
+                onKeyDown={(e) => e.stopPropagation()}
                 maxLength={maxLength}
                 rows={20}
                 className="w-full flex-1 bg-[var(--background)] border rounded-xl p-3 text-sm text-muted-foreground focus:outline-none focus:border-[var(--color-brand-600)] transition-all resize-vertical min-h-[400px]"
@@ -744,7 +748,7 @@ export const LongText: React.FC<LongTextProps> = ({
             )}
             <div className="flex justify-end mt-4 flex-shrink-0">
               <button
-                onClick={closeModal}
+                onClick={() => closeModal(true)}
                 className="px-4 py-2 text-sm font-medium btn-primary transition-colors"
               >
                 Save & Close
