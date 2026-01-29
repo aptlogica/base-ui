@@ -13,7 +13,6 @@ interface FormPreviewProps {
   onSubmit?: (e: React.FormEvent) => void;
   onDeleteField: (fieldId: string) => void;
   formError?: string | null;
-  // Props needed for attachment fields
   model_id?: string;
   row_id?: number;
   onEdit?: (fieldId: string) => void;
@@ -75,8 +74,6 @@ const computeAppearanceStyles = (appearance: FormConfig['appearance']): Appearan
 
   return { containerWidth, cardStyle, rounded, titleAlign };
 };
-
-// Extract editable title component
 interface EditableTitleProps {
   title: string;
   isEditing: boolean;
@@ -137,8 +134,8 @@ const EditableTitle: React.FC<EditableTitleProps> = ({
     return (
       <button
         type="button"
-        className="mb-4 text-2xl font-bold p-4 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors w-full"
-        style={{ color: textColor || undefined }}
+        className="mb-4 text-left text-2xl font-bold p-4 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors w-full"
+        style={{ color: textColor || undefined}}
         onClick={onStartEdit}
         onKeyDown={(e) => handleViewKeyDown(e, onStartEdit)}
         aria-label="Click to edit title"

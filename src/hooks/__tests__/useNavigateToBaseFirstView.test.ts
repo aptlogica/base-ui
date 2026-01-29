@@ -25,8 +25,6 @@ vi.mock('../../service/clientService', () => ({
   getTablesByBaseIdService: vi.fn(),
   getViewsByModelIdService: vi.fn(),
 }));
-import * as clientService from '../../service/clientService';
-
 // Mock Zustand navigation store with dynamic state
 let selectedWorkspaceId: string | null = 'ws-1';
 const navigateToBase = vi.fn();

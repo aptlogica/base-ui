@@ -39,6 +39,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
   const [imagePreview, setImagePreview] = useState<string | null>(initialImage);
   const [error, setError] = useState('');
   const [validationError, setValidationError] = useState('');
+  const [imageError, setImageError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -50,6 +51,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
       setImagePreview(initialImage);
       setError('');
       setValidationError('');
+      setImageError('');
       setIsSubmitting(false);
     }
   }, [isOpen, initialName, initialDescription, initialImage]);
@@ -84,7 +86,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
       // Validate file type
       const validTypes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
       if (!validTypes.includes(file.type)) {
-        setError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
+        setImageError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
         return;
       }
       
@@ -92,18 +94,21 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
       const previewUrl = URL.createObjectURL(file);
       setImage(file);
       setImagePreview(previewUrl);
-      setError('');
+      setImageError('');
       
-      // Validate dimensions asynchronously (show error if invalid, but don't clear the image)
+      // Validate dimensions asynchronously (show error if invalid, and clear the image)
       const img = new Image();
       img.onload = () => {
         if (img.width > 800 || img.height > 400) {
-          setError('Image dimensions must be max 800 x 400px');
-          // Don't clear the image - let user decide if they want to proceed
+          setImage(null);
+          setImagePreview(null);
+          setImageError('Image dimensions must be max 800 x 400px');
         }
       };
       img.onerror = () => {
-        setError('Failed to load image. Please try again.');
+        setImage(null);
+        setImagePreview(null);
+        setImageError('Failed to load image. Please try again.');
       };
       img.src = previewUrl;
     }
@@ -126,22 +131,25 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
         const previewUrl = URL.createObjectURL(file);
         setImage(file);
         setImagePreview(previewUrl);
-        setError('');
+        setImageError('');
         
-        // Validate dimensions asynchronously (show error if invalid, but don't clear the image)
+        // Validate dimensions asynchronously (show error if invalid, and clear the image)
         const img = new Image();
         img.onload = () => {
           if (img.width > 800 || img.height > 400) {
-            setError('Image dimensions must be max 800 x 400px');
-            // Don't clear the image - let user decide if they want to proceed
+            setImage(null);
+            setImagePreview(null);
+            setImageError('Image dimensions must be max 800 x 400px');
           }
         };
         img.onerror = () => {
-          setError('Failed to load image. Please try again.');
+          setImage(null);
+          setImagePreview(null);
+          setImageError('Failed to load image. Please try again.');
         };
         img.src = previewUrl;
       } else {
-        setError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
+        setImageError('Please upload a valid image file (SVG, PNG, JPG, or GIF)');
       }
     }
   };
@@ -188,6 +196,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
 
     setError('');
     setValidationError('');
+    setImageError('');
     setIsSubmitting(true);
 
     try {
@@ -196,8 +205,8 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
         description: description.trim(),
       };
       
-      // Only include image for base type (must be a File object)
-      if (itemType === 'base' && image instanceof File) {
+      // Include image for base type (File for new upload, null for removal)
+      if (itemType === 'base') {
         saveData.image = image;
       }
       
@@ -234,7 +243,6 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
       <div
         className="bg-modal !p-0 flex flex-col relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
@@ -280,7 +288,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
                 <span className="relative inline-block group">
                   <HelpCircle className={`w-4 h-4 ${getHelpIconColorClass()} cursor-help`} />
                   <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
-                    <h4 className="font-medium mb-2">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} name requirements:</h4>
+                    <h4 className="font-medium text-primary mb-2">{itemType.charAt(0).toUpperCase() + itemType.slice(1)} name requirements:</h4>
                     <ul className="space-y-1">
                       <li className={`flex items-center ${name.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
                         • Minimum 3 characters
@@ -386,6 +394,13 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
             </div>
           )}
 
+          {/* Image Error - Display here, not under Base Name */}
+          {itemType === 'base' && imageError && (
+            <div className="mb-2 text-sm text-red-600">
+              <span>{imageError}</span>
+            </div>
+          )}
+
           </div>
         </form>
 
@@ -405,7 +420,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
               e.preventDefault();
               handleSubmit(e);
             }}
-            disabled={isSubmitting || !name.trim() || name.trim().length < 3 || !!validationError}
+            disabled={isSubmitting || !name.trim() || name.trim().length < 3 || !!validationError || (itemType === 'base' && !!imageError)}
             className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             {isSubmitting ? (

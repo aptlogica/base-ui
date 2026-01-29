@@ -353,7 +353,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
                 <span className="relative inline-block group">
                   <HelpCircle className={`w-4 h-4 ${getHelpIconColorClass()} cursor-help`} />
                   <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
-                    <h4 className="font-medium mb-2">Workspace name requirements:</h4>
+                    <h4 className="font-medium text-primary mb-2">Workspace name requirements:</h4>
                     <ul className="space-y-1">
                       <li className={`flex items-center ${getListItemColorClass()}`}>
                         • Minimum 3 characters

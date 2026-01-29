@@ -732,7 +732,7 @@ describe('Return Value Completeness', () => {
     const { result } = renderHook(() => useWorkspaceStateManager());
 
     const keys = Object.keys(result.current);
-    expect(keys.length).toBe(42);
+    expect(keys.length).toBe(43);
   });
 });
 

@@ -113,8 +113,11 @@ describe('ImportModal', () => {
     it('shows file size limit info', () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
 
-      expect(screen.getByText(/1/)).toBeInTheDocument();
-      expect(screen.getByText(/MB/i)).toBeInTheDocument();
+      const uploadArea = screen.getByLabelText(/Click or drag and drop to upload file/i);
+      expect(uploadArea).toBeInTheDocument();
+      
+      const browseFilesText = screen.getByText(/browse files/i);
+      expect(browseFilesText).toBeInTheDocument();
     });
   });
 

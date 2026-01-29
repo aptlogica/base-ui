@@ -86,12 +86,18 @@ type StoreState = {
   setBase: (id: string | null) => void;
   setTable: (id: string | null) => void;
   setView: (id: string | null) => void;
+  navigateToBase: (workspaceId: string, baseId: string) => void;
+  navigateToTable: (workspaceId: string, baseId: string, tableId: string) => void;
+  navigateToView: (workspaceId: string, baseId: string, tableId: string, viewId: string) => void;
 };
 
 const setWorkspace = vi.fn();
 const setBase = vi.fn();
 const setTable = vi.fn();
 const setView = vi.fn();
+const navigateToBase = vi.fn();
+const navigateToTable = vi.fn();
+const navigateToView = vi.fn();
 const saveUserNavigation = vi.fn();
 
 let storeState: StoreState;
@@ -106,6 +112,9 @@ const resetStoreState = (partial?: Partial<StoreState>) => {
     setBase,
     setTable,
     setView,
+    navigateToBase,
+    navigateToTable,
+    navigateToView,
     ...partial,
   } as StoreState;
 };
@@ -243,7 +252,7 @@ describe('handleWorkspaceDeletion', () => {
 describe('handleBaseDeletion', () => {
   it('clears base/table/view and navigates to safe target when current base is deleted (by equality)', () => {
     // Arrange
-    resetStoreState({ selectedBaseId: 'base-1' });
+    resetStoreState({ selectedWorkspaceId: 'ws-1', selectedBaseId: 'base-1' });
     const { result } = renderHook(() => useNavigationActions(), { wrapper });
 
     // Act
@@ -253,14 +262,14 @@ describe('handleBaseDeletion', () => {
     expect(setBase).toHaveBeenCalledWith(null);
     expect(setTable).toHaveBeenCalledWith(null);
     expect(setView).toHaveBeenCalledWith(null);
-    expect(navigateSpy).toHaveBeenCalledWith('/workspace', { replace: true });
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1', { replace: true });
     expect(saveUserNavigation).toHaveBeenCalledWith('user-1');
   });
 
   it('acts when cleanupBaseNavigation returns true', () => {
     // Arrange
     vi.mocked(navPersistenceModule.cleanupBaseNavigation).mockReturnValue(true);
-    resetStoreState({ selectedBaseId: 'base-OTHER' });
+    resetStoreState({ selectedWorkspaceId: 'ws-1', selectedBaseId: 'base-OTHER' });
     const { result } = renderHook(() => useNavigationActions(), { wrapper });
 
     // Act
@@ -268,7 +277,9 @@ describe('handleBaseDeletion', () => {
 
     // Assert
     expect(setBase).toHaveBeenCalledWith(null);
-    expect(navigateSpy).toHaveBeenCalledWith('/workspace', { replace: true });
+    expect(setTable).toHaveBeenCalledWith(null);
+    expect(setView).toHaveBeenCalledWith(null);
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1', { replace: true });
   });
 
   it('does nothing when not current and cleanup returns false', () => {
@@ -288,7 +299,7 @@ describe('handleBaseDeletion', () => {
 describe('handleTableDeletion', () => {
   it('clears table/view and navigates when current table is deleted (by equality)', () => {
     // Arrange
-    resetStoreState({ selectedTableId: 'table-1' });
+    resetStoreState({ selectedWorkspaceId: 'ws-1', selectedBaseId: 'base-1', selectedTableId: 'table-1' });
     const { result } = renderHook(() => useNavigationActions(), { wrapper });
 
     // Act
@@ -297,14 +308,14 @@ describe('handleTableDeletion', () => {
     // Assert
     expect(setTable).toHaveBeenCalledWith(null);
     expect(setView).toHaveBeenCalledWith(null);
-    expect(navigateSpy).toHaveBeenCalledWith('/workspace', { replace: true });
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1', { replace: true });
     expect(saveUserNavigation).toHaveBeenCalledWith('user-1');
   });
 
   it('acts when cleanupTableNavigation returns true', () => {
     // Arrange
     vi.mocked(navPersistenceModule.cleanupTableNavigation).mockReturnValue(true);
-    resetStoreState({ selectedTableId: 'table-OTHER' });
+    resetStoreState({ selectedWorkspaceId: 'ws-1', selectedBaseId: 'base-1', selectedTableId: 'table-OTHER' });
     const { result } = renderHook(() => useNavigationActions(), { wrapper });
 
     // Act
@@ -313,7 +324,7 @@ describe('handleTableDeletion', () => {
     // Assert
     expect(setTable).toHaveBeenCalledWith(null);
     expect(setView).toHaveBeenCalledWith(null);
-    expect(navigateSpy).toHaveBeenCalledWith('/workspace', { replace: true });
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1', { replace: true });
   });
 
   it('does nothing when not current and cleanup returns false', () => {

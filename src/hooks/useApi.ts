@@ -915,14 +915,14 @@ export const useUpdateViewAppearance = () => {
       // Update the specific table query if we have model_id
       if (modelId) {
         queryClient.setQueryData(['tables', String(modelId)], (old: any) => {
-          if (!old || !old.views || !Array.isArray(old.views)) return old;
+          if (!old?.views || !Array.isArray(old.views)) return old;
           
           const updatedViews = old.views.map((v: any) => 
             v.id === viewId 
               ? {
                   ...v,
                   meta: {
-                    ...v.meta || {},
+                    ...v.meta,
                     formViewAppearance: appearance
                   }
                 }
@@ -945,7 +945,7 @@ export const useUpdateViewAppearance = () => {
                 ? {
                     ...v,
                     meta: {
-                      ...v.meta || {},
+                      ...v.meta,
                       formViewAppearance: appearance
                     }
                   }

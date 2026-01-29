@@ -203,7 +203,7 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
 
   // Check if card is editable (for drag and click)
   const isEditable = onEdit !== undefined;
-  
+
   return (
     <div className={`kanban-card bg-card rounded-2xl border shadow-sm p-4 pt-0 ${isEditable ? 'hover:border-[var(--color-bg-brand-primary)] group' : ''} transition-all duration-200 ${isEditable ? 'hover:shadow-lg' : ''} cursor-default relative ${isDragging ? 'opacity-50 rotate-2 shadow-lg' : ''}`}
       draggable={isEditable}

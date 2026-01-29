@@ -24,7 +24,6 @@ interface AuthContextType {
   login: (userInfo: any) => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
-  saving: boolean;
   restoreCompleted: boolean;
   userRole: string | null;
 }
@@ -34,7 +33,6 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [restoreCompleted, setRestoreCompleted] = useState(false);
   const queryClient = useQueryClient();
   const lastUserIdRef = useRef<string | null>(null);
@@ -84,7 +82,7 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
       if (e.key === 'sb_signout') {
         // Remote tab logged out: perform local cleanup
         try {
-          clientLogout();
+         clientLogout();
         } catch (err) {
           console.warn('clientLogout error during cross-tab signout', err);
         }
@@ -368,7 +366,7 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, saving, restoreCompleted, userRole }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, restoreCompleted, userRole }}>
       {children}
     </AuthContext.Provider>
   );

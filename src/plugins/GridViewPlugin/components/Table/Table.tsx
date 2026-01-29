@@ -54,11 +54,8 @@ interface TableProps {
   };
   viewId?: string;
   onRefresh: () => void;
-  // Optional view meta override; when provided, it supersedes tableData.view.meta
   viewConfig?: Record<string, any>;
-  // Virtualization is always enabled (using @tanstack/react-virtual)
-  // This prop is kept for backward compatibility but has no effect
-  enableVirtualization?: boolean; // @deprecated - always enabled
+  enableVirtualization?: boolean;
   actions?: TableActions;
 }
 
@@ -70,15 +67,9 @@ export const Table: React.FC<TableProps> = ({
   enableVirtualization, // Separate prop for virtualization control
   actions,
 }) => {
-  // Toast utility for simple user feedback
   const toast = useToast();
-
-  // Get all views for field usage validation
   const { data: allViews = [] } = useAllViews();
-
   const [activeCell, setActiveCell] = useState<{ rowId: string; colKey: string } | null>(null);
-
-  // Refs for modals to exclude from click outside
   const newColumnModalRef = useRef<HTMLDivElement>(null);
   const editModalRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -155,15 +146,6 @@ export const Table: React.FC<TableProps> = ({
     });
   }, [columns]);
 
-  // PAGINATION DISABLED - Infinite scroll hook commented out
-  // Uncomment below to re-enable pagination with infinite scroll
-  // const { allRecords, setAllRecords, isLoadingMore, fetchMoreRecords, preservePagesOnNextUpdate } = useInfiniteScroll({
-  //   tableId: tableData?.model?.id,
-  //   initialRecords: tableData?.records || [],
-  // });
-
-  // Transform API records to UI-ready format
-  // FRONTEND PAGINATION: Get ALL records from backend (no pagination params)
   const allRecords = useMemo(() => {
     if (!tableData?.records || !Array.isArray(tableData.records)) return [];
     return tableData.records.map((record: any): TableData => {
@@ -220,7 +202,6 @@ export const Table: React.FC<TableProps> = ({
     realTimeFilter,
     localFieldConfig,
     visibleColumns,
-    handleRealTimeFilter,
     handleAddFilter,
     handleRemoveFilter,
     handleUpdateFilter: handleUpdateFilterFromHook,
@@ -372,9 +353,9 @@ export const Table: React.FC<TableProps> = ({
 
     return result;
   }, [
-    allRecords, 
-    viewConfigState.filters, 
-    viewConfigState.sorts,  
+    allRecords,
+    viewConfigState.filters,
+    viewConfigState.sorts,
     searchTerm,
     selectedSearchField,
     columns,
@@ -408,7 +389,6 @@ export const Table: React.FC<TableProps> = ({
         return currentGroup.direction === 'desc' ? b.localeCompare(a) : a.localeCompare(b);
       });
 
-      // Recursively group each group
       // Note: Rows within each group are already sorted from filteredAndSortedData
       return groupKeys.map(key => ({
         groupValue: key,
@@ -423,9 +403,6 @@ export const Table: React.FC<TableProps> = ({
     return groupRows(filteredAndSortedData, viewConfigState.groupBy);
   }, [filteredAndSortedData, viewConfigState.groupBy]);
 
-  // FRONTEND PAGINATION: Paginate the filtered/sorted data
-  // This allows filters/search to work on full dataset, but only render a portion
-  // Must be before useCellEditing so paginatedData is available
   const {
     allLoadedData: paginatedData,
     loadNextPage,
@@ -437,14 +414,11 @@ export const Table: React.FC<TableProps> = ({
     initialPage: 1,
   });
 
-  // Cell editing hook (must be after paginatedData is defined)
-  // FRONTEND PAGINATION: Use paginatedData for cell editing (what's currently displayed)
   const { handleCellChange } = useCellEditing({
     data: paginatedData,
     columns,
     tableId,
     insertRowDataMutation: actions?.insertRowData,
-    // No need for onRecordsUpdate - data comes from filteredAndSortedData via pagination
     onRecordsUpdate: () => { },
   });
 
@@ -454,7 +428,6 @@ export const Table: React.FC<TableProps> = ({
     if (!element) return;
 
     const updateHeight = () => {
-      // Get available height: container height - header height (35px) - footer height (48px) - add row button (40px)
       const containerHeight = element.clientHeight;
       const headerHeight = headerRef.current?.clientHeight || 35;
       const footerHeight = 48; // Footer is fixed at bottom
@@ -478,8 +451,6 @@ export const Table: React.FC<TableProps> = ({
       window.removeEventListener('resize', updateHeight);
     };
   }, [paginatedData.length, columnWidths.length]); // Track paginated data length
-
-  // Scroll handler removed - virtualization handles infinite scrolling via onScroll callback
 
   // Toggle selection for a single row
   const handleRowSelect = useCallback((rowId: string, selected: boolean) => {
@@ -691,10 +662,7 @@ export const Table: React.FC<TableProps> = ({
         </div>
       </div>
 
-      {/* EditRecordModal block intentionally removed: this table is UI-only and does not manage record modals here. */}
-      {/* Table Container - Single scroll container for both rows and columns */}
       <div className="flex-1 overflow-hidden relative">
-        {/* Scrollable Container with Sticky Header - This is the ONLY scroll container */}
         <div
           ref={tableRef}
           className="h-full overflow-auto"
@@ -822,11 +790,9 @@ export const Table: React.FC<TableProps> = ({
               </div>
             </div>
 
-            {/* Table Body - Always virtualized with @tanstack/react-virtual (supports grouping) */}
             <div ref={tableBodyRef}>
               {(() => {
                 const totalWidth = 48 + columnWidths.reduce((sum, w) => sum + w, 0) + 48;
-
                 return (
                   <VirtualizedTableBody
                     data={paginatedData}
@@ -849,9 +815,6 @@ export const Table: React.FC<TableProps> = ({
                     canEdit={canUpdateRecord() && !isBaseReadOnly()}
                     allColumns={columns}
                     onScroll={(scrollTop) => {
-                      // FRONTEND PAGINATION: Load next page when scrolling near bottom
-                      // Calculate total content height based on flattened items
-                      // For simplicity, estimate: (group headers + rows) * 40px
                       const estimatedItemCount = groupedData
                         ? groupedData.reduce((sum, g) => sum + 1 + (expandedGroups.has(`${g.groupColumn}-${g.groupValue}-0`) ? g.rows.length : 0), 0)
                         : paginatedData.length;

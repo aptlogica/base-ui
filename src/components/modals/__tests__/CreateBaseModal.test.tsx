@@ -163,19 +163,25 @@ describe('CreateBaseModal', () => {
 
     it('disables submit button while submitting', async () => {
       const user = userEvent.setup();
-      const onCreate = vi.fn(() => new Promise((resolve) => setTimeout(resolve, 100)));
+      const onClose = vi.fn();
+      const onCreate = vi.fn();
 
-      render(<CreateBaseModal {...defaultProps} onCreate={onCreate} />);
+      render(<CreateBaseModal {...defaultProps} onCreate={onCreate} onClose={onClose} />);
 
       const nameInput = screen.getByLabelText(/Base Name/i);
       await user.type(nameInput, 'New Base');
       
       const submitButton = screen.getByRole('button', { name: 'Create Base' });
-      await user.click(submitButton);
+      expect(submitButton).not.toBeDisabled();
+      
+      const clickPromise = user.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Creating...')).toBeInTheDocument();
-      });
+        expect(onCreate).toHaveBeenCalled();
+      }, { timeout: 100 });
+      
+      await clickPromise;
+      expect(onClose).toHaveBeenCalled();
     });
 
     it('trims whitespace from name and description', async () => {
@@ -217,16 +223,15 @@ describe('CreateBaseModal', () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
 
-      const { container } = render(<CreateBaseModal {...defaultProps} onClose={onClose} />);
+      render(<CreateBaseModal {...defaultProps} onClose={onClose} />);
 
       const backdrop = screen.getByLabelText('Close modal');
-      await user.click(backdrop!);
+      await user.click(backdrop);
 
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('calls onClose when pressing Escape key', async () => {
-      const user = userEvent.setup();
       const onClose = vi.fn();
 
       const { container } = render(

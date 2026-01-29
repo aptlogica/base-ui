@@ -329,8 +329,8 @@ describe('CreateViewModal', () => {
         <CreateViewModal {...defaultProps} onClose={onClose} />
       );
 
-      const modal = container.querySelector('.bg-modal');
-      fireEvent.keyDown(modal!, { key: 'Escape' });
+      const backdrop = container.querySelector('.bg-modal-backdrop');
+      fireEvent.keyDown(backdrop!, { key: 'Escape' });
 
       expect(onClose).toHaveBeenCalledTimes(1);
     });

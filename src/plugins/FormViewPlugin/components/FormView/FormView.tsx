@@ -305,7 +305,6 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
     selectedFieldId,
     setSelectedFieldId,
     toggleSidebar,
-    handleBackToFieldsList,
   } = useFormPanel();
 
   // Get view - compute before hooks that depend on it
@@ -680,12 +679,9 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
           <RightPanel
             config={formConfig}
             selectedFieldId={selectedFieldId}
-            editingFieldId={selectedFieldId}
             onFieldSelect={setSelectedFieldId}
             onFieldToggle={panelHandlers.onFieldToggle}
             onConfigChange={panelHandlers.onConfigChange}
-            onFieldUpdate={panelHandlers.onFieldUpdate}
-            onBackToFieldsList={handleBackToFieldsList}
             onDeleteField={panelHandlers.onDeleteField}
             setVisibleAllFields={panelHandlers.setVisibleAllFields}
             onFieldOrderChange={panelHandlers.onFieldOrderChange}

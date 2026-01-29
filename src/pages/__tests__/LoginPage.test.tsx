@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 
@@ -1009,7 +1009,9 @@ describe('LoginPage', () => {
 
       await user.type(emailInput, 'user@example.com');
       await user.type(passwordInput, 'password123');
-      await user.click(submitButton);
+      
+      // Wrap the click in act by using fireEvent instead, or await user.click which handles act()
+      fireEvent.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText(/sending otp/i)).toBeInTheDocument();

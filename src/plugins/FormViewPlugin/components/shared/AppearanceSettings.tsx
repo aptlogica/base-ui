@@ -3,7 +3,7 @@ import { FormConfig } from '../../../../types/form';
 import AdvancedDropdown from '../../../../components/common/dropdown/AdvancedDropdown';
 import { useAddImage } from '../../../../hooks/useApi';
 import { useToast } from '../../../../components/common/Toast';
-import { Upload, X, Link2, ImageUp, Trash2 } from 'lucide-react';
+import { Upload, Link2, ImageUp, Trash2 } from 'lucide-react';
 
 // Helper to extract filename from a URL
 const getImageName = (url: string) => {
@@ -124,7 +124,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
       const parsed = new URL(val);
       return parsed.protocol === 'http:' || parsed.protocol === 'https:';
     } catch (err) {
-      return false;
+      console.warn(err)
     }
   };
 
@@ -167,13 +167,8 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
     }
 
     try {
-      const response = await addImageMutation.mutateAsync({
+      const response:any = await addImageMutation.mutateAsync({
         files: [file],
-        onProgress: (progressEvent: ProgressEvent) => {
-          // Progress tracking can be added here if needed
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          // You can add progress state here if needed
-        }
       });
 
       // Extract image URL from response (following the same pattern as account settings)
@@ -231,11 +226,10 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                 <button
                   key={color}
                   onClick={() => handleColorChange(color)}
-                  className={`w-10 h-10 rounded-xl border-2 transition-all ${
-                    ap.backgroundColor === color
-                      ? 'border scale-110'
-                      :  'border-gray-300 hover:border-gray-400'
-                  }`}
+                  className={`w-10 h-10 rounded-xl border-2 transition-all ${ap.backgroundColor === color
+                    ? 'border scale-110'
+                    : 'border-gray-300 hover:border-gray-400'
+                    }`}
                   style={{ backgroundColor: color }}
                 />
               ))}
@@ -274,12 +268,10 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                 onChange={(e) => onChange({ ...ap, hideNocoBranding: e.target.checked })}
                 className="sr-only"
               />
-              <div className={`w-11 h-6 rounded-full transition-colors ${
-                  ap.hideNocoBranding ? 'bg-[var(--color-bg-brand-primary)]' : 'bg-gray-200'
-              }`}>
-                <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-                  ap.hideNocoBranding ? 'translate-x-5' : 'translate-x-0.5'
-                } mt-0.5`} />
+              <div className={`w-11 h-6 rounded-full transition-colors ${ap.hideNocoBranding ? 'bg-[var(--color-bg-brand-primary)]' : 'bg-gray-200'
+                }`}>
+                <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${ap.hideNocoBranding ? 'translate-x-5' : 'translate-x-0.5'
+                  } mt-0.5`} />
               </div>
             </label>
           </div>
@@ -295,32 +287,30 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                     onClick={() => setShowLogoUrlInput(true)}
                     className="px-3 py-2 flex-1 border border-gray-300 rounded-xl text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 flex items-center gap-2"
                   >
-                    <Link2  size={16} />
+                    <Link2 size={16} />
                     <span>Insert via URL</span>
                   </button>
                 ) : (
-                  <>
-                    <div className="flex-1">
-                      <input
-                        type="url"
-                        placeholder="https://..."
-                        value={(ap.logoUrl as string) || ''}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (v === '' || validateUrl(v)) {
-                            setLogoError(null);
-                            onChange({ ...ap, logoUrl: v });
-                            setLogoFromBrowse(false);
-                          } else {
-                            setLogoError('Invalid URL');
-                          }
-                        }}
-                        ref={logoUrlInputRef}
-                        className={`w-full field-component field-component-border field-component-focus ${logoError ? 'border-red-500' : ''}`}
-                      />
-                    </div>
-                    
-                  </>
+                  <div className="flex-1">
+                    <input
+                      type="url"
+                      placeholder="https://..."
+                      value={(ap.logoUrl as string) || ''}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === '' || validateUrl(v)) {
+                          setLogoError(null);
+                          onChange({ ...ap, logoUrl: v });
+                          setLogoFromBrowse(false);
+                        } else {
+                          setLogoError('Invalid URL');
+                        }
+                      }}
+                      ref={logoUrlInputRef}
+                      className={`w-full field-component field-component-border field-component-focus ${logoError ? 'border-red-500' : ''}`}
+                    />
+                  </div>
+
                 )}
                 <input
                   type="file"
@@ -406,30 +396,19 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                 onChange={(e) => onChange({ ...ap, hideBanner: e.target.checked })}
                 className="sr-only"
               />
-              <div className={`w-11 h-6 rounded-full transition-colors ${
-                ap.hideBanner ?'bg-[var(--color-bg-brand-primary)]' : 'bg-gray-200'
-              }`}>
-                <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-                  ap.hideBanner ? 'translate-x-5' : 'translate-x-0.5'
-                } mt-0.5`} />
+              <div className={`w-11 h-6 rounded-full transition-colors ${ap.hideBanner ? 'bg-[var(--color-bg-brand-primary)]' : 'bg-gray-200'
+                }`}>
+                <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${ap.hideBanner ? 'translate-x-5' : 'translate-x-0.5'
+                  } mt-0.5`} />
               </div>
             </label>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Banner</label>
             {!(ap.bannerUrl && !bannerError && !showBannerUrlInput) && (
               <div className="flex gap-2">
-                {!showBannerUrlInput ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowBannerUrlInput(true)}
-                    className="px-3 py-2 flex-1 border border-gray-300 rounded-xl text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 flex items-center gap-2"
-                  >
-                    <Link2 size={16} />
-                    <span>Insert via URL</span>
-                  </button>
-                ) : (
+                {showBannerUrlInput ? (
                   <>
                     <input
                       type="url"
@@ -449,6 +428,15 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                       className={`flex-1 field-component field-component-border field-component-focus ${bannerError ? 'border-red-500' : ''}`}
                     />
                   </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowBannerUrlInput(true)}
+                    className="px-3 py-2 flex-1 border border-gray-300 rounded-xl text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <Link2 size={16} />
+                    <span>Insert via URL</span>
+                  </button>
                 )}
                 <input
                   type="file"
@@ -575,7 +563,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-1">Field Layout</label>
               <AdvancedDropdown<string>
                 options={[
-                  { label: 'List', value: 'list' }, 
+                  { label: 'List', value: 'list' },
                   { label: 'Grid', value: 'grid-2' }
                 ]}
                 value={(ap.fieldLayout as string) || 'list'}

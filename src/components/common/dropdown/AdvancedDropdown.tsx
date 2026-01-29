@@ -327,8 +327,6 @@ export function AdvancedDropdown<T extends string | number>({
             ? 'bottom-full mb-1'
             : 'top-full mt-1'
             }`}
-          role="listbox"
-          aria-multiselectable={multiple}
         >
           {/* Search Input */}
           {searchable && (
@@ -451,7 +449,15 @@ const DropdownTrigger = React.forwardRef<HTMLButtonElement, {
 
         {clearable && selectedCount > 0 && !loading && onClear && (
           <div
+            role="button"
+            tabIndex={0}
             onClick={onClear}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClear(e);
+              }
+            }}
             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
             aria-label="Clear selection"
           >

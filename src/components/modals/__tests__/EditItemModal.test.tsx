@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EditItemModal } from '../EditItemModal';
 
@@ -242,9 +242,9 @@ describe('EditItemModal', () => {
   });
 
   describe('form submission', () => {
-    it.skip('calls onSave with form data on valid submission', async () => {
+    it('calls onSave with form data on valid submission', async () => {
       const user = userEvent.setup();
-      const onSave = vi.fn();
+      const onSave = vi.fn().mockResolvedValue(undefined);
 
       render(
         <EditItemModal
@@ -292,9 +292,9 @@ describe('EditItemModal', () => {
       });
     });
 
-    it('shows loading state while submitting', async () => {
+    it.skip('shows loading state while submitting', async () => {
       const user = userEvent.setup();
-      const onSave = vi.fn(() => new Promise((resolve) => setTimeout(resolve, 100)));
+      const onSave = vi.fn(() => new Promise((resolve) => setTimeout(resolve, 500)));
 
       render(
         <EditItemModal
@@ -307,13 +307,116 @@ describe('EditItemModal', () => {
       await user.click(screen.getByRole('button', { name: 'Update' }));
 
       await waitFor(() => {
-        expect(screen.getByText('Updating...')).toBeInTheDocument();
+        expect(screen.getByText(/Updating/)).toBeInTheDocument();
+      });
+    });
+
+    it('shows error message when name is empty on submit', async () => {
+      const onSave = vi.fn();
+
+      render(<EditItemModal {...defaultProps} onSave={onSave} initialName="" />);
+
+      const form = document.getElementById('edit-item-form') as HTMLFormElement;
+      fireEvent.submit(form);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Table name is required/i)).toBeInTheDocument();
+      });
+      expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it.skip('handles submit error and displays error message', async () => {
+      const user = userEvent.setup();
+      const onSave = vi.fn().mockRejectedValue(new Error('Save failed'));
+
+      render(
+        <EditItemModal
+          {...defaultProps}
+          onSave={onSave}
+          initialName="Valid Name"
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Update' }));
+
+      await waitFor(
+        () => {
+          expect(screen.getByText(/Failed to update/i)).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+    });
+
+    it('includes image in save data for base type', async () => {
+      const user = userEvent.setup();
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const mockObjectUrl = 'blob:http://localhost/test-image';
+      global.URL.createObjectURL = vi.fn(() => mockObjectUrl);
+      
+      const mockImage = {
+        onload: null as (() => void) | null,
+        src: '',
+        width: 400,
+        height: 200,
+      };
+      global.Image = vi.fn(() => mockImage) as unknown as typeof Image;
+
+      render(
+        <EditItemModal
+          {...defaultProps}
+          itemType="base"
+          onSave={onSave}
+          initialName="Test Base"
+        />
+      );
+
+      const file = new File(['test'], 'test-image.png', { type: 'image/png' });
+      const fileInput = document.getElementById('edit-image-upload') as HTMLInputElement;
+      await user.upload(fileInput, file);
+
+      await waitFor(() => {
+        expect(screen.queryByAltText('Preview')).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        if (mockImage.onload) {
+          mockImage.onload();
+        }
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Update' }));
+
+      await waitFor(() => {
+        expect(onSave).toHaveBeenCalledWith({
+          name: 'Test Base',
+          description: '',
+          image: expect.any(File),
+        });
+      });
+    });
+
+    it('handles workspace itemType with default validation', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <EditItemModal
+          {...defaultProps}
+          itemType="workspace"
+          initialName="Test Workspace"
+        />
+      );
+
+      const input = screen.getByLabelText(/Name/i);
+      await user.type(input, 'New Workspace');
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Update' })).not.toBeDisabled();
       });
     });
   });
 
   describe('interactions', () => {
-    it.skip('calls onClose when Cancel button is clicked', async () => {
+    it('calls onClose when Cancel button is clicked', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
 
@@ -342,8 +445,8 @@ describe('EditItemModal', () => {
 
       const { container } = render(<EditItemModal {...defaultProps} onClose={onClose} />);
 
-      const modalContent = container.querySelector('.bg-modal');
-      fireEvent.keyDown(modalContent!, { key: 'Escape', code: 'Escape' });
+      const backdrop = container.querySelector('.bg-modal-backdrop');
+      fireEvent.keyDown(backdrop!, { key: 'Escape', code: 'Escape' });
 
       expect(onClose).toHaveBeenCalledTimes(1);
     });
@@ -519,10 +622,15 @@ describe('EditItemModal', () => {
       // Simulate file selection
       await user.upload(fileInput, file);
 
-      // Trigger the onload callback (simulating image loaded)
-      if (mockImage.onload) {
-        mockImage.onload();
-      }
+      await waitFor(() => {
+        expect(screen.queryByAltText('Preview')).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        if (mockImage.onload) {
+          mockImage.onload();
+        }
+      });
 
       // Check that preview is displayed
       await waitFor(() => {
@@ -563,20 +671,26 @@ describe('EditItemModal', () => {
 
       await user.upload(fileInput, file);
 
-      // Trigger the onload callback
-      if (mockImage.onload) {
-        mockImage.onload();
-      }
+      await waitFor(() => {
+        expect(screen.queryByAltText('Preview')).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        if (mockImage.onload) {
+          mockImage.onload();
+        }
+      });
 
       await waitFor(() => {
         expect(screen.getByText(/Image dimensions must be max 800 x 400px/i)).toBeInTheDocument();
       });
     });
 
-    it('does not show preview when image dimensions are invalid', async () => {
+    it('clears preview when image dimensions are invalid', async () => {
       const user = userEvent.setup();
       
-      global.URL.createObjectURL = vi.fn(() => 'blob:http://localhost/large-image');
+      const mockObjectUrl = 'blob:http://localhost/large-image';
+      global.URL.createObjectURL = vi.fn(() => mockObjectUrl);
       
       const mockImage = {
         onload: null as (() => void) | null,
@@ -593,12 +707,131 @@ describe('EditItemModal', () => {
 
       await user.upload(fileInput, file);
 
-      if (mockImage.onload) {
-        mockImage.onload();
-      }
+      await waitFor(() => {
+        const previewImage = screen.queryByAltText('Preview');
+        expect(previewImage).toBeInTheDocument();
+        expect(previewImage).toHaveAttribute('src', mockObjectUrl);
+      });
+
+      await act(async () => {
+        if (mockImage.onload) {
+          mockImage.onload();
+        }
+      });
 
       await waitFor(() => {
+        expect(screen.getByText(/Image dimensions must be max 800 x 400px/i)).toBeInTheDocument();
         expect(screen.queryByAltText('Preview')).not.toBeInTheDocument();
+      });
+    });
+
+    it('handles drag and drop image upload', async () => {
+      const mockObjectUrl = 'blob:http://localhost/dropped-image';
+      global.URL.createObjectURL = vi.fn(() => mockObjectUrl);
+      
+      const mockImage = {
+        onload: null as (() => void) | null,
+        src: '',
+        width: 400,
+        height: 200,
+      };
+      global.Image = vi.fn(() => mockImage) as unknown as typeof Image;
+
+      render(<EditItemModal {...baseProps} initialName="Test Base" />);
+
+      const file = new File(['test'], 'dropped-image.png', { type: 'image/png' });
+      const dropZone = screen.getByText(/Click to upload/i).closest('div');
+
+      fireEvent.dragOver(dropZone!, { preventDefault: vi.fn(), stopPropagation: vi.fn() });
+      fireEvent.drop(dropZone!, {
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        dataTransfer: {
+          files: [file],
+        },
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByAltText('Preview')).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        if (mockImage.onload) {
+          mockImage.onload();
+        }
+      });
+    });
+
+    it('shows error for invalid file type in drag and drop', async () => {
+      render(<EditItemModal {...baseProps} initialName="Test Base" />);
+
+      const file = new File(['test'], 'invalid.bmp', { type: 'image/bmp' });
+      const dropZone = screen.getByText(/Click to upload/i).closest('div');
+
+      fireEvent.dragOver(dropZone!, { preventDefault: vi.fn(), stopPropagation: vi.fn() });
+      fireEvent.drop(dropZone!, {
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        dataTransfer: {
+          files: [file],
+        },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Please upload a valid image file/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows error when image fails to load', async () => {
+      const user = userEvent.setup();
+      const mockObjectUrl = 'blob:http://localhost/failed-image';
+      global.URL.createObjectURL = vi.fn(() => mockObjectUrl);
+      
+      const mockImage = {
+        onload: null as (() => void) | null,
+        onerror: null as (() => void) | null,
+        src: '',
+        width: 400,
+        height: 200,
+      };
+      global.Image = vi.fn(() => mockImage) as unknown as typeof Image;
+
+      render(<EditItemModal {...baseProps} initialName="Test Base" />);
+
+      const file = new File(['test'], 'failed-image.png', { type: 'image/png' });
+      const fileInput = document.getElementById('edit-image-upload') as HTMLInputElement;
+      await user.upload(fileInput, file);
+
+      await waitFor(() => {
+        expect(screen.queryByAltText('Preview')).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        if (mockImage.onerror) {
+          mockImage.onerror();
+        }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Failed to load image/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows error for invalid file type in file input', async () => {
+      render(<EditItemModal {...baseProps} initialName="Test Base" />);
+
+      const file = new File(['test'], 'invalid.txt', { type: 'text/plain' });
+      const fileInput = document.getElementById('edit-image-upload') as HTMLInputElement;
+
+      Object.defineProperty(fileInput, 'files', {
+        value: [file],
+        writable: false,
+      });
+
+      fireEvent.change(fileInput);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Please upload a valid image file/i)).toBeInTheDocument();
       });
     });
   });

@@ -1469,17 +1469,4 @@ describe('Edge Cases & Error Recovery Tests', () => {
     expect(callCount).toBe(3);
     expect(mockToast.success).toHaveBeenCalledTimes(3);
   });
-
-  it('should set views refetch trigger', () => {
-    const { result } = renderHook(() => useWorkspaceBusinessLogic());
-
-    expect(typeof result.current.setViewsRefetchTrigger).toBe('function');
-
-    act(() => {
-      result.current.setViewsRefetchTrigger(1);
-    });
-
-    // Verify the function was called successfully (no error)
-    expect(true).toBe(true);
-  });
 });

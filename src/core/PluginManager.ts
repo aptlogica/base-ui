@@ -88,8 +88,6 @@ export class PluginManagerImpl implements PluginManager {
   register(plugin: Plugin): void {
     if (this.plugins.has(plugin.manifest.id)) {
       throw new Error(`Plugin ${plugin.manifest.id} is already registered`);
-      // console.warn(`Plugin ${plugin.manifest.id} is already registered`)
-      return
     }
     
     this.plugins.set(plugin.manifest.id, plugin);
@@ -162,7 +160,6 @@ export class PluginManagerImpl implements PluginManager {
         
         // Check if extension point exists, if not, register it automatically
         if (!this.extensionPoints.has(fullPointId)) {
-          // console.warn(`Extension point ${fullPointId} does not exist. Creating it automatically.`);
           this.extensionPoints.set(fullPointId, {});
         }
         
@@ -187,7 +184,6 @@ export class PluginManagerImpl implements PluginManager {
       },
       registerService: <T>(serviceId: string, service: T): void => {
         if (this.services.has(serviceId)) {
-          // console.warn(`Service ${serviceId} is already registered. Overriding.`);
         }
         this.services.set(serviceId, service);
       }
@@ -214,8 +210,7 @@ export class PluginManagerImpl implements PluginManager {
     // Check if other loaded plugins depend on this one
     for (const [id, p] of this.plugins.entries()) {
       if (this.loadedPlugins.has(id) && 
-          p.manifest.dependencies && 
-          p.manifest.dependencies[pluginId]) {
+          p.manifest.dependencies?.[pluginId]) {
         throw new Error(`Cannot unload plugin ${pluginId} because plugin ${id} depends on it`);
       }
     }
@@ -239,11 +234,7 @@ export class PluginManagerImpl implements PluginManager {
         this.extensionPoints.delete(pointId);
       }
     }
-    
-    // Remove services provided by this plugin
-    // Note: This is a simplified approach. In a real implementation,
-    // you might want to track which plugin registered which service
-    
+ 
     this.loadedPlugins.delete(pluginId);
   }
   
