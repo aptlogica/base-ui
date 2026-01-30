@@ -244,7 +244,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                   <span className="relative inline-block group">
                     <HelpCircle className={`w-4 h-4 ${getHelpIconColor()} cursor-help`} />
                     <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
-                      <h4 className="font-medium mb-2">Base name requirements:</h4>
+                      <h4 className="font-medium text-primary mb-2">Base name requirements:</h4>
                       <ul className="space-y-1">
                         <li className={`flex items-center ${name.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
                           • Minimum 3 characters
@@ -393,7 +393,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
               e.preventDefault();
               handleSubmit(e);
             }}
-            disabled={isSubmitting || !name.trim() || name.trim().length < 3}
+            disabled={isSubmitting || !name.trim() || name.trim().length < 3 || !!imageError}
             className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             {isSubmitting ? (

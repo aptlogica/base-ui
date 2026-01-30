@@ -150,7 +150,7 @@ describe('LongText Component', () => {
       });
     });
 
-    it('should close modal on backdrop click', async () => {
+    it('should close modal on backdrop click without saving', async () => {
       const { container } = render(
         <LongText
           value="Original content"
@@ -160,6 +160,11 @@ describe('LongText Component', () => {
       );
 
       await openModal(container);
+
+      const textboxes = screen.getAllByRole('textbox');
+      const textarea = textboxes[1];
+      await userEvent.clear(textarea);
+      await userEvent.type(textarea, 'Modified content');
 
       const backdrop = document.querySelector('.backdrop-blur-sm');
       if (backdrop) {
@@ -167,12 +172,14 @@ describe('LongText Component', () => {
         await waitFor(() => {
           expect(screen.queryByText('Long Text')).not.toBeInTheDocument();
         }, { timeout: 2000 });
+        // Ensure onChange was NOT called (no save on backdrop click)
+        expect(mockOnChange).not.toHaveBeenCalled();
       } else {
         expect(screen.getByText('Long Text')).toBeInTheDocument();
       }
     });
 
-    it('should close modal on X button click', async () => {
+    it('should close modal on X button click and save changes', async () => {
       const { container } = render(
         <LongText
           value="Original content"
@@ -183,12 +190,19 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
+      const textboxes = screen.getAllByRole('textbox');
+      const textarea = textboxes[1];
+      await userEvent.clear(textarea);
+      await userEvent.type(textarea, 'Modified content');
+
       const closeButton = screen.getByLabelText('Close');
       fireEvent.click(closeButton);
 
       await waitFor(() => {
         expect(screen.queryByText('Long Text')).not.toBeInTheDocument();
       });
+      // Ensure onChange was called (X button saves)
+      expect(mockOnChange).toHaveBeenCalledWith('Modified content');
     });
   });
 

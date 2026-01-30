@@ -14,8 +14,7 @@ dist-ssr
 
 # Test coverage reports
 coverage/
-coverage-vitest/
-scripts/
+!coverage-vitest/lcov.info
 
 # Editor directories and files
 .vscode/*
@@ -30,4 +29,3 @@ scripts/
 
 # Environment variables
 .env
-package-lock.json

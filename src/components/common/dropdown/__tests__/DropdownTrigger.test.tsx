@@ -29,7 +29,7 @@ describe('DropdownTrigger', () => {
     expect(screen.getByText('3')).toBeInTheDocument();
   });
 
-  it('clear button invokes onClear and does not toggle', () => {
+  it('clear button invokes onClear and does not toggle', async () => {
     const onToggle = vi.fn();
     const onClear = vi.fn();
     render(
@@ -43,15 +43,12 @@ describe('DropdownTrigger', () => {
         onClear={onClear}
       />
     );
-    const buttons = screen.getAllByRole('button');
-    const clearBtn = buttons.find(btn => {
-      const svg = btn.querySelector('svg.lucide-x');
-      return svg !== null && btn !== buttons[0];
-    });
+    // The clear button is now a div with role="button" and aria-label="Clear selection"
+    const clearBtn = screen.getByRole('button', { name: /clear selection/i });
+    
     expect(clearBtn).toBeTruthy();
-    if (clearBtn) {
-      fireEvent.click(clearBtn);
-    }
+    fireEvent.click(clearBtn);
+    
     expect(onClear).toHaveBeenCalledTimes(1);
     expect(onToggle).not.toHaveBeenCalled();
   });

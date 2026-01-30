@@ -48,51 +48,60 @@ export function DropdownTrigger({
   };
 
   return (
-    <button
-      type="button"
-      className={`${baseClasses} ${stateClasses} ${className}`}
-      onClick={onToggle}
-      disabled={disabled || loading}
-      aria-expanded={isOpen}
-      aria-haspopup="listbox"
-    >
-      <div className="flex items-center justify-between">
-        <span className={`block truncate ${displayLabel.includes('Select') ? 'text-gray-500' : 'text-gray-900'
-          }`}>
-          {displayLabel}
-        </span>
+    <div className="relative">
+      <button
+        type="button"
+        className={`${baseClasses} ${stateClasses} ${className}`}
+        onClick={onToggle}
+        disabled={disabled || loading}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+      >
+        <div className="flex items-center justify-between">
+          <span className={`block truncate ${displayLabel.includes('Select') ? 'text-gray-500' : 'text-gray-900'
+            }`}>
+            {displayLabel}
+          </span>
 
-        <div className="flex items-center space-x-1">
-          {multiple && selectedCount > 0 && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-              {selectedCount}
-            </span>
-          )}
+          <div className="flex items-center space-x-1">
+            {multiple && selectedCount > 0 && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {selectedCount}
+              </span>
+            )}
 
-          {clearable && selectedCount > 0 && !loading && (
-            <button
-              onClick={handleClear}
-              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-              type="button"
-            >
-              <X className="w-3 h-3 text-gray-500" />
-            </button>
-          )}
-
-          {loading ? (
-            <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
-          ) : (
-            <>
-              {dropdownPosition === 'above' && isOpen ? (
-                <ChevronUp className="w-4 h-4 text-gray-400" />
-              ) : (
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen && dropdownPosition === 'below' ? 'transform rotate-180' : ''
-                  }`} />
-              )}
-            </>
-          )}
+            {loading ? (
+              <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+            ) : (
+              <>
+                {dropdownPosition === 'above' && isOpen ? (
+                  <ChevronUp className="w-4 h-4 text-gray-400" />
+                ) : (
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen && dropdownPosition === 'below' ? 'transform rotate-180' : ''
+                    }`} />
+                )}
+              </>
+            )}
+          </div>
         </div>
-    </div>
       </button>
+
+      {clearable && selectedCount > 0 && !loading && (
+        <div
+          onClick={handleClear}
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer z-10"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              handleClear(e as any);
+            }
+          }}
+          aria-label="Clear selection"
+        >
+          <X className="w-3 h-3 text-gray-500" />
+        </div>
+      )}
+    </div>
   );
 }

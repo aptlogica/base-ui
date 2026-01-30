@@ -472,7 +472,7 @@ describe('useWorkspaces', () => {
       // Arrange
       const apiError = new Error('Network error');
       vi.mocked(clientService.getWorkspacesByUser).mockRejectedValue(apiError);
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
 
       // Act
       renderHook(() => useWorkspaces(), {
@@ -491,7 +491,7 @@ describe('useWorkspaces', () => {
       // Arrange
       const authError = { response: { status: 401 } };
       vi.mocked(clientService.getWorkspacesByUser).mockRejectedValue(authError);
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
 
       // Act
       renderHook(() => useWorkspaces(), {
@@ -510,7 +510,7 @@ describe('useWorkspaces', () => {
       // Arrange
       const authError = { response: { status: 403 } };
       vi.mocked(clientService.getWorkspacesByUser).mockRejectedValue(authError);
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
 
       // Act
       renderHook(() => useWorkspaces(), {
@@ -1968,7 +1968,7 @@ describe('View Mutations', () => {
       // Arrange
       const appearance = { backgroundColor: '#ffffff' };
       vi.mocked(clientService.updateViewService).mockResolvedValue({});
-      
+
       // Pre-populate cache with existing view
       queryClient.setQueryData(['view', 'view-123'], { id: 'view-123', meta: {} });
 
@@ -1995,7 +1995,7 @@ describe('View Mutations', () => {
       const appearance = { backgroundColor: '#ffffff' };
       const originalView = { id: 'view-123', meta: { formViewAppearance: { backgroundColor: '#000000' } } };
       vi.mocked(clientService.updateViewService).mockRejectedValue(new Error('Failed'));
-      
+
       // Pre-populate cache
       queryClient.setQueryData(['view', 'view-123'], originalView);
 
@@ -2024,7 +2024,7 @@ describe('View Mutations', () => {
       // Arrange
       const meta = { cardOrder: ['card-1', 'card-2'] };
       vi.mocked(clientService.updateViewService).mockResolvedValue({});
-      
+
       // Pre-populate cache
       queryClient.setQueryData(['view', 'view-123'], { id: 'view-123', meta: { existingKey: 'value' } });
 
@@ -2742,15 +2742,15 @@ describe('User Profile Mutations', () => {
 
       await act(async () => {
         await result.current.mutateAsync({
-          old_password: 'oldpass123',
-          new_password: 'newpass456',
+          old_password: 'XC01060R',
+          new_password: '6cV.JcjD',
         });
       });
 
       // Assert
       expect(clientService.changePasswordService).toHaveBeenCalledWith('user-123', {
-        old_password: 'oldpass123',
-        new_password: 'newpass456',
+        old_password: 'XC01060R',
+        new_password: '6cV.JcjD',
       });
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
@@ -3826,7 +3826,7 @@ describe('Error Handling Edge Cases', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync({ base_id: 'base-123', workspace_id: 'ws-123', title: 'Test', description: '' });
-        } catch (e) {}
+        } catch (e) { }
       });
       await waitFor(() => { expect(result.current.isError).toBe(true); });
       expect((result.current.error as any)?.response?.status).toBe(401);
@@ -3839,7 +3839,7 @@ describe('Error Handling Edge Cases', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync('ws-123');
-        } catch (e) {}
+        } catch (e) { }
       });
       await waitFor(() => { expect(result.current.isError).toBe(true); });
       expect((result.current.error as any)?.response?.status).toBe(403);
@@ -3852,7 +3852,7 @@ describe('Error Handling Edge Cases', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync({ workspace: { title: '', description: '' } });
-        } catch (e) {}
+        } catch (e) { }
       });
       await waitFor(() => { expect(result.current.isError).toBe(true); });
       expect((result.current.error as any)?.response?.status).toBe(422);
@@ -3865,7 +3865,7 @@ describe('Error Handling Edge Cases', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync({ tableId: 'table-123', baseId: 'base-123', config: { name: 'Field', type: 'text' } });
-        } catch (e) {}
+        } catch (e) { }
       });
       await waitFor(() => { expect(result.current.isError).toBe(true); });
       expect((result.current.error as any)?.response?.status).toBe(500);
@@ -3878,7 +3878,7 @@ describe('Error Handling Edge Cases', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync({ baseId: 'base-123', workspaceId: 'ws-123', members: [{ user_id: 'user-1', role: 'viewer' }] });
-        } catch (e) {}
+        } catch (e) { }
       });
       await waitFor(() => { expect(result.current.isError).toBe(true); });
       expect((result.current.error as any)?.response?.status).toBe(207);
@@ -3892,7 +3892,7 @@ describe('Error Handling Edge Cases', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync({ tableId: 'table-123', params: { name: 'Updated' } });
-        } catch (e) {}
+        } catch (e) { }
       });
       await waitFor(() => { expect(result.current.isError).toBe(true); });
       expect(result.current.error?.name).toBe('TimeoutError');
@@ -3905,7 +3905,7 @@ describe('Error Handling Edge Cases', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync({ viewId: 'view-123', appearance: { layout: 'grid' } });
-        } catch (e) {}
+        } catch (e) { }
       });
       await waitFor(() => { expect(result.current.isError).toBe(true); });
       expect(result.current.error).toBe(error);

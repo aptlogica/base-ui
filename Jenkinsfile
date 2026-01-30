@@ -8,12 +8,24 @@ pipeline {
       }
     }
 
+    stage('Install Dependencies') {
+      steps {
+        sh 'npm ci'
+      }
+    }
+
+    stage('Run Tests with Coverage') {
+      steps {
+        sh 'npm run test:coverage'
+      }
+    }
+
     stage('SonarQube Analysis') {
       steps {
         script {
           // Get path to the installed Sonar Scanner tool
           def scannerHome = tool 'SonarScanner'
-          
+
           withSonarQubeEnv('aptl-sonar') {
             // Run the scanner binary
             sh "${scannerHome}/bin/sonar-scanner"

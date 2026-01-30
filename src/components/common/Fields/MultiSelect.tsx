@@ -210,10 +210,10 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
         <button
           ref={buttonRef}
           type="button"
-          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onClick={() => !disabled && allowEdit && setIsOpen(!isOpen)}
           disabled={disabled}
           className={`field-component ${error ? 'border-red-500 bg-red-50' : ''
-            } ${disabled || readOnly ? 'text-gray-400' : 'text-gray-900'} ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900 cursor-pointer'}`}
         >
           <div className="w-full flex items-center justify-between min-w-0">
             <div className="flex gap-1 min-w-0 flex-1 overflow-hidden max-h-20 overflow-y-auto">
@@ -228,7 +228,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                   const cls = opt.color ? '' : getOptionColor(item, colorIndex);
                   return (
                     <div
-                      key={item}
+                      key={`${index}-${item}`}
                       className={`min-w-8 h-6 max-w-32 inline-flex items-center justify-center gap-0.5 p-1 px-2 rounded-xl truncate overflow-hidden whitespace-nowrap flex-shrink-0 ${cls}`}
                       style={style}
                       title={item}
@@ -275,7 +275,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                 return (
                   <button
                     type="button"
-                    key={`${label}-${index}`}
+                    key={`option-${index}-${label}`}
                     onClick={() => !isDisabled && !readOnly && handleToggleOption(label)}
                     disabled={disabled || readOnly}
                     className={`w-full text-left text-sm rounded-xl flex items-center justify-between ${isDisabled || readOnly

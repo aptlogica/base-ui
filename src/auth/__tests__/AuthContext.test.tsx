@@ -1264,7 +1264,7 @@ describe('AuthContext', () => {
       });
     });
 
-    it('should return saving state', async () => {
+    it('should return loading state', async () => {
       let result: any;
       await act(async () => {
         const hook = renderHook(() => useAuth(), {
@@ -1277,7 +1277,7 @@ describe('AuthContext', () => {
         result = hook.result;
       });
 
-      expect(typeof result.current.saving).toBe('boolean');
+      expect(typeof result.current.loading).toBe('boolean');
     });
 
     it('should return restoreCompleted state', async () => {
@@ -1677,14 +1677,13 @@ describe('AuthContext', () => {
   describe('AuthContext Value', () => {
     it('should provide all required context values', async () => {
       const TestComponent = () => {
-        const { user, login, logout, loading, saving, restoreCompleted, userRole } = useAuth();
+        const { user, login, logout, loading, restoreCompleted, userRole } = useAuth();
         return (
           <div>
             <div data-testid="has-user">{user ? 'yes' : 'no'}</div>
             <div data-testid="has-login">{typeof login === 'function' ? 'yes' : 'no'}</div>
             <div data-testid="has-logout">{typeof logout === 'function' ? 'yes' : 'no'}</div>
             <div data-testid="has-loading">{typeof loading === 'boolean' ? 'yes' : 'no'}</div>
-            <div data-testid="has-saving">{typeof saving === 'boolean' ? 'yes' : 'no'}</div>
             <div data-testid="has-restore">{typeof restoreCompleted === 'boolean' ? 'yes' : 'no'}</div>
             <div data-testid="has-role">{typeof userRole === 'string' || userRole === null ? 'yes' : 'no'}</div>
           </div>
@@ -1704,7 +1703,6 @@ describe('AuthContext', () => {
         expect(screen.getByTestId('has-login')).toHaveTextContent('yes');
         expect(screen.getByTestId('has-logout')).toHaveTextContent('yes');
         expect(screen.getByTestId('has-loading')).toHaveTextContent('yes');
-        expect(screen.getByTestId('has-saving')).toHaveTextContent('yes');
         expect(screen.getByTestId('has-restore')).toHaveTextContent('yes');
         expect(screen.getByTestId('has-role')).toHaveTextContent('yes');
       });

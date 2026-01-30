@@ -35,9 +35,10 @@ export const MultiLineText: React.FC<MultiLineTextProps> = ({
   const prevValueRef = useRef<string>(localValue);
 
   useEffect(() => {
-    if (value !== undefined && value !== prevValueRef.current) {
-      setLocalValue(value);
-      prevValueRef.current = value;
+    const normalizedValue = value ?? "";
+    if (normalizedValue !== prevValueRef.current) {
+      setLocalValue(normalizedValue);
+      prevValueRef.current = normalizedValue;
     }
   }, [value]);
 

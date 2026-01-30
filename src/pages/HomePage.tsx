@@ -216,16 +216,17 @@ const HomePage: React.FC = () => {
     setEditingBase(base);
   };
 
-  const handleSaveBase = async ({ name, description, image }: { name: string; description: string; image?: File | null }) => {
+  const handleSaveBase = async ({ name, description, image }: { name: string; description: string; image?: File | string | null }) => {
     if (!editingBase) return;
 
     try {
       const updates: {
         title?: string;
         description?: string;
-        image?: File | Blob;
+        image?: File | Blob ;
       } = {};
 
+      console.log(updates)
       // Only include fields that have actually changed
       const currentTitle = editingBase.title || editingBase.name || '';
       const currentDescription = editingBase.description || '';

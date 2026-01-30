@@ -274,7 +274,7 @@ export const Percent: React.FC<PercentProps> = ({
   const inputClassName = getInputClassName(error, showError, disabled, readOnly);
   const displayClassName = getDisplayClassName(localValue, disabled, readOnly);
   const borderClassName = isBorder ? "field-component-border" : "";
-  const baseClassName = `w-full relative ${className} ${borderClassName}`.trim();
+  const baseClassName = `w-full relative ${borderClassName} ${className || ""}`.trim();
 
   if (displayAsProgress) {
     const progressBar = (

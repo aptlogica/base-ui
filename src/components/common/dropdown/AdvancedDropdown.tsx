@@ -448,14 +448,21 @@ const DropdownTrigger = React.forwardRef<HTMLButtonElement, {
         )}
 
         {clearable && selectedCount > 0 && !loading && onClear && (
-          <button
-            type="button"
+          <div
+            role="button"
+            tabIndex={0}
             onClick={onClear}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClear(e);
+              }
+            }}
             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
             aria-label="Clear selection"
           >
             <X className="w-3 h-3 text-gray-500" />
-          </button>
+          </div>
         )}
 
         {loading ? (

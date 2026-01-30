@@ -11,7 +11,6 @@
  * - Footer button registration and cleanup
  */
 
-import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -20,7 +19,7 @@ import { SecuritySection } from '../SecuritySection';
 import * as activityService from '../../../service/activityService';
 import * as validationUtils from '../../../utils/validation';
 import type { LoginSession } from '../../../service/activityService';
-import { useUserProfile, useChangePassword } from '../../../hooks/useApi';
+import { useUserProfile } from '../../../hooks/useApi';
 import { useAuth } from '../../../auth/AuthContext';
 
 // ============================================================================
@@ -267,9 +266,11 @@ describe('SecuritySection - Error States', () => {
 
     renderSecuritySection();
 
-    // Component should still render the password section
+    // Component should still render the password section even if activity service fails
     await waitFor(() => {
       expect(screen.getByText(/Change Password/i)).toBeInTheDocument();
+      // Verify the component is still functional
+      expect(screen.getByText(/Recent Login Activity/i)).toBeInTheDocument();
     });
   });
 });
@@ -288,7 +289,7 @@ describe('SecuritySection - Password Validation', () => {
   it('should require current password field', async () => {
     renderSecuritySection();
 
-    const currentPasswordInput = screen.getByPlaceholderText(/Enter your current password/i);
+    const currentPasswordInput = await screen.findByPlaceholderText(/Enter your current password/i);
     
     fireEvent.focus(currentPasswordInput);
     fireEvent.blur(currentPasswordInput);
@@ -301,7 +302,7 @@ describe('SecuritySection - Password Validation', () => {
   it('should require new password field', async () => {
     renderSecuritySection();
 
-    const newPasswordInput = screen.getByPlaceholderText(/Enter new password/i);
+    const newPasswordInput = await screen.findByPlaceholderText(/Enter new password/i);
     
     fireEvent.focus(newPasswordInput);
     fireEvent.blur(newPasswordInput);
@@ -314,7 +315,7 @@ describe('SecuritySection - Password Validation', () => {
   it('should require confirm password field', async () => {
     renderSecuritySection();
 
-    const confirmPasswordInput = screen.getByPlaceholderText(/Confirm new password/i);
+    const confirmPasswordInput = await screen.findByPlaceholderText(/Confirm new password/i);
     
     fireEvent.focus(confirmPasswordInput);
     fireEvent.blur(confirmPasswordInput);
@@ -328,7 +329,7 @@ describe('SecuritySection - Password Validation', () => {
     const user = userEvent.setup();
     renderSecuritySection();
 
-    const newPasswordInput = screen.getByPlaceholderText(/Enter new password/i);
+    const newPasswordInput = await screen.findByPlaceholderText(/Enter new password/i);
     await user.type(newPasswordInput, 'test');
 
     expect(validationUtils.validatePasswordStrength).toHaveBeenCalled();
@@ -338,8 +339,8 @@ describe('SecuritySection - Password Validation', () => {
     const user = userEvent.setup();
     renderSecuritySection();
 
-    const newPasswordInput = screen.getByPlaceholderText(/Enter new password/i);
-    const confirmPasswordInput = screen.getByPlaceholderText(/Confirm new password/i);
+    const newPasswordInput = await screen.findByPlaceholderText(/Enter new password/i);
+    const confirmPasswordInput = await screen.findByPlaceholderText(/Confirm new password/i);
 
     await user.type(newPasswordInput, 'Password123!');
     await user.type(confirmPasswordInput, 'Different456!');
@@ -355,8 +356,8 @@ describe('SecuritySection - Password Validation', () => {
     const user = userEvent.setup();
     renderSecuritySection();
 
-    const newPasswordInput = screen.getByPlaceholderText(/Enter new password/i);
-    const confirmPasswordInput = screen.getByPlaceholderText(/Confirm new password/i);
+    const newPasswordInput = await screen.findByPlaceholderText(/Enter new password/i);
+    const confirmPasswordInput = await screen.findByPlaceholderText(/Confirm new password/i);
 
     // Create mismatch
     await user.type(newPasswordInput, 'Password123!');
@@ -382,7 +383,7 @@ describe('SecuritySection - Password Validation', () => {
 
     renderSecuritySection();
 
-    const newPasswordInput = screen.getByPlaceholderText(/Enter new password/i);
+    const newPasswordInput = await screen.findByPlaceholderText(/Enter new password/i);
     await user.type(newPasswordInput, 'weak');
     fireEvent.blur(newPasswordInput);
 
@@ -403,24 +404,24 @@ describe('SecuritySection - Password Field Interactions', () => {
     });
   });
 
-  it('should have password type for current password input initially', () => {
+  it('should have password type for current password input initially', async () => {
     renderSecuritySection();
 
-    const currentPasswordInput = screen.getByPlaceholderText(/Enter your current password/i) as HTMLInputElement;
+    const currentPasswordInput = await screen.findByPlaceholderText(/Enter your current password/i) as HTMLInputElement;
     expect(currentPasswordInput.type).toBe('password');
   });
 
-  it('should have password type for new password input initially', () => {
+  it('should have password type for new password input initially', async () => {
     renderSecuritySection();
 
-    const newPasswordInput = screen.getByPlaceholderText(/Enter new password/i) as HTMLInputElement;
+    const newPasswordInput = await screen.findByPlaceholderText(/Enter new password/i) as HTMLInputElement;
     expect(newPasswordInput.type).toBe('password');
   });
 
-  it('should have password type for confirm password input initially', () => {
+  it('should have password type for confirm password input initially', async () => {
     renderSecuritySection();
 
-    const confirmPasswordInput = screen.getByPlaceholderText(/Confirm new password/i) as HTMLInputElement;
+    const confirmPasswordInput = await screen.findByPlaceholderText(/Confirm new password/i) as HTMLInputElement;
     expect(confirmPasswordInput.type).toBe('password');
   });
 
@@ -428,7 +429,7 @@ describe('SecuritySection - Password Field Interactions', () => {
     const user = userEvent.setup();
     renderSecuritySection();
 
-    const currentPasswordInput = screen.getByPlaceholderText(/Enter your current password/i) as HTMLInputElement;
+    const currentPasswordInput = await screen.findByPlaceholderText(/Enter your current password/i) as HTMLInputElement;
     await user.type(currentPasswordInput, 'TestPassword123');
 
     expect(currentPasswordInput.value).toBe('TestPassword123');
@@ -438,7 +439,7 @@ describe('SecuritySection - Password Field Interactions', () => {
     const user = userEvent.setup();
     renderSecuritySection();
 
-    const newPasswordInput = screen.getByPlaceholderText(/Enter new password/i) as HTMLInputElement;
+    const newPasswordInput = await screen.findByPlaceholderText(/Enter new password/i) as HTMLInputElement;
     await user.type(newPasswordInput, 'NewPassword456');
 
     expect(newPasswordInput.value).toBe('NewPassword456');
@@ -448,7 +449,7 @@ describe('SecuritySection - Password Field Interactions', () => {
     const user = userEvent.setup();
     renderSecuritySection();
 
-    const confirmPasswordInput = screen.getByPlaceholderText(/Confirm new password/i) as HTMLInputElement;
+    const confirmPasswordInput = await screen.findByPlaceholderText(/Confirm new password/i) as HTMLInputElement;
     await user.type(confirmPasswordInput, 'NewPassword456');
 
     expect(confirmPasswordInput.value).toBe('NewPassword456');
@@ -730,7 +731,7 @@ describe('SecuritySection - Edge Cases', () => {
     const user = userEvent.setup();
     renderSecuritySection();
 
-    const currentPasswordInput = screen.getByPlaceholderText(/Enter your current password/i);
+    const currentPasswordInput = await screen.findByPlaceholderText(/Enter your current password/i);
     await user.type(currentPasswordInput, '   ');
     fireEvent.blur(currentPasswordInput);
 
@@ -743,8 +744,8 @@ describe('SecuritySection - Edge Cases', () => {
     const user = userEvent.setup();
     renderSecuritySection();
 
-    const currentPasswordInput = screen.getByPlaceholderText(/Enter your current password/i);
-    const newPasswordInput = screen.getByPlaceholderText(/Enter new password/i);
+    const currentPasswordInput = await screen.findByPlaceholderText(/Enter your current password/i);
+    const newPasswordInput = await screen.findByPlaceholderText(/Enter new password/i);
 
     // Blur current password to create error
     fireEvent.focus(currentPasswordInput);
@@ -770,7 +771,7 @@ describe('SecuritySection - Edge Cases', () => {
     const user = userEvent.setup();
     renderSecuritySection();
 
-    const currentPasswordInput = screen.getByPlaceholderText(/Enter your current password/i) as HTMLInputElement;
+    const currentPasswordInput = await screen.findByPlaceholderText(/Enter your current password/i) as HTMLInputElement;
 
     // Rapid typing
     await user.type(currentPasswordInput, 'A');
