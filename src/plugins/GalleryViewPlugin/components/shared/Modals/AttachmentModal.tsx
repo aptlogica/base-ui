@@ -299,7 +299,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
           );
           // Update progress for all files
           selectedFiles.forEach(file => {
-            setUploadProgress(prev => ({...prev,[file.url]: percent}));
+            setUploadProgress(prev => ({ ...prev, [file.url]: percent }));
           });
         }
       });
@@ -435,8 +435,6 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
                   ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-50'
                   : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                 }`}
-              onKeyDown={(e) => e.stopPropagation()}
-
             >
               <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <div className="text-xl font-medium text-gray-900 mb-2">

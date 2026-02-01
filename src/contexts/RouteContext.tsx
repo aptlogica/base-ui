@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { useLocation, matchPath } from 'react-router-dom';
 
-export type RouteType = 
-  | 'homepage' 
-  | 'administrator' 
-  | 'view' 
+// Define RouteType based on your application needs
+export type RouteType =
+  | 'homepage'
+  | 'administrator'
+  | 'view'
   | 'public'
   | 'unknown';
 
@@ -37,16 +38,14 @@ const ROUTE_PATTERNS = {
   homepage: [
     '/',
     '/workspace',
-    // Match /workspace/:workspaceId exactly (not sub-routes)
-    // We check this after view/administrator to avoid false matches
     { path: '/workspace/:workspaceId' },
-  ],
+  ] as const,
   administrator: [
     { path: '/workspace/:workspaceId/administrator' },
-  ],
+  ] as const,
   view: [
     { path: '/workspace/:workspaceId/base/:baseId/table/:tableId/:viewId' },
-  ]
+  ] as const,
 } as const;
 
 // Component visibility rules by route type
@@ -79,51 +78,51 @@ const VISIBILITY_RULES: Record<RouteType, {
 /**
  * Determine the route type based on the current pathname
  */
-function determineRouteType(pathname: string): RouteType {
-  // Check in priority order (most specific first)
-  
-  // Administrator pages
-  for (const pattern of ROUTE_PATTERNS.administrator) {
-    const match = matchPath(
-      typeof pattern === 'string' ? { path: pattern } : pattern,
-      pathname
-    );
-    if (match) return 'administrator';
+function isExactMatch(pathname: string, pattern: string | { path: string }): boolean {
+  if (typeof pattern === 'string') {
+    return pathname === pattern;
+  } else {
+    const match = matchPath(pattern, pathname);
+    return match?.pathname === pathname;
   }
-  
-  // View pages
-  for (const pattern of ROUTE_PATTERNS.view) {
-    const match = matchPath(
-      typeof pattern === 'string' ? { path: pattern } : pattern,
-      pathname
-    );
-    if (match) return 'view';
-  }
-  
-  
-  // Homepage (check last to avoid false matches)
-  // Only match if pathname exactly matches (not a sub-route like /base/...)
-  for (const pattern of ROUTE_PATTERNS.homepage) {
-    if (typeof pattern === 'string') {
-      if (pathname === pattern) return 'homepage';
-    } else {
-      const match = matchPath(pattern, pathname);
-      // For homepage patterns, ensure exact match (not a sub-route)
-      // Check that the matched pathname equals the input pathname
-      if (match?.pathname === pathname) {
-        return 'homepage';
-      }
+}
+
+function checkPatterns(
+  patterns: readonly (string | { path: string })[],
+  pathname: string,
+  routeType: RouteType
+): RouteType | undefined {
+  for (const pattern of patterns) {
+    if (isExactMatch(pathname, pattern)) {
+      return routeType;
     }
   }
-  
+  return undefined;
+}
+
+function determineRouteType(pathname: string): RouteType {
+  // Check in priority order (most specific first)
+
+  // Administrator pages
+  const adminMatch = checkPatterns(ROUTE_PATTERNS.administrator, pathname, 'administrator');
+  if (adminMatch) return adminMatch;
+
+  // View pages
+  const viewMatch = checkPatterns(ROUTE_PATTERNS.view, pathname, 'view');
+  if (viewMatch) return viewMatch;
+
+  // Homepage (check last to avoid false matches)
+  const homepageMatch = checkPatterns(ROUTE_PATTERNS.homepage, pathname, 'homepage');
+  if (homepageMatch) return homepageMatch;
+
   return 'unknown';
 }
 
 export const RouteContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
-  
+
   const routeType = useMemo(() => determineRouteType(location.pathname), [location.pathname]);
-  
+
   // Extract route params
   const params = useMemo(() => {
     const allPatterns = [
@@ -131,7 +130,7 @@ export const RouteContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
       ...ROUTE_PATTERNS.administrator,
       ...ROUTE_PATTERNS.homepage.filter(p => typeof p !== 'string'),
     ];
-    
+
     for (const pattern of allPatterns) {
       const match = matchPath(
         typeof pattern === 'string' ? { path: pattern } : pattern,
@@ -143,7 +142,7 @@ export const RouteContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
     return {};
   }, [location.pathname]);
-  
+
   const isVisible = useMemo(() => {
     const rules = VISIBILITY_RULES[routeType] || VISIBILITY_RULES.unknown;
     return (componentId: string): boolean => {
@@ -159,14 +158,14 @@ export const RouteContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
       return true;
     };
   }, [routeType]);
-  
+
   const value = useMemo(() => ({
     routeType,
     pathname: location.pathname,
     params,
     isVisible,
   }), [routeType, location.pathname, params, isVisible]);
-  
+
   return (
     <RouteContext.Provider value={value}>
       {children}

@@ -1009,7 +1009,7 @@ describe('updateUserActivity', () => {
 
     // Assert
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '❌ Failed to update user activity:',
+      'Failed to update user activity:',
       expect.any(Error)
     );
 
@@ -1109,7 +1109,7 @@ describe('getUserActivity', () => {
 
     // Assert
     expect(result).toBeNull();
-    expect(consoleErrorSpy).toHaveBeenCalledWith('❌ Failed to fetch user activity:', error);
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to fetch user activity:', error);
 
     consoleErrorSpy.mockRestore();
   });
@@ -1244,7 +1244,7 @@ describe('clearUserActivity', () => {
 
     // Assert
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '❌ Failed to clear user activity:',
+      'Failed to clear user activity:',
       error
     );
 

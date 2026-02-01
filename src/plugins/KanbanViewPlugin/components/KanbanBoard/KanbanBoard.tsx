@@ -35,7 +35,7 @@ type KanbanActions = {
   duplicateCard: (cardId: string) => Promise<string>;
   updateFieldOptions: (fieldId: string, options: string[] | Array<{ option: string; color: string }>) => Promise<void>;
   persistStackOrder?: (newOrder: string[]) => Promise<void>;
-  changeGroupByColumn: (col: Column | any) => Promise<void>;
+  changeGroupByColumn: (col: Column | null) => Promise<void>;
   updateViewConfig: (viewId: string, updates: Record<string, unknown>) => Promise<void>;
   addRow: ReturnType<typeof useAddRow>;
   insertRowData: ReturnType<typeof useInsertRowData>;

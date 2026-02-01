@@ -98,7 +98,7 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
     }
     if (t === 'date' || t === 'datetime' || t === 'createdtime' || t === 'lastmodifiedtime') {
       const d = new Date(raw);
-      if (!isNaN(d.getTime())) {
+      if (!Number.isNaN(d.getTime())) {
         // Format date more nicely
         if (t === 'date') {
           return d.toLocaleDateString('en-US', { 
@@ -124,12 +124,12 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
       return s;
     }
     if (t === 'multiselect') {
-      if (Array.isArray(raw)) return raw.map(v => String((v as any)?.label ?? v)).join(', ');
+      if (Array.isArray(raw)) return raw.map(v => String((v)?.label ?? v)).join(', ');
       try { const parsed = JSON.parse(String(raw)); if (Array.isArray(parsed)) return parsed.join(', '); } catch {}
     }
     if (Array.isArray(raw)) {
       // Handle links / attachments similar to Gantt
-      if (raw.length > 0 && typeof raw[0] === 'object' && (raw[0] as any).title) {
+      if (raw.length > 0 && typeof raw[0] === 'object' && raw[0].title) {
         return raw
           .map((v: any) => v?.title || v?.name || String(v))
           .join(', ');
@@ -139,7 +139,7 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
         .join(', ');
     }
     if (typeof raw === 'object') {
-      const name = (raw as any)?.name || (raw as any)?.label || (raw as any)?.title;
+      const name = raw?.name || raw?.label || raw?.title;
       if (name) return String(name);
       // Unknown object shape – show hyphen instead of JSON noise
       return '-';
@@ -169,7 +169,7 @@ export function buildEventTooltipLines(args: {
     const titleLine = [String(event.title)];
     
     // Add date/time info (always show date for context)
-    if (event.dateTime instanceof Date && !isNaN(event.dateTime.getTime())) {
+    if (event.dateTime instanceof Date && !Number.isNaN(event.dateTime.getTime())) {
       // Format as local "YYYY-MM-DD HH:MM" (or "YYYY-MM-DD" for date-only)
       const d = event.dateTime;
       const yyyy = d.getFullYear();

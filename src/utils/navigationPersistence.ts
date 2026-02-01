@@ -46,7 +46,7 @@ export const getLastNavigation = (userId?: string | null): LastNavigationState =
   } catch (error) {
     console.error('Failed to parse last navigation from sessionStorage:', error);
   }
-  
+
   return {
     workspaceId: null,
     baseId: null,
@@ -79,6 +79,7 @@ export const hasLastNavigation = (userId?: string | null): boolean => {
     const stored = sessionStorage.getItem(storageKey);
     return stored !== null && stored !== '';
   } catch (error) {
+    console.warn(error)
     return false;
   }
 };
@@ -102,27 +103,27 @@ export const clearLastNavigation = (userId?: string | null) => {
 export const clearAllLastNavigation = () => {
   try {
     const keysToRemove: string[] = [];
-    
+
     // Clean up sessionStorage navigation entries
     for (let i = 0; i < sessionStorage.length; i++) {
       const key = sessionStorage.key(i);
-      if (key && key.startsWith(STORAGE_KEY_PREFIX)) {
+      if (key?.startsWith(STORAGE_KEY_PREFIX)) {
         keysToRemove.push(key);
       }
     }
-    
+
     keysToRemove.forEach(key => sessionStorage.removeItem(key));
-    
+
     // Also clean up any legacy localStorage entries (backwards compatibility)
     const legacyKeysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith('serenibase_last_navigation')) {
+      if (key?.startsWith('serenibase_last_navigation')) {
         legacyKeysToRemove.push(key);
       }
     }
     legacyKeysToRemove.forEach(key => localStorage.removeItem(key));
-    
+
   } catch (error) {
     console.error('Failed to clear all last navigation states:', error);
   }
@@ -150,11 +151,11 @@ export const getBestNavigationTarget = (workspaces: any[] | null, lastNav?: Last
   if (!workspaces) {
     return null;
   }
-  
+
   if (workspaces.length === 0) {
     return '/workspace';
   }
-  
+
   // Try to use last navigation state if provided and valid
   if (lastNav?.workspaceId && lastNav.baseId && lastNav.tableId && lastNav.viewId) {
     const workspace = workspaces.find((ws: any) => ws.id === lastNav.workspaceId);
@@ -162,7 +163,7 @@ export const getBestNavigationTarget = (workspaces: any[] | null, lastNav?: Last
       const base = workspace.bases.find((b: any) => b.id === lastNav.baseId);
       if (base?.tables) {
         // Handle both nested structure (model.id) and direct id
-        const table = base.tables.find((t: any) => 
+        const table = base.tables.find((t: any) =>
           t?.model?.id === lastNav.tableId || t?.id === lastNav.tableId
         );
         if (table?.views && table.views.length > 0) {
@@ -176,7 +177,7 @@ export const getBestNavigationTarget = (workspaces: any[] | null, lastNav?: Last
       }
     }
   }
-  
+
   // Auto-select for new users: Navigate to first workspace > first base > first table > first view
   const firstWorkspace = workspaces[0];
   if (firstWorkspace?.bases && firstWorkspace.bases.length > 0) {
@@ -197,7 +198,7 @@ export const getBestNavigationTarget = (workspaces: any[] | null, lastNav?: Last
       return `/workspace/${firstWorkspace.id}`;
     }
   }
-  
+
   // If no valid path found, go to first workspace
   return firstWorkspace ? `/workspace/${firstWorkspace.id}` : '/workspace';
 };
@@ -209,7 +210,7 @@ export const resolveWorkspaceIdFromBaseId = (baseId: string, workspaces: any[]):
   if (!baseId || !workspaces || workspaces.length === 0) {
     return null;
   }
-  
+
   for (const workspace of workspaces) {
     if (workspace?.bases) {
       const base = workspace.bases.find((b: any) => b.id === baseId);
@@ -218,7 +219,7 @@ export const resolveWorkspaceIdFromBaseId = (baseId: string, workspaces: any[]):
       }
     }
   }
-  
+
   return null;
 };
 
@@ -230,7 +231,7 @@ export const getSafeNavigationTarget = (workspaces: any[] | null): string | null
   if (!workspaces || workspaces.length === 0) {
     return '/workspace';
   }
-  
+
   // Navigate to first available workspace > base > table > view
   for (const workspace of workspaces) {
     if (workspace?.bases && workspace.bases.length > 0) {
@@ -249,7 +250,7 @@ export const getSafeNavigationTarget = (workspaces: any[] | null): string | null
       }
     }
   }
-  
+
   return workspaces[0] ? `/workspace/${workspaces[0].id}` : '/workspace';
 };
 
@@ -262,7 +263,7 @@ export const getSafeNavigationTarget = (workspaces: any[] | null): string | null
  */
 export const cleanupWorkspaceNavigation = (deletedWorkspaceId: string, userId?: string | null): boolean => {
   const lastNav = getLastNavigation(userId);
-  
+
   if (lastNav.workspaceId === deletedWorkspaceId) {
     saveLastNavigation({
       workspaceId: null,
@@ -272,7 +273,7 @@ export const cleanupWorkspaceNavigation = (deletedWorkspaceId: string, userId?: 
     }, userId);
     return true; // Was current workspace
   }
-  
+
   return false; // Was not current workspace
 };
 
@@ -281,7 +282,7 @@ export const cleanupWorkspaceNavigation = (deletedWorkspaceId: string, userId?: 
  */
 export const cleanupBaseNavigation = (deletedBaseId: string, userId?: string | null): boolean => {
   const lastNav = getLastNavigation(userId);
-  
+
   if (lastNav.baseId === deletedBaseId) {
     saveLastNavigation({
       workspaceId: lastNav.workspaceId, // Keep workspace
@@ -291,7 +292,7 @@ export const cleanupBaseNavigation = (deletedBaseId: string, userId?: string | n
     }, userId);
     return true; // Was current base
   }
-  
+
   return false; // Was not current base
 };
 
@@ -300,7 +301,7 @@ export const cleanupBaseNavigation = (deletedBaseId: string, userId?: string | n
  */
 export const cleanupTableNavigation = (deletedTableId: string, userId?: string | null): boolean => {
   const lastNav = getLastNavigation(userId);
-  
+
   if (lastNav.tableId === deletedTableId) {
     saveLastNavigation({
       workspaceId: lastNav.workspaceId, // Keep workspace
@@ -310,7 +311,7 @@ export const cleanupTableNavigation = (deletedTableId: string, userId?: string |
     }, userId);
     return true; // Was current table
   }
-  
+
   return false; // Was not current table
 };
 
@@ -319,7 +320,7 @@ export const cleanupTableNavigation = (deletedTableId: string, userId?: string |
  */
 export const cleanupViewNavigation = (deletedViewId: string, userId?: string | null): boolean => {
   const lastNav = getLastNavigation(userId);
-  
+
   if (lastNav.viewId === deletedViewId) {
     saveLastNavigation({
       workspaceId: lastNav.workspaceId, // Keep workspace
@@ -329,6 +330,6 @@ export const cleanupViewNavigation = (deletedViewId: string, userId?: string | n
     }, userId);
     return true; // Was current view
   }
-  
+
   return false; // Was not current view
 };

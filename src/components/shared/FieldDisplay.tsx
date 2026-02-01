@@ -8,7 +8,7 @@ import {
   SingleSelect,
   MultiSelect,
   LongText,
-  URL,
+  URLField,
   Rating,
   PhoneNumber,
   Currency,
@@ -91,6 +91,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       }
       return field.config || {};
     } catch (error) {
+      console.warn(error)
       return field.config || {};
     }
   })();
@@ -183,8 +184,6 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
         <LongText
           {...commonProps}
           maxLength={1000}
-          minRows={2}
-          maxRows={4}
           config={parsedConfig}
           allowEdit={false}
           isBorder={false}
@@ -362,7 +361,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       break;
     case 'url':
       renderedComponent = (
-        <URL
+        <URLField
           {...commonProps}
           config={parsedConfig}
           allowEdit={false}
@@ -383,7 +382,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       break;
     case 'multiSelect':
       // Safely parse multiSelect value - handle both string and array formats
-      let multiSelectValue: any[] = [];
+      { let multiSelectValue: any[] = [];
       try {
         if (Array.isArray(value)) {
           multiSelectValue = value;
@@ -395,6 +394,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
         }
       } catch (e) {
         // If parsing fails, default to empty array
+        console.warn(e);
         multiSelectValue = [];
       }
       renderedComponent = (
@@ -408,7 +408,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
           isBorder={false}
         />
       );
-      break;
+      break; }
     case 'rating':
       renderedComponent = (
         <Rating

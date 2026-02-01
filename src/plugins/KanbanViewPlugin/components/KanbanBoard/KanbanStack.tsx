@@ -81,11 +81,9 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     };
   }, [groupCol]);
 
-  // Calculate visible cards and pagination BEFORE handleDrop callback (which uses these)
   // NOTE: stack.cards already contains only cards for THIS specific stack (filtered per stack in KanbanBoard)
   const visibleCards = stack.cards.filter(card => !card._meta.deleted_at);
 
-  // FRONTEND PAGINATION: Paginate cards per stack (only when not collapsed)
   // This allows rendering only a portion of cards initially for better performance
   const {
     allLoadedData: paginatedCards,
@@ -116,7 +114,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
   const calculateDropPosition = useCallback((e: React.DragEvent): number | null => {
     const cardId = e.dataTransfer.getData('cardId') || e.dataTransfer.getData('text/plain');
     const sourceStackId = e.dataTransfer.getData('sourceStackId') || '';
-    
+
     // Store dragged card ID for filtering in render
     if (cardId) {
       setDraggedCardId(cardId);
@@ -174,7 +172,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     try { e.dataTransfer.dropEffect = 'move'; } catch { }
-    
+
     // Calculate and update drop indicator position
     const position = calculateDropPosition(e);
     setDropIndicatorPosition(position);
@@ -204,51 +202,87 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     }
   }, [removeHighlight]);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    dragCounter.current = 0;
-    removeHighlight();
+  const resetDragState = () => {
+    setDropIndicatorPosition(null);
+    setDraggedCardId(null);
+  };
 
-    const cardId = e.dataTransfer.getData('cardId') || e.dataTransfer.getData('text/plain');
-    const sourceStackId = e.dataTransfer.getData('sourceStackId') || '';
-    const sourceIndex = Number.parseInt(e.dataTransfer.getData('sourceIndex') || '0', 10);
-
-    if (cardId && onCardMove) {
-      let targetPosition: number;
-      if (dropIndicatorPosition === null) {
-        // Append to end
-        targetPosition = visibleCards.length;
-      } else if (stack.isCollapsed) {
-        targetPosition = dropIndicatorPosition;
-      } else if (dropIndicatorPosition < paginatedCards.length) {
-        targetPosition = dropIndicatorPosition;
-      } else {
-        targetPosition = visibleCards.length;
-      }
-      if (sourceStackId === stack.id) {
-        if (sourceIndex < targetPosition) {
-          targetPosition -= 1;
-        }
-      }
-
-      // Prevent duplicate: Don't call onCardMove if dropping in the same stack at the same position
-      if (sourceStackId === stack.id && sourceIndex === targetPosition) {
-        setDropIndicatorPosition(null);
-        setDraggedCardId(null);
-        return; // No change needed, exit early
-      }
-
-      // Clear indicators after using the position
-      setDropIndicatorPosition(null);
-      setDraggedCardId(null);
-
-      onCardMove(cardId, stack.id, targetPosition);
-    } else {
-      // Clear indicators even if no move
-      setDropIndicatorPosition(null);
-      setDraggedCardId(null);
+  const calculateTargetPosition = (
+    dropIndicatorPosition: number | null,
+    visibleLength: number,
+    paginatedLength: number,
+    isCollapsed: boolean
+  ): number => {
+    if (dropIndicatorPosition === null) {
+      return visibleLength;
     }
-  }, [onCardMove, removeHighlight, visibleCards, paginatedCards, stack.isCollapsed, stack.id, dropIndicatorPosition]);
+
+    if (isCollapsed) {
+      return dropIndicatorPosition;
+    }
+
+    if (dropIndicatorPosition < paginatedLength) {
+      return dropIndicatorPosition;
+    }
+
+    return visibleLength;
+  };
+
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      dragCounter.current = 0;
+      removeHighlight();
+
+      const cardId =
+        e.dataTransfer.getData('cardId') ||
+        e.dataTransfer.getData('text/plain');
+
+      const sourceStackId = e.dataTransfer.getData('sourceStackId') || '';
+      const sourceIndex = Number.parseInt(
+        e.dataTransfer.getData('sourceIndex') || '0',
+        10
+      );
+
+      // Original guard: only proceed if cardId && onCardMove
+      if (!cardId || !onCardMove) {
+        resetDragState();
+        return;
+      }
+
+      let targetPosition = calculateTargetPosition(
+        dropIndicatorPosition,
+        visibleCards.length,
+        paginatedCards.length,
+        stack.isCollapsed
+      );
+
+      // Same-stack adjustment (unchanged)
+      if (sourceStackId === stack.id && sourceIndex < targetPosition) {
+        targetPosition -= 1;
+      }
+
+      // Prevent duplicate move (unchanged)
+      if (sourceStackId === stack.id && sourceIndex === targetPosition) {
+        resetDragState();
+        return;
+      }
+
+      // Cleanup before move (same timing as original)
+      resetDragState();
+      onCardMove(cardId, stack.id, targetPosition);
+    },
+    [
+      onCardMove,
+      removeHighlight,
+      visibleCards.length,
+      paginatedCards.length,
+      stack.isCollapsed,
+      stack.id,
+      dropIndicatorPosition,
+    ]
+  );
 
   const handleContainerDrop = useCallback((e: React.DragEvent) => {
     handleDrop(e);
@@ -393,7 +427,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
   }, []);
 
   const ContainerTag = onCardMove === undefined ? 'div' : 'section';
-  
+
   return (
     <ContainerTag
       ref={containerRef}
@@ -452,7 +486,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
               {!stack.isCollapsed && hasMore && ` (${formatCompactNumber(paginatedCards.length)} loaded)`}
             </span>
           )}
-          
+
           <button
             onMouseDown={handleMenuMouseDown}
             onClick={handleMenuButtonClick}
@@ -519,7 +553,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
 
       {/* Stack Content */}
       {!stack.isCollapsed && (
-        <div 
+        <div
           className='p-4 max-h-[90%] overflow-y-auto'
           onScroll={(e) => {
             // FRONTEND PAGINATION: Infinite scroll - load more when near bottom
@@ -542,13 +576,13 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
               <div ref={cardsContainerRef} className="space-y-2 min-h-[80px] mb-2">
                 {cardsToRender.map((card, index) => {
                   const isDraggedCard = draggedCardId === card._meta.id;
-                  
+
                   return (
                     <React.Fragment key={card._meta.id}>
                       {/* Drop indicator line before this card */}
                       {dropIndicatorPosition === index && !isDraggedCard && (
-                        <div className="h-1 bg-[var(--color-brand-600)] rounded-full -my-1 z-50 opacity-80" 
-                          style={{ 
+                        <div className="h-1 bg-[var(--color-brand-600)] rounded-full -my-1 z-50 opacity-80"
+                          style={{
                             boxShadow: '0 0 12px rgba(59, 130, 246, 0.8)',
                             marginLeft: '-8px',
                             marginRight: '-8px'
@@ -578,8 +612,8 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
                 })}
                 {/* Drop indicator at the end */}
                 {dropIndicatorPosition === cardsToRender.length && (
-                  <div className="h-1 bg-[var(--color-brand-600)] rounded-full -my-1 z-50 opacity-80" 
-                    style={{ 
+                  <div className="h-1 bg-[var(--color-brand-600)] rounded-full -my-1 z-50 opacity-80"
+                    style={{
                       boxShadow: '0 0 12px rgba(59, 130, 246, 0.8)',
                       marginLeft: '-8px',
                       marginRight: '-8px'
@@ -587,7 +621,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
                   />
                 )}
               </div>
-              
+
               {/* FRONTEND PAGINATION: Load more button (alternative to infinite scroll) */}
               {hasMore && (
                 <div className="flex justify-center mt-2 mb-2">
@@ -622,11 +656,11 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
         const cardCount = stack.cards?.length || 0;
         const cardWord = cardCount === 1 ? 'card' : 'cards';
         const fieldTitle = groupFieldTitle || 'Status';
-        
+
         const deleteMessage = hasCards
           ? `This stack contains ${cardCount} ${cardWord}. Deleting this stack will:\n\n• Remove the "${stack.name}" option from the "${fieldTitle}" field\n• Move all ${cardCount} ${cardWord} to the Uncategorized stack\n\nThis action cannot be undone.`
           : `This action will remove the "${stack.name}" option from the "${fieldTitle}" field. This cannot be undone.`;
-        
+
         return (
           <DeleteConfirmModal
             isOpen={confirmOpen}

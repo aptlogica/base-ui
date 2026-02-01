@@ -8,7 +8,7 @@ import {
   SingleSelect,
   MultiSelect,
   LongText,
-  URL,
+  URLField,
   Rating,
   Attachment,
   PhoneNumber,
@@ -393,7 +393,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
       }
       case 'email': return <Email {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       case 'phoneNumber': return <PhoneNumber {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      case 'url': return <URL {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+      case 'url': return <URLField {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       case 'select': return <SingleSelect {...commonProps} options={parsedConfig?.options || []} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       case 'multiSelect': return <MultiSelect value={Array.isArray(value) ? value : (typeof value === 'string' ? JSON.parse(value || '[]') : [])} onChange={(newValue) => onChange(newValue)} options={parsedConfig?.options || []} maxSelections={10} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       case 'rating': return <Rating {...commonProps} value={value} max={parsedConfig?.ratingMax || 5} readOnly={!allowEdit} config={parsedConfig} />;

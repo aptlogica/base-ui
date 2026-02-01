@@ -11,45 +11,45 @@ import HomePage from '../pages/HomePage';
 export const registerCoreLayoutComponents = (api: PluginAPI, config: any = {}) => {
   // Set workspace config on window for backward compatibility
   (globalThis as any).__workspaceConfig = config;
-  
+
   // Register header-left components
   api.registerExtension('layout:header-left', {
     id: 'header-logo',
     order: 1,
     render: () => <HeaderLogo logoUrl={config.sidebarLogoUrl} />
   });
-  
+
   api.registerExtension('layout:header-left', {
     id: 'header-workspace-dropdown',
     order: 2,
     render: () => <HeaderWorkspaceDropdown />
   });
-  
+
   api.registerExtension('layout:header-left', {
     id: 'header-breadcrumb',
     order: 3,
     render: () => <Breadcrumb />
   });
-  
+
   // Register header-right components
   api.registerExtension('layout:header', {
     id: 'header-members',
     order: 0.5,
     render: () => <HeaderMembers />
   });
-  
+
   api.registerExtension('layout:header', {
     id: 'header-administrator-settings',
     order: 1,
     render: () => <AdministratorSettingsButton />
   });
-  
+
   api.registerExtension('layout:header', {
     id: 'header-user-dropdown',
     order: 2,
     render: () => <UserDropdown />
   });
-  
+
   // Register default pages as pluggable extensions
   api.registerExtension('page:homepage', {
     id: 'default-homepage-page',

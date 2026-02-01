@@ -11,11 +11,8 @@ interface CalendarHeaderProps {
   currentView: string;
   onViewChange: (view: string) => void;
   dateField?: any;
-  dateFields: any[];
-  onDateFieldChange: (fieldId: string) => void;
   onExport: () => void;
   onCreateRecord?: () => void;
-  sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
   // Props for the popover components
   columns: GridColumn[];
@@ -37,11 +34,8 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   currentView,
   onViewChange,
   dateField,
-  dateFields,
-  onDateFieldChange,
   onExport,
   onCreateRecord,
-  sidebarCollapsed,
   onToggleSidebar,
   columns,
   fieldConfig,
@@ -52,7 +46,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onUpdateFilter,
   onRealTimeFilter,
   onGroupByChange,
-  tableId,
+  // tableId,
   events = [],
 }) => {
   // Handler to update a filter at a specific index
@@ -295,7 +289,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               const isCurrentWeek = week.start <= currentDate && week.end >= currentDate;
               return (
                 <button
-                  key={index}
+                  key={week.start.toISOString()}
                   onClick={(e) => {
                     e.stopPropagation();
                     selectWeek(week.start);
@@ -375,7 +369,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
                 return (
                   <button
-                    key={index}
+                    key={date.toISOString()}
                     onClick={(e) => {
                       e.stopPropagation();
                       onDateChange(date);
@@ -661,7 +655,6 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                 columns={columns}
                 fieldConfig={fieldConfig}
                 onFieldToggle={onFieldToggle}
-                tableId={tableId}
                 label="Fields"
                 iconComponent={List}
               />
@@ -697,7 +690,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
             {/* Create Record */}
             {onCreateRecord && (
-              <button 
+              <button
                 onClick={onCreateRecord}
                 className="px-6 py-2 rounded-xl btn-primary text-[var(--color-text-primary)] font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >

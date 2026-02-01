@@ -144,12 +144,15 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
   // Memoize drag handlers
   const handleDragStart = React.useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.stopPropagation();
-    // Set the drag data
     e.dataTransfer.setData('cardId', card._meta.id);
     e.dataTransfer.setData('sourceIndex', card._meta.position.toString());
-    // Get source stack ID from the card's parent stack (passed via props or context)
     const stackElement = e.currentTarget.closest('.kanban-stack');
-    const sourceStackId = stackElement?.dataset?.stackId || '';
+
+    const sourceStackId =
+      stackElement instanceof HTMLElement
+        ? stackElement.dataset.stackId || ''
+        : '';
+
     if (sourceStackId) {
       e.dataTransfer.setData('sourceStackId', sourceStackId);
     }

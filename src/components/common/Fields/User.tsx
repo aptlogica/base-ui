@@ -383,7 +383,7 @@ export const User: React.FC<UserProps> = ({
                     className="ml-1 hover:bg-gray-300 rounded-full p-0.5 flex-shrink-0 border-0 bg-transparent cursor-pointer"
                     aria-label={`Remove ${user.name}`}
                   >
-                    <X className="w-3 h-3" />
+                    {!readOnly ? <X className="w-3 h-3" /> : null}
                   </button>
                 </span>
               ))}

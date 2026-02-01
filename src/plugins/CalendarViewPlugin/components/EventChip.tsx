@@ -94,13 +94,14 @@ const EventChip: React.FC<EventChipProps> = ({
       const tooltipEl = tooltipRef.current;
       let tooltipWidth = 300;
       let tooltipHeight = 120;
+
       if (tooltipEl) {
         const tr = tooltipEl.getBoundingClientRect();
         tooltipWidth = tr.width || tooltipWidth;
         tooltipHeight = tr.height || tooltipHeight;
       }
 
-      let position: 'top' | 'bottom' | 'left' | 'right' = 'top';
+      let position: 'top' | 'bottom' | 'left' | 'right';
 
       // Prefer top, then bottom, then right, then left based on space
       if (chipRect.top - tooltipHeight - 10 >= 0) {
@@ -115,29 +116,35 @@ const EventChip: React.FC<EventChipProps> = ({
         position = 'bottom';
       }
 
-      let top = 0;
-      let left = 0;
+      const horizontalCenter =
+        chipRect.left + chipRect.width / 2 - tooltipWidth / 2;
+
+      const verticalCenter =
+        chipRect.top + chipRect.height / 2 - tooltipHeight / 2;
+
+      let top: number;
+      let left: number;
 
       switch (position) {
         case 'top':
           top = chipRect.top - tooltipHeight - 8;
-          left = chipRect.left + (chipRect.width / 2) - (tooltipWidth / 2);
+          left = horizontalCenter;
           break;
+
         case 'bottom':
           top = chipRect.bottom + 8;
-          left = chipRect.left + (chipRect.width / 2) - (tooltipWidth / 2);
+          left = horizontalCenter;
           break;
+
         case 'right':
-          top = chipRect.top + (chipRect.height / 2) - (tooltipHeight / 2);
+          top = verticalCenter;
           left = chipRect.right + 8;
           break;
+
         case 'left':
-          top = chipRect.top + (chipRect.height / 2) - (tooltipHeight / 2);
+          top = verticalCenter;
           left = chipRect.left - tooltipWidth - 8;
           break;
-        default:
-          top = chipRect.bottom + 8;
-          left = chipRect.left + (chipRect.width / 2) - (tooltipWidth / 2);
       }
 
       // Clamp to viewport
@@ -147,6 +154,7 @@ const EventChip: React.FC<EventChipProps> = ({
       setTooltipPosition(position);
       setTooltipCoords({ top, left });
     };
+
 
     // Compute immediately and on next frame to capture initial mount layout
     computePosition();
@@ -165,23 +173,18 @@ const EventChip: React.FC<EventChipProps> = ({
 
   // Memoize tooltip classes to avoid recalculation
   const tooltipClasses = useMemo(() => {
-    // Allow long content (URLs, attachments) to wrap instead of overflowing
-    const baseClasses =
+    const base =
       "fixed z-[9999] bg-card text-secondary text-sm rounded-xl p-3 shadow-2xl border " +
       "max-w-xl whitespace-normal break-words";
 
-    switch (tooltipPosition) {
-      case 'top':
-        return `${baseClasses}`;
-      case 'bottom':
-        return `${baseClasses}`;
-      case 'left':
-        return `${baseClasses}`;
-      case 'right':
-        return `${baseClasses}`;
-      default:
-        return `${baseClasses}`;
-    }
+    const positionClassMap: Record<string, string> = {
+      top: "mb-2",
+      bottom: "mt-2",
+      left: "mr-2",
+      right: "ml-2"
+    };
+
+    return `${base} ${positionClassMap[tooltipPosition] ?? ''}`;
   }, [tooltipPosition]);
 
   // Memoize tooltip arrow classes
@@ -224,8 +227,8 @@ const EventChip: React.FC<EventChipProps> = ({
 
       {/* Tooltip */}
       {showTooltip && createPortal(
-        <div 
-          ref={tooltipRef} 
+        <div
+          ref={tooltipRef}
           className={tooltipClasses}
           style={{
             top: `${tooltipCoords ? tooltipCoords.top : -9999}px`,

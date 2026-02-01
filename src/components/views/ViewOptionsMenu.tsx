@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { PopoverMenu } from '../common/PopoverMenu';
-import {
-  Ellipsis,
-  Edit,
-  Trash2,
-  Eye,
-  Pin,
-} from 'lucide-react';
+import { Ellipsis, Edit, Trash2, Eye, Pin } from 'lucide-react';
 import { EditItemModal } from '../modals/EditItemModal';
 import DeleteConfirmModal from '../modals/DeleteConfirmModal';
 import { useUpdateView, useDeleteView } from '../../hooks/useApi';

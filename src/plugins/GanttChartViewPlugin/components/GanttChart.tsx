@@ -25,24 +25,34 @@ import { ColumnConfig } from '../../../plugins/GridViewPlugin/types/grid.types';
 
 // TaskCard component - moved outside to prevent recreation on every render
 const TaskCard = React.memo(({ task, onEdit, onDelete }: { task: GanttTask; onEdit?: () => void; onDelete?: (e: React.MouseEvent) => void }) => {
-  const duration = React.useMemo(() => 
+  const duration = React.useMemo(() =>
     Math.ceil((task.endDate.getTime() - task.startDate.getTime()) / (1000 * 60 * 60 * 24)),
     [task.endDate, task.startDate]
   );
   const isOverdue = task.status === 'overdue';
   const isCompleted = task.status === 'completed';
-  
+
   return (
     <div
       className={`bg-card border rounded-xl transition-all duration-200 relative overflow-hidden ${onEdit ? 'hover:border-gray-300 hover:shadow-md cursor-pointer group' : ''}`}
       onClick={onEdit}
+      onKeyDown={
+        onEdit
+          ? (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault(); // prevent scroll on Space
+              onEdit();
+            }
+          }
+          : undefined
+      }
     >
       {/* Color accent bar */}
       <div
         className="absolute left-0 top-0 bottom-0 w-1 rounded-tl-xl rounded-bl-xl"
         style={{ backgroundColor: task.color }}
       />
-      
+
       <div className="pl-4 pr-3 py-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -84,7 +94,7 @@ const TaskCard = React.memo(({ task, onEdit, onDelete }: { task: GanttTask; onEd
                 <span className="font-medium">{duration}</span>
                 <span>days</span>
               </div>
-              
+
               {task.progress > 0 && (
                 <div className="flex items-center gap-2">
                   <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
@@ -124,9 +134,9 @@ const TaskCard = React.memo(({ task, onEdit, onDelete }: { task: GanttTask; onEd
 TaskCard.displayName = 'TaskCard';
 
 // ChartTask component - moved outside to prevent recreation on every render
-const ChartTask = React.memo(({ 
-  task, 
-  position, 
+const ChartTask = React.memo(({
+  task,
+  position,
   rowTop,
   onEdit,
   onMouseEnter,
@@ -155,14 +165,12 @@ const ChartTask = React.memo(({
   const progress = Math.min(Math.max(task.progress || 0, 0), 100);
   const isOverdue = task.status === 'overdue';
   const isCompleted = task.status === 'completed';
-  
+
   return (
     <div
-      className={`absolute group transition-all duration-200 ${
-        onEdit ? 'cursor-pointer' : ''
-      } ${
-        isMilestone ? 'w-0 h-0' : 'bg-background border rounded-xl'
-      }`}
+      className={`absolute group transition-all duration-200 ${onEdit ? 'cursor-pointer' : ''
+        } ${isMilestone ? 'w-0 h-0' : 'bg-background border rounded-xl'
+        }`}
       style={{
         left: position.left,
         top: rowTop,
@@ -172,6 +180,16 @@ const ChartTask = React.memo(({
       onClick={onEdit}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      onKeyDown={
+        onEdit
+          ? (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault(); // prevent scroll on Space
+              onEdit();
+            }
+          }
+          : undefined
+      }
     >
       {/* Color accent bar */}
       {!isMilestone && (
@@ -201,7 +219,7 @@ const ChartTask = React.memo(({
                 </span>
               )}
             </div>
-            
+
             {/* Progress indicator */}
             {task.progress > 0 && (
               <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -277,18 +295,18 @@ interface GanttChartProps {
 export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, actions }) => {
   // Extract base ID for permission checks
   const baseId = useMemo(() => String(tableData?.data?.model?.base_id ?? ''), [tableData?.data?.model?.base_id]);
-  
+
   // Check permissions for read-only access
-  const { 
-    isBaseReadOnly, 
-    canCreateRecord, 
-    canUpdateRecord, 
-    canDeleteRecord 
+  const {
+    isBaseReadOnly,
+    canCreateRecord,
+    canUpdateRecord,
+    canDeleteRecord
   } = useBaseAccess(baseId || undefined);
-  
+
   // Safe handlers pattern: Check read-only once at top level
   const isReadOnly = isBaseReadOnly();
-  
+
   // Process data into Gantt-ready format
   const processedData = useGanttTaskProcessing({ tableData });
 
@@ -328,7 +346,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
     handleTaskMouseLeave,
     getTooltipClasses,
     getTooltipArrowClasses,
-  } = useGanttTimeline({ 
+  } = useGanttTimeline({
     filteredTasks,
     columns: processedData.columns,
     fieldConfig: localFieldConfig,
@@ -356,13 +374,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
     tasks: processedData.tasks,
     tableData,
     actions,
-    onRefresh: onRefresh || (() => {}),
+    onRefresh: onRefresh || (() => { }),
     columns: processedData.columns,
     rawRecords: tableData?.data?.records || [],
     startDateField: processedData.startDateField,
     endDateField: processedData.endDateField,
-    titleField: processedData.titleField,
-    progressField: processedData.progressField,
   });
 
   // Field configuration handlers
@@ -374,7 +390,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
   } = useGanttFieldConfig({
     currentView: processedData.currentView,
     updateView: actions?.updateView,
-    onRefresh: onRefresh || (() => {}),
+    onRefresh: onRefresh || (() => { }),
   });
 
   // Memoize column mappings to prevent recreation on every render
@@ -689,7 +705,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
           </div>
 
           {/* Task List */}
-          <div 
+          <div
             ref={scrollContainerRef}
             className="flex-1 overflow-y-auto p-3 space-y-2"
           >
@@ -713,7 +729,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
                     />
                   ))}
                 </div>
-                
+
                 {/* Load More Button */}
                 {hasMore && (
                   <div className="flex justify-center py-4 px-2">
@@ -772,7 +788,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
               const rowTop = virtualItem.start + 10;
 
               return (
-              <ChartTask
+                <ChartTask
                   key={task.id}
                   task={task}
                   position={position}
