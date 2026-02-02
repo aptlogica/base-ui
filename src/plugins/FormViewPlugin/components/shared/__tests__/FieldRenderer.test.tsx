@@ -34,7 +34,7 @@ vi.mock('../../../../../components/common/Fields/LongText', () => ({
 
 vi.mock('../../../../../components/common/Fields/SingleSelect', () => ({
   SingleSelect: (props: { value?: string }) => (
-    <select data-testid="single-select-field" value={props.value ?? ''}>
+    <select data-testid="single-select-field" value={props.value ?? ''} onChange={() => {}}>
       <option value="">Select</option>
     </select>
   ),

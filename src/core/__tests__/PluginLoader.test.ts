@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { loadPlugin, loadPlugins } from '../PluginLoader';
 import type { Plugin } from '../types';
 
@@ -19,31 +19,44 @@ function createMockPlugin(id: string, version: string = '1.0.0'): Plugin {
 describe('PluginLoader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('import', vi.fn((url: string) => {
+      if (url.includes('plugin.js') && !url.includes('broken')) {
+        return Promise.resolve({ default: createMockPlugin('loaded-plugin') });
+      }
+      return Promise.reject(new Error('mock import failure'));
+    }));
+    vi.stubGlobal('__vite_ssr_import__', vi.fn((url: string) => {
+      if (url.includes('plugin.js') && !url.includes('broken')) {
+        return Promise.resolve({ default: createMockPlugin('loaded-plugin') });
+      }
+      return Promise.reject(new Error('mock import failure'));
+    }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   describe('loadPlugin', () => {
     it('should load plugin from URL', async () => {
-      const mockPlugin = createMockPlugin('test-plugin');
-      vi.doMock('http://example.com/plugins/test/plugin.js', () => ({
-        default: mockPlugin,
-      }));
+      const moduleCode = encodeURIComponent(
+        'export default {' +
+          'manifest:{id:"test-plugin",name:"test-plugin",version:"1.0.0",description:"Mock plugin for testing"},' +
+          'initialize:async()=>{},activate:async()=>{},deactivate:async()=>{}' +
+        '};'
+      );
+      const dataUrl = `data:text/javascript;charset=utf-8,${moduleCode}`;
 
-      vi.stubGlobal('import', vi.fn().mockResolvedValue({ default: mockPlugin }));
-
-      (globalThis as any).import = vi.fn().mockResolvedValue({ default: mockPlugin });
-
-      try {
-        const importMock = vi.fn().mockResolvedValue({ default: mockPlugin });
-        vi.stubGlobal('import', importMock);
-      } catch {
-        // Skip if import stubbing is not supported
-      }
+      const loaded = await loadPlugin(dataUrl);
+      expect(loaded.manifest.id).toBe('test-plugin');
     });
 
     it('should throw error when plugin fails to load', async () => {
       const url = 'http://example.com/plugins/broken/plugin.js';
-
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      (globalThis as any).import.mockRejectedValueOnce(new Error('boom'));
       await expect(loadPlugin(url)).rejects.toThrow(`Failed to load plugin from ${url}`);
+      consoleErrorSpy.mockRestore();
     });
 
     it('should log error when plugin fails to load', async () => {
@@ -51,6 +64,7 @@ describe('PluginLoader', () => {
       const url = 'http://example.com/plugins/broken/plugin.js';
 
       try {
+        (globalThis as any).import.mockRejectedValueOnce(new Error('boom'));
         await loadPlugin(url);
       } catch {
         // Expected to throw
@@ -62,12 +76,17 @@ describe('PluginLoader', () => {
 
     it('should handle invalid URL gracefully', async () => {
       const invalidUrl = 'not-a-valid-url';
-
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      (globalThis as any).import.mockRejectedValueOnce(new Error('invalid'));
       await expect(loadPlugin(invalidUrl)).rejects.toThrow();
+      consoleErrorSpy.mockRestore();
     });
 
     it('should handle empty URL string', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      (globalThis as any).import.mockRejectedValueOnce(new Error('empty'));
       await expect(loadPlugin('')).rejects.toThrow();
+      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -81,6 +100,12 @@ describe('PluginLoader', () => {
     it('should filter out null plugins from failed loads', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
+      (globalThis as any).import.mockImplementation((url: string) =>
+        url.includes('broken')
+          ? Promise.reject(new Error('broken'))
+          : Promise.resolve({ default: createMockPlugin(url) })
+      );
+
       const plugins = await loadPlugins([
         'http://example.com/plugins/broken/manifest.json',
       ]);
@@ -91,6 +116,8 @@ describe('PluginLoader', () => {
 
     it('should log error for each failed plugin load', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      (globalThis as any).import.mockRejectedValue(new Error('broken'));
 
       await loadPlugins([
         'http://example.com/plugins/broken1/manifest.json',
@@ -103,6 +130,7 @@ describe('PluginLoader', () => {
 
     it('should construct plugin URL from manifest URL', async () => {
       const manifestUrl = 'http://example.com/plugins/test/manifest.json';
+      (globalThis as any).import.mockResolvedValue({ default: createMockPlugin('constructed') });
       const result = await loadPlugins([manifestUrl]);
 
       expect(Array.isArray(result)).toBe(true);
@@ -112,6 +140,7 @@ describe('PluginLoader', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const manifestUrl = 'http://example.com/plugins/test/manifest.json';
+      (globalThis as any).import.mockResolvedValue({ default: createMockPlugin('no-trailing') });
       await loadPlugins([manifestUrl]);
 
       consoleErrorSpy.mockRestore();
@@ -119,6 +148,10 @@ describe('PluginLoader', () => {
 
     it('should handle multiple manifest URLs', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      (globalThis as any).import.mockImplementation((url: string) =>
+        Promise.resolve({ default: createMockPlugin(url) })
+      );
 
       const result = await loadPlugins([
         'http://example.com/plugins/plugin1/manifest.json',
@@ -135,6 +168,8 @@ describe('PluginLoader', () => {
     it('should extract base URL correctly from manifest path', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
+      (globalThis as any).import.mockRejectedValue(new Error('fail'));
+
       await loadPlugins(['http://example.com/path/to/plugin/manifest.json']);
 
       expect(consoleErrorSpy).toHaveBeenCalled();
@@ -143,6 +178,8 @@ describe('PluginLoader', () => {
 
     it('should handle URL with query parameters', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      (globalThis as any).import.mockRejectedValue(new Error('fail'));
 
       await loadPlugins([
         'http://example.com/plugins/test/manifest.json?version=1.0.0',
@@ -154,6 +191,8 @@ describe('PluginLoader', () => {
     it('should handle URL with hash fragment', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
+      (globalThis as any).import.mockRejectedValue(new Error('fail'));
+
       await loadPlugins(['http://example.com/plugins/test/manifest.json#section']);
 
       consoleErrorSpy.mockRestore();
@@ -163,6 +202,12 @@ describe('PluginLoader', () => {
   describe('Error Handling', () => {
     it('should continue loading other plugins when one fails', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      (globalThis as any).import.mockImplementation((url: string) =>
+        url.includes('broken')
+          ? Promise.reject(new Error('broken'))
+          : Promise.resolve({ default: createMockPlugin(url) })
+      );
 
       const result = await loadPlugins([
         'http://example.com/plugins/broken/manifest.json',
@@ -175,6 +220,8 @@ describe('PluginLoader', () => {
 
     it('should not throw when all plugins fail to load', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      (globalThis as any).import.mockRejectedValue(new Error('fail'));
 
       await expect(
         loadPlugins([
@@ -189,6 +236,7 @@ describe('PluginLoader', () => {
 
   describe('Type Safety', () => {
     it('should return Plugin type array from loadPlugins', async () => {
+      (globalThis as any).import.mockResolvedValue({ default: createMockPlugin('typed') });
       const result = await loadPlugins([]);
 
       const typeCheck: Plugin[] = result;

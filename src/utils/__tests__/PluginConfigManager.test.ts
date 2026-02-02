@@ -52,6 +52,7 @@ describe('PluginConfigManager', () => {
   });
 
   it('loadConfig should fall back to default config on fetch failure', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('nope')));
 
     const mgr = new PluginConfigManager('/x.json');
@@ -60,15 +61,18 @@ describe('PluginConfigManager', () => {
     expect(loaded.plugins.builtin.length).toBeGreaterThan(0);
     expect(loaded.settings.pluginTimeout).toBe(10000);
     expect(mgr.isPluginEnabled('navigation')).toBe(true);
+    consoleErrorSpy.mockRestore();
   });
 
   it('getPluginConfig/isPluginEnabled should return defaults when unknown', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('nope')));
     const mgr = new PluginConfigManager('/x.json');
     await mgr.loadConfig();
 
     expect(mgr.getPluginConfig('missing')).toEqual({});
     expect(mgr.isPluginEnabled('missing')).toBe(false);
+    consoleErrorSpy.mockRestore();
   });
 
   it('updatePluginConfig should merge config and persist to localStorage', async () => {

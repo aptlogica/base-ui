@@ -1,9 +1,20 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { UserTable, type TenantUser } from '../UserTable';
+
+vi.mock('axios', () => ({
+  default: {
+    create: () => ({
+      get: vi.fn().mockResolvedValue({ data: [] }),
+      post: vi.fn().mockResolvedValue({ data: [] }),
+      put: vi.fn().mockResolvedValue({ data: [] }),
+      delete: vi.fn().mockResolvedValue({ data: [] }),
+    }),
+  },
+}));
 
 vi.mock('../../hooks/useUserRole', () => ({
   useUserRole: vi.fn(() => ({
@@ -15,7 +26,32 @@ vi.mock('../../hooks/useUserRole', () => ({
 
 vi.mock('../../hooks/useApi', () => ({
   useUserRolesAndAccess: vi.fn(() => ({ data: [], isLoading: false, error: null })),
+  useTenantUsers: vi.fn(() => ({ data: [], isLoading: false, error: null })),
 }));
+
+vi.mock('../../service/clientService', () => ({
+  getTenantUsersService: vi.fn().mockResolvedValue([]),
+  getUserRolesService: vi.fn().mockResolvedValue([]),
+}));
+
+class MockXMLHttpRequest {
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  open() {}
+  setRequestHeader() {}
+  send() {
+    this.onload?.();
+  }
+  abort() {}
+}
+
+beforeAll(() => {
+  vi.stubGlobal('XMLHttpRequest', MockXMLHttpRequest as unknown as typeof XMLHttpRequest);
+});
+
+afterAll(() => {
+  vi.unstubAllGlobals();
+});
 
 const createTestQueryClient = () =>
   new QueryClient({
