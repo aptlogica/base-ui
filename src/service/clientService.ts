@@ -325,8 +325,11 @@ export const forceLogout = async (): Promise<void> => {
   // Fallback: Only use globalThis.location if no component handles the event within 100ms
   // This ensures we still redirect even if no component is listening
   setTimeout(() => {
+    const pathname = globalThis.location?.pathname;
+    if (!pathname) return;
+
     // Check if we're still on a non-login page (event wasn't handled)
-    if (globalThis.location.pathname !== '/login' && !globalThis.location.pathname.startsWith('/login')) {
+    if (pathname !== '/login' && !pathname.startsWith('/login')) {
       globalThis.location.href = '/login';
     }
   }, 100);

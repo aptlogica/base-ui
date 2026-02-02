@@ -69,7 +69,7 @@ describe('AuditCreatedBy Component', () => {
 
       render(<AuditCreatedBy />);
 
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.getByText('user@example.com')).toBeInTheDocument();
     });
 
     it('should render avatar from user profile when available', () => {

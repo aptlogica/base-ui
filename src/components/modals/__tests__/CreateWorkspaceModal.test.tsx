@@ -270,16 +270,16 @@ describe('CreateWorkspaceModal', () => {
     });
 
     it('enforces max length of 50 characters', async () => {
-      const user = userEvent.setup();
-
       renderWithQueryClient(<CreateWorkspaceModal {...defaultProps} />);
 
       const input = screen.getByLabelText(/Workspace Name/i) as HTMLInputElement;
-      await user.clear(input);
-      await user.type(input, 'A'.repeat(50));
-
-      expect(input.value.length).toBe(50);
       expect(input.maxLength).toBe(50);
+
+      fireEvent.change(input, { target: { value: 'A'.repeat(51) } });
+
+      await waitFor(() => {
+        expect(screen.getByText(/less than 50 characters/i)).toBeInTheDocument();
+      });
     });
   });
 

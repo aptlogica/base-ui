@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import { URLField } from '../URL';
+import { URL } from '../URL';
 
 // Mock window.open
 const mockWindowOpen = vi.fn();
@@ -38,28 +38,28 @@ describe('URL Component', () => {
 
   describe('Rendering', () => {
     it('should render with value', () => {
-      render(<URLField value="example.com" onChange={mockOnChange} />);
+      render(<URL value="example.com" onChange={mockOnChange} />);
       expect(screen.getByText('example.com')).toBeInTheDocument();
     });
 
     it('should render with placeholder when value is empty', () => {
-      render(<URLField value="" onChange={mockOnChange} placeholder="Enter URL" />);
+      render(<URL value="" onChange={mockOnChange} placeholder="Enter URL" />);
       expect(screen.getByText('Enter URL')).toBeInTheDocument();
     });
 
     it('should render label when provided', () => {
-      render(<URLField label="Website URL" value="" onChange={mockOnChange} />);
+      render(<URL label="Website URL" value="" onChange={mockOnChange} />);
       expect(screen.getByText('Website URL')).toBeInTheDocument();
     });
 
     it('should render required indicator', () => {
-      render(<URLField label="URL" value="" required onChange={mockOnChange} />);
+      render(<URL label="URL" value="" required onChange={mockOnChange} />);
       expect(screen.getByText('*')).toBeInTheDocument();
     });
 
     it('should render helper text', () => {
       render(
-        <URLField
+        <URL
           value=""
           onChange={mockOnChange}
           helperText="Enter a valid website URL"
@@ -69,13 +69,13 @@ describe('URL Component', () => {
     });
 
     it('should render external link icon when value exists and showIcon is true', () => {
-      render(<URLField value="example.com" onChange={mockOnChange} />);
+      render(<URL value="example.com" onChange={mockOnChange} />);
       expect(screen.getByTestId('external-link')).toBeInTheDocument();
     });
 
     it('should not render external link icon when showIcon is false', () => {
       render(
-        <URLField
+        <URL
           value="example.com"
           onChange={mockOnChange}
           config={{ showIcon: false }}
@@ -85,18 +85,18 @@ describe('URL Component', () => {
     });
 
     it('should not render external link icon when value is empty', () => {
-      render(<URLField value="" onChange={mockOnChange} />);
+      render(<URL value="" onChange={mockOnChange} />);
       expect(screen.queryByTestId('external-link')).not.toBeInTheDocument();
     });
 
     it('should render with disabled styling when disabled', () => {
-      render(<URLField value="example.com" disabled onChange={mockOnChange} />);
+      render(<URL value="example.com" disabled onChange={mockOnChange} />);
       const button = screen.getByRole('button');
       expect(button).toHaveAttribute('aria-disabled', 'true');
     });
 
     it('should render with readOnly styling when readOnly', () => {
-      const { container } = render(<URLField value="example.com" readOnly onChange={mockOnChange} />);
+      const { container } = render(<URL value="example.com" readOnly onChange={mockOnChange} />);
       const element = container.querySelector('[aria-disabled="true"]');
       expect(element).toBeInTheDocument();
       expect(element).toHaveAttribute('tabIndex', '-1');
@@ -105,7 +105,7 @@ describe('URL Component', () => {
 
   describe('Editing Behavior', () => {
     it('should enter edit mode on single click when allowEdit is true', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} allowEdit={true} />);
+      render(<URL value="example.com" onChange={mockOnChange} allowEdit={true} />);
 
       await userEvent.click(screen.getByRole('button'));
 
@@ -113,7 +113,7 @@ describe('URL Component', () => {
     });
 
     it('should enter edit mode on double click when allowEdit is false', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} allowEdit={false} />);
+      render(<URL value="example.com" onChange={mockOnChange} allowEdit={false} />);
 
       const button = screen.getByRole('button');
       await userEvent.dblClick(button);
@@ -122,7 +122,7 @@ describe('URL Component', () => {
     });
 
     it('should not enter edit mode on single click when allowEdit is false', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} allowEdit={false} />);
+      render(<URL value="example.com" onChange={mockOnChange} allowEdit={false} />);
 
       await userEvent.click(screen.getByRole('button'));
 
@@ -130,7 +130,7 @@ describe('URL Component', () => {
     });
 
     it('should not enter edit mode when readOnly is true', async () => {
-      const { container } = render(<URLField value="example.com" onChange={mockOnChange} readOnly />);
+      const { container } = render(<URL value="example.com" onChange={mockOnChange} readOnly />);
 
       const element = container.querySelector('[aria-disabled="true"]');
       if (element) {
@@ -141,7 +141,7 @@ describe('URL Component', () => {
     });
 
     it('should not enter edit mode when disabled is true', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} disabled />);
+      render(<URL value="example.com" onChange={mockOnChange} disabled />);
 
       await userEvent.click(screen.getByRole('button'));
 
@@ -149,7 +149,7 @@ describe('URL Component', () => {
     });
 
     it('should enter edit mode on Enter key press', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} />);
+      render(<URL value="example.com" onChange={mockOnChange} />);
 
       const button = screen.getByRole('button');
       button.focus();
@@ -159,7 +159,7 @@ describe('URL Component', () => {
     });
 
     it('should enter edit mode on Space key press', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} />);
+      render(<URL value="example.com" onChange={mockOnChange} />);
 
       const button = screen.getByRole('button');
       button.focus();
@@ -169,7 +169,7 @@ describe('URL Component', () => {
     });
 
     it('should not enter edit mode on key press when disabled', () => {
-      render(<URLField value="example.com" onChange={mockOnChange} disabled />);
+      render(<URL value="example.com" onChange={mockOnChange} disabled />);
 
       const button = screen.getByRole('button');
       fireEvent.keyDown(button, { key: 'Enter' });
@@ -179,13 +179,13 @@ describe('URL Component', () => {
 
     it('should exit edit mode when readOnly becomes true', async () => {
       const { rerender } = render(
-        <URLField value="example.com" onChange={mockOnChange} />
+        <URL value="example.com" onChange={mockOnChange} />
       );
 
       await userEvent.click(screen.getByRole('button'));
       expect(await screen.findByRole('textbox')).toBeInTheDocument();
 
-      rerender(<URLField value="example.com" readOnly onChange={mockOnChange} />);
+      rerender(<URL value="example.com" readOnly onChange={mockOnChange} />);
 
       await waitFor(() => {
         expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
@@ -193,7 +193,7 @@ describe('URL Component', () => {
     });
 
     it('should exit edit mode on blur', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} />);
+      render(<URL value="example.com" onChange={mockOnChange} />);
 
       await userEvent.click(screen.getByRole('button'));
       const input = await screen.findByRole('textbox');
@@ -207,7 +207,7 @@ describe('URL Component', () => {
 
   describe('Input Handling', () => {
     it('should update local value on input change', async () => {
-      render(<URLField value="" onChange={mockOnChange} />);
+      render(<URL value="" onChange={mockOnChange} />);
 
       await userEvent.click(screen.getByRole('button'));
       const input = await screen.findByRole('textbox');
@@ -218,7 +218,7 @@ describe('URL Component', () => {
     });
 
     it('should call onChange on valid input', async () => {
-      render(<URLField value="" onChange={mockOnChange} />);
+      render(<URL value="" onChange={mockOnChange} />);
 
       await userEvent.click(screen.getByRole('button'));
       const input = await screen.findByRole('textbox');
@@ -229,7 +229,7 @@ describe('URL Component', () => {
     });
 
     it('should normalize URL by adding https:// prefix on blur', async () => {
-      render(<URLField value="" onChange={mockOnChange} />);
+      render(<URL value="" onChange={mockOnChange} />);
 
       await userEvent.click(screen.getByRole('button'));
       const input = await screen.findByRole('textbox');
@@ -243,7 +243,7 @@ describe('URL Component', () => {
     });
 
     it('should not normalize URL if it already has protocol', async () => {
-      render(<URLField value="" onChange={mockOnChange} />);
+      render(<URL value="" onChange={mockOnChange} />);
 
       await userEvent.click(screen.getByRole('button'));
       const input = await screen.findByRole('textbox');
@@ -257,7 +257,7 @@ describe('URL Component', () => {
     });
 
     it('should not normalize URL if it has http:// protocol', async () => {
-      render(<URLField value="" onChange={mockOnChange} />);
+      render(<URL value="" onChange={mockOnChange} />);
 
       await userEvent.click(screen.getByRole('button'));
       const input = await screen.findByRole('textbox');
@@ -271,7 +271,7 @@ describe('URL Component', () => {
     });
 
     it('should not call onChange when value does not change', async () => {
-      render(<URLField value="https://example.com" onChange={mockOnChange} />);
+      render(<URL value="https://example.com" onChange={mockOnChange} />);
 
       await userEvent.click(screen.getByRole('button'));
       const input = await screen.findByRole('textbox');
@@ -281,7 +281,7 @@ describe('URL Component', () => {
     });
 
     it('should prevent duplicate onChange calls for same value', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} />);
+      render(<URL value="example.com" onChange={mockOnChange} />);
 
       await userEvent.click(screen.getByRole('button'));
       const input = await screen.findByRole('textbox');
@@ -298,7 +298,7 @@ describe('URL Component', () => {
 
   describe('Validation', () => {
     it('should hide icon when required and empty on blur', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} required />);
+      render(<URL value="example.com" onChange={mockOnChange} required />);
 
       await userEvent.click(screen.getByRole('button'));
       const input = await screen.findByRole('textbox');
@@ -313,7 +313,7 @@ describe('URL Component', () => {
     });
 
     it('should revert to previous value on blur when required and empty', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} required />);
+      render(<URL value="example.com" onChange={mockOnChange} required />);
 
       await userEvent.click(screen.getByRole('button'));
       const input = await screen.findByRole('textbox');
@@ -328,7 +328,7 @@ describe('URL Component', () => {
 
     it('should hide icon when urlValid is true and URL is invalid', async () => {
       render(
-        <URLField
+        <URL
           value="example.com"
           onChange={mockOnChange}
           config={{ urlValid: true }}
@@ -350,7 +350,7 @@ describe('URL Component', () => {
 
     it('should revert to previous value on invalid URL when urlValid is true', async () => {
       render(
-        <URLField
+        <URL
           value="example.com"
           onChange={mockOnChange}
           config={{ urlValid: true }}
@@ -384,7 +384,7 @@ describe('URL Component', () => {
 
     it('should not show error when urlValid is false and URL is invalid', async () => {
       render(
-        <URLField
+        <URL
           value="example.com"
           onChange={mockOnChange}
           config={{ urlValid: false }}
@@ -404,7 +404,7 @@ describe('URL Component', () => {
     });
 
     it('should not show error for empty value when not required', async () => {
-      render(<URLField value="" onChange={mockOnChange} />);
+      render(<URL value="" onChange={mockOnChange} />);
 
       await userEvent.click(screen.getByRole('button'));
       const input = await screen.findByRole('textbox');
@@ -419,7 +419,7 @@ describe('URL Component', () => {
 
     it('should clear error on valid input', async () => {
       render(
-        <URLField
+        <URL
           value=""
           onChange={mockOnChange}
           config={{ urlValid: true }}
@@ -445,7 +445,7 @@ describe('URL Component', () => {
 
     it('should hide icon when there is an error', async () => {
       render(
-        <URLField
+        <URL
           value="example.com"
           onChange={mockOnChange}
           config={{ urlValid: true }}
@@ -470,7 +470,7 @@ describe('URL Component', () => {
   describe('URL Click Behavior', () => {
     it('should open URL in new tab when openInNewTab is true', async () => {
       render(
-        <URLField
+        <URL
           value="example.com"
           onChange={mockOnChange}
           config={{ openInNewTab: true }}
@@ -489,7 +489,7 @@ describe('URL Component', () => {
 
     it('should open URL in same tab when openInNewTab is false', async () => {
       render(
-        <URLField
+        <URL
           value="example.com"
           onChange={mockOnChange}
           config={{ openInNewTab: false }}
@@ -507,7 +507,7 @@ describe('URL Component', () => {
     });
 
     it('should normalize URL before opening', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} />);
+      render(<URL value="example.com" onChange={mockOnChange} />);
 
       const icon = screen.getByTestId('external-link');
       fireEvent.click(icon);
@@ -520,7 +520,7 @@ describe('URL Component', () => {
     });
 
     it('should not open URL when in edit mode', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} />);
+      render(<URL value="example.com" onChange={mockOnChange} />);
 
       await userEvent.click(screen.getByRole('button'));
       await screen.findByRole('textbox');
@@ -534,7 +534,7 @@ describe('URL Component', () => {
 
     it('should not open URL when there is an error', async () => {
       render(
-        <URLField
+        <URL
           value="example.com"
           onChange={mockOnChange}
           config={{ urlValid: true }}
@@ -556,14 +556,14 @@ describe('URL Component', () => {
     });
 
     it('should not open URL when value is empty', () => {
-      render(<URLField value="" onChange={mockOnChange} />);
+      render(<URL value="" onChange={mockOnChange} />);
 
       expect(screen.queryByTestId('external-link')).not.toBeInTheDocument();
       expect(mockWindowOpen).not.toHaveBeenCalled();
     });
 
     it('should prevent default behavior when clicking URL', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} />);
+      render(<URL value="example.com" onChange={mockOnChange} />);
 
       const icon = screen.getByTestId('external-link');
       const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
@@ -578,19 +578,19 @@ describe('URL Component', () => {
   describe('Value Synchronization', () => {
     it('should update local value when prop value changes', () => {
       const { rerender } = render(
-        <URLField value="old.com" onChange={mockOnChange} />
+        <URL value="old.com" onChange={mockOnChange} />
       );
 
       expect(screen.getByText('old.com')).toBeInTheDocument();
 
-      rerender(<URLField value="new.com" onChange={mockOnChange} />);
+      rerender(<URL value="new.com" onChange={mockOnChange} />);
 
       expect(screen.getByText('new.com')).toBeInTheDocument();
     });
 
     it('should use defaultValue when value is empty', () => {
       render(
-        <URLField
+        <URL
           value=""
           onChange={mockOnChange}
           config={{ defaultValue: 'default.com' }}
@@ -602,7 +602,7 @@ describe('URL Component', () => {
 
     it('should prioritize value over defaultValue', () => {
       render(
-        <URLField
+        <URL
           value="actual.com"
           onChange={mockOnChange}
           config={{ defaultValue: 'default.com' }}
@@ -615,7 +615,7 @@ describe('URL Component', () => {
 
     it('should update when defaultValue changes', () => {
       const { rerender } = render(
-        <URLField
+        <URL
           value=""
           onChange={mockOnChange}
           config={{ defaultValue: 'first.com' }}
@@ -625,7 +625,7 @@ describe('URL Component', () => {
       expect(screen.getByText('first.com')).toBeInTheDocument();
 
       rerender(
-        <URLField
+        <URL
           value=""
           onChange={mockOnChange}
           config={{ defaultValue: 'second.com' }}
@@ -638,7 +638,7 @@ describe('URL Component', () => {
 
   describe('Change Handling', () => {
     it('should call onChange for each valid keystroke', async () => {
-      render(<URLField value="" onChange={mockOnChange} />);
+      render(<URL value="" onChange={mockOnChange} />);
 
       await userEvent.click(screen.getByRole('button'));
       const input = await screen.findByRole('textbox');
@@ -651,7 +651,7 @@ describe('URL Component', () => {
 
     it('should not call onChange when there is a validation error', async () => {
       render(
-        <URLField
+        <URL
           value=""
           onChange={mockOnChange}
           config={{ urlValid: true }}
@@ -671,7 +671,7 @@ describe('URL Component', () => {
 
   describe('Disabled and ReadOnly States', () => {
     it('should disable input when disabled', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} disabled />);
+      render(<URL value="example.com" onChange={mockOnChange} disabled />);
 
       await userEvent.click(screen.getByRole('button'));
       // Should not enter edit mode when disabled
@@ -679,7 +679,7 @@ describe('URL Component', () => {
     });
 
     it('should disable input when readOnly', async () => {
-      const { container } = render(<URLField value="example.com" onChange={mockOnChange} readOnly />);
+      const { container } = render(<URL value="example.com" onChange={mockOnChange} readOnly />);
 
       const element = container.querySelector('[aria-disabled="true"]');
       if (element) {
@@ -690,13 +690,13 @@ describe('URL Component', () => {
     });
 
     it('should not call onChange when disabled', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} disabled />);
+      render(<URL value="example.com" onChange={mockOnChange} disabled />);
 
       expect(mockOnChange).not.toHaveBeenCalled();
     });
 
     it('should not call onChange when readOnly', async () => {
-      render(<URLField value="example.com" onChange={mockOnChange} readOnly />);
+      render(<URL value="example.com" onChange={mockOnChange} readOnly />);
 
       expect(mockOnChange).not.toHaveBeenCalled();
     });
@@ -704,45 +704,45 @@ describe('URL Component', () => {
 
   describe('Accessibility', () => {
     it('should have button role when not readOnly', () => {
-      render(<URLField value="example.com" onChange={mockOnChange} />);
+      render(<URL value="example.com" onChange={mockOnChange} />);
       expect(screen.getByRole('button')).toBeInTheDocument();
     });
 
     it('should not have button role when readOnly', () => {
-      render(<URLField value="example.com" onChange={mockOnChange} readOnly />);
+      render(<URL value="example.com" onChange={mockOnChange} readOnly />);
       // When readOnly, role should be undefined, but the element still exists
       const element = screen.getByText('example.com').closest('div');
       expect(element).not.toHaveAttribute('role', 'button');
     });
 
     it('should have aria-disabled when disabled', () => {
-      render(<URLField value="example.com" onChange={mockOnChange} disabled />);
+      render(<URL value="example.com" onChange={mockOnChange} disabled />);
       const button = screen.getByRole('button');
       expect(button).toHaveAttribute('aria-disabled', 'true');
     });
 
     it('should have aria-disabled when readOnly', () => {
-      const { container } = render(<URLField value="example.com" onChange={mockOnChange} readOnly />);
+      const { container } = render(<URL value="example.com" onChange={mockOnChange} readOnly />);
       const element = container.querySelector('[aria-disabled="true"]');
       expect(element).toBeInTheDocument();
       expect(element).toHaveAttribute('aria-disabled', 'true');
     });
 
     it('should have tabIndex -1 when disabled', () => {
-      render(<URLField value="example.com" onChange={mockOnChange} disabled />);
+      render(<URL value="example.com" onChange={mockOnChange} disabled />);
       const button = screen.getByRole('button');
       expect(button).toHaveAttribute('tabIndex', '-1');
     });
 
     it('should have tabIndex -1 when readOnly', () => {
-      const { container } = render(<URLField value="example.com" onChange={mockOnChange} readOnly />);
+      const { container } = render(<URL value="example.com" onChange={mockOnChange} readOnly />);
       const element = container.querySelector('[aria-disabled="true"]');
       expect(element).toBeInTheDocument();
       expect(element).toHaveAttribute('tabIndex', '-1');
     });
 
     it('should have tabIndex 0 when enabled', () => {
-      render(<URLField value="example.com" onChange={mockOnChange} />);
+      render(<URL value="example.com" onChange={mockOnChange} />);
       const button = screen.getByRole('button');
       expect(button).toHaveAttribute('tabIndex', '0');
     });
@@ -750,12 +750,12 @@ describe('URL Component', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty string value', () => {
-      render(<URLField value="" onChange={mockOnChange} />);
+      render(<URL value="" onChange={mockOnChange} />);
       expect(screen.getByRole('button')).toBeInTheDocument();
     });
 
     it('should handle URL with path', async () => {
-      render(<URLField value="example.com/path" onChange={mockOnChange} />);
+      render(<URL value="example.com/path" onChange={mockOnChange} />);
 
       const icon = screen.getByTestId('external-link');
       fireEvent.click(icon);
@@ -768,7 +768,7 @@ describe('URL Component', () => {
     });
 
     it('should handle URL with query parameters', async () => {
-      render(<URLField value="example.com?param=value" onChange={mockOnChange} />);
+      render(<URL value="example.com?param=value" onChange={mockOnChange} />);
 
       const icon = screen.getByTestId('external-link');
       fireEvent.click(icon);
@@ -781,7 +781,7 @@ describe('URL Component', () => {
     });
 
     it('should handle whitespace-only value', async () => {
-      render(<URLField value="   " onChange={mockOnChange} />);
+      render(<URL value="   " onChange={mockOnChange} />);
 
       await userEvent.click(screen.getByRole('button'));
       const input = await screen.findByRole('textbox');
@@ -795,11 +795,11 @@ describe('URL Component', () => {
 
     it('should handle rapid value changes', async () => {
       const { rerender } = render(
-        <URLField value="first.com" onChange={mockOnChange} />
+        <URL value="first.com" onChange={mockOnChange} />
       );
 
-      rerender(<URLField value="second.com" onChange={mockOnChange} />);
-      rerender(<URLField value="third.com" onChange={mockOnChange} />);
+      rerender(<URL value="second.com" onChange={mockOnChange} />);
+      rerender(<URL value="third.com" onChange={mockOnChange} />);
 
       expect(screen.getByText('third.com')).toBeInTheDocument();
     });
