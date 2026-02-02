@@ -24,13 +24,10 @@ interface LinksFieldProps {
     };
     disabled?: boolean;
     placeholder?: string;
-    // Current row context - these should be passed from the table row
     currentRowId?: number;
     currentTableId?: string;
-    // New prop to control persistence behavior
-    persistImmediately?: boolean; // Default: true (maintains backward compatibility)
-    // Border styling prop
-    isBorder?: boolean; // Default: false (maintains backward compatibility)
+    persistImmediately?: boolean;
+    isBorder?: boolean;
 }
 
 interface RelatedRecord {
@@ -55,13 +52,6 @@ export const LinksField: React.FC<LinksFieldProps> = ({
     const [loadingRecordId, setLoadingRecordId] = useState<string | null>(null);
     const [dropdownPosition, setDropdownPosition] = useState<{ top?: number; bottom?: number; left: number; width: number; position: 'above' | 'below' } | null>(null);
     const [focusedRecordIndex, setFocusedRecordIndex] = useState<number>(-1);
-
-    // PAGINATION DISABLED - Pagination state commented out
-    // Pagination state
-    // const [allRecords, setAllRecords] = useState<RelatedRecord[]>([]);
-    // const [currentPage, setCurrentPage] = useState(1);
-    // const [hasMore, setHasMore] = useState(true);
-    // const [isLoadingMore, setIsLoadingMore] = useState(false);
 
     const dropdownRef = useRef<HTMLDivElement>(null);
     const searchRef = useRef<HTMLInputElement>(null);
@@ -141,82 +131,9 @@ export const LinksField: React.FC<LinksFieldProps> = ({
     const targetTableId = field?.meta?.relation?.with;
     const relationType = field?.meta?.relation?.type || 'one-to-one';
 
-    // PAGINATION DISABLED - Fetch target table data without pagination
-    // Fetch target table data with pagination (initial 30 records)
-    // const { data: tableData, isLoading: isTableLoading } = useTable(targetTableId || '', { pageNumber: 1, pageLimit: 30 });
-    const { data: tableData, isLoading: isTableLoading } = useTable(targetTableId || ''); // No pagination - fetches all records
+    const { data: tableData, isLoading: isTableLoading } = useTable(targetTableId || '');
     const insertRelationMutation = useInsertRelationData();
-    // PAGINATION DISABLED - useGetRecordsByPagination commented out
-    // const { mutateAsync: fetchPaginatedRecords } = useGetRecordsByPagination(targetTableId || '');
 
-    // PAGINATION DISABLED - Initialize records directly from tableData (no pagination logic)
-    // Initialize records from initial table data and reset when target table changes
-    // useEffect(() => {
-    //     if (tableData?.data?.records) {
-    //         const initialRecords = tableData.data.records.map((record: any) => ({
-    //             id: record.id.toString(),
-    //             ...record
-    //         }));
-    //         setAllRecords(initialRecords);
-    //         // Check if there are more records (if we got exactly 30, there might be more)
-    //         // Also check if total count is available in response
-    //         const totalRecords = tableData?.data?.meta?.total || tableData?.data?.total || null;
-    //         if (totalRecords !== null) {
-    //             setHasMore(initialRecords.length < totalRecords);
-    //         } else {
-    //             // Fallback: assume more if we got exactly 30
-    //             setHasMore(initialRecords.length === 30);
-    //         }
-    //         setCurrentPage(1);
-    //     } else if (!isTableLoading) {
-    //         // Reset if no data and not loading
-    //         setAllRecords([]);
-    //         setHasMore(false);
-    //         setCurrentPage(1);
-    //     }
-    // }, [tableData, isTableLoading, targetTableId]);
-
-    // PAGINATION DISABLED - loadMoreRecords function commented out
-    // Function to load more records
-    // const loadMoreRecords = useCallback(async () => {
-    //     if (isLoadingMore || !hasMore || !targetTableId) return;
-
-    //     setIsLoadingMore(true);
-    //     try {
-    //         const result = await fetchPaginatedRecords({
-    //             pageNumber: currentPage + 1,
-    //             pageSize: 30
-    //         });
-    //         const newRecords = (result?.data?.records || []).map((record: any) => ({
-    //             id: record.id.toString(),
-    //             ...record
-    //         }));
-
-    //         if (newRecords.length < 30) {
-    //             setHasMore(false);
-    //         }
-
-    //         if (newRecords.length > 0) {
-    //             setAllRecords(prev => {
-    //                 // Avoid duplicates by checking IDs
-    //                 const existingIds = new Set(prev.map(r => r.id));
-    //                 const uniqueNewRecords = newRecords.filter(r => !existingIds.has(r.id));
-    //                 return [...prev, ...uniqueNewRecords];
-    //             });
-    //             setCurrentPage(prev => prev + 1);
-    //         } else {
-    //             setHasMore(false);
-    //         }
-    //     } catch (error) {
-    //         setHasMore(false);
-    //     } finally {
-    //         setIsLoadingMore(false);
-    //     }
-    // }, [isLoadingMore, hasMore, targetTableId, fetchPaginatedRecords, currentPage]);
-
-
-    // FRONTEND PAGINATION: Get all records from target table (no pagination)
-    // Since pagination is disabled, useTable returns all records
     const records = useMemo(() => {
         const data = tableData as { data?: { records?: any[] } } | null | undefined;
         if (!data?.data?.records || !Array.isArray(data.data.records)) {
@@ -228,16 +145,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
         }));
     }, [tableData]);
 
-    // FRONTEND PAGINATION: Use linked records resolver as a safety net
-    // This ensures linked records are resolved even if they're not in the initial records array
-    // Note: This requires passing allRecords from parent table, but for now we rely on useTable returning all records
-    // const linkedRecordsMap = useLinkedRecordsForField(
-    //     allTableRecords || [], // Would need to be passed from parent
-    //     field.id || field.key || '',
-    //     targetTableId || ''
-    // );
 
-    // Compute selected records from value prop - ROBUST VERSION
     const selectedRecords = useMemo(() => {
         // Handle empty objects, null, undefined, or empty arrays
         if (!value ||
@@ -299,7 +207,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             const searchableFields = ['title', 'name', 'first_name', 'last_name', 'description'];
             return searchableFields.some(fieldName => {
                 const fieldValue = record[fieldName];
-                return fieldValue && fieldValue.toString().toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+                return fieldValue?.toString().toLowerCase().includes(debouncedSearchTerm.toLowerCase());
             });
         });
     }, [records, debouncedSearchTerm]);
@@ -482,7 +390,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
 
         for (const field of titleFields) {
             const value = record[field];
-            if (value && value.toString().trim()) {
+            if (value?.toString().trim()) {
                 return value.toString().trim();
             }
         }
@@ -526,8 +434,8 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             }
         };
 
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        globalThis.addEventListener('keydown', handleKeyDown);
+        return () => globalThis.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, focusedRecordIndex, paginatedRecords, handleSelectRecord, hasMore, isLoadingMore, loadNextPage]);
 
     // Scroll focused record into view - only works with paginated records
@@ -563,7 +471,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                     }
                 }}
                 tabIndex={disabled ? -1 : 0}
-                aria-label={`${field.title} - ${selectedRecords.length} record${selectedRecords.length !== 1 ? 's' : ''} linked`}
+                aria-label={`${field.title} - ${selectedRecords.length} record${selectedRecords.length === 1 ? '' : 's'} linked`}
                 aria-expanded={isOpen}
                 aria-haspopup="listbox"
                 className={`field-component ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${isBorder ? 'field-component-border' : ''}`}
@@ -728,34 +636,6 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                 {formatCompactNumber(selectedRecords.length)} of {formatCompactNumber(totalItems)} selected{hasMore && ` (${formatCompactNumber(paginatedRecords.length)} loaded)`}
                             </div>
                         </div>
-                        {/* Bulk Operations - Show for has-many and many-to-many */}
-                        {/* {(relationType === 'has-many' || relationType === 'many-to-many') && (
-                            <div className="flex items-center space-x-2 mt-3">
-                                <button
-                                    type='button'
-                                    onClick={handleSelectAll}
-                                    disabled={disabled || isLoading || filteredRecords.every(record =>
-                                        selectedRecords.some(selected => selected.id === record.id)
-                                    )}
-                                    className="flex items-center space-x-1 px-3 py-1.5 text-xs bg-green-100 text-green-700 rounded-md hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    <Plus className="w-3 h-3" />
-                                    <span>Select All</span>
-                                </button>
-                                <button
-                                    type='button'
-                                    onClick={handleClearAll}
-                                    disabled={disabled || isLoading || selectedRecords.length === 0}
-                                    className="flex items-center space-x-1 px-3 py-1.5 text-xs bg-red-100 text-red-700 rounded-md hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    <X className="w-3 h-3" />
-                                    <span>Clear All</span>
-                                </button>
-                                <div className="text-xs text-gray-500">
-                                    {selectedRecords.length} of {filteredRecords.length} selected
-                                </div>
-                            </div>
-                        )} */}
                     </div>
 
                     {/* Records List */}

@@ -2005,8 +2005,8 @@ describe('View Mutations', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync({ viewId: 'view-123', appearance });
-        } catch {
-          // Expected error
+        } catch (e) {
+          console.log('Caught error as expected', e);
         }
       });
 
@@ -3566,7 +3566,7 @@ describe('Additional Query Hooks', () => {
         try {
           await result.current.mutateAsync({ pageNumber: 1, pageSize: 50 });
         } catch (e) {
-          // Expected
+          console.log('Caught error as expected', e);
         }
       });
 
@@ -3591,7 +3591,7 @@ describe('Additional Query Hooks', () => {
         try {
           await result.current.mutateAsync({ pageNumber: 1, pageSize: 50 });
         } catch (e) {
-          // Expected
+          console.log('Caught error as expected', e);
         }
       });
 
@@ -3780,7 +3780,7 @@ describe('Error Handling Edge Cases', () => {
         try {
           await result.current.mutateAsync({ workspace: { title: 'Test', description: '' } });
         } catch (e) {
-          // Expected
+          console.log('Caught error as expected', e);
         }
       });
 
@@ -3805,7 +3805,7 @@ describe('Error Handling Edge Cases', () => {
         try {
           await result.current.mutateAsync({ baseId: 'base-123', updates: {} });
         } catch (e) {
-          // Expected
+          console.log('Caught error as expected', e);
         }
       });
 
@@ -3822,7 +3822,9 @@ describe('Error Handling Edge Cases', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync({ base_id: 'base-123', workspace_id: 'ws-123', title: 'Test', description: '' });
-        } catch (e) { }
+        } catch (e) {
+          console.log('Caught error as expected', e);
+        }
       });
       await waitFor(() => { expect(result.current.isError).toBe(true); });
       expect((result.current.error as any)?.response?.status).toBe(401);
@@ -3835,7 +3837,9 @@ describe('Error Handling Edge Cases', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync('ws-123');
-        } catch (e) { }
+        } catch (e) {
+          console.log('Caught error as expected', e);
+        }
       });
       await waitFor(() => { expect(result.current.isError).toBe(true); });
       expect((result.current.error as any)?.response?.status).toBe(403);
@@ -3848,7 +3852,9 @@ describe('Error Handling Edge Cases', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync({ workspace: { title: '', description: '' } });
-        } catch (e) { }
+        } catch (e) {
+          console.log('Caught error as expected', e);
+        }
       });
       await waitFor(() => { expect(result.current.isError).toBe(true); });
       expect((result.current.error as any)?.response?.status).toBe(422);
@@ -3861,7 +3867,9 @@ describe('Error Handling Edge Cases', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync({ tableId: 'table-123', baseId: 'base-123', config: { name: 'Field', type: 'text' } });
-        } catch (e) { }
+        } catch (e) {
+          console.log('Caught error as expected', e);
+        }
       });
       await waitFor(() => { expect(result.current.isError).toBe(true); });
       expect((result.current.error as any)?.response?.status).toBe(500);
@@ -3874,7 +3882,9 @@ describe('Error Handling Edge Cases', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync({ baseId: 'base-123', workspaceId: 'ws-123', members: [{ user_id: 'user-1', role: 'viewer' }] });
-        } catch (e) { }
+        } catch (e) {
+          console.log('Caught error as expected', e);
+        }
       });
       await waitFor(() => { expect(result.current.isError).toBe(true); });
       expect((result.current.error as any)?.response?.status).toBe(207);
@@ -3888,7 +3898,9 @@ describe('Error Handling Edge Cases', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync({ tableId: 'table-123', params: { name: 'Updated' } });
-        } catch (e) { }
+        } catch (e) {
+          console.log('Caught error as expected', e);
+        }
       });
       await waitFor(() => { expect(result.current.isError).toBe(true); });
       expect(result.current.error?.name).toBe('TimeoutError');
@@ -3901,7 +3913,9 @@ describe('Error Handling Edge Cases', () => {
       await act(async () => {
         try {
           await result.current.mutateAsync({ viewId: 'view-123', appearance: { layout: 'grid' } });
-        } catch (e) { }
+        } catch (e) {
+          console.log('Caught error as expected', e);
+        }
       });
       await waitFor(() => { expect(result.current.isError).toBe(true); });
       expect(result.current.error).toBe(error);

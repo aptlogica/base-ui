@@ -17,15 +17,13 @@ interface AttachmentProps {
   config?: AttachmentConfig;
   required?: boolean;
   disabled?: boolean;
-  allowEdit?: boolean; // Controls whether attachment actions are visible
-  readOnly?: boolean; // true = completely prevent editing
-  // API parameters for attachment operations
+  allowEdit?: boolean;
+  readOnly?: boolean;
   model_id?: string;
   column_id?: string;
   row_id?: number;
   isBorder?: boolean;
-  showPreview?: boolean; // New prop to control preview button visibility
-  // New prop to control upload behavior
+  showPreview?: boolean; 
   persistImmediately?: boolean; // Default: true (maintains backward compatibility)
 }
 

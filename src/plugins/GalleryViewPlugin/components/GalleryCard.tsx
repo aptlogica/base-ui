@@ -260,6 +260,7 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
               }}
               value={raw}
               className=""
+              hideActionButtons={true}
             />
           </div>
         </div>

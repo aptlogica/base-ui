@@ -6,7 +6,7 @@ import {
 import Dropdown from '../../plugins/GridViewPlugin/components/shared/DropDown/DropDown';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { FIELD_TYPES } from '../../types/fieldTypes';
-import { DateField, DateTime, Duration, Email, JSONField, Time, URL, Year, User, SingleLineText, LongText, Number, Decimal, Currency, MultiLineText, Formula } from '../../components/common/Fields';
+import { DateField, DateTime, Duration, Email, JSONField, Time, URLField, Year, User, SingleLineText, LongText, Number, Decimal, Currency, MultiLineText, Formula } from '../../components/common/Fields';
 import { convertDateFormat } from '../../utils/helpers';
 import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown';
 import {
@@ -1390,7 +1390,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 value={defaultValue}
                 onChange={value => setDefaultValue(value)}
                 placeholder="Enter default text value"
-                minRows={4} // Minimum rows for the input
                 isBorder={true}
                 onModalOpen={handleLongtextModalOpen}
                 onModalClose={handleLongtextModalClose}
@@ -2526,7 +2525,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               </button>
               {showUrlDefault && (
                 <div className="mt-2">
-                  <URL
+                  <URLField
                     value={urlDefault}
                     onChange={handleUrlChange}
                     placeholder="e.g. https://example.com"

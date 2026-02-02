@@ -9,7 +9,6 @@ interface MonthViewProps {
   events: CalendarEvent[];
   onEventClick?: (event: CalendarEvent) => void;
   onDateClick?: (date: Date) => void;
-  onDateSelect: (date: Date) => void;
   columns?: any[];
   fieldConfig?: any[];
 }
@@ -19,7 +18,6 @@ const MonthView: React.FC<MonthViewProps> = ({
   events,
   onEventClick,
   onDateClick,
-  onDateSelect,
   columns,
   fieldConfig,
 }) => {
@@ -37,11 +35,7 @@ const MonthView: React.FC<MonthViewProps> = ({
     const month = currentDate.getMonth();
 
     const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
     const startDate = new Date(firstDay);
-    // Start week on Monday (ISO 8601 standard, like NocoDB)
-    // getDay() returns 0 (Sunday) to 6 (Saturday)
-    // We want Monday (1) to be the first day, so adjust accordingly
     const dayOfWeek = firstDay.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days to Monday; otherwise go back (dayOfWeek - 1) days
     startDate.setDate(startDate.getDate() - daysToSubtract);
@@ -87,11 +81,10 @@ const MonthView: React.FC<MonthViewProps> = ({
           return (
             <div
               key={day}
-              className={`p-2 text-center text-sm font-medium border-r border-gray-200 ${
-                isWeekendHeader 
-                  ? 'bg-gray-100 text-gray-600' 
-                  : 'bg-gray-50 text-gray-500'
-              }`}
+              className={`p-2 text-center text-sm font-medium border-r border-gray-200 ${isWeekendHeader
+                ? 'bg-gray-100 text-gray-600'
+                : 'bg-gray-50 text-gray-500'
+                }`}
             >
               {day}
             </div>
@@ -101,37 +94,38 @@ const MonthView: React.FC<MonthViewProps> = ({
 
       {/* Calendar grid */}
       <div className="grid grid-cols-7 grid-rows-6 flex-1 overflow-hidden" style={{ gridAutoRows: '1fr' }}>
-        {calendarDays.map((date, index) => {
+        {calendarDays.map((date, _index) => {
           const dayEvents = getEventsForDate(date);
           const isCurrentMonthDay = isCurrentMonth(date);
           const isTodayDate = isToday(date);
           const isWeekendDay = isWeekend(date);
 
+          let dayCellBgClass = '';
+          if (!isTodayDate) {
+            if (isCurrentMonthDay) {
+              dayCellBgClass = isWeekendDay ? 'bg-gray-50' : 'bg-background';
+            } else {
+              dayCellBgClass = 'bg-gray-50';
+            }
+          }
+
+          let dateTextClass = 'text-gray-400';
+
+          if (isCurrentMonthDay) {
+            dateTextClass = isTodayDate
+              ? 'p-1 h-8 w-8 rounded-full bg-[var(--color-bg-brand-primary)] text-black'
+              : 'text-gray-900';
+          }
+
           return (
             <div
-              key={index}
-              className={`border-r border-b border-gray-200 overflow-visible p-2 relative group flex flex-col ${
-                isTodayDate 
-                  ? '' 
-                  : isCurrentMonthDay 
-                    ? isWeekendDay 
-                      ? 'bg-gray-50' 
-                      : 'bg-background'
-                    : 'bg-gray-50'
-              }`}
+              key={date.toISOString()}
+              className={`border-r border-b border-gray-200 overflow-visible p-2 relative group flex flex-col ${dayCellBgClass}`}
               style={{ position: 'relative', minHeight: 0 }}
             >
               {/* Date number */}
               <div className="flex items-center justify-between mb-2">
-                <span
-                  className={`text-sm font-medium text-center ${
-                    isCurrentMonthDay
-                      ? isTodayDate
-                        ? 'p-1 h-8 w-8 rounded-full bg-[var(--color-bg-brand-primary)] text-black'
-                        : 'text-gray-900'
-                      : 'text-gray-400'
-                  }`}
-                >
+                <span className={`text-sm font-medium text-center ${dateTextClass}`}>
                   {date.getDate()}
                 </span>
 
@@ -161,10 +155,16 @@ const MonthView: React.FC<MonthViewProps> = ({
                         />
                       ))}
                     </div>
-                    
+
                     {/* Show "+n more" dropdown on the right if there are additional events */}
                     {dayEvents.length > 1 && (
-                      <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();   // prevent page scroll on Space
+                            e.stopPropagation();
+                          }
+                        }}>
                         <MoreEventsDropdown
                           events={dayEvents.slice(1)}
                           onEventClick={onEventClick}
@@ -184,7 +184,7 @@ const MonthView: React.FC<MonthViewProps> = ({
           );
         })}
       </div>
-    </div>
+    </div >
   );
 };
 

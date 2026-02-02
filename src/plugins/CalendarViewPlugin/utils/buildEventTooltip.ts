@@ -22,45 +22,44 @@ const isTruthy = (v: any) => v !== null && v !== undefined && v !== '';
 // Clean HTML/CSS content from rich text fields
 function cleanRichTextContent(content: string): string {
   if (!content || typeof content !== 'string') return '';
-  
-  // Remove HTML tags and decode entities
+
   let cleaned = content
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ') // Normalize whitespace
+    .replaceAll(/<[^>]*>/g, '')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&amp;', '&')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&nbsp;', ' ')
+    .replaceAll(/\s+/g, ' ')
     .trim();
-  
-  // Remove CSS properties and other technical content
+
   cleaned = cleaned
-    .replace(/[^:]*:\s*[^;]*;/g, '') // Remove CSS properties
-    .replace(/rgb\([^)]*\)/g, '') // Remove RGB colors
-    .replace(/#[0-9a-fA-F]{3,6}/g, '') // Remove hex colors
-    .replace(/\d+px/g, '') // Remove pixel values
-    .replace(/\d+em/g, '') // Remove em values
-    .replace(/\d+rem/g, '') // Remove rem values
-    .replace(/\d+%/g, '') // Remove percentage values
-    .replace(/\s+/g, ' ') // Normalize whitespace again
+    .replaceAll(/[^:]*:\s*[^;]*;/g, '')
+    .replaceAll(/rgb\([^)]*\)/g, '')
+    .replaceAll(/#[0-9a-fA-F]{3,6}/g, '')
+    .replaceAll(/\d+px/g, '')
+    .replaceAll(/\d+em/g, '')
+    .replaceAll(/\d+rem/g, '')
+    .replaceAll(/\d+%/g, '')
+    .replaceAll(/\s+/g, ' ')
     .trim();
-  
+
   return cleaned;
 }
+
 
 function formatValue(col: Column, raw: any, formatTime: (t: string) => string): string | null {
   // If value is null/undefined/empty, show hyphen instead of hiding the field
   if (!isTruthy(raw)) return '-';
   const t = String(col?.type || col?.uidt || '').toLowerCase();
-  
+
   try {
     // Handle rich text fields (longText with richText: true)
     if (t === 'longtext' && col?.uidt === 'longText' && typeof raw === 'string' && raw.includes('<')) {
       const cleaned = cleanRichTextContent(raw);
       return cleaned.length > 100 ? cleaned.substring(0, 100) + '...' : cleaned;
     }
-    
+
     if (t === 'currency') {
       const num = Number(raw);
       if (!Number.isNaN(num)) {
@@ -98,18 +97,18 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
     }
     if (t === 'date' || t === 'datetime' || t === 'createdtime' || t === 'lastmodifiedtime') {
       const d = new Date(raw);
-      if (!isNaN(d.getTime())) {
+      if (!Number.isNaN(d.getTime())) {
         // Format date more nicely
         if (t === 'date') {
-          return d.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric', 
-            year: 'numeric' 
+          return d.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
           });
         } else {
-          return d.toLocaleString('en-US', { 
-            month: 'short', 
-            day: 'numeric', 
+          return d.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
             year: 'numeric',
             hour: 'numeric',
             minute: '2-digit',
@@ -124,12 +123,12 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
       return s;
     }
     if (t === 'multiselect') {
-      if (Array.isArray(raw)) return raw.map(v => String((v as any)?.label ?? v)).join(', ');
-      try { const parsed = JSON.parse(String(raw)); if (Array.isArray(parsed)) return parsed.join(', '); } catch {}
+      if (Array.isArray(raw)) return raw.map(v => String((v)?.label ?? v)).join(', ');
+      try { const parsed = JSON.parse(String(raw)); if (Array.isArray(parsed)) return parsed.join(', '); } catch { }
     }
     if (Array.isArray(raw)) {
       // Handle links / attachments similar to Gantt
-      if (raw.length > 0 && typeof raw[0] === 'object' && (raw[0] as any).title) {
+      if (raw.length > 0 && typeof raw[0] === 'object' && raw[0].title) {
         return raw
           .map((v: any) => v?.title || v?.name || String(v))
           .join(', ');
@@ -139,12 +138,12 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
         .join(', ');
     }
     if (typeof raw === 'object') {
-      const name = (raw as any)?.name || (raw as any)?.label || (raw as any)?.title;
+      const name = raw?.name || raw?.label || raw?.title;
       if (name) return String(name);
       // Unknown object shape – show hyphen instead of JSON noise
       return '-';
     }
-    
+
     // Truncate very long strings
     const str = String(raw);
     return str.length > 50 ? str.substring(0, 50) + '...' : str;
@@ -167,9 +166,9 @@ export function buildEventTooltipLines(args: {
   // First line: Event title with date/time separated by bullets (horizontal)
   if (isTruthy(event.title)) {
     const titleLine = [String(event.title)];
-    
+
     // Add date/time info (always show date for context)
-    if (event.dateTime instanceof Date && !isNaN(event.dateTime.getTime())) {
+    if (event.dateTime instanceof Date && !Number.isNaN(event.dateTime.getTime())) {
       // Format as local "YYYY-MM-DD HH:MM" (or "YYYY-MM-DD" for date-only)
       const d = event.dateTime;
       const yyyy = d.getFullYear();
@@ -177,18 +176,18 @@ export function buildEventTooltipLines(args: {
       const dd = String(d.getDate()).padStart(2, '0');
       const ymd = `${yyyy}-${mm}-${dd}`; // Local date components avoid UTC shift from toISOString()
       const dateStr = event.isDateField
-         ? ymd
+        ? ymd
         : `${ymd} ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: false })}`;
       titleLine.push(dateStr);
     }
-    
+
     lines.push(titleLine.join(' • '));
   }
 
   // Collect all visible, non-empty fields
   // We use "priority" only for ordering (essential types first), not for exclusion
   const visibleFields: Array<{ col: Column; value: string; priority: number }> = [];
-  
+
   (columns || []).forEach(col => {
     const key = String(col?.columnName ?? col?.name ?? col?.key ?? col?.title ?? '');
     if (!key) return;
@@ -231,12 +230,12 @@ export function buildEventTooltipLines(args: {
 
   // Create horizontal bullet-separated lines (like NocoDB)
   const sortedFields = visibleFields.sort((a, b) => a.priority - b.priority);
-  
+
   // Group fields into lines (up to 3-4 fields per line max)
   const fieldsPerLine = 3;
   for (let i = 0; i < sortedFields.length; i += fieldsPerLine) {
     const lineFields = sortedFields.slice(i, i + fieldsPerLine);
-    const lineValues = lineFields.map(({value}) => value).join(' • ');
+    const lineValues = lineFields.map(({ value }) => value).join(' • ');
     if (lineValues) {
       lines.push(`• ${lineValues}`);
     }

@@ -39,7 +39,7 @@ const CalendarViewPlugin: Plugin = {
             <div className="text-center">
               <div className="text-red-500 text-lg mb-2">Something went wrong while loading the calendar view.</div>
               <p className="text-muted-foreground mb-4">{errorMessage}</p>
-              <button onClick={() => refresh()} className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90">Retry</button>
+              <button onClick={() => refresh().catch(console.error)} className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90">Retry</button>
             </div>
           </div>
         );
@@ -58,7 +58,7 @@ const CalendarViewPlugin: Plugin = {
         <CalendarView
           tableData={tableData}
           viewId={viewId}
-          onRefresh={() => refresh()}
+          onRefresh={() => refresh().catch(console.error)}
           actions={{ addRow, insertRowData, deleteRecord, updateField, updateView, updateEvent, createEvent, deleteEvent, changeDateField, updateViewConfig }}
         />
       );

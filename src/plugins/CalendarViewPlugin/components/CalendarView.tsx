@@ -50,10 +50,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 }) => {
   // Extract base ID for permission checks
   const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
-  
+
   // Check permissions for read-only access
   const { isBaseReadOnly, canCreateRecord, canDeleteRecord, canUpdateRecord } = useBaseAccess(baseId || undefined);
-  
+
   // Safe handlers pattern: Check read-only once at top level
   const isReadOnly = isBaseReadOnly();
 
@@ -94,7 +94,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       const fieldConfigMap = new Map(
         currentView.meta.fieldConfig.map((fc: any) => [String(fc.id), fc])
       );
-      
+
       cols = cols.map(col => {
         const fieldConfig = fieldConfigMap.get(String(col.id)) as any;
         if (fieldConfig) {
@@ -143,26 +143,26 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     const processedEvents: CalendarEvent[] = currentDateField ? rawRecords.map((record: any, idx: number): CalendarEvent | null => {
       const rowData = record?.data || record;
       const dateValue = rowData?.[currentDateField.key || ''] || record?.[currentDateField.key || ''];
-      
+
       if (!dateValue) return null;
-      
+
       // Check if this is a datetime field (not just date)
-      const isDateTimeField = currentDateField.type === 'datetime' || 
-                              currentDateField.uidt === 'datetime' ||
-                              currentDateField.type === 'createdtime' ||
-                              currentDateField.uidt === 'createdtime' ||
-                              currentDateField.type === 'lastmodifiedtime' ||
-                              currentDateField.uidt === 'lastmodifiedtime';
-      
+      const isDateTimeField = currentDateField.type === 'datetime' ||
+        currentDateField.uidt === 'datetime' ||
+        currentDateField.type === 'createdtime' ||
+        currentDateField.uidt === 'createdtime' ||
+        currentDateField.type === 'lastmodifiedtime' ||
+        currentDateField.uidt === 'lastmodifiedtime';
+
       // Check if this is a date field (not datetime)
       const isDateField = currentDateField.type === 'date' || currentDateField.uidt === 'date';
-      
+
       // Parse date value - handle both UTC (with Z) and local time
       const dateStr = String(dateValue);
-      
+
       let eventDate: string;
       let eventDateTime: Date;
-      
+
       if (dateStr.endsWith('Z')) {
         // UTC format
         if (isDateTimeField) {
@@ -171,18 +171,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             // Get timezone from field meta/config (same logic as DateTime component)
             const fieldMeta = currentDateField.meta || {};
             const tz = fieldMeta.timeZoneLabel || fieldMeta.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-            
+
             // Convert UTC ISO to configured timezone (returns "yyyy-MM-dd HH:mm" format)
             const zonedDateTime = utcISOToZoned(dateStr, tz);
             const [datePart, timePart = '00:00'] = zonedDateTime.split(' ');
-            
+
             eventDate = datePart; // Use the timezone-converted date
-            
+
             // Parse the timezone-converted datetime
             const [year, month, day] = datePart.split('-').map(Number);
             const [hours = 0, minutes = 0] = timePart.split(':').map(Number);
             eventDateTime = new Date(year, month - 1, day, hours, minutes);
           } catch (error) {
+            console.warn(error);
             // Fallback to original logic if conversion fails
             const isoStr = dateStr.replace('Z', '');
             const [datePart, timePart = '00:00'] = isoStr.split('T');
@@ -203,21 +204,21 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         // Local time format - extract date part and parse as local
         const [datePart, timePart = ''] = dateStr.split('T');
         eventDate = datePart;
-        
+
         // Parse as local datetime
         const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return null;
-        
+        if (Number.isNaN(date.getTime())) return null;
+
         const year = date.getFullYear();
         const month = date.getMonth();
         const day = date.getDate();
-        const hours = timePart ? parseInt(timePart.split(':')[0]) : 0;
-        const minutes = timePart ? parseInt(timePart.split(':')[1]) : 0;
-        
+        const hours = timePart ? Number.parseInt(timePart.split(':')[0]) : 0;
+        const minutes = timePart ? Number.parseInt(timePart.split(':')[1]) : 0;
+
         eventDateTime = new Date(year, month, day, hours, minutes);
       }
-      
-      if (isNaN(eventDateTime.getTime())) return null;
+
+      if (Number.isNaN(eventDateTime.getTime())) return null;
 
       return {
         id: record?.id ?? idx,
@@ -244,13 +245,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   }, [tableData, viewId]);
 
   const {
-    addRow,
-    insertRowData,
-    deleteRecord,
-    updateField,
     updateView,
-    updateEvent,
-    createEvent,
     deleteEvent,
     changeDateField,
     updateViewConfig,
@@ -265,7 +260,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     currentView,
     setCurrentView,
     sidebarCollapsed,
-    setSidebarCollapsed,
     toggleSidebar,
   } = useCalendarDateNavigation();
 
@@ -287,7 +281,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     handleUpdateFilter,
     handleSortChange,
     handleFieldToggle,
-    handleFieldOrderChange,
   } = useCalendarViewConfig({
     view,
     columns: uiColumns,
@@ -316,27 +309,27 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   const filteredEvents = useMemo(() => {
     const hasFilters = Array.isArray(filters) && filters.length > 0;
     const hasDraftFilter = draftFilter !== null;
-    
+
     if (!hasFilters && !hasDraftFilter) return events;
-    
+
     // Combine saved filters with draft filter (if any) for real-time preview
-    const allFilters = hasDraftFilter 
+    const allFilters = hasDraftFilter
       ? [...filters, draftFilter]
       : filters;
-    
+
     // Convert events to records format for filtering
     const records = events.map(event => ({
       data: event.data,
       id: event.id
     }));
-    
+
     // Apply filters using the standard filter utility (includes both saved and draft)
     const filteredRecords = applyFilters(records, allFilters, visibleColumns);
-    
+
     // Convert back to events
     // Optimized with Set for O(1) lookups instead of O(n) some() calls
     const filteredRecordIdsSet = new Set(filteredRecords.map(r => String(r.id)));
-    return events.filter(event => 
+    return events.filter(event =>
       filteredRecordIdsSet.has(String(event.id))
     );
   }, [events, filters, draftFilter, visibleColumns]);
@@ -344,12 +337,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   // Don't apply sorting here - let EventsSidebar handle it for sidebar events
   // Calendar views display events in their natural order
   const sortedEvents = filteredEvents;
-
-  // Delete event handler
-  const handleDeleteEvent = useCallback(async (eventId: string) => {
-    await deleteEvent(eventId);
-    onRefresh();
-  }, [deleteEvent, onRefresh]);
 
   // Wrapper for handleDeleteRecordFromModal to pass required params
   const handleDeleteFromModal = useCallback(async (recordId: string) => {
@@ -362,22 +349,22 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   const getEditInitialValues = useCallback((): Record<string, any> => {
     if (!modalState.edit.selectedEvent) return {};
-    
+
     // Find the original record from uiData
     // Optimized with Map for O(1) lookup instead of O(n) find()
     const uiDataMap = new Map(
       uiData.map(record => [String(record.id || record._meta?.id), record])
     );
-    const matchedRecord = uiDataMap.get(String(modalState.edit.selectedEvent!.id));
-    
+    const matchedRecord = uiDataMap.get(String(modalState.edit?.selectedEvent?.id));
+
     if (!matchedRecord) return modalState.edit.selectedEvent.data || {};
-    
+
     const initialValues = buildInitialValuesForEdit({
       record: matchedRecord,
       recordId: String(modalState.edit.selectedEvent.id),
       columns: uiColumns as any,
     });
-    
+
     // Filter out empty string values to prevent unnecessary API calls
     const filteredValues: Record<string, any> = {};
     Object.entries(initialValues).forEach(([key, value]) => {
@@ -385,20 +372,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         filteredValues[key] = value;
       }
     });
-    
+
     return filteredValues;
   }, [modalState.edit.selectedEvent, uiData, uiColumns]);
-
-  // Date field change handler
-  const handleDateFieldChange = useCallback(async (fieldId: string) => {
-    await changeDateField(fieldId);
-    onRefresh();
-  }, [changeDateField, onRefresh]);
 
   // Handle date field change (similar to Kanban's group by change)
   const handleGroupByChange = useCallback(async (column: GridColumn | undefined) => {
     if (!column) return;
-    
+
     try {
       // Update the date field in the view meta
       await changeDateField(column.id || column.key);
@@ -431,10 +412,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       // For date fields, use YYYY-MM-DD format
       // For datetime fields, send without timezone to store as local time in database
       // The backend will handle timezone conversion
-      const dateValue = (dateField.type === 'date' || dateField.uidt === 'Date') 
+      const dateValue = (dateField.type === 'date' || dateField.uidt === 'Date')
         ? `${year}-${month}-${day}`
         : `${year}-${month}-${day}T${hours}:${minutes}:00`;
-      
+
       // Set initial value using both field.id and field.name for compatibility
       if (dateField.id) {
         initialValues[dateField.id] = dateValue;
@@ -450,6 +431,28 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     return initialValues;
   }, [modalState.create.selectedDate, dateField, visibleColumns]);
 
+
+  const onCreateRecordHandler =
+    !isReadOnly && canCreateRecord()
+      ? () => handleOpenCreateModal(currentDate)
+      : undefined;
+
+  const onEventClickHandler =
+    !isReadOnly && canUpdateRecord()
+      ? handleOpenEditModal
+      : undefined;
+
+  const onDateClickHandler =
+    !isReadOnly && canCreateRecord()
+      ? handleOpenCreateModal
+      : undefined;
+
+  const onDeleteHandler =
+    !isReadOnly && canDeleteRecord()
+      ? handleDeleteFromModal
+      : undefined;
+
+
   return (
     <div className="h-full flex flex-col bg-card">
       {/* Header */}
@@ -459,13 +462,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         currentView={currentView}
         onViewChange={handleViewChange}
         dateField={dateField}
-        dateFields={dateFields}
-        onDateFieldChange={handleDateFieldChange}
         onExport={handleOpenExportModal}
-        onCreateRecord={isReadOnly ? undefined : (canCreateRecord() ? () => handleOpenCreateModal(currentDate) : undefined)}
-        sidebarCollapsed={sidebarCollapsed}
+        onCreateRecord={onCreateRecordHandler}
         onToggleSidebar={toggleSidebar}
-        columns={visibleColumns as GridColumn[]}
+        columns={visibleColumns}
         fieldConfig={localFieldConfig}
         filters={filters}
         onFieldToggle={isReadOnly ? undefined : handleFieldToggle}
@@ -486,8 +486,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             <MonthView
               currentDate={currentDate}
               events={sortedEvents}
-              onEventClick={isReadOnly ? undefined : (canUpdateRecord() ? handleOpenEditModal : undefined)}
-              onDateClick={isReadOnly ? undefined : (canCreateRecord() ? handleOpenCreateModal : undefined)}
+              onEventClick={onEventClickHandler}
+              onDateClick={onDateClickHandler}
               onDateSelect={setSelectedDate}
               columns={visibleColumns}
               fieldConfig={localFieldConfig}
@@ -497,8 +497,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             <WeekView
               currentDate={currentDate}
               events={sortedEvents}
-              onEventClick={isReadOnly ? undefined : (canUpdateRecord() ? handleOpenEditModal : undefined)}
-              onDateClick={isReadOnly ? undefined : (canCreateRecord() ? handleOpenCreateModal : undefined)}
+              onEventClick={onEventClickHandler}
+              onDateClick={onDateClickHandler}
               onDateSelect={setSelectedDate}
               dateField={dateField}
               columns={visibleColumns}
@@ -509,8 +509,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             <DayView
               currentDate={currentDate}
               events={sortedEvents}
-              onEventClick={isReadOnly ? undefined : (canUpdateRecord() ? handleOpenEditModal : undefined)}
-              onDateClick={isReadOnly ? undefined : (canCreateRecord() ? handleOpenCreateModal : undefined)}
+              onEventClick={onEventClickHandler}
+              onDateClick={onDateClickHandler }
               onDateSelect={setSelectedDate}
               dateField={dateField}
               columns={visibleColumns}
@@ -519,10 +519,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           )}
           {currentView === "year" && (
             <YearView
-                  currentDate={currentDate}
+              currentDate={currentDate}
               events={sortedEvents}
-              onEventClick={isReadOnly ? undefined : (canUpdateRecord() ? handleOpenEditModal : undefined)}
-              onDateClick={isReadOnly ? undefined : (canCreateRecord() ? handleOpenCreateModal : undefined)}
+              onEventClick={onEventClickHandler}
+              onDateClick={onDateClickHandler}
               onDateSelect={setSelectedDate}
               onViewChange={handleViewChange}
             />
@@ -532,17 +532,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         {/* Right Sidebar - Events List */}
         {!sidebarCollapsed && (
           <div className="w-80 border-l flex flex-col bg-card">
-              <EventsSidebar
+            <EventsSidebar
               events={sortedEvents}
-              onEventClick={isReadOnly ? undefined : (canUpdateRecord() ? handleOpenEditModal : undefined)}
+              onEventClick={onEventClickHandler}
               onDateSelect={setSelectedDate}
               selectedDate={selectedDate}
-                currentView={currentView}
-                currentDate={currentDate}
-                columns={visibleColumns}
-                sorts={sorts}
-                onCreateRecord={isReadOnly ? undefined : (canCreateRecord() ? () => handleOpenCreateModal(currentDate) : undefined)}
-                onSortChange={handleSortChange}
+              currentView={currentView}
+              currentDate={currentDate}
+              columns={visibleColumns}
+              sorts={sorts}
+              onCreateRecord={onCreateRecordHandler}
+              onSortChange={handleSortChange}
             />
           </div>
         )}
@@ -572,14 +572,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           title="Edit Record"
           submitLabel="Update record"
           onSuccess={() => handleEditSuccess(onRefresh)}
-          onDelete={isReadOnly ? undefined : (canDeleteRecord() ? handleDeleteFromModal : undefined)}
+          onDelete={onDeleteHandler}
           onDuplicate={isReadOnly ? undefined : onDuplicateCard}
           initialValues={getEditInitialValues()}
         />
       )}
 
       {modalState.export.isOpen && (
-      <ExportModal
+        <ExportModal
           isOpen={modalState.export.isOpen}
           onClose={handleCloseExportModal}
           events={events}

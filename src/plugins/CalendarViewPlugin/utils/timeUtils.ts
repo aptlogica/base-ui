@@ -1,4 +1,3 @@
-// Shared time utilities for CalendarViewPlugin
 // Converts a formatted time string like "10:45 AM" to short form "10:45a"
 export function toShortTime(formatted: string | undefined | null): string {
   if (!formatted) return "";

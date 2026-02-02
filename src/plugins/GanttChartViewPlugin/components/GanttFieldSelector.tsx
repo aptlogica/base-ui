@@ -30,21 +30,21 @@ export const GanttFieldSelector: React.FC<GanttFieldSelectorProps> = ({
     if (fieldType === 'date') {
       return item.uidt === 'date'; // Only date fields, exclude datetime and timestamp
     } else if (fieldType === 'progress') {
-      return item.uidt === 'percent' || 
-             (item.uidt === 'number' && (
-               item.column_name?.toLowerCase().includes('progress') ||
-               item.title?.toLowerCase().includes('progress') ||
-               item.column_name?.toLowerCase().includes('percent') ||
-               item.title?.toLowerCase().includes('percent')
-             ));
+      return item.uidt === 'percent' ||
+        (item.uidt === 'number' && (
+          item.column_name?.toLowerCase().includes('progress') ||
+          item.title?.toLowerCase().includes('progress') ||
+          item.column_name?.toLowerCase().includes('percent') ||
+          item.title?.toLowerCase().includes('percent')
+        ));
     } else if (fieldType === 'completion') {
       // Only date fields (not datetime) for completion status
       // If completion date exists, task is completed
       return item.uidt === 'date' ||
-             (item.column_name?.toLowerCase().includes('complete') ||
-              item.title?.toLowerCase().includes('complete') ||
-              item.column_name?.toLowerCase().includes('done') ||
-              item.title?.toLowerCase().includes('done'));
+        (item.column_name?.toLowerCase().includes('complete') ||
+          item.title?.toLowerCase().includes('complete') ||
+          item.column_name?.toLowerCase().includes('done') ||
+          item.title?.toLowerCase().includes('done'));
     }
     return false;
   });
@@ -113,12 +113,12 @@ export const GanttFieldConfiguration: React.FC<GanttFieldConfigurationProps> = (
   });
 
   // Filter columns by type
-  const dateColumns = columns?.filter(col => 
+  const dateColumns = columns?.filter(col =>
     col.uidt === 'date' // Only date fields, exclude datetime and timestamp
   );
-  
-  const progressColumns = columns.filter(col => 
-    col.uidt === 'percent' || 
+
+  const progressColumns = columns.filter(col =>
+    col.uidt === 'percent' ||
     (col.uidt === 'number' && (
       col.column_name?.toLowerCase().includes('progress') ||
       col.title?.toLowerCase().includes('progress') ||
@@ -127,14 +127,14 @@ export const GanttFieldConfiguration: React.FC<GanttFieldConfigurationProps> = (
     ))
   );
 
-  const completionColumns = columns.filter(col => 
+  const completionColumns = columns.filter(col =>
     // Only date fields (not datetime) for completion status
     // If completion date exists, task is completed
     col.uidt === 'date' ||
     (col.column_name?.toLowerCase().includes('complete') ||
-     col.title?.toLowerCase().includes('complete') ||
-     col.column_name?.toLowerCase().includes('done') ||
-     col.title?.toLowerCase().includes('done'))
+      col.title?.toLowerCase().includes('complete') ||
+      col.column_name?.toLowerCase().includes('done') ||
+      col.title?.toLowerCase().includes('done'))
   );
 
   // Close on Escape
@@ -171,7 +171,7 @@ export const GanttFieldConfiguration: React.FC<GanttFieldConfigurationProps> = (
           style={{ position: 'fixed', top: position.top, left: position.left }}
         >
           <h3 className="text-sm font-semibold text-primary mb-4">Configure Gantt Fields</h3>
-          
+
           <div className="space-y-4">
             {/* Start Date Field */}
             <div>

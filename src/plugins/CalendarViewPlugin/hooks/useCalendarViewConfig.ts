@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDebounce } from '../../../utils/helpers';
-import { filterValidSorts } from '../../../utils/sortUtils';
-import { SortItem } from '../../../utils/sortUtils';
+import { SortItem, filterValidSorts } from '../../../utils/sortUtils';
 import { GridColumn } from '../../GridViewPlugin/types/grid.types';
 import { extractFieldConfigFromMeta, generateDefaultFieldConfig, mergeFieldConfigWithColumns } from '../../../utils/viewFieldConfigUtils';
 import { isFormulaField } from '../../../utils/fieldUtils';
@@ -19,7 +18,6 @@ interface UseCalendarViewConfigOptions {
 export function useCalendarViewConfig({
   view,
   columns,
-  updateView,
   updateViewConfig,
   isReadOnly = false,
 }: UseCalendarViewConfigOptions) {
@@ -71,7 +69,7 @@ export function useCalendarViewConfig({
     if (!columns.length) return;
 
     const existingFieldConfig = extractFieldConfigFromMeta(view?.meta);
-    const backendConfigStr = JSON.stringify(existingFieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+    const backendConfigStr = JSON.stringify(existingFieldConfig.toSorted((a, b) => (a.position || 0) - (b.position || 0)));
 
     // If we haven't initialized yet, initialize from backend or generate default
     if (!initializedRef.current) {
@@ -80,7 +78,7 @@ export function useCalendarViewConfig({
         const completeConfig = mergeFieldConfigWithColumns(existingFieldConfig, columns);
         
         setLocalFieldConfig(completeConfig);
-        lastBackendConfigRef.current = JSON.stringify(completeConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+        lastBackendConfigRef.current = JSON.stringify(completeConfig.toSorted((a, b) => (a.position || 0) - (b.position || 0)));
         initializedRef.current = true;
       } else {
         // Generate default config (first 3-4 fields visible)
@@ -95,7 +93,7 @@ export function useCalendarViewConfig({
           }
         );
 
-        const defaultConfigStr = JSON.stringify(defaultFieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+        const defaultConfigStr = JSON.stringify(defaultFieldConfig.toSorted((a, b) => (a.position || 0) - (b.position || 0)));
         setLocalFieldConfig(defaultFieldConfig);
         lastBackendConfigRef.current = defaultConfigStr;
         initializedRef.current = true;
@@ -110,7 +108,7 @@ export function useCalendarViewConfig({
       const mergedConfig = mergeFieldConfigWithColumns(existingFieldConfig, columns);
       
       setLocalFieldConfig(mergedConfig);
-      lastBackendConfigRef.current = JSON.stringify(mergedConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+      lastBackendConfigRef.current = JSON.stringify(mergedConfig.toSorted((a, b) => (a.position || 0) - (b.position || 0)));
     } else if (initializedRef.current && existingFieldConfig.length === 0 && localFieldConfig.length > 0) {
       // No backend config but we have local config - check for new columns
       const mergedConfig = mergeFieldConfigWithColumns(localFieldConfig, columns);
@@ -140,7 +138,7 @@ export function useCalendarViewConfig({
           fieldConfig
         });
         // Update ref after successful save so we know the backend has the new config
-        lastBackendConfigRef.current = JSON.stringify(fieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+        lastBackendConfigRef.current = JSON.stringify(fieldConfig.toSorted((a, b) => (a.position || 0) - (b.position || 0)));
       } catch (error) {
         console.error('Failed to save field config:', error);
       }
@@ -175,7 +173,7 @@ export function useCalendarViewConfig({
         hidden: true,
         is_hidden: true
       };
-    }).sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    }).toSorted((a, b) => (a.position ?? 0) - (b.position ?? 0));
   }, [columns, localFieldConfig]);
 
   // Handle real-time filtering while typing
@@ -277,7 +275,7 @@ export function useCalendarViewConfig({
       
       const updatedFieldConfig = allColumnsConfig.map((fc: any) => {
         if (String(fc.id) === String(fieldId)) {
-          return { ...fc, isHidden: !Boolean(fc.isHidden) };
+          return { ...fc, isHidden: !fc.isHidden };
         }
         return fc;
       });
@@ -320,15 +318,17 @@ export function useCalendarViewConfig({
       if (newPosition !== undefined) {
         // This column was reordered, use new position
         const newColumn = newColumnsMap.get(fcIdStr);
-        return { 
-          ...fc, 
+        // Compute isHidden to avoid nested ternary
+        let computedIsHidden = fc.isHidden;
+        if (typeof newColumn?.hidden === 'boolean') {
+          computedIsHidden = !!newColumn.hidden;
+        } else if (typeof newColumn?.isHidden === 'boolean') {
+          computedIsHidden = !!newColumn.isHidden;
+        }
+        return {
+          ...fc,
           position: newPosition,
-          // Update isHidden if provided in newColumns - O(1) lookup
-          isHidden: typeof newColumn?.hidden === 'boolean' 
-            ? !!newColumn.hidden
-            : typeof newColumn?.isHidden === 'boolean'
-            ? !!newColumn.isHidden
-            : fc.isHidden
+          isHidden: computedIsHidden
         };
       }
       // This column wasn't in the reordered list, keep existing config
@@ -348,8 +348,8 @@ export function useCalendarViewConfig({
     });
 
     // Sort by position and re-index to ensure no gaps
-    updatedFieldConfig.sort((a: any, b: any) => (a.position || 0) - (b.position || 0));
-    const finalFieldConfig = updatedFieldConfig.map((fc: any, idx: number) => ({
+    const sortedFieldConfig = updatedFieldConfig.toSorted((a: any, b: any) => (a.position || 0) - (b.position || 0));
+    const finalFieldConfig = sortedFieldConfig.map((fc: any, idx: number) => ({
       ...fc,
       position: idx
     }));
@@ -362,7 +362,7 @@ export function useCalendarViewConfig({
       fieldConfig: finalFieldConfig
     });
     // Update ref after successful save
-    lastBackendConfigRef.current = JSON.stringify(finalFieldConfig.sort((a, b) => (a.position || 0) - (b.position || 0)));
+    lastBackendConfigRef.current = JSON.stringify(finalFieldConfig.toSorted((a, b) => (a.position || 0) - (b.position || 0)));
   }, [updateViewConfig, view]);
 
   return {
