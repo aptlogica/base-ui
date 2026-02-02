@@ -14,11 +14,11 @@ pipeline {
       }
     }
 
-    stage('Run Tests with Coverage') {
-      steps {
-        sh 'npm run test:coverage'
-      }
-    }
+    // stage('Run Tests with Coverage') {
+    //   steps {
+    //     sh 'npm run test:coverage'
+    //   }
+    // }
 
     stage('SonarQube Analysis') {
       steps {

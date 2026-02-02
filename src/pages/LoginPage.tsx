@@ -12,7 +12,6 @@ interface FormData {
 
 const LogIn: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({ email: "", password: "" });
-  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -60,8 +59,6 @@ const LogIn: React.FC = () => {
       const token = data.data.token;
 
       if (!userInfo.email_verified) {
-        // For unverified users, we need a token to verify OTP
-        // The login response should include a token that can be used for OTP verification
         const verificationToken = token?.access_token || token;
 
         if (!verificationToken) {
@@ -189,15 +186,6 @@ const LogIn: React.FC = () => {
               {passwordError && <div className="mt-1.5 text-red-500 text-sm">{passwordError}</div>}
             </div>
             <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={e => setRememberMe(e.target.checked)}
-                  className="checkbox-primary-brand"
-                />
-                <span>Remember me</span>
-              </label>
               <Link to="/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
             </div>
             {error && <div className="text-destructive text-sm text-center">{error}</div>}
