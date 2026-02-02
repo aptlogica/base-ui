@@ -318,15 +318,17 @@ export function useCalendarViewConfig({
       if (newPosition !== undefined) {
         // This column was reordered, use new position
         const newColumn = newColumnsMap.get(fcIdStr);
-        return { 
-          ...fc, 
+        // Compute isHidden to avoid nested ternary
+        let computedIsHidden = fc.isHidden;
+        if (typeof newColumn?.hidden === 'boolean') {
+          computedIsHidden = !!newColumn.hidden;
+        } else if (typeof newColumn?.isHidden === 'boolean') {
+          computedIsHidden = !!newColumn.isHidden;
+        }
+        return {
+          ...fc,
           position: newPosition,
-          // Update isHidden if provided in newColumns - O(1) lookup
-          isHidden: typeof newColumn?.hidden === 'boolean' 
-            ? !!newColumn.hidden
-            : typeof newColumn?.isHidden === 'boolean'
-            ? !!newColumn.isHidden
-            : fc.isHidden
+          isHidden: computedIsHidden
         };
       }
       // This column wasn't in the reordered list, keep existing config

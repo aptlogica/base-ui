@@ -66,6 +66,10 @@ interface FieldDisplayProps {
    * Optional all columns for formula field name mapping
    */
   allColumns?: any[];
+  /**
+   * Optional flag to hide action buttons in fields
+   */
+  hideActionButtons?: boolean;
 }
 
 /**
@@ -78,7 +82,8 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
   currentRowId,
   className = '',
   rowData,
-  allColumns
+  allColumns,
+  hideActionButtons = false
 }) => {
   // Parse column meta for config (same logic as EditableTableCell)
   const parsedConfig = (() => {
@@ -182,9 +187,11 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
     case 'longText':
       renderedComponent = (
         <LongText
-          {...commonProps}
+          value={getDisplayValue(fieldType, value)}
+          onChange={() => {}}
+          readOnly={true}
           maxLength={1000}
-          config={parsedConfig}
+          config={{ ...parsedConfig, hideMaximizeButton: hideActionButtons }}
           allowEdit={false}
           isBorder={false}
         />
@@ -363,7 +370,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       renderedComponent = (
         <URLField
           {...commonProps}
-          config={parsedConfig}
+          config={{ ...parsedConfig, showIcon: !hideActionButtons }}
           allowEdit={false}
           isBorder={false}
         />
@@ -419,11 +426,11 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       );
       break;
     case 'user':
-      renderedComponent = <User {...commonProps} config={parsedConfig} />;
+      renderedComponent = <User {...commonProps} config={parsedConfig} readOnly={true} />;
       break;
     case 'json':
       renderedComponent = (
-        <JSONField {...commonProps} config={parsedConfig} />
+        <JSONField {...commonProps} config={{ ...parsedConfig, hideMaximizeButton: hideActionButtons }} />
       );
       break;
     case 'createdTime':
@@ -495,6 +502,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
           row_id={currentRowId}
           isBorder={false}
           disabled={true}
+          showPreview={!hideActionButtons}
         />
       );
       break;

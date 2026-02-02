@@ -601,18 +601,30 @@ const Breadcrumb: React.FC = () => {
       {breadcrumbItems.map((item, index) => {
         const isLast = index === breadcrumbItems.length - 1;
         const isDropdownOpen = openDropdown === item.type;
-        const dropdownItems =
-          item.type === 'base' ? getBaseDropdownItems() : item.type === 'table' ? getTableDropdownItems() : getViewDropdownItems();
+        let dropdownItems: DropdownItem[];
+        if (item.type === 'base') {
+          dropdownItems = getBaseDropdownItems();
+        } else if (item.type === 'table') {
+          dropdownItems = getTableDropdownItems();
+        } else {
+          dropdownItems = getViewDropdownItems();
+        }
+
+        let currentRef;
+        if (item.type === 'base') {
+          currentRef = baseDropdownRef;
+        } else if (item.type === 'table') {
+          currentRef = tableDropdownRef;
+        } else {
+          currentRef = viewDropdownRef;
+        }
 
         return (
           <React.Fragment key={`${item.type}-${item.id}`}>
             {index > 0 && (
               <ChevronRight size={12} className="text-gray-400 mx-1 flex-shrink-0" />
             )}
-            <div className="relative" ref={
-              item.type === 'base' ? baseDropdownRef :
-                item.type === 'table' ? tableDropdownRef : viewDropdownRef
-            }>
+            <div className="relative" ref={currentRef}>
               <div
                 className="flex items-center gap-1.5 cursor-pointer rounded px-2 py-1 transition-colors hover:bg-gray-100 group"
                 onClick={(e) => handleSegmentClick(e, item.type)}
@@ -645,7 +657,11 @@ const Breadcrumb: React.FC = () => {
                     {/* Header */}
                     <div className="px-4 py-2 flex-shrink-0">
                       <div className="text-xs font-semibold text-primary tracking-wide">
-                        {item.type === 'base' ? 'Bases' : item.type === 'table' ? 'Tables' : 'Views'}
+                        {(() => {
+                          if (item.type === 'base') return 'Bases';
+                          if (item.type === 'table') return 'Tables';
+                          return 'Views';
+                        })()}
                       </div>
                     </div>
 

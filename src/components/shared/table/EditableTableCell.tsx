@@ -287,7 +287,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
     };
     switch (fieldType) {
       case 'text': return <SingleLineText {...commonProps} maxLength={255} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      case 'longText': return <LongText {...commonProps} maxLength={1000} minRows={2} maxRows={4} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+      case 'longText': return <LongText {...commonProps} maxLength={1000} maxRows={4} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       case 'number': {
         // Normalize value to numeric string - handle old text values when field type was changed
         const normalizedValue = normalizeNumericValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
@@ -448,7 +448,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
 
   return (
     <div
-      className={`flex-shrink-0 h-10 flex items-center px-0 ${isLast ? 'border-r border-border/20' : 'border-r border-border/20'} ${isLast ? 'border-b border-border/20' : 'border-b border-border/20'}`}
+      className={`flex-shrink-0 h-10 flex items-center px-0 ${isLast ? '' : 'border-r border-border/20'} border-b border-border/20`}
       style={{ width: `${width}px`, height: '40px', minHeight: '40px', maxHeight: '40px' }}
     >
       <div className="w-full min-w-0">
@@ -579,7 +579,6 @@ export const EditableTableCell = React.memo(EditableTableCellComponent, (prevPro
 
   // Compare onChange function reference
   // Note: This will cause re-render if parent creates new function each time
-  // But we can't do deep comparison on functions
   if (prevProps.onChange !== nextProps.onChange) {
     return false;
   }

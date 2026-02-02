@@ -208,7 +208,7 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
   const isEditable = onEdit !== undefined;
 
   return (
-    <div className={`kanban-card bg-card rounded-2xl border shadow-sm p-4 pt-0 ${isEditable ? 'hover:border-[var(--color-bg-brand-primary)] group' : ''} transition-all duration-200 ${isEditable ? 'hover:shadow-lg' : ''} cursor-default relative ${isDragging ? 'opacity-50 rotate-2 shadow-lg' : ''}`}
+    <div className={`kanban-card bg-card rounded-2xl border shadow-sm p-4 pt-0 group ${isEditable ? 'hover:border-[var(--color-bg-brand-primary)]' : ''} transition-all duration-200 ${isEditable ? 'hover:shadow-lg' : ''} cursor-default relative ${isDragging ? 'opacity-50 rotate-2 shadow-lg' : ''}`}
       draggable={isEditable}
       onDragStart={isEditable ? handleDragStart : undefined}
       onDragEnd={isEditable ? handleDragEnd : undefined}
@@ -245,8 +245,8 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
               }}
             />
 
-            {/* Carousel Navigation Arrows - Only show if multiple images and editable */}
-            {hasMultipleImages && onEdit && (
+            {/* Carousel Navigation Arrows - Only show if multiple images */}
+            {hasMultipleImages && (
               <div className='opacity-0 group-hover:opacity-100 transition-opacity duration-200'>
                 <button
                   onClick={(e) => {
@@ -280,8 +280,8 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
               </div>
             )}
 
-            {/* Navigation Dots - Only show if multiple images and editable */}
-            {hasMultipleImages && onEdit && (
+            {/* Navigation Dots - Only show if multiple images */}
+            {hasMultipleImages && (
               <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10 bg-black/40 backdrop-blur-sm px-2 py-1.5 rounded-full">
                 {allImages.map((img, index) => (
                   <button
@@ -371,6 +371,7 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
                   value={raw}
                   className=""
                   currentRowId={card._meta?.id || card.id}
+                  hideActionButtons={true}
                 />
               </div>
             </div>

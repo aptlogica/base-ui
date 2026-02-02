@@ -56,19 +56,21 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
         return;
       }
 
-      // Validate dimensions (max 800x400)
+      // Validate dimensions (max 800x400) but keep invalid images visible
       const img = new Image();
       img.onload = () => {
         if (img.width > 800 || img.height > 400) {
           setImageError('Image dimensions must be max 800 x 400px');
-          return;
+        } else {
+          setImageError('');
         }
         setImage(file);
         setImagePreview(URL.createObjectURL(file));
-        setImageError('');
       };
       img.onerror = () => {
         setImageError('Failed to load image. Please try again.');
+        setImage(file);
+        setImagePreview(URL.createObjectURL(file));
       };
       img.src = URL.createObjectURL(file);
     }
@@ -89,16 +91,18 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
       if (validTypes.includes(file.type)) {
         const img = new Image();
         img.onload = () => {
-          if (img.width <= 800 && img.height <= 400) {
-            setImage(file);
-            setImagePreview(URL.createObjectURL(file));
-            setImageError('');
-          } else {
+          if (img.width > 800 || img.height > 400) {
             setImageError('Image dimensions must be max 800 x 400px');
+          } else {
+            setImageError('');
           }
+          setImage(file);
+          setImagePreview(URL.createObjectURL(file));
         };
         img.onerror = () => {
           setImageError('Failed to load image. Please try again.');
+          setImage(file);
+          setImagePreview(URL.createObjectURL(file));
         };
         img.src = URL.createObjectURL(file);
       } else {
@@ -303,6 +307,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                         e.stopPropagation();
                         setImage(null);
                         setImagePreview(null);
+                        setImageError('');
                         const input = document.getElementById('image-upload') as HTMLInputElement;
                         if (input) input.value = '';
                       }}

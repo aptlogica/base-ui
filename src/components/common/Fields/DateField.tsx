@@ -774,7 +774,7 @@ export const DateField: React.FC<DateProps> = ({
           return (
             <button
               type="button"
-              key={idx}
+              key={day || `empty-${idx}`}
               className={`w-9 h-9 rounded-full text-center text-sm font-medium hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${dayClasses} ${day ? '' : 'opacity-0 pointer-events-none'}`}
               onClick={() => day && !readOnly && handleDateSelect(day)}
               disabled={!!(!day || readOnly || (min && day < convertDateFormat(min, dateFormat, 'YYYY-MM-DD')) || (max && day > convertDateFormat(max, dateFormat, 'YYYY-MM-DD')))}

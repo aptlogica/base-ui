@@ -27,7 +27,6 @@ interface KanbanStackProps {
   onStackDragStart?: (stackId: string, index: number, e: React.DragEvent) => void;
   onStackDrop?: (stackId: string, e: React.DragEvent) => void;
   onStackDelete?: (stackId: string) => void;
-  onDuplicate?: (cardId: string) => void;
   index?: number;
 }
 
@@ -159,8 +158,8 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     // If mouse is below all cards, append to end
     if (cardElements.length > 0) {
       const lastCard = cardElements[cardElements.length - 1];
-      const lastRect = lastCard.getBoundingClientRect();
-      if (mouseY > lastRect.bottom) {
+      const lastRect = lastCard?.getBoundingClientRect();
+      if (mouseY > lastRect?.bottom) {
         return cardElements.length;
       }
     }

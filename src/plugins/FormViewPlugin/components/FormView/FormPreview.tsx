@@ -18,6 +18,7 @@ interface FormPreviewProps {
   onEdit?: (fieldId: string) => void;
   onConfigChange?: (updates: Partial<FormConfig>) => void;
   isReadOnly?: boolean;
+  isSubmitting?: boolean;
 }
 
 // Extract field filtering logic
@@ -258,6 +259,7 @@ interface FormFieldsListProps {
   onEdit?: (fieldId: string) => void;
   isReadOnly: boolean;
   isGridLayout: boolean;
+  isSubmitting?: boolean;
 }
 
 interface RenderFormFieldParams {
@@ -279,6 +281,7 @@ interface RenderFormFieldParams {
   onEdit?: (fieldId: string) => void;
   isReadOnly: boolean;
   isGridLayout: boolean;
+  isSubmitting?: boolean;
 }
 
 const getFormFieldDragHandlers = (
@@ -331,7 +334,8 @@ const renderFormField = (params: RenderFormFieldParams) => {
     row_id,
     onEdit,
     isReadOnly,
-    isGridLayout
+    isGridLayout,
+    isSubmitting = false
   } = params;
 
   const { containerClass, innerClass } = getFormFieldClasses(isGridLayout);
@@ -362,6 +366,7 @@ const renderFormField = (params: RenderFormFieldParams) => {
           row_id={row_id}
           onEdit={onEdit}
           isReadOnly={isReadOnly}
+          isSubmitting={isSubmitting}
         />
       </div>
     </div>
@@ -385,7 +390,8 @@ const FormFieldsList: React.FC<FormFieldsListProps> = ({
   row_id,
   onEdit,
   isReadOnly,
-  isGridLayout
+  isGridLayout,
+  isSubmitting = false
 }) => {
   return (
     <>
@@ -408,7 +414,8 @@ const FormFieldsList: React.FC<FormFieldsListProps> = ({
           row_id,
           onEdit,
           isReadOnly,
-          isGridLayout
+          isGridLayout,
+          isSubmitting
         })
       )}
     </>
@@ -508,16 +515,18 @@ interface FormActionsProps {
   onSubmit?: (e: React.FormEvent) => void;
   onClear?: () => void;
   primaryColor?: string;
+  isSubmitting?: boolean;
 }
 
-const FormActions: React.FC<FormActionsProps> = ({ onSubmit, onClear, primaryColor }) => {
+const FormActions: React.FC<FormActionsProps> = ({ onSubmit, onClear, primaryColor, isSubmitting = false }) => {
   if (!onSubmit) return null;
 
   return (
     <div className="pt-6 flex gap-2">
       <button
         type="submit"
-        className="flex-1 rounded-xl py-3 px-4 h-11 font-medium text-white transition-colors"
+        disabled={isSubmitting}
+        className="flex-1 rounded-xl py-3 px-4 h-11 font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         style={{
           backgroundColor: primaryColor || '#2563eb',
           borderColor: primaryColor || '#2563eb'
@@ -528,7 +537,8 @@ const FormActions: React.FC<FormActionsProps> = ({ onSubmit, onClear, primaryCol
       {onClear && (
         <button
           type="button"
-          className="flex-1 btn-tertiary rounded-xl py-3 px-4 h-11 font-medium"
+          disabled={isSubmitting}
+          className="flex-1 btn-tertiary rounded-xl py-3 px-4 h-11 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={onClear}
         >
           Clear
@@ -598,7 +608,8 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
   row_id,
   onEdit,
   onConfigChange,
-  isReadOnly = false
+  isReadOnly = false,
+  isSubmitting = false
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -715,12 +726,14 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
               onEdit={onEdit}
               isReadOnly={isReadOnly}
               isGridLayout={isGridLayout}
+              isSubmitting={isSubmitting}
             />
 
             <FormActions
               onSubmit={onSubmit}
               onClear={onClear}
               primaryColor={appearance.primaryColor}
+              isSubmitting={isSubmitting}
             />
           </form>
         </div>

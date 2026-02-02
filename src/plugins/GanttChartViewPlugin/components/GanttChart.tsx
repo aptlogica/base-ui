@@ -614,9 +614,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
                 onCompletionFieldChange={handleCompletionFieldChange}
               />
             )}
-          </div>
-
-          <div className="flex items-center gap-2">
             {!isReadOnly && handleFieldToggle && (
               <FieldsPopover
                 columns={fieldsPopoverColumns}
@@ -635,6 +632,9 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
                 onUpdateFilter={handleUpdateFilter}
               />
             )}
+          </div>
+
+          <div className="flex items-center gap-2">
             {/* New Record Button - only show if user can create records and not read-only */}
             {!isReadOnly && canCreateRecord() && (
               <button

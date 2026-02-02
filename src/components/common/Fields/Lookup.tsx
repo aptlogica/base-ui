@@ -267,12 +267,12 @@ export const Lookup: React.FC<LookupProps> = ({
       
       if (renderedItems.length === 0) return null;
       
-        return (
+      return (
         <div className={`flex flex-wrap gap-1 items-center ${isInDropdown ? 'max-w-full' : ''}`} style={{ maxWidth: '100%', overflow: 'hidden' }}>
           {renderedItems}
-          </div>
-        );
-      }
+        </div>
+      );
+    }
       
     // Render each value as a separate pill using source column type
     const renderedItems = items

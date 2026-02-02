@@ -22,6 +22,7 @@ interface LongTextProps {
     maxLength?: number;
     placeholder?: string;
     richText?: boolean;
+    hideMaximizeButton?: boolean;
     [key: string]: any;
   };
 }
@@ -43,7 +44,7 @@ export const LongText: React.FC<LongTextProps> = ({
   onModalClose,
   config = {}
 }) => {
-  const { defaultValue = '', maxLength: configMaxLength = maxLength, placeholder: configPlaceholder = placeholder, richText = false } = config;
+  const { defaultValue = '', maxLength: configMaxLength = maxLength, placeholder: configPlaceholder = placeholder, richText = false, hideMaximizeButton = false } = config;
   const [localValue, setLocalValue] = useState(value || '');
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -171,7 +172,6 @@ export const LongText: React.FC<LongTextProps> = ({
 
   // Modal handlers
   const openModal = () => {
-    if (readOnly) return;
     setIsModalOpen(true);
     // Reset link popup when opening main modal
     if (isLinkPopupOpen) {
@@ -544,13 +544,25 @@ export const LongText: React.FC<LongTextProps> = ({
           style={readOnly ? { cursor: 'default' } : { cursor: 'pointer' }}
           onDoubleClick={readOnly ? undefined : openModal}
         />
-        {!readOnly && (
+        {!readOnly && !hideMaximizeButton && (
           <button
             type="button"
-            onClick={openModal}
+            onClick={(e) => { e.stopPropagation(); openModal(); }}
             className="mx-2 w-8 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-colors z-0"
             tabIndex={-1}
             disabled={disabled}
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+        )}
+        {readOnly && !hideMaximizeButton && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); openModal(); }}
+            className="mx-2 w-8 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-colors z-0"
+            tabIndex={-1}
+            disabled={false}
+            title="View full content"
           >
             <Maximize2 className="w-4 h-4" />
           </button>
@@ -667,7 +679,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   contentEditable={!readOnly}
                   suppressContentEditableWarning
                   onInput={readOnly ? undefined : handleRichTextChange}
-                  onPaste={!readOnly ? handlePaste : undefined}
+                  onPaste={readOnly ? undefined : handlePaste}
                   onKeyDown={(e) => {
                     e.stopPropagation();
                     // Handle keyboard shortcuts
@@ -748,13 +760,24 @@ export const LongText: React.FC<LongTextProps> = ({
               />
             )}
             <div className="flex justify-end mt-4 flex-shrink-0">
-              <button
-                type='button'
-                onClick={() => closeModal(true)}
-                className="px-4 py-2 text-sm font-medium btn-primary transition-colors"
-              >
-                Save & Close
-              </button>
+              {!readOnly && (
+                <button
+                  type='button'
+                  onClick={() => closeModal(true)}
+                  className="px-4 py-2 text-sm font-medium btn-primary transition-colors"
+                >
+                  Save & Close
+                </button>
+              )}
+              {readOnly && (
+                <button
+                  type='button'
+                  onClick={() => closeModal(false)}
+                  className="px-4 py-2 text-sm font-medium bg-gray-200 text-gray-700 rounded-lg transition-colors hover:bg-gray-300"
+                >
+                  Close
+                </button>
+              )}
             </div>
           </div>
         </div>,
