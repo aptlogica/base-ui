@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">0.2% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/980</span>
+                <span class='fraction'>2/980</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>0/0</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>0/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">0.2% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/980</span>
+                <span class='fraction'>2/980</span>
             </div>
         
             
@@ -1283,7 +1283,7 @@
 <a name='L1218'></a><a href='#L1218'>1218</a>
 <a name='L1219'></a><a href='#L1219'>1219</a>
 <a name='L1220'></a><a href='#L1220'>1220</a>
-<a name='L1221'></a><a href='#L1221'>1221</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L1221'></a><a href='#L1221'>1221</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1501,6 +1501,7 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -1522,7 +1523,6 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -2503,7 +2503,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >import React, { useState, useEffect, useRef, useCallback } from 'react';</span></span></span>
+<span class="cline-any cline-no">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { zonedToUtcISO } from '../../../utils/dateUtils';
@@ -2532,11 +2532,11 @@ interface AuditCreatedTimeProps {
   };
 }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >function pad(n: number) {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >function pad(n: number) {</span></span>
 <span class="cstat-no" title="statement not covered" >  return n.toString().padStart(2, '0');</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >function getTimeOptions(step = 30, hourFormat: '12' | '24' = '24', timeFormat: string = 'HH:mm') {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >function getTimeOptions(step = 30, hourFormat: '12' | '24' = '24', timeFormat: string = 'HH:mm') {</span></span>
 <span class="cstat-no" title="statement not covered" >  const options: string[] = [];</span>
 &nbsp;
   // Determine step based on time format
@@ -2568,12 +2568,12 @@ interface AuditCreatedTimeProps {
 <span class="cstat-no" title="statement not covered" >  return options;</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >function getTodayISO() {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >function getTodayISO() {</span></span>
 <span class="cstat-no" title="statement not covered" >  const now = new Date();</span>
 <span class="cstat-no" title="statement not covered" >  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >function formatDate(date: string, format: string): string {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >function formatDate(date: string, format: string): string {</span></span>
 <span class="cstat-no" title="statement not covered" >  if (!date) return '';</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  const [year, month, day] = date.split('-');</span>
@@ -2598,7 +2598,7 @@ interface AuditCreatedTimeProps {
 <span class="cstat-no" title="statement not covered" >  }</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >function parseDate(dateStr: string, format: string): string {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >function parseDate(dateStr: string, format: string): string {</span></span>
 <span class="cstat-no" title="statement not covered" >  if (!dateStr) return '';</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  let year, month, day;</span>
@@ -2633,7 +2633,7 @@ interface AuditCreatedTimeProps {
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
 // Validate if input matches the expected format pattern
-<span class="cstat-no" title="statement not covered" >function validateDateTimeFormat(input: string, dateFormat: string, timeFormat: string, hourFormat: '12' | '24'): boolean {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >function validateDateTimeFormat(input: string, dateFormat: string, timeFormat: string, hourFormat: '12' | '24'): boolean {</span></span>
 <span class="cstat-no" title="statement not covered" >  if (!input.trim()) return false;</span>
 &nbsp;
   // Split input into date and time parts
@@ -2680,12 +2680,12 @@ interface AuditCreatedTimeProps {
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
 // Get placeholder based on format
-<span class="cstat-no" title="statement not covered" >function getDateTimePlaceholder(dateFormat: string, hourFormat: '12' | '24', timeFormat: string = 'HH:mm'): string {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >function getDateTimePlaceholder(dateFormat: string, hourFormat: '12' | '24', timeFormat: string = 'HH:mm'): string {</span></span>
 <span class="cstat-no" title="statement not covered" >  return `${dateFormat} ${timeFormat}`;</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
 // Convert a local date (YYYY-MM-DD) and time (HH:mm or HH:mm:ss[.SSS]) into a UTC ISO string with Z
-<span class="cstat-no" title="statement not covered" >function toUtcIso(localDate: string, localTime: string): string {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >function toUtcIso(localDate: string, localTime: string): string {</span></span>
 <span class="cstat-no" title="statement not covered" >  const candidate = `${localDate}T${localTime}`;</span>
 <span class="cstat-no" title="statement not covered" >  const d = new Date(candidate);</span>
 <span class="cstat-no" title="statement not covered" >  if (!Number.isNaN(d.getTime())) {</span>
@@ -2696,7 +2696,7 @@ interface AuditCreatedTimeProps {
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
 // Normalize any display time (possibly 12h or with seconds) to 24h HH:mm for calculations
-<span class="cstat-no" title="statement not covered" >function toHHmm(timeStr: string, hourFormat: '12' | '24'): string {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >function toHHmm(timeStr: string, hourFormat: '12' | '24'): string {</span></span>
 <span class="cstat-no" title="statement not covered" >  if (!timeStr) return '';</span>
 <span class="cstat-no" title="statement not covered" >  let t = timeStr.trim();</span>
 <span class="cstat-no" title="statement not covered" >  if (hourFormat === '12') {</span>
@@ -2721,7 +2721,7 @@ interface AuditCreatedTimeProps {
 <span class="cstat-no" title="statement not covered" >  return `${pad(Number.parseInt(HH, 10))}:${pad(Number.parseInt(MM, 10))}`;</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export const AuditCreatedTime: React.FC&lt;AuditCreatedTimeProps&gt; = ({</span>
+export const AuditCreatedTime: React.FC&lt;AuditCreatedTimeProps&gt; = <span class="fstat-no" title="function not covered" >({</span>
 <span class="cstat-no" title="statement not covered" >  label,</span>
 <span class="cstat-no" title="statement not covered" >  value,</span>
 <span class="cstat-no" title="statement not covered" >  onChange,</span>
@@ -3730,7 +3730,7 @@ interface AuditCreatedTimeProps {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-03T12:56:33.082Z
+                at 2026-02-03T13:13:03.842Z
             </div>
         <script src="../../../../prettify.js"></script>
         <script>

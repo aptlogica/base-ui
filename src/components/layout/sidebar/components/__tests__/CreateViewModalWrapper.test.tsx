@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import React from 'react';
 import { CreateViewModalWrapper } from '../CreateViewModalWrapper';
 
 const mockOnClose = vi.fn();
@@ -19,21 +18,12 @@ const mockExistingViews: unknown[] = [
   { id: 'view-1', title: 'View 1', type: 'grid' },
 ];
 
-vi.mock('../../../../hooks/useApi', () => ({
+vi.mock('../../../../../hooks/useApi', () => ({
   useTableViews: vi.fn(),
 }));
 
-vi.mock('../../../../components/modals/CreateViewModal', () => ({
-  CreateViewModal: ({
-    isOpen,
-    onClose,
-    tableId,
-    viewType,
-    defaultName,
-    fields,
-    existingViews,
-    onCreate,
-  }: {
+vi.mock('../../../../../components/modals/CreateViewModal', () => ({
+  CreateViewModal: (props: {
     isOpen: boolean;
     onClose: () => void;
     tableId: string;
@@ -43,18 +33,19 @@ vi.mock('../../../../components/modals/CreateViewModal', () => ({
     existingViews: unknown[];
     onCreate: (data: unknown) => Promise<void>;
   }) => (
-    <div data-testid="create-view-modal">
-      <span data-testid="modal-table-id">{tableId}</span>
-      <span data-testid="modal-view-type">{viewType}</span>
-      <span data-testid="modal-default-name">{defaultName}</span>
-      <span data-testid="modal-views-count">{existingViews.length}</span>
-      <button type="button" onClick={onClose} data-testid="modal-close">
+    <div data-testid="create-view-modal" data-is-open={props.isOpen}>
+      <span data-testid="modal-table-id">{props.tableId}</span>
+      <span data-testid="modal-view-type">{props.viewType}</span>
+      <span data-testid="modal-default-name">{props.defaultName}</span>
+      <span data-testid="modal-views-count">{props.existingViews.length}</span>
+      <span data-testid="modal-fields-count">{props.fields.length}</span>
+      <button type="button" onClick={props.onClose} data-testid="modal-close">
         Close
       </button>
       <button
         type="button"
         data-testid="modal-create"
-        onClick={() => onCreate({ name: 'New View', description: '', type: viewType })}
+        onClick={() => props.onCreate({ name: 'New View', description: '', type: props.viewType })}
       >
         Create
       </button>
@@ -62,7 +53,7 @@ vi.mock('../../../../components/modals/CreateViewModal', () => ({
   ),
 }));
 
-import { useTableViews } from '../../../../hooks/useApi';
+import { useTableViews } from '../../../../../hooks/useApi';
 
 const useTableViewsMock = vi.mocked(useTableViews);
 

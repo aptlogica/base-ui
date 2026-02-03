@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">8.14% </span>
+                <span class="strong">9.49% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>102/1253</span>
+                <span class='fraction'>119/1253</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">50% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>2/4</span>
+                <span class='fraction'>5/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">2.56% </span>
+                <span class="strong">6.25% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>2/78</span>
+                <span class='fraction'>5/80</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">8.14% </span>
+                <span class="strong">9.49% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>102/1253</span>
+                <span class='fraction'>119/1253</span>
             </div>
         
             
@@ -3098,12 +3098,12 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -3170,20 +3170,20 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">60x</span>
+<span class="cline-any cline-yes">60x</span>
+<span class="cline-any cline-yes">60x</span>
+<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-yes">19x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-yes">60x</span>
+<span class="cline-any cline-yes">60x</span>
+<span class="cline-any cline-yes">60x</span>
+<span class="cline-any cline-yes">60x</span>
+<span class="cline-any cline-yes">60x</span>
+<span class="cline-any cline-yes">60x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -4861,13 +4861,13 @@ export const useUpdateAssetById = <span class="fstat-no" title="function not cov
 <span class="cstat-no" title="statement not covered" >  });</span>
 <span class="cstat-no" title="statement not covered" >};</span>
 &nbsp;
-export const useAddImage = <span class="fstat-no" title="function not covered" >() =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >  return useMutation({</span>
-<span class="cstat-no" title="statement not covered" >    mutationFn: async ({ files, onProgress }: { files: File[]; onProgress?: (progressEvent: ProgressEvent) =&gt; void }) =&gt; {</span>
+export const useAddImage = () =&gt; {
+  return useMutation({
+    mutationFn: <span class="fstat-no" title="function not covered" >async ({ files, onProgress }: { files: File[]; onProgress?: (progressEvent: ProgressEvent) =&gt; void }) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >      return await addImageService(files, onProgress);</span>
 <span class="cstat-no" title="statement not covered" >    },</span>
-<span class="cstat-no" title="statement not covered" >  });</span>
-<span class="cstat-no" title="statement not covered" >};</span>
+  });
+};
 &nbsp;
 // =========================
 // User Profile APIs
@@ -4933,21 +4933,21 @@ export const useUserAccessDetails = <span class="fstat-no" title="function not c
 <span class="cstat-no" title="statement not covered" >  });</span>
 <span class="cstat-no" title="statement not covered" >};</span>
 &nbsp;
-export const useUserRolesAndAccess = <span class="fstat-no" title="function not covered" >(userId: string | null, scopeId?: string) =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >  return useQuery({</span>
-<span class="cstat-no" title="statement not covered" >    queryKey: ['userRolesAndAccess', userId, scopeId],</span>
-<span class="cstat-no" title="statement not covered" >    queryFn: async () =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >      if (!userId) return null;</span>
-<span class="cstat-no" title="statement not covered" >      const result = await getUserRolesAndAccessService(userId, scopeId) as any;</span>
+export const useUserRolesAndAccess = (userId: string | null, scopeId?: string) =&gt; {
+  return useQuery({
+    queryKey: ['userRolesAndAccess', userId, scopeId],
+    queryFn: async () =&gt; {
+      if (!userId) <span class="branch-0 cbranch-no" title="branch not covered" >return null;</span>
+      const result = await getUserRolesAndAccessService(userId, scopeId<span class="branch-0 cbranch-no" title="branch not covered" >) as any;</span>
       // Extract the data from StandardResponse structure
-<span class="cstat-no" title="statement not covered" >      return result?.data || null;</span>
-<span class="cstat-no" title="statement not covered" >    },</span>
-<span class="cstat-no" title="statement not covered" >    enabled: !!userId,</span>
-<span class="cstat-no" title="statement not covered" >    staleTime: 0, // Always consider data stale to allow refetching when invalidated</span>
-<span class="cstat-no" title="statement not covered" >    gcTime: 5 * 60 * 1000, // 5 minutes</span>
-<span class="cstat-no" title="statement not covered" >    refetchOnMount: 'always', // Always refetch when component mounts</span>
-<span class="cstat-no" title="statement not covered" >  });</span>
-<span class="cstat-no" title="statement not covered" >};</span>
+      return result?.<span class="branch-0 cbranch-no" title="branch not covered" >data || null;</span>
+    },
+    enabled: !!userId,
+    staleTime: 0, // Always consider data stale to allow refetching when invalidated
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: 'always', // Always refetch when component mounts
+  });
+};
 &nbsp;
 export const useAddOrUpdateAvatar = <span class="fstat-no" title="function not covered" >(userId: string) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >  const queryClient = useQueryClient();</span>
@@ -5362,7 +5362,7 @@ export const useUpdateOrganization = <span class="fstat-no" title="function not 
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-03T12:56:33.082Z
+                at 2026-02-03T13:13:03.842Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

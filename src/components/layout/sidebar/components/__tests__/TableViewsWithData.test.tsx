@@ -32,16 +32,21 @@ const defaultProps = {
   setPopoverRef: mockSetPopoverRef,
 };
 
-vi.mock('../../../../hooks/useApi', () => ({
+vi.mock('../../../../../hooks/useApi', () => ({
   useTableViews: vi.fn(),
 }));
 
+interface MockView {
+  id: string;
+  title: string;
+}
+
 vi.mock('../TableViews', () => ({
-  TableViews: ({ views, table }: { views: unknown[]; table: { id: string } }) => (
+  TableViews: ({ views, table }: { views: MockView[]; table: { id: string } }) => (
     <div data-testid="table-views">
       <span data-testid="views-count">{views.length}</span>
       <span data-testid="table-id">{table.id}</span>
-      {views.map((v: { id: string; title: string }) => (
+      {views.map((v) => (
         <span key={v.id} data-testid={`view-${v.id}`}>
           {v.title}
         </span>
@@ -50,7 +55,7 @@ vi.mock('../TableViews', () => ({
   ),
 }));
 
-import { useTableViews } from '../../../../hooks/useApi';
+import { useTableViews } from '../../../../../hooks/useApi';
 
 const useTableViewsMock = vi.mocked(useTableViews);
 

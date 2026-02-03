@@ -9,7 +9,6 @@ const mockIsViewActive = vi.fn();
 const mockHandleViewDeletion = vi.fn();
 const mockSetShowCreateViewModal = vi.fn();
 const mockSetPopoverRef = vi.fn();
-const mockSetEditingViewId = vi.fn();
 
 const mockTable = {
   id: 'table-1',
@@ -27,22 +26,22 @@ const mockViews = [
 const mockMutateAsync = vi.fn();
 const mockMutate = vi.fn();
 
-vi.mock('../../../../hooks/useApi', () => ({
+vi.mock('../../../../../hooks/useApi', () => ({
   useUpdateTable: () => ({
     mutate: mockMutate,
     mutateAsync: mockMutateAsync,
   }),
 }));
 
-vi.mock('../../../../hooks/useWorkspaceAccess', () => ({
+vi.mock('../../../../../hooks/useWorkspaceAccess', () => ({
   useWorkspaceAccess: vi.fn(),
 }));
 
-vi.mock('../../../../hooks/useBaseAccess', () => ({
+vi.mock('../../../../../hooks/useBaseAccess', () => ({
   useBaseAccess: vi.fn(),
 }));
 
-vi.mock('../../../../components/views/ViewOptionsMenu', () => ({
+vi.mock('../../../../../components/views/ViewOptionsMenu', () => ({
   default: ({
     view,
     onPinToggle,
@@ -77,8 +76,8 @@ vi.mock('../CreateViewButton', () => ({
   ),
 }));
 
-import { useWorkspaceAccess } from '../../../../hooks/useWorkspaceAccess';
-import { useBaseAccess } from '../../../../hooks/useBaseAccess';
+import { useWorkspaceAccess } from '../../../../../hooks/useWorkspaceAccess';
+import { useBaseAccess } from '../../../../../hooks/useBaseAccess';
 
 const useWorkspaceAccessMock = vi.mocked(useWorkspaceAccess);
 const useBaseAccessMock = vi.mocked(useBaseAccess);
@@ -91,7 +90,7 @@ const defaultProps = {
   handleViewDeletion: mockHandleViewDeletion,
   setShowCreateViewModal: mockSetShowCreateViewModal,
   setPopoverRef: mockSetPopoverRef,
-  setEditingViewId: mockSetEditingViewId,
+  setEditingViewId: vi.fn(),
 };
 
 describe('TableViews', () => {
@@ -101,10 +100,10 @@ describe('TableViews', () => {
     mockIsViewActive.mockReturnValue(false);
     useWorkspaceAccessMock.mockReturnValue({
       isWorkspaceReadOnly: vi.fn().mockReturnValue(false),
-    } as ReturnType<typeof useWorkspaceAccessMock>);
+    } as unknown as ReturnType<typeof useWorkspaceAccessMock>);
     useBaseAccessMock.mockReturnValue({
       canCreateView: vi.fn().mockReturnValue(true),
-    } as ReturnType<typeof useBaseAccessMock>);
+    } as unknown as ReturnType<typeof useBaseAccessMock>);
   });
 
   describe('Rendering', () => {
@@ -116,7 +115,7 @@ describe('TableViews', () => {
     it('should not render Create View button when workspace is read-only', () => {
       useWorkspaceAccessMock.mockReturnValue({
         isWorkspaceReadOnly: vi.fn().mockReturnValue(true),
-      } as ReturnType<typeof useWorkspaceAccessMock>);
+      } as unknown as ReturnType<typeof useWorkspaceAccessMock>);
       render(<TableViews {...defaultProps} />);
       expect(screen.queryByTestId('create-view-button')).not.toBeInTheDocument();
     });
@@ -124,7 +123,7 @@ describe('TableViews', () => {
     it('should not render Create View button when cannot create view', () => {
       useBaseAccessMock.mockReturnValue({
         canCreateView: vi.fn().mockReturnValue(false),
-      } as ReturnType<typeof useBaseAccessMock>);
+      } as unknown as ReturnType<typeof useBaseAccessMock>);
       render(<TableViews {...defaultProps} />);
       expect(screen.queryByTestId('create-view-button')).not.toBeInTheDocument();
     });

@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">64.57% </span>
+                <span class="strong">63.28% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>401/621</span>
+                <span class='fraction'>393/621</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">43.11% </span>
+                <span class="strong">44.11% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>47/109</span>
+                <span class='fraction'>45/102</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">44.44% </span>
+                <span class="strong">40.74% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>12/27</span>
+                <span class='fraction'>11/27</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">64.57% </span>
+                <span class="strong">63.28% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>401/621</span>
+                <span class='fraction'>393/621</span>
             </div>
         
             
@@ -1052,30 +1052,30 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">8x</span>
@@ -1867,32 +1867,32 @@ const Breadcrumb: React.FC = () =&gt; {
   useEffect(() =&gt; {
     if (!openDropdown) return;
 &nbsp;
-    const handleClickOutside = (event: MouseEvent) =&gt; {
+    const handleClickOutside = <span class="fstat-no" title="function not covered" >(event: MouseEvent) =&gt; {</span>
       // Ignore the click that opened the dropdown
-      if (ignoreNextClickRef.current) {
-        ignoreNextClickRef.current = false;
-        return;
-<span class="branch-0 cbranch-no" title="branch not covered" >      }</span>
+<span class="cstat-no" title="statement not covered" >      if (ignoreNextClickRef.current) {</span>
+<span class="cstat-no" title="statement not covered" >        ignoreNextClickRef.current = false;</span>
+<span class="cstat-no" title="statement not covered" >        return;</span>
+<span class="cstat-no" title="statement not covered" >      }</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      const target = event.target as Node;</span>
 <span class="cstat-no" title="statement not covered" >      const portal = document.querySelector('.breadcrumb-dropdown-portal');</span>
 &nbsp;
       // Check if click is inside the portal (including buttons)
 <span class="cstat-no" title="statement not covered" >      const clickedInside =</span>
-        (baseDropdownRef.current?.contains(target<span class="branch-0 cbranch-no" title="branch not covered" >)) ||</span>
-<span class="cstat-no" title="statement not covered" >        (tableDropdownRef.current?.contains(target<span class="branch-0 cbranch-no" title="branch not covered" >)) ||</span></span>
-<span class="cstat-no" title="statement not covered" >        (viewDropdownRef.current?.contains(target<span class="branch-0 cbranch-no" title="branch not covered" >)) ||</span></span>
+<span class="cstat-no" title="statement not covered" >        (baseDropdownRef.current?.contains(target)) ||</span>
+<span class="cstat-no" title="statement not covered" >        (tableDropdownRef.current?.contains(target)) ||</span>
+<span class="cstat-no" title="statement not covered" >        (viewDropdownRef.current?.contains(target)) ||</span>
 <span class="cstat-no" title="statement not covered" >        (portal?.contains(target));</span>
 &nbsp;
-      if (!clickedInside) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
+<span class="cstat-no" title="statement not covered" >      if (!clickedInside) {</span>
 <span class="cstat-no" title="statement not covered" >        setOpenDropdown(null);</span>
 <span class="cstat-no" title="statement not covered" >        setDropdownPosition(null);</span>
 <span class="cstat-no" title="statement not covered" >      }</span>
-    };
+<span class="cstat-no" title="statement not covered" >    };</span>
 &nbsp;
     // Use a small delay to avoid immediate closure
     const timeoutId = setTimeout(() =&gt; {
-      document.addEventListener('mousedown', handleClickOutside);
+<span class="cstat-no" title="statement not covered" >      document.addEventListener('mousedown', handleClickOutside);</span>
     }, 100);
 &nbsp;
     return () =&gt; {
@@ -2521,7 +2521,7 @@ export default Breadcrumb;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-03T12:56:33.082Z
+                at 2026-02-03T13:13:03.842Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

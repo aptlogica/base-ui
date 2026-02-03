@@ -47,30 +47,30 @@ const mockCreateViewMutateAsync = vi.fn();
 const mockUpdateBaseMutate = vi.fn();
 const mockUpdateBaseMutateAsync = vi.fn();
 
-vi.mock('../../common/Toast', () => ({
+vi.mock('../../../common/Toast', () => ({
   useToast: () => mockToast,
 }));
 
-vi.mock('../../../hooks/workspace/useWorkspaceBusinessLogic', () => ({
+vi.mock('../../../../hooks/workspace/useWorkspaceBusinessLogic', () => ({
   useWorkspaceBusinessLogic: vi.fn(),
 }));
 
-vi.mock('../../../hooks/useBaseAccess', () => ({
+vi.mock('../../../../hooks/useBaseAccess', () => ({
   useBaseAccess: vi.fn(),
 }));
 
-vi.mock('../../../hooks/useApi', () => ({
+vi.mock('../../../../hooks/useApi', () => ({
   useUpdateBase: () => ({
     mutate: mockUpdateBaseMutate,
     mutateAsync: mockUpdateBaseMutateAsync,
   }),
 }));
 
-vi.mock('../../modals/CreateTableModal', () => ({
+vi.mock('../../../modals/CreateTableModal', () => ({
   CreateTableModal: () => <div data-testid="create-table-modal">Create Table Modal</div>,
 }));
 
-vi.mock('../../modals/ImportModal', () => ({
+vi.mock('../../../modals/ImportModal', () => ({
   ImportModal: () => <div data-testid="import-modal">Import Modal</div>,
 }));
 
@@ -82,7 +82,7 @@ vi.mock('react-dom', async () => {
   };
 });
 
-vi.mock('../../modals/CreateBaseModal', () => ({
+vi.mock('../../../modals/CreateBaseModal', () => ({
   CreateBaseModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
     isOpen ? (
       <div data-testid="create-base-modal">
@@ -93,7 +93,7 @@ vi.mock('../../modals/CreateBaseModal', () => ({
     ) : null,
 }));
 
-vi.mock('../../tables/TableOptionsMenu', () => ({
+vi.mock('../../../tables/TableOptionsMenu', () => ({
   default: () => <div data-testid="table-options-menu">Table Options</div>,
 }));
 
@@ -111,11 +111,11 @@ vi.mock('../components/CreateViewModalWrapper', () => ({
   ),
 }));
 
-vi.mock('../../ui/Loader', () => ({
+vi.mock('../../../ui/Loader', () => ({
   Loader: () => <div data-testid="loader">Loading</div>,
 }));
 
-vi.mock('../../common/Skeleton/SidebarSkeleton', () => ({
+vi.mock('../../../common/Skeleton/SidebarSkeleton', () => ({
   SidebarSkeleton: ({ itemCount }: { itemCount: number }) => (
     <div data-testid="sidebar-skeleton" data-item-count={itemCount}>
       Skeleton {itemCount}
@@ -123,8 +123,8 @@ vi.mock('../../common/Skeleton/SidebarSkeleton', () => ({
   ),
 }));
 
-import { useWorkspaceBusinessLogic } from '../../../hooks/workspace/useWorkspaceBusinessLogic';
-import { useBaseAccess } from '../../../hooks/useBaseAccess';
+import { useWorkspaceBusinessLogic } from '../../../../hooks/workspace/useWorkspaceBusinessLogic';
+import { useBaseAccess } from '../../../../hooks/useBaseAccess';
 
 const useWorkspaceBusinessLogicMock = vi.mocked(useWorkspaceBusinessLogic);
 const useBaseAccessMock = vi.mocked(useBaseAccess);
@@ -169,11 +169,11 @@ describe('Sidebar', () => {
     vi.clearAllMocks();
     mockUpdateBaseMutateAsync.mockResolvedValue(undefined);
     useWorkspaceBusinessLogicMock.mockReturnValue(
-      getDefaultWorkspaceState() as ReturnType<typeof useWorkspaceBusinessLogicMock>
+      getDefaultWorkspaceState() as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>
     );
     useBaseAccessMock.mockReturnValue({
       canCreateTable: vi.fn().mockReturnValue(true),
-    } as ReturnType<typeof useBaseAccessMock>);
+    } as unknown as ReturnType<typeof useBaseAccessMock>);
   });
 
   describe('Rendering', () => {
@@ -181,7 +181,7 @@ describe('Sidebar', () => {
       useWorkspaceBusinessLogicMock.mockReturnValue({
         ...getDefaultWorkspaceState(),
         flyoutOpen: false,
-      } as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
       render(<Sidebar />);
       expect(screen.queryByText('Table 1')).not.toBeInTheDocument();
     });
@@ -190,7 +190,7 @@ describe('Sidebar', () => {
       useWorkspaceBusinessLogicMock.mockReturnValue({
         ...getDefaultWorkspaceState(),
         loading: true,
-      } as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
       render(<Sidebar />);
       const skeleton = screen.getByTestId('sidebar-skeleton');
       expect(skeleton).toBeInTheDocument();
@@ -204,7 +204,7 @@ describe('Sidebar', () => {
       useWorkspaceBusinessLogicMock.mockReturnValue({
         ...getDefaultWorkspaceState(),
         error: 'Something went wrong',
-      } as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
       const { container } = render(<Sidebar />);
       expect(screen.getByText('Something went wrong')).toBeInTheDocument();
       expect(container.querySelector('.flyout-error')).toBeInTheDocument();
@@ -214,7 +214,7 @@ describe('Sidebar', () => {
       useWorkspaceBusinessLogicMock.mockReturnValue({
         ...getDefaultWorkspaceState(),
         currentWorkspace: null,
-      } as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
       render(<Sidebar />);
       expect(screen.getByText('Please select a workspace')).toBeInTheDocument();
     });
@@ -223,7 +223,7 @@ describe('Sidebar', () => {
       useWorkspaceBusinessLogicMock.mockReturnValue({
         ...getDefaultWorkspaceState(),
         selectedBase: null,
-      } as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
       render(<Sidebar />);
       expect(screen.getByText('Please select a base to view tables')).toBeInTheDocument();
     });
@@ -237,7 +237,7 @@ describe('Sidebar', () => {
       useWorkspaceBusinessLogicMock.mockReturnValue({
         ...getDefaultWorkspaceState(),
         baseTables: { data: [] },
-      } as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
       render(<Sidebar />);
       expect(
         screen.getByText('No tables in this base. Create your first table to get started.')
@@ -309,19 +309,20 @@ describe('Sidebar', () => {
   });
 
   describe('Edge cases', () => {
-    it('should not render Create Table when selectedBase is null', () => {
+    it('should render disabled Create Table button when selectedBase is null', () => {
       useWorkspaceBusinessLogicMock.mockReturnValue({
         ...getDefaultWorkspaceState(),
         selectedBase: null,
-      } as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
       render(<Sidebar />);
-      expect(screen.queryByRole('button', { name: /create table/i })).not.toBeInTheDocument();
+      const createTableButton = screen.getByRole('button', { name: /create table/i });
+      expect(createTableButton).toBeDisabled();
     });
 
     it('should not render Create Table when cannot create table', () => {
       useBaseAccessMock.mockReturnValue({
         canCreateTable: vi.fn().mockReturnValue(false),
-      } as ReturnType<typeof useBaseAccessMock>);
+      } as unknown as ReturnType<typeof useBaseAccessMock>);
       render(<Sidebar />);
       expect(screen.queryByRole('button', { name: /create table/i })).not.toBeInTheDocument();
     });
@@ -330,7 +331,7 @@ describe('Sidebar', () => {
       useWorkspaceBusinessLogicMock.mockReturnValue({
         ...getDefaultWorkspaceState(),
         expandedTables: ['table-1'],
-      } as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
       render(<Sidebar />);
       expect(screen.getByTestId('table-views-with-data')).toBeInTheDocument();
     });

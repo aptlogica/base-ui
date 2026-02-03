@@ -69,7 +69,7 @@ describe('YearView', () => {
     it('should render weekday headers for each month', () => {
       render(<YearView {...defaultProps} />);
 
-      const mondays = screen.getAllByText('M');
+      const mondays = screen.getAllByText('Mon');
       expect(mondays.length).toBeGreaterThanOrEqual(12);
     });
   });
@@ -105,32 +105,32 @@ describe('YearView', () => {
   });
 
   describe('date clicks', () => {
-    it('should call onDateClick when date is clicked', async () => {
-      const mockOnDateClick = vi.fn();
+    it('should call onDateSelect when date is clicked', async () => {
+      const mockOnDateSelect = vi.fn();
 
       const { container } = render(
         <YearView
           {...defaultProps}
-          onDateClick={mockOnDateClick}
+          onDateSelect={mockOnDateSelect}
         />
       );
 
-      const dateCell = container.querySelector('button');
+      const dateCell = container.querySelector('.cursor-pointer');
       if (dateCell) {
         await userEvent.click(dateCell);
-        expect(mockOnDateClick).toHaveBeenCalled();
+        expect(mockOnDateSelect).toHaveBeenCalled();
       }
     });
 
-    it('should not call onDateClick when not provided', async () => {
+    it('should call default onDateSelect when clicking date cell', async () => {
       const { container } = render(<YearView {...defaultProps} />);
 
-      const dateCell = container.querySelector('button');
+      const dateCell = container.querySelector('.cursor-pointer');
       if (dateCell) {
         await userEvent.click(dateCell as HTMLElement);
       }
 
-      expect(container.firstChild).toBeInTheDocument();
+      expect(defaultProps.onDateSelect).toHaveBeenCalled();
     });
   });
 
@@ -229,11 +229,13 @@ describe('YearView', () => {
   });
 
   describe('weekend styling', () => {
-    it('should apply weekend styling', () => {
+    it('should render weekend day headers', () => {
       render(<YearView {...defaultProps} />);
 
-      const saturdayHeaders = screen.getAllByText('S');
-      expect(saturdayHeaders.length).toBeGreaterThan(0);
+      const saturdayHeaders = screen.getAllByText('Sat');
+      const sundayHeaders = screen.getAllByText('Sun');
+      expect(saturdayHeaders.length).toBeGreaterThanOrEqual(12);
+      expect(sundayHeaders.length).toBeGreaterThanOrEqual(12);
     });
   });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 
@@ -710,7 +710,6 @@ describe('LoginPage', () => {
     it('should handle OTP send failure gracefully', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const user = userEvent.setup();
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockApiLogin.mockResolvedValue({
         data: {
           user: { id: '1', email: 'user@example.com', email_verified: false },
