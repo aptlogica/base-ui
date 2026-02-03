@@ -256,4 +256,167 @@ describe('ImportModal', () => {
       expect(screen.getByText(new RegExp(`Import ${label}`, 'i'))).toBeInTheDocument();
     });
   });
+
+  describe('title validation', () => {
+    it('shows error when title is less than 3 characters', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+
+      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
+      await user.type(titleInput, 'ab');
+
+      await waitFor(() => {
+        expect(screen.getByText(/Table title must be at least 3 characters long/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows error when title is not unique', async () => {
+      const user = userEvent.setup();
+      const existingTables = [{ title: 'Existing Table' }];
+
+      renderWithQueryClient(
+        <ImportModal {...defaultProps} existingTables={existingTables} />
+      );
+
+      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
+      await user.type(titleInput, 'Existing Table');
+
+      await waitFor(() => {
+        expect(screen.getByText(/Table title must be unique/i)).toBeInTheDocument();
+      });
+    });
+
+    it('clears error when title becomes valid', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+
+      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
+      await user.type(titleInput, 'ab');
+
+      await waitFor(() => {
+        expect(screen.getByText(/Table title must be at least 3 characters long/i)).toBeInTheDocument();
+      });
+
+      await user.type(titleInput, 'c');
+
+      await waitFor(() => {
+        expect(screen.queryByText(/Table title must be at least 3 characters long/i)).not.toBeInTheDocument();
+      });
+    });
+
+    it('shows red border on title input when there is an error', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+
+      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
+      await user.type(titleInput, 'ab');
+
+      await waitFor(() => {
+        expect(titleInput).toHaveClass('border-red-500');
+      });
+    });
+  });
+
+  describe('file validation', () => {
+    it('shows error when file type is invalid', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<ImportModal {...defaultProps} importType="csv" />);
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const invalidFile = new File(['content'], 'file.txt', { type: 'text/plain' });
+
+      await user.upload(fileInput, invalidFile);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Invalid file type/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows red border on file upload area when there is a file error', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const invalidFile = new File(['content'], 'file.txt', { type: 'text/plain' });
+
+      await user.upload(fileInput, invalidFile);
+
+      const uploadArea = screen.getByLabelText(/Click or drag and drop to upload file/i);
+
+      await waitFor(() => {
+        expect(uploadArea).toHaveClass('border-red-400');
+      });
+    });
+  });
+
+  describe('file and title interaction', () => {
+    it('auto-generates title from filename when file is selected', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const validFile = new File(['content'], 'my_data.csv', { type: 'text/csv' });
+
+      await user.upload(fileInput, validFile);
+
+      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
+
+      await waitFor(() => {
+        expect(titleInput).toHaveValue('my_data');
+      });
+    });
+
+    it('clears title error when file is selected', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+
+      // First create a title error
+      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
+      await user.type(titleInput, 'ab');
+
+      await waitFor(() => {
+        expect(screen.getByText(/Table title must be at least 3 characters long/i)).toBeInTheDocument();
+      });
+
+      // Now select a file which should clear the error and update title
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const validFile = new File(['content'], 'my_data.csv', { type: 'text/csv' });
+
+      await user.upload(fileInput, validFile);
+
+      await waitFor(() => {
+        expect(screen.queryByText(/Table title must be at least 3 characters long/i)).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('separate error display', () => {
+    it('displays file error under file upload area', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const invalidFile = new File(['content'], 'file.txt', { type: 'text/plain' });
+
+      await user.upload(fileInput, invalidFile);
+
+      await waitFor(() => {
+        const errorText = screen.getByText(/Invalid file type/i);
+        expect(errorText).toBeInTheDocument();
+      });
+    });
+
+    it('displays title error under title input', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+
+      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
+      await user.type(titleInput, 'ab');
+
+      await waitFor(() => {
+        const errorText = screen.getByText(/Table title must be at least 3 characters long/i);
+        expect(errorText).toBeInTheDocument();
+      });
+    });
+  });;
 });

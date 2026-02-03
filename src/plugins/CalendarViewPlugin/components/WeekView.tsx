@@ -60,6 +60,13 @@ const WeekView: React.FC<WeekViewProps> = ({
     return days;
   }, [currentDate]);
 
+  const getHourLabel = (hour: number): string => {
+    if (hour === 0) return '12 am';
+    if (hour < 12) return `${hour} am`;
+    if (hour === 12) return '12 pm';
+    return `${hour - 12} pm`;
+  };
+
   // Generate time slots for datetime fields
   const timeSlots = useMemo(() => {
     if (!isDateTimeField) return [];
@@ -76,13 +83,6 @@ const WeekView: React.FC<WeekViewProps> = ({
 
     return slots;
   }, [isDateTimeField]);
-
-  const getHourLabel = (hour: number): string => {
-    if (hour === 0) return '12 am';
-    if (hour < 12) return `${hour} am`;
-    if (hour === 12) return '12 pm';
-    return `${hour - 12} pm`;
-  };
 
   // Get events for a specific date
   const getEventsForDate = (date: Date) => {
