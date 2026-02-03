@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/364</span>
+                <span class='fraction'>0/358</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/364</span>
+                <span class='fraction'>0/358</span>
             </div>
         
             
@@ -546,14 +546,7 @@
 <a name='L481'></a><a href='#L481'>481</a>
 <a name='L482'></a><a href='#L482'>482</a>
 <a name='L483'></a><a href='#L483'>483</a>
-<a name='L484'></a><a href='#L484'>484</a>
-<a name='L485'></a><a href='#L485'>485</a>
-<a name='L486'></a><a href='#L486'>486</a>
-<a name='L487'></a><a href='#L487'>487</a>
-<a name='L488'></a><a href='#L488'>488</a>
-<a name='L489'></a><a href='#L489'>489</a>
-<a name='L490'></a><a href='#L490'>490</a>
-<a name='L491'></a><a href='#L491'>491</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L484'></a><a href='#L484'>484</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -619,7 +612,6 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -656,12 +648,6 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1047,7 +1033,7 @@
 <span class="cstat-no" title="statement not covered" >import { BrowserRouter as Router, Routes, Route, Navigate, useParams, Outlet, useLocation, useNavigate } from 'react-router-dom';</span>
 <span class="cstat-no" title="statement not covered" >import { useTable, useBaseTables, useWorkspaces } from './hooks/useApi';</span>
 <span class="cstat-no" title="statement not covered" >import { QueryClient, QueryClientProvider } from '@tanstack/react-query';</span>
-<span class="cstat-no" title="statement not covered" >import { DefaultAuthProvider, useAuth } from './auth/AuthContext';</span>
+<span class="cstat-no" title="statement not covered" >import { DefaultAuthProvider } from './auth/AuthContext';</span>
 <span class="cstat-no" title="statement not covered" >import { PrivateRoute } from './auth/PrivateRoute';</span>
 <span class="cstat-no" title="statement not covered" >import { AccessLevelRoute } from './auth/AccessLevelRoute';</span>
 <span class="cstat-no" title="statement not covered" >import { useExtensions, PluginFrameworkProvider } from './core/PluginFrameworkContext';</span>
@@ -1107,7 +1093,6 @@ declare global {
 }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >const Layout = () =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >  const { saving } = useAuth();</span>
 <span class="cstat-no" title="statement not covered" >  const { flyoutOpen, selectedWorkspace, openFlyout, closeFlyout, currentPlugin } = usePluginStore();</span>
 <span class="cstat-no" title="statement not covered" >  const location = useLocation();</span>
 &nbsp;
@@ -1146,12 +1131,6 @@ declare global {
 <span class="cstat-no" title="statement not covered" >          &lt;/div&gt;</span>
 <span class="cstat-no" title="statement not covered" >          &lt;div className="flex items-center gap-2"&gt;</span>
 <span class="cstat-no" title="statement not covered" >            &lt;ExtensionPoint id="layout:header" /&gt;</span>
-<span class="cstat-no" title="statement not covered" >            {saving &amp;&amp; (</span>
-<span class="cstat-no" title="statement not covered" >              &lt;div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md text-sm border border-blue-200 dark:border-blue-700"&gt;</span>
-<span class="cstat-no" title="statement not covered" >                &lt;Loader size={16} /&gt;</span>
-<span class="cstat-no" title="statement not covered" >                &lt;span&gt;Saving workspace data...&lt;/span&gt;</span>
-<span class="cstat-no" title="statement not covered" >              &lt;/div&gt;</span>
-            )}
 <span class="cstat-no" title="statement not covered" >          &lt;/div&gt;</span>
 <span class="cstat-no" title="statement not covered" >        &lt;/header&gt;</span>
 &nbsp;
@@ -1540,7 +1519,7 @@ interface PluginConfig {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-02T18:52:16.123Z
+                at 2026-02-03T06:47:23.490Z
             </div>
         <script src="../prettify.js"></script>
         <script>
