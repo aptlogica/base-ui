@@ -68,7 +68,7 @@ export const TableRow: React.FC<TableRowProps> = ({
           id: column.id || '',
           title: column.title,
           column_name: column.key,
-          uidt: column.uidt || column.type || 'text',
+          uidt: column.type || column.uidt || 'text',
           system: column.isSystem || column.system || false,
           meta: column.meta || {}, // Pass original meta
           config: column.config || {}, // Pass parsed config (used by EditableTableCell)

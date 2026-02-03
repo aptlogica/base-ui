@@ -95,14 +95,6 @@ describe('LoginPage', () => {
       expect(passwordInput.value).toBe('');
     });
 
-    it('should render remember me checkbox', () => {
-      renderWithRouter();
-
-      const checkbox = screen.getByRole('checkbox');
-      expect(checkbox).toBeInTheDocument();
-      expect(screen.getByText('Remember me')).toBeInTheDocument();
-    });
-
     it('should render forgot password link', () => {
       renderWithRouter();
 
@@ -178,22 +170,6 @@ describe('LoginPage', () => {
     });
   });
 
-  describe('Remember me checkbox', () => {
-    it('should toggle checked state', async () => {
-      const user = userEvent.setup();
-      renderWithRouter();
-
-      const checkbox = screen.getByRole('checkbox') as HTMLInputElement;
-      expect(checkbox.checked).toBe(false);
-
-      await user.click(checkbox);
-      expect(checkbox.checked).toBe(true);
-
-      await user.click(checkbox);
-      expect(checkbox.checked).toBe(false);
-    });
-  });
-
   describe('Email validation', () => {
     it('should show error when email is empty on blur', async () => {
       const user = userEvent.setup();
@@ -218,20 +194,21 @@ describe('LoginPage', () => {
     });
 
     it('should clear error when valid email entered', async () => {
-      const user = userEvent.setup();
       renderWithRouter();
 
       const emailInput = screen.getByPlaceholderText('Email');
-      await user.type(emailInput, 'invalid');
-      await user.tab();
 
-      expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
+      fireEvent.change(emailInput, { target: { value: 'invalid' } });
+      fireEvent.blur(emailInput);
 
-      await user.clear(emailInput);
-      await user.type(emailInput, 'valid@example.com');
-      await user.tab();
+      expect(await screen.findByText('Please enter a valid email address')).toBeInTheDocument();
 
-      expect(screen.queryByText('Please enter a valid email address')).not.toBeInTheDocument();
+      fireEvent.change(emailInput, { target: { value: 'valid@example.com' } });
+      fireEvent.blur(emailInput);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Please enter a valid email address')).not.toBeInTheDocument();
+      });
     });
 
     it('should clear error on input change', async () => {
@@ -688,6 +665,7 @@ describe('LoginPage', () => {
 
     it('should handle OTP send failure gracefully', async () => {
       const user = userEvent.setup();
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockApiLogin.mockResolvedValue({
         data: {
           user: { id: '1', email: 'user@example.com', email_verified: false },
@@ -711,6 +689,8 @@ describe('LoginPage', () => {
           'OTP sent to your email. Please check your inbox.'
         );
       });
+
+      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -1009,15 +989,18 @@ describe('LoginPage', () => {
 
       await user.type(emailInput, 'user@example.com');
       await user.type(passwordInput, 'password123');
-      
-      // Wrap the click in act by using fireEvent instead, or await user.click which handles act()
-      fireEvent.click(submitButton);
+
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText(/sending otp/i)).toBeInTheDocument();
       });
 
       resendOtpResolve!();
+
+      await waitFor(() => {
+        expect(screen.getByText(/sign in/i)).toBeInTheDocument();
+      });
     });
 
     it('should show "Sign in" text after OTP sending completes', async () => {
@@ -1069,14 +1052,11 @@ describe('LoginPage', () => {
 
       const emailInput = screen.getByPlaceholderText('Email') as HTMLInputElement;
       const passwordInput = screen.getByPlaceholderText('Password') as HTMLInputElement;
-      const checkbox = screen.getByRole('checkbox') as HTMLInputElement;
 
       await user.type(emailInput, 'user@example.com');
-      await user.click(checkbox);
       await user.type(passwordInput, 'password123');
 
       expect(emailInput.value).toBe('user@example.com');
-      expect(checkbox.checked).toBe(true);
       expect(passwordInput.value).toBe('password123');
     });
   });

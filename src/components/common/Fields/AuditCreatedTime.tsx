@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { utcISOToZoned, zonedToUtcISO } from '../../../utils/dateUtils';
+import { zonedToUtcISO } from '../../../utils/dateUtils';
 
 interface AuditCreatedTimeProps {
   label?: string;
@@ -11,7 +11,8 @@ interface AuditCreatedTimeProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean;
+  allowEdit?: boolean; // true = single click opens dropdown, false = double click for manual edit
+  readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;
   config?: {
@@ -51,13 +52,11 @@ function getTimeOptions(step = 30, hourFormat: '12' | '24' = '24', timeFormat: s
         } else {
           options.push(`${displayHour}:${pad(m)} ${period}`);
         }
+      } else if (timeFormat === 'HH:mm:ss' || timeFormat === 'HH:mm:ss.SSS') {
+        // For seconds format, show seconds as 00
+        options.push(`${pad(h)}:${pad(m)}:00`);
       } else {
-        if (timeFormat === 'HH:mm:ss' || timeFormat === 'HH:mm:ss.SSS') {
-          // For seconds format, show seconds as 00
-          options.push(`${pad(h)}:${pad(m)}:00`);
-        } else {
-          options.push(`${pad(h)}:${pad(m)}`);
-        }
+        options.push(`${pad(h)}:${pad(m)}`);
       }
     }
   }
@@ -73,7 +72,6 @@ function formatDate(date: string, format: string): string {
   if (!date) return '';
 
   const [year, month, day] = date.split('-');
-  const dateObj = new Date(Number(year), Number(month) - 1, Number(day));
 
   switch (format) {
     case 'YYYY-MM-DD':
@@ -185,7 +183,7 @@ function getDateTimePlaceholder(dateFormat: string, hourFormat: '12' | '24', tim
 function toUtcIso(localDate: string, localTime: string): string {
   const candidate = `${localDate}T${localTime}`;
   const d = new Date(candidate);
-  if (!isNaN(d.getTime())) {
+  if (!Number.isNaN(d.getTime())) {
     return d.toISOString();
   }
   // Fallback: append Z if parsing somehow failed (should be rare with valid inputs)
@@ -193,7 +191,7 @@ function toUtcIso(localDate: string, localTime: string): string {
 }
 
 // Normalize any display time (possibly 12h or with seconds) to 24h HH:mm for calculations
-function toHHmm(timeStr: string, hourFormat: '12' | '24', timeFormat: string): string {
+function toHHmm(timeStr: string, hourFormat: '12' | '24'): string {
   if (!timeStr) return '';
   let t = timeStr.trim();
   if (hourFormat === '12') {
@@ -205,8 +203,8 @@ function toHHmm(timeStr: string, hourFormat: '12' | '24', timeFormat: string): s
       period = parts[1];
     }
     const [hStr, mStr] = t.split(':');
-    let h = parseInt(hStr, 10);
-    const m = parseInt(mStr, 10);
+    let h = Number.parseInt(hStr, 10);
+    const m = Number.parseInt(mStr, 10);
     if (period.toUpperCase() === 'PM' && h !== 12) h += 12;
     if (period.toUpperCase() === 'AM' && h === 12) h = 0;
     return `${pad(h)}:${pad(m)}`;
@@ -215,7 +213,7 @@ function toHHmm(timeStr: string, hourFormat: '12' | '24', timeFormat: string): s
   const segs = t.split(':');
   const HH = segs[0] || '00';
   const MM = segs[1] || '00';
-  return `${pad(parseInt(HH, 10))}:${pad(parseInt(MM, 10))}`;
+  return `${pad(Number.parseInt(HH, 10))}:${pad(Number.parseInt(MM, 10))}`;
 }
 
 export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
@@ -227,6 +225,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
   isBorder = false,
   className = "",
   allowEdit = true,
+  readOnly = false,
   helperText,
   icon = "",
   config = {}
@@ -251,8 +250,13 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showQuickSelect, setShowQuickSelect] = useState(false);
-  const [dateDropdownPosition, setDateDropdownPosition] = useState<'below' | 'above'>('below');
-  const [timeDropdownPosition, setTimeDropdownPosition] = useState<'below' | 'above'>('below');
+
+  // Exit edit mode if readOnly becomes true
+  useEffect(() => {
+    if (readOnly && isEditing) {
+      setIsEditing(false);
+    }
+  }, [readOnly, isEditing]);
   const [displayOriginalTime, setDisplayOriginalTime] = useState('');
   const [displayOriginalDate, setDisplayOriginalDate] = useState('');
   const [dateCalculatedPosition, setDateCalculatedPosition] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
@@ -265,20 +269,17 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
   const timeDropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Note: date and time state are now updated in the displayOriginalDate/Time effect
+  // to ensure they match the timezone-converted values. This useEffect is kept
+  // for initial setup but the main sync happens in the display effect.
   useEffect(() => {
     const currentValue = value || defaultValue;
-    if (currentValue) {
-      const [d, t] = currentValue.split('T');
-      setDate(d || '');
-      setTime(t ? t.slice(0, 5) : '');
-    } else {
+    if (!currentValue) {
       setDate('');
       setTime('');
     }
+    // Don't set date/time here - let the display effect handle it with timezone conversion
   }, [value, defaultValue]);
-
-  useEffect(() => {
-  }, [displayTimeZone])
 
   // Calculate date dropdown position for portal rendering
   const calculateDateDropdownPosition = useCallback(() => {
@@ -299,8 +300,6 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
     if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
       position = 'above';
     }
-    setDateDropdownPosition(position);
-
     // Calculate left position (align with button)
     let left = rect.left;
     if (left + dropdownWidth > viewportWidth - 10) {
@@ -378,9 +377,9 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
       const quickSelect = document.querySelector('[data-quick-select]');
 
       // Check if click is outside all dropdowns
-      const isOutsideYear = !yearPicker || !yearPicker.contains(target);
-      const isOutsideMonth = !monthPicker || !monthPicker.contains(target);
-      const isOutsideQuick = !quickSelect || !quickSelect.contains(target);
+      const isOutsideYear = !yearPicker?.contains(target);
+      const isOutsideMonth = !monthPicker?.contains(target);
+      const isOutsideQuick = !quickSelect?.contains(target);
 
       if (showYearPicker && isOutsideYear) {
         setShowYearPicker(false);
@@ -416,8 +415,6 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
     if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
       position = 'above';
     }
-    setTimeDropdownPosition(position);
-
     // Calculate left position (align with button)
     let left = rect.left;
     if (left + dropdownWidth > viewportWidth - 10) {
@@ -491,7 +488,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
       }
       const hasTz = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(value);
       const dt = new Date(hasTz ? value : `${value}Z`);
-      if (isNaN(dt.getTime())) {
+      if (Number.isNaN(dt.getTime())) {
         setDisplayOriginalTime('');
         setDisplayOriginalDate('');
         return;
@@ -499,15 +496,14 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
 
       const tz = config?.timeZoneLabel || config?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
       const includeSeconds = timeFormat === 'HH:mm:ss' || timeFormat === 'hh:mm:ss' || timeFormat === 'hh:mm:ss.SSS' || timeFormat === 'HH:mm:ss.SSS';
-      const newDateTime = utcISOToZoned(value, tz)
 
       // Support GMT/UTC offsets like GMT-7, GMT+7, UTC+05:30
       const gmtMatch = /^(?:GMT|UTC)\s*([+-]\d{1,2})(?::?(\d{2}))?$/i.exec(tz || '');
       let map: Record<string, string> = {};
       if (gmtMatch) {
         const signChar = gmtMatch[1][0];
-        const hoursAbs = Math.abs(parseInt(gmtMatch[1], 10));
-        const minsAbs = gmtMatch[2] ? parseInt(gmtMatch[2], 10) : 0;
+        const hoursAbs = Math.abs(Number.parseInt(gmtMatch[1], 10));
+        const minsAbs = gmtMatch[2] ? Number.parseInt(gmtMatch[2], 10) : 0;
         const totalMinutes = (hoursAbs * 60 + minsAbs) * (signChar === '-' ? -1 : 1);
         // Adjust base UTC time by the offset to get local wall-clock in that GMT zone
         const adj = new Date(dt.getTime() + totalMinutes * 60_000);
@@ -554,12 +550,17 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
       let timeStr = '';
       if (hourFormat === '12') {
         // Remove any leading zeros from hour for display in 12h UI
-        const hNum = parseInt(hh, 10);
-        const displayHour = hNum === 0 ? 12 : hNum > 12 ? hNum - 12 : hNum;
+        const hNum = Number.parseInt(hh, 10);
+        let displayHour = hNum;
+        if (hNum === 0) {
+          displayHour = 12;
+        } else if (hNum > 12) {
+          displayHour = hNum - 12;
+        }
         if (timeFormat === 'hh:mm:ss' || timeFormat === 'HH:mm:ss') {
           timeStr = `${displayHour}:${min}:${sec || '00'} ${period}`.trim();
         } else if (timeFormat === 'hh:mm:ss.SSS' || timeFormat === 'HH:mm:ss.SSS') {
-          timeStr = `${displayHour}:${min}:${sec ? sec : '00'}.000 ${period}`.trim();
+          timeStr = `${displayHour}:${min}:${sec || '00'}.000 ${period}`.trim();
         } else {
           timeStr = `${displayHour}:${min} ${period}`.trim();
         }
@@ -568,7 +569,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
         if (timeFormat === 'hh:mm:ss' || timeFormat === 'HH:mm:ss') {
           timeStr = `${hh}:${min}:${sec || '00'}`;
         } else if (timeFormat === 'hh:mm:ss.SSS' || timeFormat === 'HH:mm:ss.SSS') {
-          timeStr = `${hh}:${min}:${sec ? sec : '00'}.000`;
+          timeStr = `${hh}:${min}:${sec || '00'}.000`;
         } else {
           timeStr = `${hh}:${min}`;
         }
@@ -576,6 +577,13 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
 
       setDisplayOriginalDate(formattedDate);
       setDisplayOriginalTime(timeStr);
+
+      // Update date and time state to match the timezone-converted values
+      // This ensures the calendar shows the same date as what's displayed in the buttons
+      setDate(isoLocalDate); // Use the timezone-converted date (YYYY-MM-DD format)
+      // Set time state using the 24-hour format values from map (hh, min, sec are already in 24h)
+      const timeForState = sec ? `${hh}:${min}:${sec}` : `${hh}:${min}`;
+      setTime(timeForState);
     } catch {
       // On any unexpected error, do not block rendering
       setDisplayOriginalTime('');
@@ -593,9 +601,6 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
-
-    // Don't save immediately - only update display
-    // Save will happen on blur if valid
   };
 
   const handleInputBlur = () => {
@@ -613,7 +618,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
         if (hourFormat === '12' && timePart.includes(' ')) {
           const [time, period] = timePart.split(' ');
           const [hours, minutes] = time.split(':');
-          let hour = parseInt(hours);
+          let hour = Number.parseInt(hours, 10);
           if (period === 'PM' && hour !== 12) hour += 12;
           if (period === 'AM' && hour === 12) hour = 0;
           timeValue = `${pad(hour)}:${minutes}`;
@@ -673,10 +678,6 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
           return;
         }
       }
-
-      // Invalid input: keep what the user typed, but show error instead of clearing
-      // setError('Invalid date/time format');
-      return;
     } else {
       // Empty input - clear the value
       setInputValue('');
@@ -687,7 +688,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
-    if (!disabled) {
+    if (!disabled && !readOnly) {
       setIsEditing(true);
       // Set input value to current display value
       const displayValue = `${displayDate} ${displayTime}`;
@@ -697,6 +698,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
   };
 
   const handleDateSelect = (selected: string) => {
+    if (readOnly) return;
     let newTime = displayOriginalTime;
     if (!newTime) {
       newTime = '00:00';
@@ -707,10 +709,10 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
     setShowYearPicker(false);
     setShowMonthPicker(false);
     setShowQuickSelect(false);
-    // const newValue = toUtcIso(selected, newTime);
-    // const newValue = toUtcIso(selected, newTime);
-    const normalizedTime = toHHmm(newTime, hourFormat, timeFormat);
-    const newValue = zonedToUtcISO(selected, normalizedTime, config?.timeZoneLabel);
+    const normalizedTime = toHHmm(newTime, hourFormat);
+    // Get timezone - use config timezone or fallback to browser timezone
+    const tz = config?.timeZoneLabel || config?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const newValue = zonedToUtcISO(selected, normalizedTime, tz);
     setError(validate(selected, normalizedTime));
     onChange(newValue);
   };
@@ -734,12 +736,13 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
   };
 
   const handleTimeSelect = (selected: string) => {
+    if (readOnly) return;
     // Convert 12-hour format to 24-hour format for storage
     let timeValue = selected;
     if (hourFormat === '12' && selected.includes(' ')) {
       const [time, period] = selected.split(' ');
       const [hours, minutes] = time.split(':');
-      let hour = Number(hours);
+      let hour = Number.parseInt(hours, 10);
       if (period === 'PM' && hour !== 12) hour += 12;
       if (period === 'AM' && hour === 12) hour = 0;
       timeValue = `${pad(hour)}:${minutes}`;
@@ -752,10 +755,12 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
       setDate(newDate);
     }
     const isoDate = parseDate(newDate, dateFormat);
-    timeValue = toHHmm(timeValue, hourFormat, timeFormat);
+    timeValue = toHHmm(timeValue, hourFormat);
     setTime(timeValue);
     setTimeOpen(false);
-    const newValue = zonedToUtcISO(isoDate, timeValue, config?.timeZoneLabel);
+    // Get timezone - use config timezone or fallback to browser timezone
+    const tz = config?.timeZoneLabel || config?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const newValue = zonedToUtcISO(isoDate, timeValue, tz);
     setError(validate(isoDate, timeValue));
     onChange(newValue);
   };
@@ -791,13 +796,34 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
   }, [date]);
 
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 201 }, (_, i) => currentYear - 100 + i);
+  const [startYear, setStartYear] = React.useState(currentYear); // page starts at selected/current year
+  const years = React.useMemo(() => Array.from({ length: 12 }, (_, i) => startYear + i), [startYear]);
 
   // Generate month options for dropdown
   const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
   ];
+
+  // For year dropdown
+  const goPrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setStartYear((y) => y - 12);
+  };
+  const goNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setStartYear((y) => y + 12);
+  };
+
+  // For month dropdown: change year of calendarMonth
+  const goPrevMonthYear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCalendarMonth((prev) => new Date(prev.getFullYear() - 1, prev.getMonth(), 1));
+  };
+  const goNextMonthYear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCalendarMonth((prev) => new Date(prev.getFullYear() + 1, prev.getMonth(), 1));
+  };
 
   const renderCalendar = () => {
     const year = calendarMonth.getFullYear();
@@ -805,10 +831,13 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
-    const startDay = firstDay.getDay();
+    // Monday as first day of week
+    let startDay = firstDay.getDay();
+    startDay = startDay === 0 ? 6 : startDay - 1;
+    if (Number.isNaN(startDay) || startDay < 0) startDay = 0;
     const todayISO = getTodayISO();
     const weeks: (string | null)[][] = [];
-    let week: (string | null)[] = Array(startDay).fill(null);
+    let week: (string | null)[] = new Array(startDay).fill(null);
     for (let d = 1; d <= daysInMonth; d++) {
       const dayISO = `${year}-${pad(month + 1)}-${pad(d)}`;
       week.push(dayISO);
@@ -831,14 +860,14 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
               className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
               onClick={() => setCalendarMonth(new Date(year, month - 1, 1))}
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
             </button>
 
             <div className="flex items-center gap-1">
               {/* Month dropdown */}
               <div className="relative" data-month-picker>
                 <button
-                  className="px-3 py-1 text-sm font-medium hover:bg-gray-100 rounded-md transition-colors flex items-center gap-1"
+                  className="px-3 py-1 text-sm font-medium hover:bg-gray-100 text-[var(--color-text-primary)] rounded-md transition-colors flex items-center gap-1"
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowMonthPicker(!showMonthPicker);
@@ -847,22 +876,50 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
                   }}
                 >
                   {months[month]}
-                  <ChevronLeft className={`w-3 h-3 transition-transform ${showMonthPicker ? 'rotate-90' : '-rotate-90'}`} />
+                  <ChevronLeft className={`w-3 h-3 text-[var(--color-text-primary)] transition-transform ${showMonthPicker ? 'rotate-90' : '-rotate-90'}`} />
                 </button>
                 {showMonthPicker && (
-                  <div className="absolute top-full left-0 mt-1 p-1.5 space-y-1 border bg-background rounded-xl shadow-lg z-50 w-32 max-h-48 overflow-y-auto">
-                    {months.map((monthName, index) => (
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 w-64 rounded-xl border bg-background shadow-lg z-50">
+                    <div className="flex items-center justify-between p-2 border-b">
                       <button
-                        key={index}
-                        className={`w-full px-3 py-2 text-left text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors ${index === month ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMonthSelect(index);
-                        }}
+                        type="button"
+                        onClick={goPrevMonthYear}
+                        className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100 transition-colors"
                       >
-                        {monthName}
+                        <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
                       </button>
-                    ))}
+                      <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                        {calendarMonth.getFullYear()}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={goNextMonthYear}
+                        className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100 transition-colors"
+                      >
+                        <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 p-2">
+                      {months.map((monthName, index) => (
+                        <button
+                          key={index}
+                          className={[
+                            "w-full py-2 rounded-xl text-sm text-center transition-colors",
+                            "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black",
+                            index === month
+                              ? "bg-[var(--color-bg-brand-secondary)] text-black font-semibold"
+                              : ""
+                          ].join(" ")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMonthSelect(index);
+                          }}
+                        >
+                          {monthName}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -870,7 +927,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
               {/* Year dropdown */}
               <div className="relative" data-year-picker>
                 <button
-                  className="px-3 py-1 text-sm font-medium hover:bg-gray-100 rounded-md transition-colors flex items-center gap-1"
+                  className="px-3 py-1 text-sm font-medium hover:bg-gray-100 text-[var(--color-text-primary)] rounded-md transition-colors flex items-center gap-1"
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowYearPicker(!showYearPicker);
@@ -879,22 +936,52 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
                   }}
                 >
                   {year}
-                  <ChevronLeft className={`w-3 h-3 transition-transform ${showYearPicker ? 'rotate-90' : '-rotate-90'}`} />
+                  <ChevronLeft className={`w-3 h-3 text-[var(--color-text-primary)] transition-transform ${showYearPicker ? 'rotate-90' : '-rotate-90'}`} />
                 </button>
                 {showYearPicker && (
-                  <div className="absolute top-full left-0 mt-1 p-1.5 space-y-1 border bg-background rounded-xl shadow-lg z-50 w-24 max-h-48 overflow-y-auto">
-                    {years.map((yearOption) => (
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 w-64 rounded-xl border bg-background shadow-lg z-50">
+                    <div className="flex items-center justify-between p-2 border-b">
                       <button
-                        key={yearOption}
-                        className={`w-full px-3 py-2 text-left text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors ${yearOption === year ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleYearSelect(yearOption);
-                        }}
+                        type="button"
+                        onClick={goPrev}
+                        className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100"
                       >
-                        {yearOption}
+                        <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
                       </button>
-                    ))}
+                      <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                        {currentYear}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={goNext}
+                        className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100"
+                      >
+                        <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-2 p-2">
+                      {years.map((yearOption) => (
+                        <button
+                          type="button"
+                          key={yearOption}
+                          className={[
+                            "w-full py-2 rounded-md text-sm text-center transition-colors",
+                            "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-secondary)] hover:text-black",
+                            yearOption === year
+                              ? "bg-[var(--color-bg-brand-secondary)] text-black font-semibold"
+                              : ""
+                          ].join(" ")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleYearSelect(yearOption);
+                            // Optionally: setStartYear(yearOption); // to re-page on select
+                          }}
+                        >
+                          {yearOption}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -904,7 +991,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
               className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
               onClick={() => setCalendarMonth(new Date(year, month + 1, 1))}
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
             </button>
           </div>
         </div>
@@ -917,26 +1004,39 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
         </div>
 
         <div className="grid grid-cols-7 gap-1">
-          {weeks.flat().map((day, idx) => (
-            <button
-              key={idx}
-              className={`w-9 h-9 rounded-full text-center text-sm font-medium hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${day === date ? 'bg-[var(--color-bg-brand-solid)] text-black font-bold' :
-                day === todayISO ? 'border-2 border-[var(--color-border-brand)] text-[var(--color-text-primary)] bg-[var(--color-bg-brand-primary)]' :
-                  'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)]'
-                } ${!day ? 'opacity-0 pointer-events-none' : ''}`}
-              onClick={() => day && handleDateSelect(day)}
-              disabled={!day}
-            >
-              {day ? Number(day.split('-')[2]) : ''}
-            </button>
-          ))}
+          {weeks.flat().map((day, idx) => {
+            let dayStateClass =
+              'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)]';
+
+            if (day === date) {
+              dayStateClass =
+                'bg-[var(--color-bg-brand-solid)] text-black font-bold';
+            } else if (day === todayISO) {
+              dayStateClass =
+                'border border-[var(--color-bg-brand-primary)] text-primary';
+            }
+
+            return (
+              <button
+                key={day || `empty-${idx}`}
+                className={`w-9 h-9 rounded-full text-center text-sm font-medium hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${dayStateClass} ${day ? '' : 'opacity-0 pointer-events-none'
+                  }`}
+                onClick={() => day && !readOnly && handleDateSelect(day)}
+                disabled={!day || readOnly}
+              >
+                {day ? Number(day.split('-')[2]) : ''}
+              </button>
+            );
+          })}
         </div>
+
 
         {/* Footer with Today button */}
         <div className="flex justify-center mt-4 pt-3 border-t border-gray-100">
           <button
-            className="px-4 py-2 rounded-xl bg-[var(--color-bg-brand-primary)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
-            onClick={() => handleDateSelect(todayISO)}
+            className="px-4 py-2 rounded-xl bg-[var(--color-bg-brand-primary)] text-black hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
+            onClick={() => !readOnly && handleDateSelect(todayISO)}
+            disabled={readOnly}
           >
             Today
           </button>
@@ -953,7 +1053,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
   const displayTime = time ? (hourFormat === '12' ?
     (() => {
       const [hours, minutes, seconds] = time.split(':');
-      const hour = parseInt(hours);
+      const hour = Number.parseInt(hours);
       const period = hour >= 12 ? 'PM' : 'AM';
       const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
 
@@ -980,7 +1080,7 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
 
 
   return (
-    <div className={`w-full relative ${className} ${isBorder ? "field-component-border" : ""}`} onDoubleClick={handleDoubleClick}>
+    <div className={`w-full relative ${className} ${isBorder ? "field-component-border" : ""}`} onDoubleClick={readOnly ? undefined : handleDoubleClick}>
       {/* Label */}
       {label && (
         <label className="field-component-label">
@@ -998,9 +1098,9 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
             onChange={handleInputChange}
             onBlur={handleInputBlur}
             placeholder={getDateTimePlaceholder(dateFormat, hourFormat, timeFormat)}
-            disabled={disabled}
+            disabled={disabled || readOnly}
             className={`field-component min-w-max ${error ? 'border-red-500 bg-red-50' : ''
-              } ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
+              } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
           />
         </div>
       ) : (
@@ -1012,8 +1112,8 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
               type="button"
               className={`field-component min-w-max ${error ? 'border-red-500 bg-red-50' : ''
                 } ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
-              onClick={() => !disabled && setDateOpen(v => !v)}
-              disabled={disabled}
+              onClick={() => !disabled && !readOnly && allowEdit && setDateOpen(v => !v)}
+              disabled={disabled || readOnly}
             >
               {displayOriginalDate || <span className="text-gray-400 min-w-max">{dateFormat}</span>}
             </button>
@@ -1041,11 +1141,11 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
               type="button"
               className={`field-component min-w-max ${error ? 'border-red-500 bg-red-50' : ''
                 } ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}
-              onClick={() => !disabled && setTimeOpen(v => !v)}
-              disabled={disabled}
+              onClick={() => !disabled && !readOnly && allowEdit && setTimeOpen(v => !v)}
+              disabled={disabled || readOnly}
             >
               {displayOriginalTime ||
-                <span className="text-gray-400">  {/* hello2 */}
+                <span className="text-gray-400">
                   {timeFormat}
                 </span>
               }
@@ -1074,7 +1174,8 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
               hover:bg-[var(--color-bg-brand-primary)] hover:text-black 
               focus:bg-[var(--color-bg-brand-secondary)] transition-colors 
               ${displayTime === option ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
-                      onClick={() => handleTimeSelect(option)}
+                      onClick={() => !readOnly && handleTimeSelect(option)}
+                      disabled={readOnly}
                     >
                       {option}
                     </button>
@@ -1085,14 +1186,11 @@ export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = ({
                 <div className="border-t border-gray-100 px-2 py-2 flex justify-center bg-background">
                   <button
                     type="button"
-                    className="px-3 py-1 rounded bg-[var(--color-bg-brand-primary)] text-[var(--color-text-primary)] 
-            hover:bg-[var(--color-bg-brand-secondary)] text-xs font-medium"
+                    className="px-3 py-1 rounded-xl bg-[var(--color-bg-brand-primary)] text-black  hover:bg-[var(--color-bg-brand-secondary)] text-xs font-medium"
                     onClick={() =>
                       handleNowUtc()
                     }
-                  >
-                    Now
-                  </button>
+                  >Now</button>
                 </div>
               </div>
             </div>,

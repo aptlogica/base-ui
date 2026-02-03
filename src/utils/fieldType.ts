@@ -12,6 +12,7 @@ const fieldTypeMap: Record<string, FieldRendererType> = {
   email: 'email',
   phonenumber: 'phoneNumber',
   url: 'url',
+  select: 'select',
   singleselect: 'select',
   multiselect: 'multiSelect',
   boolean: 'boolean',

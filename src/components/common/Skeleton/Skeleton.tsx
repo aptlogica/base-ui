@@ -56,6 +56,8 @@ export const Skeleton: React.FC<SkeletonProps> = ({
     <div
       className={`${baseClasses} ${variantClasses[variant]} ${animationClasses[animation]} ${className}`}
       style={{ width, height, ...waveStyle }}
+      role="status"
+      aria-live="polite"
       aria-label="Loading..."
     />
   );
