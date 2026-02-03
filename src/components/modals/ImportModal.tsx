@@ -19,37 +19,37 @@ const IMPORT_CONFIG = {
     label: 'CSV',
     accept: '.csv',
     mimeTypes: ['text/csv', 'application/csv'],
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 25 * 1024 * 1024, // 25MB
   },
   excel: {
     label: 'Excel',
     accept: '.xlsx,.xls',
     mimeTypes: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'],
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 25 * 1024 * 1024, // 25MB
   },
   sql: {
     label: 'SQL',
     accept: '.sql',
     mimeTypes: ['application/sql', 'text/sql'],
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 25 * 1024 * 1024, // 25MB
   },
   json: {
     label: 'JSON',
     accept: '.json',
     mimeTypes: ['application/json'],
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 25 * 1024 * 1024, // 25MB
   },
   airtable: {
     label: 'Airtable',
     accept: '.csv,.json',
     mimeTypes: ['text/csv', 'application/json'],
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 25 * 1024 * 1024, // 25MB
   },
   nocodb: {
     label: 'NocoDB',
     accept: '.csv,.json',
     mimeTypes: ['text/csv', 'application/json'],
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 25 * 1024 * 1024, // 25MB
   },
 };
 
@@ -67,6 +67,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [titleError, setTitleError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -76,6 +78,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const toast = useToast();
   const config = IMPORT_CONFIG[importType];
 
+  const isTitleUnique = (titleToCheck: string): boolean => {
+    const trimmedTitle = titleToCheck.trim().toLowerCase();
+    return !existingTables.some((table: any) => 
+      table.title?.toLowerCase() === trimmedTitle
+    );
+  };
+
   // Reset form when modal opens/closes
   useEffect(() => {
     if (isOpen) {
@@ -84,6 +93,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       setSelectedFile(null);
       setUploadProgress(0);
       setError(null);
+      setFileError(null);
+      setTitleError(null);
       setIsDragOver(false);
       setIsSubmitting(false);
       isSubmittingRef.current = false; // Reset ref
@@ -109,7 +120,27 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     const acceptedExtensions = config.accept.split(',').map(ext => ext.trim().toLowerCase());
 
     if (!acceptedExtensions.includes(fileExtension)) {
-      return `Invalid file type. Please select a ${config.label} file (${config.accept}).`;
+      return `Please select a ${config.label} file (${config.accept}).`;
+    }
+
+    return null;
+  };
+
+  const validateTitle = (titleValue: string): string | null => {
+    if (!titleValue.trim()) {
+      return 'Table title is required';
+    }
+
+    if (titleValue.trim().length < 3) {
+      return 'Table title must be at least 3 characters long';
+    }
+
+    const trimmedTitle = titleValue.trim().toLowerCase();
+    const isUnique = !existingTables.some((table: any) => 
+      table.title?.toLowerCase() === trimmedTitle
+    );
+    if (!isUnique) {
+      return 'Table title must be unique. This title is already in use.';
     }
 
     return null;
@@ -118,19 +149,19 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const handleFileSelect = (file: File) => {
     const validationError = validateFile(file);
     if (validationError) {
-      setError(validationError);
+      setFileError(validationError);
       setSelectedFile(null);
       return;
     }
 
-    setError(null);
+    setFileError(null);
     setSelectedFile(file);
 
-    // Auto-generate title from filename if title is empty
-    if (!title.trim()) {
-      const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
-      setTitle(fileNameWithoutExt);
-    }
+    // Auto-generate title from filename
+    const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+    setTitle(fileNameWithoutExt);
+    // Clear title error when file changes
+    setTitleError(null);
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,20 +200,24 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     }
 
     setError(null);
+    setFileError(null);
+    setTitleError(null);
 
     // Validation
-    if (!title.trim()) {
-      setError('Table title is required');
-      return;
-    }
-
     if (!selectedFile) {
-      setError('Please select a file to import');
+      setFileError('Please select a file to import');
       return;
     }
 
     if (!workspaceId) {
       setError('Workspace ID is required');
+      return;
+    }
+
+    // Check title validation
+    const titleValidationError = validateTitle(title);
+    if (titleValidationError) {
+      setTitleError(titleValidationError);
       return;
     }
 
@@ -301,7 +336,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 id="file-upload-input"
                 className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${isDragOver
                   ? 'border-[var(--color-bg-brand-primary)] bg-[var(--color-bg-brand-primary)]/10'
-                  : selectedFile ? 'border-green-400 hover:border-green-500' : 'border-gray-300 hover:border-gray-400 bg-gray-50/50'}`}
+                  : fileError ? 'border-red-400 hover:border-red-500 bg-red-50/30' : selectedFile ? 'border-green-400 hover:border-green-500' : 'border-gray-300 hover:border-gray-400 bg-gray-50/50'}`}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -326,7 +361,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 {selectedFile ? (
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                      <FileText size={32} className="text-green-600" />
+                      <FileText size={22} className="text-green-600" />
                     </div>
                     <div className="space-y-1">
                       <div className="text-sm font-semibold text-primary">{selectedFile.name}</div>
@@ -348,23 +383,26 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                      <Upload size={32} className="text-gray-400" />
+                    <div className="w-16 h-16 bg-gray-100 rounded-full border flex items-center justify-center">
+                      <Upload size={22} className="text-gray-400" />
                     </div>
                     <div className="space-y-1">
                       <div className="text-sm font-medium text-primary">
-                        Drop your document here or{' '}
-                        <span className="text-[var(--color-bg-brand-primary)] hover:underline font-semibold">
-                          browse files
-                        </span>
+                        Drop your document here or
                       </div>
-                      {/* <div className="text-xs text-secondary">
+                      <span className="text-primary text-xl hover:underline font-semibold">Browse files</span>
+                      <div className="text-xs text-secondary">
                       {config.label} file (max {formatFileSize(config.maxSize)})
-                    </div> */}
+                    </div>
                     </div>
                   </div>
                 )}
               </div>
+              {fileError && (
+                <div className="mt-1 text-sm text-red-600">
+                  <span>{fileError}</span>
+                </div>
+              )}
             </div>
 
             {/* Title Input */}
@@ -377,9 +415,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                   id="tableTitle"
                   type="text"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => {
+                    const newTitle = e.target.value;
+                    setTitle(newTitle);
+                    // Real-time validation
+                    const error = validateTitle(newTitle);
+                    setTitleError(error);
+                  }}
                   placeholder="Enter table title"
-                  className={`field-component field-component-border field-component-focus ${error && !selectedFile ? 'border-red-500' : 'border'}`}
+                  className={`field-component field-component-border field-component-focus ${titleError ? 'border-red-500' : 'border'}`}
                   required
                   minLength={3}
                   maxLength={50}
@@ -388,8 +432,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
                   <span className="relative inline-block group">
                     <HelpCircle
-                      className={`w-4 h-4 ${error && !selectedFile ? 'text-red-500' : title.trim().length >= 3 ? 'text-green-600' : 'text-gray-400'
-                        } cursor-help`}
+                      className={`w-4 h-4 ${titleError ? 'text-red-500' : title.trim().length >= 3 && isTitleUnique(title) ? 'text-green-600' : 'text-gray-400'} cursor-help`}
                     />
                     <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                       <h4 className="font-medium text-primary mb-2">Table title requirements:</h4>
@@ -397,15 +440,17 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                         <li className={`flex items-center ${title.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
                           • Minimum 3 characters
                         </li>
-                        <li className="flex items-center text-gray-500">• Must be unique</li>
+                        <li className={`flex items-center ${title.trim() && isTitleUnique(title) ? 'text-green-600' : title.trim() && !isTitleUnique(title) ? 'text-red-600' : 'text-gray-500'}`}>
+                          • Must be unique
+                        </li>
                       </ul>
                     </div>
                   </span>
                 </div>
               </div>
-              {error && !selectedFile && (
+              {titleError && (
                 <div className="mt-1 text-sm text-red-600">
-                  <span>{error}</span>
+                  <span>{titleError}</span>
                 </div>
               )}
               <p className="mt-1 text-xs text-gray-500">
@@ -424,7 +469,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             />
 
             {/* Error Message - Only show if not related to file or title */}
-            {error && selectedFile && title.trim().length >= 3 && (
+            {error && !fileError && !titleError && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
                 {error}
               </div>

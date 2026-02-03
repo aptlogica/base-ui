@@ -181,7 +181,7 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
               className="flex items-center gap-1 text-gray-600 text-xs font-medium hover:text-gray-800"
               onClick={() => setShowSystemFields(!showSystemFields)}
             >
-              {showSystemFields ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showSystemFields ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               System fields
             </button>
           </div>

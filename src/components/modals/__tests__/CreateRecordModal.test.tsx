@@ -211,4 +211,37 @@ describe('CreateRecordModal', () => {
       expect(submitButton).toHaveAttribute('type', 'button');
     });
   });
+
+  describe('title field badge removal', () => {
+    it('does not render title field badge', () => {
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} />);
+
+      // The badge should not exist
+      expect(screen.queryByText('Title Field')).not.toBeInTheDocument();
+    });
+
+    it('still renders title field input', () => {
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} />);
+
+      // The title field should still be visible and functional
+      expect(screen.getByText('Title')).toBeInTheDocument();
+    });
+
+    it('title field is not mandatory in validation', () => {
+      // Title field can have empty values since it's not marked as required
+      const fieldsWithoutRequired = mockFields.map(f => 
+        f.name === 'title' ? { ...f, required: false } : f
+      );
+
+      renderWithQueryClient(
+        <CreateRecordModal {...defaultProps} fields={fieldsWithoutRequired} />
+      );
+
+      const titleField = screen.getByText('Title');
+      expect(titleField).toBeInTheDocument();
+      
+      // Should not have asterisk for required
+      expect(titleField.parentElement?.textContent).not.toContain('*');
+    });
+  });
 });

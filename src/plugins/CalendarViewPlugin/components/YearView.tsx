@@ -19,7 +19,7 @@ const YearView: React.FC<YearViewProps> = ({
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  const weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   // Generate calendar data for each month
   const monthCalendars = useMemo(() => {
@@ -95,7 +95,7 @@ const YearView: React.FC<YearViewProps> = ({
                 {weekDays.map((day) => (
                   <div
                     key={day}
-                    className="text-center text-xs font-medium text-gray-500 py-1"
+                    className="text-center text-[10px] font-medium text-gray-500 py-1"
                   >
                     {day}
                   </div>
