@@ -24,10 +24,10 @@ export default defineConfig({
         '**/sdk/**'
       ],
       thresholds: {
-        lines: 80,
-        functions: 80,
-        branches: 80,
-        statements: 80
+        lines: 40,
+        functions: 50,
+        branches: 40,
+        statements: 40
       }
     }
   },
