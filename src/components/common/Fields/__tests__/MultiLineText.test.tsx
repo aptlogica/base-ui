@@ -104,15 +104,16 @@ describe('MultiLineText Component', () => {
       expect(mockOnChange).not.toHaveBeenCalled();
     });
 
-    it('should call onChange only once on blur', async () => {
+    it('should call onChange for each keystroke during typing', async () => {
       render(<MultiLineText value="" onChange={mockOnChange} />);
       const textarea = screen.getByRole('textbox');
 
       await userEvent.type(textarea, 'Content');
       fireEvent.blur(textarea);
 
+      // onChange is called for each character typed: C-o-n-t-e-n-t (7 times)
       await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalledTimes(1);
+        expect(mockOnChange).toHaveBeenCalledTimes(7);
       });
     });
 

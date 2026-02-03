@@ -9,18 +9,23 @@ interface DayViewProps {
   events: CalendarEvent[];
   onEventClick?: (event: CalendarEvent) => void;
   onDateClick?: (date: Date) => void;
-  onDateSelect: (date: Date) => void;
   dateField?: any;
   columns?: any[];
   fieldConfig?: any[];
 }
+
+const DATETIME_TYPES = new Set([
+  'datetime',
+  'createdtime',
+  'lastmodifiedtime'
+]);
+
 
 const DayView: React.FC<DayViewProps> = ({
   currentDate,
   events,
   onEventClick,
   onDateClick,
-  onDateSelect,
   dateField,
   columns,
   fieldConfig,
@@ -28,25 +33,39 @@ const DayView: React.FC<DayViewProps> = ({
   // Check if the date field is datetime type
   const isDateTimeField = useMemo(() => {
     if (!dateField) return false;
-    const datetimeTypes = ['datetime', 'createdtime', 'lastmodifiedtime'];
-    return datetimeTypes.includes(dateField.type?.toLowerCase() || '') ||
-           datetimeTypes.includes(dateField.uidt?.toLowerCase() || '');
+
+    const type = dateField.type?.toLowerCase();
+    const uidt = dateField.uidt?.toLowerCase();
+
+    return (
+      (type && DATETIME_TYPES.has(type)) ||
+      (uidt && DATETIME_TYPES.has(uidt))
+    );
   }, [dateField]);
 
   // Generate time slots for datetime fields
   const timeSlots = useMemo(() => {
     if (!isDateTimeField) return [];
-    
+
     const slots: Array<{ hour: number; label: string; time: string }> = [];
+
     for (let hour = 0; hour < 24; hour++) {
       slots.push({
         hour,
-        label: hour === 0 ? '12 am' : hour < 12 ? `${hour} am` : hour === 12 ? '12 pm' : `${hour - 12} pm`,
+        label: getHourLabel(hour),
         time: `${hour.toString().padStart(2, '0')}:00`
       });
     }
+
     return slots;
   }, [isDateTimeField]);
+
+  const getHourLabel = (hour: number): string => {
+    if (hour === 0) return '12 am';
+    if (hour < 12) return `${hour} am`;
+    if (hour === 12) return '12 pm';
+    return `${hour - 12} pm`;
+  };
 
   // Get events for the current date
   const getEventsForDate = (date: Date) => {
@@ -61,13 +80,13 @@ const DayView: React.FC<DayViewProps> = ({
   // Get events for a specific time slot (datetime fields only)
   const getEventsForTimeSlot = (date: Date, hour: number) => {
     if (!isDateTimeField) return [];
-    
+
     // Use local date format to match event.date format (event.date is extracted from string)
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
-    
+
     return events.filter(event => {
       if (event.date !== dateStr) return false;
       const eventHour = new Date(event.dateTime).getHours();
@@ -77,11 +96,11 @@ const DayView: React.FC<DayViewProps> = ({
 
   // Format date for display
   const formatDate = (date: Date) => {
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     };
     return date.toLocaleDateString('en-US', options);
   };
@@ -102,9 +121,9 @@ const DayView: React.FC<DayViewProps> = ({
           <div className="flex">
             {/* Time column */}
             <div className="w-16 border-r border-gray-200 bg-gray-50">
-              {timeSlots.map((slot, index) => (
+              {timeSlots.map((slot, _index) => (
                 <div
-                  key={index}
+                  key={slot.hour}
                   className="h-12 border-b border-gray-100 flex items-center justify-center relative"
                 >
                   <span className="text-xs text-gray-500 font-medium">{slot.label}</span>
@@ -114,13 +133,13 @@ const DayView: React.FC<DayViewProps> = ({
 
             {/* Events column */}
             <div className="flex-1 relative">
-              {timeSlots.map((slot, slotIndex) => {
+              {timeSlots.map((slot, _slotIndex) => {
                 const slotEvents = getEventsForTimeSlot(currentDate, slot.hour);
                 const hasEvents = slotEvents.length > 0;
-                
+
                 return (
                   <div
-                    key={slotIndex}
+                    key={slot.hour}
                     className="h-12 border-b border-gray-100 relative group overflow-visible"
                     onClick={() => {
                       // Only trigger date click if clicking on empty space (not on events)
@@ -147,7 +166,7 @@ const DayView: React.FC<DayViewProps> = ({
                               />
                             ))}
                           </div>
-                          
+
                           {/* Show "+n more" dropdown on the right if there are additional events */}
                           {slotEvents.length > 1 && (
                             <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -163,7 +182,7 @@ const DayView: React.FC<DayViewProps> = ({
                               </MoreEventsDropdown>
                             </div>
                           )}
-                          
+
                           {/* Add event button on the right side when there are events */}
                           {onDateClick && (
                             <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -183,7 +202,7 @@ const DayView: React.FC<DayViewProps> = ({
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Add event button - only show when no events and on hover */}
                     {!hasEvents && onDateClick && (
                       <div className="opacity-0 group-hover:opacity-100 absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -247,7 +266,7 @@ const DayView: React.FC<DayViewProps> = ({
                     fieldConfig={fieldConfig}
                   />
                 ))}
-                
+
                 {/* Add event button */}
                 {onDateClick && (
                   <div className="pt-4">

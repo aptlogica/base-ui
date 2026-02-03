@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTable, useBaseTables, useWorkspaces } from './hooks/useApi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { DefaultAuthProvider, useAuth } from './auth/AuthContext';
+import { DefaultAuthProvider } from './auth/AuthContext';
 import { PrivateRoute } from './auth/PrivateRoute';
 import { AccessLevelRoute } from './auth/AccessLevelRoute';
 import { useExtensions, PluginFrameworkProvider } from './core/PluginFrameworkContext';
@@ -62,7 +62,6 @@ declare global {
 }
 
 const Layout = () => {
-  const { saving } = useAuth();
   const { flyoutOpen, selectedWorkspace, openFlyout, closeFlyout, currentPlugin } = usePluginStore();
   const location = useLocation();
 
@@ -101,12 +100,6 @@ const Layout = () => {
           </div>
           <div className="flex items-center gap-2">
             <ExtensionPoint id="layout:header" />
-            {saving && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md text-sm border border-blue-200 dark:border-blue-700">
-                <Loader size={16} />
-                <span>Saving workspace data...</span>
-              </div>
-            )}
           </div>
         </header>
 

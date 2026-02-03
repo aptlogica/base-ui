@@ -311,9 +311,21 @@ export const Table: React.FC<TableProps> = ({
   const columnWidths = useMemo(() => {
     return (visibleColumns || []).map((c) => {
       const fromView = viewConfigState.columnWidths?.[c.key];
-      return typeof fromView === 'number' ? fromView : (typeof c.width === 'number' ? c.width : 235);
+
+      let width = 235;
+
+      if (typeof c.width === 'number') {
+        width = c.width;
+      }
+
+      if (typeof fromView === 'number') {
+        width = fromView;
+      }
+
+      return width;
     });
   }, [visibleColumns, viewConfigState.columnWidths]);
+
 
   // Memoize minimal columns for sorting (only recreates when visibleColumns change)
   const minimalColumnsForSorting = useMemo(() => {
@@ -696,8 +708,6 @@ export const Table: React.FC<TableProps> = ({
 
                 {/* Column headers */}
                 {visibleColumns.map((column, index) => {
-                  const isLast = index === visibleColumns.length - 1;
-
                   return (
                     <div
                       key={column.key}

@@ -39,7 +39,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
     circular: 'rounded-full',
     rectangular: 'rounded-md',
   };
-  
+
   const animationClasses = {
     pulse: 'animate-pulse',
     wave: '', // Wave animation applied via inline style
@@ -56,8 +56,9 @@ export const Skeleton: React.FC<SkeletonProps> = ({
     <div
       className={`${baseClasses} ${variantClasses[variant]} ${animationClasses[animation]} ${className}`}
       style={{ width, height, ...waveStyle }}
-      aria-label="Loading..."
       role="status"
+      aria-live="polite"
+      aria-label="Loading..."
     />
   );
 };

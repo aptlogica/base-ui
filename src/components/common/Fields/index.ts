@@ -6,7 +6,7 @@ export { Email } from './Email';
 export { SingleSelect } from './SingleSelect';
 export { MultiSelect } from './MultiSelect';
 export { LongText } from './LongText';
-export { URL } from './URL';
+export { URL as URLField } from './URL';
 export { Rating } from './Rating';
 export { Attachment } from './Attachment';
 export { PhoneNumber } from './PhoneNumber';

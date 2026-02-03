@@ -392,8 +392,10 @@ describe('LongText Component', () => {
       const input = container.querySelector('input[type="text"]');
       expect(input).toBeInTheDocument();
       
+      // Button should appear in readOnly mode with "View full content" title
       const expandButton = container.querySelector('button[type="button"]');
-      expect(expandButton).not.toBeInTheDocument();
+      expect(expandButton).toBeInTheDocument();
+      expect(expandButton).toHaveAttribute('title', 'View full content');
 
       fireEvent.doubleClick(input!);
 
@@ -1449,12 +1451,28 @@ describe('LongText Component', () => {
       const input = container.querySelector('input[type="text"]');
       expect(input).toBeInTheDocument();
       
+      // When hideMaximizeButton is not set, button should still appear in readOnly mode (with "View full content" title)
       const expandButton = container.querySelector('button[type="button"]');
-      expect(expandButton).not.toBeInTheDocument();
+      expect(expandButton).toBeInTheDocument();
+      expect(expandButton).toHaveAttribute('title', 'View full content');
 
       fireEvent.doubleClick(input!);
 
       expect(screen.queryByText('Long Text')).not.toBeInTheDocument();
+    });
+
+    it('should hide maximize button when hideMaximizeButton config is true', () => {
+      const { container } = render(
+        <LongText
+          value="Test content"
+          onChange={mockOnChange}
+          config={{ hideMaximizeButton: true }}
+          readOnly
+        />
+      );
+
+      const expandButton = container.querySelector('button[type="button"]');
+      expect(expandButton).not.toBeInTheDocument();
     });
 
     it('should handle rich text content with br tag normalization', async () => {

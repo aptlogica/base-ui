@@ -286,36 +286,17 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
     if (!workspaceData?.data?.workspaces) return false;
 
     const workspaces = workspaceData.data.workspaces;
-    let targetWorkspaceId = null;
-    let targetTable: any = null;
-    let targetView: any = null;
+    const { targetWorkspaceId, targetTable, targetView } = findTarget(workspaces, baseId);
 
-    // Find the workspace and base
-    for (const workspace of workspaces) {
-      if (workspace.bases) {
-        const base = workspace.bases.find((b: any) => b.id === baseId);
-        if (base) {
-          targetWorkspaceId = workspace.id;
-          if (base.tables && base.tables.length > 0) {
-            targetTable = base.tables[0];
-            if (targetTable.views && targetTable.views.length > 0) {
-              targetView = targetTable.views[0];
-            }
-          }
-          break;
-        }
-      }
-    }
-
-    if (targetWorkspaceId && targetTable && (targetTable as any).id) {
-      if (targetView && (targetView as any).id) {
+    if (targetWorkspaceId && targetTable?.id) {
+      if (targetView?.id) {
         // Navigate to first view
-        get().navigateToView(targetWorkspaceId, baseId, (targetTable as any).id, (targetView as any).id);
-        navigate(`/workspace/${targetWorkspaceId}/base/${baseId}/table/${(targetTable as any).id}/${(targetView as any).id}`);
+        get().navigateToView(targetWorkspaceId, baseId, targetTable.id, targetView.id);
+        navigate(`/workspace/${targetWorkspaceId}/base/${baseId}/table/${targetTable.id}/${targetView.id}`);
       } else {
         // Navigate to first table with grid view
-        get().navigateToTable(targetWorkspaceId, baseId, (targetTable as any).id);
-        navigate(`/workspace/${targetWorkspaceId}/base/${baseId}/table/${(targetTable as any).id}/grid`);
+        get().navigateToTable(targetWorkspaceId, baseId, targetTable.id);
+        navigate(`/workspace/${targetWorkspaceId}/base/${baseId}/table/${targetTable.id}/grid`);
       }
       return true;
     } else if (targetWorkspaceId) {
@@ -330,7 +311,6 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
   navigateToFirstBase: (workspaceId: string, workspaceData: any, navigate: (path: string) => void): boolean => {
     // Try to get workspace bases from the API hook data structure
     let bases = null;
-
     if (workspaceData && Array.isArray(workspaceData)) {
       // Handle workspace data as array format
       const workspace = workspaceData.find(ws => ws.id === workspaceId);
@@ -344,18 +324,17 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
         bases = workspaceData.data;
       }
     }
-
-    if (bases && Array.isArray(bases) && (bases as any[]).length > 0) {
-      const firstBase = bases[0] as any;
-      if (firstBase && firstBase.id) {
+    if (bases && Array.isArray(bases) && bases?.length > 0) {
+      const firstBase = bases[0];
+      if (firstBase?.id) {
 
         // Navigate to the first base and try to find first table/view
         if (firstBase.tables && Array.isArray(firstBase.tables) && firstBase.tables.length > 0) {
-          const firstTable = firstBase.tables[0] as any;
-          if (firstTable && firstTable.id) {
+          const firstTable = firstBase.tables[0];
+          if (firstTable?.id) {
             if (firstTable.views && Array.isArray(firstTable.views) && firstTable.views.length > 0) {
-              const firstView = firstTable.views[0] as any;
-              if (firstView && firstView.id) {
+              const firstView = firstTable.views[0];
+              if (firstView?.id) {
                 get().navigateToView(workspaceId, firstBase.id, firstTable.id, firstView.id);
                 navigate(`/workspace/${workspaceId}/base/${firstBase.id}/table/${firstTable.id}/${firstView.id}`);
               }
@@ -421,7 +400,10 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
         session.device_type === newSession.device_type
       );
 
-      if (existingSessionIndex !== -1) {
+      if (existingSessionIndex === -1) {
+        // Add new session (limit to last 15)
+        allSessions = [newSession, ...existingSessions].slice(0, 15);
+      } else {
         // Update existing session's login_at timestamp and move it to the top
         // This happens when user logs in again from the same device
         const updatedSessions = [...existingSessions];
@@ -436,9 +418,6 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
         // Move updated session to the beginning
         const [updatedSession] = updatedSessions.splice(existingSessionIndex, 1);
         allSessions = [updatedSession, ...updatedSessions].slice(0, 15);
-      } else {
-        // Add new session (limit to last 15)
-        allSessions = [newSession, ...existingSessions].slice(0, 15);
       }
     }
     // On logout (isLogin=false), we keep existing sessions as-is (don't update login_at)
@@ -455,7 +434,7 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
 
       await updateUserActivity(userId, activityData);
     } catch (error) {
-      console.error('❌ Failed to update activity data:', error);
+      console.error('Failed to update activity data:', error);
       throw error; // Re-throw so caller can handle it
     }
   },
@@ -478,7 +457,7 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
         return false;
       }
     } catch (error) {
-      console.error('❌ Failed to load activity data:', error);
+      console.error('Failed to load activity data:', error);
       return false;
     }
   },
@@ -487,7 +466,43 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
     try {
       await clearUserActivity(userId);
     } catch (error) {
-      console.error('❌ Failed to clear activity data:', error);
+      console.error('Failed to clear activity data:', error);
     }
   }
 }));
+
+// Helper function to get the first table and view
+const getFirstTableAndView = (base: any) => {
+  if (base.tables && base.tables.length > 0) {
+    const firstTable = base.tables[0];
+    const firstView = firstTable.views && firstTable.views.length > 0 ? firstTable.views[0] : null;
+    return { firstTable, firstView };
+  }
+  return { firstTable: null, firstView: null };
+};
+
+// Main function to find the target workspace, table, and view
+const findTarget = (workspaces: any[], baseId: string) => {
+  let targetWorkspaceId = null;
+  let targetTable = null;
+  let targetView = null;
+
+  // Find the workspace and base
+  for (const workspace of workspaces) {
+    if (workspace.bases) {
+      const base = workspace.bases.find((b: any) => b.id === baseId);
+      if (base) {
+        targetWorkspaceId = workspace.id;
+
+        // Use the helper function to get the first table and view
+        const { firstTable, firstView } = getFirstTableAndView(base);
+        targetTable = firstTable;
+        targetView = firstView;
+
+        break; // Exit loop after finding the target base
+      }
+    }
+  }
+
+  return { targetWorkspaceId, targetTable, targetView };
+};

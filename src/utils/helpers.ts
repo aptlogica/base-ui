@@ -159,7 +159,7 @@ export function formatCompactNumber(num: number): string {
  * @returns 2-letter initials when possible, or 1-2 characters
  */
 export function getInitials(name: string, fallback: string = 'U'): string {
-  if (!name || !name.trim()) return fallback;
+  if (!name?.trim()) return fallback;
   
   const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) {

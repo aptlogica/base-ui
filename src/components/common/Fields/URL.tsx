@@ -63,7 +63,7 @@ const validateURLSafe = (url: string): boolean => {
   const domainName = parts[0];
   if (!validateDomain(domainName)) return false;
   
-  const lastPartWithPath = parts[parts.length - 1];
+  const lastPartWithPath = parts.at(-1) ?? '';
   const slashIndex = lastPartWithPath.indexOf('/');
   const tld = slashIndex >= 0 ? lastPartWithPath.substring(0, slashIndex) : lastPartWithPath;
   if (!validateTLD(tld)) return false;
@@ -201,6 +201,7 @@ export const URL: React.FC<URLProps> = ({
   };
 
   const handleURLClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!isEditing && localValue && !error) {
       e.preventDefault();
       const url = normalizeURL(localValue);
@@ -224,7 +225,7 @@ export const URL: React.FC<URLProps> = ({
   };
 
   const renderIcon = () => {
-    if (error || !localValue || !showIcon) return null;
+    if (error || !localValue.trim() || !showIcon) return null;
     return (
       <div className={`flex-shrink-0 w-7 h-7 bg-card flex items-center justify-center rounded-lg border shadow-lg hover:bg-gray-200 transition-all ${isEditing ? '' : 'mr-3'}`}>
         <ExternalLink

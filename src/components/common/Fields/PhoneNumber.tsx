@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Info } from "lucide-react";
 import { useClickHandler } from "../../../utils/helpers";
 
 interface PhoneNumberProps {
@@ -7,7 +6,6 @@ interface PhoneNumberProps {
   value?: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  countryCode?: string;
   required?: boolean;
   disabled?: boolean;
   isBorder?: boolean;
@@ -19,8 +17,6 @@ interface PhoneNumberProps {
   config?: {
     phoneValid?: boolean;
     defaultValue?: string;
-    description?: string;
-    countryCode?: string;
     formatDisplay?: boolean;
     placeholder?: string;
     [key: string]: any;
@@ -32,7 +28,6 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
   value,
   onChange,
   placeholder = "Enter phone number...",
-  countryCode = "+1",
   required = false,
   disabled = false,
   isBorder = false,
@@ -74,12 +69,12 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
 
   const validatePhone = (phone: string) => {
     const phoneStr = String(phone ?? "");
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-    return phoneRegex.test(phoneStr.replace(/[\s\-\(\)]/g, ""));
+    const phoneRegex = /^[+]?[1-9]\d{0,15}$/;
+    return phoneRegex.test(phoneStr.replaceAll(/[\s\-()]/g, ''));
   };
 
   // keep only digits when numeric-only is desired
-  const sanitizeInput = (val: string) => val.replace(/\D/g, "");
+  const sanitizeInput = (val: string) => val.replaceAll(/\D/g, "");
 
   const validate = (val: string) => {
     if (required && !val.trim()) return "This field is required";
@@ -95,7 +90,7 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
     if (!validationError && prevValueRef.current !== localValue) {
       onChange(localValue);
       prevValueRef.current = localValue;
-    }else{
+    } else {
       setLocalValue(prevValueRef.current);
     }
 
@@ -104,10 +99,18 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
 
   const formatPhoneNumber = (phone: string) => {
     const phoneStr = String(phone ?? "");
-    const cleaned = phoneStr.replace(/\D/g, "");
-    const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
+    const cleaned = phoneStr.replaceAll(/\D/g, "");
+    const phoneRegex = /^(\d{3})(\d{3})(\d{4})$/;
+    const match = phoneRegex.exec(cleaned);
     if (match) return `(${match[1]}) ${match[2]}-${match[3]}`;
     return phoneStr;
+  };
+
+  const getDisplayValue = () => {
+    if (localValue) {
+      return formatDisplay ? formatPhoneNumber(localValue) : localValue;
+    }
+    return configPlaceholder;
   };
 
   // allowEdit controls single vs double-click behavior
@@ -144,7 +147,7 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
             onPaste={(e) => {
               if (!phoneValid) return;
               e.preventDefault();
-              const text = (e.clipboardData || (window as any).clipboardData)?.getData("text") ?? "";
+              const text = (e.clipboardData || (globalThis as any).clipboardData)?.getData("text") ?? "";
               setLocalValue(sanitizeInput(text));
             }}
             onBlur={handleBlur}
@@ -158,33 +161,20 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
             autoFocus
             placeholder={configPlaceholder}
             disabled={disabled || readOnly}
-            className={`field-component ${isBorder ? "field-component-focus" : ""} ${
-              error ? "border-red-500 bg-red-50" : "border-gray-300"
-            } ${disabled || readOnly ? "cursor-not-allowed" : ""}`}
+            className={`field-component ${isBorder ? "field-component-focus" : ""} ${error ? "border-red-500 bg-red-50" : "border-gray-300"
+              } ${disabled || readOnly ? "cursor-not-allowed" : ""}`}
           />
         ) : (
           <div
-            onClick={!readOnly ? handleClick : undefined}
-            className={`field-component ${
-              localValue ? "text-gray-800" : "text-gray-400"
-            } ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""} max-w-full overflow-hidden`}
+            onClick={readOnly ? undefined : handleClick}
+            className={`field-component ${localValue ? "text-gray-800" : "text-gray-400"
+              } ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""} max-w-full overflow-hidden`}
             style={{ textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
-            {localValue ? (formatDisplay ? formatPhoneNumber(localValue) : localValue) : configPlaceholder}
+            {getDisplayValue()}
           </div>
         )}
-
-        {/* Error Icon */}
-        {/* {error && (
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-            <Info className="w-4 h-4 text-red-400" />
-          </div>
-        )} */}
       </div>
-
-      {/* Error Text */}
-      {/* {error && allowEdit && <div className="mt-1.5 text-red-500 cursor-default">{error}</div>} */}
-
       {/* Helper Text */}
       {helperText && allowEdit && (
         <p className="text-xs text-gray-500 mt-1">{helperText}</p>

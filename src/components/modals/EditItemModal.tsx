@@ -96,18 +96,16 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
       setImagePreview(previewUrl);
       setImageError('');
       
-      // Validate dimensions asynchronously (show error if invalid, and clear the image)
+      // Validate dimensions asynchronously (show error if invalid, but keep the image)
       const img = new Image();
       img.onload = () => {
         if (img.width > 800 || img.height > 400) {
-          setImage(null);
-          setImagePreview(null);
+          // Keep the image but show error - user can remove it manually
           setImageError('Image dimensions must be max 800 x 400px');
         }
       };
       img.onerror = () => {
-        setImage(null);
-        setImagePreview(null);
+        // Keep the image but show error - user can remove it manually
         setImageError('Failed to load image. Please try again.');
       };
       img.src = previewUrl;
@@ -133,18 +131,14 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
         setImagePreview(previewUrl);
         setImageError('');
         
-        // Validate dimensions asynchronously (show error if invalid, and clear the image)
+        // Validate dimensions asynchronously (show error if invalid, but keep the image)
         const img = new Image();
         img.onload = () => {
           if (img.width > 800 || img.height > 400) {
-            setImage(null);
-            setImagePreview(null);
             setImageError('Image dimensions must be max 800 x 400px');
           }
         };
         img.onerror = () => {
-          setImage(null);
-          setImagePreview(null);
           setImageError('Failed to load image. Please try again.');
         };
         img.src = previewUrl;
@@ -348,6 +342,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
                         e.stopPropagation();
                         setImage(null);
                         setImagePreview(null);
+                        setImageError('');
                         const input = document.getElementById('edit-image-upload') as HTMLInputElement;
                         if (input) input.value = '';
                       }}

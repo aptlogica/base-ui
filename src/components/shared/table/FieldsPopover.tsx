@@ -146,7 +146,7 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
             {/* System Fields Section */}
             {showSystemFields && filteredSystemFields.length > 0 && (
               <>
-                <div className="border-t border-gray-100 my-2"></div>
+                <div className="border-t border-gray-100 my-2"/>
                 <div className="px-2 py-1 text-xs font-medium text-gray-500 uppercase tracking-wide">System Fields</div>
                 {filteredSystemFields.map((col) => (
                   <div
