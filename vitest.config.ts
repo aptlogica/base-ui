@@ -10,6 +10,7 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
     testTimeout: 15000,
     hookTimeout: 15000,
+    exclude: ['node_modules', 'dist', 'sdk'],
     coverage: {
       provider: 'v8',
       reportsDirectory: 'coverage-vitest',
@@ -40,6 +41,9 @@ export default defineConfig({
       '@service': path.resolve(__dirname, './src/service'),
       '@stores': path.resolve(__dirname, './src/stores')
     }
+  },
+  optimizeDeps: {
+    exclude: ['sdk']
   }
 });
 

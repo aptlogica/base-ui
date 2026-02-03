@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">99.3% </span>
+                <span class="strong">98.84% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>1290/1299</span>
+                <span class='fraction'>1284/1299</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">92.1% </span>
+                <span class="strong">90.84% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>140/152</span>
+                <span class='fraction'>139/153</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">99.3% </span>
+                <span class="strong">98.84% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>1290/1299</span>
+                <span class='fraction'>1284/1299</span>
             </div>
         
             
@@ -2819,21 +2819,6 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -2843,11 +2828,6 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -2860,6 +2840,26 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -4437,18 +4437,18 @@ describe('LongText Component', () =&gt; {
       await waitFor(() =&gt; {
         const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
         const link = editor.querySelector('a');
-        if (link) {
-          fireEvent.click(link);
-        }
+        if (link) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
+<span class="cstat-no" title="statement not covered" >          fireEvent.click(link);</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
       }, { timeout: 2000 });
 &nbsp;
       await waitFor(() =&gt; {
         const editButton = screen.queryByText('Edit');
-        if (editButton) {
-          fireEvent.click(editButton);
-          const urlInput = screen.queryByPlaceholderText('https://example.com') as HTMLInputElement;
-          expect(urlInput).toBeInTheDocument();
-        }
+        if (editButton) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
+<span class="cstat-no" title="statement not covered" >          fireEvent.click(editButton);</span>
+<span class="cstat-no" title="statement not covered" >          const urlInput = screen.queryByPlaceholderText('https://example.com') as HTMLInputElement;</span>
+<span class="cstat-no" title="statement not covered" >          expect(urlInput).toBeInTheDocument();</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
       }, { timeout: 2000 });
     });
 &nbsp;
@@ -4837,7 +4837,7 @@ describe('LongText Component', () =&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-03T06:47:23.490Z
+                at 2026-02-03T07:56:42.233Z
             </div>
         <script src="../../../../../prettify.js"></script>
         <script>
