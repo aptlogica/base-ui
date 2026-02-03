@@ -82,17 +82,8 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
     }
   };
 
-  // Clear footer when switching tabs to prevent stale buttons
-  // Only clear when section actually changes, not on initial mount
-  const prevSectionRef = useRef<string | null>(null);
-  useEffect(() => {
-    // Only clear if section actually changed (not on initial mount)
-    if (prevSectionRef.current !== null && prevSectionRef.current !== activeSection) {
-      setFooterButtons(null);
-    }
-    prevSectionRef.current = activeSection;
-  }, [activeSection]);
 
+ 
   return (
     <FooterButtonContext.Provider value={contextValue}>
       <div className="flex flex-col h-full min-h-0">
