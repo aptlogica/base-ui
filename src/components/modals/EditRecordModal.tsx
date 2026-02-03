@@ -97,14 +97,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     return field.system;
   };
 
-  // Find title field for validation
-  const titleField = useMemo(() => {
-    return (fields || []).find(f => {
-      const fieldName = f.name?.toLowerCase() || '';
-      const fieldTitle = f.title?.toLowerCase() || '';
-      return (fieldName.includes('title') || fieldTitle.includes('title'));
-    });
-  }, [fields]);
+
 
   const visibleFields = useMemo(
     () => (fields || []).filter(f => !f.is_hidden && !f.hidden && !isSystemField(f) && !isFormulaField(f)),
@@ -381,18 +374,12 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
             {/* Visible fields */}
             <div className="space-y-4">
               {visibleFields.map((field) => {
-                const isTitleField = titleField && field.id === titleField.id;
                 return (
                   <div key={field.id} className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-4 items-center">
                     <div className="text-gray-600 flex items-center gap-2">
                       {getFieldTypeIconWithMargin(getStandardFieldType(field))}
                       <span className="text-sm">{getFieldDisplayName(field)}</span>
                       {field.required && <span className="text-red-500 ml-1 field-component-required">*</span>}
-                      {isTitleField && (
-                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                          Title Field
-                        </span>
-                      )}
                     </div>
                     <div className="max-w-[560px] w-full">
                       {renderField(field)}
