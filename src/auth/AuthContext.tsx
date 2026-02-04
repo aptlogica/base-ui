@@ -74,7 +74,7 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
       const enabled = !!(
         (w?.__NAV_DEBUG__) ||
         (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('NAV_DEBUG') === '1') ||
-        (q && q.get('navdebug') === '1')
+        (q?.get('navdebug') === '1')
       );
       if (enabled) console.log('[NAV][Auth]', ...args);
     } catch { }
