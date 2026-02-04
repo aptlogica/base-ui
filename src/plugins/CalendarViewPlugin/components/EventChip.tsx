@@ -239,7 +239,7 @@ const EventChip: React.FC<EventChipProps> = ({
         >
           <div className="space-y-1">
             {tooltipLines.map((line, index) => (
-              <div key={index} className={index === 0 ? "font-semibold text-primary text-sm" : "text-secondary text-xs"}>
+              <div key={line} className={index === 0 ? "font-semibold text-primary text-sm" : "text-secondary text-xs"}>
                 {line}
               </div>
             ))}

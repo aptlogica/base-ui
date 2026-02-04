@@ -229,7 +229,7 @@ export function buildEventTooltipLines(args: {
   });
 
   // Create horizontal bullet-separated lines (like NocoDB)
-  const sortedFields = visibleFields.sort((a, b) => a.priority - b.priority);
+  const sortedFields = visibleFields.toSorted((a, b) => a.priority - b.priority);
 
   // Group fields into lines (up to 3-4 fields per line max)
   const fieldsPerLine = 3;

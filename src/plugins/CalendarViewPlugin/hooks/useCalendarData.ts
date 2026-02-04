@@ -242,7 +242,7 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
 
     // Merge updates into meta (handles fieldConfig, filters, sorts, etc.)
     const finalMeta = {
-      ...(currentView.meta || {}),
+      ...currentView.meta,
       ...updates
     };
 
