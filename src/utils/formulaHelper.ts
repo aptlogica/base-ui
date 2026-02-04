@@ -396,7 +396,7 @@ export const evaluateArgument = (
     return getFieldValue(fieldName, context);
   }
   
-  if (/^-?\d*\.?\d+$/.test(trimmedArg)) {
+  if (/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(trimmedArg)) {
     return Number.parseFloat(trimmedArg);
   }
   
@@ -1258,7 +1258,7 @@ const parseComparisonOperand = (operand: string, context: FormulaContext): any =
     return getFieldValueByType(fieldName, context);
   } else if ((operand.startsWith('"') && operand.endsWith('"')) || (operand.startsWith("'") && operand.endsWith("'"))) {
     return operand.slice(1, -1);
-  } else if (/^-?\d*\.?\d+$/.test(operand)) {
+  } else if (/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(operand)) {
     return Number.parseFloat(operand);
   } else {
     const lowerOperand = operand.toLowerCase();
@@ -1407,7 +1407,7 @@ export const evaluateIF = (formula: string, context: FormulaContext): any => {
     trueResult = value === null ? '' : value;
   } else if ((trueValue.startsWith('"') && trueValue.endsWith('"')) || (trueValue.startsWith("'") && trueValue.endsWith("'"))) {
     trueResult = trueValue.slice(1, -1);
-  } else if (/^-?\d*\.?\d+$/.test(trueValue)) {
+  } else if (/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(trueValue)) {
     trueResult = Number.parseFloat(trueValue);
   } else {
     const lowerTrueValue = trueValue.toLowerCase();
@@ -1432,7 +1432,7 @@ export const evaluateIF = (formula: string, context: FormulaContext): any => {
       falseResult = value === null ? '' : value;
     } else if ((falseValue.startsWith('"') && falseValue.endsWith('"')) || (falseValue.startsWith("'") && falseValue.endsWith("'"))) {
       falseResult = falseValue.slice(1, -1);
-    } else if (/^-?\d*\.?\d+$/.test(falseValue)) {
+    } else if (/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(falseValue)) {
       falseResult = Number.parseFloat(falseValue);
     } else {
       const lowerFalseValue = falseValue.toLowerCase();
@@ -1573,7 +1573,7 @@ export const evaluateISNUMBER = (formula: string, context: FormulaContext): bool
     return isNumericType(fieldType);
   }
   
-  return /^-?\d*\.?\d+$/.test(arg);
+  return /^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(arg);
 };
 
 export const evaluateISTEXT = (formula: string, context: FormulaContext): boolean | null => {
@@ -1601,7 +1601,7 @@ export const evaluateISTEXT = (formula: string, context: FormulaContext): boolea
     return true;
   }
   
-  return !/^-?\d*\.?\d+$/.test(arg);
+  return !/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(arg);
 };
 
 export const evaluateISDATE = (formula: string, context: FormulaContext): boolean | null => {
@@ -2049,10 +2049,15 @@ export const getFunctionSyntax = (funcName: string, example: string): string => 
   }
   
   if (example) {
-    const match = /\(([^)]+)\)/.exec(example);
+      const match = /\(([^)]+)\)/.exec(example);
     if (match) {
       const args = match[1];
-      const fieldRefs = args.match(/\{[^}]+\}/g) || [];
+      const fieldRefs: string[] = [];
+      const fieldRefRegex = /\{[^}]+\}/g;
+      let fieldRefMatch;
+      while ((fieldRefMatch = fieldRefRegex.exec(args)) !== null) {
+        fieldRefs.push(fieldRefMatch[0]);
+      }
       if (fieldRefs.length === 1) {
         return `${baseName}(number)`;
       } else if (fieldRefs.length === 2) {
@@ -2379,7 +2384,12 @@ const validateCompoundStatements = (formula: string): string | null => {
 const validateFieldReferences = (formula: string, context: FormulaContext): string | null => {
   const { columns, allColumns } = context;
   
-  const fieldRefs = formula.match(/\{([^}]+)\}/g) || [];
+  const fieldRefs: string[] = [];
+  const fieldRefRegex = /\{([^}]+)\}/g;
+  let fieldRefMatch;
+  while ((fieldRefMatch = fieldRefRegex.exec(formula)) !== null) {
+    fieldRefs.push(fieldRefMatch[0]);
+  }
   const searchColumns = allColumns.length > 0 ? allColumns : columns;
   
   const validFieldNames = new Set<string>();
@@ -2392,7 +2402,7 @@ const validateFieldReferences = (formula: string, context: FormulaContext): stri
   for (const ref of fieldRefs) {
     const fieldName = ref.slice(1, -1).trim();
     if (fieldName && !validFieldNames.has(fieldName)) {
-      if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+      if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(fieldName)) {
         return `Unknown field: ${fieldName}`;
       }
     }
@@ -2423,13 +2433,13 @@ const validateMathFunctions = (formula: string, context: FormulaContext): string
         if (trimmedArg.startsWith('{') && trimmedArg.endsWith('}')) {
           const fieldName = parseFieldReference(trimmedArg);
           
-          if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+          if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(fieldName)) {
             const fieldType = getFieldType(fieldName, context);
             if (!isNumericType(fieldType)) {
               return `${funcName}() requires numeric fields. "${fieldName}" is a ${fieldType || 'non-numeric'} field`;
             }
           }
-        } else if (!/^-?\d*\.?\d+$/.test(trimmedArg)) {
+        } else if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(trimmedArg)) {
           if (trimmedArg && !/^[A-Z_]+\(/.exec(trimmedArg)) {
             return `${funcName}() requires numeric values. "${trimmedArg}" is not numeric`;
           }
@@ -2486,13 +2496,13 @@ const validateTextFunctions = (formula: string, context: FormulaContext): string
         const countArg = args[1].trim();
         if (countArg.startsWith('{') && countArg.endsWith('}')) {
           const fieldName = parseFieldReference(countArg);
-          if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+          if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(fieldName)) {
             const fieldType = getFieldType(fieldName, context);
             if (!isNumericType(fieldType)) {
               return `${funcName}() second argument must be numeric or numeric field reference`;
             }
           }
-        } else if (!/^-?\d*\.?\d+$/.test(countArg)) {
+        } else if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(countArg)) {
           return `${funcName}() second argument must be a number`;
         }
       }
@@ -2511,13 +2521,13 @@ const validateTextFunctions = (formula: string, context: FormulaContext): string
         const checkNumericArg = (argStr: string) => {
           if (argStr.startsWith('{') && argStr.endsWith('}')) {
             const fieldName = parseFieldReference(argStr);
-            if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+            if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(fieldName)) {
               const fieldType = getFieldType(fieldName, context);
               if (!isNumericType(fieldType)) return false;
             }
             return true;
           }
-          return /^-?\d*\.?\d+$/.test(argStr);
+          return /^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(argStr);
         };
         
         if (!checkNumericArg(startArg)) {
@@ -2558,7 +2568,7 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
         const firstArg = args[0].trim();
         if (firstArg.startsWith('{') && firstArg.endsWith('}')) {
           const fieldName = parseFieldReference(firstArg);
-          if (/^-?\d*\.?\d+$/.test(fieldName)) {
+          if (/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(fieldName)) {
             return `${funcName}() requires a date field, not a numeric literal`;
           } else {
             const fieldType = getFieldType(fieldName, context);
@@ -2583,7 +2593,7 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
         const firstArg = args[0].trim();
         if (firstArg.startsWith('{') && firstArg.endsWith('}')) {
           const fieldName = parseFieldReference(firstArg);
-          if (/^-?\d*\.?\d+$/.test(fieldName)) {
+          if (/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(fieldName)) {
             return `${funcName}() first argument requires a date field, not a numeric literal`;
           } else {
             const fieldType = getFieldType(fieldName, context);
@@ -2601,13 +2611,13 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
         const secondArg = args[1].trim();
         if (secondArg.startsWith('{') && secondArg.endsWith('}')) {
           const fieldName = parseFieldReference(secondArg);
-          if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+          if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(fieldName)) {
             const fieldType = getFieldType(fieldName, context);
             if (!isNumericType(fieldType)) {
               return `${funcName}() second argument must be numeric. "${fieldName}" is a ${fieldType || 'non-numeric'} field`;
             }
           }
-        } else if (!/^-?\d*\.?\d+$/.test(secondArg)) {
+        } else if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(secondArg)) {
           return `${funcName}() second argument must be a number`;
         }
         
@@ -2635,7 +2645,7 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
         const firstArg = args[0].trim();
         if (firstArg.startsWith('{') && firstArg.endsWith('}')) {
           const fieldName = parseFieldReference(firstArg);
-          if (/^-?\d*\.?\d+$/.test(fieldName)) {
+          if (/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(fieldName)) {
             return `${funcName}() first argument requires a date field, not a numeric literal`;
           } else {
             const fieldType = getFieldType(fieldName, context);
@@ -2653,7 +2663,7 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
         const secondArg = args[1].trim();
         if (secondArg.startsWith('{') && secondArg.endsWith('}')) {
           const fieldName = parseFieldReference(secondArg);
-          if (/^-?\d*\.?\d+$/.test(fieldName)) {
+          if (/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(fieldName)) {
             return `${funcName}() second argument requires a date field, not a numeric literal`;
           } else {
             const fieldType = getFieldType(fieldName, context);
@@ -2693,13 +2703,13 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
           const arg = args[i].trim();
           if (arg.startsWith('{') && arg.endsWith('}')) {
             const fieldName = parseFieldReference(arg);
-            if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+            if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(fieldName)) {
               const fieldType = getFieldType(fieldName, context);
               if (!isNumericType(fieldType)) {
                 return `${funcName}() argument ${i + 1} must be numeric. "${fieldName}" is a ${fieldType || 'non-numeric'} field`;
               }
             }
-          } else if (!/^-?\d*\.?\d+$/.test(arg)) {
+          } else if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(arg)) {
             return `${funcName}() argument ${i + 1} must be a number`;
           }
         }
@@ -2755,7 +2765,7 @@ const validateMathOperators = (formula: string, context: FormulaContext): string
   
   for (const ref of fieldRefs) {
     const fieldName = parseFieldReference(ref);
-    if (fieldName && !/^-?\d*\.?\d+$/.test(fieldName)) {
+    if (fieldName && !/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(fieldName)) {
       uniqueFieldNames.add(fieldName);
     }
   }
@@ -2773,14 +2783,14 @@ const validateMathOperators = (formula: string, context: FormulaContext): string
   
   // Validate numeric literals (check for invalid numeric patterns)
   // Extract potential numeric literals (not inside quotes or field references)
-  const numericPattern = /-?\d*\.?\d+/g;
+  const numericPattern = /-?(?:\d+\.?\d*|\d*\.\d+)/g;
   let match;
   const processedFormula = formula.replaceAll(/\{[^}]+\}/g, '').replaceAll(/"[^"]*"/g, '').replaceAll(/'[^']*'/g, '');
   
   while ((match = numericPattern.exec(processedFormula)) !== null) {
     const numStr = match[0];
     // Check if it's a valid number (not part of a function name or invalid)
-    if (numStr && !/^-?\d*\.?\d+$/.test(numStr.trim())) {
+    if (numStr && !/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(numStr.trim())) {
       // This shouldn't happen with the regex, but just in case
       continue;
     }
@@ -2923,8 +2933,8 @@ const validateComparisonOperators = (formula: string, context: FormulaContext): 
       }
       if (parenDepth > 0) continue;
       
-      const leftPattern = /(\{[^}]+\}|-?\d+\.?\d*|-?\.\d+|"[^"]*"|'[^']*'|[A-Z_][A-Z0-9_]*\([^)]*\)|[^\s=!<>]+)$/;
-      const rightPattern = /^(\{[^}]+\}|-?\d+\.?\d*|-?\.\d+|"[^"]*"|'[^']*'|[A-Z_][A-Z0-9_]*\([^)]*\)|[^\s=!<>]+)/;
+      const leftPattern = /(\{[^}]+\}|-?(?:\d+\.?\d*|\.\d+)|"[^"]*"|'[^']*'|[A-Z_][A-Z0-9_]*\([^)]*\)|[^\s=!<>]+)$/;
+      const rightPattern = /^(\{[^}]+\}|-?(?:\d+\.?\d*|\.\d+)|"[^"]*"|'[^']*'|[A-Z_][A-Z0-9_]*\([^)]*\)|[^\s=!<>]+)/;
       
       const leftMatch = leftPattern.exec(beforeOp);
       const rightMatch = rightPattern.exec(afterOp);
@@ -2939,12 +2949,12 @@ const validateComparisonOperators = (formula: string, context: FormulaContext): 
       
       if (leftSide.startsWith('{') && leftSide.endsWith('}')) {
         const fieldName = parseFieldReference(leftSide);
-        if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+        if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(fieldName)) {
           if (!validFieldNames.has(fieldName)) {
             return `Unknown field in comparison: "${fieldName}"`;
           }
         }
-      } else if (!/^-?\d*\.?\d+$/.test(leftSide) && 
+      } else if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(leftSide) && 
                  !(leftSide.startsWith('"') && leftSide.endsWith('"')) &&
                  !(leftSide.startsWith("'") && leftSide.endsWith("'"))) {
         if (!/^[A-Z_]+\(/.test(leftSide)) {
@@ -2954,12 +2964,12 @@ const validateComparisonOperators = (formula: string, context: FormulaContext): 
       
       if (rightSide.startsWith('{') && rightSide.endsWith('}')) {
         const fieldName = parseFieldReference(rightSide);
-        if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+        if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(fieldName)) {
           if (!validFieldNames.has(fieldName)) {
             return `Unknown field in comparison: "${fieldName}"`;
           }
         }
-      } else if (!/^-?\d*\.?\d+$/.test(rightSide) && 
+      } else if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(rightSide) && 
                  !(rightSide.startsWith('"') && rightSide.endsWith('"')) &&
                  !(rightSide.startsWith("'") && rightSide.endsWith("'"))) {
         if (!/^[A-Z_]+\(/.test(rightSide)) {
@@ -3046,7 +3056,7 @@ const validateLogicalFunctions = (formula: string, _context: FormulaContext): st
         const arg = args[0].trim();
         const isFieldRef = arg.startsWith('{') && arg.endsWith('}');
         const isQuoted = (arg.startsWith('"') && arg.endsWith('"')) || (arg.startsWith("'") && arg.endsWith("'"));
-        const isNumber = /^-?\d*\.?\d+$/.test(arg);
+        const isNumber = /^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(arg);
         const isFunction = /^[A-Z_]+\(/.test(arg);
         
         if (!isFieldRef && !isQuoted && !isNumber && !isFunction) {
