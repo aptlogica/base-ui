@@ -436,7 +436,7 @@ export const SecuritySection: React.FC = () => {
     // Cleanup: clear footer when component unmounts or section changes
     return () => {
       if (currentSection === 'security') {
-        clearFooter();
+        clearFooter('security');
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -487,9 +487,9 @@ export const SecuritySection: React.FC = () => {
                   className="text-gray-400 hover:text-gray-600"
                 >
                   {showCurrentPassword ? (
-                    <EyeOff className="h-5 w-5" />
+                    <Eye className="h-4 w-4" />
                   ) : (
-                    <Eye className="h-5 w-5" />
+                    <EyeOff className="h-4 w-4" />
                   )}
                 </button>
               </div>
@@ -545,9 +545,9 @@ export const SecuritySection: React.FC = () => {
                     className="text-gray-400 hover:text-gray-600"
                   >
                     {showNewPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
                       <Eye className="w-4 h-4" />
+                    ) : (
+                      <EyeOff className="w-4 h-4" />
                     )}
                   </button>
                 </div>
@@ -585,9 +585,9 @@ export const SecuritySection: React.FC = () => {
                     className="text-gray-400 hover:text-gray-600"
                   >
                     {showConfirmPassword ? (
-                      <EyeOff className="h-5 w-5" />
+                      <Eye className="h-4 w-4" />
                     ) : (
-                      <Eye className="h-5 w-5" />
+                      <EyeOff className="h-4 w-4" />
                     )}
                   </button>
                 </div>
