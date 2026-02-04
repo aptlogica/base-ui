@@ -510,8 +510,8 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
               }
             }}
             config={{
-              timeFormat: (column?.config?.timeFormat || 'HH:mm') as any,
-              hourFormat: (column?.config?.hourFormat || '24') as any,
+              timeFormat: column?.config?.timeFormat || 'HH:mm',
+              hourFormat: column?.config?.hourFormat || '24',
             }}
             allowEdit={true}
             isBorder={true}
@@ -550,9 +550,12 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
       );
     }
     // For existing filters, use local state while typing, filter.value when not editing
-    const currentValue = isNewFilter
-      ? inputValue
-      : (localFilterValues[filterIndex] !== undefined ? localFilterValues[filterIndex] : filter.value);
+    let currentValue: string;
+    if (isNewFilter) {
+      currentValue = inputValue;
+    } else {
+      currentValue = localFilterValues[filterIndex] ?? filter.value;
+    }
     return (
       <input
         className="flex-1 min-w-0 px-3 py-1.5 text-sm border rounded-xl bg-background text-primary placeholder-gray-400 focus:outline-none focus:border-[--color-brand-600]"
@@ -620,9 +623,10 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
             const column = visibleColumns.find(col => col.column_name === filter.column);
             const filterOperatorOptions = column ? (FIELD_TYPE_OPERATORS[column.uidt || 'text'] || FIELD_TYPE_OPERATORS.default) : OPERATORS;
             const currentLogic = filter.logic || (idx === 0 ? undefined : 'AND');
+            const uniqueKey = `${filter.column}-${filter.operator}-${filter.value}-${idx}`;
 
             return (
-              <div key={idx} className="flex items-center gap-2 mb-3">
+              <div key={uniqueKey} className="flex items-center gap-2 mb-3">
                 {/* Logic dropdown (Where/And/Or) */}
                 <div className="relative">
                   {idx === 0 ? (

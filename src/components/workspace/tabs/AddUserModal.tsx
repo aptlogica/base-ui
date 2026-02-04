@@ -130,7 +130,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
   // Check if current user is editing themselves
   const isEditingSelf = useMemo(() => {
-    return isEditMode && editUser && currentUser && editUser.id === currentUser.id;
+    return isEditMode && editUser?.id === currentUser?.id;
   }, [isEditMode, editUser, currentUser]);
 
   // Load user data when in edit mode

@@ -46,7 +46,7 @@ export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({
     if (!name) return 'U';
     const parts = name.trim().split(' ');
     if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+      return `${parts[0][0]}${parts.at(-1)?.[0]}`.toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
   };
