@@ -42,6 +42,13 @@ const Dropdown: React.FC<DropdownProps> = ({
       ? Array.isArray(value) && value.includes(optionValue)
       : value === optionValue;
 
+  const getDisplayValue = () => {
+    if (multiple) {
+      return Array.isArray(value) && value.length > 0 ? value.join(", ") : placeholder;
+    }
+    return (value as string) || placeholder;
+  };
+
   return (
     <div className="relative w-full mb-3">
       {/* Trigger box (same look as <select> tag) */}
@@ -54,11 +61,7 @@ const Dropdown: React.FC<DropdownProps> = ({
         onClick={() => setOpen(!open)}
       >
         <span>
-          {multiple
-            ? Array.isArray(value) && value.length > 0
-              ? value.join(", ")
-              : placeholder
-            : (value as string) || placeholder}
+          {getDisplayValue()}
         </span>
         {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </div>
