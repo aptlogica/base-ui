@@ -348,17 +348,19 @@ describe('MultiLineText Component', () => {
 
   describe('Edge Cases', () => {
     it('should handle undefined value', () => {
-      render(<MultiLineText value={undefined as any} onChange={mockOnChange} />);
+      render(<MultiLineText value={undefined} onChange={mockOnChange} />);
       const textarea = screen.getByRole('textbox');
 
       expect(textarea.value).toBe('');
     });
 
     it('should handle null value', () => {
-      render(<MultiLineText value={null as any} onChange={mockOnChange} />);
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      render(<MultiLineText value={(null as unknown) as string} onChange={mockOnChange} />);
       const textarea = screen.getByRole('textbox');
 
       expect(textarea.value).toBe('');
+      consoleErrorSpy.mockRestore();
     });
 
     it('should handle special characters', async () => {

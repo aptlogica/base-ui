@@ -106,6 +106,8 @@ describe('AccessLevelRoute', () => {
     });
 
     it('should not render protected content when access is denied', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       mockUseWorkspaceAccess.mockReturnValue({
         canAccessSettings: vi.fn().mockReturnValue(false),
         canCreateWorkspace: vi.fn(),
@@ -122,6 +124,8 @@ describe('AccessLevelRoute', () => {
       renderWithRouter('restricted-workspace', false);
 
       expect(screen.queryByText('Settings Page')).not.toBeInTheDocument();
+      consoleErrorSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
     });
 
     it.skip('should use Replace strategy for navigation to homepage', () => {

@@ -863,7 +863,6 @@ describe('HomePage', () => {
           'Navigation failed'
         );
       });
-
       consoleErrorSpy.mockRestore();
     });
   });

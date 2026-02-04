@@ -57,7 +57,7 @@ describe('JSONField Component', () => {
     it('should display empty object for null value', () => {
       render(
         <JSONField
-          value={null as any}
+          value={(null as unknown) as string}
           onChange={mockOnChange}
         />
       );
@@ -283,7 +283,7 @@ describe('JSONField Component', () => {
     it('should handle invalid JSON gracefully', () => {
       render(
         <JSONField
-          value={null as any}
+          value={(null as unknown) as string}
           onChange={mockOnChange}
         />
       );
@@ -390,7 +390,7 @@ describe('JSONField Component', () => {
     it('should handle null value', () => {
       render(
         <JSONField
-          value={null as any}
+          value={(null as unknown) as string}
           onChange={mockOnChange}
         />
       );
@@ -401,7 +401,7 @@ describe('JSONField Component', () => {
     it('should handle undefined value', () => {
       render(
         <JSONField
-          value={undefined as any}
+          value={undefined}
           onChange={mockOnChange}
         />
       );
@@ -748,7 +748,7 @@ describe('JSONField Component', () => {
       const defaultVal = { default: 'value' };
       render(
         <JSONField
-          value={null as any}
+          value={(null as unknown) as string}
           onChange={mockOnChange}
           config={{ defaultValue: defaultVal }}
         />
@@ -1024,7 +1024,7 @@ describe('JSONField Component', () => {
     it('should display Empty JSON when tree has null data', async () => {
       render(
         <JSONField
-          value={null as any}
+          value={(null as unknown) as string}
           onChange={mockOnChange}
           placeholder="Empty JSON"
         />

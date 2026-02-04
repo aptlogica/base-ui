@@ -468,7 +468,7 @@ describe('Time Component', () => {
   describe('Edge Cases', () => {
     it('should handle null value', () => {
       render(
-        <Time value={null as any} onChange={mockOnChange} />
+        <Time value={(null as unknown) as string} onChange={mockOnChange} />
       );
 
       const button = screen.getByRole('button');
@@ -477,7 +477,7 @@ describe('Time Component', () => {
 
     it('should handle undefined value', () => {
       render(
-        <Time value={undefined as any} onChange={mockOnChange} />
+        <Time value={undefined} onChange={mockOnChange} />
       );
 
       const button = screen.getByRole('button');
