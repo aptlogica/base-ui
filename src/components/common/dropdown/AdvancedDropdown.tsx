@@ -28,7 +28,6 @@ interface AdvancedDropdownProps<T = string | number> {
   readonly id?: string;
   readonly helpText?: string;
   readonly validate?: (value: T | T[] | undefined) => string | undefined;
-  readonly showValueOnRight?: boolean;
 }
 
 export function AdvancedDropdown<T extends string | number>({
@@ -49,7 +48,6 @@ export function AdvancedDropdown<T extends string | number>({
   id,
   helpText,
   validate,
-  showValueOnRight = false,
 }: AdvancedDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -155,7 +153,7 @@ export function AdvancedDropdown<T extends string | number>({
   }, [currentValues]);
 
   // Handle clear
-  const handleClear = useCallback((e: React.MouseEvent) => {
+  const handleClear = useCallback((e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     onChange(multiple ? [] as T[] : undefined as any);
     setSearchQuery('');
@@ -396,8 +394,8 @@ const DropdownTrigger = React.forwardRef<HTMLButtonElement, {
   selectedCount?: number;
   error?: string;
   onToggle: () => void;
-  onClear?: (e: React.MouseEvent) => void;
-  dropdownPosition?: 'below' | 'above';
+  onClear?: (e: React.MouseEvent | React.KeyboardEvent) => void;
+
 }>(({
   displayLabel,
   isOpen,
@@ -409,7 +407,6 @@ const DropdownTrigger = React.forwardRef<HTMLButtonElement, {
   error,
   onToggle,
   onClear,
-  dropdownPosition,
 }, ref) => {
 
   const baseClasses = `
@@ -541,10 +538,10 @@ function DropdownOptionItem<T>({
     transition-all duration-150 ease-in-out relative
   `;
 
+  const selectedClass = isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-[var(--color-text-primary)]';
   const stateClasses = `
     ${isFocused ? 'bg-[var(--color-bg-brand-primary)] border-l-4 border-l-gray-400' : ''}
-    ${isSelected && !multiple ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-[var(--color-text-primary)]'}
-    ${isSelected && multiple ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-[var(--color-text-primary)]'}
+    ${selectedClass}
     ${!isSelected && !isFocused ? 'hover:bg-[var(--color-bg-brand-primary)] hover:text-black' : ''}
     ${option.disabled ? 'opacity-50 cursor-not-allowed' : ''}
   `;
