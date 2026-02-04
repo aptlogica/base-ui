@@ -68,7 +68,7 @@ export function convertDateFormat(date: string, fromFormat: string, toFormat: st
   if (fromFormat === 'YYYY-MM-DD') {
     isoDate = date;
   } else if (fromFormat === 'YYYY/MM/DD') {
-    isoDate = date.replace(/\//g, '-');
+    isoDate = date.replaceAll('/', '-');
   } else if (fromFormat === 'DD-MM-YYYY') {
     const parts = date.split('-');
     if (parts.length === 3) {

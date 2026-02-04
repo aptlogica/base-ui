@@ -712,7 +712,7 @@ export const Table: React.FC<TableProps> = ({
                     <div
                       key={column.key}
                       role="columnheader"
-                      className={`relative flex-shrink-0 bg-sidebar-menu border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${typeof (column as any).isNew !== 'undefined' && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
+                      className={`relative flex-shrink-0 bg-sidebar-menu border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${(column as any).isNew !== undefined && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
                       style={{
                         width: `${columnWidths[index]}px`,
                         minWidth: '80px',

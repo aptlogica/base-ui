@@ -20,6 +20,8 @@ import { useBaseAccess } from '../../../hooks/useBaseAccess';
 import { useUpdateBase } from '../../../hooks/useApi';
 import type { TablesResponse } from '../../../types/api.types';
 
+type FieldIdValue = string | { value: string } | null;
+
 interface PinnedTables {
   [tableId: string]: boolean;
 }
@@ -506,9 +508,9 @@ const Sidebar: React.FC<SidebarProps> = ({
               name: string;
               description?: string;
               type: string;
-              fieldId?: string | { value: string } | null;
-              startDateFieldId?: string | { value: string } | null;
-              endDateFieldId?: string | { value: string } | null;
+              fieldId?: FieldIdValue;
+              startDateFieldId?: FieldIdValue;
+              endDateFieldId?: FieldIdValue;
             }) => {
               // Find base_id for the selected table
               const tables = (baseTables as TablesResponse | undefined)?.data || [];

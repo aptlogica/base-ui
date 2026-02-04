@@ -218,7 +218,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
   const getInitials = (name: string): string => {
     const parts = name.trim().split(' ');
     if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      return (parts[0][0] + parts.at(-1)![0]).toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
   };

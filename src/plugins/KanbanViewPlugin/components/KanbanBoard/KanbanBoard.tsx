@@ -484,16 +484,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
   }, [groupCol, tableId, actions?.insertRowData]);
 
-  // Create records Map for O(1) lookups
-  const recordsMap = useMemo(() => {
-    const map = new Map<string, any>();
-    tableData.records?.forEach((r: any) => {
-      map.set(String(r.id), r);
-    });
-    return map;
-  }, [tableData.records]);
-
-
   // PERFORMANCE: Memoize card order and filter/sort config separately
   const cardOrderConfig = useMemo(() => {
     const viewMeta = view?.meta || {};
