@@ -21,6 +21,7 @@ export { User } from './User';
 export { JSONField } from './JSONField';
 export { AuditCreatedBy } from './AuditCreatedBy';
 export { AuditLastModifiedBy } from './AuditLastModifiedBy';
+export { AuditUser } from './AuditUser';
 export { AuditCreatedTime } from './AuditCreatedTime';
 export { AuditLastModifiedTime } from './AuditLastModifiedTime';
 export { MultiLineText } from './MultiLineText';

@@ -3,8 +3,8 @@ import { ProfileSection } from './ProfileSection';
 import { SecuritySection } from './SecuritySection';
 
 interface FooterButtonContextType {
-  registerFooter: (buttons: React.ReactNode, sectionId?: string) => void;
-  clearFooter: () => void;
+  registerFooter: (buttons: React.ReactNode, sectionId: string) => void;
+  clearFooter: (sectionId: string) => void;
   currentSection: string;
 }
 
@@ -29,6 +29,7 @@ interface AccountSettingsProps {
 export const AccountSettings: React.FC<AccountSettingsProps> = () => {
   const [activeSection, setActiveSection] = useState('profile');
   const [footerButtons, setFooterButtons] = useState<React.ReactNode>(null);
+  const [footerSectionOwner, setFooterSectionOwner] = useState<string>('');
   const activeSectionRef = useRef(activeSection);
   const isMountedRef = useRef(true);
 
@@ -50,20 +51,22 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
   }, []);
 
   // Memoize registerFooter to prevent unnecessary re-renders
-  const registerFooter = useCallback((buttons: React.ReactNode, sectionId?: string) => {
-    // Only update if component is still mounted and section matches
-    // This prevents race conditions when switching tabs quickly
-    if (isMountedRef.current && (!sectionId || sectionId === activeSectionRef.current)) {
+  const registerFooter = useCallback((buttons: React.ReactNode, sectionId: string) => {
+    // Only update if component is still mounted and sectionId matches current active section
+    if (isMountedRef.current && sectionId === activeSectionRef.current) {
       setFooterButtons(buttons);
+      setFooterSectionOwner(sectionId);
     }
   }, []);
 
   // Memoize clearFooter
-  const clearFooter = useCallback(() => {
-    if (isMountedRef.current) {
+  const clearFooter = useCallback((sectionId: string) => {
+    // Only clear if this section is the owner of the current footer
+    if (isMountedRef.current && sectionId === footerSectionOwner) {
       setFooterButtons(null);
+      setFooterSectionOwner('');
     }
-  }, []);
+  }, [footerSectionOwner]);
 
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = React.useMemo(

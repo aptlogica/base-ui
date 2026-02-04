@@ -628,7 +628,7 @@ const HomePage: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <h3
-                        className="font-semibold text-base text-gray-900 leading-tight flex-1 min-w-0"
+                        className="font-semibold text-base text-gray-900 leading-tight truncate flex-1 min-w-0"
                       >
                         {base.title || base.name || 'Untitled Base'}
                       </h3>
