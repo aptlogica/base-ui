@@ -244,6 +244,7 @@ export const LongText: React.FC<LongTextProps> = ({
     richTextEditorRef.current.focus();
 
     // Execute the command
+    // @ts-ignore - execCommand is deprecated but still needed for rich text formatting
     const success = document.execCommand(command, false, value || undefined);
 
     if (success) {
@@ -266,7 +267,7 @@ export const LongText: React.FC<LongTextProps> = ({
   const normalizeUrl = (url: string): string => {
     if (!url) return '';
     let normalized = url.trim();
-    if (normalized && !normalized.match(/^https?:\/\//i)) {
+    if (normalized && !/^https?:\/\//i.exec(normalized)) {
       normalized = 'https://' + normalized;
     }
     return normalized;
