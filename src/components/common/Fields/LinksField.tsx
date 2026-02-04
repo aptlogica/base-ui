@@ -326,21 +326,17 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                         type: 'active'
                     });
                 }
-            } else {
+            } else if (onChange) {
                 // Revert optimistic update on failure
-                if (onChange) {
-                    onChange(value);
-                }
+                onChange(value);
             }
-        } else {
+        } else if (onChange) {
             // Update local state only (for form view)
             const newSelectedRecords = isAlreadySelected
                 ? selectedRecords.filter(r => r.id !== record.id)
                 : [...selectedRecords, record];
 
-            if (onChange) {
-                onChange(newSelectedRecords);
-            }
+            onChange(newSelectedRecords);
         }
     }, [disabled, selectedRecords, persistImmediately, persistRelation, onChange, toast, value, currentTableId, queryClient]);
 
@@ -369,18 +365,14 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                         type: 'active'
                     });
                 }
-            } else {
+            } else if (onChange) {
                 // Revert optimistic update on failure
-                if (onChange) {
-                    onChange(value);
-                }
+                onChange(value);
             }
-        } else {
+        } else if (onChange) {
             // Update local state only (for form view)
             const newSelectedRecords = selectedRecords.filter(r => r.id !== recordId);
-            if (onChange) {
-                onChange(newSelectedRecords);
-            }
+            onChange(newSelectedRecords);
         }
     }, [persistImmediately, persistRelation, selectedRecords, onChange, toast, value, currentTableId, queryClient]);
 
