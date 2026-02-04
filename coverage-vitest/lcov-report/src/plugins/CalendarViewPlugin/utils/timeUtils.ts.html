@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/19</span>
+                <span class='fraction'>19/19</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">95% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>19/20</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>2/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/19</span>
+                <span class='fraction'>19/19</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -91,59 +91,59 @@
 <a name='L26'></a><a href='#L26'>26</a>
 <a name='L27'></a><a href='#L27'>27</a>
 <a name='L28'></a><a href='#L28'>28</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">23x</span>
+<span class="cline-any cline-yes">20x</span>
+<span class="cline-any cline-yes">23x</span>
+<span class="cline-any cline-yes">17x</span>
+<span class="cline-any cline-yes">17x</span>
+<span class="cline-any cline-yes">23x</span>
+<span class="cline-any cline-yes">23x</span>
+<span class="cline-any cline-yes">23x</span>
+<span class="cline-any cline-yes">23x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">15x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// Converts a formatted time string like "10:45 AM" to short form "10:45a"
-<span class="cstat-no" title="statement not covered" >export function toShortTime(formatted: string | undefined | null): string {</span>
-<span class="cstat-no" title="statement not covered" >  if (!formatted) return "";</span>
-<span class="cstat-no" title="statement not covered" >  const parts = formatted.split(" ");</span>
-<span class="cstat-no" title="statement not covered" >  if (parts.length !== 2) return formatted; // already condensed or unexpected</span>
-<span class="cstat-no" title="statement not covered" >  let [t, ampm] = parts; // t =&gt; HH:MM</span>
-<span class="cstat-no" title="statement not covered" >  const [h, m] = t.split(":");</span>
-<span class="cstat-no" title="statement not covered" >  if (!h || !m || !ampm) return formatted;</span>
-<span class="cstat-no" title="statement not covered" >  const hh = h.startsWith("0") ? h.slice(1) || "0" : h;</span>
-<span class="cstat-no" title="statement not covered" >  return `${hh}:${m}${ampm[0].toLowerCase()}`;</span>
-<span class="cstat-no" title="statement not covered" >}</span>
+export function toShortTime(formatted: string | undefined | null): string {
+  if (!formatted) return "";
+  const parts = formatted.split(" ");
+  if (parts.length !== 2) return formatted; // already condensed or unexpected
+  let [t, ampm] = parts; // t =&gt; HH:MM
+  const [h, m] = t.split(":");
+  if (!h || !m || !ampm) return formatted;
+  const hh = h.startsWith("0") ? h.slice(1<span class="branch-0 cbranch-no" title="branch not covered" >) || "0" : h</span>;
+  return `${hh}:${m}${ampm[0].toLowerCase()}`;
+}
 &nbsp;
 export interface ShortTimeOptions {
   hideMinutesIfZero?: boolean;
 }
 &nbsp;
 // Optional variant that removes :00
-<span class="cstat-no" title="statement not covered" >export function toShortTimeCondensed(formatted: string | undefined | null, opts?: ShortTimeOptions): string {</span>
-<span class="cstat-no" title="statement not covered" >  if (!formatted) return "";</span>
-<span class="cstat-no" title="statement not covered" >  const base = toShortTime(formatted);</span>
-<span class="cstat-no" title="statement not covered" >  if (!opts?.hideMinutesIfZero) return base;</span>
+export function toShortTimeCondensed(formatted: string | undefined | null, opts?: ShortTimeOptions): string {
+  if (!formatted) return "";
+  const base = toShortTime(formatted);
+  if (!opts?.hideMinutesIfZero) return base;
   // base looks like h:mm[a|p]
-<span class="cstat-no" title="statement not covered" >  const timeRegex = /^(\d+):00([ap])$/i;</span>
-<span class="cstat-no" title="statement not covered" >  const match = timeRegex.exec(base);</span>
-<span class="cstat-no" title="statement not covered" >  if (match) return `${match[1]}${match[2]}`; // 3p</span>
-<span class="cstat-no" title="statement not covered" >  return base;</span>
-<span class="cstat-no" title="statement not covered" >}</span>
+  const timeRegex = /^(\d+):00([ap])$/i;
+  const match = timeRegex.exec(base);
+  if (match) return `${match[1]}${match[2]}`; // 3p
+  return base;
+}
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -151,7 +151,7 @@ export interface ShortTimeOptions {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-03T12:56:33.082Z
+                at 2026-02-04T08:46:54.589Z
             </div>
         <script src="../../../../prettify.js"></script>
         <script>

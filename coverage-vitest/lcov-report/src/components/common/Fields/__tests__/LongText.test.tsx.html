@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">99.61% </span>
+                <span class="strong">98.84% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>1294/1299</span>
+                <span class='fraction'>1284/1299</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">93.33% </span>
+                <span class="strong">90.9% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>140/150</span>
+                <span class='fraction'>140/154</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">99.61% </span>
+                <span class="strong">98.84% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>1294/1299</span>
+                <span class='fraction'>1284/1299</span>
             </div>
         
             
@@ -2849,7 +2849,17 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -2864,30 +2874,20 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -3752,7 +3752,7 @@ describe('LongText Component', () =&gt; {
   describe('Edge Cases', () =&gt; {
     it('should handle null value', () =&gt; {
       render(
-        &lt;LongText value={null as any} onChange={mockOnChange} /&gt;
+        &lt;LongText value={(null as unknown) as string} onChange={mockOnChange} /&gt;
       );
 &nbsp;
       const input = screen.getByDisplayValue('');
@@ -3761,7 +3761,7 @@ describe('LongText Component', () =&gt; {
 &nbsp;
     it('should handle undefined value', () =&gt; {
       render(
-        &lt;LongText value={undefined as any} onChange={mockOnChange} /&gt;
+        &lt;LongText value={undefined} onChange={mockOnChange} /&gt;
       );
 &nbsp;
       const input = screen.getByDisplayValue('');
@@ -4437,18 +4437,18 @@ describe('LongText Component', () =&gt; {
       await waitFor(() =&gt; {
         const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
         const link = editor.querySelector('a');
-        if (link) {
-          fireEvent.click(link);
-        }
+        if (link) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
+<span class="cstat-no" title="statement not covered" >          fireEvent.click(link);</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
       }, { timeout: 2000 });
 &nbsp;
       await waitFor(() =&gt; {
         const editButton = screen.queryByText('Edit');
-        if (editButton) {
-          fireEvent.click(editButton);
-          const urlInput = screen.queryByPlaceholderText('https://example.com') as HTMLInputElement;
-          expect(urlInput).toBeInTheDocument();
-        }
+        if (editButton) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
+<span class="cstat-no" title="statement not covered" >          fireEvent.click(editButton);</span>
+<span class="cstat-no" title="statement not covered" >          const urlInput = screen.queryByPlaceholderText('https://example.com') as HTMLInputElement;</span>
+<span class="cstat-no" title="statement not covered" >          expect(urlInput).toBeInTheDocument();</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
       }, { timeout: 2000 });
     });
 &nbsp;
@@ -4467,16 +4467,16 @@ describe('LongText Component', () =&gt; {
       await waitFor(() =&gt; {
         const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
         const link = editor.querySelector('a');
-        if (link) {
-          fireEvent.click(link);
-        }
+        if (link) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
+<span class="cstat-no" title="statement not covered" >          fireEvent.click(link);</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
       }, { timeout: 2000 });
 &nbsp;
       await waitFor(() =&gt; {
         const removeButton = screen.queryByText('Remove');
-        if (removeButton) {
-          fireEvent.click(removeButton);
-        }
+        if (removeButton) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
+<span class="cstat-no" title="statement not covered" >          fireEvent.click(removeButton);</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
       }, { timeout: 2000 });
     });
 &nbsp;
@@ -4837,7 +4837,7 @@ describe('LongText Component', () =&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-03T12:56:33.082Z
+                at 2026-02-04T08:46:54.589Z
             </div>
         <script src="../../../../../prettify.js"></script>
         <script>

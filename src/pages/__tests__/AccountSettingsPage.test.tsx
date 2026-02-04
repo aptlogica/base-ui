@@ -82,8 +82,8 @@ describe('AccountSettingsPage', () => {
 
   describe('Edge Cases', () => {
     it('should not call AccountSettings when route does not match', () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       // Arrange
       // When route path doesn't match (empty workspaceId), component won't render
       render(
@@ -96,14 +96,13 @@ describe('AccountSettingsPage', () => {
 
       // Act & Assert
       expect(mockAccountSettingsComponent).not.toHaveBeenCalled();
-
-      consoleWarnSpy.mockRestore();
       consoleErrorSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
     });
 
     it('should not render when route path does not match (missing workspaceId)', () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       // Arrange
       const { container } = render(
         <MemoryRouter initialEntries={['/workspace//settings']}>
@@ -116,9 +115,8 @@ describe('AccountSettingsPage', () => {
       // Act & Assert
       // When route doesn't match, nothing is rendered in the container
       expect(container.firstChild?.childNodes.length || 0).toBe(0);
-
-      consoleWarnSpy.mockRestore();
       consoleErrorSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
     });
 
     it('should handle workspaceId with only whitespace by rendering AccountSettings', () => {
