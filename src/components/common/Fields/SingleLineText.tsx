@@ -92,10 +92,12 @@ export const SingleLineText: React.FC<SingleLineTextProps> = ({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (readOnly || disabled) return;
-    if (e.key === 'Enter' || e.key === ' ') {
+    // Only handle key for the div itself, not when input is focused
+    if (e.key === 'Enter') {
       e.preventDefault();
       setIsEditing(true);
     }
+    // Don't handle space here - let it be typed normally
   };
 
   return (

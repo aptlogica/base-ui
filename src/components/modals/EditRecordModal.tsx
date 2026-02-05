@@ -298,7 +298,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
         className="absolute inset-0"
         onClick={onClose}
       />
-      <div className="bg-modal w-full relative !p-0 flex flex-col overflow-hidden" style={{ maxWidth: '50vw' }}
+      <div className="bg-modal w-full relative !p-0 flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
@@ -395,7 +395,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                 <div className="h-px bg-gray-200 flex-1" />
                 <button
                   type="button"
-                  className="px-4 py-2 rounded-full border text-sm text-gray-700 bg-white hover:bg-gray-50"
+                  className="px-4 py-2 rounded-full border text-sm text-primary bg-card hover:bg-gray-50"
                   onClick={() => setShowHidden(v => !v)}
                 >
                   {showHidden ? `Hide ${hiddenFields.length} hidden fields` : `Show ${hiddenFields.length} hidden fields`}

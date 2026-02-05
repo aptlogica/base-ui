@@ -321,9 +321,10 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     setEditValue(stack.name);
   };
 
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     const trimmed = editValue.trim();
     if (trimmed && trimmed !== stack.name) {
+      // Call the edit handler
       onStackEdit?.(stack.name, trimmed);
     }
     setIsEditing(false);
@@ -467,8 +468,11 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
               />
             ) : (
               <span
-                style={{ backgroundColor: stack.color }}
-                className="font-semibold text-black px-2 py-0.5 rounded text-xs border truncate max-w-32"
+                style={{ 
+                  backgroundColor: stack.color && stack.color.trim() ? stack.color : '#d1d5db',
+                  color: stack.name === 'Uncategorized' ? '#666' : '#000'
+                }}
+                className="font-semibold px-2 py-0.5 rounded-lg text-xs border truncate max-w-32"
                 title={stack.name}
               >
                 {stack.name}
