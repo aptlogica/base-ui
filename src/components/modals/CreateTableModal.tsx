@@ -47,7 +47,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
     }
   }, [name, existingTables]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!name.trim()) {

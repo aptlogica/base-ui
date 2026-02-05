@@ -23,10 +23,10 @@ const LogIn: React.FC = () => {
   const login = typeof auth?.login === 'function' ? auth.login : () => { };
 
   const validateEmail = (value: string) => {
-    return /^[^\s@]+@[^\s@.]+\.[^\s@.]+$/.test(value);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setEmailError(null);

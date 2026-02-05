@@ -146,7 +146,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   };
 
   // Submit workspace - extracted to reduce complexity
-  const submitWorkspace = async (e: React.FormEvent | undefined, title: string, desc: string) => {
+  const submitWorkspace = async (e:React.SyntheticEvent<HTMLFormElement> | undefined, title: string, desc: string) => {
     if (controlledSubmit) {
       await controlledSubmit(e);
     } else {

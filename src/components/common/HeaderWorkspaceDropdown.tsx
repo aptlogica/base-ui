@@ -381,7 +381,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
           description={newWorkspaceDescription}
           setDescription={setNewWorkspaceDescription}
           error={workspaceError}
-          onSubmit={async (e: React.FormEvent) => {
+          onSubmit={async (e:React.SyntheticEvent<HTMLFormElement>) => {
             e.preventDefault();
             await handleFormSubmit(e);
           }}

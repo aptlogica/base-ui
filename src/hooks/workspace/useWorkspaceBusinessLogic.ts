@@ -351,7 +351,7 @@ export const useWorkspaceBusinessLogic = () => {
   }, [restoreCompleted, workspaces, selectedWorkspaceId, setWorkspace, setSelectedWorkspace, authUser?.id, navigateAndPersist]);
 
   // Form submission handler
-  const handleFormSubmit = useCallback(async (e: React.FormEvent) => {
+  const handleFormSubmit = useCallback(async (e:React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!newWorkspaceName.trim()) {
       setWorkspaceError('Workspace name is required');

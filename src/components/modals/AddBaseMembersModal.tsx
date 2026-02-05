@@ -99,7 +99,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (selectedUserIds.length === 0) {
