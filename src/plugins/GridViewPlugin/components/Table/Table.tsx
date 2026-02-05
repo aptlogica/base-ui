@@ -58,7 +58,6 @@ interface TableProps {
   viewId?: string;
   onRefresh: () => void;
   viewConfig?: Record<string, any>;
-  enableVirtualization?: boolean;
   actions?: TableActions;
 }
 
@@ -728,7 +727,7 @@ export const Table: React.FC<TableProps> = ({
                     <div
                       key={column.key}
                       role="columnheader"
-                      className={`relative flex-shrink-0 bg-gray-50 border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${typeof (column as any).isNew !== 'undefined' && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
+                      className={`relative flex-shrink-0 bg-gray-50 border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${(column as any).isNew !== undefined && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
                       style={{
                         width: `${columnWidths[index]}px`,
                         minWidth: '80px',
@@ -1017,7 +1016,14 @@ export const Table: React.FC<TableProps> = ({
         table={tableData?.model}
         fields={tableData?.columns}
         initialValues={buildInitialValuesForEdit({ recordId: selectedRecordId, columns: tableData?.columns || [], rawRecords: tableData?.records || [] })}
-        onDelete={(id: string) => { try { handleDelete(id); } catch {} closeEditRecordModal(); }}
+        onDelete={async (id: string) => { 
+          try { 
+            await handleDelete(id); 
+          } catch {} 
+          finally { 
+            closeEditRecordModal(); 
+          } 
+        }}
         title="Edit record"
         submitLabel="Update record"
       />

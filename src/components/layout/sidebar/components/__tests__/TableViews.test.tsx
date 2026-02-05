@@ -103,6 +103,7 @@ describe('TableViews', () => {
     } as unknown as ReturnType<typeof useWorkspaceAccessMock>);
     useBaseAccessMock.mockReturnValue({
       canCreateView: vi.fn().mockReturnValue(true),
+      isBaseReadOnly: vi.fn().mockReturnValue(false),
     } as unknown as ReturnType<typeof useBaseAccessMock>);
   });
 
@@ -123,6 +124,7 @@ describe('TableViews', () => {
     it('should not render Create View button when cannot create view', () => {
       useBaseAccessMock.mockReturnValue({
         canCreateView: vi.fn().mockReturnValue(false),
+        isBaseReadOnly: vi.fn().mockReturnValue(false),
       } as unknown as ReturnType<typeof useBaseAccessMock>);
       render(<TableViews {...defaultProps} />);
       expect(screen.queryByTestId('create-view-button')).not.toBeInTheDocument();
@@ -132,6 +134,19 @@ describe('TableViews', () => {
       render(<TableViews {...defaultProps} />);
       expect(screen.getByText('Grid View')).toBeInTheDocument();
       expect(screen.getByText('Kanban View')).toBeInTheDocument();
+    });
+
+    it('should filter out form views when base is read-only', () => {
+      useBaseAccessMock.mockReturnValue({
+        canCreateView: vi.fn().mockReturnValue(true),
+        isBaseReadOnly: vi.fn().mockReturnValue(true),
+      } as unknown as ReturnType<typeof useBaseAccessMock>);
+      const viewsWithForm = [
+        ...mockViews,
+        { id: 'view-3', title: 'Form View', type: 'form' },
+      ];
+      render(<TableViews {...defaultProps} views={viewsWithForm} />);
+      expect(screen.queryByText('Form View')).not.toBeInTheDocument();
     });
 
     it('should render nothing when views is empty', () => {
@@ -166,6 +181,38 @@ describe('TableViews', () => {
       const gridViewButton = screen.getByRole('button', { name: /go to view grid view/i });
 
       await user.click(gridViewButton);
+
+      expect(mockNavigateToView).toHaveBeenCalledWith(
+        mockTable.workspace_id,
+        mockTable.base_id,
+        mockTable.id,
+        'view-1'
+      );
+    });
+
+    it('should call navigateToView on Enter key', async () => {
+      const user = userEvent.setup();
+      render(<TableViews {...defaultProps} />);
+      const gridViewButton = screen.getByRole('button', { name: /go to view grid view/i });
+
+      gridViewButton.focus();
+      await user.keyboard('{Enter}');
+
+      expect(mockNavigateToView).toHaveBeenCalledWith(
+        mockTable.workspace_id,
+        mockTable.base_id,
+        mockTable.id,
+        'view-1'
+      );
+    });
+
+    it('should call navigateToView on Space key', async () => {
+      const user = userEvent.setup();
+      render(<TableViews {...defaultProps} />);
+      const gridViewButton = screen.getByRole('button', { name: /go to view grid view/i });
+
+      gridViewButton.focus();
+      await user.keyboard(' ');
 
       expect(mockNavigateToView).toHaveBeenCalledWith(
         mockTable.workspace_id,
@@ -244,6 +291,46 @@ describe('TableViews', () => {
       const tableNoMeta = { ...mockTable, meta: undefined };
       render(<TableViews {...defaultProps} table={tableNoMeta} />);
       expect(screen.getByText('Grid View')).toBeInTheDocument();
+    });
+
+    it('should clear pinned views when views are empty', async () => {
+      const tableWithPinned = {
+        ...mockTable,
+        meta: { pinnedViews: { 'view-1': true } },
+      };
+      render(<TableViews {...defaultProps} table={tableWithPinned} views={[]} />);
+
+      await waitFor(() => {
+        expect(mockMutate).toHaveBeenCalledWith({
+          tableId: mockTable.id,
+          params: {
+            meta: {
+              ...tableWithPinned.meta,
+              pinnedViews: {},
+            },
+          },
+        });
+      });
+    });
+
+    it('should remove orphaned pinned view ids when views change', async () => {
+      const tableWithPinned = {
+        ...mockTable,
+        meta: { pinnedViews: { 'view-1': true, 'view-orphan': true } },
+      };
+      render(<TableViews {...defaultProps} table={tableWithPinned} />);
+
+      await waitFor(() => {
+        expect(mockMutate).toHaveBeenCalledWith({
+          tableId: mockTable.id,
+          params: {
+            meta: {
+              ...tableWithPinned.meta,
+              pinnedViews: { 'view-1': true },
+            },
+          },
+        });
+      });
     });
   });
 });

@@ -328,9 +328,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                 }
             } else {
                 // Revert optimistic update on failure
-                if (onChange) {
-                    onChange(value);
-                }
+                onChange?.(value);
             }
         } else {
             // Update local state only (for form view)
@@ -371,9 +369,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                 }
             } else {
                 // Revert optimistic update on failure
-                if (onChange) {
-                    onChange(value);
-                }
+                onChange?.(value);
             }
         } else {
             // Update local state only (for form view)
@@ -478,14 +474,17 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             >
                 <div className="flex items-center gap-2 w-full min-w-0">
                     <div className="flex items-center gap-1 flex-1 min-w-0 w-full overflow-hidden">
-                        {isTableLoading ? (
-                            <span className="text-sm text-gray-400 truncate block min-w-0">Loading...</span>
-                        ) : selectedRecords.length === 0 ? (
-                            <span className="text-sm text-gray-500 truncate block min-w-0">{placeholder}</span>
-                        ) : (
-                            <div className="flex items-center gap-1 flex-1 min-w-0 w-full overflow-hidden">
-                                {/* Show first record with proper truncation */}
-                                {selectedRecords.length === 1 ? (
+                        {(() => {
+                            if (isTableLoading) {
+                                return <span className="text-sm text-gray-400 truncate block min-w-0">Loading...</span>;
+                            }
+
+                            if (selectedRecords.length === 0) {
+                                return <span className="text-sm text-gray-500 truncate block min-w-0">{placeholder}</span>;
+                            }
+
+                            if (selectedRecords.length === 1) {
+                                return (
                                     <div className="flex items-center gap-1 px-2 py-1 text-primary bg-blue-100 text-xs rounded-full border flex-shrink min-w-fit overflow-hidden" style={{ maxWidth: 'calc(100% - 1.5rem)' }}>
                                         <span
                                             className="truncate block min-w-0 flex-1 text-blue-500"
@@ -504,68 +503,70 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                             <X className="w-3 h-3" />
                                         </button>
                                     </div>
-                                ) : (
-                                    <>
-                                        {/* Show first record */}
-                                        <div className="flex items-center gap-1 px-2 py-1 text-primary bg-blue-100 text-xs rounded-full border flex-shrink-0 min-w-fit max-w-fit overflow-hidden">
-                                            <span
-                                                className="truncate block min-w-0 flex-1 text-blue-500"
-                                                title={getRecordDisplayText(selectedRecords[0])}
-                                            >
-                                                {getRecordDisplayText(selectedRecords[0])}
+                                );
+                            }
+
+                            return (
+                                <>
+                                    {/* Show first record */}
+                                    <div className="flex items-center gap-1 px-2 py-1 text-primary bg-blue-100 text-xs rounded-full border flex-shrink-0 min-w-fit max-w-fit overflow-hidden">
+                                        <span
+                                            className="truncate block min-w-0 flex-1 text-blue-500"
+                                            title={getRecordDisplayText(selectedRecords[0])}
+                                        >
+                                            {getRecordDisplayText(selectedRecords[0])}
+                                        </span>
+                                        <button
+                                            type='button'
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleRemoveRecord(selectedRecords[0].id);
+                                            }}
+                                            className="hover:bg-blue-200 rounded-full p-0.5 flex-shrink-0"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                    {/* Show second record */}
+                                    <div className="flex items-center gap-1 px-2 py-1 text-primary bg-blue-100 text-xs rounded-full border flex-shrink-0 min-w-0 max-w-[40%] overflow-hidden">
+                                        <span
+                                            className="truncate block min-w-0 flex-1 text-blue-500"
+                                            title={getRecordDisplayText(selectedRecords[1])}
+                                        >
+                                            {getRecordDisplayText(selectedRecords[1])}
+                                        </span>
+                                        <button
+                                            type='button'
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleRemoveRecord(selectedRecords[1].id);
+                                            }}
+                                            className="hover:bg-blue-200 rounded-full p-0.5 flex-shrink-0"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                    {/* Show count for remaining records if more than 2 */}
+                                    {selectedRecords.length > 2 && (
+                                        <div
+                                            className="flex items-center px-2 py-1 bg-blue-500 text-[var(--color-text-primary)] text-xs rounded-full border border-[var(--color-border-brand)] flex-shrink-0 cursor-pointer hover:opacity-80"
+                                            title={selectedRecords.slice(2).map(r => getRecordDisplayText(r)).join(', ')}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                // Open dropdown to show remaining items
+                                                if (!isOpen) {
+                                                    setIsOpen(true);
+                                                }
+                                            }}
+                                        >
+                                            <span className="font-medium whitespace-nowrap">
+                                                +{selectedRecords.length - 2}
                                             </span>
-                                            <button
-                                                type='button'
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleRemoveRecord(selectedRecords[0].id);
-                                                }}
-                                                className="hover:bg-blue-200 rounded-full p-0.5 flex-shrink-0"
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </button>
                                         </div>
-                                        {/* Show second record */}
-                                        <div className="flex items-center gap-1 px-2 py-1 text-primary bg-blue-100 text-xs rounded-full border flex-shrink-0 min-w-0 max-w-[40%] overflow-hidden">
-                                            <span
-                                                className="truncate block min-w-0 flex-1 text-blue-500"
-                                                title={getRecordDisplayText(selectedRecords[1])}
-                                            >
-                                                {getRecordDisplayText(selectedRecords[1])}
-                                            </span>
-                                            <button
-                                                type='button'
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleRemoveRecord(selectedRecords[1].id);
-                                                }}
-                                                className="hover:bg-blue-200 rounded-full p-0.5 flex-shrink-0"
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                        {/* Show count for remaining records if more than 2 */}
-                                        {selectedRecords.length > 2 && (
-                                            <div
-                                                className="flex items-center px-2 py-1 bg-blue-500 text-[var(--color-text-primary)] text-xs rounded-full border border-[var(--color-border-brand)] flex-shrink-0 cursor-pointer hover:opacity-80"
-                                                title={selectedRecords.slice(2).map(r => getRecordDisplayText(r)).join(', ')}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    // Open dropdown to show remaining items
-                                                    if (!isOpen) {
-                                                        setIsOpen(true);
-                                                    }
-                                                }}
-                                            >
-                                                <span className="font-medium whitespace-nowrap">
-                                                    +{selectedRecords.length - 2}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                        )}
+                                    )}
+                                </>
+                            );
+                        })()}
                     </div>
                     <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 </div>
@@ -648,16 +649,24 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                         aria-label="Available records"
                         className="flex-1 overflow-y-auto min-h-0"
                     >
-                        {isTableLoading ? (
-                            <div className="p-4 text-center text-gray-500" role="status" aria-live="polite">
-                                Loading records...
-                            </div>
-                        ) : totalItems === 0 ? (
-                            <div className="p-4 text-center text-gray-500" role="status" aria-live="polite">
-                                {debouncedSearchTerm ? 'No records found' : 'No records available'}
-                            </div>
-                        ) : (
-                            paginatedRecords.map((record, index) => {
+                        {(() => {
+                            if (isTableLoading) {
+                                return (
+                                    <div className="p-4 text-center text-gray-500" role="status" aria-live="polite">
+                                        Loading records...
+                                    </div>
+                                );
+                            }
+
+                            if (totalItems === 0) {
+                                return (
+                                    <div className="p-4 text-center text-gray-500" role="status" aria-live="polite">
+                                        {debouncedSearchTerm ? 'No records found' : 'No records available'}
+                                    </div>
+                                );
+                            }
+
+                            return paginatedRecords.map((record, index) => {
                                 const isSelected = selectedRecords.some(r => r.id === record.id);
                                 const isFocused = index === focusedRecordIndex;
                                 const isRecordLoading = loadingRecordId === record.id;
@@ -729,8 +738,8 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                         </div>
                                     </div>
                                 );
-                            })
-                        )}
+                            });
+                        })()}
 
                         {/* Loading more indicator */}
                         {isLoadingMore && (
