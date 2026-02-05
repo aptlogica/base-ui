@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">93.1% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/29</span>
+                <span class='fraction'>27/29</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>11/11</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">88.88% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>8/9</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">93.1% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/29</span>
+                <span class='fraction'>27/29</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -104,82 +104,82 @@
 <a name='L39'></a><a href='#L39'>39</a>
 <a name='L40'></a><a href='#L40'>40</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">28x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">28x</span>
+<span class="cline-any cline-yes">28x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-yes">15x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-yes">13x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">15x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-yes">13x</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Plugin } from './types';
 &nbsp;
-<span class="cstat-no" title="statement not covered" >class PluginRegistry {</span>
-<span class="cstat-no" title="statement not covered" >  private static instance: PluginRegistry;</span>
-<span class="cstat-no" title="statement not covered" >  private readonly plugins: Map&lt;string, Plugin&gt; = new Map();</span>
+class PluginRegistry {
+  private static instance: PluginRegistry;
+  private readonly plugins: Map&lt;string, Plugin&gt; = new Map();
 &nbsp;
-<span class="cstat-no" title="statement not covered" >  private constructor() { }</span>
+  private constructor() { }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >  static getInstance(): PluginRegistry {</span>
-<span class="cstat-no" title="statement not covered" >    if (!PluginRegistry.instance) {</span>
-<span class="cstat-no" title="statement not covered" >      PluginRegistry.instance = new PluginRegistry();</span>
-<span class="cstat-no" title="statement not covered" >    }</span>
-<span class="cstat-no" title="statement not covered" >    return PluginRegistry.instance;</span>
-<span class="cstat-no" title="statement not covered" >  }</span>
+  static getInstance(): PluginRegistry {
+    if (!PluginRegistry.instance) {
+      PluginRegistry.instance = new PluginRegistry();
+    }
+    return PluginRegistry.instance;
+  }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >  registerPlugin(plugin: Plugin): void {</span>
-<span class="cstat-no" title="statement not covered" >    if (this.plugins.has(plugin.manifest.id)) {</span>
-<span class="cstat-no" title="statement not covered" >      return;</span>
-<span class="cstat-no" title="statement not covered" >    }</span>
+  registerPlugin(plugin: Plugin): void {
+    if (this.plugins.has(plugin.manifest.id)) {
+      return;
+    }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    this.plugins.set(plugin.manifest.id, plugin);</span>
-<span class="cstat-no" title="statement not covered" >  }</span>
+    this.plugins.set(plugin.manifest.id, plugin);
+  }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >  getRegisteredPlugins(): Plugin[] {</span>
-<span class="cstat-no" title="statement not covered" >    return Array.from(this.plugins.values());</span>
-<span class="cstat-no" title="statement not covered" >  }</span>
+  getRegisteredPlugins(): Plugin[] {
+    return Array.from(this.plugins.values());
+  }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >  getPlugin(id: string): Plugin | undefined {</span>
+<span class="fstat-no" title="function not covered" >  getPlugin(id: string): Plugin | undefined {</span>
 <span class="cstat-no" title="statement not covered" >    return this.plugins.get(id);</span>
 <span class="cstat-no" title="statement not covered" >  }</span>
-<span class="cstat-no" title="statement not covered" >}</span>
+}
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export const registerPlugin = (plugin: Plugin): void =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >  PluginRegistry.getInstance().registerPlugin(plugin);</span>
-<span class="cstat-no" title="statement not covered" >};</span>
+export const registerPlugin = (plugin: Plugin): void =&gt; {
+  PluginRegistry.getInstance().registerPlugin(plugin);
+};
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export const getRegisteredPlugins = (): Plugin[] =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >  return PluginRegistry.getInstance().getRegisteredPlugins();</span>
-<span class="cstat-no" title="statement not covered" >};</span>
+export const getRegisteredPlugins = (): Plugin[] =&gt; {
+  return PluginRegistry.getInstance().getRegisteredPlugins();
+};
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -187,7 +187,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-04T06:40:30.171Z
+                at 2026-02-04T08:46:54.589Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

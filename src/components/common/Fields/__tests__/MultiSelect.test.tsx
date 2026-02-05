@@ -512,6 +512,7 @@ describe('MultiSelect Component', () => {
 
     it('should handle duplicate selections in value', () => {
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       render(
         <MultiSelect
           value={['Option 1', 'Option 1', 'Option 2']}
@@ -522,6 +523,7 @@ describe('MultiSelect Component', () => {
       const elements = screen.getAllByText('Option 1');
       expect(elements.length).toBeGreaterThanOrEqual(1);
       consoleWarnSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
     });
 
     it('should handle selections not in options list', () => {

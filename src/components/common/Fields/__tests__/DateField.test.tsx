@@ -586,12 +586,12 @@ describe('DateField Component', () => {
 
   describe('Edge Cases', () => {
     it('should handle null value', () => {
-      render(<DateField value={null as any} onChange={mockOnChange} />);
+      render(<DateField value={(null as unknown) as string} onChange={mockOnChange} />);
       expect(getTriggerButton()).toBeInTheDocument();
     });
 
     it('should handle undefined value', () => {
-      render(<DateField value={undefined as any} onChange={mockOnChange} />);
+      render(<DateField value={undefined} onChange={mockOnChange} />);
       expect(getTriggerButton()).toBeInTheDocument();
     });
 

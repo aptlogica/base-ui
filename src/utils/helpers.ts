@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 
 // Debounce utility for delaying function execution
 export function useDebounce<T extends (...args: any[]) => any>(
@@ -55,6 +55,16 @@ export function useClickHandler(
       }, delay);
     }
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (clickTimeout.current) {
+        clearTimeout(clickTimeout.current);
+        clickTimeout.current = null;
+      }
+    };
+  }, []);
 
   return handleClick;
 }
