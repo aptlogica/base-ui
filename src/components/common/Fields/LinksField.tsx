@@ -476,19 +476,19 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                 aria-haspopup="listbox"
                 className={`field-component ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${isBorder ? 'field-component-border' : ''}`}
             >
-                <div className="flex items-center gap-2 min-w-0">
-                    <div className="flex items-center gap-1 flex-1 min-w-0 overflow-hidden">
+                <div className="flex items-center gap-2 w-full min-w-0">
+                    <div className="flex items-center gap-1 flex-1 min-w-0 w-full overflow-hidden">
                         {isTableLoading ? (
                             <span className="text-sm text-gray-400 truncate block min-w-0">Loading...</span>
                         ) : selectedRecords.length === 0 ? (
                             <span className="text-sm text-gray-500 truncate block min-w-0">{placeholder}</span>
                         ) : (
-                            <div className="flex items-center gap-1 flex-1 min-w-0 overflow-hidden">
+                            <div className="flex items-center gap-1 flex-1 min-w-0 w-full overflow-hidden">
                                 {/* Show first record with proper truncation */}
                                 {selectedRecords.length === 1 ? (
-                                    <div className="flex items-center gap-1 px-2 py-1 bg-[var(--color-bg-brand-primary)] text-[black text-xs rounded-full border flex-shrink min-w-fit overflow-hidden" style={{ maxWidth: 'calc(100% - 1.5rem)' }}>
+                                    <div className="flex items-center gap-1 px-2 py-1 text-primary bg-blue-100 text-xs rounded-full border flex-shrink min-w-fit overflow-hidden" style={{ maxWidth: 'calc(100% - 1.5rem)' }}>
                                         <span
-                                            className="truncate block min-w-0 flex-1"
+                                            className="truncate block min-w-0 flex-1 text-blue-500"
                                             title={getRecordDisplayText(selectedRecords[0])}
                                         >
                                             {getRecordDisplayText(selectedRecords[0])}
@@ -507,9 +507,9 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                 ) : (
                                     <>
                                         {/* Show first record */}
-                                        <div className="flex items-center gap-1 px-2 py-1 bg-[var(--color-bg-brand-primary)] text-black text-xs rounded-full border flex-shrink-0 min-w-fit max-w-fit overflow-hidden">
+                                        <div className="flex items-center gap-1 px-2 py-1 text-primary bg-blue-100 text-xs rounded-full border flex-shrink-0 min-w-fit max-w-fit overflow-hidden">
                                             <span
-                                                className="truncate block min-w-0 flex-1"
+                                                className="truncate block min-w-0 flex-1 text-blue-500"
                                                 title={getRecordDisplayText(selectedRecords[0])}
                                             >
                                                 {getRecordDisplayText(selectedRecords[0])}
@@ -526,9 +526,9 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                             </button>
                                         </div>
                                         {/* Show second record */}
-                                        <div className="flex items-center gap-1 px-2 py-1 bg-[var(--color-bg-brand-primary)] text-black text-xs rounded-full border flex-shrink-0 min-w-0 max-w-[35%] overflow-hidden">
+                                        <div className="flex items-center gap-1 px-2 py-1 text-primary bg-blue-100 text-xs rounded-full border flex-shrink-0 min-w-0 max-w-[40%] overflow-hidden">
                                             <span
-                                                className="truncate block min-w-0 flex-1"
+                                                className="truncate block min-w-0 flex-1 text-blue-500"
                                                 title={getRecordDisplayText(selectedRecords[1])}
                                             >
                                                 {getRecordDisplayText(selectedRecords[1])}
@@ -547,7 +547,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                         {/* Show count for remaining records if more than 2 */}
                                         {selectedRecords.length > 2 && (
                                             <div
-                                                className="flex items-center px-2 py-1 bg-[var(--color-bg-brand-primary)] text-black text-xs rounded-full border border-[var(--color-border-brand)] flex-shrink-0 cursor-pointer hover:opacity-80"
+                                                className="flex items-center px-2 py-1 bg-blue-500 text-[var(--color-text-primary)] text-xs rounded-full border border-[var(--color-border-brand)] flex-shrink-0 cursor-pointer hover:opacity-80"
                                                 title={selectedRecords.slice(2).map(r => getRecordDisplayText(r)).join(', ')}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -594,7 +594,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                 type='button'
                                 onClick={() => setIsOpen(false)}
                                 aria-label="Close dropdown"
-                                className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200"
+                                className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-blue-100"
                             >
                                 <X className="w-4 h-4" />
                             </button>
@@ -668,7 +668,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                         role="option"
                                         aria-selected={isSelected}
                                         tabIndex={-1}
-                                        className={`p-4 border-b hover:bg-gray-50 cursor-pointer bg-card transition-colors ${isSelected ? 'bg-blue-50 border-l-4 border-l-green-500' : ''
+                                        className={`p-4 border-b hover:bg-gray-50 cursor-pointer bg-card transition-colors ${isSelected ? 'bg-blue-500' : ''
                                             } ${isFocused ? 'bg-[var(--color-bg-brand-secondary)] text-black' : ''
                                             }`}
                                         onClick={() => {
@@ -677,7 +677,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                         }}
                                         onMouseEnter={() => setFocusedRecordIndex(index)}
                                     >
-                                        <div className="flex items-start justify-between">
+                                        <div className="flex items-center justify-between">
                                             <div className="flex-1 min-w-0">
                                                 {/* Mini-form display with better layout */}
                                                 <div className="space-y-2">
@@ -686,16 +686,13 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                         <h4 className="font-medium text-gray-900 truncate">
                                                             {record.title || `Record ${record.id}`}
                                                         </h4>
-                                                        {isSelected && (
-                                                            <div className="flex-shrink-0 w-2 h-2 bg-[var(--color-bg-brand-primary)] text-[var(--color-text-primary)] rounded-full"></div>
-                                                        )}
                                                     </div>
 
                                                     {/* Status indicator */}
                                                     {isSelected && (
                                                         <div className="flex items-center space-x-1 mt-2">
-                                                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                                            <span className="text-xs text-green-700 font-medium">Linked</span>
+                                                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                                            <span className="text-xs text-blue-500 font-medium">Linked</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -718,7 +715,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                         aria-label={isSelected ? `Unlink ${getRecordDisplayText(record)}` : `Link ${getRecordDisplayText(record)}`}
                                                         className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isSelected
                                                             ? 'bg-red-500 hover:bg-red-600 shadow-sm'
-                                                            : 'bg-green-500 hover:bg-green-600 shadow-sm'
+                                                            : 'bg-blue-500 hover:bg-blue-600 shadow-sm'
                                                             }`}
                                                     >
                                                         {isSelected ? (

@@ -8,6 +8,7 @@ import { GridRecord as TableData, GridColumn as ColumnConfig } from '../../types
 import { FilterPopover } from '../../../../components/shared/table/FilterPopover';
 import { FieldsPopover } from '../../../../components/shared/table/FieldsPopover';
 import { ContextMenu } from './components/ContextMenu';
+import { ColumnContextMenu } from './components/ColumnContextMenu';
 import { VirtualizedTableBody } from './components/VirtualizedTableBody';
 import { Search } from '../../../../components/shared/table/Search';
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
@@ -64,7 +65,6 @@ export const Table: React.FC<TableProps> = ({
   viewId,
   onRefresh,
   viewConfig,
-  enableVirtualization, // Separate prop for virtualization control
   actions,
 }) => {
   const toast = useToast();
@@ -272,7 +272,6 @@ export const Table: React.FC<TableProps> = ({
     handleConfirmUpdateField,
     handleDeleteColumn,
     handleConfirmDeleteColumn,
-    handleDuplicateColumn,
     handleColumnDragStart: handleColumnDragStartFromHook,
     handleColumnDragEnter,
     handleColumnDragEnd: handleColumnDragEndFromHook,
@@ -756,16 +755,10 @@ export const Table: React.FC<TableProps> = ({
                         {/* Column dropdown - hide for readonly users */}
                         {!column.isSystem && !isBaseReadOnly() && (canUpdateColumn() || canDeleteColumn()) && (
                           <ColumnDropdown
-                            column={{
-                              id: column.id,
-                              title: column.title,
-                              isSystem: column.isSystem
-                            }}
                             onEdit={() => {
                               handleEditColumn(column, index, { target: document.createElement('div') });
                             }}
                             onDelete={() => handleDeleteColumn(column.id!)}
-                            onDuplicate={() => handleDuplicateColumn(column)}
                           />
                         )}
                       </div>
@@ -924,25 +917,21 @@ export const Table: React.FC<TableProps> = ({
             style={{ position: 'fixed', inset: 0, zIndex: 999 }}
             onClick={handleCloseColMenu}
           />
-          <div
-            style={{ position: 'fixed', left: colMenu.x, top: colMenu.y, zIndex: 1000 }}
-            className="bg-background border p-1 space-y-1 rounded-xl shadow-lg w-48"
-          >
-            {canUpdateColumn() && (
-              <button
-                className="w-full text-left px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
-                onClick={(e) => {
-                  handleEditColumn(visibleColumns[colMenu.colIndex!], colMenu.colIndex!, { target: e.currentTarget });
-                  handleCloseColMenu();
-                }}
-              >
-                Edit column
-              </button>
-            )}
-            {canDeleteColumn() && (
-              <button className="w-full text-left px-4 py-2 text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors" onClick={() => { handleDeleteColumn(visibleColumns[colMenu.colIndex!].id!); handleCloseColMenu(); }}>Delete column</button>
-            )}
-          </div>
+          <ColumnContextMenu
+            x={colMenu.x}
+            y={colMenu.y}
+            onClose={handleCloseColMenu}
+            onEdit={() => {
+              handleEditColumn(visibleColumns[colMenu.colIndex!], colMenu.colIndex!, { target: null });
+              handleCloseColMenu();
+            }}
+            onDelete={() => {
+              handleDeleteColumn(visibleColumns[colMenu.colIndex!].id!);
+              handleCloseColMenu();
+            }}
+            canUpdate={canUpdateColumn()}
+            canDelete={canDeleteColumn()}
+          />
         </>
       )}
 
