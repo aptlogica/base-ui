@@ -699,9 +699,9 @@ export const Table: React.FC<TableProps> = ({
         >
           <div className="bg-background w-full">
             {/* Sticky Table Header */}
-            <div ref={headerRef} className="sticky top-0 z-20 bg-sidebar-menu w-full" onClick={() => setActiveCell(null)}>
+            <div ref={headerRef} className="sticky top-0 z-20 w-full" onClick={() => setActiveCell(null)}>
               <div
-                className="grid"
+                className="grid bg-gray-50"
                 style={{
                   gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`,
                   minWidth: '100vw',
@@ -710,7 +710,7 @@ export const Table: React.FC<TableProps> = ({
               >
                 {/* Row selector header */}
                 <div
-                  className="group flex-shrink-0 bg-sidebar-menu border-r border-b border-border/30 flex items-center justify-center"
+                  className="group flex-shrink-0 bg-gray-50 border-r border-b border-border/30 flex items-center justify-center"
                   style={{ position: 'sticky', left: 0, zIndex: 3, height: '35px', boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)' }}
                 >
                   <input
@@ -728,7 +728,7 @@ export const Table: React.FC<TableProps> = ({
                     <div
                       key={column.key}
                       role="columnheader"
-                      className={`relative flex-shrink-0 bg-sidebar-menu border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${(column as any).isNew !== undefined && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
+                      className={`relative flex-shrink-0 bg-gray-50 border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${typeof (column as any).isNew !== 'undefined' && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
                       style={{
                         width: `${columnWidths[index]}px`,
                         minWidth: '80px',
@@ -785,7 +785,7 @@ export const Table: React.FC<TableProps> = ({
 
                 {/* Add column button - only show if user can create columns and not read-only */}
                 {canCreateColumn() && !isBaseReadOnly() && (
-                  <div className="flex-shrink-0 bg-[var(--color-hover-bg)] flex items-center justify-center h-[35px] border-r border-b relative">
+                  <div className="flex-shrink-0 bg-gray-100 hover:bg-gray-200  flex items-center justify-center h-[35px] border-r border-b relative">
                     <button
                       ref={addColumnButtonRef}
                       className="p-1 rounded hover:bg-muted/70 transition-colors duration-200"
@@ -853,7 +853,7 @@ export const Table: React.FC<TableProps> = ({
               {/* FRONTEND PAGINATION: Add row button with optional loading indicator */}
               {!isBaseReadOnly() && canCreateRecord() && (
                 <div className="relative w-full" style={{ height: '40px' }}>
-                  <div className="flex-shrink-0 w-[48px] h-10 border-r border-b border-border/30 flex items-center justify-center bg-[var(--color-hover-bg)]" style={{ height: '40px', position: 'sticky', left: 0, zIndex: 2, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)' }}>
+                  <div className="flex-shrink-0 w-[48px] h-10 border-r border-b border-border/30 flex items-center justify-center bg-gray-100 hover:bg-gray-200" style={{ height: '40px', position: 'sticky', left: 0, zIndex: 2, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)' }}>
                     <button className="p-1 rounded hover:bg-muted/50 transition-colors" title="Add row" onClick={() => { setActiveCell(null); addNewRow(); }}>
                       <Plus className="w-5 h-5 text-muted-foreground" />
                     </button>
