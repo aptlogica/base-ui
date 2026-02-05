@@ -71,7 +71,7 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
       // Use requestAnimationFrame to ensure DOM is ready
       requestAnimationFrame(() => {
         if (!triggerRef.current) return;
-        
+
         const rect = triggerRef.current.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
@@ -80,21 +80,21 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
         const estimatedItemHeight = 80;
         const initialItems = Math.min(paginatedEvents.length, 30);
         const estimatedHeight = Math.min(initialItems * estimatedItemHeight + 120, 400); // Header + padding + load more button
-        
+
         // Try to position below the trigger, aligned to its right edge (since "+N" is on the right)
         let top = rect.bottom + 8;
         let left = rect.right - dropdownWidth; // Align to right edge of trigger
-        
+
         // If dropdown would go off left edge, align to trigger's left edge instead
         if (left < 10) {
           left = rect.left;
         }
-        
+
         // If dropdown would go off right edge, adjust
         if (left + dropdownWidth > viewportWidth - 10) {
           left = viewportWidth - dropdownWidth - 10;
         }
-        
+
         // If there's not enough space below, show above
         if (top + estimatedHeight > viewportHeight - 10) {
           top = rect.top - estimatedHeight - 8;
@@ -103,11 +103,11 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
             top = 10;
           }
         }
-        
+
         // Final bounds check
         const finalTop = Math.max(10, Math.min(top, viewportHeight - estimatedHeight - 10));
         const finalLeft = Math.max(10, Math.min(left, viewportWidth - dropdownWidth - 10));
-        
+
         setPosition({ top: finalTop, left: finalLeft });
       });
     } else {
@@ -149,10 +149,17 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();   // prevent page scroll on Space
+            e.stopPropagation();
+            setIsOpen(!isOpen);
+          }
+        }}
       >
         {children}
       </div>
-      
+
       {isOpen && position && createPortal(
         <div
           ref={dropdownRef}
@@ -173,7 +180,7 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
               )}
             </div>
           </div>
-          <div 
+          <div
             ref={scrollContainerRef}
             className="flex-1 overflow-y-auto p-3"
           >
@@ -188,7 +195,7 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
                 />
               ))}
             </div>
-            
+
             {/* Load More Button */}
             {hasMore && (
               <div className="flex justify-center py-3 mt-2">

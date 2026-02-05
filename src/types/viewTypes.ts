@@ -30,11 +30,6 @@ export enum ViewType {
   GanttChart = 'ganttChart',
 }
 
-// Helper function to get view type info
-export const getViewTypeInfo = (type: string) => {
-  return VIEW_TYPES.find(vt => vt.type === type) || VIEW_TYPES[0];
-};
-
 // Helper function to get view icon info
 export const getViewIconInfo = (type: string) => {
   return VIEW_ICONS[type as keyof typeof VIEW_ICONS] || VIEW_ICONS.grid;

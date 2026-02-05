@@ -173,7 +173,7 @@ describe('Email Component', () => {
 
   describe('Edge cases', () => {
     it('should handle undefined value', () => {
-      render(<Email value={undefined as any} onChange={mockOnChange} />);
+      render(<Email value={undefined} onChange={mockOnChange} />);
       expect(
         screen.getByText((_, el) => el?.classList.contains('field-component') ?? false)
       ).toBeInTheDocument();

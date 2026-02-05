@@ -283,7 +283,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
 }) => {
   // Always use pretty print (no longer configurable)
   const prettyPrint = true;
-  const { defaultValue = null } = config;
+  const { defaultValue = null, hideMaximizeButton = false } = config;
 
   const [localValue, setLocalValue] = useState('');
   const [modalValue, setModalValue] = useState('');
@@ -335,7 +335,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
     const jsonString = formatJsonString(displayValue, prettyPrint);
     setModalValue(jsonString);
     setError(null);
-    setViewMode(readOnly ? 'tree' : 'tree'); // Always start with tree view
+    setViewMode('tree'); // Always start with tree view
   }, [isModalOpen, value, defaultValue, prettyPrint, parseJsonValue, readOnly]);
 
   const handleModalChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -406,6 +406,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
         onClick={() => !disabled && setIsModalOpen(true)}
         onKeyDown={e => {
           if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
+            e.preventDefault();
             setIsModalOpen(true);
           }
         }}
@@ -417,11 +418,13 @@ export const JSONField: React.FC<JSONFieldProps> = ({
         <span className="truncate overflow-hidden whitespace-nowrap block flex-1 text-gray-800" title={localValue || placeholder}>
           {getPreview() || <span className="text-sm text-gray-400">{placeholder}</span>}
         </span>
-        <span
-          className="absolute right-2 text-gray-400 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg border shadow-md bg-card hover:bg-gray-200 transition-all z-0 pointer-events-none"
-        >
-          <Maximize2 className="w-4 h-4" />
-        </span>
+        {!hideMaximizeButton && (
+          <span
+            className="absolute right-2 text-gray-400 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg border shadow-md bg-card hover:bg-gray-200 transition-all z-0 pointer-events-none"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </span>
+        )}
       </button>
       {/* Modal for editing JSON */}
       {isModalOpen && createPortal(
@@ -431,13 +434,8 @@ export const JSONField: React.FC<JSONFieldProps> = ({
             type="button"
             className="absolute inset-0 backdrop-blur-sm bg-opacity-40"
             aria-label="Close modal"
-            tabIndex={0}
+            tabIndex={-1}
             onClick={() => setIsModalOpen(false)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                setIsModalOpen(false);
-              }
-            }}
             style={{ cursor: 'pointer' }}
           />
           {/* Modal Content */}
@@ -499,6 +497,10 @@ export const JSONField: React.FC<JSONFieldProps> = ({
                   className="w-full h-full bg-[var(--background)] text-[var(--color-text-primary)] border rounded-xl p-3 text-sm font-mono focus:outline-none focus:border-[var(--color-brand-600)] transition-all resize-none"
                   placeholder={placeholder}
                   disabled={disabled}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                  autoFocus
                 />
               )}
             </div>

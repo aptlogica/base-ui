@@ -4,6 +4,11 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { Duration } from '../Duration';
 
+// Mock useClickHandler to call immediately for faster tests
+vi.mock('../../../utils/helpers', () => ({
+  useClickHandler: vi.fn((onSingle: () => void) => onSingle),
+}));
+
 describe('Duration Component', () => {
   let mockOnChange: ReturnType<typeof vi.fn>;
 
@@ -13,10 +18,7 @@ describe('Duration Component', () => {
   });
 
   afterEach(async () => {
-    // Wait for any pending timeouts from useClickHandler (200ms delay)
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 250));
-    });
+    vi.restoreAllMocks();
   });
 
   describe('Rendering', () => {
@@ -310,7 +312,7 @@ describe('Duration Component', () => {
       );
 
       const wrapper = container.querySelector('.field-component')?.parentElement!;
-      fireEvent.click(wrapper);
+      await userEvent.click(wrapper);
 
       await waitFor(() => {
         expect(container.querySelector('input')).toBeInTheDocument();
@@ -329,7 +331,7 @@ describe('Duration Component', () => {
       );
 
       const wrapper = container.querySelector('.field-component')?.parentElement!;
-      fireEvent.click(wrapper);
+      await userEvent.click(wrapper);
 
       await waitFor(() => {
         expect(container.querySelector('input')).toBeInTheDocument();

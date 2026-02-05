@@ -268,6 +268,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
   const {
     rowData,
     formError,
+    submitting,
     setFormError,
     setSubmitting,
     setSubmitSuccess,
@@ -651,6 +652,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
           onEdit={previewHandlers.onEdit}
           onConfigChange={previewHandlers.onConfigChange}
           isReadOnly={isReadOnly}
+          isSubmitting={submitting}
         />
       </div>
     );

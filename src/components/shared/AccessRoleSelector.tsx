@@ -43,7 +43,6 @@ export const AccessRoleSelector: React.FC<AccessRoleSelectorProps> = ({
     const rect = buttonRef.current.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
-    const dropdownMaxHeight = 400; // Max height of dropdown
     const dropdownMinHeight = 200; // Min height estimate
 
     const spaceBelow = viewportHeight - rect.bottom;
@@ -105,7 +104,7 @@ export const AccessRoleSelector: React.FC<AccessRoleSelectorProps> = ({
 
     const query = searchQuery.toLowerCase();
     return (Object.entries(roleConfig) as [AccessRole, RoleConfig][]).filter(
-      ([role, config]) =>
+      ([_role, config]) =>
         config.label.toLowerCase().includes(query) ||
         config.description.toLowerCase().includes(query)
     );
@@ -139,9 +138,8 @@ export const AccessRoleSelector: React.FC<AccessRoleSelectorProps> = ({
           type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
-          className={`w-full flex items-center justify-between px-4 py-2 border rounded-xl text-sm font-medium transition-colors ${
-            currentRole.color
-          } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
+          className={`w-full flex items-center justify-between px-4 py-2 border rounded-xl text-sm font-medium transition-colors ${currentRole.color
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
         >
           <div className="flex items-center gap-2">
             <CurrentIcon className={`w-4 h-4 ${getIconColorClass(value)}`} />
@@ -155,7 +153,7 @@ export const AccessRoleSelector: React.FC<AccessRoleSelectorProps> = ({
       {isOpen && !disabled && dropdownPosition && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed bg-card border border rounded-xl shadow-lg z-50 max-h-96 overflow-hidden"
+          className="fixed bg-card border rounded-xl shadow-lg z-50 max-h-96 overflow-hidden"
           style={{
             ...(dropdownPosition.top !== undefined && { top: `${dropdownPosition.top}px` }),
             ...(dropdownPosition.bottom !== undefined && { bottom: `${dropdownPosition.bottom}px` }),
@@ -172,7 +170,7 @@ export const AccessRoleSelector: React.FC<AccessRoleSelectorProps> = ({
                 placeholder="Search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-sm"
+                className="w-full pl-10 pr-4 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-sm"
                 autoFocus
               />
             </div>
@@ -195,16 +193,14 @@ export const AccessRoleSelector: React.FC<AccessRoleSelectorProps> = ({
                     key={role}
                     type="button"
                     onClick={() => handleRoleSelect(role)}
-                    className={`w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors ${
-                      isSelected ? 'bg-green-50' : ''
-                    }`}
+                    className={`w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors ${isSelected ? 'bg-green-50' : ''
+                      }`}
                   >
                     <Icon className={`w-5 h-5 ${iconColorClass} mt-0.5 flex-shrink-0`} />
                     <div className="flex-1 text-left min-w-0">
                       <div
-                        className={`font-medium ${
-                          isSelected ? 'text-green-900' : 'text-gray-900'
-                        }`}
+                        className={`font-medium ${isSelected ? 'text-green-900' : 'text-gray-900'
+                          }`}
                       >
                         {config.label}
                       </div>

@@ -11,7 +11,7 @@ const UserDropdown: React.FC = () => {
   const [isDark, setIsDark] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { logout, saving, user: authUser } = useAuth();
+  const { logout, user: authUser } = useAuth();
   const navigate = useNavigate();
 
   // Get user profile data from API (single source of truth)
@@ -236,7 +236,6 @@ const UserDropdown: React.FC = () => {
           {/* Sign Out */}
           <button
             onClick={handleLogout}
-            disabled={saving}
             className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors rounded-xl duration-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-b-xl"
           >
             <LogOut className="w-5 h-5 text-gray-400" />

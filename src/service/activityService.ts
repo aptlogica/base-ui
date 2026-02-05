@@ -236,7 +236,7 @@ export const getUserActivity = async (userId: string): Promise<UserActivityData 
     
     return null;
   } catch (error) {
-    console.error('❌ Failed to fetch user activity:', error);
+    console.error('Failed to fetch user activity:', error);
     return null;
   }
 };
@@ -248,7 +248,7 @@ export const clearUserActivity = async (userId: string) => {
     });
     return result;
   } catch (error) {
-    console.error('❌ Failed to clear user activity:', error);
+    console.error('Failed to clear user activity:', error);
     throw error;
   }
 };

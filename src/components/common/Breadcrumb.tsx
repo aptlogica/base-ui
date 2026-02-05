@@ -60,26 +60,16 @@ const BaseMenuWrapper: React.FC<{
   }
 
   return (
-    <div
-      onClick={(e) => {
-        e.stopPropagation();
-        // Prevent closing the dropdown when clicking the menu trigger
-      }}
-      onMouseDown={(e) => {
-        // Prevent the click-outside handler from closing the dropdown
-        e.stopPropagation();
-      }}
-    >
-      <BaseMenu
-        base={base}
-        onEdit={onEdit}
-        onAddMembers={onAddMembers}
-        onDelete={onDelete}
-        canEdit={canEdit}
-        canDelete={canDelete}
-        canAddMembers={canAddMembers}
-      />
-    </div>
+    <BaseMenu
+      base={base}
+      onEdit={onEdit}
+      onAddMembers={onAddMembers}
+      onDelete={onDelete}
+      canEdit={canEdit}
+      canDelete={canDelete}
+      canAddMembers={canAddMembers}
+      align={"left"}
+    />
   );
 };
 
@@ -155,9 +145,15 @@ const Breadcrumb: React.FC = () => {
       return;
     }
 
-    const targetRef =
-      openDropdown === 'base' ? baseDropdownRef :
-        openDropdown === 'table' ? tableDropdownRef : viewDropdownRef;
+    let targetRef;
+
+    if (openDropdown === 'base') {
+      targetRef = baseDropdownRef;
+    } else if (openDropdown === 'table') {
+      targetRef = tableDropdownRef;
+    } else {
+      targetRef = viewDropdownRef;
+    }
 
     if (targetRef.current) {
       const rect = targetRef.current.getBoundingClientRect();
@@ -184,10 +180,10 @@ const Breadcrumb: React.FC = () => {
 
       // Check if click is inside the portal (including buttons)
       const clickedInside =
-        (baseDropdownRef.current && baseDropdownRef.current.contains(target)) ||
-        (tableDropdownRef.current && tableDropdownRef.current.contains(target)) ||
-        (viewDropdownRef.current && viewDropdownRef.current.contains(target)) ||
-        (portal && portal.contains(target));
+        (baseDropdownRef.current?.contains(target)) ||
+        (tableDropdownRef.current?.contains(target)) ||
+        (viewDropdownRef.current?.contains(target)) ||
+        (portal?.contains(target));
 
       if (!clickedInside) {
         setOpenDropdown(null);
@@ -222,16 +218,13 @@ const Breadcrumb: React.FC = () => {
   const buildBreadcrumbItems = (): BreadcrumbItem[] => {
     const items: BreadcrumbItem[] = [];
     const pathParts = pathname.split('/').filter(Boolean);
-
-    // Check for new route format: /workspace/:workspaceId/base/:baseId/table/:tableId/:viewId
-    // pathParts: ['workspace', workspaceId, 'base', baseId, 'table', tableId, viewId]
     const isNewFormat = pathParts[0] === 'workspace' && pathParts[2] === 'base';
-    
+
     // Determine indices based on route format
     let baseIndex = -1;
     let tableIndex = -1;
     let viewIndex = -1;
-    
+
     if (isNewFormat) {
       // New format: /workspace/:workspaceId/base/:baseId/table/:tableId/:viewId
       baseIndex = 3;
@@ -340,11 +333,11 @@ const Breadcrumb: React.FC = () => {
       // Only include fields that have actually changed
       const currentTitle = editingBase.title || editingBase.name || '';
       const currentDescription = editingBase.description || '';
-      
+
       if (name !== currentTitle) {
         updates.title = name;
       }
-      
+
       if (description !== currentDescription) {
         updates.description = description;
       }
@@ -408,6 +401,7 @@ const Breadcrumb: React.FC = () => {
         try {
           await navigateToFirstView(remainingBases[0].id);
         } catch (err) {
+          console.warn(err)
           navigate(`/workspace/${selectedWorkspaceId}`);
         }
       } else if (selectedWorkspaceId) {
@@ -449,7 +443,7 @@ const Breadcrumb: React.FC = () => {
     }
 
     try {
-      const newBase = await createBaseMutation.mutateAsync({
+      await createBaseMutation.mutateAsync({
         title: name,
         description: description || '',
         workspace_id: selectedWorkspaceId,
@@ -517,6 +511,7 @@ const Breadcrumb: React.FC = () => {
           try {
             await navigateToFirstView(base.id);
           } catch (err) {
+            console.warn(err)
             if (selectedWorkspaceId) {
               navigate(`/workspace/${selectedWorkspaceId}`);
             } else {
@@ -606,21 +601,30 @@ const Breadcrumb: React.FC = () => {
       {breadcrumbItems.map((item, index) => {
         const isLast = index === breadcrumbItems.length - 1;
         const isDropdownOpen = openDropdown === item.type;
-        const dropdownItems =
-          item.type === 'base' ? getBaseDropdownItems() :
-            item.type === 'table' ? getTableDropdownItems() :
-              getViewDropdownItems();
+        let dropdownItems: DropdownItem[];
+        if (item.type === 'base') {
+          dropdownItems = getBaseDropdownItems();
+        } else if (item.type === 'table') {
+          dropdownItems = getTableDropdownItems();
+        } else {
+          dropdownItems = getViewDropdownItems();
+        }
+
+        let currentRef;
+        if (item.type === 'base') {
+          currentRef = baseDropdownRef;
+        } else if (item.type === 'table') {
+          currentRef = tableDropdownRef;
+        } else {
+          currentRef = viewDropdownRef;
+        }
 
         return (
           <React.Fragment key={`${item.type}-${item.id}`}>
             {index > 0 && (
               <ChevronRight size={12} className="text-gray-400 mx-1 flex-shrink-0" />
             )}
-            <div className="relative" ref={
-              item.type === 'base' ? baseDropdownRef :
-                item.type === 'table' ? tableDropdownRef :
-                  viewDropdownRef
-            }>
+            <div className="relative" ref={currentRef}>
               <div
                 className="flex items-center gap-1.5 cursor-pointer rounded px-2 py-1 transition-colors hover:bg-gray-100 group"
                 onClick={(e) => handleSegmentClick(e, item.type)}
@@ -653,7 +657,11 @@ const Breadcrumb: React.FC = () => {
                     {/* Header */}
                     <div className="px-4 py-2 flex-shrink-0">
                       <div className="text-xs font-semibold text-primary tracking-wide">
-                        {item.type === 'base' ? 'Bases' : item.type === 'table' ? 'Tables' : 'Views'}
+                        {(() => {
+                          if (item.type === 'base') return 'Bases';
+                          if (item.type === 'table') return 'Tables';
+                          return 'Views';
+                        })()}
                       </div>
                     </div>
 

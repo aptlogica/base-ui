@@ -245,7 +245,7 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
           </div>
         </div>
         {/* Field Value */}
-        <div className="ml-5 text-gray-900">
+        <div className="ml-5 text-gray-900 cursor-default">
             <FieldDisplay
               field={{
                 id: col.id,
@@ -260,6 +260,7 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
               }}
               value={raw}
               className=""
+              hideActionButtons={true}
             />
           </div>
         </div>
@@ -296,7 +297,7 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
 
   return (
     <div 
-      className={`group relative bg-card rounded-2xl border shadow-sm overflow-hidden transition-all duration-300 transform ${onEdit ? 'cursor-pointer hover:-translate-y-1' : ''}`}
+      className={`group relative bg-card rounded-2xl border shadow-sm overflow-hidden transition-all duration-300 transform ${onEdit ? 'cursor-pointer hover:-translate-y-1' : 'cursor-default'}`}
       onClick={onEdit}
       onKeyDown={onEdit ? handleKeyDown : undefined}
       role={onEdit ? 'button' : undefined}

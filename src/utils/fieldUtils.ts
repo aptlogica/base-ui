@@ -3,8 +3,6 @@
  * Consolidates field type handling, default values, and data processing
  */
 
-import { FieldType } from '../types/fieldTypes';
-
 export interface BaseField {
   id?: string;
   name?: string;
@@ -18,9 +16,9 @@ export interface BaseField {
  * Get default value for a field based on its type and meta
  */
 export const getFieldDefaultValue = (field: BaseField): any => {
-  if (!field || !field.meta) return getTypeDefaultValue(field?.type || 'text');
+  if (!field?.meta) return getTypeDefaultValue(field?.type || 'text');
 
-  // Check for defaultValue in meta first
+  // C!field?.metafirst
   if (field.meta.defaultValue !== undefined && field.meta.defaultValue !== null) {
     return field.meta.defaultValue;
   }
@@ -125,33 +123,11 @@ export const processFieldValue = (field: BaseField, value: unknown): any => {
 };
 
 /**
- * Map field type aliases to canonical types
- */
-export const mapFieldType = (type: string): string => {
-  const typeMap: Record<string, string> = {
-    'dropdown': 'multiSelect',
-    'radio': 'select',
-    'textarea': 'longText',
-    'file': 'attachment',
-    'phone': 'phoneNumber',
-  };
-  
-  return typeMap[type] || type;
-};
-
-/**
  * Check if a field is a system field
  */
 export const isSystemField = (field: BaseField): boolean => {
-  return field.isSystem || 
-         ['id', 'created_at', 'updated_at', 'createdTime', 'lastModifiedTime', 'createdBy', 'lastModifiedBy'].includes(field.name || '');
-};
-
-/**
- * Check if a field type supports options (select, multiSelect)
- */
-export const fieldSupportsOptions = (type: string): boolean => {
-  return ['select', 'multiSelect', 'singleSelect'].includes(type);
+  return field.isSystem ||
+    ['id', 'created_at', 'updated_at', 'createdTime', 'lastModifiedTime', 'createdBy', 'lastModifiedBy'].includes(field.name || '');
 };
 
 /**
@@ -161,6 +137,16 @@ export const mapFieldConfig = (field: BaseField) => {
   const baseMeta = field.meta || {};
   let meta = { ...baseMeta };
 
+  // Helper function to determine the default value
+  const determineDefaultValue = () => {
+    if (field.checkboxDefault !== undefined) {
+      return field.checkboxDefault;
+    }
+    if (meta.checkboxDefault !== undefined) {
+      return meta.checkboxDefault;
+    }
+    return meta.defaultValue || false;
+  };
   // Type-specific meta mapping
   switch (field.type) {
     case 'boolean':
@@ -169,18 +155,16 @@ export const mapFieldConfig = (field: BaseField) => {
         ...meta,
         icon: field.checkboxIcon || meta.checkboxIcon || meta.icon || 'check',
         color: field.checkboxColor || meta.checkboxColor || meta.color || 'green',
-        defaultValue: field.checkboxDefault !== undefined ? field.checkboxDefault :
-          meta.checkboxDefault !== undefined ? meta.checkboxDefault :
-          meta.defaultValue || false,
-      };
+        defaultValue: determineDefaultValue(),
+      }
       break;
     case 'rating':
       meta = {
         ...meta,
         ratingIcon: field.ratingIcon || meta.ratingIcon || 'star',
         ratingColor: field.ratingColor || meta.ratingColor || 'yellow',
-        ratingMax: field.ratingMax !== undefined ? field.ratingMax : meta.ratingMax || 5,
-        ratingDefault: field.ratingDefault !== undefined ? field.ratingDefault : meta.ratingDefault || 0,
+        ratingMax: field.ratingMax === undefined ? meta.ratingMax || 5 : field.ratingMax,
+        ratingDefault: field.ratingDefault === undefined ? meta.ratingDefault || 0 : field.ratingDefault,
       };
       break;
     case 'multiSelect':
@@ -199,43 +183,31 @@ export const mapFieldConfig = (field: BaseField) => {
       break;
     default:
       // Handle other field types with specific defaults
-      const fieldTypeDefaults: Record<string, any> = {
-        'text': field.defaultValue,
-        'longText': field.defaultValue,
-        'number': field.defaultValue,
-        'decimal': field.defaultValue,
-        'year': field.yearDefault,
-        'time': field.timeDefault,
-        'date': field.defaultValue,
-        'datetime': field.dateTimeDefault,
-        'email': field.emailDefault,
-        'phoneNumber': field.phoneDefault,
-        'url': field.urlDefault,
-        'percent': field.percentDefault,
-        'duration': field.durationDefault,
-        'currency': field.defaultValue,
-      };
-      const defaultValue = fieldTypeDefaults[field.type];
-      if (defaultValue !== undefined) {
-        meta = { ...meta, defaultValue: defaultValue || meta.defaultValue };
+      {
+        const fieldTypeDefaults: Record<string, any> = {
+          'text': field.defaultValue,
+          'longText': field.defaultValue,
+          'number': field.defaultValue,
+          'decimal': field.defaultValue,
+          'year': field.yearDefault,
+          'time': field.timeDefault,
+          'date': field.defaultValue,
+          'datetime': field.dateTimeDefault,
+          'email': field.emailDefault,
+          'phoneNumber': field.phoneDefault,
+          'url': field.urlDefault,
+          'percent': field.percentDefault,
+          'duration': field.durationDefault,
+          'currency': field.defaultValue,
+        };
+        const defaultValue = fieldTypeDefaults[field.type];
+        if (defaultValue !== undefined) {
+          meta = { ...meta, defaultValue: defaultValue || meta.defaultValue };
+        }
       }
   }
 
   return meta;
-};
-
-/**
- * Initialize form/record data with field default values
- */
-export const initializeFieldData = (fields: BaseField[]): Record<string, any> => {
-  const data: Record<string, any> = {};
-  fields.forEach(field => {
-    if (field.id) {
-      const defaultValue = getFieldDefaultValue(field);
-      data[field.id] = defaultValue;
-    }
-  });
-  return data;
 };
 
 /**
@@ -250,87 +222,8 @@ export const validateRequiredFields = (fields: BaseField[], data: Record<string,
 };
 
 /**
- * Process field value for backend submission
- */
-export const processFieldForBackend = (field: BaseField, value: any): any => {
-  switch (field.type) {
-    case 'formula':
-      // Formula fields should not be sent to backend - they're calculated
-      return null;
-    case 'multiSelect':
-      // Convert array to JSON string for backend
-      return Array.isArray(value) ? JSON.stringify(value) : value;
-    case 'user':
-      // For user fields with allowMultiple, convert array to comma-separated string
-      const userConfig = (field.meta as any) || {};
-      if (userConfig.allowMultiple && Array.isArray(value)) {
-        return value.filter(id => id && id.toString().trim()).join(',');
-      }
-      // For single user, return as-is (string ID)
-      return value;
-    case 'json':
-      // Stringify objects for backend
-      return typeof value === 'object' ? JSON.stringify(value) : value;
-    default:
-      return value;
-  }
-};
-
-/**
- * Process field value from backend response
- */
-export const processFieldFromBackend = (field: BaseField, value: any): any => {
-  switch (field.type) {
-    case 'formula':
-      // Formula fields are calculated, not stored - return empty string
-      return '';
-    case 'multiSelect':
-      // Parse JSON string from backend to array
-      if (typeof value === 'string') {
-        try {
-          return JSON.parse(value);
-        } catch {
-          return [];
-        }
-      }
-      return Array.isArray(value) ? value : [];
-    case 'user':
-      // For user fields with allowMultiple, parse comma-separated string to array
-      const userConfig = (field.meta as any) || {};
-      if (userConfig.allowMultiple) {
-        if (typeof value === 'string' && value.trim()) {
-          // Split by comma and filter out empty values
-          return value.split(',').map(id => id.trim()).filter(id => id.length > 0);
-        }
-        return Array.isArray(value) ? value : [];
-      }
-      // For single user, return as-is (string ID or null)
-      return value;
-    case 'json':
-      // Parse JSON string from backend to object
-      if (typeof value === 'string') {
-        try {
-          return JSON.parse(value);
-        } catch {
-          return {};
-        }
-      }
-      return value;
-    default:
-      return value;
-  }
-};
-
-/**
  * Check if a field is a formula field
  */
 export const isFormulaField = (field: BaseField): boolean => {
   return field.type === 'formula' || field.uidt === 'formula';
-};
-
-/**
- * Check if a field should be editable (not formula, not system, not virtual)
- */
-export const isEditableField = (field: BaseField): boolean => {
-  return !isFormulaField(field) && !field.system && !field.virtual;
 };

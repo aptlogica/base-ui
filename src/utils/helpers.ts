@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 
 // Debounce utility for delaying function execution
 export function useDebounce<T extends (...args: any[]) => any>(
@@ -55,6 +55,16 @@ export function useClickHandler(
       }, delay);
     }
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (clickTimeout.current) {
+        clearTimeout(clickTimeout.current);
+        clickTimeout.current = null;
+      }
+    };
+  }, []);
 
   return handleClick;
 }
@@ -159,7 +169,7 @@ export function formatCompactNumber(num: number): string {
  * @returns 2-letter initials when possible, or 1-2 characters
  */
 export function getInitials(name: string, fallback: string = 'U'): string {
-  if (!name || !name.trim()) return fallback;
+  if (!name?.trim()) return fallback;
   
   const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) {

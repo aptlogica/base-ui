@@ -824,6 +824,7 @@ describe('HomePage', () => {
     });
 
     it('should show error toast when navigation to base fails', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const user = userEvent.setup();
       const mockBases = [createMockBase({ id: 'base-1', title: 'Test Base' })];
       const mockTables = [{ id: 'table-1', title: 'Table 1' }];
@@ -862,6 +863,7 @@ describe('HomePage', () => {
           'Navigation failed'
         );
       });
+      consoleErrorSpy.mockRestore();
     });
   });
 

@@ -206,7 +206,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
     // Cleanup: clear footer when component unmounts or section changes
     return () => {
       if (currentSection === 'profile') {
-        clearFooter();
+        clearFooter('profile');
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

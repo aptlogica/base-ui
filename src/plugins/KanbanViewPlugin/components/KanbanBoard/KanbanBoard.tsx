@@ -35,7 +35,7 @@ type KanbanActions = {
   duplicateCard: (cardId: string) => Promise<string>;
   updateFieldOptions: (fieldId: string, options: string[] | Array<{ option: string; color: string }>) => Promise<void>;
   persistStackOrder?: (newOrder: string[]) => Promise<void>;
-  changeGroupByColumn: (col: Column | any) => Promise<void>;
+  changeGroupByColumn: (col: Column | null) => Promise<void>;
   updateViewConfig: (viewId: string, updates: Record<string, unknown>) => Promise<void>;
   addRow: ReturnType<typeof useAddRow>;
   insertRowData: ReturnType<typeof useInsertRowData>;
@@ -493,38 +493,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     return map;
   }, [tableData.records]);
 
-  // Implement duplicateCard functionality
-  const handleDuplicateCard = useCallback(async (cardId: string): Promise<string> => {
-    const record = recordsMap.get(String(cardId));
-    if (!record) throw new Error('Card not found');
-
-    const created = await actions?.addRow.mutateAsync({ model_id: String(tableId) });
-    const recordId = created?.data?.id || created?.id || String(Date.now());
-
-    if (tableData.columns) {
-      await Promise.all(tableData.columns.map(async (field: any) => {
-        // Skip attachment fields - they handle their own API calls
-        if (field.type === 'attachment' || field.uidt === 'attachment') {
-          return;
-        }
-
-        let value = record[field.column_name] ?? record[field.id];
-        if (value === undefined || value === null || value === '') return;
-        try {
-          await actions?.insertRowData.mutateAsync({
-            model_id: String(tableId),
-            column_id: String(field.id),
-            row_id: Number(recordId),
-            value,
-          });
-        } catch (e) {
-          console.warn('Failed to copy field value during duplicate:', field.id, e);
-        }
-      }));
-    }
-
-    return recordId;
-  }, [recordsMap, tableData.columns, tableId, actions?.addRow, actions?.insertRowData]);
 
   // PERFORMANCE: Memoize card order and filter/sort config separately
   const cardOrderConfig = useMemo(() => {
@@ -1080,7 +1048,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 if (isReadOnly) return undefined;
                 return canDeleteRecord() ? handleOpenDeleteRecord : undefined;
               })()}
-              onDuplicate={isReadOnly ? undefined : handleDuplicateCard}
               onStackCollapse={handleStackCollapse}
               onStackEdit={isReadOnly ? undefined : handleStackEdit}
               onStackDragStart={isReadOnly ? undefined : handleStackDragStart}
