@@ -358,7 +358,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         {canCreateTable() && (
           <>
             <button
-              className="w-full flex items-center justify-center gap-2 btn-secondary p-2 rounded transition"
+              className="w-full flex items-center justify-center gap-2 btn-secondary p-2 rounded transition overflow-hidden"
               onClick={(e) => {
                 e.stopPropagation();
                 if (selectedBase?.id && effectiveSelectedWorkspace?.id) {
@@ -374,7 +374,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <Download size={16} /> Import Table
             </button>
             <button
-              className="w-full flex items-center justify-center gap-2 btn-primary p-2 rounded transition"
+              className="w-full flex items-center justify-center gap-2 btn-primary p-2 rounded transition overflow-hidden"
               onClick={(e) => {
                 e.stopPropagation();
                 if (selectedBase?.id) {

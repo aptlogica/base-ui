@@ -13,6 +13,8 @@ import { Search } from '../../../../components/shared/table/Search';
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
 import ReactDOM from 'react-dom';
 import { Plus, List, Lock } from 'lucide-react';
+import EditRecordModal from '../../../../components/modals/EditRecordModal';
+import { buildInitialValuesForEdit } from '../../../../utils/initialValues';
 import { useToast } from '../../../../components/common/Toast';
 import { sortRowsByDataKey } from '../../../../utils/sortUtils';
 import { applyFilters } from '../../../../utils/filterUtils';
@@ -240,6 +242,21 @@ export const Table: React.FC<TableProps> = ({
     handleColContextMenu,
     handleCloseColMenu,
   } = useTableModals();
+
+  // Edit record modal state
+  const [isEditRecordModalOpen, setIsEditRecordModalOpen] = useState(false);
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+
+  const openEditRecordModal = useCallback((rowId: string) => {
+    setSelectedRecordId(rowId);
+    setIsEditRecordModalOpen(true);
+    handleCloseContextMenu();
+  }, [handleCloseContextMenu]);
+
+  const closeEditRecordModal = useCallback(() => {
+    setIsEditRecordModalOpen(false);
+    setSelectedRecordId(null);
+  }, []);
 
   // Wrap handleContextMenu to prevent opening for readonly users
   const handleContextMenu = useCallback((e: React.MouseEvent, rowId: string) => {
@@ -913,6 +930,8 @@ export const Table: React.FC<TableProps> = ({
             handleCloseContextMenu();
           }}
           canDeleteRecord={canDeleteRecord()}
+          onEdit={() => openEditRecordModal(contextMenu.rowId!)}
+          canEditRecord={canUpdateRecord()}
         />
       )}
 
@@ -999,6 +1018,20 @@ export const Table: React.FC<TableProps> = ({
           onConfirm={handleConfirmUpdateField}
         />
       }
+
+      {/* Edit Record Modal */}
+      <EditRecordModal
+        isOpen={isEditRecordModalOpen}
+        onClose={closeEditRecordModal}
+        onSuccess={() => { try { onRefresh?.(); } catch {} closeEditRecordModal(); }}
+        recordId={selectedRecordId || ''}
+        table={tableData?.model}
+        fields={tableData?.columns}
+        initialValues={buildInitialValuesForEdit({ recordId: selectedRecordId, columns: tableData?.columns || [], rawRecords: tableData?.records || [] })}
+        onDelete={(id: string) => { try { handleDelete(id); } catch {} closeEditRecordModal(); }}
+        title="Edit record"
+        submitLabel="Update record"
+      />
     </div>
 
   );
