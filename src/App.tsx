@@ -71,7 +71,24 @@ const Layout = () => {
 
   // Track sidebar position and width (for flyout menu)
   const [sidebarPosition] = useState('left');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      const saved = sessionStorage.getItem('sidebarCollapsed');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+  
+  // Wrapper to update both state and sessionStorage
+  const updateSidebarCollapsed = (value: boolean | ((prev: boolean) => boolean)) => {
+    setSidebarCollapsed((prev: boolean) => {
+      const newValue = typeof value === 'function' ? value(prev) : value;
+      sessionStorage.setItem('sidebarCollapsed', JSON.stringify(newValue));
+      return newValue;
+    });
+  };
+  
   const sidebarWidth = sidebarCollapsed ? 20 : FLYOUT_WIDTH;
 
   // Auto-open flyout menu when on base/table/view routes
@@ -122,7 +139,7 @@ const Layout = () => {
                 />
               )}
               <button 
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)} 
+                onClick={() => updateSidebarCollapsed(!sidebarCollapsed)} 
                 className='absolute top-1/2 right-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-50 hover:bg-gray-100 transition-colors outline-none'
                 aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
@@ -150,7 +167,7 @@ const Layout = () => {
                 />
               )}
               <button 
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)} 
+                onClick={() => updateSidebarCollapsed(!sidebarCollapsed)} 
                 className='absolute top-1/2 left-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-50 hover:bg-gray-100 transition-colors outline-none'
                 aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
