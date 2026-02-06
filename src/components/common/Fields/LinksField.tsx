@@ -343,6 +343,8 @@ export const LinksField: React.FC<LinksFieldProps> = ({
     }, [disabled, selectedRecords, persistImmediately, persistRelation, onChange, toast, value, currentTableId, queryClient]);
 
     const handleRemoveRecord = useCallback(async (recordId: string) => {
+        if (disabled) return;
+
         if (persistImmediately) {
             // Optimistically update the UI immediately
             // Preserve the original value format (IDs or objects)
@@ -378,7 +380,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                 onChange(newSelectedRecords);
             }
         }
-    }, [persistImmediately, persistRelation, selectedRecords, onChange, toast, value, currentTableId, queryClient]);
+    }, [disabled, persistImmediately, persistRelation, selectedRecords, onChange, toast, value, currentTableId, queryClient]);
 
     const getRecordDisplayText = (record: RelatedRecord) => {
         // Try multiple fields in order of preference
@@ -485,7 +487,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
 
                             if (selectedRecords.length === 1) {
                                 return (
-                                    <div className="flex items-center gap-1 px-2 py-1 text-primary bg-blue-100 text-xs rounded-full border flex-shrink min-w-fit overflow-hidden" style={{ maxWidth: 'calc(100% - 1.5rem)' }}>
+                                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-xs rounded-full border flex-shrink min-w-fit overflow-hidden" style={{ maxWidth: 'calc(100% - 1.5rem)' }}>
                                         <span
                                             className="truncate block min-w-0 flex-1 text-blue-500"
                                             title={getRecordDisplayText(selectedRecords[0])}
@@ -498,7 +500,8 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                 e.stopPropagation();
                                                 handleRemoveRecord(selectedRecords[0].id);
                                             }}
-                                            className="hover:bg-blue-200 rounded-full p-0.5 flex-shrink-0"
+                                            disabled={disabled}
+                                            className={`rounded-full p-0.5 flex-shrink-0 ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-200 text-black'}`}
                                         >
                                             <X className="w-3 h-3" />
                                         </button>
@@ -509,7 +512,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                             return (
                                 <>
                                     {/* Show first record */}
-                                    <div className="flex items-center gap-1 px-2 py-1 text-primary bg-blue-100 text-xs rounded-full border flex-shrink-0 min-w-fit max-w-fit overflow-hidden">
+                                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-xs rounded-full border flex-shrink-0 min-w-fit max-w-fit overflow-hidden">
                                         <span
                                             className="truncate block min-w-0 flex-1 text-blue-500"
                                             title={getRecordDisplayText(selectedRecords[0])}
@@ -522,13 +525,14 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                 e.stopPropagation();
                                                 handleRemoveRecord(selectedRecords[0].id);
                                             }}
-                                            className="hover:bg-blue-200 rounded-full p-0.5 flex-shrink-0"
+                                            disabled={disabled}
+                                            className={`rounded-full p-0.5 flex-shrink-0 ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-200 text-black'}`}
                                         >
                                             <X className="w-3 h-3" />
                                         </button>
                                     </div>
                                     {/* Show second record */}
-                                    <div className="flex items-center gap-1 px-2 py-1 text-primary bg-blue-100 text-xs rounded-full border flex-shrink-0 min-w-0 max-w-[40%] overflow-hidden">
+                                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-xs rounded-full border flex-shrink-0 min-w-0 max-w-[40%] overflow-hidden">
                                         <span
                                             className="truncate block min-w-0 flex-1 text-blue-500"
                                             title={getRecordDisplayText(selectedRecords[1])}
@@ -541,7 +545,8 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                 e.stopPropagation();
                                                 handleRemoveRecord(selectedRecords[1].id);
                                             }}
-                                            className="hover:bg-blue-200 rounded-full p-0.5 flex-shrink-0"
+                                            disabled={disabled}
+                                            className={`rounded-full p-0.5 flex-shrink-0 ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-200 text-black'}`}
                                         >
                                             <X className="w-3 h-3" />
                                         </button>
@@ -549,7 +554,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                     {/* Show count for remaining records if more than 2 */}
                                     {selectedRecords.length > 2 && (
                                         <div
-                                            className="flex items-center px-2 py-1 bg-blue-500 text-[var(--color-text-primary)] text-xs rounded-full border border-[var(--color-border-brand)] flex-shrink-0 cursor-pointer hover:opacity-80"
+                                            className="flex items-center px-2 py-1 bg-blue-100 text-xs rounded-full border flex-shrink-0 cursor-pointer hover:opacity-80"
                                             title={selectedRecords.slice(2).map(r => getRecordDisplayText(r)).join(', ')}
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -559,7 +564,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                 }
                                             }}
                                         >
-                                            <span className="font-medium whitespace-nowrap">
+                                            <span className="text-xs text-blue-500 whitespace-nowrap">
                                                 +{selectedRecords.length - 2}
                                             </span>
                                         </div>
@@ -721,11 +726,9 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                                 handleSelectRecord(record);
                                                             }
                                                         }}
+                                                        disabled={disabled}
                                                         aria-label={isSelected ? `Unlink ${getRecordDisplayText(record)}` : `Link ${getRecordDisplayText(record)}`}
-                                                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isSelected
-                                                            ? 'bg-red-500 hover:bg-red-600 shadow-sm'
-                                                            : 'bg-blue-500 hover:bg-blue-600 shadow-sm'
-                                                            }`}
+                                                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-400' : (isSelected ? 'bg-red-500 hover:bg-red-600 shadow-sm' : 'bg-blue-500 hover:bg-blue-600 shadow-sm')}`}
                                                     >
                                                         {isSelected ? (
                                                             <X className="w-4 h-4 text-white" />

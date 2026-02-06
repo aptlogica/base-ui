@@ -700,7 +700,7 @@ export const Table: React.FC<TableProps> = ({
             {/* Sticky Table Header */}
             <div ref={headerRef} className="sticky top-0 z-20 w-full" onClick={() => setActiveCell(null)}>
               <div
-                className="grid bg-gray-50"
+                className="grid bg-background"
                 style={{
                   gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`,
                   minWidth: '100vw',
