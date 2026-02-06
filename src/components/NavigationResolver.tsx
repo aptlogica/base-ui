@@ -238,11 +238,14 @@ export const NavigationResolver: React.FC = () => {
       }
 
       // Extract bases from workspaceBasesData
-      const basesFromQuery = workspaceBasesData
-        ? (Array.isArray((workspaceBasesData as any)?.data)
-          ? (workspaceBasesData as any).data
-          : (Array.isArray(workspaceBasesData) ? workspaceBasesData : []))
-        : [];
+      let basesFromQuery: any[] = [];
+      if (workspaceBasesData) {
+        if (Array.isArray((workspaceBasesData as any)?.data)) {
+          basesFromQuery = (workspaceBasesData as any).data;
+        } else if (Array.isArray(workspaceBasesData)) {
+          basesFromQuery = workspaceBasesData;
+        }
+      }
 
       const allBasesFromWorkspace = Array.isArray(workspaces)
         ? workspaces.flatMap((ws: any) => Array.isArray(ws?.bases) ? ws.bases : [])
@@ -254,15 +257,21 @@ export const NavigationResolver: React.FC = () => {
         : undefined;
 
       // Extract tables from baseTablesData
-      const tablesFromQuery = baseTablesData
-        ? (Array.isArray((baseTablesData as any)?.data)
-          ? (baseTablesData as any).data
-          : (Array.isArray(baseTablesData) ? baseTablesData : []))
-        : [];
+      let tablesFromQuery: any[] = [];
+      if (baseTablesData) {
+        if (Array.isArray((baseTablesData as any)?.data)) {
+          tablesFromQuery = (baseTablesData as any).data;
+        } else if (Array.isArray(baseTablesData)) {
+          tablesFromQuery = baseTablesData;
+        }
+      }
 
-      const tablesForBase = tablesFromQuery.length > 0
-        ? tablesFromQuery
-        : (base && Array.isArray(base.tables) ? base.tables : []);
+      let tablesForBase: any[] = [];
+      if (tablesFromQuery.length > 0) {
+        tablesForBase = tablesFromQuery;
+      } else if (base && Array.isArray(base.tables)) {
+        tablesForBase = base.tables;
+      }
 
       // Find table (handle nested model.id structure)
       const table = Array.isArray(tablesForBase) && tablesForBase.length > 0
@@ -277,11 +286,14 @@ export const NavigationResolver: React.FC = () => {
 
       // Validate view (grid is always valid)
       // Get views from tableViewsData (API response) or nested in table object
-      const viewsFromApi = tableViewsData
-        ? (Array.isArray((tableViewsData as any)?.data)
-          ? (tableViewsData as any).data
-          : (Array.isArray(tableViewsData) ? tableViewsData : []))
-        : [];
+      let viewsFromApi: any[] = [];
+      if (tableViewsData) {
+        if (Array.isArray((tableViewsData as any)?.data)) {
+          viewsFromApi = (tableViewsData as any).data;
+        } else if (Array.isArray(tableViewsData)) {
+          viewsFromApi = tableViewsData;
+        }
+      }
 
       const viewsFromTable = Array.isArray(table?.views) ? table?.views : [];
       const allViews = viewsFromApi.length > 0 ? viewsFromApi : viewsFromTable;

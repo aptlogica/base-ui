@@ -50,6 +50,15 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
     };
   }, []);
 
+  // Clear footer when section changes
+  useEffect(() => {
+    // When activeSection changes, clear any registered footer from the previous section
+    if (footerSectionOwner && footerSectionOwner !== activeSection) {
+      setFooterButtons(null);
+      setFooterSectionOwner('');
+    }
+  }, [activeSection, footerSectionOwner]);
+
   // Memoize registerFooter to prevent unnecessary re-renders
   const registerFooter = useCallback((buttons: React.ReactNode, sectionId: string) => {
     // Only update if component is still mounted and sectionId matches current active section
@@ -59,13 +68,16 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
     }
   }, []);
 
-  // Memoize clearFooter
+  // Memoize clearFooter with proper dependency
   const clearFooter = useCallback((sectionId: string) => {
-    // Only clear if this section is the owner of the current footer
-    if (isMountedRef.current && sectionId === footerSectionOwner) {
-      setFooterButtons(null);
-      setFooterSectionOwner('');
-    }
+    // Always clear if the provided sectionId matches current footerSectionOwner
+    setFooterButtons((prev) => {
+      if (isMountedRef.current && sectionId === footerSectionOwner) {
+        setFooterSectionOwner('');
+        return null;
+      }
+      return prev;
+    });
   }, [footerSectionOwner]);
 
   // Memoize context value to prevent unnecessary re-renders

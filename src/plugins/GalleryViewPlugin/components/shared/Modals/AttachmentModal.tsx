@@ -383,6 +383,16 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Determine upload area styling based on current state
+  let uploadAreaClasses = 'border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all mb-6 ';
+  if (isDragOver) {
+    uploadAreaClasses += 'border-blue-500 bg-blue-50';
+  } else if (selectedFiles.length >= maxFiles) {
+    uploadAreaClasses += 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-50';
+  } else {
+    uploadAreaClasses += 'border-gray-300 hover:border-gray-400 hover:bg-gray-50';
+  }
+
   return createPortal(
     <div
       className="bg-modal-backdrop relative"
@@ -429,12 +439,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all mb-6 ${isDragOver
-                ? 'border-blue-500 bg-blue-50'
-                : selectedFiles.length >= maxFiles
-                  ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-50'
-                  : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-                }`}
+              className={uploadAreaClasses}
             >
               <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <div className="text-xl font-medium text-gray-900 mb-2">

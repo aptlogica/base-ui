@@ -121,12 +121,16 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
       return;
     }
 
+    // Ensure meta exists and has the right structure
+    const currentMeta = field.meta || field.config || {};
+    
     // Update the field's meta options
+    // This mutation will automatically invalidate the table query via useUpdateField's onSuccess
     await updateField.mutateAsync({
       fieldId: String(fieldId),
       updatedValue: {
         meta: {
-          ...field.meta,
+          ...currentMeta,
           options: options
         }
       }

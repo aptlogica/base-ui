@@ -26,25 +26,25 @@ function cleanRichTextContent(content: string): string {
   
   // Remove HTML tags and decode entities
   let cleaned = content
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ') // Normalize whitespace
+    .replaceAll(/<[^>]*>/g, '') // Remove HTML tags
+    .replaceAll('&quot;', '"')
+    .replaceAll('&amp;', '&')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&nbsp;', ' ')
+    .replaceAll(/\s+/g, ' ') // Normalize whitespace
     .trim();
   
   // Remove CSS properties and other technical content
   cleaned = cleaned
-    .replace(/[^:]*:\s*[^;]*;/g, '') // Remove CSS properties
-    .replace(/rgb\([^)]*\)/g, '') // Remove RGB colors
-    .replace(/#[0-9a-fA-F]{3,6}/g, '') // Remove hex colors
-    .replace(/\d+px/g, '') // Remove pixel values
-    .replace(/\d+em/g, '') // Remove em values
-    .replace(/\d+rem/g, '') // Remove rem values
-    .replace(/\d+%/g, '') // Remove percentage values
-    .replace(/\s+/g, ' ') // Normalize whitespace again
+    .replaceAll(/[^:]*:\s*[^;]*;/g, '') // Remove CSS properties
+    .replaceAll(/rgb\([^)]*\)/g, '') // Remove RGB colors
+    .replaceAll(/#[0-9a-fA-F]{3,6}/g, '') // Remove hex colors
+    .replaceAll(/\d+px/g, '') // Remove pixel values
+    .replaceAll(/\d+em/g, '') // Remove em values
+    .replaceAll(/\d+rem/g, '') // Remove rem values
+    .replaceAll(/\d+%/g, '') // Remove percentage values
+    .replaceAll(/\s+/g, ' ') // Normalize whitespace again
     .trim();
   
   return cleaned;
@@ -103,7 +103,7 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
     }
     if (t === 'date' || t === 'datetime' || t === 'createdtime' || t === 'lastmodifiedtime') {
       const d = new Date(raw);
-      if (!isNaN(d.getTime())) {
+      if (!Number.isNaN(d.getTime())) {
         // Format date more nicely
         if (t === 'date') {
           return d.toLocaleDateString('en-US', { 
@@ -129,7 +129,7 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
       return s;
     }
     if (t === 'multiselect') {
-      if (Array.isArray(raw)) return raw.map(v => String((v as any)?.label ?? v)).join(', ');
+      if (Array.isArray(raw)) return raw.map(v => String(v?.label ?? v)).join(', ');
       try { const parsed = JSON.parse(String(raw)); if (Array.isArray(parsed)) return parsed.join(', '); } catch {}
     }
     if (Array.isArray(raw)) {
@@ -140,7 +140,7 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
       return raw.map(v => (v?.name || v?.filename || v?.fileName || String(v))).join(', ');
     }
     if (typeof raw === 'object') {
-      const name = (raw as any)?.name || (raw as any)?.label || (raw as any)?.title;
+      const name = raw?.name || raw?.label || raw?.title;
       if (name) return String(name);
       // Don't show [object Object] – show hyphen instead
       return '-';
@@ -172,7 +172,7 @@ export function buildGanttTooltipLines(args: {
   const startDate = task.startDate instanceof Date ? task.startDate : new Date(task.startDate);
   const endDate = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
   
-  if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+  if (!Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime())) {
     const dateRange = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
     const duration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     titleLine.push(dateRange, `${duration} days`);
@@ -230,7 +230,7 @@ export function buildGanttTooltipLines(args: {
   }
 
   // Create horizontal bullet-separated lines (like NocoDB)
-  const sortedFields = visibleFields.sort((a, b) => a.priority - b.priority);
+  const sortedFields = visibleFields.toSorted((a, b) => a.priority - b.priority);
   
   // Group fields into lines (up to 3-4 fields per line, no max-field cap)
   const fieldsPerLine = 3;

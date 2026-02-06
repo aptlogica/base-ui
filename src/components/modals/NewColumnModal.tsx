@@ -826,20 +826,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   // .sort((a: FieldType, b: FieldType) => a.label.localeCompare(b.label));
 
 
-  const getOptionColor = (option: string, index: number) => {
-    const colors = [
-      '#DBEAFE', // blue-100
-      '#DCFCE7', // green-100
-      '#F3E8FF', // purple-100
-      '#FFEDD5', // orange-100
-      '#FCE7F3', // pink-100
-      '#E0E7FF', // indigo-100
-      '#CFFAFE', // cyan-100
-      '#FEE2E2', // red-100
-      '#FEF9C3', // yellow-100
-      '#CCFBF1', // green-100
-    ];
-    return colors[index % colors.length];
+  const getOptionColor = () => {
+    // Generate a random hex color
+    const randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+    return randomColor;
   };
 
   function getBrowserTimeZone() {
@@ -1201,10 +1191,13 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         setIsSaving(false);
         return; // Prevent saving without target table
       }
-      config.relation = {
-        with: selectedTableId,
-        type: relationType
-      };
+      // Only set relation config when creating a new links field, not when editing
+      if (!initialValues) {
+        config.relation = {
+          with: selectedTableId,
+          type: relationType
+        };
+      }
     }
     if (selectedType.key === 'lookup') {
       if (!selectedRelationId) {
@@ -1802,9 +1795,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     if (exists) {
                       setOptionError('Option already exists');
                     } else {
+                      const optionColor = color && color !== '#cccccc' ? color : getOptionColor();
                       setSelectOptions([
                         ...selectOptions,
-                        { option: trimmed, color: color && color !== '#cccccc' ? color : '' }
+                        { option: trimmed, color: optionColor }
                       ]);
                       setColor('');
                       setNewOption('');
@@ -1830,9 +1824,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     if (exists) {
                       setOptionError('Option already exists');
                     } else {
+                      const optionColor = color && color !== '#cccccc' ? color : getOptionColor();
                       setSelectOptions([
                         ...selectOptions,
-                        { option: trimmed, color: color && color !== '#cccccc' ? color : '' }
+                        { option: trimmed, color: optionColor }
                       ]);
                       setColor('');
                       setNewOption('');
@@ -1867,7 +1862,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       />
                       <input
                         type="color"
-                        value={opt.color || getOptionColor(opt.option, idx)}
+                        value={opt.color || '#cccccc'}
                         onChange={(e) => {
                           const newOptions = [...selectOptions];
                           newOptions[idx] = { ...newOptions[idx], color: e.target.value };
@@ -1984,9 +1979,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     if (exists) {
                       setOptionError('Option already exists');
                     } else {
+                      const optionColor = color && color !== '#cccccc' ? color : getOptionColor();
                       setSelectOptions([
                         ...selectOptions,
-                        { option: trimmed, color: color && color !== '#cccccc' ? color : '' }
+                        { option: trimmed, color: optionColor }
                       ]);
                       setColor('');
                       setNewOption('');
@@ -2014,9 +2010,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     if (exists) {
                       setOptionError('Option already exists');
                     } else {
+                      const optionColor = color && color !== '#cccccc' ? color : getOptionColor();
                       setSelectOptions([
                         ...selectOptions,
-                        { option: trimmed, color: color && color !== '#cccccc' ? color : '' }
+                        { option: trimmed, color: optionColor }
                       ]);
                       setColor('');
                       setNewOption('');
@@ -2045,7 +2042,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       </label>
                       <input
                         type="color"
-                        value={opt.color || getOptionColor(opt.option, idx)}
+                        value={opt.color || '#cccccc'}
                         onChange={(e) => {
                           const newOptions = [...selectOptions];
                           newOptions[idx] = { ...newOptions[idx], color: e.target.value };

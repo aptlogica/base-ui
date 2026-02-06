@@ -191,7 +191,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     setIsDragOver(false);
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.SyntheticEvent<HTMLFormElement>) => {
     e?.preventDefault();
 
     // Prevent multiple submissions using ref to avoid race conditions

@@ -1032,13 +1032,28 @@ export const useUpdateViewMeta = () => {
         queryClient.setQueryData(['view', String(variables.viewId)], context.previousView);
       }
     },
-    onSuccess: (_, { viewId }) => {
-      // Only invalidate the specific view query to ensure consistency
-      // No need to invalidate all views, tables, bases, or workspaces for meta changes
+    onSuccess: (data, { viewId }) => {
+      // Try to extract tableId from the response
+      let tableId = (data as any)?.model_id || (data as any)?.model?.id;
+      
+      // If not in response, try to get from the view cache
+      if (!tableId) {
+        const viewData = queryClient.getQueryData(['view', String(viewId)]);
+        tableId = (viewData as any)?.model_id || (viewData as any)?.model?.id;
+      }
+      
+      // Invalidate the specific view query so components using view data will see updates
       queryClient.invalidateQueries({ 
-        queryKey: ['view', String(viewId)],
-        refetchType: 'none' // Don't refetch, we already updated optimistically
+        queryKey: ['view', String(viewId)]
       });
+
+      // Also invalidate the table query to ensure views array is refreshed
+      // This ensures KanbanBoard and other view-based components get the updated view metadata
+      if (tableId) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['tables', String(tableId)]
+        });
+      }
     },
   });
 };

@@ -29,17 +29,12 @@ interface FormulaConfig {
 }
 
 interface FormulaProps {
-  label?: string;
   value?: string | number | boolean | null;
   onChange?: (value: string | number | boolean | null) => void;
   config?: FormulaConfig;
-  required?: boolean;
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean;
-  helperText?: string;
-  icon?: string;
   columns?: any[]; // Available columns for formula
   onFormulaChange?: (formula: string) => void;
   onErrorChange?: (error: string | null) => void; // Notify parent of validation errors
@@ -337,16 +332,16 @@ export const Formula: React.FC<FormulaProps> = ({
 
   const handleShowAllFunctionsClick = useCallback(() => {
     setShowAllFunctions(!showAllFunctions);
-    if (!showAllFunctions) {
+    if (showAllFunctions) {
+      // Reset search when closing modal
+      setFunctionSearchQuery('');
+    } else {
       // Use requestAnimationFrame to ensure DOM is ready, then update position
       requestAnimationFrame(() => {
         setTimeout(() => {
           updateAllFunctionsModalPosition();
         }, 0);
       });
-    } else {
-      // Reset search when closing modal
-      setFunctionSearchQuery('');
     }
   }, [showAllFunctions, updateAllFunctionsModalPosition]);
 
@@ -469,12 +464,10 @@ export const Formula: React.FC<FormulaProps> = ({
         lastNotifiedValueRef.current = newValue;
         onChange(newValue);
       }
-    } else {
+    } else if (value !== null && value !== undefined) {
       // If formula is invalid or empty, only pass null if current value is not null
-      if (value !== null && value !== undefined) {
-        lastNotifiedValueRef.current = null;
-        onChange(null);
-      }
+      lastNotifiedValueRef.current = null;
+      onChange(null);
     }
     // Only depend on formulaText, onChange, formattingType, and value
     // rowData, columns, allColumns are accessed from closure and will be latest values
@@ -581,7 +574,7 @@ export const Formula: React.FC<FormulaProps> = ({
     div.style.position = 'absolute';
     div.style.visibility = 'hidden';
     div.style.whiteSpace = 'pre-wrap';
-    div.style.wordWrap = 'break-word';
+    div.style.overflowWrap = 'break-word';
     div.style.fontFamily = style.fontFamily;
     div.style.fontSize = style.fontSize;
     div.style.fontWeight = style.fontWeight;
@@ -607,13 +600,13 @@ export const Formula: React.FC<FormulaProps> = ({
     
     const textareaRect = textarea.getBoundingClientRect();
     const spanRect = span.getBoundingClientRect();
-    const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
+    const lineHeight = Number.parseFloat(style.lineHeight) || Number.parseFloat(style.fontSize) * 1.2;
     
     // Calculate cursor position with small offset below cursor
-    const top = textareaRect.top + (currentLine + 1) * lineHeight - textarea.scrollTop + parseFloat(style.paddingTop) + parseFloat(style.borderTopWidth) + 4;
-    const left = textareaRect.left + spanRect.width + parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth);
+    const top = textareaRect.top + (currentLine + 1) * lineHeight - textarea.scrollTop + Number.parseFloat(style.paddingTop) + Number.parseFloat(style.borderTopWidth) + 4;
+    const left = textareaRect.left + spanRect.width + Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.borderLeftWidth);
     
-    document.body.removeChild(div);
+    div.remove();
     
     setCursorPosition({ top, left });
   }, [formulaText]);
@@ -631,8 +624,7 @@ export const Formula: React.FC<FormulaProps> = ({
     if (lastOpenBrace === -1) return false;
     
     // Check if there's a closing '}' between the last '{' and cursor
-    const textAfterOpenBrace = textBeforeCursor.substring(lastOpenBrace + 1);
-    const hasClosingBrace = textAfterOpenBrace.includes('}');
+    const hasClosingBrace = textBeforeCursor.substring(lastOpenBrace + 1).includes('}');
     
     // If we're inside a field reference (after { but before })
     return !hasClosingBrace;
@@ -654,7 +646,7 @@ export const Formula: React.FC<FormulaProps> = ({
   const handleBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
     // Don't blur if clicking on the dropdown
     const relatedTarget = e.relatedTarget as HTMLElement;
-    if (relatedTarget && relatedTarget.closest('.field-dropdown')) {
+    if (relatedTarget?.closest('.field-dropdown')) {
       return;
     }
     
@@ -702,7 +694,7 @@ export const Formula: React.FC<FormulaProps> = ({
     const text = formulaText;
     
     // Strip any existing parentheses from function name (func.name might be "ADD()")
-    const baseFunctionName = functionName.replace(/\(\)$/, '');
+    const baseFunctionName = functionName.replaceAll(/\(\)$/g, '');
     // Insert function name with parentheses
     const functionWithParens = baseFunctionName + "()";
     const newText = text.substring(0, start) + functionWithParens + text.substring(end);
@@ -727,9 +719,22 @@ export const Formula: React.FC<FormulaProps> = ({
     const textBeforeCursor = text.substring(0, start);
     const lastOpenBrace = textBeforeCursor.lastIndexOf('{');
     
-    if (lastOpenBrace !== -1) {
+    if (lastOpenBrace === -1) {
+      // Insert column reference with curly braces
+      const columnReference = `{${columnName}}`;
+      const newText = text.substring(0, start) + columnReference + text.substring(end);
+      setFormulaText(newText);
+      
+      // Set cursor position after the inserted column reference
+      setTimeout(() => {
+        textarea.focus();
+        const newCursorPos = start + columnReference.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        updateCursorPosition();
+        setShowFieldDropdown(false);
+      }, 0);
+    } else {
       // We're inside a field reference, replace from { to cursor with {FieldName}
-      const textAfterOpenBrace = textBeforeCursor.substring(lastOpenBrace + 1);
       // Check if there's already a closing brace after cursor
       const textAfterCursor = text.substring(end);
       const hasClosingBrace = textAfterCursor.startsWith('}');
@@ -748,20 +753,6 @@ export const Formula: React.FC<FormulaProps> = ({
       setTimeout(() => {
         textarea.focus();
         const newCursorPos = lastOpenBrace + 1 + columnName.length + (hasClosingBrace ? 0 : 1);
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
-        updateCursorPosition();
-        setShowFieldDropdown(false);
-      }, 0);
-    } else {
-      // Insert column reference with curly braces
-      const columnReference = `{${columnName}}`;
-      const newText = text.substring(0, start) + columnReference + text.substring(end);
-      setFormulaText(newText);
-      
-      // Set cursor position after the inserted column reference
-      setTimeout(() => {
-        textarea.focus();
-        const newCursorPos = start + columnReference.length;
         textarea.setSelectionRange(newCursorPos, newCursorPos);
         updateCursorPosition();
         setShowFieldDropdown(false);
@@ -803,28 +794,14 @@ export const Formula: React.FC<FormulaProps> = ({
     }, 0);
   };
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch (err) {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = text;
-      textArea.style.position = 'fixed';
-      textArea.style.opacity = '0';
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-    }
-  };
+
 
   // Compute frequently used functions
   const frequentlyUsedFunctions = useMemo(() => {
     const functions: Array<{ name: string; description: string; example: string }> = [];
     Object.values(FORMULA_FUNCTIONS).forEach((funcList) => {
       funcList.forEach((func) => {
-        const funcName = func.name.replace(/[()]/g, '');
+        const funcName = func.name.replaceAll(/[()]/g, '');
         if (FREQUENTLY_USED_FUNCTION_NAMES.includes(funcName)) {
           functions.push(func);
         }
@@ -844,7 +821,7 @@ export const Formula: React.FC<FormulaProps> = ({
 
     Object.entries(FORMULA_FUNCTIONS).forEach(([category, functions]) => {
       const matchingFunctions = functions.filter((func) => {
-        const funcName = func.name.replace(/[()]/g, '').toLowerCase();
+        const funcName = func.name.replaceAll(/[()]/g, '').toLowerCase();
         const description = (func.description || '').toLowerCase();
         return funcName.includes(query) || description.includes(query);
       });
@@ -1006,7 +983,9 @@ export const Formula: React.FC<FormulaProps> = ({
                     // Check if we're still inside a field reference
                     const textBeforeNewCursor = newValue.substring(0, cursorPos);
                     const lastOpenBrace = textBeforeNewCursor.lastIndexOf('{');
-                    if (lastOpenBrace !== -1) {
+                    if (lastOpenBrace === -1) {
+                      setShowFieldDropdown(false);
+                    } else {
                       const textAfterOpenBrace = textBeforeNewCursor.substring(lastOpenBrace + 1);
                       const hasClosingBrace = textAfterOpenBrace.includes('}');
                       setShowFieldDropdown(!hasClosingBrace);
@@ -1014,8 +993,6 @@ export const Formula: React.FC<FormulaProps> = ({
                       setTimeout(() => {
                         updateCursorPosition();
                       }, 0);
-                    } else {
-                      setShowFieldDropdown(false);
                     }
                   }
                   
@@ -1083,7 +1060,7 @@ export const Formula: React.FC<FormulaProps> = ({
             </div>
             <div className="flex flex-wrap gap-1.5">
               {frequentlyUsedFunctions.map((func) => {
-                const functionName = func.name.replace(/[()]/g, '');
+                const functionName = func.name.replaceAll(/[()]/g, '');
                 const fullDescription = func.description || '';
                 const example = func.example || '';
                 
@@ -1263,7 +1240,7 @@ export const Formula: React.FC<FormulaProps> = ({
                           : "text-gray-600 hover:text-gray-900 hover:bg-gray-50/50"
                       }`}
                     >
-                      <span className="truncate">{category.replace(/\s*Functions\s*$/i, '').replace(/\s*Operators\s*$/i, '')}</span>
+                      <span className="truncate">{category.trim().replace(/\s+(Functions|Operators)$/i, '')}</span>
                       {expandedCategories.has(category) ? (
                         <ChevronUp className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 ml-2" />
                       ) : (
@@ -1288,7 +1265,7 @@ export const Formula: React.FC<FormulaProps> = ({
                                   className={`w-full px-3 text-primary py-2 text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] rounded-xl flex items-center gap-2 ${selectedFunction === functionKey ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''} truncate`}
                                   title={func.description || func.name}
                                 >
-                                  {func.name.replace(/[()]/g, '')}
+                                  {func.name.replaceAll(/[()]/g, '')}
                                 </button>
                                 <button
                                   onClick={(e) => {

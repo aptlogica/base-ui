@@ -58,7 +58,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   const isReadOnly = isBaseReadOnly();
 
   // Process raw tableData into calendar-specific data
-  const { uiColumns, uiData, uiTableId, events, dateField, dateFields, view } = useMemo(() => {
+  const { uiColumns, uiData, uiTableId, events, dateField, view } = useMemo(() => {
     const model = tableData.model || ({} as any);
     const rawColumns = Array.isArray(tableData.columns) ? tableData.columns : [];
     const rawRecords = Array.isArray(tableData.records) ? tableData.records : [];

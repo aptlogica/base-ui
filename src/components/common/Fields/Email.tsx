@@ -71,7 +71,7 @@ export const Email: React.FC<EmailProps> = ({
       if (!segment || segment.length === 0) return false;
       if (!/^[a-zA-Z0-9-]+$/.test(segment)) return false;
 
-      const isLastSegment = segment === domainParts[domainParts.length - 1];
+      const isLastSegment = segment === domainParts.at(-1);
       if (isLastSegment && (segment.length < 2 || segment.startsWith('-'))) {
         return false;
       }

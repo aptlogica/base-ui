@@ -1,7 +1,10 @@
 import { Plugin } from '../core/types';
 
 export const createPluginId = (name: string): string => {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return name.toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replace(/^-+/, '')  // Remove leading dashes
+    .replace(/-+$/, '');  // Remove trailing dashes
 };
 
 export const validatePluginId = (id: string): boolean => {

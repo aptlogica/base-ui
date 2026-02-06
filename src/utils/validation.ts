@@ -4,13 +4,13 @@ export type LoginForm = {
 };
 
 export const validateEmail = (value: string): string | null => {
-  if (!value || !value.trim()) return 'This field is required';
+  if (!value?.trim()) return 'This field is required';
   const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
   return ok ? null : 'Please enter a valid email address';
 };
 
 export const validatePassword = (value: string, minLen = 6): string | null => {
-  if (!value || !value.trim()) return 'This field is required';
+  if (!value?.trim()) return 'This field is required';
   if (value.trim().length < minLen) return `Password must be at least ${minLen} characters long`;
   return null;
 };
@@ -47,7 +47,7 @@ export const validatePasswordStrength = (
   const hasLength = pwd.length >= 8;
   const hasUpper = /[A-Z]/.test(pwd);
   const hasLower = /[a-z]/.test(pwd);
-  const hasNumber = /[0-9]/.test(pwd);
+  const hasNumber = /\d/.test(pwd);
   const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(pwd);
 
   // Check if password contains name or email (should NOT contain these)
@@ -128,7 +128,7 @@ export const validatePasswordStrength = (
 };
 
 export const validateRequired = (value: string): string | null => {
-  if (!value || !value.trim()) return 'This field is required';
+  if (!value?.trim()) return 'This field is required';
   return null;
 };
 

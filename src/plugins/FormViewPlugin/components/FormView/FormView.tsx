@@ -376,7 +376,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
   }
 
   // Handle form submit - delegate to data layer
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormError(null);
     setSubmitting(true);
@@ -627,7 +627,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
       onConfigChange: undefined
     } : {
       onClear: clearFormData,
-      onSubmit: (e: React.FormEvent) => {
+      onSubmit: (e:React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault();
         handleFormSubmit(e);
       },

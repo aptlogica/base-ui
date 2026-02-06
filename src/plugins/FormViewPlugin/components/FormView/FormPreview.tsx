@@ -10,7 +10,7 @@ interface FormPreviewProps {
   onRowDataChange: (fieldId: string, value: unknown) => void;
   onFieldOrderChange: (newFields: FormField[]) => void;
   onClear?: () => void;
-  onSubmit?: (e: React.FormEvent) => void;
+  onSubmit?: (e:React.SyntheticEvent<HTMLFormElement>) => void;
   onDeleteField: (fieldId: string) => void;
   formError?: string | null;
   model_id?: string;
@@ -512,7 +512,7 @@ const FormHeader: React.FC<FormHeaderProps> = ({
 
 // Extract form actions component
 interface FormActionsProps {
-  onSubmit?: (e: React.FormEvent) => void;
+  onSubmit?: (e:React.SyntheticEvent<HTMLFormElement>) => void;
   onClear?: () => void;
   primaryColor?: string;
   isSubmitting?: boolean;
@@ -704,7 +704,7 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
 
           <form
             className={isGridLayout ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-2'}
-            onSubmit={onSubmit || ((e: React.FormEvent) => {
+            onSubmit={onSubmit || ((e:React.SyntheticEvent<HTMLFormElement>) => {
               e.preventDefault();
             })}
           >

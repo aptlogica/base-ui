@@ -22,9 +22,7 @@ interface CalendarHeaderProps {
   onAddFilter?: (filter: { column: string; operator: string; value: string }) => void;
   onRemoveFilter?: (index: number) => void;
   onUpdateFilter?: (index: number, updates: Partial<{ column: string; operator: string; value: string }>) => void;
-  onRealTimeFilter?: (filter: { column: string; operator: string; value: string } | null) => void;
   onGroupByChange?: (column: GridColumn | undefined) => void;
-  tableId: string;
   events?: Array<{ date: string; id: string; title: string;[key: string]: any }>;
 }
 
@@ -44,7 +42,6 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onAddFilter,
   onRemoveFilter,
   onUpdateFilter,
-  onRealTimeFilter,
   onGroupByChange,
   // tableId,
   events = [],
@@ -58,8 +55,8 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       // Fallback: remove and re-add (legacy behavior)
       if (index < 0 || index >= filters.length) return;
       const updatedFilter = { ...filters[index], ...updates };
-      onRemoveFilter(index);
-      onAddFilter(updatedFilter);
+      if (onRemoveFilter) onRemoveFilter(index);
+      if (onAddFilter) onAddFilter(updatedFilter);
     }
   }, [filters, onAddFilter, onRemoveFilter, onUpdateFilter]);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -285,7 +282,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
           {/* Weeks List */}
           <div className="p-3 max-h-64 overflow-y-auto">
-            {weeks.map((week, index) => {
+            {weeks.map((week) => {
               const isCurrentWeek = week.start <= currentDate && week.end >= currentDate;
               return (
                 <button
@@ -361,11 +358,16 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
             {/* Days */}
             <div className="grid grid-cols-7 gap-1">
-              {days.map((date, index) => {
+              {days.map((date) => {
                 const isCurrentMonth = date.getMonth() === month;
                 const isToday = date.toDateString() === new Date().toDateString();
                 const isSelected = date.toDateString() === currentDate.toDateString();
                 const hasEvents = hasEventsForDate(date);
+                const isSelectedClass = isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : '';
+                const isTodayClass = isToday ? 'text-[var(--color-text-primary)] border border-[var(--color-bg-brand-primary)]' : '';
+                const isCurrentMonthClass = isCurrentMonth ? 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black' : '';
+                const defaultClass = 'text-gray-400 hover:bg-gray-50';
+                const dateButtonClass = isSelectedClass || isTodayClass || isCurrentMonthClass || defaultClass;
 
                 return (
                   <button
@@ -375,14 +377,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                       onDateChange(date);
                       setShowDatePicker(false);
                     }}
-                    className={`relative w-8 h-8 text-sm rounded-full transition-colors flex flex-col items-center justify-center ${isSelected
-                      ? 'bg-[var(--color-bg-brand-primary)] text-black'
-                      : isToday
-                        ? 'text-[var(--color-text-primary)] border border-[var(--color-bg-brand-primary)]'
-                        : isCurrentMonth
-                          ? 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
-                          : 'text-gray-400 hover:bg-gray-50'
-                      }`}
+                    className={`relative w-8 h-8 text-sm rounded-full transition-colors flex flex-col items-center justify-center ${dateButtonClass}`}
                   >
                     {/* Event indicator - show dot if date has events */}
                     {hasEvents && (
@@ -661,14 +656,13 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             )}
 
             {/* Filter Popover */}
-            {onAddFilter && (
+            {onAddFilter && onRemoveFilter && (
               <FilterPopover
                 columns={columns}
                 filters={filters}
                 onAddFilter={onAddFilter}
                 onRemoveFilter={onRemoveFilter}
                 onUpdateFilter={handleUpdateFilter}
-                onRealTimeFilter={onRealTimeFilter}
               />
             )}
 

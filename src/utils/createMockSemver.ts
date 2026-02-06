@@ -1,6 +1,6 @@
 export const createMockSemver = () => {
   const parseVersion = (version: string): [number, number, number] => {
-    const parts = version.replace(/[^0-9.]/g, '').split('.').map(Number);
+    const parts = version.replaceAll(/[^0-9.]/g, '').split('.').map(Number);
     return [parts[0] || 0, parts[1] || 0, parts[2] || 0];
   };
 
@@ -55,7 +55,7 @@ export const createMockSemver = () => {
   return {
     satisfies: satisfiesRange,
     valid: (version: string) => /^\d+\.\d+\.\d+/.test(version) ? version : null,
-    clean: (version: string) => version.replace(/[^0-9.]/g, ''),
+    clean: (version: string) => version.replaceAll(/[^0-9.]/g, ''),
     gt: (v1: string, v2: string) => compareVersions(v1, v2) > 0,
     lt: (v1: string, v2: string) => compareVersions(v1, v2) < 0,
     gte: (v1: string, v2: string) => compareVersions(v1, v2) >= 0,

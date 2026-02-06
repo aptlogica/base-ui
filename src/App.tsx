@@ -23,6 +23,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import { useClientHeaders } from './hooks/useClientHeaders';
 import { RouteContextProvider } from './contexts/RouteContext';
 import { NavigationResolver } from './components/NavigationResolver';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -70,7 +71,25 @@ const Layout = () => {
 
   // Track sidebar position and width (for flyout menu)
   const [sidebarPosition] = useState('left');
-  const [sidebarWidth] = useState(56);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      const saved = sessionStorage.getItem('sidebarCollapsed');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+  
+  // Wrapper to update both state and sessionStorage
+  const updateSidebarCollapsed = (value: boolean | ((prev: boolean) => boolean)) => {
+    setSidebarCollapsed((prev: boolean) => {
+      const newValue = typeof value === 'function' ? value(prev) : value;
+      sessionStorage.setItem('sidebarCollapsed', JSON.stringify(newValue));
+      return newValue;
+    });
+  };
+  
+  const sidebarWidth = sidebarCollapsed ? 20 : FLYOUT_WIDTH;
 
   // Auto-open flyout menu when on base/table/view routes
   useEffect(() => {
@@ -108,14 +127,24 @@ const Layout = () => {
           {/* Layout-Integrated Flyout Menu - Left Side */}
           {sidebarPosition === 'left' && flyoutOpen && (
             <aside
-              style={{ width: FLYOUT_WIDTH, minWidth: FLYOUT_WIDTH, maxWidth: FLYOUT_WIDTH }}
-              className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out"
+              style={{ width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
+              className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out relative"
             >
-              <Sidebar
-                sidebarPosition={sidebarPosition}
-                sidebarWidth={sidebarWidth}
-                selectedWorkspace={selectedWorkspace}
-              />
+              {!sidebarCollapsed && (
+                <Sidebar
+                  sidebarPosition={sidebarPosition}
+                  sidebarWidth={sidebarWidth}
+                  selectedWorkspace={selectedWorkspace}
+                  
+                />
+              )}
+              <button 
+                onClick={() => updateSidebarCollapsed(!sidebarCollapsed)} 
+                className='absolute top-1/2 right-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-50 hover:bg-gray-100 transition-colors outline-none'
+                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+              </button>
             </aside>
           )}
 
@@ -127,14 +156,23 @@ const Layout = () => {
           {/* Layout-Integrated Flyout Menu - Right Side */}
           {sidebarPosition === 'right' && flyoutOpen && (
             <aside
-              style={{ width: FLYOUT_WIDTH, minWidth: FLYOUT_WIDTH, maxWidth: FLYOUT_WIDTH }}
-              className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out"
+              style={{ width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
+              className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out relative"
             >
-              <Sidebar
-                sidebarPosition={sidebarPosition}
-                sidebarWidth={sidebarWidth}
-                selectedWorkspace={selectedWorkspace}
-              />
+              {!sidebarCollapsed && (
+                <Sidebar
+                  sidebarPosition={sidebarPosition}
+                  sidebarWidth={sidebarWidth}
+                  selectedWorkspace={selectedWorkspace}
+                />
+              )}
+              <button 
+                onClick={() => updateSidebarCollapsed(!sidebarCollapsed)} 
+                className='absolute top-1/2 left-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-50 hover:bg-gray-100 transition-colors outline-none'
+                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {sidebarCollapsed ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+              </button>
             </aside>
           )}
         </div>

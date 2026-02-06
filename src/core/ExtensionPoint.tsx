@@ -39,7 +39,7 @@ export const ExtensionPoint: React.FC<ExtensionPointProps> = ({ id, render, prop
   // Special handling for 'view' extension point - select first renderer that returns content
   // REACT CONCURRENT: Wrap view rendering in Suspense for better loading states
   if (id === 'view') {
-    const sortedExtensions = extensions.sort((a: any, b: any) => (a.order || 100) - (b.order || 100));
+    const sortedExtensions = extensions.toSorted((a: any, b: any) => (a.order || 100) - (b.order || 100));
     for (const ext of sortedExtensions) {
       if (ext.render) {
         const rendered = ext.render(props);
@@ -67,7 +67,7 @@ export const ExtensionPoint: React.FC<ExtensionPointProps> = ({ id, render, prop
   // Otherwise, render all extensions in order, then children
   return (
     <>
-      {extensions.sort((a: any, b: any) => (a.order || 100) - (b.order || 100)).map((ext: any) => (ext.render ? <React.Fragment key={ext.id}>{ext.render(props)}</React.Fragment> : null))}
+      {extensions.toSorted((a: any, b: any) => (a.order || 100) - (b.order || 100)).map((ext: any) => (ext.render ? <React.Fragment key={ext.id}>{ext.render(props)}</React.Fragment> : null))}
       {render ? render(extensions) : null}
     </>
   );
