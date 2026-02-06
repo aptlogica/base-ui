@@ -73,7 +73,8 @@ export function AdvancedDropdown<T extends string | number>({
   // Normalize value to always be an array for consistent handling
   const normalizeValue = useCallback((val: T | T[] | undefined): T[] => {
     if (val === undefined || val === null) return [];
-    return Array.isArray(val) ? val : [val];
+    const rawValues = Array.isArray(val) ? val : [val];
+    return rawValues.filter(item => !isEmptySelectionValue(item));
   }, []);
 
   // Get current values as array
@@ -608,6 +609,10 @@ function DropdownOptionItem<T>({
 }
 
 // Helper functions
+function isEmptySelectionValue<T>(value: T | undefined | null): boolean {
+  return value === undefined || value === null || value === '';
+}
+
 function getSelectedCount<T>(value: T | T[] | undefined | null): number {
   let normalizedValue: T[];
   if (value === undefined || value === null) {
@@ -617,7 +622,7 @@ function getSelectedCount<T>(value: T | T[] | undefined | null): number {
   } else {
     normalizedValue = [value];
   }
-  return normalizedValue.length;
+  return normalizedValue.filter(item => !isEmptySelectionValue(item)).length;
 }
 
 export default AdvancedDropdown;

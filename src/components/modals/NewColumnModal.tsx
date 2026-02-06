@@ -279,6 +279,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   // Add state for lookup field config
   const [selectedRelationId, setSelectedRelationId] = useState<string>('');
   const [selectedLookupColumnId, setSelectedLookupColumnId] = useState<string>('');
+  const [hasUserModifiedLookupColumn, setHasUserModifiedLookupColumn] = useState(false);
   const [targetTableFields, setTargetTableFields] = useState<any[]>([]);
 
   // Get all links type fields from current table
@@ -352,7 +353,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       setTargetTableFields(filteredFields);
 
       // If editing a lookup field and we have the lookup column ID, ensure it's set
-      if (initialValues?.type === 'lookup' && isOpen) {
+      if (initialValues?.type === 'lookup' && isOpen && !hasUserModifiedLookupColumn) {
         const config = initialValues.meta || initialValues.config || {};
         const lookupColumnId = config.lookup_column_id;
         if (lookupColumnId && !selectedLookupColumnId) {
@@ -366,7 +367,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     } else {
       setTargetTableFields([]);
     }
-  }, [targetTableData, targetTableId, initialValues, isOpen, selectedLookupColumnId]);
+  }, [targetTableData, targetTableId, initialValues, isOpen, selectedLookupColumnId, hasUserModifiedLookupColumn]);
 
   // Initialize selectedTable when tables are loaded and we have a selectedTableId (for Links fields)
   useEffect(() => {
@@ -408,6 +409,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     // Reset when relation is cleared
     if (!selectedRelationId) {
       setTargetTableFields([]);
+      setSelectedLookupColumnId('');
       previousRelationIdRef.current = '';
     }
   }, [selectedRelationId, initialValues, isOpen]);
@@ -492,6 +494,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
   useEffect(() => {
     if (isOpen) {
+      setHasUserModifiedLookupColumn(false);
       if (initialValues) {
         setStep(2);
         setFieldName(initialValues.title || '');
@@ -697,6 +700,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         // Reset lookup field config state
         setSelectedRelationId('');
         setSelectedLookupColumnId('');
+        setHasUserModifiedLookupColumn(false);
         setTargetTableFields([]);
         // Reset button field config state
         setButtonStyle('primary');
@@ -769,6 +773,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       setSelectedTable(null);
       setSelectedRelationId('');
       setSelectedLookupColumnId('');
+      setHasUserModifiedLookupColumn(false);
       setTargetTableFields([]);
       setButtonStyle('primary');
       setButtonAction('url');
@@ -3439,7 +3444,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 <AdvancedDropdown
                   options={relationOptions}
                   value={selectedRelationId}
-                  onChange={(value) => setSelectedRelationId(value as string)}
+                  onChange={(value) => {
+                    setHasUserModifiedLookupColumn(true);
+                    setSelectedRelationId(value as string);
+                  }}
                   placeholder="-select-"
                   searchable
                   clearable
@@ -3458,7 +3466,14 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 <AdvancedDropdown
                   options={lookupColumnOptions}
                   value={selectedLookupColumnId}
-                  onChange={(value) => setSelectedLookupColumnId(value as string)}
+                  onChange={(value) => {
+                    setHasUserModifiedLookupColumn(true);
+                    if (typeof value === 'string' && value) {
+                      setSelectedLookupColumnId(value);
+                    } else {
+                      setSelectedLookupColumnId('');
+                    }
+                  }}
                   placeholder="-select-"
                   disabled={!selectedRelationId || isTargetTableLoading}
                   searchable

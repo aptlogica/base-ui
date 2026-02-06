@@ -245,7 +245,7 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
           </div>
         </div>
         {/* Field Value */}
-        <div className="ml-5 text-gray-900 cursor-default">
+        <div className={`ml-5 text-gray-900 cursor-default${onEdit ? '' : ' pointer-events-none'}`}>
             <FieldDisplay
               field={{
                 id: col.id,
