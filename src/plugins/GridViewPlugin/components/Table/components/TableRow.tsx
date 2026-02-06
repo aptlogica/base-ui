@@ -125,7 +125,7 @@ export const TableRow: React.FC<TableRowProps> = ({
       role="row"
       tabIndex={0}
     >
-      <div className={`flex-shrink-0 w-13 bg-background border-r ${isRowActive ? '' : 'border-b border-border/30'} flex items-center justify-center relative select-none gap-2`} style={{ height: '39px', position: 'sticky', left: 0, zIndex: 11 }}>
+      <div className={`flex-shrink-0 w-13 bg-background border-r ${isRowActive ? '' : 'border-b border-border/30'} flex items-center justify-center relative select-none gap-2`} style={{ height: '40px', position: 'sticky', left: 0, zIndex: 11 }}>
         <span className={`text-xs text-muted-foreground font-normal absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none transition-opacity duration-150 ${isSelected ? 'opacity-0' : 'group-hover:opacity-0'}`} style={{ zIndex: 1 }}>{displayRowNumber ?? rowIndex + 1}</span>
         <input
           type="checkbox"

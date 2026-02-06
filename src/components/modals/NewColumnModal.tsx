@@ -825,6 +825,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     )
   // .sort((a: FieldType, b: FieldType) => a.label.localeCompare(b.label));
 
+  // Check if we're editing a links field (scoped here for use in dropdown)
+  const isLinksFieldEditing = initialValues && (initialValues.type === 'links' || initialValues.uidt === 'links');
 
   const getOptionColor = () => {
     // Generate a random hex color
@@ -1253,13 +1255,21 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     // Use getUniqueColumnNameByUidt to ensure no duplicate column names, using type as base
     const uidtBase = selectedType?.key || 'Field';
     const uniqueColName = getUniqueColumnNameByUidt(uidtBase, fields);
+    
+    // For links fields during edit, preserve existing meta instead of sending empty meta
+    let finalMeta = config;
+    if (selectedType.key === 'links' && initialValues) {
+      // During edit, preserve the existing meta (don't overwrite it)
+      finalMeta = initialValues.meta || initialValues.config || {};
+    }
+    
     const colConfig: any = {
       key: fieldName || uniqueColName,
       title: fieldName || uniqueColName,
       name: fieldName || uniqueColName,
       type: selectedType.key,
       description: description,
-      meta: config, // Use 'meta' instead of 'config' for new API format
+      meta: finalMeta, // Use 'meta' instead of 'config' for new API format
     };
 
     onSave(colConfig);
@@ -3253,7 +3263,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
           </>
         );
       case 'links':
-        const isLinksFieldEditing = initialValues && (initialValues.type === 'links' || initialValues.uidt === 'links');
         return (
           <>
             <div className="mb-4">
@@ -3762,7 +3771,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     <Search className="w-4 h-4" />
                   </span>
                   <input
-                    className="w-full pl-10 pr-3 py-2 text-sm text-[var(--text-color-primary)] border border-b-0 border-[var(--color-border-primary)] rounded-tl-lg rounded-tr-lg focus:outline-none bg-[var(--color-alpha-white)]"
+                    className="w-full pl-10 pr-3 py-2 text-sm text-[var(--text-color-primary)] border border-[var(--color-border-primary)] rounded-tl-lg rounded-tr-lg focus:outline-none bg-[var(--color-alpha-white)]"
                     placeholder="Search field type"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
@@ -3771,7 +3780,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               </div>
               {/* Scrollable area for filtered types */}
               {filteredTypes.length > 0 && (
-                <div className={`max-h-[230px] p-2 space-y-1 overflow-y-auto rounded-bl-lg rounded-br-lg border bg-[var(--color-alpha-white)] text-[var(--text-color-tertiary)]`}>
+                <div className={`max-h-[230px] p-2 space-y-1 overflow-y-auto rounded-bl-lg border-t-0 rounded-br-lg border bg-[var(--color-alpha-white)] text-[var(--text-color-tertiary)]`}>
                 {filteredTypes.map((type: FieldType) => (
                   <button
                     key={type.key}
@@ -3815,7 +3824,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                   fieldTypes={FIELD_TYPES.filter(type => !(type as any).hidden)}
                   selectedType={selectedType}
                   setSelectedType={handleTypeSelect}
-                  disabled={selectedType?.key === 'lookup' || isFieldUsedInViews}
+                  disabled={selectedType?.key === 'lookup' || isFieldUsedInViews || isLinksFieldEditing}
                 />
                 {isFieldUsedInViews && selectedType?.key !== 'links' && (
                   <div className="flex item-start gap-2 justify-between">

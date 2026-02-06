@@ -766,7 +766,7 @@ export const LongText: React.FC<LongTextProps> = ({
               <button
                 type='button'
                 onClick={closeModal}
-                className="px-4 py-2 text-sm font-medium bg-gray-200 text-gray-700 rounded-lg transition-colors hover:bg-gray-300"
+                className="px-4 py-2 text-sm font-medium bg-gray-200 text-gray-700 rounded-xl transition-colors hover:bg-gray-300"
               >
                 Close
               </button>
