@@ -45,7 +45,6 @@ describe('CalendarHeader', () => {
     dateFields: [],
     onDateFieldChange: vi.fn(),
     onExport: vi.fn(),
-    onCreateRecord: undefined,
     sidebarCollapsed: false,
     onToggleSidebar: vi.fn(),
     columns: [],

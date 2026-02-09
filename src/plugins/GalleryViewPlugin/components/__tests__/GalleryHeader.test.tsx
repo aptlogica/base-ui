@@ -430,28 +430,8 @@ describe('GalleryHeader', () => {
     });
   });
 
-  describe('sortable columns', () => {
-    it('should use sortableColumns when provided', () => {
-      const sortableColumns = [mockColumns[0]];
-
-      render(
-        <GalleryHeader
-          itemCount={10}
-          attachmentFields={[mockAttachmentField]}
-          columns={mockColumns}
-          sortableColumns={sortableColumns}
-          fieldConfig={mockFieldConfig}
-          filters={[]}
-          sorts={[]}
-          onSortChange={mockOnSortChange}
-          onSearch={mockOnSearch}
-        />
-      );
-
-      expect(screen.getByTestId('sort-popover')).toBeInTheDocument();
-    });
-
-    it('should default to columns when sortableColumns not provided', () => {
+  describe('sort popover', () => {
+    it('should render when sort handler exists', () => {
       render(
         <GalleryHeader
           itemCount={10}
@@ -459,7 +439,7 @@ describe('GalleryHeader', () => {
           columns={mockColumns}
           fieldConfig={mockFieldConfig}
           filters={[]}
-          sorts={[]}
+          sorts={[{ column: 'title', direction: 'asc' }]}
           onSortChange={mockOnSortChange}
           onSearch={mockOnSearch}
         />

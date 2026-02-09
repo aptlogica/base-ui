@@ -41,6 +41,12 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
     onFieldToggle(fieldId);
   };
 
+  const isTitleField = (col: ColumnConfig) => {
+    const title = (col.title || '').toLowerCase();
+    const columnName = (col.column_name || '').toLowerCase();
+    return title === 'title' || columnName === 'title';
+  };
+
   // Sort columns by position from fieldConfig, then separate regular from system fields
   const sortedColumns = [...columns].sort((a, b) => {
     const aConfig = fieldConfig?.find(fc => String(fc.id) === String(a.id));
@@ -53,8 +59,8 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
   });
 
   // Separate regular fields from system fields (using sorted order)
-  const regularFields = sortedColumns.filter(col => !col.system);
-  const systemFields = sortedColumns.filter(col => col.system);
+  const regularFields = sortedColumns.filter(col => !col.system || isTitleField(col));
+  const systemFields = sortedColumns.filter(col => col.system && !isTitleField(col));
 
   const filteredRegularFields = regularFields?.filter(col =>
     col.title?.toLowerCase().includes(search.toLowerCase())

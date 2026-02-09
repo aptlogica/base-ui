@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Filter, Trash2, Plus, Check, Type, ChevronDown, X } from 'lucide-react';
 import { useSmartPopover } from '../../../hooks/useSmartPopover';
@@ -119,6 +119,38 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
 
   // Get visible columns using utility function
   const visibleColumns = getVisibleColumns(columns, fieldsToExcludeInFilter);
+  const getColumnKey = (col: ColumnConfig) => String(col.column_name || col.key || '').trim();
+
+  const usedColumnsByFilters = useMemo(() => {
+    const counts = new Map<string, number>();
+    filters.forEach((filter) => {
+      const key = (filter.column || '').trim();
+      if (!key) {
+        return;
+      }
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return counts;
+  }, [filters]);
+
+  const usedColumnCounts = useMemo(() => {
+    const counts = new Map<string, number>(usedColumnsByFilters);
+    const newKey = (newFilter.column || '').trim();
+    if (showNewFilterRow && newKey) {
+      counts.set(newKey, (counts.get(newKey) ?? 0) + 1);
+    }
+    return counts;
+  }, [usedColumnsByFilters, newFilter.column, showNewFilterRow]);
+
+  const canAddFilter = useMemo(() => {
+    return visibleColumns.some((col) => {
+      const key = getColumnKey(col);
+      if (!key) {
+        return false;
+      }
+      return (usedColumnsByFilters.get(key) ?? 0) === 0;
+    });
+  }, [visibleColumns, usedColumnsByFilters]);
 
   // Helper function to render value input/display for a filter
   const renderFilterValue = (filter: FilterCondition, filterIndex: number, isNewFilter: boolean = false) => {
@@ -624,6 +656,17 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
             const filterOperatorOptions = column ? (FIELD_TYPE_OPERATORS[column.uidt || 'text'] || FIELD_TYPE_OPERATORS.default) : OPERATORS;
             const currentLogic = filter.logic || (idx === 0 ? undefined : 'AND');
             const uniqueKey = `${filter.column}-${filter.operator}-${filter.value}-${idx}`;
+            const currentFieldKey = (filter.column || '').trim();
+            const columnOptions = visibleColumns.filter((col) => {
+              const key = getColumnKey(col);
+              if (!key) {
+                return false;
+              }
+              if (currentFieldKey === key) {
+                return true;
+              }
+              return (usedColumnCounts.get(key) ?? 0) === 0;
+            });
 
             return (
               <div key={uniqueKey} className="flex items-center gap-2 mb-3">
@@ -699,11 +742,17 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                     <ChevronDown className="h-4 w-4 text-gray-400" />
                   </button>
                   {fieldDropdownOpen === idx && (
-                    <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
-                      {visibleColumns.map((col) => (
+                    <div
+                      className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto"
+                      data-testid={`filter-field-options-${idx}`}
+                    >
+                      {columnOptions.length === 0 && (
+                        <div className="px-3 py-2 text-sm text-secondary">All fields already used</div>
+                      )}
+                      {columnOptions.map((col) => (
                         <button
                           key={col.column_name}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap ${filter.column === col.column_name ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
+                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap ${filter.column === col.column_name ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'
                             }`}
                           onClick={() => {
                             // Reset operator and value when field changes
@@ -835,58 +884,81 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
 
               {/* Field dropdown for new filter */}
               <div className="relative flex-1 min-w-[200px]">
-                <button
-                  type="button"
-                  className="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-between"
-                  onClick={() => {
-                    setFieldDropdownOpen(fieldDropdownOpen === -1 ? null : -1);
-                    setOperatorDropdownOpen(null);
-                    setLogicDropdownOpen(null);
-                  }}
-                >
-                  <span className="flex items-center gap-2">
-                    {newFilter.column ? (
-                      (() => {
-                        const col = visibleColumns.find(c => c.column_name === newFilter.column);
-                        return col ? (
-                          <>
-                            {getFieldTypeIconComponent(col.uidt || 'text') || <Type className="w-4 h-4 text-gray-400" />}
-                            <span className="text-primary">{col.title}</span>
-                          </>
-                        ) : (
-                          <span className="text-gray-400">Select field</span>
-                        );
-                      })()
-                    ) : (
-                      <span className="text-gray-400">Select field</span>
-                    )}
-                  </span>
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
-                </button>
-                {fieldDropdownOpen === -1 && (
-                  <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-primary rounded-xl shadow-lg max-h-64 overflow-y-auto">
-                    {visibleColumns.map((col) => (
+                {(() => {
+                  const currentFieldKey = (newFilter.column || '').trim();
+                  const columnOptions = visibleColumns.filter((col) => {
+                    const key = getColumnKey(col);
+                    if (!key) {
+                      return false;
+                    }
+                    if (currentFieldKey === key) {
+                      return true;
+                    }
+                    return (usedColumnCounts.get(key) ?? 0) === 0;
+                  });
+                  return (
+                    <>
                       <button
-                        key={col.column_name}
-                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap group ${newFilter.column === col.column_name ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
-                          }`}
-                        onClick={() => {
-                          // Reset operator and value when field changes
-                          const defaultOperator = getDefaultOperator(col.uidt || 'text');
-                          setNewFilter({ column: col.column_name || '', operator: defaultOperator, value: '', logic: 'AND' });
-                          setInputValue('');
-                          setFieldDropdownOpen(null);
-                          setHasUserInteracted(true);
-                        }}
                         type="button"
+                        className="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-between"
+                        onClick={() => {
+                          setFieldDropdownOpen(fieldDropdownOpen === -1 ? null : -1);
+                          setOperatorDropdownOpen(null);
+                          setLogicDropdownOpen(null);
+                        }}
                       >
-                        {getFieldTypeIconComponent(col.uidt || 'text') || <Type className="w-4 h-4 text-gray-400" />}
-                        <span className={`${newFilter.column === col.column_name ? 'text-black' : 'text-primary group-hover:text-black'}`}>{col.title}</span>
-                        {newFilter.column === col.column_name && <Check className="w-4 h-4 ml-auto text-black" />}
+                        <span className="flex items-center gap-2">
+                          {newFilter.column ? (
+                            (() => {
+                              const col = visibleColumns.find(c => c.column_name === newFilter.column);
+                              return col ? (
+                                <>
+                                  {getFieldTypeIconComponent(col.uidt || 'text') || <Type className="w-4 h-4 text-gray-400" />}
+                                  <span className="text-primary">{col.title}</span>
+                                </>
+                              ) : (
+                                <span className="text-gray-400">Select field</span>
+                              );
+                            })()
+                          ) : (
+                            <span className="text-gray-400">Select field</span>
+                          )}
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
                       </button>
-                    ))}
-                  </div>
-                )}
+                      {fieldDropdownOpen === -1 && (
+                        <div
+                          className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-primary rounded-xl shadow-lg max-h-64 overflow-y-auto"
+                          data-testid="filter-new-field-options"
+                        >
+                          {columnOptions.length === 0 && (
+                            <div className="px-3 py-2 text-sm text-secondary">All fields already used</div>
+                          )}
+                          {columnOptions.map((col) => (
+                            <button
+                              key={col.column_name}
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap group ${newFilter.column === col.column_name ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
+                                }`}
+                              onClick={() => {
+                                // Reset operator and value when field changes
+                                const defaultOperator = getDefaultOperator(col.uidt || 'text');
+                                setNewFilter({ column: col.column_name || '', operator: defaultOperator, value: '', logic: 'AND' });
+                                setInputValue('');
+                                setFieldDropdownOpen(null);
+                                setHasUserInteracted(true);
+                              }}
+                              type="button"
+                            >
+                              {getFieldTypeIconComponent(col.uidt || 'text') || <Type className="w-4 h-4 text-gray-400" />}
+                              <span className={`${newFilter.column === col.column_name ? 'text-black' : 'text-primary group-hover:text-black'}`}>{col.title}</span>
+                              {newFilter.column === col.column_name && <Check className="w-4 h-4 ml-auto text-black" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Operator dropdown for new filter */}
@@ -913,7 +985,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                           {operatorOptions.map((op) => (
                             <button
                               key={op.value}
-                              className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors group ${newFilter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors group ${newFilter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
                                 }`}
                               onClick={() => {
                                 setNewFilter(f => ({ ...f, operator: op.value }));
@@ -963,8 +1035,15 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
             {!showNewFilterRow && (
               <button
                 type="button"
-                className="flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-xl"
+                className={`flex items-center gap-1 px-3 py-1.5 text-sm rounded-xl ${canAddFilter
+                  ? 'text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
+                  : 'text-gray-400 cursor-not-allowed opacity-60'
+                  }`}
+                disabled={!canAddFilter}
                 onClick={() => {
+                  if (!canAddFilter) {
+                    return;
+                  }
                   setShowNewFilterRow(true);
                   setHasUserInteracted(false);
                   // Clear any existing new filter state

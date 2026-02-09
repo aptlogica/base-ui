@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GroupPopover, type GroupByItem } from '../GroupPopover';
 
@@ -75,5 +75,33 @@ describe('GroupPopover', () => {
     await userEvent.click(screen.getByRole('button', { name: /Group/i }));
     await userEvent.click(screen.getByTitle('Remove grouping'));
     expect(mockSetGroupBy).toHaveBeenCalled();
+  });
+
+  it('should disable Add Group Option when no unused columns remain', async () => {
+    const groupBy: GroupByItem[] = [{ id: 'g1', column: 'name', direction: 'asc' }];
+    render(
+      <GroupPopover columns={[defaultColumns[0]]} groupBy={groupBy} setGroupBy={mockSetGroupBy} />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Group/i }));
+    const addButton = screen.getByRole('button', { name: /Add Group Option/i });
+    expect(addButton).toBeDisabled();
+  });
+
+  it('should hide already grouped columns in dropdown', async () => {
+    const groupBy: GroupByItem[] = [{ id: 'g1', column: 'name', direction: 'asc' }];
+    render(
+      <GroupPopover columns={defaultColumns} groupBy={groupBy} setGroupBy={mockSetGroupBy} />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Group/i }));
+    await userEvent.click(screen.getByText('Add Group Option'));
+    let dropdown = document.querySelector('[data-testid^="group-field-options-"]') as HTMLElement | null;
+    if (!dropdown) {
+      await userEvent.click(screen.getByText('Select field'));
+      dropdown = document.querySelector('[data-testid^="group-field-options-"]') as HTMLElement | null;
+    }
+    expect(dropdown).not.toBeNull();
+    const dropdownScope = within(dropdown as HTMLElement);
+    expect(dropdownScope.queryByText('Name')).not.toBeInTheDocument();
+    expect(dropdownScope.getByText('Count')).toBeInTheDocument();
   });
 });

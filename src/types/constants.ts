@@ -1012,5 +1012,5 @@ export const timeZoneOptions = [
 ];
 
 
-export const fieldsToFilter = ['lookup', 'rollup', 'createdTime', 'lastModifiedTime', 'createdBy', 'lastModifiedBy'];
-export const fieldsToExcludeInFilter = ['links', 'lookup', 'rollup', 'datetime', 'attachment', 'json', 'id', 'createdTime', 'lastModifiedTime', 'createdBy', 'lastModifiedBy'];
+export const fieldsToFilter = ['lookup', 'createdTime', 'lastModifiedTime', 'createdBy', 'lastModifiedBy'];
+export const fieldsToExcludeInFilter = ['links', 'lookup', 'datetime', 'attachment', 'json', 'id', 'createdTime', 'lastModifiedTime', 'createdBy', 'lastModifiedBy'];

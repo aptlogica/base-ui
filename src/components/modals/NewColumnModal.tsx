@@ -159,6 +159,21 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const [showDurationDefault, setShowDurationDefault] = useState(false);
   const [durationDefault, setDurationDefault] = useState(0);
 
+  const isValidPercentInput = (input: string) => {
+    if (input === '' || input === '.') return true;
+    let seenDot = false;
+    for (let i = 0; i < input.length; i++) {
+      const ch = input[i];
+      if (ch === '.') {
+        if (seenDot) return false;
+        seenDot = true;
+        continue;
+      }
+      if (ch < '0' || ch > '9') return false;
+    }
+    return true;
+  };
+
   // Add at the top level, with other useState hooks
   const [ratingIcon, setRatingIcon] = useState('star');
   const [ratingColor, setRatingColor] = useState('yellow');
@@ -2623,7 +2638,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 value={percentDefault?.toString() || ''}
                 onChange={e => {
                   const value = e.target.value;
-                  if (/^\d*\.?\d*$/.test(value) || value === '') {
+                  if (isValidPercentInput(value)) {
                     const numericValue = parseFloat(value);
                     if (numericValue >= 0 && numericValue <= 100) {
                       setPercentDefault(numericValue);

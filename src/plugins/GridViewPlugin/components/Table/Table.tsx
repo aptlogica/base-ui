@@ -289,7 +289,7 @@ export const Table: React.FC<TableProps> = ({
     handleDeleteColumn,
     handleConfirmDeleteColumn,
     handleColumnDragStart: handleColumnDragStartFromHook,
-    handleColumnDragEnter,
+    handleColumnDragEnter: handleColumnDragEnterFromHook,
     handleColumnDragEnd: handleColumnDragEndFromHook,
     setEditColumn,
     setEditColumnIndex,
@@ -306,6 +306,8 @@ export const Table: React.FC<TableProps> = ({
     viewConfigState,
     setViewConfigState,
   });
+
+  const canReorderColumns = useMemo(() => !isBaseReadOnly() && canUpdateColumn(), [isBaseReadOnly, canUpdateColumn]);
 
   // TanStack Query hooks - Mutations provided by data layer hook
   const deleteRecordMutation = actions?.deleteRecord;
@@ -575,10 +577,17 @@ export const Table: React.FC<TableProps> = ({
 
   // Column drag and drop handler wrapper (uses hook's handleColumnDragEnd with proper params)
   const handleColumnDragStart = useCallback((index: number) => {
+    if (!canReorderColumns) return;
     handleColumnDragStartFromHook(index, visibleColumns);
-  }, [handleColumnDragStartFromHook, visibleColumns]);
+  }, [canReorderColumns, handleColumnDragStartFromHook, visibleColumns]);
+
+  const handleColumnDragEnter = useCallback((index: number) => {
+    if (!canReorderColumns) return;
+    handleColumnDragEnterFromHook(index);
+  }, [canReorderColumns, handleColumnDragEnterFromHook]);
 
   const handleColumnDragEnd = useCallback(async () => {
+    if (!canReorderColumns) return;
     await handleColumnDragEndFromHook(
       visibleColumns,
       localFieldConfig,
@@ -587,7 +596,7 @@ export const Table: React.FC<TableProps> = ({
       actions?.updateView,
       handleFieldOrderChange
     );
-  }, [handleColumnDragEndFromHook, visibleColumns, localFieldConfig, effectiveViewId, baseMeta, actions?.updateView, handleFieldOrderChange]);
+  }, [canReorderColumns, handleColumnDragEndFromHook, visibleColumns, localFieldConfig, effectiveViewId, baseMeta, actions?.updateView, handleFieldOrderChange]);
 
   // Wrapper for handleEditColumn to use hook's version
   const handleEditColumn = useCallback((col: ColumnConfig, index: number, event?: { target: HTMLElement }) => {
@@ -709,7 +718,7 @@ export const Table: React.FC<TableProps> = ({
               >
                 {/* Row selector header */}
                 <div
-                  className="group flex-shrink-0 bg-gray-50 border-r border-b border-border/30 flex items-center justify-center"
+                  className="group flex-shrink-0 bg-gray-100 border-r border-b border-border/30 flex items-center justify-center"
                   style={{ position: 'sticky', left: 0, zIndex: 3, height: '35px', boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)' }}
                 >
                   <input
@@ -723,11 +732,12 @@ export const Table: React.FC<TableProps> = ({
 
                 {/* Column headers */}
                 {visibleColumns.map((column, index) => {
+                  const isColumnDraggable = !column.isSystem && canReorderColumns;
                   return (
                     <div
                       key={column.key}
                       role="columnheader"
-                      className={`relative flex-shrink-0 bg-gray-50 border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${(column as any).isNew !== undefined && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
+                      className={`relative flex-shrink-0 bg-gray-100 border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${(column as any).isNew !== undefined && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
                       style={{
                         width: `${columnWidths[index]}px`,
                         minWidth: '80px',
@@ -739,19 +749,23 @@ export const Table: React.FC<TableProps> = ({
                         e.preventDefault();
                         handleColContextMenu(e, index);
                       }}
-                      draggable={!column.isSystem}
+                      draggable={isColumnDraggable}
                       onDragStart={() => {
-                        if (!column.isSystem && index !== undefined) {
+                        if (isColumnDraggable && index !== undefined) {
                           handleColumnDragStart(index);
                         }
                       }}
                       onDragEnter={() => {
-                        if (index !== undefined) {
+                        if (isColumnDraggable && index !== undefined) {
                           handleColumnDragEnter(index);
                         }
                       }}
                       onDragEnd={handleColumnDragEnd}
-                      onDragOver={(e) => e.preventDefault()}
+                      onDragOver={(e) => {
+                        if (isColumnDraggable) {
+                          e.preventDefault();
+                        }
+                      }}
                     >
                       <div className={`h-full flex items-center justify-between px-4 relative ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'}`} style={{ height: '35px' }}>
                         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">

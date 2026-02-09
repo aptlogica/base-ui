@@ -1240,7 +1240,20 @@ export const Formula: React.FC<FormulaProps> = ({
                           : "text-gray-600 hover:text-gray-900 hover:bg-gray-50/50"
                       }`}
                     >
-                      <span className="truncate">{category.trim().replace(/\s+(Functions|Operators)$/i, '')}</span>
+                      <span className="truncate">
+                        {(() => {
+                          const trimmedCategory = category.trim();
+                          const functionsSuffix = " Functions";
+                          const operatorsSuffix = " Operators";
+                          if (trimmedCategory.endsWith(functionsSuffix)) {
+                            return trimmedCategory.slice(0, -functionsSuffix.length);
+                          }
+                          if (trimmedCategory.endsWith(operatorsSuffix)) {
+                            return trimmedCategory.slice(0, -operatorsSuffix.length);
+                          }
+                          return trimmedCategory;
+                        })()}
+                      </span>
                       {expandedCategories.has(category) ? (
                         <ChevronUp className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 ml-2" />
                       ) : (

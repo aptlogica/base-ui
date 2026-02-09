@@ -463,7 +463,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         onViewChange={handleViewChange}
         dateField={dateField}
         onExport={handleOpenExportModal}
-        onCreateRecord={onCreateRecordHandler}
         onToggleSidebar={toggleSidebar}
         columns={visibleColumns}
         fieldConfig={localFieldConfig}
