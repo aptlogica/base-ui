@@ -384,6 +384,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
           config={parsedConfig}
           allowEdit={false}
           isBorder={false}
+          disabled={false}
         />
       );
       break;
