@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FilterPopover } from '../FilterPopover';
 
@@ -157,6 +157,42 @@ describe('FilterPopover', () => {
         fireEvent.click(trashIconButton);
         expect(mockOnRemoveFilter).toHaveBeenCalledWith(0);
       }
+    });
+  });
+
+  describe('Column availability controls', () => {
+    it('disables Add filter button when no unused columns remain', async () => {
+      render(
+        <FilterPopover
+          columns={[defaultColumns[0]]}
+          filters={[{ column: 'name', operator: 'is equal', value: 'x', logic: 'AND' }]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      const addButton = screen.getByRole('button', { name: /Add filter/i });
+      expect(addButton).toBeDisabled();
+    });
+
+    it('hides already used columns in new filter dropdown', async () => {
+      render(
+        <FilterPopover
+          columns={defaultColumns}
+          filters={[{ column: 'name', operator: 'is equal', value: 'x', logic: 'AND' }]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getByRole('button', { name: /Add filter/i }));
+      await userEvent.click(screen.getByRole('button', { name: /Select field/i }));
+      const dropdown = screen.getByTestId('filter-new-field-options');
+      const dropdownScope = within(dropdown);
+      expect(dropdownScope.queryByText('Name')).not.toBeInTheDocument();
+      expect(dropdownScope.getByText('Count')).toBeInTheDocument();
     });
   });
 });

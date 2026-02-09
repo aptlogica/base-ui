@@ -16,7 +16,6 @@ import { Search } from '../../../../components/shared/table/Search';
 import { BaseColumn } from '../../../../types/column.types';
 import { normalizeFieldType } from '../../../../utils/fieldType';
 import { parseApiColumnMeta } from '../../../../components/shared/table/tableUtils';
-import { fieldsToExcludeInFilter } from '../../../../types/constants';
 import { useBaseAccess } from '../../../../hooks/useBaseAccess';
 import { ColumnConfig } from '../../../../plugins/GridViewPlugin/types/grid.types';
 import { useAddRow, useInsertRowData, useDeleteRecord, useUpdateField, useUpdateView, useUpdateViewMeta } from '../../../../hooks/useApi';
@@ -117,29 +116,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     });
   }, [columns]);
 
-  // Get columns for sort/filter popovers (exclude certain fields) - memoized to prevent recreation
-  const sortableColumns = useMemo(() => {
-    return columns
-      .filter(col => {
-        const uidt = String(col.uidt || col.type || '').toLowerCase();
-        return !fieldsToExcludeInFilter.includes(uidt);
-      })
-      .map((col: any) => ({
-        key: col.column_name || col.key || col.id || '',
-        column_name: col.column_name,
-        title: col.title,
-        type: col.type,
-        uidt: col.uidt,
-        id: col.id,
-        config: col.config || col.meta || {}, // Include config for SingleSelect/MultiSelect options
-        options: col.options || col.config?.options || col.meta?.options, // Include options directly
-        meta: col.meta, // Include meta as fallback
-        hidden: col.hidden,
-        isHidden: col.isHidden,
-        system: col.system
-      }));
-  }, [columns]);
-
   // Convert BaseColumn[] to ColumnConfig[] for FieldsPopover
   const columnConfigs = useMemo((): ColumnConfig[] => {
     return columns.map((col): ColumnConfig => ({
@@ -159,26 +135,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       config: col.config || col.meta,
     }));
   }, [columns]);
-
-  // Convert sortableColumns to ColumnConfig[] for FilterPopover
-  const sortableColumnConfigs = useMemo((): ColumnConfig[] => {
-    return sortableColumns.map((col): ColumnConfig => ({
-      id: col.id ? String(col.id) : undefined,
-      key: col.key || col.column_name || '',
-      column_name: col.column_name || col.key,
-      title: col.title || col.column_name || '',
-      type: normalizeFieldType(col.type || col.uidt || 'text') as any,
-      uidt: col.uidt,
-      position: 0,
-      order_index: 0,
-      isSystem: col.system || false,
-      system: col.system || false,
-      hidden: col.hidden || false,
-      is_hidden: col.isHidden || false,
-      meta: col.meta,
-      config: col.config || col.meta,
-    }));
-  }, [sortableColumns]);
 
   // Get current view
   const view = useMemo(() => {
@@ -986,7 +942,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             )}
             {handleAddFilter && (
               <FilterPopover
-                columns={sortableColumnConfigs}
+                columns={columnConfigs}
                 filters={filters}
                 onAddFilter={handleAddFilter}
                 onRemoveFilter={handleRemoveFilter}
@@ -995,7 +951,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             )}
             {handleSortChange && (
               <SortPopover
-                columns={sortableColumns}
+                columns={columns}
                 sorts={sorts}
                 onChange={handleSortChange}
               />

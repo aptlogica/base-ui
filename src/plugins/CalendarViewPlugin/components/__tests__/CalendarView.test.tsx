@@ -27,11 +27,10 @@ vi.mock('../../../../auth/AuthContext', () => ({
 
 // Mock all child components
 vi.mock('../CalendarHeader', () => ({
-  default: ({ onViewChange, onExport, onCreateRecord }: any) => (
+  default: ({ onViewChange, onExport }: any) => (
     <div data-testid="calendar-header">
       <button onClick={() => onViewChange?.('week')}>Change View</button>
       <button onClick={onExport}>Export</button>
-      {onCreateRecord && <button onClick={onCreateRecord}>Create</button>}
     </div>
   )
 }));
@@ -386,7 +385,7 @@ describe('CalendarView', () => {
   });
 
   describe('create modal', () => {
-    it('should open create modal when create button is clicked', async () => {
+    it('should open create modal when a date is clicked', async () => {
       const mockHandleOpenCreateModal = vi.fn();
       vi.mocked(useCalendarModals).mockReturnValue({
         modalState: {
@@ -407,8 +406,8 @@ describe('CalendarView', () => {
 
       render(<CalendarView {...defaultProps} />);
 
-      const createButton = screen.getByText('Create');
-      await userEvent.click(createButton);
+      const dateButton = screen.getByText('Month Date Click');
+      await userEvent.click(dateButton);
 
       expect(mockHandleOpenCreateModal).toHaveBeenCalled();
     });
@@ -577,7 +576,8 @@ describe('CalendarView', () => {
 
       render(<CalendarView {...defaultProps} />);
 
-      expect(screen.queryByText('Create')).not.toBeInTheDocument();
+      expect(screen.queryByText('Month Date Click')).not.toBeInTheDocument();
+      expect(screen.queryByText('Sidebar Create')).not.toBeInTheDocument();
       expect(screen.queryByText('Month Event Click')).not.toBeInTheDocument();
     });
   });

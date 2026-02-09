@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, ExternalLink, PanelRightClose, Plus, List } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ExternalLink, PanelRightClose, List } from "lucide-react";
 import { FilterPopover } from '../../../components/shared/table/FilterPopover';
 import { FieldsPopover } from '../../../components/shared/table/FieldsPopover';
 import { GridColumn } from '../../GridViewPlugin/types/grid.types';
@@ -12,7 +12,6 @@ interface CalendarHeaderProps {
   onViewChange: (view: string) => void;
   dateField?: any;
   onExport: () => void;
-  onCreateRecord?: () => void;
   onToggleSidebar: () => void;
   // Props for the popover components
   columns: GridColumn[];
@@ -33,7 +32,6 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onViewChange,
   dateField,
   onExport,
-  onCreateRecord,
   onToggleSidebar,
   columns,
   fieldConfig,
@@ -682,16 +680,6 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               <PanelRightClose className="w-5 h-5" />
             </button>
 
-            {/* Create Record */}
-            {onCreateRecord && (
-              <button
-                onClick={onCreateRecord}
-                className="px-6 py-2 rounded-xl btn-primary text-[var(--color-text-primary)] font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Plus className="w-3 h-3" />
-                <span>Add Record</span>
-              </button>
-            )}
           </div>
         </div>
 
@@ -731,16 +719,6 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               </button>
             </div>
 
-            {/* Create Record */}
-            {onCreateRecord && (
-              <button
-                onClick={onCreateRecord}
-                className="px-4 py-2 rounded-xl btn-primary text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Plus className="w-3 h-3" />
-                <span>Create</span>
-              </button>
-            )}
           </div>
 
           {/* Second row: View tabs and navigation */}
