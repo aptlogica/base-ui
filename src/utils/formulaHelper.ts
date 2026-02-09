@@ -3186,12 +3186,12 @@ const validateComparisonOperators = (formula: string, context: FormulaContext): 
       
       if (leftSide.startsWith('{') && leftSide.endsWith('}')) {
         const fieldName = parseFieldReference(leftSide);
-        if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(fieldName)) {
+        if (!isNumericLiteral(fieldName)) {
           if (!validFieldNames.has(fieldName)) {
             return `Unknown field in comparison: "${fieldName}"`;
           }
         }
-      } else if (!/^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(leftSide) && 
+      } else if (!isNumericLiteral(leftSide) && 
                  !(leftSide.startsWith('"') && leftSide.endsWith('"')) &&
                  !(leftSide.startsWith("'") && leftSide.endsWith("'"))) {
         if (!/^[A-Z_]+\(/.test(leftSide)) {
@@ -3292,7 +3292,7 @@ const validateLogicalFunctions = (formula: string, _context: FormulaContext): st
         const arg = args[0].trim();
         const isFieldRef = arg.startsWith('{') && arg.endsWith('}');
         const isQuoted = (arg.startsWith('"') && arg.endsWith('"')) || (arg.startsWith("'") && arg.endsWith("'"));
-        const isNumber = /^-?(?:\d+\.?\d*|\d*\.\d+)$/.test(arg);
+        const isNumber = isNumericLiteral(arg);
         const isFunction = /^[A-Z_]+\(/.test(arg);
         
         if (!isFieldRef && !isQuoted && !isNumber && !isFunction) {
