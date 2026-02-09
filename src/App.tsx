@@ -140,7 +140,7 @@ const Layout = () => {
               )}
               <button 
                 onClick={() => updateSidebarCollapsed(!sidebarCollapsed)} 
-                className='absolute top-1/2 right-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-50 hover:bg-gray-100 transition-colors outline-none'
+                className='absolute top-1/2 right-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-40 hover:bg-gray-100 transition-colors outline-none'
                 aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
@@ -168,7 +168,7 @@ const Layout = () => {
               )}
               <button 
                 onClick={() => updateSidebarCollapsed(!sidebarCollapsed)} 
-                className='absolute top-1/2 left-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-50 hover:bg-gray-100 transition-colors outline-none'
+                className='absolute top-1/2 left-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-40 hover:bg-gray-100 transition-colors outline-none'
                 aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {sidebarCollapsed ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
@@ -252,6 +252,14 @@ const TableViewRouteWrapper: React.FC = () => {
     view = { id: typeMatchedView.id, type: typeMatchedView.type };
   }
 
+  const routeFallback = (
+    <ExtensionPoint
+      id="route"
+      props={{ table, view, viewType }}
+      key={`route-${tableId}-${viewId}`}
+    />
+  );
+
   // If a non-slug viewId was provided but not found, show a clear message
   if (viewId && !requestedView && !isTypeSlug) {
     return (
@@ -271,13 +279,7 @@ const TableViewRouteWrapper: React.FC = () => {
         id="view"
         props={{ table, view, viewType }}
         key={`view-${tableId}-${viewId}`}
-        fallback={() => (
-          <ExtensionPoint
-            id="route"
-            props={{ table, view, viewType }}
-            key={`route-${tableId}-${viewId}`}
-          />
-        )}
+        fallback={routeFallback}
       />
     </>
   );

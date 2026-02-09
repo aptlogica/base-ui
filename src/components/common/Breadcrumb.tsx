@@ -215,96 +215,116 @@ const Breadcrumb: React.FC = () => {
   const currentView = viewByIdQuery.data;
 
   // Build breadcrumb items (only Base > Table > View, no workspace)
+  const buildBaseItem = (pathParts: string[], baseIndex: number): BreadcrumbItem | null => {
+    if (baseIndex <= 0 || !pathParts[baseIndex] || !currentBase) {
+      return null;
+    }
+
+    const baseName = currentBase.title || currentBase.name || 'Base';
+    const baseImageRaw = currentBase.image || currentBase.logo || currentBase.meta?.image;
+    const baseImage = typeof baseImageRaw === 'string' ? baseImageRaw : undefined;
+    const baseIcon = getBaseIcon(currentBase, 0);
+
+    const baseIconElement = baseImage ? (
+      <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
+        <img
+          src={baseImage}
+          alt={baseName}
+          className="w-full h-full object-cover"
+        />
+      </div>
+    ) : (
+      <div className={`w-8 h-8 ${baseIcon.color} rounded-lg flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}>
+        {baseIcon.letter}
+      </div>
+    );
+
+    const basePath = selectedWorkspaceId
+      ? `/workspace/${selectedWorkspaceId}`
+      : '/workspace';
+
+    return {
+      type: 'base',
+      id: currentBase.id,
+      label: baseName,
+      icon: baseIconElement,
+      path: basePath
+    };
+  };
+
+  const buildTableItem = (pathParts: string[], tableIndex: number): BreadcrumbItem | null => {
+    if (tableIndex <= 0 || !pathParts[tableIndex] || !currentTable || !selectedWorkspaceId || !currentBase) {
+      return null;
+    }
+
+    const tableData = currentTable.model || currentTable;
+    const tableId = tableData.id || pathParts[tableIndex];
+    const tableName = tableData.title || (tableData as any).name || 'Table';
+
+    if (!tableId) {
+      return null;
+    }
+
+    return {
+      type: 'table',
+      id: tableId,
+      label: tableName,
+      icon: <Sheet size={14} className="text-blue-600" />,
+      path: `/workspace/${selectedWorkspaceId}/base/${currentBase.id}/table/${tableId}/grid`
+    };
+  };
+
+  const buildViewItem = (pathParts: string[], viewIndex: number): BreadcrumbItem | null => {
+    if (viewIndex <= 0 || !pathParts[viewIndex] || !currentView || !selectedWorkspaceId || !currentBase || !selectedTableId) {
+      return null;
+    }
+
+    const viewName = currentView.title || currentView.name || 'View';
+    const viewType = currentView.type || 'grid';
+    const viewIconInfo = getViewIconInfo(viewType);
+    const ViewIcon = viewIconInfo.icon;
+
+    return {
+      type: 'view',
+      id: currentView.id,
+      label: viewName,
+      icon: <ViewIcon size={14} className="text-purple-600" />,
+      path: `/workspace/${selectedWorkspaceId}/base/${currentBase.id}/table/${selectedTableId}/${currentView.id}`
+    };
+  };
+
   const buildBreadcrumbItems = (): BreadcrumbItem[] => {
     const items: BreadcrumbItem[] = [];
     const pathParts = pathname.split('/').filter(Boolean);
     const isNewFormat = pathParts[0] === 'workspace' && pathParts[2] === 'base';
 
-    // Determine indices based on route format
     let baseIndex = -1;
     let tableIndex = -1;
     let viewIndex = -1;
 
     if (isNewFormat) {
-      // New format: /workspace/:workspaceId/base/:baseId/table/:tableId/:viewId
       baseIndex = 3;
       tableIndex = 5;
       viewIndex = 6;
     } else if (pathParts[0] === 'base') {
-      // Legacy format: /base/:baseId/table/:tableId/:viewId (kept for safety)
       baseIndex = 1;
       tableIndex = 3;
       viewIndex = pathParts[4] ? 4 : -1;
     }
 
-    // Add base
-    if (baseIndex > 0 && pathParts[baseIndex] && currentBase) {
-      const baseName = currentBase.title || currentBase.name || 'Base';
-      const baseImageRaw = currentBase.image || currentBase.logo || currentBase.meta?.image;
-      const baseImage = typeof baseImageRaw === 'string' ? baseImageRaw : undefined;
-      const baseIcon = getBaseIcon(currentBase, 0);
-
-      // Use image if available, otherwise use initial with colored background
-      const baseIconElement = baseImage ? (
-        <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
-          <img
-            src={baseImage}
-            alt={baseName}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      ) : (
-        <div className={`w-8 h-8 ${baseIcon.color} rounded-lg flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}>
-          {baseIcon.letter}
-        </div>
-      );
-
-      const basePath = selectedWorkspaceId
-        ? `/workspace/${selectedWorkspaceId}`
-        : '/workspace';
-
-      items.push({
-        type: 'base',
-        id: currentBase.id,
-        label: baseName,
-        icon: baseIconElement,
-        path: basePath
-      });
+    const baseItem = buildBaseItem(pathParts, baseIndex);
+    if (baseItem) {
+      items.push(baseItem);
     }
 
-    // Add table
-    if (tableIndex > 0 && pathParts[tableIndex] && currentTable) {
-      const tableData = currentTable.model || currentTable;
-      const tableId = tableData.id || pathParts[tableIndex];
-      const tableName = tableData.title || (tableData as any).name || 'Table';
-
-      if (tableId && selectedWorkspaceId && currentBase) {
-        items.push({
-          type: 'table',
-          id: tableId,
-          label: tableName,
-          icon: <Sheet size={14} className="text-blue-600" />,
-          path: `/workspace/${selectedWorkspaceId}/base/${currentBase.id}/table/${tableId}/grid`
-        });
-      }
+    const tableItem = buildTableItem(pathParts, tableIndex);
+    if (tableItem) {
+      items.push(tableItem);
     }
 
-    // Add view
-    if (viewIndex > 0 && pathParts[viewIndex] && currentView) {
-      const viewName = currentView.title || currentView.name || 'View';
-      const viewType = currentView.type || 'grid';
-      const viewIconInfo = getViewIconInfo(viewType);
-      const ViewIcon = viewIconInfo.icon;
-
-      if (selectedWorkspaceId && currentBase && selectedTableId) {
-        items.push({
-          type: 'view',
-          id: currentView.id,
-          label: viewName,
-          icon: <ViewIcon size={14} className="text-purple-600" />,
-          path: `/workspace/${selectedWorkspaceId}/base/${currentBase.id}/table/${selectedTableId}/${currentView.id}`
-        });
-      }
+    const viewItem = buildViewItem(pathParts, viewIndex);
+    if (viewItem) {
+      items.push(viewItem);
     }
 
     return items;
@@ -625,8 +645,8 @@ const Breadcrumb: React.FC = () => {
               <ChevronRight size={12} className="text-gray-400 mx-1 flex-shrink-0" />
             )}
             <div className="relative" ref={currentRef}>
-              <div
-                className="flex items-center gap-1.5 cursor-pointer rounded px-2 py-1 transition-colors hover:bg-gray-100 group"
+              <button
+                className="flex items-center gap-1.5 cursor-pointer rounded px-2 py-1 transition-colors hover:bg-gray-100 group border-none bg-transparent"
                 onClick={(e) => handleSegmentClick(e, item.type)}
               >
                 {item.icon}
@@ -641,7 +661,7 @@ const Breadcrumb: React.FC = () => {
                   className={`text-gray-400 transition-transform flex-shrink-0 ${isDropdownOpen ? 'rotate-180' : ''
                     }`}
                 />
-              </div>
+              </button>
 
               {/* Dropdown Menu - Portal to body to avoid overflow clipping */}
               {isDropdownOpen && dropdownPosition && ReactDOM.createPortal(
@@ -651,7 +671,6 @@ const Breadcrumb: React.FC = () => {
                     top: `${dropdownPosition.top}px`,
                     left: `${dropdownPosition.left}px`
                   }}
-                  onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex flex-col h-full">
                     {/* Header */}
@@ -671,10 +690,19 @@ const Breadcrumb: React.FC = () => {
                         dropdownItems.map((dropdownItem) => (
                           <div
                             key={dropdownItem.id}
-                            className="w-full rounded-lg text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
+                            className="w-full rounded-lg text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer border-none bg-transparent"
                             onClick={(e) => {
                               e.stopPropagation();
                               dropdownItem.onClick();
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                dropdownItem.onClick();
+                              }
                             }}
                           >
                             <div className="flex items-center gap-3">
