@@ -75,7 +75,11 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
   }, [dismiss]);
 
   const show = useCallback((opts: ToastOptions) => {
-    const id = opts.id || Math.random().toString(36).slice(2);
+    const id = opts.id || `#${crypto.getRandomValues(new Uint32Array(1))[0]
+                              .toString(16)
+                              .slice(-6)
+                              .padStart(6, '0')
+                            }`;
     const t: InternalToast = {
       id,
       title: opts.title,

@@ -850,7 +850,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
   const getOptionColor = () => {
     // Generate a random hex color
-    const randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+    const randomColor = `#${(crypto.getRandomValues(new Uint32Array(1))[0] & 0xffffff)
+                            .toString(16)
+                            .padStart(6, '0')
+                          }`;
     return randomColor;
   };
 
