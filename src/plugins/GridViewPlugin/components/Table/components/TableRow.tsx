@@ -118,7 +118,7 @@ export const TableRow: React.FC<TableRowProps> = ({
     // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
     <div
       className={`group grid transition-colors min-w-full ${isRowActive ? 'border border-[var(--color-brand-600)]' : ' border-transparent'}`}
-      style={{ gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`, height: '39px', minHeight: '39px', maxHeight: '40px', boxSizing: 'border-box' }}
+      style={{ gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`, height: '40px', minHeight: '40px', maxHeight: '40px', boxSizing: 'border-box', overflow: 'hidden' }}
       onContextMenu={onContextMenu}
       onClick={handleRowClick}
       onKeyDown={handleRowKeyDown}

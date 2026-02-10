@@ -183,6 +183,17 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     return String(na) === String(nb);
   };
 
+  const hasChanges = useMemo(() => {
+    return (fields || []).some(field => {
+      if (field.type === 'attachment' || field.uidt === 'attachment') {
+        return false;
+      }
+      return !valuesEqual(field, originalData[field.id], rowData[field.id]);
+    });
+  }, [fields, originalData, rowData]);
+
+  const isSaveDisabled = submitting || !hasChanges;
+
   const handleSave = async () => {
     // Check permission before saving
     if (!canUpdateRecord()) {
@@ -441,9 +452,9 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
             </button>
             <button
               type="button"
-              disabled={submitting}
+              disabled={isSaveDisabled}
               onClick={handleSave}
-              className={`px-16 py-2 rounded-xl btn-primary ${submitting ? 'opacity-60 cursor-not-allowed' : ''
+              className={`px-16 py-2 rounded-xl btn-primary ${isSaveDisabled ? 'opacity-60 cursor-not-allowed' : ''
                 }`}
             >
               {submitLabel}
