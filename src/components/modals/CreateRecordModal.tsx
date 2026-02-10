@@ -34,6 +34,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const [formError, setFormError] = useState<string | null>(null);
     const [rowData, setRowData] = useState<Record<string, any>>({});
     const [createdRecordId, setCreatedRecordId] = useState<string | null>(null);
+    const [initialRowData, setInitialRowData] = useState<Record<string, any>>({});
 
     // Get base_id from table (could be table.base_id or table.model.base_id)
     const baseId = table?.base_id || table?.model?.base_id;
@@ -98,6 +99,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             data[field.id] = initial === undefined ? getDefaultValueFromConfig(field) : initial;
         });
         setRowData(data);
+        setInitialRowData(data);
         setShowHidden(false);
         setFormError(null);
         setSubmitting(false);
@@ -107,6 +109,41 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const handleFieldChange = (field: any, value: unknown) => {
         setRowData(prev => ({ ...prev, [field.id]: value }));
     };
+
+    const isValuePresent = (value: any): boolean => {
+        if (Array.isArray(value)) return value.length > 0;
+        if (value === null || value === undefined) return false;
+        if (typeof value === 'string') return value.trim() !== '';
+        return true;
+    };
+
+    const normalizeForCompare = (value: any): any => {
+        if (value instanceof Date) return value.toISOString();
+        if (Array.isArray(value)) return JSON.stringify(value.map(normalizeForCompare));
+        if (value && typeof value === 'object') {
+            try {
+                return JSON.stringify(value);
+            } catch (error) {
+                return String(value);
+            }
+        }
+        return value;
+    };
+
+    const isValueEqual = (a: any, b: any): boolean => {
+        return normalizeForCompare(a) === normalizeForCompare(b);
+    };
+
+    const hasAnyValue = useMemo(() => {
+        return (fields || []).some(field => isValuePresent(rowData[field.id]));
+    }, [fields, rowData]);
+
+    const hasChanges = useMemo(() => {
+        return (fields || []).some(field => !isValueEqual(rowData[field.id], initialRowData[field.id]));
+    }, [fields, rowData, initialRowData]);
+
+    const canSave = hasAnyValue || hasChanges;
+    const isSaveDisabled = submitting || !canSave;
 
     const validateRequired = (): string[] => {
         const missing = (fields || [])
@@ -407,9 +444,9 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                         </button>
                         <button
                             type="button"
-                            disabled={submitting}
+                            disabled={isSaveDisabled}
                             onClick={handleSave}
-                            className={`px-16 py-2 rounded-xl btn-primary ${submitting ? 'opacity-60 cursor-not-allowed' : ''}`}
+                            className={`px-16 py-2 rounded-xl btn-primary ${isSaveDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
                         >
                             {submitLabel}
                         </button>
