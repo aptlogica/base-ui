@@ -124,6 +124,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             try {
                 return JSON.stringify(value);
             } catch (error) {
+                console.warn('Failed to stringify value:', error);
                 return String(value);
             }
         }

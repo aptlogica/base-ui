@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Pencil, Trash2, Copy, ChevronUp } from 'lucide-react';
+import { ChevronDown, Pencil, Trash2, ChevronUp } from 'lucide-react';
 import { useClickOutside } from '../../../../../hooks/useClickOutside';
 
 interface ColumnDropdownProps {
   onEdit: () => void;
   onDelete: () => void;
-  onDuplicate?: () => void;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }

@@ -796,7 +796,12 @@ export const Table: React.FC<TableProps> = ({
                               if (open) {
                                 handleCloseColMenu();
                               }
-                              setOpenColumnDropdownIndex(prev => (open ? index : (prev === index ? null : prev)));
+                              setOpenColumnDropdownIndex(prev => {
+                                if (open) {
+                                  return index;
+                                }
+                                return prev === index ? null : prev;
+                              });
                             }}
                           />
                         )}
