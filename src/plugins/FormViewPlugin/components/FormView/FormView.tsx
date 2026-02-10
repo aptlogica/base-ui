@@ -314,8 +314,6 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
   }, [tableData?.views, viewId]);
 
   // Get processed data from local transformation (consistent with GridView pattern)
-  // Optimized with Map for O(1) fieldConfig lookups instead of O(n) find() calls
-  // MUST be called before early return
   const allColumns = useMemo(() => {
     if (!tableData?.columns) return [];
     

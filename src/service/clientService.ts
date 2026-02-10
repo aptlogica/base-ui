@@ -705,7 +705,23 @@ export async function getAllBasesService() {
 }
 
 export async function updateBaseService(id: string, params: any) {
-  return await makeAuthenticatedCall(() => client.baseService.update(id, params));
+  // Separate image from other params since it needs special handling
+  const { image, ...updateParams } = params;
+  
+  // Always update the base metadata first
+  const updateResult = await makeAuthenticatedCall(() => client.baseService.update(id, updateParams));
+  
+  // If image is provided, upload it separately
+  if (image instanceof File || image instanceof Blob) {
+    try {
+      await makeAuthenticatedCall(() => client.baseService.uploadImage(id, image));
+    } catch (error) {
+      console.error('Failed to upload base image:', error);
+      // Don't throw - metadata was successfully updated, only image upload failed
+    }
+  }
+  
+  return updateResult;
 }
 
 export async function deleteBaseService(id: string) {

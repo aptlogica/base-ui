@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -175,17 +176,20 @@ const Breadcrumb: React.FC = () => {
         return;
       }
 
-      const target = event.target as Node;
+      const target = event.target as Element;
       const portal = document.querySelector('.breadcrumb-dropdown-portal');
 
       // Check if click is inside the portal (including buttons)
-      const clickedInside =
+      const clickedInsideBreadcrumb =
         (baseDropdownRef.current?.contains(target)) ||
         (tableDropdownRef.current?.contains(target)) ||
         (viewDropdownRef.current?.contains(target)) ||
         (portal?.contains(target));
 
-      if (!clickedInside) {
+      // Also check if click is inside a PopoverMenu portal (used by BaseMenu)
+      const isInsidePopoverMenu = !!target.closest('[data-popover-menu-portal]');
+
+      if (!clickedInsideBreadcrumb && !isInsidePopoverMenu) {
         setOpenDropdown(null);
         setDropdownPosition(null);
       }
@@ -340,7 +344,7 @@ const Breadcrumb: React.FC = () => {
     setDropdownPosition(null);
   };
 
-  const handleSaveBase = async ({ name, description, image }: { name: string; description: string; image?: File | null }) => {
+  const handleSaveBase = async ({ name, description, image, removeImage }: { name: string; description: string; image?: File | null; removeImage?: boolean }) => {
     if (!editingBase) return;
 
     try {
@@ -348,6 +352,7 @@ const Breadcrumb: React.FC = () => {
         title?: string;
         description?: string;
         image?: File | Blob;
+        removeImage?: boolean;
       } = {};
 
       // Only include fields that have actually changed
@@ -365,6 +370,11 @@ const Breadcrumb: React.FC = () => {
       // Include image if provided (must be a File object)
       if (image instanceof File) {
         updates.image = image;
+      }
+
+      // Include removeImage flag if image was explicitly removed
+      if (removeImage) {
+        updates.removeImage = true;
       }
 
       // Check if there are any changes to save

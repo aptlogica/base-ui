@@ -295,7 +295,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   >
                     <span
                       title={table.title}
-                      className="font-medium text-[var(--color-text-tertiary)] truncate max-w-[200px]"
+                      className="font-medium text-[var(--color-text-tertiary)] truncate max-w-[160px]"
                     >
                       {table.title}
                     </span>

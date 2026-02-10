@@ -6,6 +6,7 @@ import { useNavigationStore } from '../stores/navigationStore';
 import { replaceNavigate } from '../utils/navigationRedirect';
 import { getBestNavigationTarget } from '../utils/navigationPersistence';
 import { usePluginStore } from '../stores/pluginStore';
+import { Base, BasesResponse, TableItem, TablesResponse, View, ViewsResponse, Workspace } from '../types/api.types';
 
 type BooleanRef = { current: boolean };
 
@@ -294,7 +295,7 @@ const getAllBasesForSavedNavigation = (
     return [];
   }
 
-  return workspaces.flatMap((ws) => (Array.isArray(ws?.bases) ? ws.bases as Base[] : []));
+  return workspaces.flatMap((ws) => (Array.isArray(ws?.bases) ? ws.bases : []));
 };
 
 const getTablesForSavedNavigation = (
@@ -685,6 +686,7 @@ export const NavigationResolver: React.FC = () => {
     lastUserIdRef.current = user.id;
   }, [user?.id]);
 
+  // eslint-disable-next-line sonarjs/cognitive-complexity
   useEffect(() => {
     const isPublicRoute = isPublicRoutePath(location.pathname);
 

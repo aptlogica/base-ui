@@ -125,8 +125,39 @@ const getDisplayValue = (localValue: string, placeholder: string, locale: string
   return formatCurrency(numValue, locale, currency, precision);
 };
 
-const filterCurrencyInput = (input: string): string => {
-  return input.replaceAll(/[^0-9.-]/g, "");
+const filterCurrencyInput = (input: string, precision: number = 2): string => {
+  // Remove non-numeric characters except for one minus sign at start and one decimal point
+  let filtered = input.replaceAll(/[^0-9.-]/g, "");
+  
+  // Handle minus sign - only allow at the start
+  const hasMinus = filtered.startsWith('-');
+  filtered = filtered.replaceAll('-', '');
+  if (hasMinus) {
+    filtered = '-' + filtered;
+  }
+  
+  // Handle decimal point - only allow one
+  const parts = filtered.replaceAll('-', '').split('.');
+  if (parts.length > 2) {
+    filtered = parts[0] + '.' + parts.slice(1).join('');
+  }
+  
+  // Limit decimal places
+  const decimalIndex = filtered.indexOf('.');
+  if (decimalIndex !== -1) {
+    const integerPart = filtered.substring(0, decimalIndex);
+    const decimalPart = filtered.substring(decimalIndex + 1, decimalIndex + 1 + precision);
+    filtered = integerPart + '.' + decimalPart;
+  }
+  
+  // Limit total digits (maximum reasonable currency amount - 999,999,999,999.99)
+  const numValue = Number.parseFloat(filtered);
+  if (!Number.isNaN(numValue) && Math.abs(numValue) > 999999999999) {
+    // Return the previous valid value implicitly by not allowing this
+    return '';
+  }
+  
+  return filtered;
 };
 
 export const Currency: React.FC<CurrencyProps> = ({
@@ -174,7 +205,7 @@ export const Currency: React.FC<CurrencyProps> = ({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalValue(filterCurrencyInput(e.target.value));
+    setLocalValue(filterCurrencyInput(e.target.value, precision));
   };
 
   const displayValue = getDisplayValue(localValue, placeholder, currencyLocale, currencyType, precision);

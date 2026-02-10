@@ -24,6 +24,25 @@ interface SingleLineTextProps {
   };
 }
 
+// Helper functions to reduce cognitive complexity
+const getContainerClassName = (className: string, isBorder: boolean, isEditing: boolean): string => {
+  const borderClass = isBorder && !isEditing ? "field-component-border" : "";
+  return `relative ${className} ${borderClass}`;
+};
+
+const getInputClassName = (isBorder: boolean, error: string | null, disabled: boolean, readOnly: boolean): string => {
+  const focusClass = isBorder ? "field-component-focus" : "";
+  const errorClass = error ? "border-red-500 bg-red-50" : "border-gray-300";
+  const disabledClass = disabled || readOnly ? "cursor-not-allowed" : "";
+  return `field-component ${focusClass} ${errorClass} ${disabledClass}`;
+};
+
+const getDisplayClassName = (localValue: string, disabled: boolean, readOnly: boolean): string => {
+  const textClass = localValue ? "text-gray-800" : "text-gray-400";
+  const interactionClass = disabled || readOnly ? "text-gray-400 cursor-not-allowed" : "";
+  return `field-component ${textClass} ${interactionClass}`;
+};
+
 export const SingleLineText: React.FC<SingleLineTextProps> = ({
   label,
   value,
@@ -72,6 +91,17 @@ export const SingleLineText: React.FC<SingleLineTextProps> = ({
     return null;
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setLocalValue(val);
+    setError(validate(val));
+    
+    if (updateOnType) {
+      onChange(val);
+      prevValueRef.current = val;
+    }
+  };
+
   const handleBlur = () => {
     const validationError = validate(localValue);
     setError(validationError);
@@ -81,6 +111,14 @@ export const SingleLineText: React.FC<SingleLineTextProps> = ({
       prevValueRef.current = localValue;
     }
     setIsEditing(false);
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleBlur();
+    if (e.key === "Escape") {
+      setLocalValue(prevValueRef.current);
+      setIsEditing(false);
+    }
   };
 
   // allowEdit controls single vs double-click behavior
@@ -112,7 +150,7 @@ export const SingleLineText: React.FC<SingleLineTextProps> = ({
 
       {/* Input or Display */}
       <div
-        className={`relative ${className} ${isBorder && !isEditing ? "field-component-border" : ""}`}
+        className={getContainerClassName(className, isBorder, isEditing)}
         onClick={readOnly ? undefined : handleClick}
         onKeyDown={readOnly || isEditing ? undefined : handleKeyDown}
         role={readOnly ? undefined : "button"}
@@ -124,33 +162,18 @@ export const SingleLineText: React.FC<SingleLineTextProps> = ({
           <input
             type="text"
             value={localValue}
-            onChange={(e) => {
-              const val = e.target.value;
-              setLocalValue(val);
-              setError(validate(val));
-              if (updateOnType) {
-                onChange(val);
-                prevValueRef.current = val;
-              }
-            }}
+            onChange={handleInputChange}
             onBlur={handleBlur}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleBlur();
-              if (e.key === "Escape") {
-                setLocalValue(prevValueRef.current);
-                setIsEditing(false);
-              }
-            }}
+            onKeyDown={handleInputKeyDown}
             autoFocus
             placeholder={configPlaceholder}
             disabled={disabled || readOnly}
             maxLength={configMaxLength}
-            className={`field-component ${isBorder ? "field-component-focus" : ""} ${error ? "border-red-500 bg-red-50" : "border-gray-300"
-              } ${disabled || readOnly ? "cursor-not-allowed" : ""}`}
+            className={getInputClassName(isBorder, error, disabled, readOnly)}
           />
         ) : (
           <div
-            className={`field-component ${localValue ? "text-gray-800" : "text-gray-400"} ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
+            className={getDisplayClassName(localValue, disabled, readOnly)}
             title={localValue || configPlaceholder}
           >
             <span
