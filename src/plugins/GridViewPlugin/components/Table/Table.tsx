@@ -323,6 +323,7 @@ export const Table: React.FC<TableProps> = ({
   const headerRef = useRef<HTMLDivElement>(null);
   const addColumnButtonRef = useRef<HTMLButtonElement | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [openColumnDropdownIndex, setOpenColumnDropdownIndex] = useState<number | null>(null);
 
   // Static column widths (no resize). Prefer view meta widths, else column.width, else 235.
   const columnWidths = useMemo(() => {
@@ -747,6 +748,7 @@ export const Table: React.FC<TableProps> = ({
                       }}
                       onContextMenu={(e) => {
                         e.preventDefault();
+                        setOpenColumnDropdownIndex(null);
                         handleColContextMenu(e, index);
                       }}
                       draggable={isColumnDraggable}
@@ -789,6 +791,13 @@ export const Table: React.FC<TableProps> = ({
                               handleEditColumn(column, index, { target: document.createElement('div') });
                             }}
                             onDelete={() => handleDeleteColumn(column.id!)}
+                            isOpen={openColumnDropdownIndex === index}
+                            onOpenChange={(open) => {
+                              if (open) {
+                                handleCloseColMenu();
+                              }
+                              setOpenColumnDropdownIndex(prev => (open ? index : (prev === index ? null : prev)));
+                            }}
                           />
                         )}
                       </div>
