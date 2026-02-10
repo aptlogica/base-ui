@@ -327,6 +327,7 @@ describe('useFormData', () => {
 
   describe('submitForm', () => {
     it('should throw error when required fields are missing', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       mockUseTable.mockReturnValue({
         data: {
           model: { id: 'm1' },
@@ -349,6 +350,7 @@ describe('useFormData', () => {
       await expect(result.current.submitForm({}, formFields)).rejects.toThrow(
         'Required field(s) must not be left empty.'
       );
+      consoleWarnSpy.mockRestore();
     });
   });
 

@@ -130,10 +130,12 @@ describe('PluginLoader', () => {
 
     it('should construct plugin URL from manifest URL', async () => {
       const manifestUrl = 'http://example.com/plugins/test/manifest.json';
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       (globalThis as any).import.mockResolvedValue({ default: createMockPlugin('constructed') });
       const result = await loadPlugins([manifestUrl]);
 
       expect(Array.isArray(result)).toBe(true);
+      consoleErrorSpy.mockRestore();
     });
 
     it('should handle manifest URL without trailing slash', async () => {

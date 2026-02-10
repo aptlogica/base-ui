@@ -59,7 +59,12 @@ vi.mock('../../../utils/standardFieldUtils', () => ({
   getStandardFieldType: vi.fn((type) => type),
   getFieldDisplayName: vi.fn((field) => field.title || field.name),
   getFieldDefaultValue: vi.fn(() => null),
-  createFieldRendererProps: vi.fn((field) => ({ field })),
+  createFieldRendererProps: vi.fn((field, value, onChange, options = {}) => ({
+    field,
+    value,
+    onChange,
+    ...options,
+  })),
 }));
 
 vi.mock('../../../types/fieldTypes', () => ({
