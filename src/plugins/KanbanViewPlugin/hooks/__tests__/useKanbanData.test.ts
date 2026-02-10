@@ -564,6 +564,8 @@ describe('useKanbanData Hook', () => {
     });
 
     it('should handle createCard when insertRowData fails', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       mockUseInsertRowData.mockReturnValue({
         mutateAsync: vi.fn().mockRejectedValue(new Error('Insert failed'))
       });
@@ -573,5 +575,8 @@ describe('useKanbanData Hook', () => {
       // Should not throw, just log warning
       const cardId = await result.current.createCard({ title: 'Test' });
       expect(cardId).toBe('new1');
+      await Promise.resolve();
+      consoleErrorSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
     });
   });});

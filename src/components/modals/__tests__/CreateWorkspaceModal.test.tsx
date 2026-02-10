@@ -615,6 +615,7 @@ describe('CreateWorkspaceModal', () => {
 
     it('handles delete error', async () => {
       const user = userEvent.setup();
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       vi.mocked(useApi.useWorkspaces).mockReturnValue({
         data: [{ id: 'ws-1', title: 'Test Workspace' }],
         isLoading: false,
@@ -651,6 +652,7 @@ describe('CreateWorkspaceModal', () => {
       );
 
       await new Promise((resolve) => setTimeout(resolve, 100));
+      consoleErrorSpy.mockRestore();
     });
 
     it('hides danger zone tab when user cannot delete', () => {

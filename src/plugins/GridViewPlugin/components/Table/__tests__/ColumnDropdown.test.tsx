@@ -107,7 +107,7 @@ describe('ColumnDropdown', () => {
 
     const button = screen.getByRole('button', { name: /column options/i });
     expect(button).toBeInTheDocument();
-    expect(screen.queryByText('Edit field')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Edit field')).not.toBeInTheDocument();
   });
 
   it('toggles the dropdown when clicking the button', async () => {
@@ -117,12 +117,12 @@ describe('ColumnDropdown', () => {
     const button = screen.getByRole('button', { name: /column options/i });
     await user.click(button);
 
-    expect(await screen.findByText('Edit field')).toBeInTheDocument();
+    expect(await screen.findByTitle('Edit field')).toBeInTheDocument();
 
     await user.click(button);
 
     await waitFor(() => {
-      expect(screen.queryByText('Edit field')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Edit field')).not.toBeInTheDocument();
     });
   });
 
@@ -133,13 +133,13 @@ describe('ColumnDropdown', () => {
     const button = screen.getByRole('button', { name: /column options/i });
     await user.click(button);
 
-    const editButton = await screen.findByRole('button', { name: 'Edit field' });
+    const editButton = await screen.findByTitle('Edit field');
     await user.click(editButton);
 
     expect(mockOnEdit).toHaveBeenCalledTimes(1);
 
     await waitFor(() => {
-      expect(screen.queryByText('Edit field')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Edit field')).not.toBeInTheDocument();
     });
   });
 
@@ -150,13 +150,13 @@ describe('ColumnDropdown', () => {
     const button = screen.getByRole('button', { name: /column options/i });
     await user.click(button);
 
-    const deleteButton = await screen.findByRole('button', { name: 'Delete field' });
+    const deleteButton = await screen.findByTitle('Delete field');
     await user.click(deleteButton);
 
     expect(mockOnDelete).toHaveBeenCalledTimes(1);
 
     await waitFor(() => {
-      expect(screen.queryByText('Delete field')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Delete field')).not.toBeInTheDocument();
     });
   });
 
@@ -167,7 +167,7 @@ describe('ColumnDropdown', () => {
     const button = screen.getByRole('button', { name: /column options/i });
     await user.click(button);
 
-    expect(await screen.findByText('Edit field')).toBeInTheDocument();
+    expect(await screen.findByTitle('Edit field')).toBeInTheDocument();
     expect(mockUseClickOutside).toHaveBeenCalled();
 
     const onClose = mockUseClickOutside.mock.calls[0][0].onClose;
@@ -176,7 +176,7 @@ describe('ColumnDropdown', () => {
     });
 
     await waitFor(() => {
-      expect(screen.queryByText('Edit field')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Edit field')).not.toBeInTheDocument();
     });
   });
 
@@ -200,7 +200,7 @@ describe('ColumnDropdown', () => {
     const button = screen.getByRole('button', { name: /column options/i });
     await user.click(button);
 
-    const editButton = await screen.findByRole('button', { name: 'Edit field' });
+    const editButton = await screen.findByTitle('Edit field');
     const menu = editButton.closest('div');
 
     if (!menu) {
@@ -231,7 +231,7 @@ describe('ColumnDropdown', () => {
     const button = screen.getByRole('button', { name: /column options/i });
     await user.click(button);
 
-    const editButton = await screen.findByRole('button', { name: 'Edit field' });
+    const editButton = await screen.findByTitle('Edit field');
     const menu = editButton.closest('div');
 
     if (!menu) {

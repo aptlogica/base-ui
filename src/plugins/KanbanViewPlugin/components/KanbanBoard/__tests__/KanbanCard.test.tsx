@@ -216,6 +216,7 @@ describe('KanbanCard Component', () => {
     });
 
     it('should handle multiple images with carousel', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const cardWithImages = {
         ...mockCard,
         images: [
@@ -234,6 +235,7 @@ describe('KanbanCard Component', () => {
 
       const image = screen.queryByRole('img');
       expect(image).toBeInTheDocument();
+      consoleErrorSpy.mockRestore();
     });
 
     it('should filter non-image attachments', () => {

@@ -45,7 +45,12 @@ vi.mock('../../common/Toast', () => ({
 }));
 
 vi.mock('../../../utils/standardFieldUtils', () => ({
-  createFieldRendererProps: vi.fn((field) => ({ field })),
+  createFieldRendererProps: vi.fn((field, value, onChange, options = {}) => ({
+    field,
+    value,
+    onChange,
+    ...options,
+  })),
   getFieldDisplayName: vi.fn((field) => field.title || field.name),
   getFieldDefaultValue: vi.fn(() => null),
   getStandardFieldType: vi.fn((type) => type),
