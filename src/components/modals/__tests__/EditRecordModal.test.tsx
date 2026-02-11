@@ -45,7 +45,12 @@ vi.mock('../../common/Toast', () => ({
 }));
 
 vi.mock('../../../utils/standardFieldUtils', () => ({
-  createFieldRendererProps: vi.fn((field) => ({ field })),
+  createFieldRendererProps: vi.fn((field, value, onChange, options = {}) => ({
+    field,
+    value,
+    onChange,
+    ...options,
+  })),
   getFieldDisplayName: vi.fn((field) => field.title || field.name),
   getFieldDefaultValue: vi.fn(() => null),
   getStandardFieldType: vi.fn((type) => type),
@@ -394,6 +399,42 @@ describe('EditRecordModal', () => {
 
       expect(cancelButton).toHaveAttribute('type', 'button');
       expect(submitButton).toHaveAttribute('type', 'button');
+    });
+  });
+
+  describe('save button state', () => {
+    it('disables save when no values are changed', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => true,
+        canDeleteRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      renderWithQueryClient(<EditRecordModal {...defaultProps} />);
+
+      const submitButton = screen.getByRole('button', { name: 'Save changes' });
+      expect(submitButton).toBeDisabled();
+    });
+
+    it('enables save when a field value is updated', async () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => true,
+        canDeleteRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      const user = userEvent.setup();
+      renderWithQueryClient(<EditRecordModal {...defaultProps} />);
+
+      const submitButton = screen.getByRole('button', { name: 'Save changes' });
+      expect(submitButton).toBeDisabled();
+
+      await user.clear(screen.getByTestId('field-input-field-1'));
+      await user.type(screen.getByTestId('field-input-field-1'), 'Updated Title');
+
+      expect(submitButton).not.toBeDisabled();
     });
   });
 });

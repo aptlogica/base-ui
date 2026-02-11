@@ -1,19 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Pencil, Trash2, Copy, ChevronUp } from 'lucide-react';
+import { ChevronDown, Pencil, Trash2, ChevronUp } from 'lucide-react';
 import { useClickOutside } from '../../../../../hooks/useClickOutside';
 
 interface ColumnDropdownProps {
   onEdit: () => void;
   onDelete: () => void;
-  onDuplicate?: () => void;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
   onEdit,
   onDelete,
+  isOpen: controlledOpen,
+  onOpenChange,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = controlledOpen ?? internalOpen;
+  const setIsOpen = onOpenChange ?? setInternalOpen;
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -122,7 +127,7 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
             title="Edit field"
           >
             <Pencil className="w-4 h-4" />
-            Edit field
+            Edit Column
           </button>
 
           {/* Divider */}
@@ -135,7 +140,7 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
             title="Delete field"
           >
             <Trash2 className="w-4 h-4" />
-            Delete field
+            Delete Column
           </button>
         </div>,
         document.body
