@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useClickHandler } from '../../../utils/helpers';
-import { Link } from 'react-router-dom';
 
 // Safe URL validation helpers (no ReDoS vulnerabilities)
 const removeProtocol = (url: string): string => {
@@ -228,18 +227,50 @@ export const URL: React.FC<URLProps> = ({
     />
   );
 
-  const renderDisplayView = () => (
-    <div
-      className={`field-component overflow-hidden
-        ${localValue && !error ? "cursor-pointer" : "cursor-default"}
-        ${localValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400"}
-        ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
-    >
-      <span className="block w-full min-w-0 truncate whitespace-nowrap">
-        <Link to={normalizeURL(localValue)} target={openInNewTab ? '_blank' : '_self'} rel="noopener noreferrer">{localValue || placeholder}</Link>
-      </span>
-    </div>
-  );
+  const renderDisplayView = () => {
+    if (!localValue || error) {
+      return (
+        <div
+          className={`field-component overflow-hidden
+            ${localValue && !error ? "cursor-pointer" : "cursor-default"}
+            ${localValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400"}
+            ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
+        >
+          <span className="block w-full min-w-0 truncate whitespace-nowrap">
+            {localValue || placeholder}
+          </span>
+        </div>
+      );
+    }
+
+    // Use a regular anchor tag for reliable rendering
+    return (
+      <div
+        className={`field-component overflow-hidden
+          ${localValue && !error ? "cursor-pointer" : "cursor-default"}
+          ${localValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400"}
+          ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
+      >
+        <span className="block w-full min-w-0 truncate whitespace-nowrap">
+          <a 
+            href={normalizeURL(localValue)} 
+            target={openInNewTab ? '_blank' : '_self'} 
+            rel="noopener noreferrer"
+            onClick={(e) => {
+              e.preventDefault();
+              if (openInNewTab) {
+                window.open(normalizeURL(localValue), '_blank', 'noopener,noreferrer');
+              } else {
+                globalThis.location.href = normalizeURL(localValue);
+              }
+            }}
+          >
+            {localValue}
+          </a>
+        </span>
+      </div>
+    );
+  };
 
   return (
     <div className="w-full">
