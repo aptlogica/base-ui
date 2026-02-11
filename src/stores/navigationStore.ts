@@ -308,6 +308,7 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
     return false;
   },
 
+  // eslint-disable-next-line sonarjs/cognitive-complexity
   navigateToFirstBase: (workspaceId: string, workspaceData: any, navigate: (path: string) => void): boolean => {
     // Try to get workspace bases from the API hook data structure
     let bases = null;

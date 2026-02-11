@@ -140,7 +140,7 @@ const Layout = () => {
               )}
               <button 
                 onClick={() => updateSidebarCollapsed(!sidebarCollapsed)} 
-                className='absolute top-1/2 right-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-50 hover:bg-gray-100 transition-colors outline-none'
+                className='absolute top-1/2 right-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-40 hover:bg-gray-100 transition-colors outline-none'
                 aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
@@ -168,7 +168,7 @@ const Layout = () => {
               )}
               <button 
                 onClick={() => updateSidebarCollapsed(!sidebarCollapsed)} 
-                className='absolute top-1/2 left-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-50 hover:bg-gray-100 transition-colors outline-none'
+                className='absolute top-1/2 left-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-40 hover:bg-gray-100 transition-colors outline-none'
                 aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {sidebarCollapsed ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
@@ -179,8 +179,6 @@ const Layout = () => {
 
         {/* Overlays */}
         <ExtensionPoint id="layout:overlay" />
-
-        {/* Floating mode disabled intentionally */}
       </div>
     </RouteContextProvider>
   );
@@ -191,14 +189,9 @@ const TableViewRouteWrapper: React.FC = () => {
   const { baseId, tableId, viewId } = useParams();
 
   // Centralized table fetch so only one plugin renders and we can determine view type
-  // PAGINATION DISABLED - Uncomment below to re-enable pagination (30 records per page)
-  // const { data: response, isLoading, error, refetch } = useTable(tableId, { pageNumber: 1, pageLimit: 30 });
-  // PERFORMANCE: Use cached data immediately if available (placeholderData handles this)
-  // Note: useTable has enabled: !!tableId, so it won't fetch if tableId is missing
-  const { data: response, isLoading, error, refetch } = useTable(tableId || ''); // No pagination - fetches all records
-
+  const { data: response, isLoading, error, refetch } = useTable(tableId || '');
   if (!tableId) {
-    console.error('❌ TableViewRouteWrapper: Table ID is required');
+    console.error('Table ID is missing');
     return <div className="p-8 text-red-600">Table ID is required</div>;
   }
 
@@ -220,7 +213,7 @@ const TableViewRouteWrapper: React.FC = () => {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 text-lg mb-2">⚠️ Error Loading View</div>
+          <div className="text-red-500 text-lg mb-2">Something went wrong</div>
           <p className="text-muted-foreground mb-4">{String(error)}</p>
           <button onClick={() => refetch()} className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90">Retry</button>
         </div>
@@ -252,6 +245,14 @@ const TableViewRouteWrapper: React.FC = () => {
     view = { id: typeMatchedView.id, type: typeMatchedView.type };
   }
 
+  const routeFallback = (
+    <ExtensionPoint
+      id="route"
+      props={{ table, view, viewType }}
+      key={`route-${tableId}-${viewId}`}
+    />
+  );
+
   // If a non-slug viewId was provided but not found, show a clear message
   if (viewId && !requestedView && !isTypeSlug) {
     return (
@@ -271,13 +272,7 @@ const TableViewRouteWrapper: React.FC = () => {
         id="view"
         props={{ table, view, viewType }}
         key={`view-${tableId}-${viewId}`}
-        fallback={() => (
-          <ExtensionPoint
-            id="route"
-            props={{ table, view, viewType }}
-            key={`route-${tableId}-${viewId}`}
-          />
-        )}
+        fallback={routeFallback}
       />
     </>
   );

@@ -216,14 +216,15 @@ const HomePage: React.FC = () => {
     setEditingBase(base);
   };
 
-  const handleSaveBase = async ({ name, description, image }: { name: string; description: string; image?: File | string | null }) => {
+  const handleSaveBase = async ({ name, description, image, removeImage }: { name: string; description: string; image?: File | string | null; removeImage?: boolean }) => {
     if (!editingBase) return;
 
     try {
       const updates: {
         title?: string;
         description?: string;
-        image?: File | Blob ;
+        image?: File | Blob;
+        removeImage?: boolean;
       } = {};
 
       console.log(updates)
@@ -242,6 +243,11 @@ const HomePage: React.FC = () => {
       // Include image if provided (must be a File object)
       if (image instanceof File) {
         updates.image = image;
+      }
+
+      // Include removeImage flag if image was explicitly removed
+      if (removeImage) {
+        updates.removeImage = true;
       }
 
       // Check if there are any changes to save

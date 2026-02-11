@@ -1,3 +1,4 @@
+ /* eslint-disable sonarjs/cognitive-complexity */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';

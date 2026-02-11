@@ -695,7 +695,10 @@ describe('Duration Component', () => {
       const input = container.querySelector('input')!;
       await userEvent.clear(input);
       await userEvent.type(input, '0:45');
-      fireEvent.blur(input);
+      
+      await act(async () => {
+        fireEvent.blur(input);
+      });
 
       await waitFor(() => {
         expect(mockOnChange).toHaveBeenCalledWith(45);

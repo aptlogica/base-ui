@@ -1114,8 +1114,8 @@ describe('KanbanStack Component', () => {
 
         // Dispatch custom event to simulate another menu opening
         await act(async () => {
-          globalThis.dispatchEvent(new CustomEvent('kanban-menu-open', {
-            detail: { source: Symbol('other-menu') }
+          globalThis.dispatchEvent(new CustomEvent('kanban-menu-open', { 
+            detail: { source: Symbol('other-menu') } 
           }));
         });
       }

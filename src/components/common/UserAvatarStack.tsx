@@ -14,7 +14,7 @@ interface UserAvatarStackProps {
   showCount?: boolean; // Show "+N" badge if more users
   onClick?: () => void; // Optional click handler (e.g., to open modal) - if provided, dropdown won't show
   className?: string;
-  showDropdown?: boolean; // Enable dropdown functionality (default: true if no onClick)
+  showDropdown?: boolean; // Enable dropdown functioanality (default: true if no onClick)
 }
 
 export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({

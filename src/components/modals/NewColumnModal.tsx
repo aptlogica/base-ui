@@ -148,7 +148,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const [urlValid, setUrlValid] = useState(false);
   const [urlDefault, setUrlDefault] = useState('');
   const [showUrlDefault, setShowUrlDefault] = useState(false);
-  const [showUrlIcon, setShowUrlIcon] = useState(true);
 
   // Add state for percent and duration configs
   const [displayAsProgress, setDisplayAsProgress] = useState(false);
@@ -615,7 +614,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
         // Note: Lookup field initialization is handled in a separate useEffect
         // that runs when linkFields become available (see above)
-        setShowUrlIcon(config.showUrlIcon !== false);
         setDisplayAsProgress(!!config.displayAsProgress);
         setShowPercentDefault(false);
         // For percent: check defaultValue first (where it's saved), then fallback to percentDefault
@@ -694,7 +692,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         setUrlValid(false);
         setUrlDefault('');
         setShowUrlDefault(false);
-        setShowUrlIcon(true);
         setDisplayAsProgress(false);
         setShowPercentDefault(false);
         setPercentDefault(null);
@@ -771,7 +768,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       setUrlValid(false);
       setUrlDefault('');
       setShowUrlDefault(false);
-      setShowUrlIcon(true);
       setDisplayAsProgress(false);
       setShowPercentDefault(false);
       setPercentDefault(null);
@@ -1189,7 +1185,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     }
     if (selectedType.key === 'url') {
       config.urlValid = urlValid;
-      config.showIcon = showUrlIcon;
       if (urlDefault && urlDefault.trim()) {
         config.defaultValue = urlDefault;
       }
@@ -2525,24 +2520,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             </div>
 
 
-            {/* URL Display Options */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showUrlIcon}
-                    onChange={e => setShowUrlIcon(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                  <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-                </label>
-                <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Show link icon</span>
-              </div>
-              <p className="text-xs text-gray-500">Display a clickable link icon next to URLs</p>
-            </div>
-
             {/* Default Value */}
             <div className="mb-4">
               <button
@@ -2561,8 +2538,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     placeholder="e.g. https://example.com"
                     isBorder={true}
                     config={{
-                      urlValid: urlValid,
-                      showIcon: showUrlIcon
+                      urlValid: urlValid
                     }}
                   />
                 </div>
