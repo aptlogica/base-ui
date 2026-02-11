@@ -41,6 +41,12 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
     onFieldToggle(fieldId);
   };
 
+  const isTitleField = (col: ColumnConfig) => {
+    const title = (col.title || '').toLowerCase();
+    const columnName = (col.column_name || '').toLowerCase();
+    return title === 'title' || columnName === 'title';
+  };
+
   // Sort columns by position from fieldConfig, then separate regular from system fields
   const sortedColumns = [...columns].sort((a, b) => {
     const aConfig = fieldConfig?.find(fc => String(fc.id) === String(a.id));
@@ -53,8 +59,8 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
   });
 
   // Separate regular fields from system fields (using sorted order)
-  const regularFields = sortedColumns.filter(col => !col.system);
-  const systemFields = sortedColumns.filter(col => col.system);
+  const regularFields = sortedColumns.filter(col => !col.system || isTitleField(col));
+  const systemFields = sortedColumns.filter(col => col.system && !isTitleField(col));
 
   const filteredRegularFields = regularFields?.filter(col =>
     col.title?.toLowerCase().includes(search.toLowerCase())
@@ -146,7 +152,7 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
             {/* System Fields Section */}
             {showSystemFields && filteredSystemFields.length > 0 && (
               <>
-                <div className="border-t border-gray-100 my-2"></div>
+                <div className="border-t border-gray-100 my-2"/>
                 <div className="px-2 py-1 text-xs font-medium text-gray-500 uppercase tracking-wide">System Fields</div>
                 {filteredSystemFields.map((col) => (
                   <div
@@ -181,7 +187,7 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
               className="flex items-center gap-1 text-gray-600 text-xs font-medium hover:text-gray-800"
               onClick={() => setShowSystemFields(!showSystemFields)}
             >
-              {showSystemFields ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showSystemFields ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               System fields
             </button>
           </div>

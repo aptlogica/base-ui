@@ -17,15 +17,13 @@ interface AttachmentProps {
   config?: AttachmentConfig;
   required?: boolean;
   disabled?: boolean;
-  allowEdit?: boolean; // Controls whether attachment actions are visible
-  readOnly?: boolean; // true = completely prevent editing
-  // API parameters for attachment operations
+  allowEdit?: boolean;
+  readOnly?: boolean;
   model_id?: string;
   column_id?: string;
   row_id?: number;
   isBorder?: boolean;
-  showPreview?: boolean; // New prop to control preview button visibility
-  // New prop to control upload behavior
+  showPreview?: boolean;
   persistImmediately?: boolean; // Default: true (maintains backward compatibility)
 }
 
@@ -69,9 +67,6 @@ export const Attachment: React.FC<AttachmentProps> = ({
         return 'Please attach at least one file';
       }
       return null; // No error if not required and empty
-    }
-    if (files.length > maxFiles) {
-      return `Maximum ${maxFiles} files allowed`;
     }
     return null;
   };
@@ -261,9 +256,6 @@ export const Attachment: React.FC<AttachmentProps> = ({
       if (isUploading) {
         return "Upload in progress...";
       }
-      if (attachmentArray.length >= maxFiles) {
-        return `Maximum ${maxFiles} files allowed`;
-      }
       return 'Add attachment';
     };
 
@@ -282,7 +274,7 @@ export const Attachment: React.FC<AttachmentProps> = ({
       <div className={`relative flex items-center px-2 pr-20 h-11 ${isBorder ? "field-component-border" : ""}`}>
         {/* Thumbnails row - Show only first 3 images */}
         <div className="flex items-center gap-1 min-h-8 overflow-hidden flex-wrap">
-          {attachmentArray?.slice(0, 3).map((file, idx) => {
+          {attachmentArray?.slice(0, 4).map((file, idx) => {
             // Check if file is an image by MIME type or extension
             const mimeType: string = file?.mime_type || file?.type || '';
             const fileName: string = (file?.name || file?.title || '').toLowerCase();
@@ -322,33 +314,42 @@ export const Attachment: React.FC<AttachmentProps> = ({
         </div>
         {/* Floating action buttons */}
         <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1 z-10">
-        {!readOnly && 
-          <button
-            type="button"
-            className="w-7 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={() => !readOnly && setIsModalOpen(true)}
-            disabled={disabled || readOnly || attachmentArray.length >= maxFiles || isUploading}
-            title={getButtonTitle()}
-          >
-            {isUploading ? (
-              <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-            ) : (
-              <Paperclip className="w-4 h-4" />
-            )}
-          </button>
-        }
+         {attachmentArray.length > 5 && (
+            <div
+              className="w-7 h-7 text-gray-400 flex items-center justify-center rounded-lg border transition-all disabled:opacity-50 text-xs"
+              title={`+${attachmentArray.length - 4} more`}
+              aria-label={`+${attachmentArray.length - 4} more attachments`}
+            >
+              +{attachmentArray.length - 4}
+            </div>
+          )}
+          {!readOnly &&
+            <button
+              type="button"
+              className="w-7 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => !readOnly && setIsModalOpen(true)}
+              disabled={disabled || readOnly || isUploading}
+              title={getButtonTitle()}
+            >
+              {isUploading ? (
+                <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+              ) : (
+                <Paperclip className="w-4 h-4" />
+              )}
+            </button>
+          }
           {showPreview &&
-              <button
-                type="button"
-                className="w-7 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={() => setIsPreviewModalOpen(true)}
-                disabled={disabled || isUploading}
-                tabIndex={0}
-                aria-label="Preview attachments"
-                title={getPreviewButtonTitle()}
-              >
-                <Maximize2 className="w-4 h-4" />
-              </button>
+            <button
+              type="button"
+              className="w-7 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setIsPreviewModalOpen(true)}
+              disabled={disabled || isUploading}
+              tabIndex={0}
+              aria-label="Preview attachments"
+              title={getPreviewButtonTitle()}
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
           }
         </div>
       </div>

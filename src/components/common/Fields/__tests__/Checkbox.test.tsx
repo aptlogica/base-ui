@@ -169,21 +169,21 @@ describe('Checkbox Component', () => {
 
     it('should handle non-boolean values gracefully', () => {
       const { container } = render(
-        <Checkbox value={'yes' as any} onChange={mockOnChange} />
+        <Checkbox value={('yes' as unknown) as boolean} onChange={mockOnChange} />
       );
       expect(container.querySelector('.w-5')).toBeInTheDocument();
     });
 
     it('should handle undefined value', () => {
       const { container } = render(
-        <Checkbox value={undefined as any} onChange={mockOnChange} />
+        <Checkbox value={undefined} onChange={mockOnChange} />
       );
       expect(container.querySelector('.w-5')).toBeInTheDocument();
     });
 
     it('should handle null value', () => {
       const { container } = render(
-        <Checkbox value={null as any} onChange={mockOnChange} />
+        <Checkbox value={(null as unknown) as boolean} onChange={mockOnChange} />
       );
       expect(container.querySelector('.w-5')).toBeInTheDocument();
     });

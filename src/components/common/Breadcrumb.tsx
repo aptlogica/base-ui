@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -60,26 +61,16 @@ const BaseMenuWrapper: React.FC<{
   }
 
   return (
-    <div
-      onClick={(e) => {
-        e.stopPropagation();
-        // Prevent closing the dropdown when clicking the menu trigger
-      }}
-      onMouseDown={(e) => {
-        // Prevent the click-outside handler from closing the dropdown
-        e.stopPropagation();
-      }}
-    >
-      <BaseMenu
-        base={base}
-        onEdit={onEdit}
-        onAddMembers={onAddMembers}
-        onDelete={onDelete}
-        canEdit={canEdit}
-        canDelete={canDelete}
-        canAddMembers={canAddMembers}
-      />
-    </div>
+    <BaseMenu
+      base={base}
+      onEdit={onEdit}
+      onAddMembers={onAddMembers}
+      onDelete={onDelete}
+      canEdit={canEdit}
+      canDelete={canDelete}
+      canAddMembers={canAddMembers}
+      align={"left"}
+    />
   );
 };
 
@@ -155,9 +146,15 @@ const Breadcrumb: React.FC = () => {
       return;
     }
 
-    const targetRef =
-      openDropdown === 'base' ? baseDropdownRef :
-        openDropdown === 'table' ? tableDropdownRef : viewDropdownRef;
+    let targetRef;
+
+    if (openDropdown === 'base') {
+      targetRef = baseDropdownRef;
+    } else if (openDropdown === 'table') {
+      targetRef = tableDropdownRef;
+    } else {
+      targetRef = viewDropdownRef;
+    }
 
     if (targetRef.current) {
       const rect = targetRef.current.getBoundingClientRect();
@@ -179,17 +176,20 @@ const Breadcrumb: React.FC = () => {
         return;
       }
 
-      const target = event.target as Node;
+      const target = event.target as Element;
       const portal = document.querySelector('.breadcrumb-dropdown-portal');
 
       // Check if click is inside the portal (including buttons)
-      const clickedInside =
-        (baseDropdownRef.current && baseDropdownRef.current.contains(target)) ||
-        (tableDropdownRef.current && tableDropdownRef.current.contains(target)) ||
-        (viewDropdownRef.current && viewDropdownRef.current.contains(target)) ||
-        (portal && portal.contains(target));
+      const clickedInsideBreadcrumb =
+        (baseDropdownRef.current?.contains(target)) ||
+        (tableDropdownRef.current?.contains(target)) ||
+        (viewDropdownRef.current?.contains(target)) ||
+        (portal?.contains(target));
 
-      if (!clickedInside) {
+      // Also check if click is inside a PopoverMenu portal (used by BaseMenu)
+      const isInsidePopoverMenu = !!target.closest('[data-popover-menu-portal]');
+
+      if (!clickedInsideBreadcrumb && !isInsidePopoverMenu) {
         setOpenDropdown(null);
         setDropdownPosition(null);
       }
@@ -219,99 +219,116 @@ const Breadcrumb: React.FC = () => {
   const currentView = viewByIdQuery.data;
 
   // Build breadcrumb items (only Base > Table > View, no workspace)
+  const buildBaseItem = (pathParts: string[], baseIndex: number): BreadcrumbItem | null => {
+    if (baseIndex <= 0 || !pathParts[baseIndex] || !currentBase) {
+      return null;
+    }
+
+    const baseName = currentBase.title || currentBase.name || 'Base';
+    const baseImageRaw = currentBase.image || currentBase.logo || currentBase.meta?.image;
+    const baseImage = typeof baseImageRaw === 'string' ? baseImageRaw : undefined;
+    const baseIcon = getBaseIcon(currentBase, 0);
+
+    const baseIconElement = baseImage ? (
+      <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
+        <img
+          src={baseImage}
+          alt={baseName}
+          className="w-full h-full object-cover"
+        />
+      </div>
+    ) : (
+      <div className={`w-8 h-8 ${baseIcon.color} rounded-lg flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}>
+        {baseIcon.letter}
+      </div>
+    );
+
+    const basePath = selectedWorkspaceId
+      ? `/workspace/${selectedWorkspaceId}`
+      : '/workspace';
+
+    return {
+      type: 'base',
+      id: currentBase.id,
+      label: baseName,
+      icon: baseIconElement,
+      path: basePath
+    };
+  };
+
+  const buildTableItem = (pathParts: string[], tableIndex: number): BreadcrumbItem | null => {
+    if (tableIndex <= 0 || !pathParts[tableIndex] || !currentTable || !selectedWorkspaceId || !currentBase) {
+      return null;
+    }
+
+    const tableData = currentTable.model || currentTable;
+    const tableId = tableData.id || pathParts[tableIndex];
+    const tableName = tableData.title || (tableData as any).name || 'Table';
+
+    if (!tableId) {
+      return null;
+    }
+
+    return {
+      type: 'table',
+      id: tableId,
+      label: tableName,
+      icon: <Sheet size={14} className="text-blue-600" />,
+      path: `/workspace/${selectedWorkspaceId}/base/${currentBase.id}/table/${tableId}/grid`
+    };
+  };
+
+  const buildViewItem = (pathParts: string[], viewIndex: number): BreadcrumbItem | null => {
+    if (viewIndex <= 0 || !pathParts[viewIndex] || !currentView || !selectedWorkspaceId || !currentBase || !selectedTableId) {
+      return null;
+    }
+
+    const viewName = currentView.title || currentView.name || 'View';
+    const viewType = currentView.type || 'grid';
+    const viewIconInfo = getViewIconInfo(viewType);
+    const ViewIcon = viewIconInfo.icon;
+
+    return {
+      type: 'view',
+      id: currentView.id,
+      label: viewName,
+      icon: <ViewIcon size={14} className="text-purple-600" />,
+      path: `/workspace/${selectedWorkspaceId}/base/${currentBase.id}/table/${selectedTableId}/${currentView.id}`
+    };
+  };
+
   const buildBreadcrumbItems = (): BreadcrumbItem[] => {
     const items: BreadcrumbItem[] = [];
     const pathParts = pathname.split('/').filter(Boolean);
-
-    // Check for new route format: /workspace/:workspaceId/base/:baseId/table/:tableId/:viewId
-    // pathParts: ['workspace', workspaceId, 'base', baseId, 'table', tableId, viewId]
     const isNewFormat = pathParts[0] === 'workspace' && pathParts[2] === 'base';
-    
-    // Determine indices based on route format
+
     let baseIndex = -1;
     let tableIndex = -1;
     let viewIndex = -1;
-    
+
     if (isNewFormat) {
-      // New format: /workspace/:workspaceId/base/:baseId/table/:tableId/:viewId
       baseIndex = 3;
       tableIndex = 5;
       viewIndex = 6;
     } else if (pathParts[0] === 'base') {
-      // Legacy format: /base/:baseId/table/:tableId/:viewId (kept for safety)
       baseIndex = 1;
       tableIndex = 3;
       viewIndex = pathParts[4] ? 4 : -1;
     }
 
-    // Add base
-    if (baseIndex > 0 && pathParts[baseIndex] && currentBase) {
-      const baseName = currentBase.title || currentBase.name || 'Base';
-      const baseImageRaw = currentBase.image || currentBase.logo || currentBase.meta?.image;
-      const baseImage = typeof baseImageRaw === 'string' ? baseImageRaw : undefined;
-      const baseIcon = getBaseIcon(currentBase, 0);
-
-      // Use image if available, otherwise use initial with colored background
-      const baseIconElement = baseImage ? (
-        <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
-          <img
-            src={baseImage}
-            alt={baseName}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      ) : (
-        <div className={`w-8 h-8 ${baseIcon.color} rounded-lg flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}>
-          {baseIcon.letter}
-        </div>
-      );
-
-      const basePath = selectedWorkspaceId
-        ? `/workspace/${selectedWorkspaceId}`
-        : '/workspace';
-
-      items.push({
-        type: 'base',
-        id: currentBase.id,
-        label: baseName,
-        icon: baseIconElement,
-        path: basePath
-      });
+    const baseItem = buildBaseItem(pathParts, baseIndex);
+    if (baseItem) {
+      items.push(baseItem);
     }
 
-    // Add table
-    if (tableIndex > 0 && pathParts[tableIndex] && currentTable) {
-      const tableData = currentTable.model || currentTable;
-      const tableId = tableData.id || pathParts[tableIndex];
-      const tableName = tableData.title || (tableData as any).name || 'Table';
-
-      if (tableId && selectedWorkspaceId && currentBase) {
-        items.push({
-          type: 'table',
-          id: tableId,
-          label: tableName,
-          icon: <Sheet size={14} className="text-blue-600" />,
-          path: `/workspace/${selectedWorkspaceId}/base/${currentBase.id}/table/${tableId}/grid`
-        });
-      }
+    const tableItem = buildTableItem(pathParts, tableIndex);
+    if (tableItem) {
+      items.push(tableItem);
     }
 
-    // Add view
-    if (viewIndex > 0 && pathParts[viewIndex] && currentView) {
-      const viewName = currentView.title || currentView.name || 'View';
-      const viewType = currentView.type || 'grid';
-      const viewIconInfo = getViewIconInfo(viewType);
-      const ViewIcon = viewIconInfo.icon;
-
-      if (selectedWorkspaceId && currentBase && selectedTableId) {
-        items.push({
-          type: 'view',
-          id: currentView.id,
-          label: viewName,
-          icon: <ViewIcon size={14} className="text-purple-600" />,
-          path: `/workspace/${selectedWorkspaceId}/base/${currentBase.id}/table/${selectedTableId}/${currentView.id}`
-        });
-      }
+    const viewItem = buildViewItem(pathParts, viewIndex);
+    if (viewItem) {
+      items.push(viewItem);
     }
 
     return items;
@@ -327,7 +344,7 @@ const Breadcrumb: React.FC = () => {
     setDropdownPosition(null);
   };
 
-  const handleSaveBase = async ({ name, description, image }: { name: string; description: string; image?: File | null }) => {
+  const handleSaveBase = async ({ name, description, image, removeImage }: { name: string; description: string; image?: File | null; removeImage?: boolean }) => {
     if (!editingBase) return;
 
     try {
@@ -335,16 +352,17 @@ const Breadcrumb: React.FC = () => {
         title?: string;
         description?: string;
         image?: File | Blob;
+        removeImage?: boolean;
       } = {};
 
       // Only include fields that have actually changed
       const currentTitle = editingBase.title || editingBase.name || '';
       const currentDescription = editingBase.description || '';
-      
+
       if (name !== currentTitle) {
         updates.title = name;
       }
-      
+
       if (description !== currentDescription) {
         updates.description = description;
       }
@@ -352,6 +370,11 @@ const Breadcrumb: React.FC = () => {
       // Include image if provided (must be a File object)
       if (image instanceof File) {
         updates.image = image;
+      }
+
+      // Include removeImage flag if image was explicitly removed
+      if (removeImage) {
+        updates.removeImage = true;
       }
 
       // Check if there are any changes to save
@@ -408,6 +431,7 @@ const Breadcrumb: React.FC = () => {
         try {
           await navigateToFirstView(remainingBases[0].id);
         } catch (err) {
+          console.warn(err)
           navigate(`/workspace/${selectedWorkspaceId}`);
         }
       } else if (selectedWorkspaceId) {
@@ -449,7 +473,7 @@ const Breadcrumb: React.FC = () => {
     }
 
     try {
-      const newBase = await createBaseMutation.mutateAsync({
+      await createBaseMutation.mutateAsync({
         title: name,
         description: description || '',
         workspace_id: selectedWorkspaceId,
@@ -517,6 +541,7 @@ const Breadcrumb: React.FC = () => {
           try {
             await navigateToFirstView(base.id);
           } catch (err) {
+            console.warn(err)
             if (selectedWorkspaceId) {
               navigate(`/workspace/${selectedWorkspaceId}`);
             } else {
@@ -606,23 +631,32 @@ const Breadcrumb: React.FC = () => {
       {breadcrumbItems.map((item, index) => {
         const isLast = index === breadcrumbItems.length - 1;
         const isDropdownOpen = openDropdown === item.type;
-        const dropdownItems =
-          item.type === 'base' ? getBaseDropdownItems() :
-            item.type === 'table' ? getTableDropdownItems() :
-              getViewDropdownItems();
+        let dropdownItems: DropdownItem[];
+        if (item.type === 'base') {
+          dropdownItems = getBaseDropdownItems();
+        } else if (item.type === 'table') {
+          dropdownItems = getTableDropdownItems();
+        } else {
+          dropdownItems = getViewDropdownItems();
+        }
+
+        let currentRef;
+        if (item.type === 'base') {
+          currentRef = baseDropdownRef;
+        } else if (item.type === 'table') {
+          currentRef = tableDropdownRef;
+        } else {
+          currentRef = viewDropdownRef;
+        }
 
         return (
           <React.Fragment key={`${item.type}-${item.id}`}>
             {index > 0 && (
               <ChevronRight size={12} className="text-gray-400 mx-1 flex-shrink-0" />
             )}
-            <div className="relative" ref={
-              item.type === 'base' ? baseDropdownRef :
-                item.type === 'table' ? tableDropdownRef :
-                  viewDropdownRef
-            }>
-              <div
-                className="flex items-center gap-1.5 cursor-pointer rounded px-2 py-1 transition-colors hover:bg-gray-100 group"
+            <div className="relative" ref={currentRef}>
+              <button
+                className="flex items-center gap-1.5 cursor-pointer rounded px-2 py-1 transition-colors hover:bg-gray-100 group border-none bg-transparent"
                 onClick={(e) => handleSegmentClick(e, item.type)}
               >
                 {item.icon}
@@ -637,7 +671,7 @@ const Breadcrumb: React.FC = () => {
                   className={`text-gray-400 transition-transform flex-shrink-0 ${isDropdownOpen ? 'rotate-180' : ''
                     }`}
                 />
-              </div>
+              </button>
 
               {/* Dropdown Menu - Portal to body to avoid overflow clipping */}
               {isDropdownOpen && dropdownPosition && ReactDOM.createPortal(
@@ -647,13 +681,16 @@ const Breadcrumb: React.FC = () => {
                     top: `${dropdownPosition.top}px`,
                     left: `${dropdownPosition.left}px`
                   }}
-                  onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex flex-col h-full">
                     {/* Header */}
                     <div className="px-4 py-2 flex-shrink-0">
                       <div className="text-xs font-semibold text-primary tracking-wide">
-                        {item.type === 'base' ? 'Bases' : item.type === 'table' ? 'Tables' : 'Views'}
+                        {(() => {
+                          if (item.type === 'base') return 'Bases';
+                          if (item.type === 'table') return 'Tables';
+                          return 'Views';
+                        })()}
                       </div>
                     </div>
 
@@ -663,10 +700,19 @@ const Breadcrumb: React.FC = () => {
                         dropdownItems.map((dropdownItem) => (
                           <div
                             key={dropdownItem.id}
-                            className="w-full rounded-lg text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
+                            className="w-full rounded-lg text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer border-none bg-transparent"
                             onClick={(e) => {
                               e.stopPropagation();
                               dropdownItem.onClick();
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                dropdownItem.onClick();
+                              }
                             }}
                           >
                             <div className="flex items-center gap-3">

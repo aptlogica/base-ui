@@ -90,7 +90,7 @@ export function DropdownTrigger({
         <div
           onClick={handleClear}
           className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer z-10"
-          role="button"
+          role="button" 
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {

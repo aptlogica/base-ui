@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Edit } from 'lucide-react';
 
 interface ContextMenuProps {
   x: number;
   y: number;
   onClose: () => void;
   onDelete: () => void;
+  onEdit?: () => void;
   canDeleteRecord?: boolean;
+  canEditRecord?: boolean;
 }
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -14,7 +16,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   y,
   onClose,
   onDelete,
+  onEdit,
   canDeleteRecord = true
+  , canEditRecord = true
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ top: y, left: x });
@@ -104,9 +108,25 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   return (
     <div ref={menuRef} style={style} className="select-none border p-2 space-y-1 animate-fade-in">
       {/* Delete record - only show if user can delete */}
+      {/* Edit record - only show if user can edit */}
+      {canEditRecord && (
+        <>
+          <button
+            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 rounded-xl hover:bg-gray-100 focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+            onClick={() => {
+              if (onEdit) onEdit();
+              onClose();
+            }}
+          >
+            <Edit className="w-4 h-4" /> Edit record
+          </button>
+          <div className="border-t my-1" />
+        </>
+      )}
+
+      {/* Delete record - only show if user can delete */}
       {canDeleteRecord && (
         <>
-          <div className="border-t my-1" />
           <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors" onClick={onDelete}>
             <Trash2 className="w-4 h-4" /> Delete record
           </button>

@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Star, Heart, Circle, ThumbsUp, Flag, CheckCircle, BadgeCheck, ShieldCheck, Award, Trophy, Medal, Zap, Sparkles, Crown, Gem, Diamond
-} from 'lucide-react';
+import { Star, Heart, Circle, ThumbsUp, Flag, CheckCircle, BadgeCheck, ShieldCheck, Award, Trophy, Medal, Zap, Sparkles, Crown, Gem, Diamond } from 'lucide-react';
 
 interface RatingProps {
   value: number;

@@ -288,7 +288,7 @@ describe('Breadcrumb', () => {
       
       // Find the clickable breadcrumb segment
       const baseText = screen.getByText('Test Base');
-      const baseItem = baseText.closest('div[class*="cursor-pointer"]') || baseText.parentElement;
+      const baseItem = baseText.closest('button') || baseText.parentElement;
       
       await user.click(baseItem!);
       
@@ -303,7 +303,7 @@ describe('Breadcrumb', () => {
       renderBreadcrumb();
       
       const baseText = screen.getByText('Test Base');
-      const baseItem = baseText.closest('div[class*="cursor-pointer"]') || baseText.parentElement;
+      const baseItem = baseText.closest('button') || baseText.parentElement;
       
       await user.click(baseItem!);
       
@@ -319,7 +319,7 @@ describe('Breadcrumb', () => {
       renderBreadcrumb();
       
       const baseText = screen.getByText('Test Base');
-      const baseItem = baseText.closest('div[class*="cursor-pointer"]') || baseText.parentElement;
+      const baseItem = baseText.closest('button') || baseText.parentElement;
       
       // Open dropdown
       await user.click(baseItem!);
@@ -344,7 +344,7 @@ describe('Breadcrumb', () => {
       renderBreadcrumb();
       
       const baseText = screen.getByText('Test Base');
-      const baseItem = baseText.closest('div[class*="cursor-pointer"]') || baseText.parentElement;
+      const baseItem = baseText.closest('button') || baseText.parentElement;
       
       await user.click(baseItem!);
       
@@ -363,7 +363,7 @@ describe('Breadcrumb', () => {
       renderBreadcrumb();
       
       const baseText = screen.getByText('Test Base');
-      const baseItem = baseText.closest('div[class*="cursor-pointer"]') || baseText.parentElement;
+      const baseItem = baseText.closest('button') || baseText.parentElement;
       
       await user.click(baseItem!);
       
@@ -397,7 +397,7 @@ describe('Breadcrumb', () => {
       const { container } = renderBreadcrumb();
       
       const baseText = screen.getByText('Test Base');
-      const baseItem = baseText.closest('div[class*="cursor-pointer"]') || baseText.parentElement;
+      const baseItem = baseText.closest('button') || baseText.parentElement;
       
       await user.click(baseItem!);
       
@@ -416,7 +416,7 @@ describe('Breadcrumb', () => {
       renderBreadcrumb();
       
       const baseText = screen.getByText('Test Base');
-      const baseItem = baseText.closest('div[class*="cursor-pointer"]') || baseText.parentElement;
+      const baseItem = baseText.closest('button') || baseText.parentElement;
       
       await user.click(baseItem!);
       
@@ -443,7 +443,7 @@ describe('Breadcrumb', () => {
       );
       
       const baseText = screen.getByText('Test Base');
-      const baseItem = baseText.closest('div[class*="cursor-pointer"]') || baseText.parentElement;
+      const baseItem = baseText.closest('button') || baseText.parentElement;
       
       await user.click(baseItem!);
       

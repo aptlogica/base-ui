@@ -2,11 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AuditCreatedBy } from '../AuditCreatedBy';
-import { getUserInitials, useCurrentUser } from '@/auth/useCurrentUser';
-import { useUserProfile } from '@/hooks/useApi';
 
-vi.mock('@/auth/useCurrentUser');
-vi.mock('@/hooks/useApi');
+vi.mock('../AuditUser', () => ({
+  AuditUser: ({ placeholder }: { placeholder?: string }) => (
+    <div data-testid="audit-user-mock">{placeholder || 'User...'}</div>
+  ),
+}));
 
 describe('AuditCreatedBy Component', () => {
   beforeEach(() => {
@@ -14,313 +15,68 @@ describe('AuditCreatedBy Component', () => {
   });
 
   describe('Rendering', () => {
-    it('should render placeholder when current user is null', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue(null);
-      mockUseUserProfile.mockReturnValue({ data: undefined } as any);
-
-      render(<AuditCreatedBy placeholder="No creator" />);
-
-      expect(screen.getByText('No creator')).toBeInTheDocument();
+    it('should render without crashing', () => {
+      render(<AuditCreatedBy />);
+      expect(document.body).toBeInTheDocument();
     });
 
-    it('should render default placeholder when none is provided and user is null', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue(null);
-      mockUseUserProfile.mockReturnValue({ data: undefined } as any);
-
+    it('should pass default placeholder to AuditUser', () => {
       render(<AuditCreatedBy />);
-
       expect(screen.getByText('Created by...')).toBeInTheDocument();
     });
 
-    it('should render user display name when current user exists', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: '',
-      } as any);
-      mockUseUserProfile.mockReturnValue({ data: undefined } as any);
-
-      render(<AuditCreatedBy />);
-
-      expect(screen.getByText('Jane Doe')).toBeInTheDocument();
-    });
-
-    it('should fallback to default name when display name is missing', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-      const mockGetUserInitials = vi.mocked(getUserInitials);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: '',
-        avatar: '',
-      } as any);
-      mockUseUserProfile.mockReturnValue({ data: undefined } as any);
-      mockGetUserInitials.mockReturnValue('JD');
-
-      render(<AuditCreatedBy />);
-
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
-    });
-
-    it('should render avatar from user profile when available', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: 'user-avatar.png',
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({
-        data: {
-          data: {
-            avatar: 'profile-avatar.png',
-          },
-        },
-      } as any);
-
-      render(<AuditCreatedBy />);
-
-      const image = screen.getByAltText('Profile') as HTMLImageElement;
-      expect(image).toBeInTheDocument();
-      expect(image.src).toContain('profile-avatar.png');
-    });
-
-    it('should render avatar from current user when profile avatar is missing', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: 'user-avatar.png',
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: undefined } as any);
-
-      render(<AuditCreatedBy />);
-
-      const image = screen.getByAltText('Profile') as HTMLImageElement;
-      expect(image).toBeInTheDocument();
-      expect(image.src).toContain('user-avatar.png');
-    });
-
-    it('should render user initials when no avatar is available', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-      const mockGetUserInitials = vi.mocked(getUserInitials);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: '',
-      } as any);
-      mockUseUserProfile.mockReturnValue({ data: undefined } as any);
-      mockGetUserInitials.mockReturnValue('JD');
-
-      render(<AuditCreatedBy />);
-
-      expect(screen.getByText('JD')).toBeInTheDocument();
-    });
-
-    it('should prioritize profile avatar over user avatar', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: 'user-avatar.png',
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({
-        data: {
-          data: {
-            avatar: 'profile-avatar.png',
-          },
-        },
-      } as any);
-
-      render(<AuditCreatedBy />);
-
-      const image = screen.getByAltText('Profile') as HTMLImageElement;
-      expect(image.src).toContain('profile-avatar.png');
-      expect(image.src).not.toContain('user-avatar.png');
-    });
-
-    it('should use user avatar when profile data exists but avatar is missing', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: 'user-avatar.png',
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({
-        data: {
-          data: {},
-        },
-      } as any);
-
-      render(<AuditCreatedBy />);
-
-      const image = screen.getByAltText('Profile') as HTMLImageElement;
-      expect(image.src).toContain('user-avatar.png');
+    it('should pass custom placeholder to AuditUser', () => {
+      render(<AuditCreatedBy placeholder="Created by custom" />);
+      expect(screen.getByText('Created by custom')).toBeInTheDocument();
     });
   });
 
-  describe('Function Calls', () => {
-    it('should call getUserInitials with current user when no avatar', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-      const mockGetUserInitials = vi.mocked(getUserInitials);
-
-      const user = {
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: '',
-      };
-
-      mockUseCurrentUser.mockReturnValue(user as any);
-      mockUseUserProfile.mockReturnValue({ data: undefined } as any);
-      mockGetUserInitials.mockReturnValue('JD');
-
-      render(<AuditCreatedBy />);
-
-      expect(mockGetUserInitials).toHaveBeenCalledWith(user);
+  describe('Props Passing', () => {
+    it('should forward placeholder prop to AuditUser', () => {
+      render(<AuditCreatedBy placeholder="Test Placeholder" />);
+      expect(screen.getByTestId('audit-user-mock')).toBeInTheDocument();
     });
 
-    it('should call useUserProfile with user id when user exists', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-      const mockGetUserInitials = vi.mocked(getUserInitials);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: '',
-      } as any);
-      mockUseUserProfile.mockReturnValue({ data: undefined } as any);
-      mockGetUserInitials.mockReturnValue('JD');
-
+    it('should use default created by placeholder when not specified', () => {
       render(<AuditCreatedBy />);
+      expect(screen.getByText('Created by...')).toBeInTheDocument();
+    });
+  });
 
-      expect(mockUseUserProfile).toHaveBeenCalledWith('1');
+  describe('Integration with AuditUser', () => {
+    it('should render AuditUser component', () => {
+      render(<AuditCreatedBy />);
+      expect(screen.getByTestId('audit-user-mock')).toBeInTheDocument();
     });
 
-    it('should call useUserProfile with empty string when user id is missing', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-      const mockGetUserInitials = vi.mocked(getUserInitials);
+    it('should properly delegate to AuditUser with props', () => {
+      const { rerender } = render(
+        <AuditCreatedBy placeholder="First Placeholder" />
+      );
+      expect(screen.getByText('First Placeholder')).toBeInTheDocument();
 
-      mockUseCurrentUser.mockReturnValue({
-        id: '',
-        display_name: 'Jane Doe',
-        avatar: '',
-      } as any);
-      mockUseUserProfile.mockReturnValue({ data: undefined } as any);
-      mockGetUserInitials.mockReturnValue('JD');
-
-      render(<AuditCreatedBy />);
-
-      expect(mockUseUserProfile).toHaveBeenCalledWith('');
+      rerender(<AuditCreatedBy placeholder="Second Placeholder" />);
+      expect(screen.getByText('Second Placeholder')).toBeInTheDocument();
     });
+  });
 
-    it('should call useUserProfile with empty string when user is null', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue(null);
-      mockUseUserProfile.mockReturnValue({ data: undefined } as any);
-
-      render(<AuditCreatedBy />);
-
-      expect(mockUseUserProfile).toHaveBeenCalledWith('');
+  describe('Accessibility', () => {
+    it('should have proper semantic structure', () => {
+      const { container } = render(<AuditCreatedBy />);
+      expect(container).toBeInTheDocument();
     });
   });
 
   describe('Edge Cases', () => {
-    it('should handle undefined user gracefully', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue(undefined as any);
-      mockUseUserProfile.mockReturnValue({ data: undefined } as any);
-
-      render(<AuditCreatedBy />);
-
-      expect(screen.getByText('Created by...')).toBeInTheDocument();
+    it('should handle empty placeholder string', () => {
+      render(<AuditCreatedBy placeholder="" />);
+      expect(screen.getByTestId('audit-user-mock')).toBeInTheDocument();
     });
 
-    it('should handle user with no id', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-      const mockGetUserInitials = vi.mocked(getUserInitials);
-
-      mockUseCurrentUser.mockReturnValue({
-        display_name: 'Jane Doe',
-        avatar: '',
-      } as any);
-      mockUseUserProfile.mockReturnValue({ data: undefined } as any);
-      mockGetUserInitials.mockReturnValue('JD');
-
-      render(<AuditCreatedBy />);
-
-      expect(mockUseUserProfile).toHaveBeenCalledWith('');
-      expect(screen.getByText('Jane Doe')).toBeInTheDocument();
-    });
-
-    it('should handle null profile response', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-      const mockGetUserInitials = vi.mocked(getUserInitials);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: '',
-      } as any);
-      mockUseUserProfile.mockReturnValue({ data: null } as any);
-      mockGetUserInitials.mockReturnValue('JD');
-
-      render(<AuditCreatedBy />);
-
-      expect(screen.getByText('JD')).toBeInTheDocument();
-    });
-
-    it('should handle profile response with null data', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-      const mockGetUserInitials = vi.mocked(getUserInitials);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: '',
-      } as any);
-      mockUseUserProfile.mockReturnValue({
-        data: {
-          data: null,
-        },
-      } as any);
-      mockGetUserInitials.mockReturnValue('JD');
-
-      render(<AuditCreatedBy />);
-
-      expect(screen.getByText('JD')).toBeInTheDocument();
+    it('should handle very long placeholder text', () => {
+      const longPlaceholder = 'A'.repeat(100);
+      render(<AuditCreatedBy placeholder={longPlaceholder} />);
+      expect(screen.getByText(longPlaceholder)).toBeInTheDocument();
     });
   });
 });

@@ -276,7 +276,7 @@ export const Percent: React.FC<PercentProps> = ({
   const borderClassName = isBorder ? "field-component-border" : "";
   const baseClassName = `w-full relative ${borderClassName} ${className || ""}`.trim();
 
-  if (displayAsProgress) {
+  const renderProgressMode = () => {
     const progressBar = (
       <div className="w-full p-3 flex align-center justify-center">
         <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
@@ -318,47 +318,51 @@ export const Percent: React.FC<PercentProps> = ({
         {isEditing ? progressInput : progressBar}
       </div>
     );
-  }
+  };
 
-  const standardInput = (
-    <div className="relative group">
-      <input
-        ref={inputRef}
-        type="text"
-        value={localValue}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        placeholder=""
-        autoFocus
-        disabled={disabled || readOnly}
-        className={inputClassName}
-      />
-      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-        <PercentageIcon className="w-4 h-4 text-gray-500" />
+  const renderStandardMode = () => {
+    const standardInput = (
+      <div className="relative group">
+        <input
+          ref={inputRef}
+          type="text"
+          value={localValue}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          placeholder=""
+          autoFocus
+          disabled={disabled || readOnly}
+          className={inputClassName}
+        />
+        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+          <PercentageIcon className="w-4 h-4 text-gray-500" />
+        </div>
       </div>
-    </div>
-  );
+    );
 
-  const standardDisplay = (
-    <div className={displayClassName}>
-      {localValue || placeholder}
-    </div>
-  );
+    const standardDisplay = (
+      <div className={displayClassName}>
+        {localValue || placeholder}
+      </div>
+    );
 
-  return (
-    <div
-      className={baseClassName}
-      onClick={readOnly ? undefined : handleClick}
-      onKeyDown={readOnly ? undefined : handleKeyDown}
-      role={readOnly ? undefined : "button"}
-      tabIndex={readOnly || disabled ? -1 : 0}
-      aria-label={readOnly ? undefined : "Edit percent value"}
-      style={readOnly ? { cursor: 'default' } : undefined}
-    >
-      {isEditing ? standardInput : standardDisplay}
-      {helperText && allowEdit && (
-        <p className="text-xs text-gray-500 mt-1">{helperText}</p>
-      )}
-    </div>
-  );
+    return (
+      <div
+        className={baseClassName}
+        onClick={readOnly ? undefined : handleClick}
+        onKeyDown={readOnly ? undefined : handleKeyDown}
+        role={readOnly ? undefined : "button"}
+        tabIndex={readOnly || disabled ? -1 : 0}
+        aria-label={readOnly ? undefined : "Edit percent value"}
+        style={readOnly ? { cursor: 'default' } : undefined}
+      >
+        {isEditing ? standardInput : standardDisplay}
+        {helperText && allowEdit && (
+          <p className="text-xs text-gray-500 mt-1">{helperText}</p>
+        )}
+      </div>
+    );
+  };
+
+  return displayAsProgress ? renderProgressMode() : renderStandardMode();
 };

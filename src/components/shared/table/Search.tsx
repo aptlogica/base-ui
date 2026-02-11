@@ -153,6 +153,8 @@ export const Search: React.FC<SearchProps> = ({
 
   // Filter fields based on search term and exclude system fields (except Title) and fieldsToExcludeInFilter
   // Memoized to prevent recalculation on every render
+  const excludedFieldTypes = React.useMemo(() => new Set(fieldsToExcludeInFilter.map(type => String(type).toLowerCase())), []);
+
   const filteredFields = React.useMemo(() => {
     // Normalize search term to lowercase for case-insensitive comparison
     const normalizedSearchTerm = fieldSearchTerm.toLowerCase().trim();
@@ -170,12 +172,14 @@ export const Search: React.FC<SearchProps> = ({
       const isTitle = columnTitle === 'title' || columnName === 'title';
 
       // Exclude fields in fieldsToExcludeInFilter
-      const isExcludedType = fieldsToExcludeInFilter.includes(column.type) || fieldsToExcludeInFilter.includes(column.uidt || '');
+      const normalizedType = String(column.type || '').toLowerCase();
+      const normalizedUidt = String(column.uidt || '').toLowerCase();
+      const isExcludedType = excludedFieldTypes.has(normalizedType) || excludedFieldTypes.has(normalizedUidt);
 
       // Show if it matches search AND (not a system field OR is Title) AND not in excluded types
       return matchesSearch && (!isSystemField || isTitle) && !isExcludedType;
     });
-  }, [columns, fieldSearchTerm]);
+  }, [columns, fieldSearchTerm, excludedFieldTypes]);
 
   return (
     <div className={`relative ${className} ${columns.length === 0 ? "opacity-[0.5] pointer-events-none" : ""}`}>

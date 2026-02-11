@@ -8,11 +8,14 @@ import { GridRecord as TableData, GridColumn as ColumnConfig } from '../../types
 import { FilterPopover } from '../../../../components/shared/table/FilterPopover';
 import { FieldsPopover } from '../../../../components/shared/table/FieldsPopover';
 import { ContextMenu } from './components/ContextMenu';
+import { ColumnContextMenu } from './components/ColumnContextMenu';
 import { VirtualizedTableBody } from './components/VirtualizedTableBody';
 import { Search } from '../../../../components/shared/table/Search';
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
 import ReactDOM from 'react-dom';
 import { Plus, List, Lock } from 'lucide-react';
+import EditRecordModal from '../../../../components/modals/EditRecordModal';
+import { buildInitialValuesForEdit } from '../../../../utils/initialValues';
 import { useToast } from '../../../../components/common/Toast';
 import { sortRowsByDataKey } from '../../../../utils/sortUtils';
 import { applyFilters } from '../../../../utils/filterUtils';
@@ -55,7 +58,6 @@ interface TableProps {
   viewId?: string;
   onRefresh: () => void;
   viewConfig?: Record<string, any>;
-  enableVirtualization?: boolean;
   actions?: TableActions;
 }
 
@@ -64,7 +66,6 @@ export const Table: React.FC<TableProps> = ({
   viewId,
   onRefresh,
   viewConfig,
-  enableVirtualization, // Separate prop for virtualization control
   actions,
 }) => {
   const toast = useToast();
@@ -241,6 +242,21 @@ export const Table: React.FC<TableProps> = ({
     handleCloseColMenu,
   } = useTableModals();
 
+  // Edit record modal state
+  const [isEditRecordModalOpen, setIsEditRecordModalOpen] = useState(false);
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+
+  const openEditRecordModal = useCallback((rowId: string) => {
+    setSelectedRecordId(rowId);
+    setIsEditRecordModalOpen(true);
+    handleCloseContextMenu();
+  }, [handleCloseContextMenu]);
+
+  const closeEditRecordModal = useCallback(() => {
+    setIsEditRecordModalOpen(false);
+    setSelectedRecordId(null);
+  }, []);
+
   // Wrap handleContextMenu to prevent opening for readonly users
   const handleContextMenu = useCallback((e: React.MouseEvent, rowId: string) => {
     if (isBaseReadOnly() || !canCreateRecord()) {
@@ -272,9 +288,8 @@ export const Table: React.FC<TableProps> = ({
     handleConfirmUpdateField,
     handleDeleteColumn,
     handleConfirmDeleteColumn,
-    handleDuplicateColumn,
     handleColumnDragStart: handleColumnDragStartFromHook,
-    handleColumnDragEnter,
+    handleColumnDragEnter: handleColumnDragEnterFromHook,
     handleColumnDragEnd: handleColumnDragEndFromHook,
     setEditColumn,
     setEditColumnIndex,
@@ -292,6 +307,8 @@ export const Table: React.FC<TableProps> = ({
     setViewConfigState,
   });
 
+  const canReorderColumns = useMemo(() => !isBaseReadOnly() && canUpdateColumn(), [isBaseReadOnly, canUpdateColumn]);
+
   // TanStack Query hooks - Mutations provided by data layer hook
   const deleteRecordMutation = actions?.deleteRecord;
   const bulkDeleteRecordsMutation = actions?.bulkDeleteRecords;
@@ -306,14 +323,27 @@ export const Table: React.FC<TableProps> = ({
   const headerRef = useRef<HTMLDivElement>(null);
   const addColumnButtonRef = useRef<HTMLButtonElement | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [openColumnDropdownIndex, setOpenColumnDropdownIndex] = useState<number | null>(null);
 
   // Static column widths (no resize). Prefer view meta widths, else column.width, else 235.
   const columnWidths = useMemo(() => {
     return (visibleColumns || []).map((c) => {
       const fromView = viewConfigState.columnWidths?.[c.key];
-      return typeof fromView === 'number' ? fromView : (typeof c.width === 'number' ? c.width : 235);
+
+      let width = 235;
+
+      if (typeof c.width === 'number') {
+        width = c.width;
+      }
+
+      if (typeof fromView === 'number') {
+        width = fromView;
+      }
+
+      return width;
     });
   }, [visibleColumns, viewConfigState.columnWidths]);
+
 
   // Memoize minimal columns for sorting (only recreates when visibleColumns change)
   const minimalColumnsForSorting = useMemo(() => {
@@ -548,10 +578,17 @@ export const Table: React.FC<TableProps> = ({
 
   // Column drag and drop handler wrapper (uses hook's handleColumnDragEnd with proper params)
   const handleColumnDragStart = useCallback((index: number) => {
+    if (!canReorderColumns) return;
     handleColumnDragStartFromHook(index, visibleColumns);
-  }, [handleColumnDragStartFromHook, visibleColumns]);
+  }, [canReorderColumns, handleColumnDragStartFromHook, visibleColumns]);
+
+  const handleColumnDragEnter = useCallback((index: number) => {
+    if (!canReorderColumns) return;
+    handleColumnDragEnterFromHook(index);
+  }, [canReorderColumns, handleColumnDragEnterFromHook]);
 
   const handleColumnDragEnd = useCallback(async () => {
+    if (!canReorderColumns) return;
     await handleColumnDragEndFromHook(
       visibleColumns,
       localFieldConfig,
@@ -560,7 +597,7 @@ export const Table: React.FC<TableProps> = ({
       actions?.updateView,
       handleFieldOrderChange
     );
-  }, [handleColumnDragEndFromHook, visibleColumns, localFieldConfig, effectiveViewId, baseMeta, actions?.updateView, handleFieldOrderChange]);
+  }, [canReorderColumns, handleColumnDragEndFromHook, visibleColumns, localFieldConfig, effectiveViewId, baseMeta, actions?.updateView, handleFieldOrderChange]);
 
   // Wrapper for handleEditColumn to use hook's version
   const handleEditColumn = useCallback((col: ColumnConfig, index: number, event?: { target: HTMLElement }) => {
@@ -671,9 +708,9 @@ export const Table: React.FC<TableProps> = ({
         >
           <div className="bg-background w-full">
             {/* Sticky Table Header */}
-            <div ref={headerRef} className="sticky top-0 z-20 bg-sidebar-menu w-full" onClick={() => setActiveCell(null)}>
+            <div ref={headerRef} className="sticky top-0 z-20 w-full" onClick={() => setActiveCell(null)}>
               <div
-                className="grid"
+                className="grid bg-background"
                 style={{
                   gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`,
                   minWidth: '100vw',
@@ -682,7 +719,7 @@ export const Table: React.FC<TableProps> = ({
               >
                 {/* Row selector header */}
                 <div
-                  className="group flex-shrink-0 bg-sidebar-menu border-r border-b border-border/30 flex items-center justify-center"
+                  className="group flex-shrink-0 bg-gray-100 border-r border-b border-border/30 flex items-center justify-center"
                   style={{ position: 'sticky', left: 0, zIndex: 3, height: '35px', boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)' }}
                 >
                   <input
@@ -696,13 +733,12 @@ export const Table: React.FC<TableProps> = ({
 
                 {/* Column headers */}
                 {visibleColumns.map((column, index) => {
-                  const isLast = index === visibleColumns.length - 1;
-
+                  const isColumnDraggable = !column.isSystem && canReorderColumns;
                   return (
                     <div
                       key={column.key}
                       role="columnheader"
-                      className={`relative flex-shrink-0 bg-sidebar-menu border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${typeof (column as any).isNew !== 'undefined' && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
+                      className={`relative flex-shrink-0 bg-gray-100 border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${(column as any).isNew !== undefined && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
                       style={{
                         width: `${columnWidths[index]}px`,
                         minWidth: '80px',
@@ -712,21 +748,26 @@ export const Table: React.FC<TableProps> = ({
                       }}
                       onContextMenu={(e) => {
                         e.preventDefault();
+                        setOpenColumnDropdownIndex(null);
                         handleColContextMenu(e, index);
                       }}
-                      draggable={!column.isSystem}
+                      draggable={isColumnDraggable}
                       onDragStart={() => {
-                        if (!column.isSystem && index !== undefined) {
+                        if (isColumnDraggable && index !== undefined) {
                           handleColumnDragStart(index);
                         }
                       }}
                       onDragEnter={() => {
-                        if (index !== undefined) {
+                        if (isColumnDraggable && index !== undefined) {
                           handleColumnDragEnter(index);
                         }
                       }}
                       onDragEnd={handleColumnDragEnd}
-                      onDragOver={(e) => e.preventDefault()}
+                      onDragOver={(e) => {
+                        if (isColumnDraggable) {
+                          e.preventDefault();
+                        }
+                      }}
                     >
                       <div className={`h-full flex items-center justify-between px-4 relative ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'}`} style={{ height: '35px' }}>
                         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
@@ -746,16 +787,22 @@ export const Table: React.FC<TableProps> = ({
                         {/* Column dropdown - hide for readonly users */}
                         {!column.isSystem && !isBaseReadOnly() && (canUpdateColumn() || canDeleteColumn()) && (
                           <ColumnDropdown
-                            column={{
-                              id: column.id,
-                              title: column.title,
-                              isSystem: column.isSystem
-                            }}
                             onEdit={() => {
                               handleEditColumn(column, index, { target: document.createElement('div') });
                             }}
                             onDelete={() => handleDeleteColumn(column.id!)}
-                            onDuplicate={() => handleDuplicateColumn(column)}
+                            isOpen={openColumnDropdownIndex === index}
+                            onOpenChange={(open) => {
+                              if (open) {
+                                handleCloseColMenu();
+                              }
+                              setOpenColumnDropdownIndex(prev => {
+                                if (open) {
+                                  return index;
+                                }
+                                return prev === index ? null : prev;
+                              });
+                            }}
                           />
                         )}
                       </div>
@@ -765,7 +812,7 @@ export const Table: React.FC<TableProps> = ({
 
                 {/* Add column button - only show if user can create columns and not read-only */}
                 {canCreateColumn() && !isBaseReadOnly() && (
-                  <div className="flex-shrink-0 bg-[var(--color-hover-bg)] flex items-center justify-center h-[35px] border-r border-b relative">
+                  <div className="flex-shrink-0 bg-gray-100 hover:bg-gray-200  flex items-center justify-center h-[35px] border-r border-b relative">
                     <button
                       ref={addColumnButtonRef}
                       className="p-1 rounded hover:bg-muted/70 transition-colors duration-200"
@@ -833,7 +880,7 @@ export const Table: React.FC<TableProps> = ({
               {/* FRONTEND PAGINATION: Add row button with optional loading indicator */}
               {!isBaseReadOnly() && canCreateRecord() && (
                 <div className="relative w-full" style={{ height: '40px' }}>
-                  <div className="flex-shrink-0 w-[48px] h-10 border-r border-b border-border/30 flex items-center justify-center bg-[var(--color-hover-bg)]" style={{ height: '40px', position: 'sticky', left: 0, zIndex: 2, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)' }}>
+                  <div className="flex-shrink-0 w-[48px] h-10 border-r border-b border-border/30 flex items-center justify-center bg-gray-100 hover:bg-gray-200" style={{ height: '40px', position: 'sticky', left: 0, zIndex: 2, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)' }}>
                     <button className="p-1 rounded hover:bg-muted/50 transition-colors" title="Add row" onClick={() => { setActiveCell(null); addNewRow(); }}>
                       <Plus className="w-5 h-5 text-muted-foreground" />
                     </button>
@@ -903,6 +950,8 @@ export const Table: React.FC<TableProps> = ({
             handleCloseContextMenu();
           }}
           canDeleteRecord={canDeleteRecord()}
+          onEdit={() => openEditRecordModal(contextMenu.rowId!)}
+          canEditRecord={canUpdateRecord()}
         />
       )}
 
@@ -914,25 +963,21 @@ export const Table: React.FC<TableProps> = ({
             style={{ position: 'fixed', inset: 0, zIndex: 999 }}
             onClick={handleCloseColMenu}
           />
-          <div
-            style={{ position: 'fixed', left: colMenu.x, top: colMenu.y, zIndex: 1000 }}
-            className="bg-background border p-1 space-y-1 rounded-xl shadow-lg w-48"
-          >
-            {canUpdateColumn() && (
-              <button
-                className="w-full text-left px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
-                onClick={(e) => {
-                  handleEditColumn(visibleColumns[colMenu.colIndex!], colMenu.colIndex!, { target: e.currentTarget });
-                  handleCloseColMenu();
-                }}
-              >
-                Edit column
-              </button>
-            )}
-            {canDeleteColumn() && (
-              <button className="w-full text-left px-4 py-2 text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors" onClick={() => { handleDeleteColumn(visibleColumns[colMenu.colIndex!].id!); handleCloseColMenu(); }}>Delete column</button>
-            )}
-          </div>
+          <ColumnContextMenu
+            x={colMenu.x}
+            y={colMenu.y}
+            onClose={handleCloseColMenu}
+            onEdit={() => {
+              handleEditColumn(visibleColumns[colMenu.colIndex!], colMenu.colIndex!, { target: null });
+              handleCloseColMenu();
+            }}
+            onDelete={() => {
+              handleDeleteColumn(visibleColumns[colMenu.colIndex!].id!);
+              handleCloseColMenu();
+            }}
+            canUpdate={canUpdateColumn()}
+            canDelete={canDeleteColumn()}
+          />
         </>
       )}
 
@@ -989,6 +1034,27 @@ export const Table: React.FC<TableProps> = ({
           onConfirm={handleConfirmUpdateField}
         />
       }
+
+      {/* Edit Record Modal */}
+      <EditRecordModal
+        isOpen={isEditRecordModalOpen}
+        onClose={closeEditRecordModal}
+        onSuccess={() => { try { onRefresh?.(); } catch {} closeEditRecordModal(); }}
+        recordId={selectedRecordId || ''}
+        table={tableData?.model}
+        fields={tableData?.columns}
+        initialValues={buildInitialValuesForEdit({ recordId: selectedRecordId, columns: tableData?.columns || [], rawRecords: tableData?.records || [] })}
+        onDelete={async (id: string) => { 
+          try { 
+            await handleDelete(id); 
+          } catch {} 
+          finally { 
+            closeEditRecordModal(); 
+          } 
+        }}
+        title="Edit record"
+        submitLabel="Update record"
+      />
     </div>
 
   );

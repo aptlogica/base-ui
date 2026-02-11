@@ -36,7 +36,8 @@ export function useCellEditing({
   // Helper to normalize empty values
   const normalizeEmpty = useCallback((val: any, oldVal?: any): any => {
     if (val === null || val === undefined || val === '') return null;
-    if (typeof val === 'string' && val.trim() === '') return null;
+    // For string fields, preserve space-only input - don't treat it as empty
+    // For other types that might have whitespace, only trim non-string values
     if (Array.isArray(val) && val.length === 0) return null;
     // For duration fields, treat 0 as empty if original was null/undefined
     if (typeof val === 'number' && val === 0 && (oldVal === null || oldVal === undefined)) {
@@ -205,13 +206,18 @@ export function useCellEditing({
     const isEmpty = isEmptyValue(change.value);
     const isOldEmpty = isEmptyValue(originalValue);
 
+    // For text fields, allow space-only input (don't treat as empty)
+    const isTextField = column.uidt === 'SingleLineText' || column.uidt === 'LongText' || column.type === 'text';
+    const isActuallyEmpty = isTextField ? (change.value === null || change.value === undefined) : isEmpty;
+    const wasActuallyEmpty = isTextField ? (originalValue === null || originalValue === undefined) : isOldEmpty;
+
     // Skip empty-to-empty transitions
-    if (isEmpty && isOldEmpty) {
+    if (isActuallyEmpty && wasActuallyEmpty) {
       return;
     }
 
     // Skip empty values for newly created rows
-    if (isEmpty && isNewlyCreatedRow(row)) {
+    if (isActuallyEmpty && isNewlyCreatedRow(row)) {
       return;
     }
 

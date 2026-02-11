@@ -28,7 +28,6 @@ interface AdvancedDropdownProps<T = string | number> {
   readonly id?: string;
   readonly helpText?: string;
   readonly validate?: (value: T | T[] | undefined) => string | undefined;
-  readonly showValueOnRight?: boolean;
 }
 
 export function AdvancedDropdown<T extends string | number>({
@@ -49,7 +48,6 @@ export function AdvancedDropdown<T extends string | number>({
   id,
   helpText,
   validate,
-  showValueOnRight = false,
 }: AdvancedDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,7 +73,8 @@ export function AdvancedDropdown<T extends string | number>({
   // Normalize value to always be an array for consistent handling
   const normalizeValue = useCallback((val: T | T[] | undefined): T[] => {
     if (val === undefined || val === null) return [];
-    return Array.isArray(val) ? val : [val];
+    const rawValues = Array.isArray(val) ? val : [val];
+    return rawValues.filter(item => !isEmptySelectionValue(item));
   }, []);
 
   // Get current values as array
@@ -155,7 +154,7 @@ export function AdvancedDropdown<T extends string | number>({
   }, [currentValues]);
 
   // Handle clear
-  const handleClear = useCallback((e: React.MouseEvent) => {
+  const handleClear = useCallback((e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     onChange(multiple ? [] as T[] : undefined as any);
     setSearchQuery('');
@@ -396,8 +395,8 @@ const DropdownTrigger = React.forwardRef<HTMLButtonElement, {
   selectedCount?: number;
   error?: string;
   onToggle: () => void;
-  onClear?: (e: React.MouseEvent) => void;
-  dropdownPosition?: 'below' | 'above';
+  onClear?: (e: React.MouseEvent | React.KeyboardEvent) => void;
+
 }>(({
   displayLabel,
   isOpen,
@@ -409,7 +408,6 @@ const DropdownTrigger = React.forwardRef<HTMLButtonElement, {
   error,
   onToggle,
   onClear,
-  dropdownPosition,
 }, ref) => {
 
   const baseClasses = `
@@ -499,7 +497,7 @@ const DropdownSearch = React.forwardRef<HTMLInputElement, {
   }, [value, onChange]);
 
   return (
-    <div className="p-3 border-b border">
+    <div className="p-3 border-b">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
@@ -541,10 +539,10 @@ function DropdownOptionItem<T>({
     transition-all duration-150 ease-in-out relative
   `;
 
+  const selectedClass = isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-[var(--color-text-primary)]';
   const stateClasses = `
     ${isFocused ? 'bg-[var(--color-bg-brand-primary)] border-l-4 border-l-gray-400' : ''}
-    ${isSelected && !multiple ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-[var(--color-text-primary)]'}
-    ${isSelected && multiple ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-[var(--color-text-primary)]'}
+    ${selectedClass}
     ${!isSelected && !isFocused ? 'hover:bg-[var(--color-bg-brand-primary)] hover:text-black' : ''}
     ${option.disabled ? 'opacity-50 cursor-not-allowed' : ''}
   `;
@@ -611,6 +609,10 @@ function DropdownOptionItem<T>({
 }
 
 // Helper functions
+function isEmptySelectionValue<T>(value: T | undefined | null): boolean {
+  return value === undefined || value === null || value === '';
+}
+
 function getSelectedCount<T>(value: T | T[] | undefined | null): number {
   let normalizedValue: T[];
   if (value === undefined || value === null) {
@@ -620,7 +622,7 @@ function getSelectedCount<T>(value: T | T[] | undefined | null): number {
   } else {
     normalizedValue = [value];
   }
-  return normalizedValue.length;
+  return normalizedValue.filter(item => !isEmptySelectionValue(item)).length;
 }
 
 export default AdvancedDropdown;

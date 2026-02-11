@@ -52,12 +52,10 @@ const PROFILE_UPDATE_FIELDS: Array<keyof ProfileFormData> = [
 ];
 
 const buildProfileUpdatePayload = (formData: ProfileFormData): Record<string, string> => {
-  // Send ALL formData fields directly - no comparison, no filtering
   const payload: Record<string, string> = {};
 
   for (const field of PROFILE_UPDATE_FIELDS) {
     const value = formData[field];
-    // Include field even if empty string (let API decide what to do with it)
     payload[field] = value ?? '';
   }
 
@@ -70,7 +68,120 @@ const getTimeZonesForCountry = (country?: string) => {
   return timeZoneOptions.filter(t => t.country === country);
 };
 
-export const ProfileSection: React.FC = () => { // NOSONAR
+const getAvatarUploadStateClass = (isEditing: boolean, isDragging: boolean): string => {
+  if (!isEditing) return 'border bg-gray-50 cursor-not-allowed opacity-60';
+  if (isDragging) return 'border-[var(--color-brand-600)] bg-[var(--color-brand-50)] cursor-pointer';
+  return 'border hover:border-green-500 bg-gray-50 cursor-pointer';
+};
+
+const getTzDropdownPlaceholder = (isEditing: boolean, activeCountry: string): string => {
+  if (!isEditing) return 'Not set';
+  return activeCountry ? 'Select Time Zone' : 'Select Country first';
+};
+
+interface AvatarUploadAreaProps {
+  isEditing: boolean;
+  isDragging: boolean;
+  updateProfileMutation: any;
+  avatarUploadStateClass: string;
+  avatarUploadBusyClass: string;
+  onDragOver: (e: React.DragEvent<HTMLElement>) => void;
+  onDrop: (e: React.DragEvent<HTMLElement>) => void;
+  onDragLeave: (e: React.DragEvent<HTMLElement>) => void;
+  triggerAvatarInput: () => void;
+  handleAvatarUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+const AvatarUploadArea: React.FC<AvatarUploadAreaProps> = ({
+  isEditing,
+  updateProfileMutation,
+  avatarUploadStateClass,
+  avatarUploadBusyClass,
+  onDragOver,
+  onDrop,
+  onDragLeave,
+  triggerAvatarInput,
+  handleAvatarUpload,
+  isDragging,
+}) => (
+  <button
+    onDragOver={isEditing ? onDragOver : undefined}
+    onDrop={isEditing ? onDrop : undefined}
+    onDragLeave={isEditing ? onDragLeave : undefined}
+    className={`border-2 w-full border-dashed rounded-xl p-8 text-center transition-colors ${avatarUploadStateClass} ${avatarUploadBusyClass}`}
+    onClick={isEditing ? triggerAvatarInput : undefined}
+  >
+    <input
+      id="avatar-upload-input"
+      type="file"
+      accept="image/*"
+      onChange={handleAvatarUpload}
+      disabled={updateProfileMutation.isPending}
+      className="hidden"
+    />
+    <CloudUpload className={`w-12 h-12 ${isDragging ? 'text-[var(--color-brand-600)]' : 'text-gray-400'} mx-auto mb-3`} />
+    <p className="text-sm text-gray-600 mb-1">
+      <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
+    </p>
+    <p className="text-xs text-gray-500">
+      SVG, PNG, JPG or GIF (max. 800 x 400px)
+    </p>
+  </button>
+);
+
+interface AvatarImageProps {
+  displayAvatarUrl: string | null;
+  updateProfileMutation: any;
+  isEditing: boolean;
+  selectedAvatarFile: File | null;
+  removeAvatarMutation: any;
+  onRemoveAvatar: () => Promise<void>;
+  handleRemovePreview: () => void;
+}
+
+const AvatarImage: React.FC<AvatarImageProps> = ({
+  displayAvatarUrl,
+  updateProfileMutation,
+  isEditing,
+  selectedAvatarFile,
+  removeAvatarMutation,
+  onRemoveAvatar,
+  handleRemovePreview,
+}) => (
+  <div className="relative flex-shrink-0">
+    <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center overflow-hidden">
+      <img
+        src={displayAvatarUrl || ''}
+        alt="Profile"
+        className="w-full h-full object-cover"
+      />
+      {updateProfileMutation.isPending && (
+        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+      )}
+    </div>
+    {isEditing && !updateProfileMutation.isPending && (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (selectedAvatarFile) {
+            handleRemovePreview();
+          } else {
+            onRemoveAvatar();
+          }
+        }}
+        disabled={removeAvatarMutation.isPending}
+        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-primary rounded-full flex items-center justify-center hover:bg-red-600 transition-colors disabled:opacity-50"
+      >
+        <X size={12} />
+      </button>
+    )}
+  </div>
+);
+
+export const ProfileSection: React.FC = () => {
   const { user: authUser } = useAuth();
   const currentUser = useCurrentUser();
   const [isEditing, setIsEditing] = useState(false);
@@ -206,7 +317,7 @@ export const ProfileSection: React.FC = () => { // NOSONAR
     // Cleanup: clear footer when component unmounts or section changes
     return () => {
       if (currentSection === 'profile') {
-        clearFooter();
+        clearFooter('profile');
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -240,53 +351,62 @@ export const ProfileSection: React.FC = () => { // NOSONAR
     });
   };
 
-  const handleSave = async () => { // NOSONAR
+  const validateDobField = (dob: string): boolean => {
+    if (!dob) return true;
+    const dobErr = validateDOB(dob, 'DD-MM-YYYY');
+    if (dobErr) {
+      setDobError(dobErr);
+      toast.error(dobErr, { title: 'Invalid Date of Birth' });
+      return false;
+    }
+    return true;
+  };
+
+  const cleanupAvatarPreview = () => {
+    setSelectedAvatarFile(null);
+    if (avatarPreviewUrl) {
+      URL.revokeObjectURL(avatarPreviewUrl);
+      setAvatarPreviewUrl(null);
+    }
+  };
+
+  const persistProfileSettings = (formData: ProfileFormData) => {
+    if (formData.country) {
+      safeSessionStorageSet('country', formData.country);
+    }
+    if (formData.timezone) {
+      safeSessionStorageSet('timezone', formData.timezone);
+    }
+  };
+
+  const resetProfileState = () => {
+    setIsEditing(false);
+    setHasChanges(false);
+    setFormData({});
+    formDataRef.current = {};
+    setDobError(null);
+    cleanupAvatarPreview();
+  };
+
+  const handleSave = async () => {
     if (!hasChanges) return;
 
-    // Use ref to get the LATEST formData (not stale closure value)
     const latestFormData = formDataRef.current;
 
-    // Validate DOB before saving
-    if (latestFormData.dob) {
-      const dobErr = validateDOB(latestFormData.dob, 'DD-MM-YYYY');
-      if (dobErr) {
-        setDobError(dobErr);
-        toast.error(dobErr, { title: 'Invalid Date of Birth' });
-        return;
-      }
+    if (!validateDobField(latestFormData.dob || '')) {
+      return;
     }
 
     try {
-      // Build payload from LATEST formData - sends ALL fields directly
       const payload = buildProfileUpdatePayload(latestFormData);
 
-      // Call the mutation with both profile data and avatar file in one API call
       await updateProfileMutation.mutateAsync({
         ...payload,
         avatarFile: selectedAvatarFile || undefined,
       });
 
-      // Persist updated country and timezone to sessionStorage
-      if (latestFormData.country) {
-        safeSessionStorageSet('country', latestFormData.country);
-      }
-      if (latestFormData.timezone) {
-        safeSessionStorageSet('timezone', latestFormData.timezone);
-      }
-
-      // Clear avatar selection and preview
-      setSelectedAvatarFile(null);
-      if (avatarPreviewUrl) {
-        URL.revokeObjectURL(avatarPreviewUrl);
-        setAvatarPreviewUrl(null);
-      }
-
-      setIsEditing(false);
-      setHasChanges(false);
-      setFormData({});
-      formDataRef.current = {}; // Clear ref
-      setDobError(null);
-
+      persistProfileSettings(latestFormData);
+      resetProfileState();
       toast.success('Profile updated successfully!', { title: 'Success' });
     } catch (error: any) {
       toast.error(error?.message || 'Failed to save profile. Please try again.', { title: 'Save Failed' });
@@ -411,28 +531,14 @@ export const ProfileSection: React.FC = () => { // NOSONAR
   }
 
   const displayAvatarUrl = avatarPreviewUrl || userProfile?.avatar || currentUser?.avatar;
-  let avatarUploadStateClass = 'border bg-gray-50 cursor-not-allowed opacity-60';
-  if (isEditing) {
-    if (isDragging) {
-      avatarUploadStateClass = 'border-[var(--color-brand-600)] bg-[var(--color-brand-50)] cursor-pointer';
-    } else {
-      avatarUploadStateClass = 'border hover:border-green-500 bg-gray-50 cursor-pointer';
-    }
-  }
+  const avatarUploadStateClass = getAvatarUploadStateClass(isEditing, isDragging);
   const avatarUploadBusyClass = (updateProfileMutation.isPending) ? 'opacity-50 cursor-not-allowed' : '';
 
   const activeCountry = isEditing ? (formData.country || '') : (userProfile.country || '');
   const tzDropdownOptions = getTimeZonesForCountry(activeCountry)
     .map((t) => ({ label: `${t.label} (${t.value})`, value: t.value }));
   const tzDropdownValue = isEditing ? (formData.timezone || '') : (userProfile.timezone || '');
-  let tzDropdownPlaceholder = 'Not set';
-  if (isEditing) {
-    if (activeCountry) {
-      tzDropdownPlaceholder = 'Select Time Zone';
-    } else {
-      tzDropdownPlaceholder = 'Select Country first';
-    }
-  }
+  const tzDropdownPlaceholder = getTzDropdownPlaceholder(isEditing, activeCountry);
 
   const triggerAvatarInput = () => {
     if (!isEditing || updateProfileMutation.isPending) return;
@@ -517,95 +623,51 @@ export const ProfileSection: React.FC = () => { // NOSONAR
           {displayAvatarUrl ? (
             <div className="flex gap-4">
               {/* Image Preview - Left Side */}
-              <div className="relative flex-shrink-0">
-                <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center overflow-hidden">
-                  <img
-                    src={displayAvatarUrl}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                  {(updateProfileMutation.isPending) && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                    </div>
-                  )}
-                </div>
-                {isEditing && !updateProfileMutation.isPending && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (selectedAvatarFile) {
-                        // Just clear the preview if it's a pending upload
-                        setSelectedAvatarFile(null);
-                        if (avatarPreviewUrl) {
-                          URL.revokeObjectURL(avatarPreviewUrl);
-                          setAvatarPreviewUrl(null);
-                        }
-                      } else {
-                        // Remove existing avatar
-                        handleRemoveAvatar();
-                      }
-                    }}
-                    disabled={removeAvatarMutation.isPending}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-primary rounded-full flex items-center justify-center hover:bg-red-600 transition-colors disabled:opacity-50"
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
+              <AvatarImage
+                displayAvatarUrl={displayAvatarUrl}
+                updateProfileMutation={updateProfileMutation}
+                isEditing={isEditing}
+                selectedAvatarFile={selectedAvatarFile}
+                removeAvatarMutation={removeAvatarMutation}
+                onRemoveAvatar={handleRemoveAvatar}
+                handleRemovePreview={() => {
+                  setSelectedAvatarFile(null);
+                  if (avatarPreviewUrl) {
+                    URL.revokeObjectURL(avatarPreviewUrl);
+                    setAvatarPreviewUrl(null);
+                  }
+                }}
+              />
 
               {/* Upload Area - Right Side */}
               <div className="flex-1">
-                <button
-                  onDragOver={isEditing ? handleDragOver : undefined}
-                  onDrop={isEditing ? handleDrop : undefined}
-                  onDragLeave={isEditing ? handleDragLeave : undefined}
-                  className={`border-2 w-full border-dashed rounded-xl p-8 text-center transition-colors ${avatarUploadStateClass} ${avatarUploadBusyClass}`}
-                  onClick={isEditing ? triggerAvatarInput : undefined}
-                >
-                  <input
-                    id="avatar-upload-input"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarUpload}
-                    disabled={updateProfileMutation.isPending}
-                    className="hidden"
-                  />
-                  <CloudUpload className={`w-12 h-12 ${isDragging ? 'text-[var(--color-brand-600)]' : 'text-gray-400'} mx-auto mb-3`} />
-                  <p className="text-sm text-gray-600 mb-1">
-                    <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    SVG, PNG, JPG or GIF (max. 800 x 400px)
-                  </p>
-                </button>
+                <AvatarUploadArea
+                  isEditing={isEditing}
+                  isDragging={isDragging}
+                  updateProfileMutation={updateProfileMutation}
+                  avatarUploadStateClass={avatarUploadStateClass}
+                  avatarUploadBusyClass={avatarUploadBusyClass}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onDragLeave={handleDragLeave}
+                  triggerAvatarInput={triggerAvatarInput}
+                  handleAvatarUpload={handleAvatarUpload}
+                />
               </div>
             </div>
           ) : (
-            <button
-              onDragOver={isEditing ? handleDragOver : undefined}
-              onDrop={isEditing ? handleDrop : undefined}
-              onDragLeave={isEditing ? handleDragLeave : undefined}
-              className={`border-2 w-full border-dashed rounded-xl p-8 text-center transition-colors ${avatarUploadStateClass} ${avatarUploadBusyClass}`}
-              onClick={isEditing ? triggerAvatarInput : undefined}
-            >
-              <input
-                id="avatar-upload-input"
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-                disabled={updateProfileMutation.isPending}
-                className="hidden"
-              />
-              <CloudUpload className={`w-12 h-12 ${isDragging ? 'text-[var(--color-brand-600)]' : 'text-gray-400'} mx-auto mb-3`} />
-              <p className="text-sm text-gray-600 mb-1">
-                <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
-              </p>
-              <p className="text-xs text-gray-500">
-                SVG, PNG, JPG or GIF (max. 800 x 400px)
-              </p>
-            </button>
+            <AvatarUploadArea
+              isEditing={isEditing}
+              isDragging={isDragging}
+              updateProfileMutation={updateProfileMutation}
+              avatarUploadStateClass={avatarUploadStateClass}
+              avatarUploadBusyClass={avatarUploadBusyClass}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onDragLeave={handleDragLeave}
+              triggerAvatarInput={triggerAvatarInput}
+              handleAvatarUpload={handleAvatarUpload}
+            />
           )}
         </div>
 

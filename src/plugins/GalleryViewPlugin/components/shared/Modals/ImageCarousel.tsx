@@ -119,7 +119,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
 
     if (mime.startsWith('application/pdf') || ext === 'pdf') {
       return (
-       <iframe
+        <iframe
           src={file?.url}
           title={file?.name || 'pdf'}
           className="w-full h-full rounded-none shadow-xl"
@@ -141,12 +141,17 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
   const handleNext = () => {
     setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
   };
-  
+
 
   return createPortal(
     <div
       className="fixed inset-0 bg-[#1e1d1db8] backdrop-blur-sm transition-all duration-200 flex flex-col gap-3 items-center justify-between z-[9999]"
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      }}
     >
       {/* Filename Header */}
       <div className=" text-[16px] text-primary font-medium mt-3">
@@ -158,7 +163,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
         onClick={onClose}
         className="absolute top-3 right-5 w-8 h-8 flex items-center justify-center hover:scale-110 transition-all duration-200"
       >
-        <X size={18} className="text-primary"/>
+        <X size={18} className="text-primary" />
       </button>
 
       {/* Navigation */}
@@ -186,6 +191,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
       <div
         className="w-full max-w-screen-xl h-[80vh] flex items-center justify-center px-20 overflow-auto scrollbar-none"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e)=> e.stopPropagation()}
       >
         {isImage(currentImage) ? (
           <img
@@ -207,55 +213,54 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
 
       {/* Thumbnails */}
       <div className="flex flex-col gap-2 px-2 justify-center items-center py-2 bg-transparent">
-        
-      {/* Zoom Controls */}
-      <div className=" flex items-center justify-center border w-fit gap-4 bg-white/70 backdrop-blur-sm rounded-full px-4 py-2">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setZoom((z) => Math.max(z - 25, 50));
-          }}
-          className="text-secondary hover:text-gray-500"
-        >
-          <ZoomOut size={18} />
-        </button>
-        <span className="text-secondary text-sm">{zoom}%</span>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setZoom((z) => Math.min(z + 25, 300));
-          }}
-          className="text-secondary hover:text-gray-500"
-        >
-          <ZoomIn size={18} />
-        </button>
-      </div>
 
-          <div className="flex  gap-2 px-2 py-2 bg-transparent">
-        {images.map((img) => (
+        {/* Zoom Controls */}
+        <div className=" flex items-center justify-center border w-fit gap-4 bg-white/70 backdrop-blur-sm rounded-full px-4 py-2">
           <button
-            key={img.url}
             onClick={(e) => {
               e.stopPropagation();
-              setCurrentIndex(images.findIndex(i => i.url === img.url));
+              setZoom((z) => Math.max(z - 25, 50));
             }}
-            className={`w-14 h-14 rounded overflow-hidden border ${
-              img.url === currentImage?.url
-                ? "border-black shadow-sm"
-                : "border-gray-300 opacity-70 hover:opacity-100"
-            } transition`}
+            className="text-secondary hover:text-gray-500"
           >
-            {isImage(img) ? (
-              <img
-                src={img.thumbnail_url || img.url}
-                alt={img.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              getFileIcon(img, 'small')
-            )}
+            <ZoomOut size={18} />
           </button>
-        ))}
+          <span className="text-secondary text-sm">{zoom}%</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setZoom((z) => Math.min(z + 25, 300));
+            }}
+            className="text-secondary hover:text-gray-500"
+          >
+            <ZoomIn size={18} />
+          </button>
+        </div>
+
+        <div className="flex  gap-2 px-2 py-2 bg-transparent">
+          {images.map((img) => (
+            <button
+              key={img.url}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentIndex(images.findIndex(i => i.url === img.url));
+              }}
+              className={`w-14 h-14 rounded overflow-hidden border ${img.url === currentImage?.url
+                  ? "border-black shadow-sm"
+                  : "border-gray-300 opacity-70 hover:opacity-100"
+                } transition`}
+            >
+              {isImage(img) ? (
+                <img
+                  src={img.thumbnail_url || img.url}
+                  alt={img.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                getFileIcon(img, 'small')
+              )}
+            </button>
+          ))}
         </div>
       </div>
     </div>,

@@ -311,7 +311,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
     return isFieldSelectionInvalid(fieldDropdownOptions, showFieldDropdown);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     // If no name provided, generate a default name

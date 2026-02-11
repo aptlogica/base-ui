@@ -4,8 +4,6 @@ import { CalendarEvent } from "../hooks/useCalendarData";
 interface YearViewProps {
   currentDate: Date;
   events: CalendarEvent[];
-  onEventClick?: (event: CalendarEvent) => void;
-  onDateClick?: (date: Date) => void;
   onDateSelect: (date: Date) => void;
   onViewChange?: (view: string) => void;
 }
@@ -13,7 +11,6 @@ interface YearViewProps {
 const YearView: React.FC<YearViewProps> = ({
   currentDate,
   events,
-  onEventClick,
   onDateSelect,
   onViewChange,
 }) => {
@@ -22,27 +19,27 @@ const YearView: React.FC<YearViewProps> = ({
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  const weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   // Generate calendar data for each month
   const monthCalendars = useMemo(() => {
     const year = currentDate.getFullYear();
-    
+
     return months.map((monthName, monthIndex) => {
       const firstDay = new Date(year, monthIndex, 1);
       const lastDay = new Date(year, monthIndex + 1, 0);
       const startDate = new Date(firstDay);
       startDate.setDate(startDate.getDate() - firstDay.getDay() + 1); // Start from Monday
-      
+
       const days: Date[] = [];
       const current = new Date(startDate);
-      
+
       // Generate 42 days (6 weeks)
       for (let i = 0; i < 42; i++) {
         days.push(new Date(current));
         current.setDate(current.getDate() + 1);
       }
-      
+
       return {
         monthName,
         monthIndex,
@@ -86,7 +83,7 @@ const YearView: React.FC<YearViewProps> = ({
       {/* Months grid */}
       <div className="flex-1 overflow-y-auto p-4 min-h-0">
         <div className="grid grid-cols-3 gap-6">
-          {monthCalendars.map(({ monthName, monthIndex, days, firstDay, lastDay }) => (
+          {monthCalendars.map(({ monthName, monthIndex, days }) => (
             <div key={monthIndex} className="bg-card border border-gray-200 rounded-xl p-4">
               {/* Month header */}
               <div className="text-center mb-3">
@@ -95,10 +92,10 @@ const YearView: React.FC<YearViewProps> = ({
 
               {/* Week day headers */}
               <div className="grid grid-cols-7 gap-1 mb-2">
-                {weekDays.map((day, index) => (
+                {weekDays.map((day) => (
                   <div
-                    key={index}
-                    className="text-center text-xs font-medium text-gray-500 py-1"
+                    key={day}
+                    className="text-center text-[10px] font-medium text-gray-500 py-1"
                   >
                     {day}
                   </div>
@@ -107,21 +104,23 @@ const YearView: React.FC<YearViewProps> = ({
 
               {/* Calendar grid */}
               <div className="grid grid-cols-7 gap-1">
-                {days.map((date, dayIndex) => {
+                {days.map((date) => {
                   const dayEvents = getEventsForDate(date);
                   const isCurrentMonthDay = isCurrentMonth(date, monthIndex);
                   const isTodayDate = isToday(date);
 
+                  let dayCellClass = 'text-gray-400';
+
+                  if (isCurrentMonthDay) {
+                    dayCellClass = isTodayDate
+                      ? 'bg-[var(--color-bg-brand-primary)] text-black'
+                      : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black';
+                  }
+
                   return (
                     <div
-                      key={dayIndex}
-                      className={`relative aspect-square flex flex-col items-center justify-center text-xs cursor-pointer rounded-full transition-colors ${
-                        isCurrentMonthDay
-                          ? isTodayDate
-                            ? 'bg-[var(--color-bg-brand-primary)] text-black'
-                            : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
-                          : 'text-gray-400'
-                      }`}
+                      key={date.toDateString()}
+                      className={`relative aspect-square flex flex-col items-center justify-center text-xs cursor-pointer rounded-full transition-colors ${dayCellClass}`}
                       onClick={() => onDateSelect(date)}
                       onDoubleClick={() => {
                         onDateSelect(date);
@@ -135,7 +134,7 @@ const YearView: React.FC<YearViewProps> = ({
                         </div>
                       )}
                       <span className="text-xs">{date.getDate()}</span>
-                      
+
                     </div>
                   );
                 })}

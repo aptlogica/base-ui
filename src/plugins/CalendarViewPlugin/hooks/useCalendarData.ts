@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTable, useAddRow, useDeleteRecord, useInsertRowData, useUpdateField, useUpdateView } from '../../../hooks/useApi';
-import type { TableData } from '../../../types/tableData';
+import type { TableData } from '../../../types/api.types';
 import { parseApiColumnMeta } from '../../../components/shared/table/tableUtils';
 import { normalizeFieldType } from '../../../utils/fieldType';
-import type { GridColumn } from '../../GridViewPlugin/types/grid.types';
+import type { GridColumn, GridFieldType } from '../../GridViewPlugin/types/grid.types';
 
 // Data layer for Calendar: fetch + CRUD orchestration; keeps UI components clean
 export interface UseCalendarDataOptions {
@@ -38,7 +38,7 @@ export interface UseCalendarDataReturn {
   view: any; // Current view object
 
   // CRUD ops (thin wrappers around shared hooks)
-  refresh: () => void;
+  refresh: () => Promise<void>;
   addRow: ReturnType<typeof useAddRow>;
   insertRowData: ReturnType<typeof useInsertRowData>;
   deleteRecord: ReturnType<typeof useDeleteRecord>;
@@ -93,7 +93,7 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
       id: col.id,
       key: col.column_name || col.key,
       title: col.title,
-      type: normalizeFieldType(col.uidt || col.type),
+      type: normalizeFieldType(col.uidt || col.type) as GridFieldType,
       uidt: col.uidt,
       position: col.order_index ?? index,
       hidden: col.hidden || col.deleted || false,
@@ -115,7 +115,6 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
 
     // Create Maps for O(1) lookups
     const uiColumnsMap = new Map(uiColumns.map(col => [String(col.id), col]));
-    const availableDateFieldsMap = new Map(availableDateFields.map(f => [String(f.id), f]));
 
     // Determine current date field
     const selectedDateFieldId = viewMeta.date_field_id;
@@ -138,7 +137,7 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
       if (!dateValue) return null;
 
       const date = new Date(dateValue);
-      if (isNaN(date.getTime())) return null;
+      if (Number.isNaN(date.getTime())) return null;
 
       // Generate a consistent color based on the record ID
       const colors = [
@@ -177,9 +176,8 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
   const updateView = useUpdateView();
 
   // Calendar-specific business operations
-  const updateEvent = async (eventId: string, updates: Record<string, any>) => {
+  const updateEvent = async (_eventId: string, updates: Record<string, any>) => {
     // Update event using the standard updateField hook
-    const recordId = String(eventId);
     await Promise.all(
       Object.entries(updates).map(([fieldKey, value]) =>
         updateField.mutateAsync({
@@ -190,7 +188,7 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
     );
   };
 
-  const createEvent = async (initialValues: Record<string, any>) => {
+  const createEvent = async (_initialValues: Record<string, any>) => {
     // Create event using the standard addRow hook
     const result = await addRow.mutateAsync({
       model_id: String(tableId)
@@ -210,7 +208,7 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
     if (!viewId) return;
 
     // Optimized with Map for O(1) lookup instead of O(n) find()
-    const viewsMap = new Map((tableData?.views || []).map((v: any) => [String(v.id), v]));
+    const viewsMap = new Map((tableData?.views || []).map((v: any) => [String(v?.id), v]));
     const currentView = viewsMap.get(String(viewId));
     const currentMeta = currentView?.meta ?? {};
 
@@ -224,7 +222,7 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
           }
         }
       });
-      
+
       // Force refresh the table data to get updated view information
       await tableQuery.refetch();
     } catch (error) {
@@ -236,26 +234,15 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
   const updateViewConfig = async (viewId: string, updates: any) => {
     // Get current view to merge updates properly
     // Optimized with Map for O(1) lookup instead of O(n) find()
-    const viewsMap = new Map((tableData?.views || []).map((v: any) => [String(v.id), v]));
+    const viewsMap = new Map((tableData?.views || []).map((v: any) => [String(v?.id), v]));
     const currentView = viewsMap.get(String(viewId));
     if (!currentView) {
       throw new Error('View not found');
     }
 
-    // Clean up any nested meta.meta structure before merging
-    let cleanedMeta = currentView.meta || {};
-    if (cleanedMeta.meta && typeof cleanedMeta.meta === 'object') {
-      // If meta.meta exists, merge its contents into meta and remove meta.meta
-      cleanedMeta = {
-        ...cleanedMeta,
-        ...cleanedMeta.meta
-      };
-      delete cleanedMeta.meta;
-    }
-
     // Merge updates into meta (handles fieldConfig, filters, sorts, etc.)
     const finalMeta = {
-      ...cleanedMeta,
+      ...currentView.meta,
       ...updates
     };
 
@@ -273,9 +260,8 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
     ...processedData,
     isLoading: tableQuery.isLoading,
     error: tableQuery.error,
-
     // CRUD operations
-    refresh: tableQuery.refetch,
+    refresh: async () => { await tableQuery.refetch(); },
     addRow,
     insertRowData,
     deleteRecord,

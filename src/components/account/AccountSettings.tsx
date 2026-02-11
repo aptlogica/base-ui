@@ -3,8 +3,8 @@ import { ProfileSection } from './ProfileSection';
 import { SecuritySection } from './SecuritySection';
 
 interface FooterButtonContextType {
-  registerFooter: (buttons: React.ReactNode, sectionId?: string) => void;
-  clearFooter: () => void;
+  registerFooter: (buttons: React.ReactNode, sectionId: string) => void;
+  clearFooter: (sectionId: string) => void;
   currentSection: string;
 }
 
@@ -28,7 +28,7 @@ interface AccountSettingsProps {
 
 export const AccountSettings: React.FC<AccountSettingsProps> = () => {
   const [activeSection, setActiveSection] = useState('profile');
-  const [footerButtons, setFooterButtons] = useState<React.ReactNode>(null);
+  const [sectionFooters, setSectionFooters] = useState<Record<string, React.ReactNode | undefined>>({});
   const activeSectionRef = useRef(activeSection);
   const isMountedRef = useRef(true);
 
@@ -50,19 +50,30 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
   }, []);
 
   // Memoize registerFooter to prevent unnecessary re-renders
-  const registerFooter = useCallback((buttons: React.ReactNode, sectionId?: string) => {
-    // Only update if component is still mounted and section matches
-    // This prevents race conditions when switching tabs quickly
-    if (isMountedRef.current && (!sectionId || sectionId === activeSectionRef.current)) {
-      setFooterButtons(buttons);
+  const registerFooter = useCallback((buttons: React.ReactNode, sectionId: string) => {
+    if (!isMountedRef.current || sectionId !== activeSectionRef.current) {
+      return;
     }
+    setSectionFooters(prev => {
+      if (prev[sectionId] === buttons) {
+        return prev;
+      }
+      return { ...prev, [sectionId]: buttons };
+    });
   }, []);
 
-  // Memoize clearFooter
-  const clearFooter = useCallback(() => {
-    if (isMountedRef.current) {
-      setFooterButtons(null);
+  // Memoize clearFooter with proper dependency
+  const clearFooter = useCallback((sectionId: string) => {
+    if (!isMountedRef.current) {
+      return;
     }
+    setSectionFooters(prev => {
+      if (!(sectionId in prev)) {
+        return prev;
+      }
+      const { [sectionId]: _removed, ...rest } = prev;
+      return rest;
+    });
   }, []);
 
   // Memoize context value to prevent unnecessary re-renders
@@ -70,6 +81,8 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
     () => ({ registerFooter, clearFooter, currentSection: activeSection }),
     [registerFooter, clearFooter, activeSection]
   );
+
+  const activeFooterContent = sectionFooters[activeSection];
 
   const renderSectionContent = () => {
     switch (activeSection) {
@@ -82,17 +95,8 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
     }
   };
 
-  // Clear footer when switching tabs to prevent stale buttons
-  // Only clear when section actually changes, not on initial mount
-  const prevSectionRef = useRef<string | null>(null);
-  useEffect(() => {
-    // Only clear if section actually changed (not on initial mount)
-    if (prevSectionRef.current !== null && prevSectionRef.current !== activeSection) {
-      setFooterButtons(null);
-    }
-    prevSectionRef.current = activeSection;
-  }, [activeSection]);
 
+ 
   return (
     <FooterButtonContext.Provider value={contextValue}>
       <div className="flex flex-col h-full min-h-0">
@@ -126,7 +130,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
 
         {/* Fixed Footer with Buttons */}
         <div className="flex-shrink-0 border-t border-gray-200 px-6 py-4 bg-alpha-white">
-          {footerButtons || (
+          {activeFooterContent ?? (
             <div className="flex items-center justify-end gap-3 w-full">
               {/* Default empty footer */}
             </div>

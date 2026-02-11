@@ -1647,6 +1647,7 @@ describe('AuthContext', () => {
 
     it('should ignore clientLogout errors during cross-tab signout', async () => {
       vi.mocked(clientService.logout).mockRejectedValue(new Error('Logout failed'));
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       render(
         <QueryClientProvider client={queryClient}>
@@ -1667,6 +1668,7 @@ describe('AuthContext', () => {
       });
 
       expect(clientService.logout).toHaveBeenCalled();
+      consoleWarnSpy.mockRestore();
     });
   });
 

@@ -9,7 +9,6 @@ import DeleteConfirmModal from '../../../components/modals/DeleteConfirmModal';
 import { applyFilters } from '../../../utils/filterUtils';
 import { buildComparator } from '../../../utils/sortUtils';
 import { buildInitialValuesForEdit } from '../../../utils/initialValues';
-import { fieldsToExcludeInFilter } from '../../../types/constants';
 import { useFrontendPagination } from '../../../hooks/useFrontendPagination';
 import { formatCompactNumber } from '../../../utils/helpers';
 import { Loader } from '../../../components/ui/Loader';
@@ -48,13 +47,15 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     viewId: tableData?.views?.find((v: any) => v.type === 'gallery')?.id 
   });
 
-  // Get searchable columns (exclude certain fields)
+  // Get searchable columns (exclude system fields except Title)
   const searchableColumns = useMemo(() => {
-    return galleryData.columns
-      .filter(col => {
-        const uidt = String(col.uidt || col.type || '').toLowerCase();
-        return !fieldsToExcludeInFilter.includes(uidt);
-      });
+    return galleryData.columns.filter(col => {
+      const isSystemField = col.isSystem || col.system;
+      const title = (col.title || '').toLowerCase();
+      const columnName = (col.column_name || '').toLowerCase();
+      const isTitle = title === 'title' || columnName === 'title';
+      return !isSystemField || isTitle;
+    });
   }, [galleryData.columns]);
 
   // View configuration hook
@@ -97,28 +98,6 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     handleEditSuccess,
   } = useGalleryModals();
 
-  // Get columns for sort/filter popovers (exclude certain fields)
-  const sortableColumns = useMemo(() => {
-    return galleryData.columns
-      .filter(col => {
-        const uidt = String(col.uidt || col.type || '').toLowerCase();
-        return !fieldsToExcludeInFilter.includes(uidt);
-      })
-      .map(col => ({
-        key: col.column_name || col.key,
-        column_name: col.column_name || col.key,
-        title: col.title,
-        type: col.type,
-        uidt: col.uidt,
-        id: col.id,
-        config: col.config || col.meta || {}, // Include config for SingleSelect/MultiSelect options
-        options: col.options || col.config?.options || col.meta?.options, // Include options directly
-        meta: col.meta, // Include meta as fallback
-        hidden: col.hidden,
-        isHidden: col.isHidden,
-        system: col.system
-      }));
-  }, [galleryData.columns]);
 
   // Delete confirmation handler
   const handleConfirmDelete = useCallback(async () => {
@@ -284,7 +263,6 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         attachmentFields={galleryData.attachmentFields}
         onAttachmentFieldChange={isReadOnly ? undefined : handleAttachmentFieldChange}
         columns={galleryData.columns}
-        sortableColumns={sortableColumns}
         fieldConfig={localFieldConfig}
         onFieldToggle={isReadOnly ? undefined : handleFieldToggle}
         filters={filters}
