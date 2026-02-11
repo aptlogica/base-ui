@@ -29,17 +29,12 @@ interface AccountSettingsProps {
 export const AccountSettings: React.FC<AccountSettingsProps> = () => {
   const [activeSection, setActiveSection] = useState('profile');
   const [sectionFooters, setSectionFooters] = useState<Record<string, React.ReactNode | undefined>>({});
-  const activeSectionRef = useRef(activeSection);
   const isMountedRef = useRef(true);
 
   const sections = [
     { key: 'profile', label: 'Profile', icon: 'User' },
     { key: 'security', label: 'Security', icon: 'Shield' },
   ];
-
-  useEffect(() => {
-    activeSectionRef.current = activeSection;
-  }, [activeSection]);
 
   // Track mount status
   useEffect(() => {
@@ -51,7 +46,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
 
   // Memoize registerFooter to prevent unnecessary re-renders
   const registerFooter = useCallback((buttons: React.ReactNode, sectionId: string) => {
-    if (!isMountedRef.current || sectionId !== activeSectionRef.current) {
+    if (!isMountedRef.current) {
       return;
     }
     setSectionFooters(prev => {

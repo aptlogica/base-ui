@@ -155,7 +155,7 @@ export const TableRow: React.FC<TableRowProps> = ({
         return (
           // eslint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role
           <div
-            key={column.key}
+            key={`${column.id || column.key || 'column'}-${index}`}
             className={borderClass}
             style={{ height: '40px', minHeight: '40px', maxHeight: '40px', overflow: 'hidden', boxSizing: 'border-box' }}
             onClick={(e) => handleCellClick(e, column.key)}

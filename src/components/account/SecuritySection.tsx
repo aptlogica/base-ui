@@ -480,7 +480,6 @@ export const SecuritySection: React.FC = () => {
                 data-form-type="other"
               />
               <div className="absolute right-3 flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
