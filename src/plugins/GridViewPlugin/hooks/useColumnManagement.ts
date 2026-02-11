@@ -344,7 +344,8 @@ export function useColumnManagement({
     
     try {
       const deletedColumn = columns.find(col => col.id === columnToDelete);
-      const columnKey = deletedColumn?.key;
+      const columnWidthKeyById = deletedColumn?.id ? String(deletedColumn.id) : undefined;
+      const columnWidthKeyByName = deletedColumn?.key;
 
       // Call the API to delete the column
       await deleteColumnMutation.mutateAsync({
@@ -353,14 +354,19 @@ export function useColumnManagement({
       });
 
       // Remove column width from view config only if it was saved (not default)
-      if (columnKey && viewConfigState?.columnWidths?.[columnKey] && setViewConfigState) {
+      if ((columnWidthKeyById || columnWidthKeyByName) && viewConfigState?.columnWidths && setViewConfigState) {
         const newConfigState = {
           ...viewConfigState,
           columnWidths: {
             ...viewConfigState.columnWidths
           }
         };
-        delete newConfigState.columnWidths[columnKey];
+        if (columnWidthKeyById) {
+          delete newConfigState.columnWidths[columnWidthKeyById];
+        }
+        if (columnWidthKeyByName) {
+          delete newConfigState.columnWidths[columnWidthKeyByName];
+        }
         setViewConfigState(newConfigState);
         if (updateViewConfigBackend) {
           await updateViewConfigBackend(newConfigState);

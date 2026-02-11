@@ -328,7 +328,8 @@ export const Table: React.FC<TableProps> = ({
   // Static column widths (no resize). Prefer view meta widths, else column.width, else 235.
   const columnWidths = useMemo(() => {
     return (visibleColumns || []).map((c) => {
-      const fromView = viewConfigState.columnWidths?.[c.key];
+      const widthKey = String(c.id || c.key);
+      const fromView = viewConfigState.columnWidths?.[widthKey] ?? viewConfigState.columnWidths?.[c.key];
 
       let width = 235;
 
@@ -736,7 +737,7 @@ export const Table: React.FC<TableProps> = ({
                   const isColumnDraggable = !column.isSystem && canReorderColumns;
                   return (
                     <div
-                      key={column.key}
+                      key={column.id || column.key}
                       role="columnheader"
                       className={`relative flex-shrink-0 bg-gray-100 border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${(column as any).isNew !== undefined && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
                       style={{
