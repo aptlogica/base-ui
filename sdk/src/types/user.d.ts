@@ -6,6 +6,7 @@ export interface UpdateUserProfileParams {
     country?: string;
     timezone?: string;
     locale?: string;
+    activity_data?: any;
 }
 export interface ChangePasswordParams {
     current_password: string;
