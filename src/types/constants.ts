@@ -639,22 +639,6 @@ export const timeFormatOptions = [
   { label: "hh:mm:ss.SSS", value: "hh:mm:ss.SSS" },
 ];
 
-// defined button style options
-export const buttonStyleOptions = [
-  { label: "Primary", value: "primary" },
-  { label: "Secondary", value: "secondary" },
-  { label: "Success", value: "success" },
-  { label: "Danger", value: "danger" },
-  { label: "Warning", value: "warning" }
-];
-
-// defined button action options
-export const buttonActionOptions = [
-  { label: "Open URL", value: "url" },
-  { label: "Send Email", value: "email" },
-  { label: "Call Phone", value: "phone" },
-  { label: "Custom Action", value: "custom" }
-];
 
 // defined link text options
 export const linkTextOptions = [
