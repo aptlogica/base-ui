@@ -23,10 +23,25 @@ const LogIn: React.FC = () => {
   const login = typeof auth?.login === 'function' ? auth.login : () => { };
 
   const validateEmail = (value: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    if (/\s/.test(trimmed)) return false;
+
+    const atIndex = trimmed.indexOf('@');
+    if (atIndex <= 0) return false;
+    if (trimmed.lastIndexOf('@') !== atIndex) return false;
+
+    const local = trimmed.slice(0, atIndex);
+    const domain = trimmed.slice(atIndex + 1);
+    if (!local || !domain) return false;
+
+    const dotIndex = domain.lastIndexOf('.');
+    if (dotIndex <= 0 || dotIndex === domain.length - 1) return false;
+
+    return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setEmailError(null);

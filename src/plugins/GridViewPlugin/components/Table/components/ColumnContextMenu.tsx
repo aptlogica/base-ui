@@ -1,24 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Trash2, Edit } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 
-interface ContextMenuProps {
+interface ColumnContextMenuProps {
   x: number;
   y: number;
   onClose: () => void;
+  onEdit: () => void;
   onDelete: () => void;
-  onEdit?: () => void;
-  canDeleteRecord?: boolean;
-  canEditRecord?: boolean;
+  canUpdate?: boolean;
+  canDelete?: boolean;
 }
 
-export const ContextMenu: React.FC<ContextMenuProps> = ({
+export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
   x,
   y,
   onClose,
-  onDelete,
   onEdit,
-  canDeleteRecord = true
-  , canEditRecord = true
+  onDelete,
+  canUpdate = true,
+  canDelete = true
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ top: y, left: x });
@@ -40,7 +40,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     };
   }, [onClose]);
 
-  // Calculate position to prevent going off-screen
+  // Calculate position to prevent going off-screen (similar to ContextMenu)
   useEffect(() => {
     if (!menuRef.current) return;
     const viewportWidth = window.innerWidth;
@@ -52,7 +52,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       if (!menuRef.current) return;
       
       const menuRect = menuRef.current.getBoundingClientRect();
-      const menuHeight = menuRect.height || 200; // Fallback estimate
+      const menuHeight = menuRect.height || 120; // Fallback estimate
       const menuWidth = menuRect.width || 180; // Fallback estimate
 
       let adjustedTop = y;
@@ -100,38 +100,38 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     background: 'var(--color-alpha-white)',
     borderRadius: 8,
     boxShadow: '0 4px 24px 0 rgba(0,0,0,0.12)',
-    border: '',
-    padding: 5,
+    border: '1px solid var(--color-border-subtle)',
+    padding: 8,
     overflow: 'hidden',
   };
 
   return (
-    <div ref={menuRef} style={style} className="select-none border p-2 space-y-1 animate-fade-in">
-      {/* Delete record - only show if user can delete */}
-      {/* Edit record - only show if user can edit */}
-      {canEditRecord && (
-        <>
-          <button
-            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 rounded-xl hover:bg-gray-100 focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
-            onClick={() => {
-              if (onEdit) onEdit();
-              onClose();
-            }}
-          >
-            <Edit className="w-4 h-4" /> Edit record
-          </button>
-          <div className="border-t my-1" />
-        </>
+    <div ref={menuRef} style={style} className="select-none space-y-1 animate-fade-in">
+      {/* Edit column */}
+      {canUpdate && (
+        <button
+          onClick={onEdit}
+          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+          title="Edit column"
+        >
+          <Pencil className="w-4 h-4" />
+          Edit column
+        </button>
       )}
 
-      {/* Delete record - only show if user can delete */}
-      {canDeleteRecord && (
+      {canDelete && (
         <>
-          <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors" onClick={onDelete}>
-            <Trash2 className="w-4 h-4" /> Delete record
+          <div className="border-t border-gray-100" />
+          <button
+            onClick={onDelete}
+            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+            title="Delete column"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete column
           </button>
         </>
       )}
     </div>
   );
-}; 
+};

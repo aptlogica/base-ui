@@ -18,18 +18,20 @@ const GROUPABLE_TYPES = new Set<string>([
   'date',
   'boolean',
   'email',
-  'phoneNumber',
+  'phonenumber',
   'select',
-  'multiSelect',
-  'longText',
+  'multiselect',
+  'longtext',
   'url',
   'rating',
   'user',
-  'createdTime',
-  'lastModifiedTime',
-  'createdBy',
-  'lastModifiedBy',
+  'createdtime',
+  'lastmodifiedtime',
+  'createdby',
+  'lastmodifiedby',
 ]);
+
+const EXCLUDED_GROUP_TYPES = new Set(fieldsToExcludeInFilter.map(type => String(type).toLowerCase()));
 
 
 export type GroupByItem = {
@@ -76,20 +78,49 @@ export const GroupPopover: React.FC<{
     return displayGroups.filter(group => group.column?.trim()).length;
   }, [displayGroups]);
 
-  const groupableColumns = popoverColumns.filter(col =>
-    GROUPABLE_TYPES.has(col.type) &&
-    !col.hidden &&
-    !col.isHidden &&
-    !col.system &&
-    col.key?.toLowerCase() !== 'id' &&
-    col.column_name?.toLowerCase() !== 'id' &&
-    !fieldsToExcludeInFilter.includes(col.uidt || col.type || '')
-  );
+  const groupableColumns = popoverColumns.filter(col => {
+    const key = String(col.key || '').toLowerCase();
+    const columnName = String(col.column_name || '').toLowerCase();
+    const columnType = String(col.uidt || col.type || '').toLowerCase();
+
+    if (key === 'id' || columnName === 'id') {
+      return false;
+    }
+
+    if (EXCLUDED_GROUP_TYPES.has(columnType)) {
+      return false;
+    }
+
+    return GROUPABLE_TYPES.has(columnType);
+  });
+  const getColumnKey = (col: ColumnConfig) => String(col.key || col.column_name || '').trim();
   const availableColumns = groupableColumns;
+
+  const usedColumnCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    displayGroups.forEach((group) => {
+      const key = (group.column || '').trim();
+      if (!key) {
+        return;
+      }
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return counts;
+  }, [displayGroups]);
+
+  const hasUnusedColumns = useMemo(() => {
+    return availableColumns.some((col) => {
+      const key = getColumnKey(col);
+      if (!key) {
+        return false;
+      }
+      return (usedColumnCounts.get(key) ?? 0) === 0;
+    });
+  }, [availableColumns, usedColumnCounts]);
 
   const addGrouping = () => {
     if (displayGroups.length >= 3) return; // Maximum 3 groupings (including pending)
-    if (availableColumns.length === 0) return;
+    if (!hasUnusedColumns) return;
 
     const newGroupId = `group_${Date.now()}`;
     const newGroup: GroupByItem = {
@@ -267,6 +298,17 @@ export const GroupPopover: React.FC<{
             {displayGroups.map((group) => {
               const column = popoverColumns.find(col => col.key === group.column);
               const sortOptions = column ? getSortOptions(column) : [];
+              const currentColumnKey = (group.column || '').trim();
+              const columnOptions = availableColumns.filter((col) => {
+                const key = getColumnKey(col);
+                if (!key) {
+                  return false;
+                }
+                if (currentColumnKey === key) {
+                  return true;
+                }
+                return (usedColumnCounts.get(key) ?? 0) === 0;
+              });
 
               return (
                 <div key={group.id} className="flex items-center gap-3">
@@ -299,8 +341,14 @@ export const GroupPopover: React.FC<{
                     </button>
 
                     {fieldDropdownOpen === group.id && (
-                      <div className="absolute z-50 top-full mt-1 p-2 space-y-1 w-full bg-background border text-primary rounded-xl shadow-lg max-h-64 overflow-y-auto">
-                        {availableColumns.map((col) => (
+                      <div
+                        className="absolute z-50 top-full mt-1 p-2 space-y-1 w-full bg-background border text-primary rounded-xl shadow-lg max-h-64 overflow-y-auto"
+                        data-testid={`group-field-options-${group.id}`}
+                      >
+                        {columnOptions.length === 0 && (
+                          <div className="px-3 py-2 text-sm text-secondary">All fields already used</div>
+                        )}
+                        {columnOptions.map((col) => (
                           <button
                             key={col.key}
                             className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl transition-colors ${group.column === col.key
@@ -375,8 +423,13 @@ export const GroupPopover: React.FC<{
             {/* Add New Group Option Button */}
             {displayGroups.length < 3 && (
               <button
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-primary text-sm hover:bg-[var(--color-bg-brand-primary)] hover:text-black font-medium mt-2"
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-sm font-medium mt-2 ${hasUnusedColumns
+                  ? 'text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
+                  : 'text-gray-400 cursor-not-allowed opacity-60'
+                  }`}
                 onClick={addGrouping}
+                disabled={!hasUnusedColumns}
+                data-testid="group-add-button"
               >
                 <Plus className="w-4 h-4" />
                 Add Group Option

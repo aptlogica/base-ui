@@ -106,24 +106,26 @@ export const TableRow: React.FC<TableRowProps> = ({
 
   // Handle cell keyboard events
   const handleCellKeyDown = useCallback((e: React.KeyboardEvent, columnKey: string) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+    // Only handle Enter/space for activating cells, not when already editing
+    const isAlreadyActive = activeCell?.rowId === rowId && activeCell?.colKey === columnKey;
+    if (!isAlreadyActive && (e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault();
       setActiveCell?.({ rowId, colKey: columnKey });
     }
-  }, [rowId, setActiveCell]);
+  }, [rowId, setActiveCell, activeCell]);
 
   return (
     // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
     <div
       className={`group grid transition-colors min-w-full ${isRowActive ? 'border border-[var(--color-brand-600)]' : ' border-transparent'}`}
-      style={{ gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`, height: '40px', minHeight: '40px', maxHeight: '40px', boxSizing: 'border-box' }}
+      style={{ gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`, height: '40px', minHeight: '40px', maxHeight: '40px', boxSizing: 'border-box', overflow: 'hidden' }}
       onContextMenu={onContextMenu}
       onClick={handleRowClick}
       onKeyDown={handleRowKeyDown}
       role="row"
       tabIndex={0}
     >
-      <div className={`flex-shrink-0 w-13 bg-background border-r ${isRowActive ? '' : 'border-b border-border/30'} flex items-center justify-center relative select-none gap-2`} style={{ height: '39px', position: 'sticky', left: 0, zIndex: 11, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)', boxSizing: 'border-box' }}>
+      <div className={`flex-shrink-0 w-13 bg-background border-r hover:bg-gray-50 ${isRowActive ? '' : 'border-b border-border/30'} flex items-center justify-center relative select-none gap-2`} style={{ height: '40px', position: 'sticky', left: 0, zIndex: 11 }}>
         <span className={`text-xs text-muted-foreground font-normal absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none transition-opacity duration-150 ${isSelected ? 'opacity-0' : 'group-hover:opacity-0'}`} style={{ zIndex: 1 }}>{displayRowNumber ?? rowIndex + 1}</span>
         <input
           type="checkbox"

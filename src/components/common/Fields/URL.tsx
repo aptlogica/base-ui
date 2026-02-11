@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ExternalLink } from 'lucide-react';
 import { useClickHandler } from '../../../utils/helpers';
 
 // Safe URL validation helpers (no ReDoS vulnerabilities)
@@ -12,8 +11,8 @@ const removeProtocol = (url: string): string => {
 const isValidDomainChar = (char: string): boolean => {
   const code = char.codePointAt(0) ?? 0;
   return (code >= 48 && code <= 57) || // 0-9
-         (code >= 97 && code <= 122) || // a-z
-         char === '-' || char === '.';
+    (code >= 97 && code <= 122) || // a-z
+    char === '-' || char === '.';
 };
 
 const isValidTLDChar = (char: string): boolean => {
@@ -24,9 +23,9 @@ const isValidTLDChar = (char: string): boolean => {
 const isValidPathChar = (char: string): boolean => {
   const code = char.codePointAt(0) ?? 0;
   return (code >= 48 && code <= 57) || // 0-9
-         (code >= 65 && code <= 90) || // A-Z
-         (code >= 97 && code <= 122) || // a-z
-         char === '/' || char === ' ' || char === '.' || char === '-' || char === '_';
+    (code >= 65 && code <= 90) || // A-Z
+    (code >= 97 && code <= 122) || // a-z
+    char === '/' || char === ' ' || char === '.' || char === '-' || char === '_';
 };
 
 const validateDomain = (domain: string): boolean => {
@@ -55,25 +54,25 @@ const validatePath = (path: string): boolean => {
 
 const validateURLSafe = (url: string): boolean => {
   if (!url.trim()) return true;
-  
+
   const urlWithoutProtocol = removeProtocol(url.trim());
   const parts = urlWithoutProtocol.split('.');
   if (parts.length < 2) return false;
-  
+
   const domainName = parts[0];
   if (!validateDomain(domainName)) return false;
-  
+
   const lastPartWithPath = parts.at(-1) ?? '';
   const slashIndex = lastPartWithPath.indexOf('/');
   const tld = slashIndex >= 0 ? lastPartWithPath.substring(0, slashIndex) : lastPartWithPath;
   if (!validateTLD(tld)) return false;
-  
+
   const pathStartIndex = urlWithoutProtocol.indexOf('/');
   if (pathStartIndex >= 0) {
     const path = urlWithoutProtocol.substring(pathStartIndex + 1);
     if (!validatePath(path)) return false;
   }
-  
+
   return true;
 };
 
@@ -103,7 +102,6 @@ interface URLProps {
     defaultValue?: string;
     description?: string;
     openInNewTab?: boolean;
-    showIcon?: boolean;
     [key: string]: any;
   };
 }
@@ -122,7 +120,7 @@ export const URL: React.FC<URLProps> = ({
   helperText,
   config = {}
 }) => {
-  const { urlValid = false, defaultValue = '', openInNewTab = true, showIcon = true } = config;
+  const { urlValid = false, defaultValue = '', openInNewTab = true } = config;
 
   const [localValue, setLocalValue] = useState(value || defaultValue || '');
   const [error, setError] = useState<string | null>(null);
@@ -200,20 +198,10 @@ export const URL: React.FC<URLProps> = ({
     }
   };
 
-  const handleURLClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isEditing && localValue && !error) {
-      e.preventDefault();
-      const url = normalizeURL(localValue);
-      window.open(url, openInNewTab ? '_blank' : '_self', 'noopener,noreferrer');
-    }
-  };
-
-  // allowEdit controls single vs double-click behavior
   // readOnly completely prevents editing
   const handleClick = useClickHandler(
-    () => !readOnly && allowEdit && !disabled && setIsEditing(true), // Single click when allowEdit=true
-    () => !readOnly && !allowEdit && !disabled && setIsEditing(true) // Double click when allowEdit=false
+    () => !readOnly && allowEdit && !disabled && setIsEditing(true),
+    () => !readOnly && !allowEdit && !disabled && setIsEditing(true)
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -224,50 +212,65 @@ export const URL: React.FC<URLProps> = ({
     }
   };
 
-  const renderIcon = () => {
-    if (error || !localValue.trim() || !showIcon) return null;
-    return (
-      <div className={`flex-shrink-0 w-7 h-7 bg-card flex items-center justify-center rounded-lg border shadow-lg hover:bg-gray-200 transition-all ${isEditing ? '' : 'mr-3'}`}>
-        <ExternalLink
-          className="w-4 h-4 cursor-pointer text-gray-400"
-          onClick={handleURLClick}
-        />
-      </div>
-    );
-  };
-
   const renderInputView = () => (
-    <div className="flex items-center gap-2 min-w-0">
-      <input
-        type="text"
-        value={localValue}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        autoFocus
-        placeholder={placeholder}
-        disabled={disabled || readOnly}
-        className={`field-component flex-1 min-w-0
-          ${localValue ? "text-gray-900" : "text-gray-400"}
-          ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
-      />
-      {renderIcon()}
-    </div>
+    <input
+      type="text"
+      value={localValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      autoFocus
+      placeholder={placeholder}
+      disabled={disabled || readOnly}
+      className={`field-component w-full min-w-0
+        ${localValue ? "text-gray-900" : "text-gray-400"}
+        ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
+    />
   );
 
-  const renderDisplayView = () => (
-    <div className="flex items-center min-w-0">
+  const renderDisplayView = () => {
+    if (!localValue || error) {
+      return (
+        <div
+          className={`field-component overflow-hidden
+            ${localValue && !error ? "cursor-pointer" : "cursor-default"}
+            ${localValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400"}
+            ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
+        >
+          <span className="block w-full min-w-0 truncate whitespace-nowrap">
+            {localValue || placeholder}
+          </span>
+        </div>
+      );
+    }
+
+    // Use a regular anchor tag for reliable rendering
+    return (
       <div
-        className={`field-component flex-1 min-w-0 overflow-hidden cursor-default
+        className={`field-component overflow-hidden
+          ${localValue && !error ? "cursor-pointer" : "cursor-default"}
           ${localValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400"}
           ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
       >
         <span className="block w-full min-w-0 truncate whitespace-nowrap">
-          {localValue || placeholder}
+          <a 
+            href={normalizeURL(localValue)} 
+            target={openInNewTab ? '_blank' : '_self'} 
+            rel="noopener noreferrer"
+            onClick={(e) => {
+              e.preventDefault();
+              if (openInNewTab) {
+                window.open(normalizeURL(localValue), '_blank', 'noopener,noreferrer');
+              } else {
+                globalThis.location.href = normalizeURL(localValue);
+              }
+            }}
+          >
+            {localValue}
+          </a>
         </span>
       </div>
-      {renderIcon()}
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="w-full">

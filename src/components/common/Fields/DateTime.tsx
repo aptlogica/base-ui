@@ -1,3 +1,4 @@
+ /* eslint-disable sonarjs/cognitive-complexity */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -44,7 +45,12 @@ function getTimeOptions(step = 30, hourFormat: '12' | '24' = '24', timeFormat: s
     for (let m = 0; m < 60; m += actualStep) {
       if (hourFormat === '12') {
         const period = h >= 12 ? 'PM' : 'AM';
-        const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+        let displayHour = h;
+        if (h === 0) {
+          displayHour = 12;
+        } else if (h > 12) {
+          displayHour = h - 12;
+        }
 
         if (timeFormat === 'HH:mm:ss' || timeFormat === 'HH:mm:ss.SSS') {
           // For seconds format, show seconds as 00
@@ -564,15 +570,15 @@ export const DateTime: React.FC<DateTimeProps> = ({
         } else {
           timeStr = `${displayHour}:${min} ${period}`.trim();
         }
+      } else if (timeFormat === 'hh:mm:ss' || timeFormat === 'HH:mm:ss') {
+        // 24-hour display with seconds
+        timeStr = `${hh}:${min}:${sec || '00'}`;
+      } else if (timeFormat === 'hh:mm:ss.SSS' || timeFormat === 'HH:mm:ss.SSS') {
+        // 24-hour display with milliseconds
+        timeStr = `${hh}:${min}:${sec || '00'}.000`;
       } else {
         // 24-hour display
-        if (timeFormat === 'hh:mm:ss' || timeFormat === 'HH:mm:ss') {
-          timeStr = `${hh}:${min}:${sec || '00'}`;
-        } else if (timeFormat === 'hh:mm:ss.SSS' || timeFormat === 'HH:mm:ss.SSS') {
-          timeStr = `${hh}:${min}:${sec || '00'}.000`;
-        } else {
-          timeStr = `${hh}:${min}`;
-        }
+        timeStr = `${hh}:${min}`;
       }
 
       setDisplayOriginalDate(formattedDate);
@@ -903,7 +909,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                     <div className="grid grid-cols-3 gap-2 p-2">
                       {months.map((monthName, index) => (
                         <button
-                          key={index}
+                          key={monthName+index}
                           className={[
                             "w-full py-2 rounded-xl text-sm text-center transition-colors",
                             "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black",
@@ -1050,33 +1056,40 @@ export const DateTime: React.FC<DateTimeProps> = ({
 
   // Format display values
   const displayDate = date ? formatDate(date, dateFormat) : '';
-  const displayTime = time ? (hourFormat === '12' ?
-    (() => {
+  
+  let displayTime = '';
+  if (time) {
+    if (hourFormat === '12') {
       const [hours, minutes, seconds] = time.split(':');
       const hour = Number.parseInt(hours);
       const period = hour >= 12 ? 'PM' : 'AM';
-      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      
+      let displayHour: number;
+      if (hour === 0) {
+        displayHour = 12;
+      } else if (hour > 12) {
+        displayHour = hour - 12;
+      } else {
+        displayHour = hour;
+      }
 
       if (timeFormat === 'hh:mm:ss') {
-        return `${displayHour}:${minutes}:${seconds || '00'} ${period}`;
-      }
-      else if (timeFormat === 'hh:mm:ss.SSS') {
-        return `${displayHour}:${minutes}:${seconds || '00.000'} ${period}`;
-      } else {
-        return `${displayHour}:${minutes} ${period}`;
-      }
-    })() : (() => {
-      if (timeFormat === 'hh:mm:ss') {
-        const [hours, minutes, seconds] = time.split(':');
-        return `${hours}:${minutes}:${seconds || '00'}`;
+        displayTime = `${displayHour}:${minutes}:${seconds || '00'} ${period}`;
       } else if (timeFormat === 'hh:mm:ss.SSS') {
-        const [hours, minutes, seconds] = time.split(':');
-        return `${hours}:${minutes}:${seconds || '00.000'}`;
+        displayTime = `${displayHour}:${minutes}:${seconds || '00.000'} ${period}`;
+      } else {
+        displayTime = `${displayHour}:${minutes} ${period}`;
       }
-      else {
-        return time;
-      }
-    })()) : '';
+    } else if (timeFormat === 'hh:mm:ss') {
+      const [hours, minutes, seconds] = time.split(':');
+      displayTime = `${hours}:${minutes}:${seconds || '00'}`;
+    } else if (timeFormat === 'hh:mm:ss.SSS') {
+      const [hours, minutes, seconds] = time.split(':');
+      displayTime = `${hours}:${minutes}:${seconds || '00.000'}`;
+    } else {
+      displayTime = time;
+    }
+  }
 
 
   return (

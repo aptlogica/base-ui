@@ -37,9 +37,7 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
   const [pendingSorts, setPendingSorts] = useState<SortItem[]>([]);
 
   // Merge saved sorts with pending sorts for display
-  const displaySorts = useMemo(() => {
-    return [...sorts, ...pendingSorts];
-  }, [sorts, pendingSorts]);
+  const displaySorts = useMemo(() => [...sorts, ...pendingSorts], [sorts, pendingSorts]);
 
   // Count only valid sorts (with a column selected) for badge display
   const validSortsCount = useMemo(() => {
@@ -62,6 +60,26 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
     // Allow all other fields (including hidden, system, datetime, etc.)
     return true;
   });
+
+  const getColumnKey = (col: BaseColumn) => String(col.column_name || col.key || '').trim();
+
+  const usedColumnCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    displaySorts.forEach(sort => {
+      const key = (sort.column || '').trim();
+      if (!key) return;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return counts;
+  }, [displaySorts]);
+
+  const hasUnusedColumns = useMemo(() => {
+    return availableColumns.some(col => {
+      const key = getColumnKey(col);
+      if (!key) return false;
+      return (usedColumnCounts.get(key) ?? 0) === 0;
+    });
+  }, [availableColumns, usedColumnCounts]);
 
   // Close dropdowns when clicking outside or pressing Escape
   React.useEffect(() => {
@@ -170,9 +188,17 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
           <div className="p-3">
             {displaySorts.length === 0 && <div className="text-gray-400 text-sm mb-2">No sort options</div>}
             {displaySorts.map((sort, idx) => {
-              const col = availableColumns.find(c => (c.column_name || c.key) === sort.column);
+              const currentKey = (sort.column || '').trim();
+              const col = columns.find(c => (c.column_name || c.key) === currentKey) || availableColumns.find(c => (c.column_name || c.key) === currentKey);
+              const columnOptions = availableColumns.filter(c => {
+                const key = getColumnKey(c);
+                if (!key) return false;
+                if (key === currentKey) return true;
+                return (usedColumnCounts.get(key) ?? 0) === 0;
+              });
+              const rowKey = currentKey || `sort-row-${idx}`;
               return (
-                <div key={col?.key} className="flex items-center gap-2 mb-2">
+                <div key={rowKey} className="flex items-center gap-2 mb-2">
                   {/* Field dropdown */}
                   <div className="relative flex-1">
                     <button
@@ -184,6 +210,7 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
                       onClick={() => handleFieldDropdownToggle(idx)}
                       aria-haspopup="listbox"
                       aria-expanded={fieldDropdownOpen === idx}
+                      data-testid={`sort-field-trigger-${idx}`}
                     >
                       <span className="flex-1 text-left">
                         {col ? (
@@ -202,8 +229,14 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
                       )}
                     </button>
                     {fieldDropdownOpen === idx && (
-                      <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full bg-background border text-primary rounded-xl shadow-lg max-h-64 overflow-y-auto">
-                        {availableColumns.map((c) => (
+                      <div
+                        className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full bg-background border text-primary rounded-xl shadow-lg max-h-64 overflow-y-auto"
+                        data-testid={`sort-field-options-${idx}`}
+                      >
+                        {columnOptions.length === 0 && (
+                          <div className="px-3 py-2 text-sm text-secondary">All fields already used</div>
+                        )}
+                        {columnOptions.map((c) => (
                           <button
                             key={c.column_name || c.key}
                             className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl  hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${sort.column === (c.column_name || c.key) ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''}`}
@@ -320,8 +353,11 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
             })}
             {availableColumns.length > 0 && (
               <button
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-primary text-sm hover:bg-[var(--color-bg-brand-primary)] hover:text-black font-medium mt-2"
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-sm font-medium mt-2 ${hasUnusedColumns ? 'text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black' : 'text-secondary cursor-not-allowed opacity-60'}`}
+                data-testid="add-sort-button"
+                disabled={!hasUnusedColumns}
                 onClick={() => {
+                  if (!hasUnusedColumns) return;
                   const newIndex = displaySorts.length;
                   // Add new sort to pending sorts (local state only, no onChange call)
                   // This prevents saving empty sort to backend

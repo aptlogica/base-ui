@@ -24,7 +24,7 @@ export const TableViews: React.FC<TableViewsProps> = ({
 }) => {
   const updateTable = useUpdateTable();
   const { isWorkspaceReadOnly } = useWorkspaceAccess(table.workspace_id);
-  const { canCreateView } = useBaseAccess(table.base_id);
+  const { canCreateView, isBaseReadOnly } = useBaseAccess(table.base_id);
   const [pinnedViews, setPinnedViews] = useState<PinnedViews>(() => {
     return table.meta?.pinnedViews || {};
   });
@@ -84,7 +84,12 @@ export const TableViews: React.FC<TableViewsProps> = ({
   const viewsData = useMemo(() => {
     if (!views) return [];
 
-    return [...views].sort((a, b) => {
+    // Filter out form views for readonly users
+    const filteredViews = isBaseReadOnly()
+      ? views.filter(view => view.type !== 'form')
+      : views;
+
+    return [...filteredViews].sort((a, b) => {
       const aPinned = pinnedViews[a.id] || false;
       const bPinned = pinnedViews[b.id] || false;
 
@@ -92,7 +97,7 @@ export const TableViews: React.FC<TableViewsProps> = ({
       if (!aPinned && bPinned) return 1;  // b comes first
       return 0; // Keep original order if both pinned or both unpinned
     });
-  }, [views, pinnedViews]);
+  }, [views, pinnedViews, isBaseReadOnly]);
 
   const handlePinToggle = async (viewId: string, newStatus: boolean) => {
     const newPinnedViews = { ...pinnedViews, [viewId]: newStatus };

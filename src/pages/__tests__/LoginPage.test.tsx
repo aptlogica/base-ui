@@ -227,7 +227,6 @@ describe('LoginPage', () => {
       renderWithRouter();
 
       const emailInput = screen.getByPlaceholderText('Email');
-      await user.clear(emailInput);
       await user.type(emailInput, 'user@example.com');
       await user.tab();
 
@@ -239,7 +238,6 @@ describe('LoginPage', () => {
       renderWithRouter();
 
       const emailInput = screen.getByPlaceholderText('Email');
-      await user.clear(emailInput);
       await user.type(emailInput, 'test.user@example.co.uk');
       await user.tab();
 
@@ -251,7 +249,6 @@ describe('LoginPage', () => {
       renderWithRouter();
 
       const emailInput = screen.getByPlaceholderText('Email');
-      await user.clear(emailInput);
       await user.type(emailInput, 'user+tag@example.com');
       await user.tab();
 

@@ -29,7 +29,7 @@ const ResetPasswordPage: React.FC = () => {
     }
   }, [token, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setPasswordError(null);

@@ -16,7 +16,6 @@ import { Search } from '../../../../components/shared/table/Search';
 import { BaseColumn } from '../../../../types/column.types';
 import { normalizeFieldType } from '../../../../utils/fieldType';
 import { parseApiColumnMeta } from '../../../../components/shared/table/tableUtils';
-import { fieldsToExcludeInFilter } from '../../../../types/constants';
 import { useBaseAccess } from '../../../../hooks/useBaseAccess';
 import { ColumnConfig } from '../../../../plugins/GridViewPlugin/types/grid.types';
 import { useAddRow, useInsertRowData, useDeleteRecord, useUpdateField, useUpdateView, useUpdateViewMeta } from '../../../../hooks/useApi';
@@ -117,29 +116,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     });
   }, [columns]);
 
-  // Get columns for sort/filter popovers (exclude certain fields) - memoized to prevent recreation
-  const sortableColumns = useMemo(() => {
-    return columns
-      .filter(col => {
-        const uidt = String(col.uidt || col.type || '').toLowerCase();
-        return !fieldsToExcludeInFilter.includes(uidt);
-      })
-      .map((col: any) => ({
-        key: col.column_name || col.key || col.id || '',
-        column_name: col.column_name,
-        title: col.title,
-        type: col.type,
-        uidt: col.uidt,
-        id: col.id,
-        config: col.config || col.meta || {}, // Include config for SingleSelect/MultiSelect options
-        options: col.options || col.config?.options || col.meta?.options, // Include options directly
-        meta: col.meta, // Include meta as fallback
-        hidden: col.hidden,
-        isHidden: col.isHidden,
-        system: col.system
-      }));
-  }, [columns]);
-
   // Convert BaseColumn[] to ColumnConfig[] for FieldsPopover
   const columnConfigs = useMemo((): ColumnConfig[] => {
     return columns.map((col): ColumnConfig => ({
@@ -159,26 +135,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       config: col.config || col.meta,
     }));
   }, [columns]);
-
-  // Convert sortableColumns to ColumnConfig[] for FilterPopover
-  const sortableColumnConfigs = useMemo((): ColumnConfig[] => {
-    return sortableColumns.map((col): ColumnConfig => ({
-      id: col.id ? String(col.id) : undefined,
-      key: col.key || col.column_name || '',
-      column_name: col.column_name || col.key,
-      title: col.title || col.column_name || '',
-      type: normalizeFieldType(col.type || col.uidt || 'text') as any,
-      uidt: col.uidt,
-      position: 0,
-      order_index: 0,
-      isSystem: col.system || false,
-      system: col.system || false,
-      hidden: col.hidden || false,
-      is_hidden: col.isHidden || false,
-      meta: col.meta,
-      config: col.config || col.meta,
-    }));
-  }, [sortableColumns]);
 
   // Get current view
   const view = useMemo(() => {
@@ -433,7 +389,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       if (stackName === 'Uncategorized') {
         stackColor = defaultColors[0]; // Gray for uncategorized
       } else {
-        stackColor = optionColorMap.get(stackName) || defaultColors[(index - 1) % defaultColors.length];
+        const optionColor = optionColorMap.get(stackName);
+        // Only use option color if it's a valid non-empty hex/color string
+        if (optionColor && optionColor.trim() && optionColor !== '') {
+          stackColor = optionColor.trim();
+        } else {
+          // Fall back to default color if no valid color found
+          stackColor = defaultColors[(index - 1) % defaultColors.length];
+        }
       }
 
       return {
@@ -483,16 +446,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       throw error;
     }
   }, [groupCol, tableId, actions?.insertRowData]);
-
-  // Create records Map for O(1) lookups
-  const recordsMap = useMemo(() => {
-    const map = new Map<string, any>();
-    tableData.records?.forEach((r: any) => {
-      map.set(String(r.id), r);
-    });
-    return map;
-  }, [tableData.records]);
-
 
   // PERFORMANCE: Memoize card order and filter/sort config separately
   const cardOrderConfig = useMemo(() => {
@@ -901,9 +854,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const handleStackEdit = useCallback(async (oldName: string, newName: string) => {
     if (!groupCol?.id || oldName === newName || newName.trim() === '') return;
     try {
-      // Convert options to strings for comparison
+      // Convert options to strings for comparison (use 'option' property as the key field)
       const stringOptions = localOptions.map((opt: any) =>
-        typeof opt === 'string' ? opt : opt?.value || opt?.label || String(opt)
+        typeof opt === 'string' ? opt : (opt?.option || opt?.value || opt?.label || String(opt))
       );
 
       // Only edit if the old name exists in field options (proper Kanban behavior)
@@ -912,7 +865,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         const preservedOptions = localOptions.map((opt: any) => {
           const optionName = typeof opt === 'string'
             ? opt
-            : opt?.option || opt?.value || opt?.label || String(opt);
+            : (opt?.option || opt?.value || opt?.label || String(opt));
 
           if (optionName === oldName) {
             // Update the option name but preserve the color
@@ -930,6 +883,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           };
         });
 
+        // Wait for the field options update to complete
+        // This mutation will automatically invalidate the table query via useUpdateField's onSuccess
         await onUpdateFieldOptions(groupCol.id, preservedOptions);
 
         // 2. Update all records that have the old value to use the new value
@@ -938,28 +893,30 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         ) || [];
 
         // Update each record's field value using insertRowData (same as move card logic)
-        for (const record of recordsToUpdate) {
-          try {
-            await actions?.insertRowData.mutateAsync({
-              model_id: String(tableId),
-              column_id: String(groupCol.id),
-              row_id: Number(record.id),
-              value: newName.trim(),
-            });
-          } catch (error) {
+        // Don't await these - they run in parallel with minimal blocking
+        recordsToUpdate.forEach(record =>
+          actions?.insertRowData.mutateAsync({
+            model_id: String(tableId),
+            column_id: String(groupCol.id),
+            row_id: Number(record.id),
+            value: newName.trim(),
+          }).catch(error => {
             console.error(`Failed to update record ${record.id}:`, error);
-          }
-        }
+          })
+        );
 
-        // Refresh to update the UI immediately
-        onRefresh();
+        // NOTE: We don't call onRefresh() here because:
+        // 1. updateField mutation already invalidates table query via onSuccess
+        // 2. Calling refresh would cause unnecessary refetches that could reset view state (like stackOrder)
+        // 3. React Query will automatically refetch and update the UI
       } else {
         console.warn('Cannot edit stack that is not a field option:', oldName);
       }
     } catch (err) {
       console.error('Failed to edit stack name', err);
+      toast.error('Failed to update stack name');
     }
-  }, [groupCol?.id, groupCol?.key, localOptions, onUpdateFieldOptions, onRefresh, tableData?.records, tableId, actions?.insertRowData]);
+  }, [groupCol?.id, groupCol?.key, localOptions, onUpdateFieldOptions, tableData?.records, tableId, actions?.insertRowData, toast]);
 
 
   return (
@@ -985,7 +942,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             )}
             {handleAddFilter && (
               <FilterPopover
-                columns={sortableColumnConfigs}
+                columns={columnConfigs}
                 filters={filters}
                 onAddFilter={handleAddFilter}
                 onRemoveFilter={handleRemoveFilter}
@@ -994,7 +951,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             )}
             {handleSortChange && (
               <SortPopover
-                columns={sortableColumns}
+                columns={columns}
                 sorts={sorts}
                 onChange={handleSortChange}
               />

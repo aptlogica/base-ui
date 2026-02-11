@@ -470,12 +470,17 @@ export const normalizeFilterValue = (filter: Partial<FilterCondition>, inputValu
  * Get visible columns for filtering (excludes system fields and non-filterable fields)
  */
 export const getVisibleColumns = (columns: any[], fieldsToExclude: string[] = []): any[] => {
-  return columns.filter(col =>
-    !col.hidden &&
-    !col.isHidden &&
-    !col.system &&
-    col.key?.toLowerCase() !== 'id' &&
-    col.column_name?.toLowerCase() !== 'id' &&
-    !fieldsToExclude.includes(col.uidt || col.type || '')
-  );
+  const excludedTypes = new Set(fieldsToExclude.map(type => String(type).toLowerCase()));
+
+  return columns.filter(col => {
+    const key = String(col.key || '').toLowerCase();
+    const columnName = String(col.column_name || '').toLowerCase();
+    const columnType = String(col.uidt || col.type || '').toLowerCase();
+
+    if (key === 'id' || columnName === 'id') {
+      return false;
+    }
+
+    return !excludedTypes.has(columnType);
+  });
 };

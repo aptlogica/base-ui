@@ -28,8 +28,7 @@ interface AccountSettingsProps {
 
 export const AccountSettings: React.FC<AccountSettingsProps> = () => {
   const [activeSection, setActiveSection] = useState('profile');
-  const [footerButtons, setFooterButtons] = useState<React.ReactNode>(null);
-  const [footerSectionOwner, setFooterSectionOwner] = useState<string>('');
+  const [sectionFooters, setSectionFooters] = useState<Record<string, React.ReactNode | undefined>>({});
   const activeSectionRef = useRef(activeSection);
   const isMountedRef = useRef(true);
 
@@ -52,27 +51,38 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
 
   // Memoize registerFooter to prevent unnecessary re-renders
   const registerFooter = useCallback((buttons: React.ReactNode, sectionId: string) => {
-    // Only update if component is still mounted and sectionId matches current active section
-    if (isMountedRef.current && sectionId === activeSectionRef.current) {
-      setFooterButtons(buttons);
-      setFooterSectionOwner(sectionId);
+    if (!isMountedRef.current || sectionId !== activeSectionRef.current) {
+      return;
     }
+    setSectionFooters(prev => {
+      if (prev[sectionId] === buttons) {
+        return prev;
+      }
+      return { ...prev, [sectionId]: buttons };
+    });
   }, []);
 
-  // Memoize clearFooter
+  // Memoize clearFooter with proper dependency
   const clearFooter = useCallback((sectionId: string) => {
-    // Only clear if this section is the owner of the current footer
-    if (isMountedRef.current && sectionId === footerSectionOwner) {
-      setFooterButtons(null);
-      setFooterSectionOwner('');
+    if (!isMountedRef.current) {
+      return;
     }
-  }, [footerSectionOwner]);
+    setSectionFooters(prev => {
+      if (!(sectionId in prev)) {
+        return prev;
+      }
+      const { [sectionId]: _removed, ...rest } = prev;
+      return rest;
+    });
+  }, []);
 
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = React.useMemo(
     () => ({ registerFooter, clearFooter, currentSection: activeSection }),
     [registerFooter, clearFooter, activeSection]
   );
+
+  const activeFooterContent = sectionFooters[activeSection];
 
   const renderSectionContent = () => {
     switch (activeSection) {
@@ -120,7 +130,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = () => {
 
         {/* Fixed Footer with Buttons */}
         <div className="flex-shrink-0 border-t border-gray-200 px-6 py-4 bg-alpha-white">
-          {footerButtons || (
+          {activeFooterContent ?? (
             <div className="flex items-center justify-end gap-3 w-full">
               {/* Default empty footer */}
             </div>

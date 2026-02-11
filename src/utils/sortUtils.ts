@@ -17,7 +17,8 @@ const compareNumbers = (a: number, b: number): number => {
   if (Number.isNaN(a) && Number.isNaN(b)) return 0;
   if (Number.isNaN(a)) return 1;
   if (Number.isNaN(b)) return -1;
-  return a === b ? 0 : a < b ? -1 : 1;
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
 };
 
 const compareDates = (a: any, b: any): number =>
@@ -47,7 +48,8 @@ export function compareValues(a: any, b: any, type: string): number {
     case 'boolean': {
       const ba = parseBoolean(a);
       const bb = parseBoolean(b);
-      return ba === bb ? 0 : ba > bb ? -1 : 1;
+      if (ba === bb) return 0;
+      return ba > bb ? -1 : 1;
     }
 
     case 'multiSelect': {

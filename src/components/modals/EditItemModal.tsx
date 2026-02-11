@@ -6,7 +6,7 @@ import { validateTableName, validateViewName, validateBaseName, ExistingItem } f
 interface EditItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { name: string; description: string; image?: File | null }) => void;
+  onSave: (data: { name: string; description: string; image?: File | null; removeImage?: boolean }) => void;
   title: string;
   subtitle: string;
   icon: React.ReactNode;
@@ -159,7 +159,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
     return 'text-gray-400';
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!name.trim()) {
@@ -194,14 +194,21 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      const saveData: { name: string; description: string; image?: File | null } = {
+      const saveData: { name: string; description: string; image?: File | null; removeImage?: boolean } = {
         name: name.trim(),
         description: description.trim(),
       };
       
       // Include image for base type (File for new upload, null for removal)
       if (itemType === 'base') {
-        saveData.image = image;
+        // If image is a File, include it for upload
+        if (image instanceof File) {
+          saveData.image = image;
+        }
+        // If image is null but initialImage was set, user explicitly removed it
+        else if (image === null && initialImage) {
+          saveData.removeImage = true;
+        }
       }
       
       onSave(saveData);

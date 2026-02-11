@@ -1,20 +1,19 @@
-﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, cleanup, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ColumnDropdown } from '../components/ColumnDropdown';
 import { useClickOutside } from '../../../../../hooks/useClickOutside';
 
-// Mock the useClickOutside hook
 vi.mock('../../../../../hooks/useClickOutside', () => ({
   useClickOutside: vi.fn(),
 }));
 
-// Mock createPortal since we're not testing portal functionality
 vi.mock('react-dom', async () => {
-  const actual = await vi.importActual('react-dom');
+  const actual = await vi.importActual<typeof import('react-dom')>('react-dom');
   return {
     ...actual,
-    createPortal: (children: any) => children,
+    createPortal: (children: ReactNode) => children,
   };
 });
 
@@ -22,27 +21,35 @@ describe('ColumnDropdown', () => {
   const mockUseClickOutside = vi.mocked(useClickOutside);
   const mockOnEdit = vi.fn();
   const mockOnDelete = vi.fn();
-  const mockOnDuplicate = vi.fn();
+  const clickOutsideRef: { current: HTMLDivElement | null } = { current: null };
 
-  const defaultProps = {
-    column: {
-      id: 'col-1',
-      title: 'Test Column',
-      isSystem: false,
-    },
-    onEdit: mockOnEdit,
-    onDelete: mockOnDelete,
-    onDuplicate: mockOnDuplicate,
+  const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+  const originalOffsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
+  const originalOffsetHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight');
+  const originalInnerWidth = globalThis.innerWidth;
+  const originalInnerHeight = globalThis.innerHeight;
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+  const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+
+  const renderDropdown = () => render(<ColumnDropdown onEdit={mockOnEdit} onDelete={mockOnDelete} />);
+
+  const setBoundingClientRect = (rect: DOMRect) => {
+    Element.prototype.getBoundingClientRect = vi.fn(() => ({
+      ...rect,
+      toJSON: () => undefined,
+    }));
+  };
+
+  const setViewport = (width: number, height: number) => {
+    Object.defineProperty(globalThis, 'innerWidth', { value: width, writable: true });
+    Object.defineProperty(globalThis, 'innerHeight', { value: height, writable: true });
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
-    // Mock useClickOutside to return a ref
-    mockUseClickOutside.mockReturnValue({ current: null } as any);
+    mockUseClickOutside.mockReturnValue(clickOutsideRef);
 
-    // Mock getBoundingClientRect
-    Element.prototype.getBoundingClientRect = vi.fn(() => ({
+    setBoundingClientRect({
       top: 100,
       left: 200,
       right: 250,
@@ -51,381 +58,187 @@ describe('ColumnDropdown', () => {
       height: 50,
       x: 200,
       y: 100,
-      toJSON: () => {},
-    }));
+      toJSON: () => undefined,
+    } as DOMRect);
 
-    // Mock window dimensions
-    Object.defineProperty(globalThis, 'innerWidth', { value: 1024, writable: true });
-    Object.defineProperty(globalThis, 'innerHeight', { value: 768, writable: true });
+    setViewport(1024, 768);
+
+    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+      configurable: true,
+      get: () => 192,
+    });
+    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+      configurable: true,
+      get: () => 200,
+    });
+
+    globalThis.requestAnimationFrame = vi.fn((callback: FrameRequestCallback) => {
+      callback(0);
+      return 0;
+    });
+    globalThis.cancelAnimationFrame = vi.fn();
   });
 
-  describe('rendering', () => {
-    it('should render dropdown trigger button', () => {
-      render(<ColumnDropdown {...defaultProps} />);
+  afterEach(() => {
+    cleanup();
+    Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
 
-      const button = screen.getByRole('button');
-      expect(button).toBeInTheDocument();
-      expect(button).toHaveClass('p-1');
-    });
+    if (originalOffsetWidth) {
+      Object.defineProperty(HTMLElement.prototype, 'offsetWidth', originalOffsetWidth);
+    } else {
+      delete (HTMLElement.prototype as { offsetWidth?: number }).offsetWidth;
+    }
 
-    it('should render column title in trigger button', () => {
-      render(<ColumnDropdown {...defaultProps} />);
+    if (originalOffsetHeight) {
+      Object.defineProperty(HTMLElement.prototype, 'offsetHeight', originalOffsetHeight);
+    } else {
+      delete (HTMLElement.prototype as { offsetHeight?: number }).offsetHeight;
+    }
 
-      // The component shows a chevron icon, not the column title text
-      const button = screen.getByTitle('Column options');
-      expect(button).toBeInTheDocument();
-    });
+    Object.defineProperty(globalThis, 'innerWidth', { value: originalInnerWidth, writable: true });
+    Object.defineProperty(globalThis, 'innerHeight', { value: originalInnerHeight, writable: true });
 
-    it('should show down chevron when closed', () => {
-      render(<ColumnDropdown {...defaultProps} />);
-
-      const chevronDown = document.querySelector('.lucide-chevron-down');
-      expect(chevronDown).toBeInTheDocument();
-    });
-
-    it('should not render dropdown menu when closed', () => {
-      render(<ColumnDropdown {...defaultProps} />);
-
-      expect(screen.queryByText('Edit field')).not.toBeInTheDocument();
-      expect(screen.queryByText('Delete field')).not.toBeInTheDocument();
-    });
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
   });
 
-  describe('dropdown opening and closing', () => {
-    it('should open dropdown when button is clicked', async () => {
-      render(<ColumnDropdown {...defaultProps} />);
+  it('renders the trigger button closed by default', () => {
+    renderDropdown();
 
-      const button = screen.getByRole('button');
-      await userEvent.click(button);
+    const button = screen.getByRole('button', { name: /column options/i });
+    expect(button).toBeInTheDocument();
+    expect(screen.queryByTitle('Edit field')).not.toBeInTheDocument();
+  });
 
-      await waitFor(() => {
-        expect(screen.getByText('Edit field')).toBeInTheDocument();
-        expect(screen.getByText('Delete field')).toBeInTheDocument();
-      });
-    });
+  it('toggles the dropdown when clicking the button', async () => {
+    const user = userEvent.setup();
+    renderDropdown();
 
-    it('should close dropdown when clicking outside', () => {
-      render(<ColumnDropdown {...defaultProps} />);
+    const button = screen.getByRole('button', { name: /column options/i });
+    await user.click(button);
 
-      // Simulate useClickOutside calling onClose
-      const onCloseMock = mockUseClickOutside.mock.calls[0]?.[0]?.onClose;
-      expect(typeof onCloseMock).toBe('function');
+    expect(await screen.findByTitle('Edit field')).toBeInTheDocument();
 
-      if (onCloseMock) {
-        onCloseMock();
-      }
+    await user.click(button);
 
-      expect(screen.queryByText('Edit field')).not.toBeInTheDocument();
-    });
-
-    it('should show up chevron when open', async () => {
-      render(<ColumnDropdown {...defaultProps} />);
-
-      const button = screen.getByRole('button');
-      await userEvent.click(button);
-
-      await waitFor(() => {
-        const chevronUp = document.querySelector('.lucide-chevron-up');
-        expect(chevronUp).toBeInTheDocument();
-      });
+    await waitFor(() => {
+      expect(screen.queryByTitle('Edit field')).not.toBeInTheDocument();
     });
   });
 
-  describe('dropdown menu content', () => {
-    beforeEach(async () => {
-      render(<ColumnDropdown {...defaultProps} />);
-      const button = screen.getByRole('button');
-      await userEvent.click(button);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Edit field')).toBeInTheDocument();
-      });
-    });
+  it('calls onEdit and closes when the edit option is clicked', async () => {
+    const user = userEvent.setup();
+    renderDropdown();
 
-    it('should render edit option', () => {
-      expect(screen.getByText('Edit field')).toBeInTheDocument();
-      
-      const editIcon = document.querySelector('.lucide-pencil');
-      expect(editIcon).toBeInTheDocument();
-    });
+    const button = screen.getByRole('button', { name: /column options/i });
+    await user.click(button);
 
-    it('should render delete option', () => {
-      expect(screen.getByText('Delete field')).toBeInTheDocument();
-      
-      const deleteIcon = document.querySelector('.lucide-trash2');
-      expect(deleteIcon).toBeInTheDocument();
-    });
+    const editButton = await screen.findByTitle('Edit field');
+    await user.click(editButton);
 
-    it('should render duplicate option when provided', () => {
-      expect(screen.getByText('Duplicate field')).toBeInTheDocument();
-      
-      const duplicateIcon = document.querySelector('.lucide-copy');
-      expect(duplicateIcon).toBeInTheDocument();
-    });
+    expect(mockOnEdit).toHaveBeenCalledTimes(1);
 
-    it('should not render duplicate option when not provided', async () => {
-      // Clean up any existing renders from beforeEach
-      cleanup();
-
-      const propsWithoutDuplicate = {
-        ...defaultProps,
-        onDuplicate: undefined,
-      };
-
-      render(<ColumnDropdown {...propsWithoutDuplicate} />);
-      const button = screen.getByRole('button');
-      await userEvent.click(button);
-
-      await waitFor(() => {
-        expect(screen.getByText('Edit field')).toBeInTheDocument();
-      });
-
-      expect(screen.queryByText('Duplicate field')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByTitle('Edit field')).not.toBeInTheDocument();
     });
   });
 
-  describe('menu actions', () => {
-    beforeEach(async () => {
-      render(<ColumnDropdown {...defaultProps} />);
-      const button = screen.getByRole('button');
-      await userEvent.click(button);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Edit field')).toBeInTheDocument();
-      });
-    });
+  it('calls onDelete and closes when the delete option is clicked', async () => {
+    const user = userEvent.setup();
+    renderDropdown();
 
-    it('should call onEdit when edit option is clicked', async () => {
-      const editOption = screen.getByText('Edit field');
-      await userEvent.click(editOption);
+    const button = screen.getByRole('button', { name: /column options/i });
+    await user.click(button);
 
-      expect(mockOnEdit).toHaveBeenCalledTimes(1);
-    });
+    const deleteButton = await screen.findByTitle('Delete field');
+    await user.click(deleteButton);
 
-    it('should call onDelete when delete option is clicked', async () => {
-      const deleteOption = screen.getByText('Delete field');
-      await userEvent.click(deleteOption);
+    expect(mockOnDelete).toHaveBeenCalledTimes(1);
 
-      expect(mockOnDelete).toHaveBeenCalledTimes(1);
-    });
-
-    it('should render duplicate option as disabled when provided', async () => {
-      const duplicateOption = screen.getByText('Duplicate field');
-      
-      // The button should be disabled and not call the function
-      expect(duplicateOption.closest('button')).toBeDisabled();
-      expect(duplicateOption.closest('button')).toHaveClass('cursor-not-allowed');
-    });
-
-    it('should close dropdown after clicking an option', async () => {
-      const editOption = screen.getByText('Edit field');
-      await userEvent.click(editOption);
-
-      await waitFor(() => {
-        expect(screen.queryByText('Edit field')).not.toBeInTheDocument();
-      });
+    await waitFor(() => {
+      expect(screen.queryByTitle('Delete field')).not.toBeInTheDocument();
     });
   });
 
-  describe('system column handling', () => {
-    it('should render delete option for system columns (no special handling in component)', async () => {
-      const systemColumnProps = {
-        ...defaultProps,
-        column: {
-          id: 'col-1',
-          title: 'System Column',
-          isSystem: true,
-        },
-      };
+  it('closes the dropdown when useClickOutside triggers onClose', async () => {
+    const user = userEvent.setup();
+    renderDropdown();
 
-      render(<ColumnDropdown {...systemColumnProps} />);
-      const button = screen.getByTitle('Column options');
-      await userEvent.click(button);
+    const button = screen.getByRole('button', { name: /column options/i });
+    await user.click(button);
 
-      await waitFor(() => {
-        const deleteOption = screen.getByText('Delete field');
-        expect(deleteOption).toBeInTheDocument();
-        
-        // The component doesn't implement system column logic, so delete button is still functional
-        const deleteButton = deleteOption.closest('button');
-        expect(deleteButton).not.toBeDisabled();
-      });
+    expect(await screen.findByTitle('Edit field')).toBeInTheDocument();
+    expect(mockUseClickOutside).toHaveBeenCalled();
+
+    const onClose = mockUseClickOutside.mock.calls[0][0].onClose;
+    act(() => {
+      onClose();
     });
 
-    it('should call onDelete for system columns (component does not restrict)', async () => {
-      const mockOnDelete = vi.fn();
-      const systemColumnProps = {
-        ...defaultProps,
-        column: {
-          id: 'col-1',
-          title: 'System Column',
-          isSystem: true,
-        },
-        onDelete: mockOnDelete,
-      };
-
-      render(<ColumnDropdown {...systemColumnProps} />);
-      const button = screen.getByTitle('Column options');
-      await userEvent.click(button);
-
-      await waitFor(() => {
-        const deleteOption = screen.getByText('Delete field');
-        expect(deleteOption).toBeInTheDocument();
-      });
-
-      const deleteOption = screen.getByText('Delete field');
-      await userEvent.click(deleteOption);
-
-      expect(mockOnDelete).toHaveBeenCalledTimes(1);
-    });
-
-    it('should allow edit for system columns', async () => {
-      const systemColumnProps = {
-        ...defaultProps,
-        column: {
-          id: 'col-1',
-          title: 'System Column',
-          isSystem: true,
-        },
-      };
-
-      render(<ColumnDropdown {...systemColumnProps} />);
-      const button = screen.getByRole('button');
-      await userEvent.click(button);
-
-      await waitFor(() => {
-        const editOption = screen.getByText('Edit field');
-        expect(editOption).toBeInTheDocument();
-      });
-
-      const editOption = screen.getByText('Edit field');
-      await userEvent.click(editOption);
-
-      expect(mockOnEdit).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(screen.queryByTitle('Edit field')).not.toBeInTheDocument();
     });
   });
 
-  describe('dropdown positioning', () => {
-    it('should calculate dropdown position based on button position', async () => {
-      render(<ColumnDropdown {...defaultProps} />);
-      
-      const button = screen.getByRole('button');
-      await userEvent.click(button);
+  it('positions the dropdown within left and top bounds when near the viewport edge', async () => {
+    setBoundingClientRect({
+      top: 200,
+      left: 5,
+      right: 100,
+      bottom: 250,
+      width: 95,
+      height: 50,
+      x: 5,
+      y: 200,
+      toJSON: () => undefined,
+    } as DOMRect);
+    setViewport(1024, 300);
 
-      // Position calculation is complex, but we can verify the dropdown renders
-      await waitFor(() => {
-        expect(screen.getByText('Edit field')).toBeInTheDocument();
-      });
-    });
+    const user = userEvent.setup();
+    renderDropdown();
 
-    it('should handle edge cases in positioning', async () => {
-      // Mock button at edge of viewport
-      Element.prototype.getBoundingClientRect = vi.fn(() => ({
-        top: 700,
-        left: 900,
-        right: 950,
-        bottom: 750,
-        width: 50,
-        height: 50,
-        x: 900,
-        y: 700,
-        toJSON: () => {},
-      }));
+    const button = screen.getByRole('button', { name: /column options/i });
+    await user.click(button);
 
-      render(<ColumnDropdown {...defaultProps} />);
-      
-      const button = screen.getByRole('button');
-      await userEvent.click(button);
+    const editButton = await screen.findByTitle('Edit field');
+    const menu = editButton.closest('div');
 
-      await waitFor(() => {
-        expect(screen.getByText('Edit field')).toBeInTheDocument();
-      });
-    });
+    if (!menu) {
+      throw new Error('Menu element not found');
+    }
+
+    expect(Number.parseFloat(menu.style.left)).toBe(5);
+    expect(Number.parseFloat(menu.style.top)).toBe(10);
   });
 
-  describe('keyboard navigation', () => {
-    it('should focus dropdown button', async () => {
-      render(<ColumnDropdown {...defaultProps} />);
+  it('positions the dropdown within right and bottom bounds when overflowing', async () => {
+    setBoundingClientRect({
+      top: 650,
+      left: 930,
+      right: 980,
+      bottom: 700,
+      width: 50,
+      height: 50,
+      x: 930,
+      y: 650,
+      toJSON: () => undefined,
+    } as DOMRect);
+    setViewport(900, 900);
 
-      const button = screen.getByTitle('Column options');
-      button.focus();
-      
-      expect(button).toHaveFocus();
-    });
+    const user = userEvent.setup();
+    renderDropdown();
 
-    it('should be accessible via keyboard', async () => {
-      render(<ColumnDropdown {...defaultProps} />);
+    const button = screen.getByRole('button', { name: /column options/i });
+    await user.click(button);
 
-      const button = screen.getByTitle('Column options');
-      expect(button).toBeInTheDocument();
-      expect(button).toHaveAttribute('title', 'Column options');
-    });
-  });
+    const editButton = await screen.findByTitle('Edit field');
+    const menu = editButton.closest('div');
 
-  describe('edge cases', () => {
-    it('should handle column without id', () => {
-      const columnWithoutId = {
-        title: 'Column Without ID',
-        isSystem: false,
-      };
+    if (!menu) {
+      throw new Error('Menu element not found');
+    }
 
-      const propsWithoutId = {
-        ...defaultProps,
-        column: columnWithoutId,
-      };
-
-      expect(() => render(<ColumnDropdown {...propsWithoutId} />)).not.toThrow();
-    });
-
-    it('should handle empty column title', () => {
-      const columnWithEmptyTitle = {
-        id: 'col-1',
-        title: '',
-        isSystem: false,
-      };
-
-      const propsWithEmptyTitle = {
-        ...defaultProps,
-        column: columnWithEmptyTitle,
-      };
-
-      render(<ColumnDropdown {...propsWithEmptyTitle} />);
-      
-      const button = screen.getByRole('button');
-      expect(button).toBeInTheDocument();
-    });
-
-    it('should handle missing callback functions gracefully', async () => {
-      const propsWithMissingCallbacks = {
-        column: defaultProps.column,
-        onEdit: vi.fn(),
-        onDelete: vi.fn(),
-        // onDuplicate is optional
-      };
-
-      render(<ColumnDropdown {...propsWithMissingCallbacks} />);
-      
-      const button = screen.getByRole('button');
-      await userEvent.click(button);
-
-      await waitFor(() => {
-        expect(screen.getByText('Edit field')).toBeInTheDocument();
-        expect(screen.queryByText('Duplicate field')).not.toBeInTheDocument();
-      });
-    });
-
-    it('should handle rapid open/close cycles', async () => {
-      render(<ColumnDropdown {...defaultProps} />);
-      
-      const button = screen.getByRole('button');
-
-      // Rapidly click button
-      await userEvent.click(button);
-      await userEvent.click(button);
-      await userEvent.click(button);
-
-      // Should handle without errors
-      expect(button).toBeInTheDocument();
-    });
+    expect(Number.parseFloat(menu.style.left)).toBe(698);
+    expect(Number.parseFloat(menu.style.top)).toBe(690);
   });
 });

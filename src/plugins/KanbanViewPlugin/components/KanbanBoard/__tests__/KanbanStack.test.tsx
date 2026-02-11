@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import KanbanStack from '../KanbanStack';
 import type { KanbanStack as Stack } from '../types';
 
@@ -1096,7 +1096,7 @@ describe('KanbanStack Component', () => {
   });
 
   describe('Menu Close on Other Menu Open', () => {
-    it('should close menu when another menu opens', () => {
+    it('should close menu when another menu opens', async () => {
       const { container } = render(
         <KanbanStack
           stack={mockStack}
@@ -1108,12 +1108,16 @@ describe('KanbanStack Component', () => {
       // Open menu first
       const menuButton = container.querySelector('button');
       if (menuButton) {
-        fireEvent.click(menuButton);
+        await act(async () => {
+          fireEvent.click(menuButton);
+        });
 
         // Dispatch custom event to simulate another menu opening
-        globalThis.dispatchEvent(new CustomEvent('kanban-menu-open', { 
-          detail: { source: Symbol('other-menu') } 
-        }));
+        await act(async () => {
+          globalThis.dispatchEvent(new CustomEvent('kanban-menu-open', { 
+            detail: { source: Symbol('other-menu') } 
+          }));
+        });
       }
 
       expect(container.firstChild).toBeInTheDocument();

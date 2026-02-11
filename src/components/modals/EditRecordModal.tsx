@@ -183,6 +183,17 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     return String(na) === String(nb);
   };
 
+  const hasChanges = useMemo(() => {
+    return (fields || []).some(field => {
+      if (field.type === 'attachment' || field.uidt === 'attachment') {
+        return false;
+      }
+      return !valuesEqual(field, originalData[field.id], rowData[field.id]);
+    });
+  }, [fields, originalData, rowData]);
+
+  const isSaveDisabled = submitting || !hasChanges;
+
   const handleSave = async () => {
     // Check permission before saving
     if (!canUpdateRecord()) {
@@ -298,7 +309,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
         className="absolute inset-0"
         onClick={onClose}
       />
-      <div className="bg-modal w-full relative !p-0 flex flex-col overflow-hidden" style={{ maxWidth: '50vw' }}
+      <div className="bg-modal w-full relative !p-0 flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
@@ -395,7 +406,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                 <div className="h-px bg-gray-200 flex-1" />
                 <button
                   type="button"
-                  className="px-4 py-2 rounded-full border text-sm text-gray-700 bg-white hover:bg-gray-50"
+                  className="px-4 py-2 rounded-full border text-sm text-primary bg-card hover:bg-gray-50"
                   onClick={() => setShowHidden(v => !v)}
                 >
                   {showHidden ? `Hide ${hiddenFields.length} hidden fields` : `Show ${hiddenFields.length} hidden fields`}
@@ -441,9 +452,9 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
             </button>
             <button
               type="button"
-              disabled={submitting}
+              disabled={isSaveDisabled}
               onClick={handleSave}
-              className={`px-16 py-2 rounded-xl btn-primary ${submitting ? 'opacity-60 cursor-not-allowed' : ''
+              className={`px-16 py-2 rounded-xl btn-primary ${isSaveDisabled ? 'opacity-60 cursor-not-allowed' : ''
                 }`}
             >
               {submitLabel}

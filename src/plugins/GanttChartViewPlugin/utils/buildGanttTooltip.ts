@@ -20,32 +20,128 @@ export type BuildGanttTooltipOptions = {
 
 const isTruthy = (v: any) => v !== null && v !== undefined && v !== '';
 
+function stripHtmlTags(input: string): string {
+  let out = '';
+  let inTag = false;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    if (ch === '<') {
+      inTag = true;
+      continue;
+    }
+    if (ch === '>') {
+      inTag = false;
+      continue;
+    }
+    if (!inTag) out += ch;
+  }
+  return out;
+}
+
+function collapseWhitespace(input: string): string {
+  let out = '';
+  let inWs = false;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    const isWs =
+      ch === ' ' ||
+      ch === '\n' ||
+      ch === '\r' ||
+      ch === '\t' ||
+      ch === '\f' ||
+      ch === '\v';
+    if (isWs) {
+      if (!inWs) out += ' ';
+      inWs = true;
+      continue;
+    }
+    inWs = false;
+    out += ch;
+  }
+  return out;
+}
+
+function removeCssDeclarations(input: string): string {
+  const parts = input.split(';');
+  const kept = parts.filter(part => !part.includes(':'));
+  return kept.join(';');
+}
+
+function removeRgbAndColorsAndUnits(input: string): string {
+  let out = '';
+  let i = 0;
+  while (i < input.length) {
+    const ch = input[i];
+
+    if (ch === '#' && i + 3 < input.length) {
+      let j = i + 1;
+      while (j < input.length && j - (i + 1) < 6) {
+        const c = input[j];
+        const isHex =
+          (c >= '0' && c <= '9') ||
+          (c >= 'a' && c <= 'f') ||
+          (c >= 'A' && c <= 'F');
+        if (!isHex) break;
+        j++;
+      }
+      const hexLen = j - (i + 1);
+      if (hexLen >= 3) {
+        i = j;
+        continue;
+      }
+    }
+
+    if (ch === 'r' && input.slice(i, i + 4) === 'rgb(') {
+      const close = input.indexOf(')', i + 4);
+      if (close !== -1) {
+        i = close + 1;
+        continue;
+      }
+    }
+
+    if (ch >= '0' && ch <= '9') {
+      let j = i;
+      while (j < input.length && input[j] >= '0' && input[j] <= '9') j++;
+      const unit2 = input.slice(j, j + 2);
+      const unit3 = input.slice(j, j + 3);
+      if (unit2 === 'px' || unit2 === 'em') {
+        i = j + 2;
+        continue;
+      }
+      if (unit3 === 'rem') {
+        i = j + 3;
+        continue;
+      }
+      if (input[j] === '%') {
+        i = j + 1;
+        continue;
+      }
+    }
+
+    out += ch;
+    i++;
+  }
+  return out;
+}
+
 // Clean HTML/CSS content from rich text fields
 function cleanRichTextContent(content: string): string {
   if (!content || typeof content !== 'string') return '';
   
   // Remove HTML tags and decode entities
-  let cleaned = content
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ') // Normalize whitespace
+  let cleaned = stripHtmlTags(content)
+    .replaceAll('&quot;', '"')
+    .replaceAll('&amp;', '&')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&nbsp;', ' ')
     .trim();
+  cleaned = collapseWhitespace(cleaned).trim();
   
   // Remove CSS properties and other technical content
-  cleaned = cleaned
-    .replace(/[^:]*:\s*[^;]*;/g, '') // Remove CSS properties
-    .replace(/rgb\([^)]*\)/g, '') // Remove RGB colors
-    .replace(/#[0-9a-fA-F]{3,6}/g, '') // Remove hex colors
-    .replace(/\d+px/g, '') // Remove pixel values
-    .replace(/\d+em/g, '') // Remove em values
-    .replace(/\d+rem/g, '') // Remove rem values
-    .replace(/\d+%/g, '') // Remove percentage values
-    .replace(/\s+/g, ' ') // Normalize whitespace again
-    .trim();
+  cleaned = removeCssDeclarations(cleaned);
+  cleaned = removeRgbAndColorsAndUnits(cleaned);
+  cleaned = collapseWhitespace(cleaned).trim();
   
   return cleaned;
 }
@@ -103,7 +199,7 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
     }
     if (t === 'date' || t === 'datetime' || t === 'createdtime' || t === 'lastmodifiedtime') {
       const d = new Date(raw);
-      if (!isNaN(d.getTime())) {
+      if (!Number.isNaN(d.getTime())) {
         // Format date more nicely
         if (t === 'date') {
           return d.toLocaleDateString('en-US', { 
@@ -129,7 +225,7 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
       return s;
     }
     if (t === 'multiselect') {
-      if (Array.isArray(raw)) return raw.map(v => String((v as any)?.label ?? v)).join(', ');
+      if (Array.isArray(raw)) return raw.map(v => String(v?.label ?? v)).join(', ');
       try { const parsed = JSON.parse(String(raw)); if (Array.isArray(parsed)) return parsed.join(', '); } catch {}
     }
     if (Array.isArray(raw)) {
@@ -140,7 +236,7 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
       return raw.map(v => (v?.name || v?.filename || v?.fileName || String(v))).join(', ');
     }
     if (typeof raw === 'object') {
-      const name = (raw as any)?.name || (raw as any)?.label || (raw as any)?.title;
+      const name = raw?.name || raw?.label || raw?.title;
       if (name) return String(name);
       // Don't show [object Object] – show hyphen instead
       return '-';
@@ -172,7 +268,7 @@ export function buildGanttTooltipLines(args: {
   const startDate = task.startDate instanceof Date ? task.startDate : new Date(task.startDate);
   const endDate = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
   
-  if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+  if (!Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime())) {
     const dateRange = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
     const duration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     titleLine.push(dateRange, `${duration} days`);
@@ -230,7 +326,7 @@ export function buildGanttTooltipLines(args: {
   }
 
   // Create horizontal bullet-separated lines (like NocoDB)
-  const sortedFields = visibleFields.sort((a, b) => a.priority - b.priority);
+  const sortedFields = visibleFields.toSorted((a, b) => a.priority - b.priority);
   
   // Group fields into lines (up to 3-4 fields per line, no max-field cap)
   const fieldsPerLine = 3;

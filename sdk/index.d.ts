@@ -376,6 +376,7 @@ interface UpdateBase {
     status?: string;
     visibility?: string;
     image?: File | Blob;
+    removeImage?: boolean;
 }
 interface BulkAddMembersRequest {
     user_id: string;
@@ -445,7 +446,7 @@ declare class BaseService {
      * Upload or update base image
      * POST /base/:id/image
      */
-    uploadImage(id: string, imageFile: File): Promise<StandardResponse<any>>;
+    uploadImage(id: string, imageFile: File | Blob): Promise<StandardResponse<any>>;
     /**
      * Delete base image
      * DELETE /base/:id/image

@@ -225,7 +225,7 @@ export const validateWorkspaceName = (
  * Generates default view name based on type
  */
 export const getDefaultViewName = (viewType: string, existingViews: ExistingItem[] = []): string => {
-  const typeName = viewType.charAt(0).toUpperCase() + viewType.slice(1).replace(/([A-Z])/g, ' $1');
+  const typeName = viewType.charAt(0).toUpperCase() + viewType.slice(1).replaceAll(/([A-Z])/g, ' $1');
   const baseName = `${typeName} View`;
   return generateUniqueName(baseName, existingViews);
 };

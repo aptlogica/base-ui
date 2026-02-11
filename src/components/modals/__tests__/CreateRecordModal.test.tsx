@@ -59,7 +59,12 @@ vi.mock('../../../utils/standardFieldUtils', () => ({
   getStandardFieldType: vi.fn((type) => type),
   getFieldDisplayName: vi.fn((field) => field.title || field.name),
   getFieldDefaultValue: vi.fn(() => null),
-  createFieldRendererProps: vi.fn((field) => ({ field })),
+  createFieldRendererProps: vi.fn((field, value, onChange, options = {}) => ({
+    field,
+    value,
+    onChange,
+    ...options,
+  })),
 }));
 
 vi.mock('../../../types/fieldTypes', () => ({
@@ -226,7 +231,7 @@ describe('CreateRecordModal', () => {
       renderWithQueryClient(<CreateRecordModal {...defaultProps} />);
 
       const submitButton = screen.getByRole('button', { name: 'Save record' });
-      expect(submitButton).not.toBeDisabled();
+      expect(submitButton).toBeDisabled();
     });
   });
 
@@ -289,6 +294,43 @@ describe('CreateRecordModal', () => {
       // Title field input should be present
       const titleFieldInput = screen.getByTestId('field-input-field-1');
       expect(titleFieldInput).toBeInTheDocument();
+    });
+  });
+
+  describe('save button state', () => {
+    it('enables save when a field value is entered', async () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canCreateRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      const user = userEvent.setup();
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} />);
+
+      const submitButton = screen.getByRole('button', { name: 'Save record' });
+      expect(submitButton).toBeDisabled();
+
+      await user.type(screen.getByTestId('field-input-field-1'), 'New Title');
+      expect(submitButton).not.toBeDisabled();
+    });
+
+    it('enables save when initial values are provided', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canCreateRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      renderWithQueryClient(
+        <CreateRecordModal
+          {...defaultProps}
+          initialValues={{ 'field-2': 'Initial Description' }}
+        />
+      );
+
+      const submitButton = screen.getByRole('button', { name: 'Save record' });
+      expect(submitButton).not.toBeDisabled();
     });
   });
 });

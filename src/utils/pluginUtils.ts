@@ -1,7 +1,15 @@
 import { Plugin } from '../core/types';
 
 export const createPluginId = (name: string): string => {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const normalized = name.toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, '-');
+
+  let start = 0;
+  let end = normalized.length;
+  while (start < end && normalized[start] === '-') start++;
+  while (end > start && normalized[end - 1] === '-') end--;
+
+  return normalized.slice(start, end);
 };
 
 export const validatePluginId = (id: string): boolean => {

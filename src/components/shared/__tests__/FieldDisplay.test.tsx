@@ -229,7 +229,9 @@ describe('FieldDisplay', () => {
       expect(container.firstChild?.nodeName).toBe('DIV');
     });
 
-    it('should handle field with invalid meta string without throwing', () => {
+    it('should handle field with invalid meta string without throwing', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       render(
         <FieldDisplay
           field={{ uidt: 'text', title: 'Name', meta: 'not-json' }}
@@ -237,6 +239,9 @@ describe('FieldDisplay', () => {
         />
       );
       expect(screen.getByText('ok')).toBeInTheDocument();
+      await Promise.resolve();
+      consoleErrorSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
     });
   });
 });
