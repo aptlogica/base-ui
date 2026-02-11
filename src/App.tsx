@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTable, useBaseTables, useWorkspaces } from './hooks/useApi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { DefaultAuthProvider, useAuth } from './auth/AuthContext';
+import { DefaultAuthProvider } from './auth/AuthContext';
 import { PrivateRoute } from './auth/PrivateRoute';
 import { AccessLevelRoute } from './auth/AccessLevelRoute';
 import { useExtensions, PluginFrameworkProvider } from './core/PluginFrameworkContext';
@@ -23,6 +23,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import { useClientHeaders } from './hooks/useClientHeaders';
 import { RouteContextProvider } from './contexts/RouteContext';
 import { NavigationResolver } from './components/NavigationResolver';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -62,7 +63,6 @@ declare global {
 }
 
 const Layout = () => {
-  const { saving } = useAuth();
   const { flyoutOpen, selectedWorkspace, openFlyout, closeFlyout, currentPlugin } = usePluginStore();
   const location = useLocation();
 
@@ -71,7 +71,25 @@ const Layout = () => {
 
   // Track sidebar position and width (for flyout menu)
   const [sidebarPosition] = useState('left');
-  const [sidebarWidth] = useState(56);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      const saved = sessionStorage.getItem('sidebarCollapsed');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+  
+  // Wrapper to update both state and sessionStorage
+  const updateSidebarCollapsed = (value: boolean | ((prev: boolean) => boolean)) => {
+    setSidebarCollapsed((prev: boolean) => {
+      const newValue = typeof value === 'function' ? value(prev) : value;
+      sessionStorage.setItem('sidebarCollapsed', JSON.stringify(newValue));
+      return newValue;
+    });
+  };
+  
+  const sidebarWidth = sidebarCollapsed ? 20 : FLYOUT_WIDTH;
 
   // Auto-open flyout menu when on base/table/view routes
   useEffect(() => {
@@ -101,12 +119,6 @@ const Layout = () => {
           </div>
           <div className="flex items-center gap-2">
             <ExtensionPoint id="layout:header" />
-            {saving && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md text-sm border border-blue-200 dark:border-blue-700">
-                <Loader size={16} />
-                <span>Saving workspace data...</span>
-              </div>
-            )}
           </div>
         </header>
 
@@ -115,14 +127,24 @@ const Layout = () => {
           {/* Layout-Integrated Flyout Menu - Left Side */}
           {sidebarPosition === 'left' && flyoutOpen && (
             <aside
-              style={{ width: FLYOUT_WIDTH, minWidth: FLYOUT_WIDTH, maxWidth: FLYOUT_WIDTH }}
-              className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out"
+              style={{ width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
+              className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out relative"
             >
-              <Sidebar
-                sidebarPosition={sidebarPosition}
-                sidebarWidth={sidebarWidth}
-                selectedWorkspace={selectedWorkspace}
-              />
+              {!sidebarCollapsed && (
+                <Sidebar
+                  sidebarPosition={sidebarPosition}
+                  sidebarWidth={sidebarWidth}
+                  selectedWorkspace={selectedWorkspace}
+                  
+                />
+              )}
+              <button 
+                onClick={() => updateSidebarCollapsed(!sidebarCollapsed)} 
+                className='absolute top-1/2 right-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-40 hover:bg-gray-100 transition-colors outline-none'
+                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+              </button>
             </aside>
           )}
 
@@ -134,22 +156,29 @@ const Layout = () => {
           {/* Layout-Integrated Flyout Menu - Right Side */}
           {sidebarPosition === 'right' && flyoutOpen && (
             <aside
-              style={{ width: FLYOUT_WIDTH, minWidth: FLYOUT_WIDTH, maxWidth: FLYOUT_WIDTH }}
-              className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out"
+              style={{ width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
+              className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out relative"
             >
-              <Sidebar
-                sidebarPosition={sidebarPosition}
-                sidebarWidth={sidebarWidth}
-                selectedWorkspace={selectedWorkspace}
-              />
+              {!sidebarCollapsed && (
+                <Sidebar
+                  sidebarPosition={sidebarPosition}
+                  sidebarWidth={sidebarWidth}
+                  selectedWorkspace={selectedWorkspace}
+                />
+              )}
+              <button 
+                onClick={() => updateSidebarCollapsed(!sidebarCollapsed)} 
+                className='absolute top-1/2 left-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-40 hover:bg-gray-100 transition-colors outline-none'
+                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {sidebarCollapsed ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+              </button>
             </aside>
           )}
         </div>
 
         {/* Overlays */}
         <ExtensionPoint id="layout:overlay" />
-
-        {/* Floating mode disabled intentionally */}
       </div>
     </RouteContextProvider>
   );
@@ -160,14 +189,9 @@ const TableViewRouteWrapper: React.FC = () => {
   const { baseId, tableId, viewId } = useParams();
 
   // Centralized table fetch so only one plugin renders and we can determine view type
-  // PAGINATION DISABLED - Uncomment below to re-enable pagination (30 records per page)
-  // const { data: response, isLoading, error, refetch } = useTable(tableId, { pageNumber: 1, pageLimit: 30 });
-  // PERFORMANCE: Use cached data immediately if available (placeholderData handles this)
-  // Note: useTable has enabled: !!tableId, so it won't fetch if tableId is missing
-  const { data: response, isLoading, error, refetch } = useTable(tableId || ''); // No pagination - fetches all records
-
+  const { data: response, isLoading, error, refetch } = useTable(tableId || '');
   if (!tableId) {
-    console.error('❌ TableViewRouteWrapper: Table ID is required');
+    console.error('Table ID is missing');
     return <div className="p-8 text-red-600">Table ID is required</div>;
   }
 
@@ -189,7 +213,7 @@ const TableViewRouteWrapper: React.FC = () => {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 text-lg mb-2">⚠️ Error Loading View</div>
+          <div className="text-red-500 text-lg mb-2">Something went wrong</div>
           <p className="text-muted-foreground mb-4">{String(error)}</p>
           <button onClick={() => refetch()} className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90">Retry</button>
         </div>
@@ -221,6 +245,14 @@ const TableViewRouteWrapper: React.FC = () => {
     view = { id: typeMatchedView.id, type: typeMatchedView.type };
   }
 
+  const routeFallback = (
+    <ExtensionPoint
+      id="route"
+      props={{ table, view, viewType }}
+      key={`route-${tableId}-${viewId}`}
+    />
+  );
+
   // If a non-slug viewId was provided but not found, show a clear message
   if (viewId && !requestedView && !isTypeSlug) {
     return (
@@ -240,13 +272,7 @@ const TableViewRouteWrapper: React.FC = () => {
         id="view"
         props={{ table, view, viewType }}
         key={`view-${tableId}-${viewId}`}
-        fallback={() => (
-          <ExtensionPoint
-            id="route"
-            props={{ table, view, viewType }}
-            key={`route-${tableId}-${viewId}`}
-          />
-        )}
+        fallback={routeFallback}
       />
     </>
   );

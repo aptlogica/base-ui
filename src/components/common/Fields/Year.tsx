@@ -33,6 +33,16 @@ const getInitialYear = (defaultValue: number | string | null | undefined, curren
   return currentYear;
 };
 
+const getDefaultYearValue = (defaultValue: number | string | null | undefined): number | string => {
+  if (typeof defaultValue === "number") {
+    return defaultValue;
+  }
+  if (typeof defaultValue === "string") {
+    return Number.parseInt(defaultValue) || "";
+  }
+  return "";
+};
+
 export const Year: React.FC<YearProps> = ({
   label,
   value,
@@ -233,12 +243,7 @@ export const Year: React.FC<YearProps> = ({
     (y) => y >= 1000 && y <= 9999
   );
 
-  let defaultYearValue: number | string = "";
-  if (typeof defaultValue === "number") {
-    defaultYearValue = defaultValue;
-  } else if (typeof defaultValue === "string") {
-    defaultYearValue = Number.parseInt(defaultValue) || "";
-  }
+  const defaultYearValue = getDefaultYearValue(defaultValue);
 
   const displayValue = value ?? defaultYearValue;
 

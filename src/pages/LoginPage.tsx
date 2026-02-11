@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Info, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from '../auth/AuthContext';
 import { login as apiLogin, resendOtp } from '../service/clientService';
@@ -12,7 +12,6 @@ interface FormData {
 
 const LogIn: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({ email: "", password: "" });
-  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -24,10 +23,25 @@ const LogIn: React.FC = () => {
   const login = typeof auth?.login === 'function' ? auth.login : () => { };
 
   const validateEmail = (value: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    if (/\s/.test(trimmed)) return false;
+
+    const atIndex = trimmed.indexOf('@');
+    if (atIndex <= 0) return false;
+    if (trimmed.lastIndexOf('@') !== atIndex) return false;
+
+    const local = trimmed.slice(0, atIndex);
+    const domain = trimmed.slice(atIndex + 1);
+    if (!local || !domain) return false;
+
+    const dotIndex = domain.lastIndexOf('.');
+    if (dotIndex <= 0 || dotIndex === domain.length - 1) return false;
+
+    return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setEmailError(null);
@@ -60,10 +74,8 @@ const LogIn: React.FC = () => {
       const token = data.data.token;
 
       if (!userInfo.email_verified) {
-        // For unverified users, we need a token to verify OTP
-        // The login response should include a token that can be used for OTP verification
         const verificationToken = token?.access_token || token;
-        
+
         if (!verificationToken) {
           throw new Error("Token not found in login response");
         }
@@ -104,15 +116,15 @@ const LogIn: React.FC = () => {
           {/* Logo and Brand Name */}
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 flex items-center justify-center flex-shrink-0 border rounded-lg shadow-xs">
-              <img 
-                src="/assets/logo.svg" 
-                alt="Sereni Base Logo" 
+              <img
+                src="/assets/logo.svg"
+                alt="Sereni Base Logo"
                 className="w-full h-full object-cover rounded-xl"
               />
             </div>
             <span className="text-xl font-semibold text-gray-900">Sereni Base</span>
           </div>
-          
+
           <h2 className="text-3xl font-bold text-foreground text-left">Welcome back</h2>
           <p className="text-base lg:text-lg text-white/90 leading-relaxed drop-shadow-md">Welcome back! Please enter your details.</p>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -144,11 +156,6 @@ const LogIn: React.FC = () => {
                 className={`field-component field-component-border field-component-focus ${emailError ? "border-destructive bg-red-50" : ""}`}
                 style={{ boxShadow: "var(--shadow-xs)" }}
               />
-              {emailError && (
-                <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                  <Info className="w-4 h-4 text-red-400" />
-                </div>
-              )}
               {emailError && <div className="mt-1.5 text-red-500 text-sm">{emailError}</div>}
             </div>
             <div className="relative">
@@ -194,15 +201,6 @@ const LogIn: React.FC = () => {
               {passwordError && <div className="mt-1.5 text-red-500 text-sm">{passwordError}</div>}
             </div>
             <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={e => setRememberMe(e.target.checked)}
-                  className="checkbox-primary-brand"
-                />
-                <span>Remember me</span>
-              </label>
               <Link to="/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
             </div>
             {error && <div className="text-destructive text-sm text-center">{error}</div>}
@@ -221,7 +219,7 @@ const LogIn: React.FC = () => {
       {/* Right Panel */}
       <div className="hidden md:block relative overflow-hidden h-full bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url(/assets/login-bg.png)' }}>
         <div className="absolute inset-0 bg-black/5"></div>
-        
+
         {/* Content Container - Text and Image */}
         <div className="relative z-10 flex flex-col h-full pt-12 md:pt-16 lg:pt-20 xl:pt-24 overflow-hidden">
           {/* Promotional Text - Top Left, Consistent Alignment */}

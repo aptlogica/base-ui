@@ -76,7 +76,7 @@ export const useNavigation = () => {
     };
 
     parseCurrentRoute();
-  }, [location.pathname, selectedWorkspaceId, selectedBaseId, selectedTableId, selectedViewId, navigateToWorkspace, navigateToBase, navigateToTable, navigateToView]);
+  }, [location.pathname, selectedWorkspaceId, selectedBaseId, selectedTableId, selectedViewId]);
 
   // Cache navigation in sessionStorage on changes (per-user)
   // Note: This only caches in sessionStorage for session recovery

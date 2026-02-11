@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CreateRecordModal from '../CreateRecordModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useBaseAccess } from '../../../hooks/useBaseAccess';
 
 // Mock hooks
 vi.mock('../../../hooks/useApi', () => ({
@@ -58,7 +59,12 @@ vi.mock('../../../utils/standardFieldUtils', () => ({
   getStandardFieldType: vi.fn((type) => type),
   getFieldDisplayName: vi.fn((field) => field.title || field.name),
   getFieldDefaultValue: vi.fn(() => null),
-  createFieldRendererProps: vi.fn((field) => ({ field })),
+  createFieldRendererProps: vi.fn((field, value, onChange, options = {}) => ({
+    field,
+    value,
+    onChange,
+    ...options,
+  })),
 }));
 
 vi.mock('../../../types/fieldTypes', () => ({
@@ -200,8 +206,43 @@ describe('CreateRecordModal', () => {
     });
   });
 
+  describe('read-only access', () => {
+    it('disables submit button when user is read-only', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canCreateRecord: () => false,
+        isBaseReadOnly: () => true,
+      } as any));
+
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} />);
+
+      // When user cannot create, the footer with buttons is not rendered
+      const submitButton = screen.queryByRole('button', { name: 'Save record' });
+      expect(submitButton).not.toBeInTheDocument();
+    });
+
+    it('allows submit when user has create permissions', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canCreateRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} />);
+
+      const submitButton = screen.getByRole('button', { name: 'Save record' });
+      expect(submitButton).toBeDisabled();
+    });
+  });
+
   describe('accessibility', () => {
     it('has proper button types', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canCreateRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
       renderWithQueryClient(<CreateRecordModal {...defaultProps} />);
 
       const closeButton = screen.getByRole('button', { name: 'Close' });
@@ -209,6 +250,87 @@ describe('CreateRecordModal', () => {
 
       expect(closeButton).toHaveAttribute('type', 'button');
       expect(submitButton).toHaveAttribute('type', 'button');
+    });
+  });
+
+  describe('title field badge removal', () => {
+    it('does not render title field badge', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canCreateRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} />);
+
+      // The badge should not exist
+      expect(screen.queryByText('Title Field')).not.toBeInTheDocument();
+    });
+
+    it('still renders title field input', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canCreateRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} />);
+
+      // The title field renderer should be visible
+      expect(screen.getByTestId('field-renderer-field-1')).toBeInTheDocument();
+    });
+
+    it('title field is visible and functional', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canCreateRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      renderWithQueryClient(
+        <CreateRecordModal {...defaultProps} />
+      );
+
+      // Title field input should be present
+      const titleFieldInput = screen.getByTestId('field-input-field-1');
+      expect(titleFieldInput).toBeInTheDocument();
+    });
+  });
+
+  describe('save button state', () => {
+    it('enables save when a field value is entered', async () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canCreateRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      const user = userEvent.setup();
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} />);
+
+      const submitButton = screen.getByRole('button', { name: 'Save record' });
+      expect(submitButton).toBeDisabled();
+
+      await user.type(screen.getByTestId('field-input-field-1'), 'New Title');
+      expect(submitButton).not.toBeDisabled();
+    });
+
+    it('enables save when initial values are provided', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canCreateRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      renderWithQueryClient(
+        <CreateRecordModal
+          {...defaultProps}
+          initialValues={{ 'field-2': 'Initial Description' }}
+        />
+      );
+
+      const submitButton = screen.getByRole('button', { name: 'Save record' });
+      expect(submitButton).not.toBeDisabled();
     });
   });
 });

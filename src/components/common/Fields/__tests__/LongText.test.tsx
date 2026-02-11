@@ -31,12 +31,45 @@ describe('LongText Component', () => {
     const expandButton = container
       ? container.querySelector('button[type="button"]')
       : screen.queryByRole('button');
-    if (expandButton) {
-      fireEvent.click(expandButton);
-      await waitFor(() => {
-        expect(screen.getByText('Long Text')).toBeInTheDocument();
-      }, { timeout: 3000 });
-    }
+    expect(expandButton).toBeInTheDocument();
+    fireEvent.click(expandButton as HTMLElement);
+    await waitFor(() => {
+      expect(screen.getByText('Long Text')).toBeInTheDocument();
+    }, { timeout: 3000 });
+  };
+  const getInput = (container: HTMLElement) => {
+    const input = container.querySelector('input[type="text"]');
+    expect(input).toBeInTheDocument();
+    return input as HTMLInputElement;
+  };
+
+  const getExpandButton = (container: HTMLElement) => {
+    const button = container.querySelector('button[type="button"]');
+    expect(button).toBeInTheDocument();
+    return button as HTMLButtonElement;
+  };
+
+  const getEditor = () => {
+    const editor = document.querySelector('[contenteditable="true"]');
+    expect(editor).toBeInTheDocument();
+    return editor as HTMLElement;
+  };
+
+  const getLinkPopupBackdrop = () => {
+    const backdrop = document.querySelector('div[style*="background: transparent"]');
+    expect(backdrop).toBeInTheDocument();
+    return backdrop as HTMLElement;
+  };
+
+  const selectEditorText = (editor: HTMLElement) => {
+    const textNode = editor.firstChild;
+    expect(textNode).toBeTruthy();
+    const range = document.createRange();
+    range.setStart(textNode as ChildNode, 0);
+    range.setEnd(textNode as ChildNode, textNode?.textContent?.length || 0);
+    const selection = globalThis.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
   };
 
   describe('Rendering', () => {
@@ -102,8 +135,9 @@ describe('LongText Component', () => {
         />
       );
 
-      const input = container.querySelector('input[type="text"]');
-      fireEvent.doubleClick(input!);
+      const input = getInput(container);
+      expect(input).toBeInTheDocument();
+      fireEvent.doubleClick(input as HTMLElement);
 
       await waitFor(() => {
         expect(screen.getByText('Long Text')).toBeInTheDocument();
@@ -142,7 +176,7 @@ describe('LongText Component', () => {
       await userEvent.clear(textarea);
       await userEvent.type(textarea, 'New content');
 
-      const saveButton = screen.getByText('Save & Close');
+      const saveButton = screen.getByRole('button', { name: 'Save' });
       fireEvent.click(saveButton);
 
       await waitFor(() => {
@@ -167,19 +201,16 @@ describe('LongText Component', () => {
       await userEvent.type(textarea, 'Modified content');
 
       const backdrop = document.querySelector('.backdrop-blur-sm');
-      if (backdrop) {
-        fireEvent.click(backdrop);
-        await waitFor(() => {
-          expect(screen.queryByText('Long Text')).not.toBeInTheDocument();
-        }, { timeout: 2000 });
-        // Ensure onChange was NOT called (no save on backdrop click)
-        expect(mockOnChange).not.toHaveBeenCalled();
-      } else {
-        expect(screen.getByText('Long Text')).toBeInTheDocument();
-      }
+      expect(backdrop).toBeInTheDocument();
+      fireEvent.click(backdrop as HTMLElement);
+      await waitFor(() => {
+        expect(screen.queryByText('Long Text')).not.toBeInTheDocument();
+      }, { timeout: 2000 });
+      // Ensure onChange was NOT called (no save on backdrop click)
+      expect(mockOnChange).not.toHaveBeenCalled();
     });
 
-    it('should close modal on X button click and save changes', async () => {
+    it('should close modal on X button click without saving', async () => {
       const { container } = render(
         <LongText
           value="Original content"
@@ -201,8 +232,8 @@ describe('LongText Component', () => {
       await waitFor(() => {
         expect(screen.queryByText('Long Text')).not.toBeInTheDocument();
       });
-      // Ensure onChange was called (X button saves)
-      expect(mockOnChange).toHaveBeenCalledWith('Modified content');
+      // Ensure onChange was NOT called (X button does not save)
+      expect(mockOnChange).not.toHaveBeenCalled();
     });
   });
 
@@ -224,7 +255,7 @@ describe('LongText Component', () => {
       await userEvent.clear(textarea);
       fireEvent.blur(textarea);
 
-      const saveButton = screen.getByText('Save & Close');
+      const saveButton = screen.getByRole('button', { name: 'Save' });
       fireEvent.click(saveButton);
 
       await waitFor(() => {
@@ -266,7 +297,7 @@ describe('LongText Component', () => {
       const textarea = textboxes[1];
       fireEvent.blur(textarea);
 
-      const saveButton = screen.getByText('Save & Close');
+      const saveButton = screen.getByRole('button', { name: 'Save' });
       fireEvent.click(saveButton);
 
       await waitFor(() => {
@@ -348,7 +379,7 @@ describe('LongText Component', () => {
         />
       );
 
-      const expandButton = container.querySelector('button[type="button"]');
+      const expandButton = getExpandButton(container);
       expect(expandButton).toBeInTheDocument();
     });
 
@@ -376,8 +407,8 @@ describe('LongText Component', () => {
         />
       );
 
-      const expandButton = container.querySelector('button[type="button"]') as HTMLButtonElement;
-      expect(expandButton?.disabled).toBe(true);
+      const expandButton = getExpandButton(container);
+      expect(expandButton.disabled).toBe(true);
     });
 
     it('should prevent modal opening when readOnly is true', async () => {
@@ -389,17 +420,19 @@ describe('LongText Component', () => {
         />
       );
 
-      const input = container.querySelector('input[type="text"]');
+      const input = getInput(container);
       expect(input).toBeInTheDocument();
       
-      const expandButton = container.querySelector('button[type="button"]');
-      expect(expandButton).not.toBeInTheDocument();
+      // Button should appear in readOnly mode with "View full content" title
+      const expandButton = getExpandButton(container);
+      expect(expandButton).toBeInTheDocument();
+      expect(expandButton).toHaveAttribute('title', 'View full content');
 
-      fireEvent.doubleClick(input!);
+      fireEvent.doubleClick(input);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      expect(screen.queryByText('Long Text')).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText('Long Text')).not.toBeInTheDocument();
+      });
     });
 
     it('should show disabled styling', () => {
@@ -495,7 +528,7 @@ describe('LongText Component', () => {
 
       expect(textarea.value).toBe('Modified');
 
-      const saveButton = screen.getByText('Save & Close');
+      const saveButton = screen.getByRole('button', { name: 'Save' });
       fireEvent.click(saveButton);
 
       await waitFor(() => {
@@ -507,7 +540,7 @@ describe('LongText Component', () => {
   describe('Edge Cases', () => {
     it('should handle null value', () => {
       render(
-        <LongText value={null as any} onChange={mockOnChange} />
+        <LongText value={(null as unknown) as string} onChange={mockOnChange} />
       );
 
       const input = screen.getByDisplayValue('');
@@ -516,7 +549,7 @@ describe('LongText Component', () => {
 
     it('should handle undefined value', () => {
       render(
-        <LongText value={undefined as any} onChange={mockOnChange} />
+        <LongText value={undefined} onChange={mockOnChange} />
       );
 
       const input = screen.getByDisplayValue('');
@@ -552,20 +585,16 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
-      if (editor) {
-        editor.innerHTML = '<script>alert("xss")</script>';
-        fireEvent.input(editor);
-        
-        const saveButton = screen.getByText('Save & Close');
-        fireEvent.click(saveButton);
+      const editor = getEditor();
+      editor.innerHTML = '<script>alert("xss")</script>';
+      fireEvent.input(editor);
 
-        await waitFor(() => {
-          expect(mockOnChange).toHaveBeenCalled();
-        }, { timeout: 2000 });
-      } else {
-        expect(editor).toBeInTheDocument();
-      }
+      const saveButton = screen.getByRole('button', { name: 'Save' });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockOnChange).toHaveBeenCalled();
+      }, { timeout: 2000 });
     });
 
     it('should handle unicode and emoji', async () => {
@@ -584,7 +613,7 @@ describe('LongText Component', () => {
       await userEvent.clear(textarea);
       await userEvent.type(textarea, '你好世界 🌍 مرحبا');
 
-      const saveButton = screen.getByText('Save & Close');
+      const saveButton = screen.getByRole('button', { name: 'Save' });
       fireEvent.click(saveButton);
 
       await waitFor(() => {
@@ -604,7 +633,7 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]');
+      const editor = getEditor();
       expect(editor).toBeInTheDocument();
     });
   });
@@ -648,7 +677,7 @@ describe('LongText Component', () => {
         />
       );
 
-      const input = container.querySelector('input[type="text"]');
+      const input = getInput(container);
       expect(input).toBeInTheDocument();
     });
   });
@@ -669,7 +698,7 @@ describe('LongText Component', () => {
       const boldButton = screen.getByTitle(/Bold/i);
       fireEvent.mouseDown(boldButton);
 
-      const editor = document.querySelector('[contenteditable="true"]');
+      const editor = getEditor();
       expect(editor).toBeInTheDocument();
     });
 
@@ -688,7 +717,7 @@ describe('LongText Component', () => {
       const italicButton = screen.getByTitle(/Italic/i);
       fireEvent.mouseDown(italicButton);
 
-      const editor = document.querySelector('[contenteditable="true"]');
+      const editor = getEditor();
       expect(editor).toBeInTheDocument();
     });
 
@@ -707,7 +736,7 @@ describe('LongText Component', () => {
       const underlineButton = screen.getByTitle(/Underline/i);
       fireEvent.mouseDown(underlineButton);
 
-      const editor = document.querySelector('[contenteditable="true"]');
+      const editor = getEditor();
       expect(editor).toBeInTheDocument();
     });
 
@@ -726,7 +755,7 @@ describe('LongText Component', () => {
       const listButton = screen.getByTitle(/Bullet List/i);
       fireEvent.mouseDown(listButton);
 
-      const editor = document.querySelector('[contenteditable="true"]');
+      const editor = getEditor();
       expect(editor).toBeInTheDocument();
     });
 
@@ -745,7 +774,7 @@ describe('LongText Component', () => {
       const quoteButton = screen.getByTitle(/Quote/i);
       fireEvent.mouseDown(quoteButton);
 
-      const editor = document.querySelector('[contenteditable="true"]');
+      const editor = getEditor();
       expect(editor).toBeInTheDocument();
     });
   });
@@ -783,7 +812,7 @@ describe('LongText Component', () => {
       const textarea = textboxes[1];
       await userEvent.clear(textarea);
 
-      const saveButton = screen.getByText('Save & Close');
+      const saveButton = screen.getByRole('button', { name: 'Save' });
       fireEvent.click(saveButton);
 
       await waitFor(() => {
@@ -806,15 +835,13 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+      const editor = getEditor();
       expect(editor).toBeInTheDocument();
 
-      const saveButton = screen.getByText('Save & Close');
+      const saveButton = screen.getByRole('button', { name: 'Save' });
       fireEvent.click(saveButton);
 
-      await waitFor(() => {
-        expect(screen.queryByText('Long Text')).not.toBeInTheDocument();
-      }, { timeout: 2000 });
+      expect(screen.getByText('Long Text')).toBeInTheDocument();
 
       expect(mockOnChange).not.toHaveBeenCalled();
     });
@@ -869,7 +896,7 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+      const editor = getEditor();
       fireEvent.keyDown(editor, { key: 'b', ctrlKey: true, preventDefault: vi.fn() });
 
       expect(mockExecCommand).toHaveBeenCalled();
@@ -887,7 +914,7 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+      const editor = getEditor();
       fireEvent.keyDown(editor, { key: 'i', ctrlKey: true, preventDefault: vi.fn() });
 
       expect(mockExecCommand).toHaveBeenCalled();
@@ -905,7 +932,7 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+      const editor = getEditor();
       fireEvent.keyDown(editor, { key: 'u', ctrlKey: true, preventDefault: vi.fn() });
 
       expect(mockExecCommand).toHaveBeenCalled();
@@ -923,7 +950,7 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+      const editor = getEditor();
       const clipboardData = {
         getData: vi.fn(() => 'Pasted text'),
       };
@@ -949,7 +976,7 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+      const editor = getEditor();
       editor.innerHTML = 'New content';
       fireEvent.input(editor);
 
@@ -970,15 +997,13 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+      const editor = getEditor();
       editor.innerHTML = '<br>';
 
-      const saveButton = screen.getByText('Save & Close');
+      const saveButton = screen.getByRole('button', { name: 'Save' });
       fireEvent.click(saveButton);
 
-      await waitFor(() => {
-        expect(screen.queryByText('Long Text')).not.toBeInTheDocument();
-      }, { timeout: 2000 });
+      expect(screen.getByText('Long Text')).toBeInTheDocument();
     });
   });
 
@@ -1009,17 +1034,9 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+      const editor = getEditor();
       editor.innerHTML = 'Selected text';
-      const textNode = editor.firstChild;
-      if (textNode) {
-        const range = document.createRange();
-        range.setStart(textNode, 0);
-        range.setEnd(textNode, textNode.textContent?.length || 0);
-        const selection = globalThis.getSelection();
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-      }
+      selectEditorText(editor);
 
       const linkButton = screen.getByTitle(/Link/i);
       fireEvent.mouseDown(linkButton);
@@ -1041,27 +1058,19 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+      const editor = getEditor();
       editor.innerHTML = 'Selected text';
-      const textNode = editor.firstChild;
-      if (textNode) {
-        const range = document.createRange();
-        range.setStart(textNode, 0);
-        range.setEnd(textNode, textNode.textContent?.length || 0);
-        const selection = globalThis.getSelection();
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-      }
+      selectEditorText(editor);
 
       const linkButton = screen.getByTitle(/Link/i);
       fireEvent.mouseDown(linkButton);
 
       await waitFor(() => {
-        const urlInput = screen.queryByPlaceholderText('https://example.com') as HTMLInputElement;
+        const urlInput = screen.queryByPlaceholderText('https://example.com');
         expect(urlInput).toBeInTheDocument();
       }, { timeout: 3000 });
 
-      const urlInput = screen.getByPlaceholderText('https://example.com') as HTMLInputElement;
+      const urlInput = screen.getByPlaceholderText('https://example.com');
       fireEvent.change(urlInput, { target: { value: 'example.com' } });
       fireEvent.keyDown(urlInput, { key: 'Enter' });
 
@@ -1082,17 +1091,9 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+      const editor = getEditor();
       editor.innerHTML = 'Text';
-      const textNode = editor.firstChild;
-      if (textNode) {
-        const range = document.createRange();
-        range.setStart(textNode, 0);
-        range.setEnd(textNode, textNode.textContent?.length || 0);
-        const selection = globalThis.getSelection();
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-      }
+      selectEditorText(editor);
 
       const linkButton = screen.getByTitle(/Link/i);
       fireEvent.mouseDown(linkButton);
@@ -1101,7 +1102,7 @@ describe('LongText Component', () => {
         expect(screen.queryByPlaceholderText('https://example.com')).toBeInTheDocument();
       }, { timeout: 3000 });
 
-      const urlInput = screen.getByPlaceholderText('https://example.com') as HTMLInputElement;
+      const urlInput = screen.getByPlaceholderText('https://example.com');
       fireEvent.change(urlInput, { target: { value: 'test.com' } });
       const insertButton = screen.getByText('Insert');
       fireEvent.click(insertButton);
@@ -1123,17 +1124,9 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+      const editor = getEditor();
       editor.innerHTML = 'Text';
-      const textNode = editor.firstChild;
-      if (textNode) {
-        const range = document.createRange();
-        range.setStart(textNode, 0);
-        range.setEnd(textNode, textNode.textContent?.length || 0);
-        const selection = globalThis.getSelection();
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-      }
+      selectEditorText(editor);
 
       const linkButton = screen.getByTitle(/Link/i);
       fireEvent.mouseDown(linkButton);
@@ -1142,7 +1135,7 @@ describe('LongText Component', () => {
         expect(screen.queryByPlaceholderText('https://example.com')).toBeInTheDocument();
       }, { timeout: 3000 });
 
-      const urlInput = screen.getByPlaceholderText('https://example.com') as HTMLInputElement;
+      const urlInput = screen.getByPlaceholderText('https://example.com');
       fireEvent.keyDown(urlInput, { key: 'Escape' });
 
       await waitFor(() => {
@@ -1163,14 +1156,12 @@ describe('LongText Component', () => {
       await openModal(container);
 
       await waitFor(() => {
-        const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
-        expect(editor).toBeInTheDocument();
-        const link = editor.querySelector('a');
+        const link = getEditor().querySelector('a');
         expect(link).toBeInTheDocument();
-        if (link) {
-          fireEvent.click(link);
-        }
       }, { timeout: 3000 });
+
+      const link = getEditor().querySelector('a') as HTMLAnchorElement;
+      fireEvent.click(link);
 
       await waitFor(() => {
         expect(screen.queryByText('Open')).toBeInTheDocument();
@@ -1190,21 +1181,17 @@ describe('LongText Component', () => {
       await openModal(container);
 
       await waitFor(() => {
-        const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
-        const link = editor.querySelector('a');
-        if (link) {
-          fireEvent.click(link);
-        }
+        const link = getEditor().querySelector('a');
+        expect(link).toBeInTheDocument();
       }, { timeout: 2000 });
 
-      await waitFor(() => {
-        const editButton = screen.queryByText('Edit');
-        if (editButton) {
-          fireEvent.click(editButton);
-          const urlInput = screen.queryByPlaceholderText('https://example.com') as HTMLInputElement;
-          expect(urlInput).toBeInTheDocument();
-        }
-      }, { timeout: 2000 });
+      const link = getEditor().querySelector('a') as HTMLAnchorElement;
+      fireEvent.click(link);
+
+      const editButton = await screen.findByText('Edit');
+      fireEvent.click(editButton);
+      const urlInput = screen.getByPlaceholderText('https://example.com');
+      expect(urlInput).toBeInTheDocument();
     });
 
     it('should remove existing link', async () => {
@@ -1220,19 +1207,15 @@ describe('LongText Component', () => {
       await openModal(container);
 
       await waitFor(() => {
-        const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
-        const link = editor.querySelector('a');
-        if (link) {
-          fireEvent.click(link);
-        }
+        const link = getEditor().querySelector('a');
+        expect(link).toBeInTheDocument();
       }, { timeout: 2000 });
 
-      await waitFor(() => {
-        const removeButton = screen.queryByText('Remove');
-        if (removeButton) {
-          fireEvent.click(removeButton);
-        }
-      }, { timeout: 2000 });
+      const link = getEditor().querySelector('a') as HTMLAnchorElement;
+      fireEvent.click(link);
+
+      const removeButton = await screen.findByText('Remove');
+      fireEvent.click(removeButton);
     });
 
     it('should close link popup on backdrop click', async () => {
@@ -1247,17 +1230,9 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+      const editor = getEditor();
       editor.innerHTML = 'Text';
-      const textNode = editor.firstChild;
-      if (textNode) {
-        const range = document.createRange();
-        range.setStart(textNode, 0);
-        range.setEnd(textNode, textNode.textContent?.length || 0);
-        const selection = globalThis.getSelection();
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-      }
+      selectEditorText(editor);
 
       const linkButton = screen.getByTitle(/Link/i);
       fireEvent.mouseDown(linkButton);
@@ -1266,10 +1241,8 @@ describe('LongText Component', () => {
         expect(screen.queryByPlaceholderText('https://example.com')).toBeInTheDocument();
       }, { timeout: 3000 });
 
-      const backdrop = document.querySelector('div[style*="background: transparent"]');
-      if (backdrop) {
-        fireEvent.mouseDown(backdrop);
-      }
+      const backdrop = getLinkPopupBackdrop();
+      fireEvent.mouseDown(backdrop);
 
       await waitFor(() => {
         expect(screen.queryByPlaceholderText('https://example.com')).not.toBeInTheDocument();
@@ -1366,17 +1339,9 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+      const editor = getEditor();
       editor.innerHTML = 'Text';
-      const textNode = editor.firstChild;
-      if (textNode) {
-        const range = document.createRange();
-        range.setStart(textNode, 0);
-        range.setEnd(textNode, textNode.textContent?.length || 0);
-        const selection = globalThis.getSelection();
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-      }
+      selectEditorText(editor);
 
       const linkButton = screen.getByTitle(/Link/i);
       fireEvent.mouseDown(linkButton);
@@ -1408,8 +1373,8 @@ describe('LongText Component', () => {
         />
       );
 
-      const input = container.querySelector('input[type="text"]');
-      fireEvent.doubleClick(input!);
+      const input = getInput(container);
+      fireEvent.doubleClick(input);
 
       expect(screen.queryByText('Long Text')).not.toBeInTheDocument();
     });
@@ -1446,15 +1411,31 @@ describe('LongText Component', () => {
         />
       );
 
-      const input = container.querySelector('input[type="text"]');
+      const input = getInput(container);
       expect(input).toBeInTheDocument();
       
-      const expandButton = container.querySelector('button[type="button"]');
-      expect(expandButton).not.toBeInTheDocument();
+      // When hideMaximizeButton is not set, button should still appear in readOnly mode (with "View full content" title)
+      const expandButton = getExpandButton(container);
+      expect(expandButton).toBeInTheDocument();
+      expect(expandButton).toHaveAttribute('title', 'View full content');
 
-      fireEvent.doubleClick(input!);
+      fireEvent.doubleClick(input);
 
       expect(screen.queryByText('Long Text')).not.toBeInTheDocument();
+    });
+
+    it('should hide maximize button when hideMaximizeButton config is true', () => {
+      const { container } = render(
+        <LongText
+          value="Test content"
+          onChange={mockOnChange}
+          config={{ hideMaximizeButton: true }}
+          readOnly
+        />
+      );
+
+      const expandButton = container.querySelector('button[type="button"]');
+      expect(expandButton).not.toBeInTheDocument();
     });
 
     it('should handle rich text content with br tag normalization', async () => {
@@ -1469,15 +1450,14 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+      const editor = getEditor();
       editor.innerHTML = '<br/>';
 
-      const saveButton = screen.getByText('Save & Close');
+      const saveButton = screen.getByRole('button', { name: 'Save' });
       fireEvent.click(saveButton);
 
-      await waitFor(() => {
-        expect(screen.queryByText('Long Text')).not.toBeInTheDocument();
-      }, { timeout: 2000 });
+      expect(screen.getByText('Long Text')).toBeInTheDocument();
+      expect(mockOnChange).not.toHaveBeenCalled();
     });
 
     it('should handle link popup with empty URL', async () => {
@@ -1492,17 +1472,9 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+      const editor = getEditor();
       editor.innerHTML = 'Text';
-      const textNode = editor.firstChild;
-      if (textNode) {
-        const range = document.createRange();
-        range.setStart(textNode, 0);
-        range.setEnd(textNode, textNode.textContent?.length || 0);
-        const selection = globalThis.getSelection();
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-      }
+      selectEditorText(editor);
 
       const linkButton = screen.getByTitle(/Link/i);
       fireEvent.mouseDown(linkButton);
@@ -1532,12 +1504,10 @@ describe('LongText Component', () => {
 
       await openModal(container);
 
-      const saveButton = screen.getByText('Save & Close');
+      const saveButton = screen.getByRole('button', { name: 'Save' });
       fireEvent.click(saveButton);
 
-      await waitFor(() => {
-        expect(screen.queryByText('Long Text')).not.toBeInTheDocument();
-      });
+      expect(screen.getByText('Long Text')).toBeInTheDocument();
 
       expect(mockOnChange).not.toHaveBeenCalled();
     });
@@ -1569,3 +1539,5 @@ describe('LongText Component', () => {
     });
   });
 });
+
+

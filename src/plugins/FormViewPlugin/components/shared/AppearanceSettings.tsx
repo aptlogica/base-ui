@@ -41,7 +41,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
   onChange
 }) => {
   // Normalize appearance to a fully-typed local variable to avoid undefined/implicit any issues
-  const ap = (appearance ?? {}) as NonNullable<FormConfig['appearance']>;
+  const ap = (appearance ?? {});
   // Local validation state for URLs so we don't write invalid URLs into view.meta
   const [logoError, setLogoError] = React.useState<string | null>(null);
   const [bannerError, setBannerError] = React.useState<string | null>(null);
@@ -132,84 +132,83 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
     onChange({ ...ap, backgroundColor: color });
   };
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'banner') => {
+  const extractImageUrl = (response: any): string => {
+    if (response?.data?.data?.url) return response.data.data.url;
+    if (response?.data?.url) return response.data.url;
+    if (response?.data?.data?.[0]?.url) return response.data.data[0].url;
+    if (response?.data?.[0]?.url) return response.data[0].url;
+    if (typeof response?.data === 'string') return response.data;
+    if (response?.data?.data?.[0]) return response.data.data[0];
+    return '';
+  };
+
+  const uploadConfig = {
+    logo: {
+      setFileName: setLogoFileName,
+      setFromBrowse: setLogoFromBrowse,
+      setShowUrlInput: setShowLogoUrlInput,
+      setUploading: setUploadingLogo,
+      setUrl: (url: string) => onChange({ ...ap, logoUrl: url }),
+      successMessage: 'Logo uploaded successfully!',
+    },
+    banner: {
+      setFileName: setBannerFileName,
+      setFromBrowse: setBannerFromBrowse,
+      setShowUrlInput: setShowBannerUrlInput,
+      setUploading: setUploadingBanner,
+      setUrl: (url: string) => onChange({ ...ap, bannerUrl: url }),
+      successMessage: 'Banner uploaded successfully!',
+    },
+  } as const;
+
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    type: 'logo' | 'banner'
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file', { title: 'Invalid File Type' });
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('File size must be less than 5MB', { title: 'File Too Large' });
       return;
     }
 
-    // Save selected filename in state
-    if (type === 'logo') {
-      setLogoFileName(file.name);
-      setLogoFromBrowse(true);
-      setShowLogoUrlInput(false); // Hide URL input when uploading via file
-    } else {
-      setBannerFileName(file.name);
-      setBannerFromBrowse(true);
-      setShowBannerUrlInput(false); // Hide URL input when uploading via file
-    }
+    const config = uploadConfig[type];
 
-    // mark respective upload as in-progress
-    if (type === 'logo') {
-      setUploadingLogo(true);
-    } else {
-      setUploadingBanner(true);
-    }
+    config.setFileName(file.name);
+    config.setFromBrowse(true);
+    config.setShowUrlInput(false);
+    config.setUploading(true);
 
     try {
-      const response:any = await addImageMutation.mutateAsync({
+      const response: any = await addImageMutation.mutateAsync({
         files: [file],
       });
 
-      // Extract image URL from response (following the same pattern as account settings)
-      // The response structure may vary, so we'll check multiple possible paths
-      let imageUrl = '';
-      if (response?.data?.data?.url) {
-        imageUrl = response.data.data.url;
-      } else if (response?.data?.url) {
-        imageUrl = response.data.url;
-      } else if (response?.data?.data?.[0]?.url) {
-        imageUrl = response.data.data[0].url;
-      } else if (response?.data?.[0]?.url) {
-        imageUrl = response.data[0].url;
-      } else if (typeof response?.data === 'string') {
-        imageUrl = response.data;
-      } else if (response?.data?.data?.[0]) {
-        // If response.data.data is an array with the first item being the URL string
-        imageUrl = response.data.data[0];
+      const imageUrl = extractImageUrl(response);
+
+      if (!imageUrl) {
+        toast.error('Failed to get image URL from response', { title: 'Upload Failed' });
+        return;
       }
 
-      if (imageUrl) {
-        if (type === 'logo') {
-          onChange({ ...ap, logoUrl: imageUrl });
-          toast.success('Logo uploaded successfully!', { title: 'Success' });
-        } else {
-          onChange({ ...ap, bannerUrl: imageUrl });
-          toast.success('Banner uploaded successfully!', { title: 'Success' });
-        }
-      } else {
-        toast.error('Failed to get image URL from response', { title: 'Upload Failed' });
-      }
+      config.setUrl(imageUrl);
+      toast.success(config.successMessage, { title: 'Success' });
     } catch (error: any) {
-      toast.error(error?.message || 'Failed to upload image. Please try again.', { title: 'Upload Failed' });
+      toast.error(
+        error?.message || 'Failed to upload image. Please try again.',
+        { title: 'Upload Failed' }
+      );
     } finally {
-      if (type === 'logo') {
-        setUploadingLogo(false);
-      } else {
-        setUploadingBanner(false);
-      }
+      config.setUploading(false);
     }
   };
+
 
   return (
     <div className="space-y-6">
@@ -218,9 +217,9 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
+            <span className="block text-sm font-medium text-gray-700 mb-3">
               Background Color
-            </label>
+            </span>
             <div className="flex gap-3">
               {colorOptions.map((color) => (
                 <button
@@ -239,8 +238,9 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
           {/* Primary/Text color */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Primary Color</label>
+              <label htmlFor="primary-color-label" className="block text-sm font-medium text-gray-700 mb-1">Primary Color</label>
               <input
+                id="primary-color-label"
                 type="color"
                 value={(ap.primaryColor as string) || '#2563eb'}
                 onChange={(e) => onChange({ ...ap, primaryColor: e.target.value })}
@@ -248,8 +248,9 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Text Color</label>
+              <label htmlFor="text-color-label" className="block text-sm font-medium text-gray-700 mb-1">Text Color</label>
               <input
+                id="text-color-label"
                 type="color"
                 value={(ap.textColor as string) || '#111827'}
                 onChange={(e) => onChange({ ...ap, textColor: e.target.value })}
@@ -260,10 +261,11 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
 
           {/* Branding toggle */}
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">Hide Branding</span>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label htmlFor="hide-branding-label" className="w-full relative inline-flex items-center justify-between cursor-pointer">
+              <span className="text-sm font-medium text-gray-700">Hide Branding</span>
               <input
                 type="checkbox"
+                id="hide-branding-label"
                 checked={!!ap.hideNocoBranding}
                 onChange={(e) => onChange({ ...ap, hideNocoBranding: e.target.checked })}
                 className="sr-only"
@@ -278,19 +280,10 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
 
           {/* Logo URL */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Logo</label>
+            <label htmlFor="logo-url-label" className="block text-sm font-medium text-gray-700 mb-1">Logo</label>
             {!(ap.logoUrl && !logoError && !showLogoUrlInput) && (
-              <div className="flex gap-1 w-full ">
-                {!showLogoUrlInput ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowLogoUrlInput(true)}
-                    className="px-3 py-2 flex-1 border border-gray-300 rounded-xl text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 flex items-center gap-2"
-                  >
-                    <Link2 size={16} />
-                    <span>Insert via URL</span>
-                  </button>
-                ) : (
+              <div className="flex gap-2 w-full ">
+                {showLogoUrlInput ? (
                   <div className="flex-1">
                     <input
                       type="url"
@@ -311,6 +304,15 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                     />
                   </div>
 
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowLogoUrlInput(true)}
+                    className="px-3 py-2 flex-1 border border-gray-300 rounded-xl text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <Link2 size={16} />
+                    <span>Insert via URL</span>
+                  </button>
                 )}
                 <input
                   type="file"
@@ -388,8 +390,8 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
 
           {/* Banner URL */}
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">Hide Banner</span>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative w-full inline-flex items-center justify-between cursor-pointer">
+              <span className="text-sm font-medium text-gray-700">Hide Banner</span>
               <input
                 type="checkbox"
                 checked={!!ap.hideBanner}
@@ -405,29 +407,27 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Banner</label>
+            <label htmlFor="banner-url-label" className="block text-sm font-medium text-gray-700 mb-1">Banner</label>
             {!(ap.bannerUrl && !bannerError && !showBannerUrlInput) && (
               <div className="flex gap-2">
                 {showBannerUrlInput ? (
-                  <>
-                    <input
-                      type="url"
-                      placeholder="https://..."
-                      value={(ap.bannerUrl as string) || ''}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        if (v === '' || validateUrl(v)) {
-                          setBannerError(null);
-                          onChange({ ...ap, bannerUrl: v });
-                          setBannerFromBrowse(false);
-                        } else {
-                          setBannerError('Invalid URL');
-                        }
-                      }}
-                      ref={bannerUrlInputRef}
-                      className={`flex-1 field-component field-component-border field-component-focus ${bannerError ? 'border-red-500' : ''}`}
-                    />
-                  </>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={(ap.bannerUrl as string) || ''}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === '' || validateUrl(v)) {
+                        setBannerError(null);
+                        onChange({ ...ap, bannerUrl: v });
+                        setBannerFromBrowse(false);
+                      } else {
+                        setBannerError('Invalid URL');
+                      }
+                    }}
+                    ref={bannerUrlInputRef}
+                    className={`flex-1 field-component field-component-border field-component-focus ${bannerError ? 'border-red-500' : ''}`}
+                  />
                 ) : (
                   <button
                     type="button"
@@ -439,6 +439,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                   </button>
                 )}
                 <input
+                  id="banner-url-label"
                   type="file"
                   ref={bannerFileInputRef}
                   accept="image/*"
@@ -515,8 +516,9 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
           {/* Layout width */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Layout Width</label>
+              <label htmlFor="layout-width-label" className="block text-sm font-medium text-gray-700 mb-1">Layout Width</label>
               <AdvancedDropdown<string>
+                id="layout-width-label"
                 options={[
                   { label: 'Narrow', value: 'narrow' },
                   { label: 'Medium', value: 'medium' },
@@ -532,8 +534,9 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title Alignment</label>
+              <label htmlFor="title-alignment-label" className="block text-sm font-medium text-gray-700 mb-1">Title Alignment</label>
               <AdvancedDropdown<string>
+                id="title-alignment-label"
                 options={[{ label: 'Left', value: 'left' }, { label: 'Center', value: 'center' }]}
                 value={(ap.align as string) || 'left'}
                 onChange={(val: string | string[]) => {
@@ -548,8 +551,9 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
           {/* Label position & Field layout */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Label Position</label>
+              <label htmlFor="label-position-label" className="block text-sm font-medium text-gray-700 mb-1">Label Position</label>
               <AdvancedDropdown<string>
+                id="label-position-label"
                 options={[{ label: 'Top', value: 'top' }, { label: 'Left', value: 'left' }]}
                 value={(ap.labelPosition as string) || 'top'}
                 onChange={(val: string | string[]) => {
@@ -560,8 +564,9 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Field Layout</label>
+              <label htmlFor="field-layout-label" className="block text-sm font-medium text-gray-700 mb-1">Field Layout</label>
               <AdvancedDropdown<string>
+                id="field-layout-label"
                 options={[
                   { label: 'List', value: 'list' },
                   { label: 'Grid', value: 'grid-2' }
@@ -579,8 +584,9 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
           {/* Card style & Rounded */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Card Style</label>
+              <label htmlFor="card-style-label" className="block text-sm font-medium text-gray-700 mb-1">Card Style</label>
               <AdvancedDropdown<string>
+                id="card-style-label"
                 options={[{ label: 'Flat', value: 'flat' }, { label: 'Elevated', value: 'elevated' }]}
                 value={(ap.cardStyle as string) || 'flat'}
                 onChange={(val: string | string[]) => {
@@ -591,8 +597,9 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Rounded Corners</label>
+              <label htmlFor="rounded-corners-label" className="block text-sm font-medium text-gray-700 mb-1">Rounded Corners</label>
               <AdvancedDropdown<string>
+                id="rounded-corners-label"
                 options={[
                   { label: 'None', value: 'none' },
                   { label: 'Medium', value: 'md' },

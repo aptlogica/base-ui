@@ -33,9 +33,7 @@ export function getUserInitials(user: any): string {
   return 'U';
 }
 
-/**
- * Helper function to get user display name from AuthContext user data
- */
+/** Helper function to get user display name from AuthContext user data*/
 export function getUserDisplayName(user: any): string {
   if (!user) return 'User';
   

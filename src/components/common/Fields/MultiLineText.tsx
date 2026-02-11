@@ -48,14 +48,25 @@ export const MultiLineText: React.FC<MultiLineTextProps> = ({
     return null;
   };
 
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+    
+    // Call onChange immediately for real-time updates
+    onChange(newValue);
+    
+    // Clear any previous error when user starts typing
+    if (error) {
+      setError(null);
+    }
+  };
+
   const handleBlur = () => {
     const validationError = validate(localValue);
     setError(validationError);
 
-    if (!validationError && prevValueRef.current !== localValue) {
-      onChange(localValue);
-      prevValueRef.current = localValue;
-    }
+    // Update prevValueRef for comparison
+    prevValueRef.current = localValue;
   };
 
   // Fixed consistent height
@@ -75,7 +86,7 @@ export const MultiLineText: React.FC<MultiLineTextProps> = ({
       {/* Single textarea */}
       <textarea
         value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
+        onChange={handleChange}
         onBlur={handleBlur}
         placeholder={placeholder}
         disabled={disabled}

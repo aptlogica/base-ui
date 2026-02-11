@@ -686,7 +686,7 @@ describe('EditItemModal', () => {
       });
     });
 
-    it('clears preview when image dimensions are invalid', async () => {
+    it('shows error when image dimensions are invalid but keeps preview', async () => {
       const user = userEvent.setup();
       
       const mockObjectUrl = 'blob:http://localhost/large-image';
@@ -721,7 +721,7 @@ describe('EditItemModal', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/Image dimensions must be max 800 x 400px/i)).toBeInTheDocument();
-        expect(screen.queryByAltText('Preview')).not.toBeInTheDocument();
+        expect(screen.queryByAltText('Preview')).toBeInTheDocument();
       });
     });
 

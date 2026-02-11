@@ -14,17 +14,17 @@ try {
  * Implementation of the PluginManager interface
  */
 export class PluginManagerImpl implements PluginManager {
-  private plugins: Map<string, Plugin> = new Map();
-  private loadedPlugins: Set<string> = new Set();
-  private extensionPoints: Map<string, Record<string, any>> = new Map();
-  private extensions: Map<string, any[]> = new Map();
-  private services: Map<string, any> = new Map();
-  private pluginConfigs: Map<string, any> = new Map();
-  private defaultConfig: Record<string, any> = {};
-  private frameworkVersion: string = '1.0.0';
-  private configListeners: Map<string, Set<(config: any) => void>> = new Map();
-  private globalConfigListeners: Set<(pluginId: string, config: any) => void> = new Set();
-  private extensionListeners: Map<string, Set<() => void>> = new Map();
+  private readonly plugins: Map<string, Plugin> = new Map();
+  private readonly loadedPlugins: Set<string> = new Set();
+  private readonly extensionPoints: Map<string, Record<string, any>> = new Map();
+  private readonly extensions: Map<string, any[]> = new Map();
+  private readonly services: Map<string, any> = new Map();
+  private readonly pluginConfigs: Map<string, any> = new Map();
+  private readonly defaultConfig: Record<string, any> = {};
+  private readonly frameworkVersion: string = '1.0.0';
+  private readonly configListeners: Map<string, Set<(config: any) => void>> = new Map();
+  private readonly globalConfigListeners: Set<(pluginId: string, config: any) => void> = new Set();
+  private readonly extensionListeners: Map<string, Set<() => void>> = new Map();
 
   constructor(defaultConfig: Record<string, any> = {}) {
     this.defaultConfig = defaultConfig;
@@ -183,8 +183,6 @@ export class PluginManagerImpl implements PluginManager {
         return this.services.get(serviceId) as T || null;
       },
       registerService: <T>(serviceId: string, service: T): void => {
-        if (this.services.has(serviceId)) {
-        }
         this.services.set(serviceId, service);
       }
     };
@@ -285,7 +283,6 @@ export class PluginManagerImpl implements PluginManager {
   }
   
   setPluginConfig(pluginId: string, config: any): void {
-    // this.pluginConfigs.set(pluginId, config);
     const oldConfig = this.pluginConfigs.get(pluginId);
     this.pluginConfigs.set(pluginId, config);
     
@@ -414,7 +411,6 @@ export class PluginManagerImpl implements PluginManager {
       return all;
     }
     const result = this.extensions.get(pointId) || [];
-    // console.log(`[PluginManager] getExtensions(${pointId})`, { result, extensions: this.extensions });
     return result;
   }
 }

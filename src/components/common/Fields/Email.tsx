@@ -55,7 +55,7 @@ export const Email: React.FC<EmailProps> = ({
 
   // Safe email validation without ReDoS vulnerability
   // Limits input length and uses non-backtracking pattern
-  
+
   const validateEmailLength = (email: string): boolean => {
     return email !== null && email !== undefined && email.length > 0 && email.length <= 320;
   };
@@ -70,8 +70,8 @@ export const Email: React.FC<EmailProps> = ({
     for (const segment of domainParts) {
       if (!segment || segment.length === 0) return false;
       if (!/^[a-zA-Z0-9-]+$/.test(segment)) return false;
-      
-      const isLastSegment = segment === domainParts[domainParts.length - 1];
+
+      const isLastSegment = segment === domainParts.at(-1);
       if (isLastSegment && (segment.length < 2 || segment.startsWith('-'))) {
         return false;
       }
@@ -82,23 +82,23 @@ export const Email: React.FC<EmailProps> = ({
   const validateDomainPart = (domainPart: string): boolean => {
     if (!domainPart || domainPart.length === 0 || domainPart.length > 255) return false;
     if (/\s/.test(domainPart)) return false;
-    
+
     const domainParts = domainPart.split('.');
     if (domainParts.length < 2) return false;
-    
+
     return validateDomainSegments(domainParts);
   };
 
   const validateEmail = (email: string): boolean => {
     if (!validateEmailLength(email)) return false;
-    
+
     const parts = email.split('@');
     if (parts.length !== 2) return false;
-    
+
     const [localPart, domainPart] = parts;
     if (!validateLocalPart(localPart)) return false;
     if (!validateDomainPart(domainPart)) return false;
-    
+
     return true;
   };
 
@@ -157,6 +157,7 @@ export const Email: React.FC<EmailProps> = ({
 
       {/* Input or Display */}
       <button
+        type="button"
         className={`relative w-full ${className} ${isBorder ? "field-component-border" : ""}`}
         onClick={readOnly ? undefined : handleClick}
         style={readOnly ? { cursor: 'default' } : undefined}

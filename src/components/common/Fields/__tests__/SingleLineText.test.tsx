@@ -38,12 +38,14 @@ describe("SingleLineText Component", () => {
 
   describe("Editing behavior", () => {
     it("should enter edit mode on click", async () => {
+      const user = userEvent.setup();
       render(<SingleLineText value="Edit" onChange={mockOnChange} />);
-      await userEvent.click(screen.getByRole("button"));
+      await user.click(screen.getByRole("button"));
       expect(await screen.findByRole("textbox")).toBeInTheDocument();
     });
 
     it("should enter edit mode on double click when allowEdit is false", async () => {
+      const user = userEvent.setup();
       render(
         <SingleLineText
           value="Edit"
@@ -53,17 +55,18 @@ describe("SingleLineText Component", () => {
       );
 
       const button = screen.getByRole("button");
-      await userEvent.dblClick(button);
+      await user.dblClick(button);
 
       expect(await screen.findByRole("textbox")).toBeInTheDocument();
     });
 
     it("should exit edit mode when readOnly becomes true", async () => {
+      const user = userEvent.setup();
       const { rerender } = render(
         <SingleLineText value="Edit" onChange={mockOnChange} />
       );
 
-      await userEvent.click(screen.getByRole("button"));
+      await user.click(screen.getByRole("button"));
       expect(await screen.findByRole("textbox")).toBeInTheDocument();
 
       rerender(
@@ -77,14 +80,26 @@ describe("SingleLineText Component", () => {
   });
 
   describe("Keyboard interaction", () => {
-    it("should enter edit mode on Space key", async () => {
+    it("should enter edit mode on Enter key", async () => {
+      const user = userEvent.setup();
       render(<SingleLineText value="Edit" onChange={mockOnChange} />);
       const button = screen.getByRole("button");
       button.focus();
 
-      fireEvent.keyDown(button, { key: " " });
+      await user.keyboard("{Enter}");
 
       expect(await screen.findByRole("textbox")).toBeInTheDocument();
+    });
+
+    it("should not enter edit mode on Space key", async () => {
+      const user = userEvent.setup();
+      render(<SingleLineText value="Edit" onChange={mockOnChange} />);
+      const button = screen.getByRole("button");
+      button.focus();
+
+      await user.keyboard(" ");
+
+      expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     });
 
     it("should ignore key events when disabled", () => {
@@ -101,8 +116,9 @@ describe("SingleLineText Component", () => {
 
   describe("Value changes", () => {
     it("should update value on blur", async () => {
+      const user = userEvent.setup();
       render(<SingleLineText value="Old" onChange={mockOnChange} />);
-      await userEvent.click(screen.getByRole("button"));
+      await user.click(screen.getByRole("button"));
 
       const input = await screen.findByRole("textbox");
       fireEvent.change(input, { target: { value: "New" } });
@@ -114,8 +130,9 @@ describe("SingleLineText Component", () => {
     });
 
     it("should not call onChange when value does not change", async () => {
+      const user = userEvent.setup();
       render(<SingleLineText value="Same" onChange={mockOnChange} />);
-      await userEvent.click(screen.getByRole("button"));
+      await user.click(screen.getByRole("button"));
 
       const input = await screen.findByRole("textbox");
       fireEvent.blur(input);
@@ -124,11 +141,12 @@ describe("SingleLineText Component", () => {
     });
 
     it("should update value on typing when updateOnType is true", async () => {
+      const user = userEvent.setup();
       render(
         <SingleLineText value="" updateOnType onChange={mockOnChange} />
       );
 
-      await userEvent.click(screen.getByRole("button"));
+      await user.click(screen.getByRole("button"));
       const input = await screen.findByRole("textbox");
 
       fireEvent.change(input, { target: { value: "A" } });
@@ -137,8 +155,9 @@ describe("SingleLineText Component", () => {
     });
 
     it("should revert value on Escape key", async () => {
+      const user = userEvent.setup();
       render(<SingleLineText value="Keep" onChange={mockOnChange} />);
-      await userEvent.click(screen.getByRole("button"));
+      await user.click(screen.getByRole("button"));
 
       const input = await screen.findByRole("textbox");
       fireEvent.change(input, { target: { value: "Discard" } });
@@ -150,11 +169,12 @@ describe("SingleLineText Component", () => {
 
   describe("Validation", () => {
     it("should show required error on blur", async () => {
+      const user = userEvent.setup();
       render(
         <SingleLineText required value="" onChange={mockOnChange} />
       );
 
-      await userEvent.click(screen.getByRole("button"));
+      await user.click(screen.getByRole("button"));
       const input = await screen.findByRole("textbox");
       fireEvent.blur(input);
 
@@ -165,6 +185,7 @@ describe("SingleLineText Component", () => {
     });
 
     it("should show max length error", async () => {
+      const user = userEvent.setup();
       render(
         <SingleLineText
           value=""
@@ -173,7 +194,7 @@ describe("SingleLineText Component", () => {
         />
       );
 
-      await userEvent.click(screen.getByRole("button"));
+      await user.click(screen.getByRole("button"));
       const input = await screen.findByRole("textbox");
 
       fireEvent.change(input, { target: { value: "1234" } });
@@ -186,6 +207,7 @@ describe("SingleLineText Component", () => {
     });
 
     it("should not render error text when allowEdit is false", async () => {
+      const user = userEvent.setup();
       render(
         <SingleLineText
           required
@@ -196,7 +218,7 @@ describe("SingleLineText Component", () => {
       );
 
       const button = screen.getByRole("button");
-      await userEvent.dblClick(button);
+      await user.dblClick(button);
 
       const input = await screen.findByRole("textbox");
       fireEvent.blur(input);
@@ -234,13 +256,51 @@ describe("SingleLineText Component", () => {
     });
   });
 
+  describe("Read-only behavior", () => {
+    it("should not enter edit mode when readOnly", async () => {
+      const user = userEvent.setup();
+      render(
+        <SingleLineText value="Edit" readOnly onChange={mockOnChange} />
+      );
+
+      await user.click(screen.getByText("Edit"));
+
+      expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    });
+
+    it("should update display when value prop changes", () => {
+      const { rerender } = render(
+        <SingleLineText value="Old" onChange={mockOnChange} />
+      );
+
+      rerender(<SingleLineText value="New" onChange={mockOnChange} />);
+
+      expect(screen.getByText("New")).toBeInTheDocument();
+    });
+  });
+
+  describe("Helper text", () => {
+    it("should render helper text when allowEdit is true", () => {
+      render(
+        <SingleLineText
+          value="Edit"
+          helperText="Helper message"
+          onChange={mockOnChange}
+        />
+      );
+
+      expect(screen.getByText("Helper message")).toBeInTheDocument();
+    });
+  });
+
   describe("Disabled state", () => {
     it("should not enter edit mode when disabled", async () => {
+      const user = userEvent.setup();
       render(
         <SingleLineText value="Edit" disabled onChange={mockOnChange} />
       );
 
-      await userEvent.click(screen.getByRole("button"));
+      await user.click(screen.getByRole("button"));
 
       expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     });

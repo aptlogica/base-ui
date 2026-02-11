@@ -57,7 +57,7 @@ export declare class BaseService {
      * Upload or update base image
      * POST /base/:id/image
      */
-    uploadImage(id: string, imageFile: File): Promise<import("..").StandardResponse<any>>;
+    uploadImage(id: string, imageFile: File | Blob): Promise<import("..").StandardResponse<any>>;
     /**
      * Delete base image
      * DELETE /base/:id/image
