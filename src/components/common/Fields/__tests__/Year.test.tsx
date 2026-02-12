@@ -174,97 +174,65 @@ describe('Year Component', () => {
     it('should enter edit mode on double-click', async () => {
       render(<Year value={2024} onChange={mockOnChange} allowEdit={true} />);
       const button = getMainButton();
-      fireEvent.doubleClick(button);
-      
-      await waitFor(() => {
-        const input = screen.queryByRole('textbox');
-        expect(input).toBeInTheDocument();
-      });
+      const user = userEvent.setup();
+      await user.dblClick(button);
+      const input = await screen.findByRole('textbox');
+      expect(input).toBeInTheDocument();
     });
 
     it('should accept year input in edit mode', async () => {
       render(<Year value={null} onChange={mockOnChange} allowEdit={true} />);
       const button = getMainButton();
-      fireEvent.doubleClick(button);
-      
-      await waitFor(async () => {
-        const input = screen.queryByRole('textbox');
-        if (input) {
-          await userEvent.type(input, '2025');
-          fireEvent.keyDown(input, { key: 'Enter' });
-          await waitFor(() => {
-            expect(mockOnChange).toHaveBeenCalled();
-          });
-        }
-      });
+      const user = userEvent.setup();
+      await user.dblClick(button);
+      const input = await screen.findByRole('textbox');
+      await user.type(input, '2025{enter}');
+      expect(mockOnChange).toHaveBeenCalled();
     });
 
     it('should exit edit mode on Escape key', async () => {
       render(<Year value={2024} onChange={mockOnChange} allowEdit={true} />);
       const button = getMainButton();
-      fireEvent.doubleClick(button);
-      
+      const user = userEvent.setup();
+      await user.dblClick(button);
+      const input = await screen.findByRole('textbox');
+      fireEvent.keyDown(input, { key: 'Escape' });
       await waitFor(() => {
-        const input = screen.queryByRole('textbox');
-        if (input) {
-          fireEvent.keyDown(input, { key: 'Escape' });
-        }
-      });
-
-      await waitFor(() => {
-        const input = screen.queryByRole('textbox');
-        expect(input).not.toBeInTheDocument();
+        expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
       });
     });
 
     it('should handle year input with Enter key', async () => {
       render(<Year value={null} onChange={mockOnChange} allowEdit={true} />);
       const button = getMainButton();
-      fireEvent.doubleClick(button);
-      
-      await waitFor(async () => {
-        const input = screen.queryByRole('textbox');
-        if (input) {
-          await userEvent.clear(input);
-          await userEvent.type(input, '1995');
-          fireEvent.keyDown(input, { key: 'Enter' });
-          await waitFor(() => {
-            expect(mockOnChange).toHaveBeenCalled();
-          });
-        }
-      });
+      const user = userEvent.setup();
+      await user.dblClick(button);
+      const input = await screen.findByRole('textbox');
+      await user.clear(input);
+      await user.type(input, '1995{enter}');
+      expect(mockOnChange).toHaveBeenCalled();
     });
 
     it('should exit edit mode on blur', async () => {
       render(<Year value={2024} onChange={mockOnChange} allowEdit={true} />);
       const button = getMainButton();
-      fireEvent.doubleClick(button);
-      
+      const user = userEvent.setup();
+      await user.dblClick(button);
+      const input = await screen.findByRole('textbox');
+      fireEvent.blur(input);
       await waitFor(() => {
-        const input = screen.queryByRole('textbox');
-        if (input) {
-          fireEvent.blur(input);
-        }
-      });
-
-      await waitFor(() => {
-        const input = screen.queryByRole('textbox');
-        expect(input).not.toBeInTheDocument();
+        expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
       });
     });
 
     it('should limit input to 4 digits', async () => {
       render(<Year value={null} onChange={mockOnChange} allowEdit={true} />);
       const button = getMainButton();
-      fireEvent.doubleClick(button);
-      
-      await waitFor(async () => {
-        const input = screen.queryByRole('textbox') as HTMLInputElement;
-        if (input) {
-          await userEvent.type(input, '12345');
-          expect(input.value.length).toBeLessThanOrEqual(4);
-        }
-      });
+      const user = userEvent.setup();
+      await user.dblClick(button);
+      const input = await screen.findByRole('textbox');
+      await user.type(input, '12345');
+      expect((input as HTMLInputElement).value.length).toBeLessThanOrEqual(4);
     });
   });
 
@@ -558,32 +526,24 @@ describe('Year Component', () => {
     it('should handle non-numeric input', async () => {
       render(<Year value={null} onChange={mockOnChange} allowEdit={true} />);
       const button = getMainButton();
-      fireEvent.doubleClick(button);
-      
-      await waitFor(async () => {
-        const input = screen.queryByRole('textbox') as HTMLInputElement;
-        if (input) {
-          await userEvent.type(input, 'abc');
-          fireEvent.blur(input);
-          expect(mockOnChange).toHaveBeenCalledWith('');
-        }
-      });
+      const user = userEvent.setup();
+      await user.dblClick(button);
+      const input = await screen.findByRole('textbox');
+      await user.type(input, 'abc');
+      fireEvent.blur(input);
+      expect(mockOnChange).not.toHaveBeenCalled();
     });
 
     it('should handle empty input', async () => {
       render(<Year value={2024} onChange={mockOnChange} allowEdit={true} />);
       const button = getMainButton();
-      fireEvent.doubleClick(button);
-      
-      await waitFor(async () => {
-        const input = screen.queryByRole('textbox') as HTMLInputElement;
-        if (input) {
-          await userEvent.clear(input);
-          fireEvent.blur(input);
-          await waitFor(() => {
-            expect(mockOnChange).toHaveBeenCalledWith('');
-          });
-        }
+      const user = userEvent.setup();
+      await user.dblClick(button);
+      const input = await screen.findByRole('textbox');
+      await user.clear(input);
+      fireEvent.blur(input);
+      await waitFor(() => {
+        expect(mockOnChange).toHaveBeenCalledWith('');
       });
     });
   });
