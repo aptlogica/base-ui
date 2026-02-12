@@ -245,6 +245,7 @@ export const Table: React.FC<TableProps> = ({
   // Edit record modal state
   const [isEditRecordModalOpen, setIsEditRecordModalOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
   const openEditRecordModal = useCallback((rowId: string) => {
     setSelectedRecordId(rowId);
@@ -257,13 +258,20 @@ export const Table: React.FC<TableProps> = ({
     setSelectedRecordId(null);
   }, []);
 
-  // Wrap handleContextMenu to prevent opening for readonly users
+  // Wrap handleContextMenu to prevent opening for readonly users and multi-select state
   const handleContextMenu = useCallback((e: React.MouseEvent, rowId: string) => {
     if (isBaseReadOnly() || !canCreateRecord()) {
+      e.preventDefault();
+      e.stopPropagation();
       return; // Don't show context menu for readonly users
     }
+    if (selectedRows.size > 1) {
+      e.preventDefault();
+      e.stopPropagation();
+      return; // Context menu is only supported for single-record actions
+    }
     originalHandleContextMenu(e, rowId);
-  }, [isBaseReadOnly, canCreateRecord, originalHandleContextMenu]);
+  }, [isBaseReadOnly, canCreateRecord, selectedRows, originalHandleContextMenu]);
 
   // Column management hook
   const {
@@ -322,8 +330,13 @@ export const Table: React.FC<TableProps> = ({
   const tableRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const addColumnButtonRef = useRef<HTMLButtonElement | null>(null);
-  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [openColumnDropdownIndex, setOpenColumnDropdownIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (selectedRows.size > 1 && contextMenu.open) {
+      handleCloseContextMenu();
+    }
+  }, [selectedRows, contextMenu.open, handleCloseContextMenu]);
 
   // Static column widths (no resize). Prefer view meta widths, else column.width, else 235.
   const columnWidths = useMemo(() => {
@@ -934,7 +947,7 @@ export const Table: React.FC<TableProps> = ({
 
 
       {/* Context menu for row actions - hide for readonly users */}
-      {contextMenu.open && contextMenu.rowId !== null && !isBaseReadOnly() && canCreateRecord() && (
+      {contextMenu.open && contextMenu.rowId !== null && !isBaseReadOnly() && canCreateRecord() && selectedRows.size <= 1 && (
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
