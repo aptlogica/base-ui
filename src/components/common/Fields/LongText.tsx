@@ -601,7 +601,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   <button
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); execCommand('bold', null, e); }}
-                    className="p-1.5 hover:bg-gray-200 rounded transition-colors"
+                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
                     title="Bold (Ctrl+B)"
                   >
                     <Bold className="w-4 h-4" />
@@ -609,7 +609,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   <button
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); execCommand('italic', null, e); }}
-                    className="p-1.5 hover:bg-gray-200 rounded transition-colors"
+                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
                     title="Italic (Ctrl+I)"
                   >
                     <Italic className="w-4 h-4" />
@@ -617,7 +617,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   <button
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); execCommand('underline', null, e); }}
-                    className="p-1.5 hover:bg-gray-200 rounded transition-colors"
+                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
                     title="Underline (Ctrl+U)"
                   >
                     <Underline className="w-4 h-4" />
@@ -625,7 +625,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   <button
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); execCommand('strikeThrough', null, e); }}
-                    className="p-1.5 hover:bg-gray-200 rounded transition-colors"
+                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
                     title="Strikethrough"
                   >
                     <Strikethrough className="w-4 h-4" />
@@ -634,7 +634,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   <button
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); insertList('ul', e); }}
-                    className="p-1.5 hover:bg-gray-200 rounded transition-colors"
+                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
                     title="Bullet List"
                   >
                     <List className="w-4 h-4" />
@@ -642,7 +642,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   <button
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); insertList('ol', e); }}
-                    className="p-1.5 hover:bg-gray-200 rounded transition-colors"
+                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
                     title="Numbered List"
                   >
                     <ListOrdered className="w-4 h-4" />
@@ -651,7 +651,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   <button
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); execCommand('formatBlock', 'blockquote', e); }}
-                    className="p-1.5 hover:bg-gray-200 rounded transition-colors"
+                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
                     title="Quote"
                   >
                     <Quote className="w-4 h-4" />
@@ -659,7 +659,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   <button
                     type="button"
                     onMouseDown={insertLink}
-                    className="p-1.5 hover:bg-gray-200 rounded transition-colors"
+                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
                     title="Link"
                     disabled={!richText}
                   >
