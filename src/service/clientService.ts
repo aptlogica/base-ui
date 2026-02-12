@@ -325,8 +325,11 @@ export const forceLogout = async (): Promise<void> => {
   // Fallback: Only use globalThis.location if no component handles the event within 100ms
   // This ensures we still redirect even if no component is listening
   setTimeout(() => {
+    const pathname = globalThis.location?.pathname;
+    if (!pathname) return;
+
     // Check if we're still on a non-login page (event wasn't handled)
-    if (globalThis.location.pathname !== '/login' && !globalThis.location.pathname.startsWith('/login')) {
+    if (pathname !== '/login' && !pathname.startsWith('/login')) {
       globalThis.location.href = '/login';
     }
   }, 100);
@@ -702,7 +705,23 @@ export async function getAllBasesService() {
 }
 
 export async function updateBaseService(id: string, params: any) {
-  return await makeAuthenticatedCall(() => client.baseService.update(id, params));
+  // Separate image from other params since it needs special handling
+  const { image, ...updateParams } = params;
+  
+  // Always update the base metadata first
+  const updateResult = await makeAuthenticatedCall(() => client.baseService.update(id, updateParams));
+  
+  // If image is provided, upload it separately
+  if (image instanceof File || image instanceof Blob) {
+    try {
+      await makeAuthenticatedCall(() => client.baseService.uploadImage(id, image));
+    } catch (error) {
+      console.error('Failed to upload base image:', error);
+      // Don't throw - metadata was successfully updated, only image upload failed
+    }
+  }
+  
+  return updateResult;
 }
 
 export async function deleteBaseService(id: string) {

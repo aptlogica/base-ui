@@ -11,6 +11,7 @@ interface BaseMenuProps {
   canEdit?: boolean;
   canDelete?: boolean;
   canAddMembers?: boolean;
+  align?: 'left' | 'right'
 }
 
 export const BaseMenu: React.FC<BaseMenuProps> = ({
@@ -21,6 +22,7 @@ export const BaseMenu: React.FC<BaseMenuProps> = ({
   canEdit = true,
   canDelete = true,
   canAddMembers = true,
+  align = "right"
 }) => {
   const menuItems = [
     ...(canEdit ? [{
@@ -43,7 +45,7 @@ export const BaseMenu: React.FC<BaseMenuProps> = ({
 
   return (
     <PopoverMenu
-      align="right"
+      align={align}
       portaled={true}
       trigger={<MoreVertical className="w-4 h-4 text-gray-500" />}
       items={menuItems}

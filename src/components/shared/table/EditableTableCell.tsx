@@ -8,7 +8,7 @@ import {
   SingleSelect,
   MultiSelect,
   LongText,
-  URL,
+  URLField,
   Rating,
   Attachment,
   PhoneNumber,
@@ -190,22 +190,22 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
     if (val === null || val === undefined || val === '') return defaultValue ?? null;
     if (typeof val === 'number') {
       // Handle NaN and Infinity
-      if (isNaN(val) || !isFinite(val)) return defaultValue ?? null;
+      if (globalThis.Number.isNaN(val) || !globalThis.Number.isFinite(val)) return defaultValue ?? null;
       return val.toString();
     }
     if (typeof val === 'string') {
       const trimmed = val.trim();
       if (trimmed === '' || trimmed === 'null') return defaultValue ?? null;
       // Check if it's a valid number (remove commas first)
-      const cleanValue = trimmed.replace(/,/g, '');
-      const num = parseFloat(cleanValue);
-      if (!isNaN(num) && isFinite(num)) return num.toString();
+      const cleanValue = trimmed.replaceAll(',', '');
+      const num = globalThis.Number.parseFloat(cleanValue);
+      if (!globalThis.Number.isNaN(num) && globalThis.Number.isFinite(num)) return num.toString();
       // Invalid numeric string - use default
       return defaultValue ?? null;
     }
     // For other types, try to convert to number
-    const num = Number(val);
-    return (!isNaN(num) && isFinite(num)) ? num.toString() : (defaultValue ?? null);
+    const num = globalThis.Number(val);
+    return (!globalThis.Number.isNaN(num) && globalThis.Number.isFinite(num)) ? num.toString() : (defaultValue ?? null);
   }, []);
 
   // Helper function to normalize date values - handles old text values when field type was changed
@@ -261,21 +261,21 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
     if (val === null || val === undefined || val === '') return defaultValue ?? null;
     if (typeof val === 'number') {
       // Validate year range (reasonable years between 1000 and 9999)
-      if (isNaN(val) || !isFinite(val) || val < 1000 || val > 9999) return defaultValue ?? null;
+      if (globalThis.Number.isNaN(val) || !globalThis.Number.isFinite(val) || val < 1000 || val > 9999) return defaultValue ?? null;
       return Math.floor(val);
     }
     if (typeof val === 'string') {
       const trimmed = val.trim();
       if (trimmed === '' || trimmed === 'null') return defaultValue ?? null;
-      const num = parseInt(trimmed, 10);
+      const num = globalThis.Number.parseInt(trimmed, 10);
       // Validate year range
-      if (!isNaN(num) && isFinite(num) && num >= 1000 && num <= 9999) return num;
+      if (!globalThis.Number.isNaN(num) && globalThis.Number.isFinite(num) && num >= 1000 && num <= 9999) return num;
       // Invalid year string - use default
       return defaultValue ?? null;
     }
     // For other types, try to convert to number
-    const num = Number(val);
-    if (!isNaN(num) && isFinite(num) && num >= 1000 && num <= 9999) return Math.floor(num);
+    const num = globalThis.Number(val);
+    if (!globalThis.Number.isNaN(num) && globalThis.Number.isFinite(num) && num >= 1000 && num <= 9999) return Math.floor(num);
     return defaultValue ?? null;
   }, []);
 
@@ -287,7 +287,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
     };
     switch (fieldType) {
       case 'text': return <SingleLineText {...commonProps} maxLength={255} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      case 'longText': return <LongText {...commonProps} maxLength={1000} minRows={2} maxRows={4} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+      case 'longText': return <LongText {...commonProps} maxLength={1000} maxRows={4} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       case 'number': {
         // Normalize value to numeric string - handle old text values when field type was changed
         const normalizedValue = normalizeNumericValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
@@ -297,7 +297,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
         // Normalize value to numeric - handle old text values when field type was changed
         const normalizedValue = normalizeNumericValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
         // Convert to number for Decimal component (it expects number | null)
-        const numValue = normalizedValue ? parseFloat(normalizedValue) : null;
+        const numValue = normalizedValue ? globalThis.Number.parseFloat(normalizedValue) : null;
         let precision = 2;
         if (parsedConfig?.precision && typeof parsedConfig.precision === 'string' && parsedConfig.precision.includes('.')) {
           const parts = parsedConfig.precision.split('.');
@@ -342,7 +342,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
         // Normalize value to numeric - handle old text values when field type was changed
         const normalizedValue = normalizeNumericValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
         // Convert to number for Currency component (it expects number | null)
-        const numValue = normalizedValue ? parseFloat(normalizedValue) : null;
+        const numValue = normalizedValue ? globalThis.Number.parseFloat(normalizedValue) : null;
         let precision = 2;
         if (parsedConfig?.precision && typeof parsedConfig.precision === 'string' && parsedConfig.precision.includes('.')) {
           const parts = parsedConfig.precision.split('.');
@@ -354,7 +354,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
         // Normalize value to numeric - handle old text values when field type was changed
         const normalizedValue = normalizeNumericValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
         // Convert to number for Percent component (it expects number | null)
-        const numValue = normalizedValue ? parseFloat(normalizedValue) : null;
+        const numValue = normalizedValue ? globalThis.Number.parseFloat(normalizedValue) : null;
         return <Percent value={numValue} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       }
       case 'duration': {
@@ -393,9 +393,17 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
       }
       case 'email': return <Email {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       case 'phoneNumber': return <PhoneNumber {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      case 'url': return <URL {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+      case 'url': return <URLField {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
       case 'select': return <SingleSelect {...commonProps} options={parsedConfig?.options || []} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      case 'multiSelect': return <MultiSelect value={Array.isArray(value) ? value : (typeof value === 'string' ? JSON.parse(value || '[]') : [])} onChange={(newValue) => onChange(newValue)} options={parsedConfig?.options || []} maxSelections={10} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+      case 'multiSelect': {
+        let multiSelectValue = [];
+        if (Array.isArray(value)) {
+          multiSelectValue = value;
+        } else if (typeof value === 'string') {
+          multiSelectValue = JSON.parse(value || '[]');
+        }
+        return <MultiSelect value={multiSelectValue} onChange={(newValue) => onChange(newValue)} options={parsedConfig?.options || []} maxSelections={10} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+      }
       case 'rating': return <Rating {...commonProps} value={value} max={parsedConfig?.ratingMax || 5} readOnly={!allowEdit} config={parsedConfig} />;
       case 'user': return <User {...commonProps} readOnly={!allowEdit} config={parsedConfig} />;
       case 'json': return <JSONField {...commonProps} value={value} config={parsedConfig} readOnly={!allowEdit} />;
@@ -448,7 +456,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
 
   return (
     <div
-      className={`flex-shrink-0 h-10 flex items-center px-0 ${isLast ? 'border-r border-border/20' : 'border-r border-border/20'} ${isLast ? 'border-b border-border/20' : 'border-b border-border/20'}`}
+      className={`flex-shrink-0 h-10 flex items-center px-0 ${isLast ? 'border-r' : 'border-r border-border/20'} border-b border-border/20`}
       style={{ width: `${width}px`, height: '40px', minHeight: '40px', maxHeight: '40px' }}
     >
       <div className="w-full min-w-0">
@@ -579,7 +587,6 @@ export const EditableTableCell = React.memo(EditableTableCellComponent, (prevPro
 
   // Compare onChange function reference
   // Note: This will cause re-render if parent creates new function each time
-  // But we can't do deep comparison on functions
   if (prevProps.onChange !== nextProps.onChange) {
     return false;
   }

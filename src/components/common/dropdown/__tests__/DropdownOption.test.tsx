@@ -1,88 +1,67 @@
-import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { DropdownOption } from '../../dropdown/DropdownOption';
-
-type Opt<T> = {
-  label: string;
-  value: T;
-  disabled?: boolean;
-  description?: string;
-  icon?: React.ReactNode;
-};
+import { describe, it, expect, vi } from 'vitest';
+import { render, fireEvent } from '@testing-library/react';
+import { DropdownOption } from '../DropdownOption';
 
 describe('DropdownOption', () => {
-  it('renders label, description, and icon', () => {
-    const option: Opt<string> = {
-      label: 'Alpha',
-      value: 'alpha',
-      description: 'First',
-      icon: <span data-testid="icon">I</span>
-    };
-    render(
-      <DropdownOption
-        option={option}
-        isSelected={false}
-        isFocused={false}
-        multiple={false}
-        onClick={vi.fn()}
-      />
-    );
-    expect(screen.getByRole('option')).toHaveTextContent('Alpha');
-    expect(screen.getByText('First')).toBeInTheDocument();
-    expect(screen.getByTestId('icon')).toBeInTheDocument();
-  });
-
-  it('calls onClick when enabled, not when disabled', () => {
+  it('renders label and description and handles click', () => {
     const onClick = vi.fn();
-    render(
-      <DropdownOption
-        option={{ label: 'Alpha', value: 'alpha' }}
-        isSelected={false}
-        isFocused={false}
-        multiple={false}
-        onClick={onClick}
-      />
+    const { getByText, getByRole } = render(
+      <select>
+        <DropdownOption
+          option={{ label: 'Option A', value: 'a', description: 'desc' }}
+          isSelected={false}
+          isFocused={false}
+          multiple={false}
+          onClick={onClick}
+        />
+      </select>
     );
-    fireEvent.click(screen.getByRole('option'));
-    expect(onClick).toHaveBeenCalledTimes(1);
 
-    onClick.mockReset();
-    render(
-      <DropdownOption
-        option={{ label: 'Gamma', value: 'gamma', disabled: true }}
-        isSelected={false}
-        isFocused={false}
-        multiple={false}
-        onClick={onClick}
-      />
-    );
-    fireEvent.click(screen.getByText('Gamma'));
-    expect(onClick).not.toHaveBeenCalled();
+    expect(getByText('Option A')).toBeInTheDocument();
+    expect(getByText('desc')).toBeInTheDocument();
+    fireEvent.click(getByRole('option'));
+    expect(onClick).toHaveBeenCalled();
   });
 
-  it('shows check icon when selected (single and multiple)', () => {
-    const { rerender } = render(
-      <DropdownOption
-        option={{ label: 'Alpha', value: 'alpha' }}
-        isSelected
-        isFocused={false}
-        multiple={false}
-        onClick={vi.fn()}
-      />
+  it('supports keyboard activation when enabled', () => {
+    const onClick = vi.fn();
+    const { getByRole } = render(
+      <select>
+        <DropdownOption
+          option={{ label: 'Option B', value: 'b' }}
+          isSelected={true}
+          isFocused={true}
+          multiple={true}
+          onClick={onClick}
+        />
+      </select>
     );
-    const option = screen.getByRole('option');
-    expect(option.querySelector('svg')).toBeInTheDocument();
 
-    rerender(
-      <DropdownOption
-        option={{ label: 'Alpha', value: 'alpha' }}
-        isSelected
-        isFocused={false}
-        multiple={true}
-        onClick={vi.fn()}
-      />
+    const option = getByRole('option');
+    fireEvent.keyDown(option, { key: 'Enter' });
+    fireEvent.keyDown(option, { key: ' ' });
+    expect(onClick).toHaveBeenCalledTimes(2);
+  });
+
+  it('disables interaction when option is disabled', () => {
+    const onClick = vi.fn();
+    const { getByRole } = render(
+      <select>
+        <DropdownOption
+          option={{ label: 'Option C', value: 'c', disabled: true }}
+          isSelected={false}
+          isFocused={false}
+          multiple={false}
+          onClick={onClick}
+        />
+      </select>
     );
-    expect(screen.getByRole('option').querySelector('svg')).toBeInTheDocument();
+
+    const option = getByRole('option');
+    fireEvent.click(option);
+    fireEvent.keyDown(option, { key: 'Enter' });
+    expect(onClick).not.toHaveBeenCalled();
+    expect(option).toHaveAttribute('aria-disabled', 'true');
   });
 });

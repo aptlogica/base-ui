@@ -268,6 +268,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
   const {
     rowData,
     formError,
+    submitting,
     setFormError,
     setSubmitting,
     setSubmitSuccess,
@@ -313,8 +314,6 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
   }, [tableData?.views, viewId]);
 
   // Get processed data from local transformation (consistent with GridView pattern)
-  // Optimized with Map for O(1) fieldConfig lookups instead of O(n) find() calls
-  // MUST be called before early return
   const allColumns = useMemo(() => {
     if (!tableData?.columns) return [];
     
@@ -375,7 +374,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
   }
 
   // Handle form submit - delegate to data layer
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormError(null);
     setSubmitting(true);
@@ -626,7 +625,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
       onConfigChange: undefined
     } : {
       onClear: clearFormData,
-      onSubmit: (e: React.FormEvent) => {
+      onSubmit: (e:React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault();
         handleFormSubmit(e);
       },
@@ -651,6 +650,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
           onEdit={previewHandlers.onEdit}
           onConfigChange={previewHandlers.onConfigChange}
           isReadOnly={isReadOnly}
+          isSubmitting={submitting}
         />
       </div>
     );

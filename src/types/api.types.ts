@@ -27,6 +27,7 @@ export interface Workspace {
   access_level: string;
   created_time: string;
   last_modified_time: string;
+  bases?: Base[]; // Include bases when fetched with workspace
 }
 
 export type WorkspacesResponse = ApiResponse<Workspace[]>;
@@ -113,6 +114,8 @@ export interface TableItem {
   columns: unknown[] | null;
   views: unknown[] | null;
   records: unknown[] | null;
+  id?: string; // Convenience property for model.id
+  table_id?: string; // Legacy property
 }
 
 export type TablesResponse = ApiResponse<TableItem[]>;

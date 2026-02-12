@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, CheckCircle, Info } from "lucide-react";
+import { ArrowLeft, CheckCircle } from "lucide-react";
 import { forgotPassword } from "../service/clientService";
 
 const ForgotPasswordPage: React.FC = () => {
@@ -61,8 +61,8 @@ const ForgotPasswordPage: React.FC = () => {
     }
     
     // Check TLD (last part) has at least 2 characters
-    const tld = domainParts[domainParts.length - 1];
-    if (tld.length < 2) {
+    const tld = domainParts.at(-1);
+    if (tld?.length < 2) {
       return false;
     }
     
@@ -76,7 +76,7 @@ const ForgotPasswordPage: React.FC = () => {
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setEmailError(null);
@@ -175,11 +175,6 @@ const ForgotPasswordPage: React.FC = () => {
               className={`field-component field-component-border field-component-focus placeholder-[var(--color-text-placeholder)] ${emailError ? "border-destructive bg-red-50" : ""} shadow-[var(--shadow-xs)]`}
               style={{ boxShadow: "var(--shadow-xs)" }}
             />
-            {emailError && (
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                <Info className="w-4 h-4 text-red-400" />
-              </div>
-            )}
             {emailError && <div className="mt-1.5 text-red-500 text-sm">{emailError}</div>}
           </div>
 

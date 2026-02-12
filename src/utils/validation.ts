@@ -4,13 +4,40 @@ export type LoginForm = {
 };
 
 export const validateEmail = (value: string): string | null => {
-  if (!value || !value.trim()) return 'This field is required';
-  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-  return ok ? null : 'Please enter a valid email address';
+  if (!value?.trim()) return 'This field is required';
+  const trimmed = value.trim();
+  if (!trimmed) return 'This field is required';
+  for (let i = 0; i < trimmed.length; i++) {
+    if (
+      trimmed[i] === ' ' ||
+      trimmed[i] === '\n' ||
+      trimmed[i] === '\r' ||
+      trimmed[i] === '\t' ||
+      trimmed[i] === '\f' ||
+      trimmed[i] === '\v'
+    ) {
+      return 'Please enter a valid email address';
+    }
+  }
+
+  const atIndex = trimmed.indexOf('@');
+  if (atIndex <= 0) return 'Please enter a valid email address';
+  if (trimmed.lastIndexOf('@') !== atIndex) return 'Please enter a valid email address';
+
+  const local = trimmed.slice(0, atIndex);
+  const domain = trimmed.slice(atIndex + 1);
+  if (!local || !domain) return 'Please enter a valid email address';
+
+  const dotIndex = domain.lastIndexOf('.');
+  if (dotIndex <= 0 || dotIndex === domain.length - 1) {
+    return 'Please enter a valid email address';
+  }
+
+  return null;
 };
 
 export const validatePassword = (value: string, minLen = 6): string | null => {
-  if (!value || !value.trim()) return 'This field is required';
+  if (!value?.trim()) return 'This field is required';
   if (value.trim().length < minLen) return `Password must be at least ${minLen} characters long`;
   return null;
 };
@@ -47,7 +74,7 @@ export const validatePasswordStrength = (
   const hasLength = pwd.length >= 8;
   const hasUpper = /[A-Z]/.test(pwd);
   const hasLower = /[a-z]/.test(pwd);
-  const hasNumber = /[0-9]/.test(pwd);
+  const hasNumber = /\d/.test(pwd);
   const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(pwd);
 
   // Check if password contains name or email (should NOT contain these)
@@ -128,7 +155,7 @@ export const validatePasswordStrength = (
 };
 
 export const validateRequired = (value: string): string | null => {
-  if (!value || !value.trim()) return 'This field is required';
+  if (!value?.trim()) return 'This field is required';
   return null;
 };
 

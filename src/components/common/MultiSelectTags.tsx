@@ -22,7 +22,6 @@ export interface MultiSelectTagsProps {
   getOptionValue?: (option: MultiSelectTagsOption) => string | number;
   showDisabledAsSelected?: boolean; // Show disabled options as selected tags in input
   id?: string; // For label association via htmlFor
-  'aria-labelledby'?: string; // For label association
 }
 
 export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
@@ -38,7 +37,6 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
   getOptionValue = (option) => option.value,
   showDisabledAsSelected = false,
   id,
-  'aria-labelledby': ariaLabelledBy,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -238,8 +236,6 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
         `}
         onClick={handleInputClick}
         onKeyDown={handleKeyDown}
-        role="button"
-        tabIndex={0}
       >
         {/* Search Icon */}
         <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -258,8 +254,8 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
                   <div
                     key={optionValue}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm flex-shrink-0 ${isDisabled
-                        ? 'bg-gray-200 text-gray-500 border border-gray-300'
-                        : 'bg-gray-100 text-gray-700'
+                      ? 'bg-gray-200 text-gray-500 border border-gray-300'
+                      : 'bg-gray-100 text-gray-700'
                       }`}
                   >
                     <span className="truncate max-w-[150px]">{label}</span>

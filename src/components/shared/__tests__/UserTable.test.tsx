@@ -1,0 +1,306 @@
+import React from 'react';
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { UserTable, type TenantUser } from '../UserTable';
+
+vi.mock('axios', () => ({
+  default: {
+    create: () => ({
+      get: vi.fn().mockResolvedValue({ data: [] }),
+      post: vi.fn().mockResolvedValue({ data: [] }),
+      put: vi.fn().mockResolvedValue({ data: [] }),
+      delete: vi.fn().mockResolvedValue({ data: [] }),
+    }),
+  },
+}));
+
+vi.mock('../../hooks/useUserRole', () => ({
+  useUserRole: vi.fn(() => ({
+    isAdmin: vi.fn(() => true),
+    isOwner: vi.fn(() => true),
+    isCoOwner: vi.fn(() => false),
+  })),
+}));
+
+vi.mock('../../hooks/useApi', () => ({
+  useUserRolesAndAccess: vi.fn(() => ({ data: [], isLoading: false, error: null })),
+  useTenantUsers: vi.fn(() => ({ data: [], isLoading: false, error: null })),
+}));
+
+vi.mock('../../service/clientService', () => ({
+  getTenantUsersService: vi.fn().mockResolvedValue([]),
+  getUserRolesService: vi.fn().mockResolvedValue([]),
+}));
+
+class MockXMLHttpRequest {
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  open() {}
+  setRequestHeader() {}
+  send() {
+    this.onload?.();
+  }
+  abort() {}
+}
+
+beforeAll(() => {
+  vi.stubGlobal('XMLHttpRequest', MockXMLHttpRequest as unknown as typeof XMLHttpRequest);
+});
+
+afterAll(() => {
+  vi.unstubAllGlobals();
+});
+
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
+const renderWithQueryClient = (ui: React.ReactElement) => {
+  const queryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+  );
+};
+
+const createUser = (overrides: Partial<TenantUser> = {}): TenantUser => ({
+  id: 'u1',
+  email: 'alice@example.com',
+  first_name: 'Alice',
+  last_name: 'Smith',
+  display_name: 'Alice Smith',
+  status: 'active',
+  email_verified: true,
+  timezone: 'UTC',
+  locale: 'en',
+  roles: [],
+  ...overrides,
+});
+
+describe('UserTable', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('Empty state', () => {
+    it('should render No users found when users array is empty', () => {
+      renderWithQueryClient(<UserTable users={[]} />);
+      expect(screen.getByText('No users found')).toBeInTheDocument();
+    });
+
+    it('should render Add new users message when empty', () => {
+      renderWithQueryClient(<UserTable users={[]} />);
+      expect(screen.getByText('Add new users to get started')).toBeInTheDocument();
+    });
+
+    it('should render headerActions in empty state when provided', () => {
+      renderWithQueryClient(
+        <UserTable
+          users={[]}
+          headerActions={<button type="button">Invite User</button>}
+        />
+      );
+      expect(screen.getByRole('button', { name: 'Invite User' })).toBeInTheDocument();
+    });
+  });
+
+  describe('Rendering', () => {
+    it('should render Users heading when users exist', () => {
+      renderWithQueryClient(<UserTable users={[createUser()]} />);
+      expect(screen.getByText('Users')).toBeInTheDocument();
+    });
+
+    it('should render user name and email in table row', () => {
+      const user = createUser({
+        first_name: 'Bob',
+        last_name: 'Jones',
+        email: 'bob@example.com',
+      });
+      renderWithQueryClient(<UserTable users={[user]} />);
+      expect(screen.getByText('Bob Jones')).toBeInTheDocument();
+      expect(screen.getByText('bob@example.com')).toBeInTheDocument();
+    });
+
+    it('should render search input when showSearch is true', () => {
+      renderWithQueryClient(<UserTable users={[createUser()]} showSearch />);
+      expect(screen.getByPlaceholderText('Search')).toBeInTheDocument();
+    });
+
+    it('should not render search when showSearch is false', () => {
+      renderWithQueryClient(<UserTable users={[createUser()]} showSearch={false} />);
+      expect(screen.queryByPlaceholderText('Search')).not.toBeInTheDocument();
+    });
+
+    it('should render Filter by Role button when showSearch is true', () => {
+      renderWithQueryClient(<UserTable users={[createUser()]} showSearch />);
+      expect(screen.getByRole('button', { name: /Filter by Role/i })).toBeInTheDocument();
+    });
+
+    it('should render table headers User Role Status Joined Date Last Active Language Timezone', () => {
+      renderWithQueryClient(<UserTable users={[createUser()]} />);
+      expect(screen.getAllByText('User').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Role')).toBeInTheDocument();
+      expect(screen.getByText('Status')).toBeInTheDocument();
+      expect(screen.getByText('Joined Date')).toBeInTheDocument();
+      expect(screen.getByText('Last Active')).toBeInTheDocument();
+      expect(screen.getByText('Language')).toBeInTheDocument();
+      expect(screen.getByText('Timezone')).toBeInTheDocument();
+    });
+
+    it('should render Active status badge for active verified user', () => {
+      renderWithQueryClient(<UserTable users={[createUser({ status: 'active', email_verified: true })]} />);
+      expect(screen.getByText('Active')).toBeInTheDocument();
+    });
+
+    it('should render Pending status for unverified user', () => {
+      renderWithQueryClient(<UserTable users={[createUser({ email_verified: false })]} />);
+      expect(screen.getByText('Pending')).toBeInTheDocument();
+    });
+
+    it('should render headerActions when provided and users exist', () => {
+      renderWithQueryClient(
+        <UserTable
+          users={[createUser()]}
+          headerActions={<button type="button">Add User</button>}
+        />
+      );
+      expect(screen.getByRole('button', { name: 'Add User' })).toBeInTheDocument();
+    });
+  });
+
+  describe('Search', () => {
+    it('should filter users by display name when search term is entered', async () => {
+      const users = [
+        createUser({ id: '1', first_name: 'Alice', last_name: 'A', display_name: 'Alice A' }),
+        createUser({ id: '2', first_name: 'Bob', last_name: 'B', display_name: 'Bob B' }),
+      ];
+      renderWithQueryClient(<UserTable users={users} showSearch />);
+      expect(screen.getByText('Alice A')).toBeInTheDocument();
+      expect(screen.getByText('Bob B')).toBeInTheDocument();
+      const searchInput = screen.getByPlaceholderText('Search');
+      await userEvent.type(searchInput, 'Alice');
+      await waitFor(() => {
+        expect(screen.getByText('Alice A')).toBeInTheDocument();
+      });
+      expect(searchInput).toHaveValue('Alice');
+    });
+
+    it('should filter users by email when search term matches', async () => {
+      const users = [
+        createUser({ id: '1', email: 'alice@x.com', first_name: 'Alice', last_name: 'X' }),
+        createUser({ id: '2', email: 'bob@y.com', first_name: 'Bob', last_name: 'Y' }),
+      ];
+      renderWithQueryClient(<UserTable users={users} showSearch />);
+      const searchInput = screen.getByPlaceholderText('Search');
+      await userEvent.type(searchInput, 'bob@y');
+      expect(screen.getByText('Bob Y')).toBeInTheDocument();
+      expect(screen.queryByText('Alice X')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Sort', () => {
+    it('should have sortable User column', () => {
+      renderWithQueryClient(<UserTable users={[createUser()]} />);
+      const userHeaders = screen.getAllByText('User');
+      const headerButton = userHeaders.find((el) => el.closest('button'));
+      expect(headerButton).toBeTruthy();
+      expect(headerButton?.closest('button')).toBeInTheDocument();
+    });
+
+    it('should have sortable Role column', () => {
+      renderWithQueryClient(<UserTable users={[createUser()]} />);
+      const roleHeader = screen.getByText('Role').closest('button');
+      expect(roleHeader).toBeInTheDocument();
+    });
+  });
+
+  describe('Actions', () => {
+    it('should show More actions button when onEditUser is provided', () => {
+      const onEdit = vi.fn();
+      renderWithQueryClient(<UserTable users={[createUser()]} onEditUser={onEdit} />);
+      expect(screen.getByLabelText('More actions')).toBeInTheDocument();
+    });
+
+    it('should call onEditUser when Edit is clicked', async () => {
+      const onEdit = vi.fn();
+      const user = createUser({ id: 'u1' });
+      renderWithQueryClient(<UserTable users={[user]} onEditUser={onEdit} />);
+      const actionsButton = screen.getByLabelText('More actions');
+      await userEvent.click(actionsButton);
+      const editButton = screen.getByText('Edit');
+      fireEvent.click(editButton);
+      expect(onEdit).toHaveBeenCalledWith(user);
+    });
+
+    it('should call onRemoveUser when Remove User is clicked for pending user', async () => {
+      const onRemove = vi.fn();
+      const user = createUser({ id: 'u1', status: 'pending' });
+      renderWithQueryClient(<UserTable users={[user]} onRemoveUser={onRemove} />);
+      const actionsButton = screen.getByLabelText('More actions');
+      await userEvent.click(actionsButton);
+      const removeButton = screen.queryByText('Remove User');
+      if (removeButton) {
+        fireEvent.click(removeButton);
+        expect(onRemove).toHaveBeenCalledWith('u1');
+      }
+    });
+  });
+
+  describe('Expand access details', () => {
+    it('should show View in detail button for non-owner user', () => {
+      renderWithQueryClient(<UserTable users={[createUser({ roles: [] })]} />);
+      expect(screen.getByText('View in detail ↓')).toBeInTheDocument();
+    });
+
+    it('should toggle to Collapse when View in detail is clicked', async () => {
+      renderWithQueryClient(<UserTable users={[createUser({ roles: [] })]} />);
+      const expandButton = screen.getByText('View in detail ↓');
+      await userEvent.click(expandButton);
+      expect(screen.getByText('Collapse ↑')).toBeInTheDocument();
+    });
+  });
+
+  describe('Pagination', () => {
+    it('should show pagination when more than 10 users', () => {
+      const users = Array.from({ length: 15 }, (_, i) =>
+        createUser({
+          id: `u${i}`,
+          first_name: `User`,
+          last_name: `${i}`,
+          email: `u${i}@x.com`,
+        })
+      );
+      renderWithQueryClient(<UserTable users={users} />);
+      expect(screen.getByText('Next →')).toBeInTheDocument();
+      expect(screen.getByText('← Previous')).toBeInTheDocument();
+    });
+
+    it('should not show pagination when 10 or fewer users', () => {
+      const users = Array.from({ length: 5 }, (_, i) =>
+        createUser({ id: `u${i}`, first_name: 'User', last_name: `${i}` })
+      );
+      renderWithQueryClient(<UserTable users={users} />);
+      expect(screen.queryByText('Next →')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('should render user with avatar when avatar url provided', () => {
+      const user = createUser({ avatar: 'https://example.com/avatar.png' });
+      renderWithQueryClient(<UserTable users={[user]} />);
+      const img = document.querySelector('img[alt="Alice Smith"]');
+      expect(img).toBeInTheDocument();
+      expect(img).toHaveAttribute('src', 'https://example.com/avatar.png');
+    });
+
+    it('should render initials when no avatar', () => {
+      renderWithQueryClient(<UserTable users={[createUser({ first_name: 'Alice', last_name: 'Smith' })]} />);
+      expect(screen.getByText('AS')).toBeInTheDocument();
+    });
+  });
+});

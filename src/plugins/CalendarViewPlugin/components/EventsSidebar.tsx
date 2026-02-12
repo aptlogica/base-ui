@@ -1,10 +1,9 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
-import { Calendar, Download, Search, BarChart3, Plus } from "lucide-react";
+import { Calendar, Plus } from "lucide-react";
 import { CalendarEvent } from "../hooks/useCalendarData";
-import { SortItem } from "../../../utils/sortUtils";
+import { SortItem, sortRowsByDataKey } from "../../../utils/sortUtils";
 import { SortPopover } from "../../../components/shared/table/SortPopover";
 import { BaseColumn } from "../../../types/column.types";
-import { sortRowsByDataKey } from "../../../utils/sortUtils";
 import { useFrontendPagination } from "../../../hooks/useFrontendPagination";
 import { formatCompactNumber } from "../../../utils/helpers";
 import { Loader } from "../../../components/ui/Loader";
@@ -12,8 +11,6 @@ import { Loader } from "../../../components/ui/Loader";
 interface EventsSidebarProps {
   events: CalendarEvent[];
   onEventClick?: (event: CalendarEvent) => void; // Optional - only provided if user has permission
-  onDateSelect: (date: Date) => void;
-  selectedDate: Date | null;
   currentView: string;
   currentDate: Date;
   columns?: BaseColumn[];
@@ -25,8 +22,6 @@ interface EventsSidebarProps {
 const EventsSidebar: React.FC<EventsSidebarProps> = ({
   events,
   onEventClick,
-  onDateSelect,
-  selectedDate,
   currentView,
   currentDate,
   columns = [],
@@ -37,19 +32,22 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
   // Filter events based on current view
   const filteredEvents = useMemo(() => {
     switch (currentView) {
-      case 'day':
-        // Show events for the current day - use event.date string for accurate comparison
+      case 'day': {
+        // Show events for the current day
         const year = currentDate.getFullYear();
         const month = String(currentDate.getMonth() + 1).padStart(2, '0');
         const day = String(currentDate.getDate()).padStart(2, '0');
         const dateStr = `${year}-${month}-${day}`;
-        return events.filter(event => event.date === dateStr);
 
-      case 'week':
+        return events.filter(event => event.date === dateStr);
+      }
+
+      case 'week': {
         // Show events for the current week
         const weekStart = new Date(currentDate);
         weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Monday
         weekStart.setHours(0, 0, 0, 0);
+
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
         weekEnd.setHours(23, 59, 59, 999);
@@ -58,26 +56,50 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
           const eventDate = new Date(event.dateTime);
           return eventDate >= weekStart && eventDate <= weekEnd;
         });
+      }
 
-      case 'month':
+      case 'month': {
         // Show events for the current month
-        const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-        const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59, 999);
+        const monthStart = new Date(
+          currentDate.getFullYear(),
+          currentDate.getMonth(),
+          1
+        );
+
+        const monthEnd = new Date(
+          currentDate.getFullYear(),
+          currentDate.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999
+        );
 
         return events.filter(event => {
           const eventDate = new Date(event.dateTime);
           return eventDate >= monthStart && eventDate <= monthEnd;
         });
+      }
 
-      case 'year':
+      case 'year': {
         // Show events for the current year
         const yearStart = new Date(currentDate.getFullYear(), 0, 1);
-        const yearEnd = new Date(currentDate.getFullYear(), 11, 31, 23, 59, 59, 999);
+        const yearEnd = new Date(
+          currentDate.getFullYear(),
+          11,
+          31,
+          23,
+          59,
+          59,
+          999
+        );
 
         return events.filter(event => {
           const eventDate = new Date(event.dateTime);
           return eventDate >= yearStart && eventDate <= yearEnd;
         });
+      }
 
       default:
         return events;
@@ -217,7 +239,7 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
             />
           )}
           {onCreateRecord && (
-            <button 
+            <button
               onClick={onCreateRecord}
               className="px-3 py-1.5 flex items-center gap-2 rounded-xl btn-primary"
             >
@@ -229,7 +251,7 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
       </div>
 
       {/* Events List - Scrollable */}
-      <div 
+      <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto bg-background"
       >
@@ -244,8 +266,19 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
               {paginatedEvents.map((event) => (
                 <div
                   key={event.id}
-                  onClick={onEventClick ? () => onEventClick(event) : undefined}
                   className={`bg-background border rounded-xl transition-colors group ${onEventClick ? 'hover:bg-gray-50 cursor-pointer' : ''}`}
+                  onClick={onEventClick ? () => onEventClick(event) : undefined}
+                  onKeyDown={
+                    onEventClick
+                      ? (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault(); // prevent scroll on Space
+                          e.stopPropagation();
+                          onEventClick(event);
+                        }
+                      }
+                      : undefined
+                  }
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-2 flex-1 min-w-0">
@@ -263,7 +296,7 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
                 </div>
               ))}
             </div>
-            
+
             {/* Load More Button */}
             {hasMore && (
               <div className="flex justify-center py-4 px-2">

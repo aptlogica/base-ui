@@ -47,7 +47,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
     }
   }, [name, existingTables]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!name.trim()) {
@@ -146,8 +146,13 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
               />
               <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
                 <span className="relative inline-block group">
-                  <HelpCircle className={`w-4 h-4 ${validationError ? 'text-red-500' : name.trim().length >= 3 ? 'text-green-600' : 'text-gray-400'
-                    } cursor-help`} />
+                  <HelpCircle className={`w-4 h-4 ${
+                    (() => {
+                      if (validationError) return 'text-red-500';
+                      if (name.trim().length >= 3) return 'text-green-600';
+                      return 'text-gray-400';
+                    })()
+                  } cursor-help`} />
                   <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                     <h4 className="mb-2 text-primary">Table name requirements:</h4>
                     <ul className="space-y-1">

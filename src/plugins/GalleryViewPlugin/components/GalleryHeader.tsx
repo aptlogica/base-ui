@@ -21,7 +21,6 @@ interface GalleryHeaderProps {
   onAttachmentFieldChange?: (field: BaseColumn) => void;
   // New props for popover functionality
   columns: BaseColumn[];
-  sortableColumns?: any[]; // Filtered columns for sort/filter popovers
   fieldConfig: Array<{ id: string; position: number; isHidden: boolean }>;
   onFieldToggle?: (fieldId: string) => void;
   filters: { column: string; operator: string; value: string }[];
@@ -42,7 +41,6 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
   attachmentFields,
   onAttachmentFieldChange,
   columns,
-  sortableColumns = columns, // Default to columns if not provided
   fieldConfig,
   onFieldToggle,
   filters,
@@ -58,7 +56,9 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
   const searchableColumns = useMemo(() => {
     return columns.filter(col => {
       const isSystemField = col.isSystem || col.system;
-      const isTitle = col.title.toLowerCase() === 'title' || col.column_name?.toLowerCase() === 'title';
+      const title = (col.title || '').toLowerCase();
+      const columnName = (col.column_name || '').toLowerCase();
+      const isTitle = title === 'title' || columnName === 'title';
       return !isSystemField || isTitle;
     });
   }, [columns]);
@@ -83,29 +83,6 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
     }));
   }, [columns]);
 
-  // Convert sortableColumns to ColumnConfig[] if provided
-  const sortableColumnConfigs = useMemo((): ColumnConfig[] => {
-    if (!sortableColumns || sortableColumns === columns) {
-      return columnConfigs;
-    }
-    return sortableColumns.map((col): ColumnConfig => ({
-      id: col.id ? String(col.id) : undefined,
-      key: col.key || col.column_name || '',
-      column_name: col.column_name || col.key,
-      title: col.title || col.column_name || '',
-      type: normalizeFieldType(col.type || col.uidt || 'text') as any,
-      uidt: col.uidt,
-      position: col.position || col.order_index || 0,
-      order_index: col.order_index || 0,
-      isSystem: col.isSystem || col.system || false,
-      system: col.system || false,
-      hidden: col.hidden || false,
-      is_hidden: col.isHidden || col.is_hidden || false,
-      meta: col.meta,
-      config: col.config || col.meta,
-    }));
-  }, [sortableColumns, columnConfigs]);
-
   return (
     <div className="bg-background border-b px-4 py-2">
       {/* Desktop Layout - Hidden on mobile */}
@@ -129,7 +106,7 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
           )}
           {onAddFilter && onRemoveFilter && onUpdateFilter && (
             <FilterPopover
-              columns={sortableColumnConfigs}
+              columns={columnConfigs}
               filters={filters}
               onAddFilter={onAddFilter}
               onRemoveFilter={onRemoveFilter}
@@ -138,7 +115,7 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
           )}
           {onSortChange && (
             <SortPopover
-              columns={sortableColumns}
+              columns={columns}
               sorts={sorts}
               onChange={onSortChange}
             />

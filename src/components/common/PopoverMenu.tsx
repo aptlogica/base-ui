@@ -295,6 +295,7 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
     <div
       ref={menuRef}
       className={getMenuClasses()}
+      data-popover-menu-portal={portaled ? 'true' : undefined}
       style={portaled ? {
         top: `${absolutePosition.top}px`,
         left: `${absolutePosition.left}px`

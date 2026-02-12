@@ -1,7 +1,8 @@
+ /* eslint-disable sonarjs/cognitive-complexity */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { utcISOToZoned, zonedToUtcISO } from '../../../utils/dateUtils';
+import { zonedToUtcISO } from '../../../utils/dateUtils';
 
 interface DateTimeProps {
   label?: string;
@@ -44,7 +45,12 @@ function getTimeOptions(step = 30, hourFormat: '12' | '24' = '24', timeFormat: s
     for (let m = 0; m < 60; m += actualStep) {
       if (hourFormat === '12') {
         const period = h >= 12 ? 'PM' : 'AM';
-        const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+        let displayHour = h;
+        if (h === 0) {
+          displayHour = 12;
+        } else if (h > 12) {
+          displayHour = h - 12;
+        }
 
         if (timeFormat === 'HH:mm:ss' || timeFormat === 'HH:mm:ss.SSS') {
           // For seconds format, show seconds as 00
@@ -183,7 +189,7 @@ function getDateTimePlaceholder(dateFormat: string, hourFormat: '12' | '24', tim
 function toUtcIso(localDate: string, localTime: string): string {
   const candidate = `${localDate}T${localTime}`;
   const d = new Date(candidate);
-  if (!isNaN(d.getTime())) {
+  if (!Number.isNaN(d.getTime())) {
     return d.toISOString();
   }
   // Fallback: append Z if parsing somehow failed (should be rare with valid inputs)
@@ -191,7 +197,7 @@ function toUtcIso(localDate: string, localTime: string): string {
 }
 
 // Normalize any display time (possibly 12h or with seconds) to 24h HH:mm for calculations
-function toHHmm(timeStr: string, hourFormat: '12' | '24', timeFormat: string): string {
+function toHHmm(timeStr: string, hourFormat: '12' | '24'): string {
   if (!timeStr) return '';
   let t = timeStr.trim();
   if (hourFormat === '12') {
@@ -203,8 +209,8 @@ function toHHmm(timeStr: string, hourFormat: '12' | '24', timeFormat: string): s
       period = parts[1];
     }
     const [hStr, mStr] = t.split(':');
-    let h = parseInt(hStr, 10);
-    const m = parseInt(mStr, 10);
+    let h = Number.parseInt(hStr, 10);
+    const m = Number.parseInt(mStr, 10);
     if (period.toUpperCase() === 'PM' && h !== 12) h += 12;
     if (period.toUpperCase() === 'AM' && h === 12) h = 0;
     return `${pad(h)}:${pad(m)}`;
@@ -213,7 +219,7 @@ function toHHmm(timeStr: string, hourFormat: '12' | '24', timeFormat: string): s
   const segs = t.split(':');
   const HH = segs[0] || '00';
   const MM = segs[1] || '00';
-  return `${pad(parseInt(HH, 10))}:${pad(parseInt(MM, 10))}`;
+  return `${pad(Number.parseInt(HH, 10))}:${pad(Number.parseInt(MM, 10))}`;
 }
 
 export const DateTime: React.FC<DateTimeProps> = ({
@@ -257,8 +263,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
       setIsEditing(false);
     }
   }, [readOnly, isEditing]);
-  const [dateDropdownPosition, setDateDropdownPosition] = useState<'below' | 'above'>('below');
-  const [timeDropdownPosition, setTimeDropdownPosition] = useState<'below' | 'above'>('below');
   const [displayOriginalTime, setDisplayOriginalTime] = useState('');
   const [displayOriginalDate, setDisplayOriginalDate] = useState('');
   const [dateCalculatedPosition, setDateCalculatedPosition] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
@@ -302,8 +306,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
     if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
       position = 'above';
     }
-    setDateDropdownPosition(position);
-
     // Calculate left position (align with button)
     let left = rect.left;
     if (left + dropdownWidth > viewportWidth - 10) {
@@ -381,9 +383,9 @@ export const DateTime: React.FC<DateTimeProps> = ({
       const quickSelect = document.querySelector('[data-quick-select]');
 
       // Check if click is outside all dropdowns
-      const isOutsideYear = !yearPicker || !yearPicker.contains(target);
-      const isOutsideMonth = !monthPicker || !monthPicker.contains(target);
-      const isOutsideQuick = !quickSelect || !quickSelect.contains(target);
+      const isOutsideYear = !yearPicker?.contains(target);
+      const isOutsideMonth = !monthPicker?.contains(target);
+      const isOutsideQuick = !quickSelect?.contains(target);
 
       if (showYearPicker && isOutsideYear) {
         setShowYearPicker(false);
@@ -419,8 +421,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
     if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
       position = 'above';
     }
-    setTimeDropdownPosition(position);
-
     // Calculate left position (align with button)
     let left = rect.left;
     if (left + dropdownWidth > viewportWidth - 10) {
@@ -494,7 +494,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
       }
       const hasTz = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(value);
       const dt = new Date(hasTz ? value : `${value}Z`);
-      if (isNaN(dt.getTime())) {
+      if (Number.isNaN(dt.getTime())) {
         setDisplayOriginalTime('');
         setDisplayOriginalDate('');
         return;
@@ -502,15 +502,14 @@ export const DateTime: React.FC<DateTimeProps> = ({
 
       const tz = config?.timeZoneLabel || config?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
       const includeSeconds = timeFormat === 'HH:mm:ss' || timeFormat === 'hh:mm:ss' || timeFormat === 'hh:mm:ss.SSS' || timeFormat === 'HH:mm:ss.SSS';
-      const newDateTime = utcISOToZoned(value, tz)
 
       // Support GMT/UTC offsets like GMT-7, GMT+7, UTC+05:30
       const gmtMatch = /^(?:GMT|UTC)\s*([+-]\d{1,2})(?::?(\d{2}))?$/i.exec(tz || '');
       let map: Record<string, string> = {};
       if (gmtMatch) {
         const signChar = gmtMatch[1][0];
-        const hoursAbs = Math.abs(parseInt(gmtMatch[1], 10));
-        const minsAbs = gmtMatch[2] ? parseInt(gmtMatch[2], 10) : 0;
+        const hoursAbs = Math.abs(Number.parseInt(gmtMatch[1], 10));
+        const minsAbs = gmtMatch[2] ? Number.parseInt(gmtMatch[2], 10) : 0;
         const totalMinutes = (hoursAbs * 60 + minsAbs) * (signChar === '-' ? -1 : 1);
         // Adjust base UTC time by the offset to get local wall-clock in that GMT zone
         const adj = new Date(dt.getTime() + totalMinutes * 60_000);
@@ -557,8 +556,13 @@ export const DateTime: React.FC<DateTimeProps> = ({
       let timeStr = '';
       if (hourFormat === '12') {
         // Remove any leading zeros from hour for display in 12h UI
-        const hNum = parseInt(hh, 10);
-        const displayHour = hNum === 0 ? 12 : hNum > 12 ? hNum - 12 : hNum;
+        const hNum = Number.parseInt(hh, 10);
+        let displayHour = hNum;
+        if (hNum === 0) {
+          displayHour = 12;
+        } else if (hNum > 12) {
+          displayHour = hNum - 12;
+        }
         if (timeFormat === 'hh:mm:ss' || timeFormat === 'HH:mm:ss') {
           timeStr = `${displayHour}:${min}:${sec || '00'} ${period}`.trim();
         } else if (timeFormat === 'hh:mm:ss.SSS' || timeFormat === 'HH:mm:ss.SSS') {
@@ -566,15 +570,15 @@ export const DateTime: React.FC<DateTimeProps> = ({
         } else {
           timeStr = `${displayHour}:${min} ${period}`.trim();
         }
+      } else if (timeFormat === 'hh:mm:ss' || timeFormat === 'HH:mm:ss') {
+        // 24-hour display with seconds
+        timeStr = `${hh}:${min}:${sec || '00'}`;
+      } else if (timeFormat === 'hh:mm:ss.SSS' || timeFormat === 'HH:mm:ss.SSS') {
+        // 24-hour display with milliseconds
+        timeStr = `${hh}:${min}:${sec || '00'}.000`;
       } else {
         // 24-hour display
-        if (timeFormat === 'hh:mm:ss' || timeFormat === 'HH:mm:ss') {
-          timeStr = `${hh}:${min}:${sec || '00'}`;
-        } else if (timeFormat === 'hh:mm:ss.SSS' || timeFormat === 'HH:mm:ss.SSS') {
-          timeStr = `${hh}:${min}:${sec || '00'}.000`;
-        } else {
-          timeStr = `${hh}:${min}`;
-        }
+        timeStr = `${hh}:${min}`;
       }
 
       setDisplayOriginalDate(formattedDate);
@@ -620,7 +624,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
         if (hourFormat === '12' && timePart.includes(' ')) {
           const [time, period] = timePart.split(' ');
           const [hours, minutes] = time.split(':');
-          let hour = parseInt(hours);
+          let hour = Number.parseInt(hours, 10);
           if (period === 'PM' && hour !== 12) hour += 12;
           if (period === 'AM' && hour === 12) hour = 0;
           timeValue = `${pad(hour)}:${minutes}`;
@@ -711,7 +715,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
     setShowYearPicker(false);
     setShowMonthPicker(false);
     setShowQuickSelect(false);
-    const normalizedTime = toHHmm(newTime, hourFormat, timeFormat);
+    const normalizedTime = toHHmm(newTime, hourFormat);
     // Get timezone - use config timezone or fallback to browser timezone
     const tz = config?.timeZoneLabel || config?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
     const newValue = zonedToUtcISO(selected, normalizedTime, tz);
@@ -744,7 +748,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
     if (hourFormat === '12' && selected.includes(' ')) {
       const [time, period] = selected.split(' ');
       const [hours, minutes] = time.split(':');
-      let hour = parseInt(hours);
+      let hour = Number.parseInt(hours, 10);
       if (period === 'PM' && hour !== 12) hour += 12;
       if (period === 'AM' && hour === 12) hour = 0;
       timeValue = `${pad(hour)}:${minutes}`;
@@ -757,7 +761,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
       setDate(newDate);
     }
     const isoDate = parseDate(newDate, dateFormat);
-    timeValue = toHHmm(timeValue, hourFormat, timeFormat);
+    timeValue = toHHmm(timeValue, hourFormat);
     setTime(timeValue);
     setTimeOpen(false);
     // Get timezone - use config timezone or fallback to browser timezone
@@ -779,14 +783,6 @@ export const DateTime: React.FC<DateTimeProps> = ({
     newDate.setMonth(month);
     setCalendarMonth(newDate);
     setShowMonthPicker(false);
-  };
-
-  const handleQuickSelect = (daysOffset: number) => {
-    const today = new Date();
-    const targetDate = new Date(today);
-    targetDate.setDate(today.getDate() + daysOffset);
-    const isoDate = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}`;
-    // handleDateSelect(isoDate);
   };
 
   // Calendar logic
@@ -844,10 +840,10 @@ export const DateTime: React.FC<DateTimeProps> = ({
     // Monday as first day of week
     let startDay = firstDay.getDay();
     startDay = startDay === 0 ? 6 : startDay - 1;
-    if (isNaN(startDay) || startDay < 0) startDay = 0;
+    if (Number.isNaN(startDay) || startDay < 0) startDay = 0;
     const todayISO = getTodayISO();
     const weeks: (string | null)[][] = [];
-    let week: (string | null)[] = Array(startDay).fill(null);
+    let week: (string | null)[] = new Array(startDay).fill(null);
     for (let d = 1; d <= daysInMonth; d++) {
       const dayISO = `${year}-${pad(month + 1)}-${pad(d)}`;
       week.push(dayISO);
@@ -913,7 +909,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                     <div className="grid grid-cols-3 gap-2 p-2">
                       {months.map((monthName, index) => (
                         <button
-                          key={index}
+                          key={monthName+index}
                           className={[
                             "w-full py-2 rounded-xl text-sm text-center transition-colors",
                             "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black",
@@ -1014,20 +1010,32 @@ export const DateTime: React.FC<DateTimeProps> = ({
         </div>
 
         <div className="grid grid-cols-7 gap-1">
-          {weeks.flat().map((day, idx) => (
-            <button
-              key={idx}
-              className={`w-9 h-9 rounded-full text-center text-sm font-medium hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${day === date ? 'bg-[var(--color-bg-brand-solid)] text-black font-bold' :
-                day === todayISO ? 'border border-[var(--color-bg-brand-primary)] text-primary' :
-                  'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)]'
-                } ${!day ? 'opacity-0 pointer-events-none' : ''}`}
-              onClick={() => day && !readOnly && handleDateSelect(day)}
-              disabled={!day || readOnly}
-            >
-              {day ? Number(day.split('-')[2]) : ''}
-            </button>
-          ))}
+          {weeks.flat().map((day, idx) => {
+            let dayStateClass =
+              'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)]';
+
+            if (day === date) {
+              dayStateClass =
+                'bg-[var(--color-bg-brand-solid)] text-black font-bold';
+            } else if (day === todayISO) {
+              dayStateClass =
+                'border border-[var(--color-bg-brand-primary)] text-primary';
+            }
+
+            return (
+              <button
+                key={day || `empty-${idx}`}
+                className={`w-9 h-9 rounded-full text-center text-sm font-medium hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${dayStateClass} ${day ? '' : 'opacity-0 pointer-events-none'
+                  }`}
+                onClick={() => day && !readOnly && handleDateSelect(day)}
+                disabled={!day || readOnly}
+              >
+                {day ? Number(day.split('-')[2]) : ''}
+              </button>
+            );
+          })}
         </div>
+
 
         {/* Footer with Today button */}
         <div className="flex justify-center mt-4 pt-3 border-t border-gray-100">
@@ -1048,33 +1056,40 @@ export const DateTime: React.FC<DateTimeProps> = ({
 
   // Format display values
   const displayDate = date ? formatDate(date, dateFormat) : '';
-  const displayTime = time ? (hourFormat === '12' ?
-    (() => {
+  
+  let displayTime = '';
+  if (time) {
+    if (hourFormat === '12') {
       const [hours, minutes, seconds] = time.split(':');
-      const hour = parseInt(hours);
+      const hour = Number.parseInt(hours);
       const period = hour >= 12 ? 'PM' : 'AM';
-      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      
+      let displayHour: number;
+      if (hour === 0) {
+        displayHour = 12;
+      } else if (hour > 12) {
+        displayHour = hour - 12;
+      } else {
+        displayHour = hour;
+      }
 
       if (timeFormat === 'hh:mm:ss') {
-        return `${displayHour}:${minutes}:${seconds || '00'} ${period}`;
-      }
-      else if (timeFormat === 'hh:mm:ss.SSS') {
-        return `${displayHour}:${minutes}:${seconds || '00.000'} ${period}`;
-      } else {
-        return `${displayHour}:${minutes} ${period}`;
-      }
-    })() : (() => {
-      if (timeFormat === 'hh:mm:ss') {
-        const [hours, minutes, seconds] = time.split(':');
-        return `${hours}:${minutes}:${seconds || '00'}`;
+        displayTime = `${displayHour}:${minutes}:${seconds || '00'} ${period}`;
       } else if (timeFormat === 'hh:mm:ss.SSS') {
-        const [hours, minutes, seconds] = time.split(':');
-        return `${hours}:${minutes}:${seconds || '00.000'}`;
+        displayTime = `${displayHour}:${minutes}:${seconds || '00.000'} ${period}`;
+      } else {
+        displayTime = `${displayHour}:${minutes} ${period}`;
       }
-      else {
-        return time;
-      }
-    })()) : '';
+    } else if (timeFormat === 'hh:mm:ss') {
+      const [hours, minutes, seconds] = time.split(':');
+      displayTime = `${hours}:${minutes}:${seconds || '00'}`;
+    } else if (timeFormat === 'hh:mm:ss.SSS') {
+      const [hours, minutes, seconds] = time.split(':');
+      displayTime = `${hours}:${minutes}:${seconds || '00.000'}`;
+    } else {
+      displayTime = time;
+    }
+  }
 
 
   return (
@@ -1143,7 +1158,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
               disabled={disabled || readOnly}
             >
               {displayOriginalTime ||
-                <span className="text-gray-400"> 
+                <span className="text-gray-400">
                   {timeFormat}
                 </span>
               }

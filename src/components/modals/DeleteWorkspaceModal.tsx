@@ -115,7 +115,6 @@ export const DeleteWorkspaceModal: React.FC<DeleteWorkspaceModalProps> = ({
                 type="text"
                 value={workspaceNameToDelete}
                 onChange={handleInputChange}
-                onPaste={(e) => e.preventDefault()}
                 placeholder="Enter workspace name"
                 className="w-full text-sm px-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all"
                 required

@@ -431,7 +431,7 @@ class BaseService {
      * Update base
      * PUT /base/:id
      */
-    update(id, params) {
+    async update(id, params) {
         const formData = createFormData();
         if (params.title !== undefined) {
             formData.append('title', params.title);
@@ -448,16 +448,21 @@ class BaseService {
         if (params.visibility !== undefined) {
             formData.append('visibility', params.visibility);
         }
-        if (params.image) {
-            formData.append('image', params.image);
-        }
         const uploadLimits = this.http.getUploadLimits(false);
-        return this.http.put(`/base/${id}`, formData, {
+        const result = await this.http.put(`/base/${id}`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
             ...uploadLimits
         });
+        // Handle image: add if provided, else remove if requested
+        if (params.image) {
+            await this.uploadImage(id, params.image);
+        }
+        else if (params.removeImage) {
+            await this.deleteImage(id);
+        }
+        return result;
     }
     /**
      * Delete base
@@ -1128,6 +1133,9 @@ class UserService {
         }
         if (avatarFile) {
             formData.append('avatar', avatarFile); // db: "avatar"
+        }
+        if (params.activity_data) {
+            formData.append('activity_data', JSON.stringify(params.activity_data));
         }
         return this.http.patch(`/user/profile/${id}`, formData, {
             headers: {

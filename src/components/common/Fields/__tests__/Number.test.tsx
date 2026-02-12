@@ -91,6 +91,7 @@ describe('Number Component', () => {
     });
 
     it('should accept numeric input', async () => {
+      const user = userEvent.setup({ delay: 0 });
       const { container } = render(
         <Number value={null} onChange={mockOnChange} allowEdit={true} />
       );
@@ -99,7 +100,7 @@ describe('Number Component', () => {
       fireEvent.click(field!);
       
       const input = await screen.findByRole('textbox');
-      await userEvent.type(input, '123');
+      await user.type(input, '123');
       fireEvent.blur(input);
 
       await waitFor(() => {
@@ -108,6 +109,7 @@ describe('Number Component', () => {
     });
 
     it('should accept negative numbers', async () => {
+      const user = userEvent.setup({ delay: 0 });
       const { container } = render(
         <Number value={null} onChange={mockOnChange} allowEdit={true} />
       );
@@ -116,7 +118,7 @@ describe('Number Component', () => {
       fireEvent.click(field!);
       
       const input = await screen.findByRole('textbox');
-      await userEvent.type(input, '-50');
+      await user.type(input, '-50');
       fireEvent.blur(input);
 
       await waitFor(() => {
@@ -125,6 +127,7 @@ describe('Number Component', () => {
     });
 
     it('should reject non-numeric characters', async () => {
+      const user = userEvent.setup({ delay: 0 });
       const { container } = render(
         <Number value={null} onChange={mockOnChange} allowEdit={true} />
       );
@@ -133,7 +136,7 @@ describe('Number Component', () => {
       fireEvent.click(field!);
       
       const input = await screen.findByRole('textbox');
-      await userEvent.type(input, '42abc');
+      await user.type(input, '42abc');
       fireEvent.blur(input);
 
       // Component should reject non-numeric input and call onChange(null)
@@ -157,6 +160,7 @@ describe('Number Component', () => {
     });
 
     it('should enforce maximum digit limit (10 digits)', async () => {
+      const user = userEvent.setup({ delay: 0 });
       const { container } = render(
         <Number value={null} onChange={mockOnChange} allowEdit={true} />
       );
@@ -165,7 +169,7 @@ describe('Number Component', () => {
       fireEvent.click(field!);
       
       const input = await screen.findByRole('textbox');
-      await userEvent.type(input, '12345678901');
+      await user.type(input, '12345678901');
       fireEvent.blur(input);
 
       // Should limit to 10 digits
@@ -217,13 +221,16 @@ describe('Number Component', () => {
       fireEvent.click(field!);
       
       const input = await screen.findByRole('textbox');
-      await userEvent.type(input, '9999999999');
+      fireEvent.change(input, { target: { value: '9999999999' } });
       fireEvent.blur(input);
 
-      expect(mockOnChange).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockOnChange).toHaveBeenCalledWith('9999999999');
+      });
     });
 
     it('should handle decimal numbers', async () => {
+      const user = userEvent.setup({ delay: 0 });
       const { container } = render(
         <Number value={null} onChange={mockOnChange} allowEdit={true} />
       );
@@ -232,13 +239,14 @@ describe('Number Component', () => {
       fireEvent.click(field!);
       
       const input = await screen.findByRole('textbox');
-      await userEvent.type(input, '3.14');
+      await user.type(input, '3.14');
       fireEvent.blur(input);
 
       expect(mockOnChange).toHaveBeenCalledWith('3.14');
     });
 
     it('should handle Escape key to revert changes', async () => {
+      const user = userEvent.setup({ delay: 0 });
       const { container } = render(
         <Number value="50" onChange={mockOnChange} allowEdit={true} />
       );
@@ -247,8 +255,8 @@ describe('Number Component', () => {
       fireEvent.click(field!);
       
       const input = await screen.findByRole('textbox');
-      await userEvent.clear(input);
-      await userEvent.type(input, '100');
+      await user.clear(input);
+      await user.type(input, '100');
       fireEvent.keyDown(input, { key: 'Escape', code: 'Escape' });
       fireEvent.click(container.querySelector('.field-component')!); // Click outside or wait
       

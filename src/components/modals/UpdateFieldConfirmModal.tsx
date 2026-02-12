@@ -29,7 +29,7 @@ const UpdateFieldConfirmModal: React.FC<UpdateFieldConfirmModalProps> = ({ isOpe
         {/* Content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="p-4">
-            <div className="font-bold text-[var(--text-color-tertiary)]">{message}</div>
+            <div className="text-[var(--text-color-tertiary)]">{message}</div>
           </div>
         </div>
         {/* Footer */}

@@ -106,13 +106,18 @@ describe('useUniqueTwoDigit', () => {
   it('should maintain state across multiple calls', () => {
     const { result } = renderHook(() => useUniqueTwoDigit());
     const numbers: number[] = [];
-    
+
+    // Call getNextNumber in separate act() blocks so state updates flush between calls
     act(() => {
       numbers.push(result.current.getNextNumber());
-      numbers.push(result.current.getNextNumber());
+    });
+    act(() => {
       numbers.push(result.current.getNextNumber());
     });
-    
+    act(() => {
+      numbers.push(result.current.getNextNumber());
+    });
+
     // All numbers should be unique
     expect(new Set(numbers).size).toBe(3);
   });
