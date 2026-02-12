@@ -337,11 +337,10 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
               data-index={virtualItem.index}
               style={{
                 position: 'absolute',
-                top: 0,
+                top: `${virtualItem.start}px`,
                 left: 0,
                 width: `${totalWidth}px`,
                 height: `${virtualItem.size}px`,
-                transform: `translateY(${virtualItem.start}px)`,
                 overflow: 'visible',
               }}
             >
