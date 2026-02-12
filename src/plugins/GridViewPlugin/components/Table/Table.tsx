@@ -245,6 +245,7 @@ export const Table: React.FC<TableProps> = ({
   // Edit record modal state
   const [isEditRecordModalOpen, setIsEditRecordModalOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
   const openEditRecordModal = useCallback((rowId: string) => {
     setSelectedRecordId(rowId);
@@ -257,9 +258,12 @@ export const Table: React.FC<TableProps> = ({
     setSelectedRecordId(null);
   }, []);
 
-  // Wrap handleContextMenu to prevent opening for readonly users
+  // Wrap handleContextMenu to prevent opening for readonly users.
+  // Multi-select is supported with delete-only action.
   const handleContextMenu = useCallback((e: React.MouseEvent, rowId: string) => {
     if (isBaseReadOnly() || !canCreateRecord()) {
+      e.preventDefault();
+      e.stopPropagation();
       return; // Don't show context menu for readonly users
     }
     originalHandleContextMenu(e, rowId);
@@ -322,13 +326,13 @@ export const Table: React.FC<TableProps> = ({
   const tableRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const addColumnButtonRef = useRef<HTMLButtonElement | null>(null);
-  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [openColumnDropdownIndex, setOpenColumnDropdownIndex] = useState<number | null>(null);
 
   // Static column widths (no resize). Prefer view meta widths, else column.width, else 235.
   const columnWidths = useMemo(() => {
     return (visibleColumns || []).map((c) => {
-      const fromView = viewConfigState.columnWidths?.[c.key];
+      const widthKey = String(c.id || c.key);
+      const fromView = viewConfigState.columnWidths?.[widthKey] ?? viewConfigState.columnWidths?.[c.key];
 
       let width = 235;
 
@@ -736,7 +740,7 @@ export const Table: React.FC<TableProps> = ({
                   const isColumnDraggable = !column.isSystem && canReorderColumns;
                   return (
                     <div
-                      key={column.key}
+                      key={`${column.id || column.key || 'column'}-${index}`}
                       role="columnheader"
                       className={`relative flex-shrink-0 bg-gray-100 border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${(column as any).isNew !== undefined && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
                       style={{
@@ -951,7 +955,7 @@ export const Table: React.FC<TableProps> = ({
           }}
           canDeleteRecord={canDeleteRecord()}
           onEdit={() => openEditRecordModal(contextMenu.rowId!)}
-          canEditRecord={canUpdateRecord()}
+          canEditRecord={selectedRows.size <= 1 && canUpdateRecord()}
         />
       )}
 

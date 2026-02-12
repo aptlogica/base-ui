@@ -191,13 +191,16 @@ export const Search: React.FC<SearchProps> = ({
           type="button"
           onClick={handleDropdownToggle}
           disabled={disabled}
-          className="flex items-center gap-3 px-2 py-1 btn-primary !rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-3 px-2 py-1 btn-primary !rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed max-w-[200px]"
         >
-          <span className='flex items-center gap-1 text-sm '>{getFieldIcon(selectedField?.type || '')} {selectedField?.title}</span>
+          <span className='flex items-center gap-1 text-sm flex-1 min-w-0 overflow-hidden'>
+            <span className="flex-shrink-0">{getFieldIcon(selectedField?.type || '')}</span>
+            <span className="truncate">{selectedField?.title}</span>
+          </span>
           {isDropdownOpen ? (
-            <ChevronUp className="w-3 h-3 transition-transform" />
+            <ChevronUp className="w-3 h-3 transition-transform flex-shrink-0" />
           ):(
-            <ChevronDown className="w-3 h-3 transition-transform" />
+            <ChevronDown className="w-3 h-3 transition-transform flex-shrink-0" />
           )}
         </button>
 
@@ -207,9 +210,9 @@ export const Search: React.FC<SearchProps> = ({
           type="text"
           value={searchTerm}
           onChange={(e) => handleSearchChange(e.target.value)}
-          placeholder={selectedField ? `Search in ${selectedField.title}` : placeholder}
+          placeholder={selectedField ? `Search in ${selectedField.title.length > 20 ? selectedField.title.substring(0, 20) + '...' : selectedField.title}` : placeholder}
           disabled={disabled}
-          className="flex-1 ml-2 bg-transparent border-none outline-none text-sm placeholder-gray-400 focus-within:bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 ml-2 bg-transparent border-none outline-none text-sm placeholder-gray-400 focus-within:bg-transparent disabled:opacity-50 disabled:cursor-not-allowed min-w-0"
         />
       </div>
 
@@ -217,7 +220,7 @@ export const Search: React.FC<SearchProps> = ({
       {isDropdownOpen && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 right-0 mt-1 bg-background border rounded-xl shadow-lg z-40 max-h-80 overflow-hidden"
+          className="absolute left-0 mt-1 bg-background border rounded-xl shadow-lg z-40 max-h-80 overflow-hidden w-72"
         >
           {/* Internal Search Bar */}
           <div className="p-2 border-b border-gray-100">
@@ -250,8 +253,10 @@ export const Search: React.FC<SearchProps> = ({
                     className={`w-full px-3 py-2 text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] rounded-xl flex items-center gap-2 ${selectedField?.key === field.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''
                       }`}
                   >
-                    <span className='text-gray-400'> {getFieldIcon(field.type)}</span>
-                    <span className="truncate">{field.title}</span>
+                    <span className='flex items-center gap-2 flex-1 min-w-0 overflow-hidden'>
+                      <span className='text-gray-400 flex-shrink-0'>{getFieldIcon(field.type)}</span>
+                      <span className="truncate">{field.title}</span>
+                    </span>
                   </button>
                 ))}
               </>
