@@ -1,8 +1,14 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-let ToastProvider: React.ComponentType<{ children: React.ReactNode }>;
-let NewColumnModal: typeof import('../NewColumnModal').NewColumnModal;
+import { NewColumnModal } from '../NewColumnModal';
+
+const toast = { error: vi.fn(), success: vi.fn() };
+
+vi.mock('../../common/Toast', () => ({
+  ToastProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  useToast: () => toast,
+}));
 
 vi.mock('../../../hooks/useApi', () => ({
   useBaseTables: () => ({ data: null }),
@@ -19,12 +25,15 @@ vi.mock('../../../utils/fieldUsageUtils', () => ({
   checkCriticalFieldUsageInViews: () => ({ isUsedInViews: false, usedInViews: [] }),
 }));
 
-vi.mock('../../../types/fieldTypes', () => ({
-  FIELD_TYPES: [
-    { key: 'text', label: 'Text', icon: () => <span data-testid="icon-text" /> },
-    { key: 'number', label: 'Number', icon: () => <span data-testid="icon-number" /> },
-  ],
-}));
+vi.mock('../../../types/fieldTypes', () => {
+  const makeType = (key: string) => ({ key, label: key, icon: () => <span data-testid={`icon-${key}`} /> });
+  return {
+    FIELD_TYPES: [
+      'text','number','decimal','boolean','select','multiSelect','rating','datetime','createdTime','lastModifiedTime',
+      'currency','percent','duration','year','date','time','phoneNumber','email','url','user','button','json','formula','links'
+    ].map(makeType),
+  };
+});
 
 vi.mock('../../common/Fields', () => ({
   DateField: () => <div />,
@@ -63,31 +72,63 @@ vi.mock('../../../utils/helpers', () => ({
   convertDateFormat: (value: string) => value,
 }));
 
-describe.skip('NewColumnModal', () => {
-  it('capitalizes field name input and moves to step 2 on type select', async () => {
-    ({ NewColumnModal } = await import('../NewColumnModal'));
-    ({ ToastProvider } = await import('../../common/Toast'));
+const renderWithType = (type: string, fields: any[] = []) => {
+  const onSave = vi.fn();
+  render(
+    <NewColumnModal
+      isOpen={true}
+      onClose={vi.fn()}
+      onSave={onSave}
+      fields={fields}
+      initialValues={{ id: 'c1', title: 'Field', type }}
+    />
+  );
+  return onSave;
+};
+
+describe('NewColumnModal', () => {
+  beforeEach(() => {
+    toast.error.mockClear();
+    toast.success.mockClear();
+  });
+
+  it('blocks save when field name is duplicate', () => {
+    const onSave = vi.fn();
     render(
-      <ToastProvider>
-        <NewColumnModal
-          isOpen={true}
-          onClose={vi.fn()}
-          onSave={vi.fn()}
-          fields={[]}
-        />
-      </ToastProvider>
+      <NewColumnModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={onSave}
+        fields={[{ id: 'c2', title: 'Status' }]}
+      />
     );
 
     const nameInput = screen.getByPlaceholderText('Enter Field name') as HTMLInputElement;
-    fireEvent.change(nameInput, { target: { value: 'sample field' } });
-    expect(nameInput.value).toBe('Sample field');
+    fireEvent.change(nameInput, { target: { value: 'Status' } });
 
-    const searchInput = screen.getByPlaceholderText('Search field type');
-    fireEvent.change(searchInput, { target: { value: 'num' } });
-    expect(screen.getByText('Number')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('text'));
+    fireEvent.click(screen.getByText('Save Field'));
 
-    fireEvent.click(screen.getByText('Number'));
-    expect(screen.queryByPlaceholderText('Search field type')).not.toBeInTheDocument();
-    expect(screen.getByTestId('field-type-dropdown')).toHaveTextContent('Number');
+    expect(screen.getByText('Field name already exists')).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('blocks saving links field without target table', () => {
+    const onSave = renderWithType('links');
+    fireEvent.click(screen.getByText('Save Field'));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith('Target table is required for relation fields');
+  });
+
+  it.each([
+    'text','number','decimal','boolean','select','multiSelect','rating','datetime','createdTime','lastModifiedTime',
+    'currency','percent','duration','year','date','time','phoneNumber','email','url','user','button','json','formula'
+  ])('saves config for %s type', (type) => {
+    const onSave = renderWithType(type);
+    fireEvent.click(screen.getByText('Save Field'));
+    expect(onSave).toHaveBeenCalled();
+    const payload = onSave.mock.calls[0][0];
+    expect(payload.type).toBe(type);
+    expect(payload.meta).toBeDefined();
   });
 });
