@@ -18,11 +18,11 @@ export function useUniqueTwoDigit() {
     if (unusedNumbers.length === 0) {
       // If all numbers are used, clear the used set and start over
       setUsedNumbers(new Set());
-      return Math.floor(Math.random() * 90) + 10; // Return random number
+      return (crypto.getRandomValues(new Uint32Array(1))[0] % 90) + 10; // Return random number
     }
     
     // Pick a random number from unused numbers
-    const randomIndex = Math.floor(Math.random() * unusedNumbers.length);
+    const randomIndex = crypto.getRandomValues(new Uint32Array(1))[0] % unusedNumbers.length;
     const randomNum = unusedNumbers[randomIndex];
     
     // Mark this number as used

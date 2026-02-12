@@ -103,7 +103,7 @@ describe('AccountSettings', () => {
       render(<TestComponent />);
       
       expect(() => {
-        capturedValues.context?.registerFooter(<div>Test</div>);
+        capturedValues.context?.registerFooter(<div>Test</div>, 'profile');
       }).not.toThrow();
     });
 
@@ -118,7 +118,7 @@ describe('AccountSettings', () => {
       render(<TestComponent />);
       
       expect(() => {
-        capturedValues.context?.clearFooter();
+        capturedValues.context?.clearFooter('profile');
       }).not.toThrow();
     });
   });

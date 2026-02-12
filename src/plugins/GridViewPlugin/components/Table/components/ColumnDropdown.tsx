@@ -1,34 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Pencil, Trash2, Copy, ChevronUp } from 'lucide-react';
+import { ChevronDown, Pencil, Trash2, ChevronUp } from 'lucide-react';
 import { useClickOutside } from '../../../../../hooks/useClickOutside';
 
 interface ColumnDropdownProps {
-  column: {
-    id?: string;
-    title: string;
-    isSystem?: boolean;
-  };
   onEdit: () => void;
   onDelete: () => void;
-  onDuplicate?: () => void;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
-  column,
   onEdit,
   onDelete,
-  onDuplicate
+  isOpen: controlledOpen,
+  onOpenChange,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = controlledOpen ?? internalOpen;
+  const setIsOpen = onOpenChange ?? setInternalOpen;
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const clickOutsideRef = useClickOutside({ 
-    isOpen, 
-    onClose: () => setIsOpen(false), 
-    excludeRefs: [buttonRef] 
+  const clickOutsideRef = useClickOutside({
+    isOpen,
+    onClose: () => setIsOpen(false),
+    excludeRefs: [buttonRef]
   });
 
   // Calculate dropdown position when opening - use requestAnimationFrame to ensure dropdown is rendered
@@ -41,14 +39,14 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
       const rect = buttonRef.current.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      
+
       // Get actual dropdown dimensions after render
       const dropdownWidth = dropdownRef.current?.offsetWidth || 192; // w-48 = 192px
       const dropdownHeight = dropdownRef.current?.offsetHeight || 200;
-      
+
       // Calculate left position - align to right edge of button
       let left = rect.right - dropdownWidth;
-      
+
       // Adjust if dropdown would go off-screen
       const margin = 10;
       if (left < margin) {
@@ -56,24 +54,24 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
       } else if (left + dropdownWidth > viewportWidth - margin) {
         left = viewportWidth - dropdownWidth - margin;
       }
-      
+
       // Calculate top position - prefer below button
       let top = rect.bottom + 8; // 8px gap below
       const spaceBelow = viewportHeight - rect.bottom;
       const spaceAbove = rect.top;
-      
+
       // If not enough space below, open above
       if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
         top = rect.top - dropdownHeight - 8;
       }
-      
+
       // Adjust vertical position for viewport boundaries
       if (top < margin) {
         top = margin;
       } else if (top + dropdownHeight > viewportHeight - margin) {
         top = viewportHeight - dropdownHeight - margin;
       }
-      
+
       setDropdownPosition({ top, left });
     };
 
@@ -104,11 +102,11 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
         className="p-1 rounded transition-colors duration-200"
         title="Column options"
       >
-       {isOpen ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+        {isOpen ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
       </button>
 
       {isOpen && createPortal(
-        <div 
+        <div
           ref={(node) => {
             // Set both refs to the same node
             if (clickOutsideRef) {
@@ -129,20 +127,8 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
             title="Edit field"
           >
             <Pencil className="w-4 h-4" />
-            Edit field
+            Edit Column
           </button>
-
-          {/* Duplicate field */}
-          {onDuplicate && (
-            <button
-            className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl opacity-50 cursor-not-allowed transition-colors" 
-            disabled
-            title="Coming soon"
-            >
-              <Copy className="w-4 h-4" />
-              Duplicate field
-            </button>
-          )}
 
           {/* Divider */}
           <div className="border-t border-gray-100 my-1"></div>
@@ -154,7 +140,7 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
             title="Delete field"
           >
             <Trash2 className="w-4 h-4" />
-            Delete field
+            Delete Column
           </button>
         </div>,
         document.body

@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/cognitive-complexity */
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronUp, HelpCircle, X, Search, Plus } from "lucide-react";
@@ -29,17 +30,12 @@ interface FormulaConfig {
 }
 
 interface FormulaProps {
-  label?: string;
   value?: string | number | boolean | null;
   onChange?: (value: string | number | boolean | null) => void;
   config?: FormulaConfig;
-  required?: boolean;
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean;
-  helperText?: string;
-  icon?: string;
   columns?: any[]; // Available columns for formula
   onFormulaChange?: (formula: string) => void;
   onErrorChange?: (error: string | null) => void; // Notify parent of validation errors
@@ -78,7 +74,7 @@ export const Formula: React.FC<FormulaProps> = ({
   const [quickFunctionTooltipPosition, setQuickFunctionTooltipPosition] = useState<{ top: number; left: number } | null>(null);
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
   const quickFunctionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-  
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const helpIconRef = useRef<HTMLSpanElement>(null);
   const showAllFunctionsButtonRef = useRef<HTMLButtonElement>(null);
@@ -187,7 +183,7 @@ export const Formula: React.FC<FormulaProps> = ({
       // Find the NewColumnModal element - traverse up from the button to find the modal container
       let currentElement: HTMLElement | null = showAllFunctionsButtonRef.current;
       let newColumnModal: Element | null = null;
-      
+
       // Traverse up the DOM tree to find the modal
       while (currentElement && !newColumnModal) {
         currentElement = currentElement.parentElement;
@@ -195,9 +191,9 @@ export const Formula: React.FC<FormulaProps> = ({
           const classes = currentElement.className || '';
           // Check for NewColumnModal specific classes - more specific matching
           if ((classes.includes('min-h-[400px]') && classes.includes('max-h-[max(70vh,400px)]')) ||
-              classes.includes('w-[500px]') || 
-              classes.includes('w-[416px]') ||
-              (classes.includes('bg-[var(--color-alpha-white)]') && classes.includes('shadow-lg') && classes.includes('border'))) {
+            classes.includes('w-[500px]') ||
+            classes.includes('w-[416px]') ||
+            (classes.includes('bg-[var(--color-alpha-white)]') && classes.includes('shadow-lg') && classes.includes('border'))) {
             const rect = currentElement.getBoundingClientRect();
             // Verify it's a modal (has reasonable dimensions and is visible)
             if (rect.width > 300 && rect.height > 300 && rect.top >= 0 && rect.left >= 0) {
@@ -207,7 +203,7 @@ export const Formula: React.FC<FormulaProps> = ({
           }
         }
       }
-      
+
       // Alternative: search all modals and find the one closest to our button
       if (!newColumnModal) {
         // More specific selector for NewColumnModal - also check for header text
@@ -215,27 +211,27 @@ export const Formula: React.FC<FormulaProps> = ({
         const buttonRect = showAllFunctionsButtonRef.current.getBoundingClientRect();
         let closestModal: Element | null = null;
         let closestDistance = Infinity;
-        
+
         for (const modal of allModals) {
           const rect = modal.getBoundingClientRect();
           // More strict validation - modal should be visible and reasonably sized
           if (rect.width > 300 && rect.height > 300 && rect.top >= 0 && rect.left >= 0) {
             // Check if this modal contains "Edit Field" or "New Field" text (more reliable)
             const modalText = modal.textContent || '';
-            const isNewColumnModal = modalText.includes('Edit Field') || 
-                                     modalText.includes('New Field') ||
-                                     modalText.includes('Save Field');
-            
+            const isNewColumnModal = modalText.includes('Edit Field') ||
+              modalText.includes('New Field') ||
+              modalText.includes('Save Field');
+
             // Calculate distance from button to modal
             const modalCenterX = rect.left + rect.width / 2;
             const modalCenterY = rect.top + rect.height / 2;
             const buttonCenterX = buttonRect.left + buttonRect.width / 2;
             const buttonCenterY = buttonRect.top + buttonRect.height / 2;
             const distance = Math.sqrt(
-              Math.pow(modalCenterX - buttonCenterX, 2) + 
+              Math.pow(modalCenterX - buttonCenterX, 2) +
               Math.pow(modalCenterY - buttonCenterY, 2)
             );
-            
+
             // Prefer modals with matching text, but still consider distance
             const adjustedDistance = isNewColumnModal ? distance * 0.5 : distance;
             if (adjustedDistance < closestDistance) {
@@ -246,26 +242,26 @@ export const Formula: React.FC<FormulaProps> = ({
         }
         newColumnModal = closestModal;
       }
-      
+
       if (newColumnModal) {
         const modalRect = newColumnModal.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
         const functionsModalWidth = 350; // Match the actual width in the JSX (w-[350px])
         const gap = 0; // No gap - make it look like an extension
-        
+
         // Always position to the right of NewColumnModal, aligned exactly at the top
         let leftPosition = modalRect.right + gap;
-        
+
         // If not enough space on right, adjust to fit but keep it on the right side
         if (leftPosition + functionsModalWidth > viewportWidth - 20) {
           // Adjust left position to fit within viewport, but still try to be on the right
           leftPosition = Math.max(20, viewportWidth - functionsModalWidth - 20);
         }
-        
+
         // Match the top position exactly and height of NewColumnModal
         const topPosition = modalRect.top;
         const modalHeight = modalRect.height; // Use actual height of NewColumnModal
-        
+
         setAllFunctionsModalPosition({
           top: topPosition,
           left: leftPosition,
@@ -277,16 +273,16 @@ export const Formula: React.FC<FormulaProps> = ({
         const viewportWidth = window.innerWidth;
         const functionsModalWidth = 350;
         const gap = 8;
-        
+
         let leftPosition = rect.right + gap;
         // If not enough space, adjust but keep on right side
         if (leftPosition + functionsModalWidth > viewportWidth - 20) {
           leftPosition = Math.max(20, viewportWidth - functionsModalWidth - 20);
         }
-        
+
         const topPosition = Math.max(20, rect.top - 100);
         const modalHeight = Math.max(window.innerHeight * 0.7, 400);
-        
+
         setAllFunctionsModalPosition({
           top: topPosition,
           left: leftPosition,
@@ -300,14 +296,14 @@ export const Formula: React.FC<FormulaProps> = ({
   useEffect(() => {
     if (showAllFunctions) {
       updateAllFunctionsModalPosition();
-      
+
       const handleUpdate = () => {
         updateAllFunctionsModalPosition();
       };
-      
+
       window.addEventListener('scroll', handleUpdate, true);
       window.addEventListener('resize', handleUpdate);
-      
+
       return () => {
         window.removeEventListener('scroll', handleUpdate, true);
         window.removeEventListener('resize', handleUpdate);
@@ -337,16 +333,16 @@ export const Formula: React.FC<FormulaProps> = ({
 
   const handleShowAllFunctionsClick = useCallback(() => {
     setShowAllFunctions(!showAllFunctions);
-    if (!showAllFunctions) {
+    if (showAllFunctions) {
+      // Reset search when closing modal
+      setFunctionSearchQuery('');
+    } else {
       // Use requestAnimationFrame to ensure DOM is ready, then update position
       requestAnimationFrame(() => {
         setTimeout(() => {
           updateAllFunctionsModalPosition();
         }, 0);
       });
-    } else {
-      // Reset search when closing modal
-      setFunctionSearchQuery('');
     }
   }, [showAllFunctions, updateAllFunctionsModalPosition]);
 
@@ -450,31 +446,29 @@ export const Formula: React.FC<FormulaProps> = ({
   // Uses utility functions from formulaHelper to avoid code duplication
   const evaluateAndNotify = useCallback(() => {
     if (!onChange) return;
-    
+
     // Evaluate the formula - it will use latest rowData, columns, allColumns from closure
     const { result, error } = evaluateFormula(formulaText, formulaContext, validateFormula);
-    
+
     if (!error && result !== null && result !== undefined) {
       // Convert result to value using utility function
       const newValue = convertResultToValue(result, formattingType);
-      
+
       // Normalize values for comparison to prevent unnecessary onChange calls
       const normalizedNew = normalizeForComparison(newValue);
       const normalizedCurrent = normalizeForComparison(value);
       const normalizedLastNotified = normalizeForComparison(lastNotifiedValueRef.current);
-      
+
       // Only call onChange if value actually changed from both current value AND last notified value
       // This prevents infinite loops when rowData updates but formula result stays the same
       if (normalizedNew !== normalizedCurrent && normalizedNew !== normalizedLastNotified) {
         lastNotifiedValueRef.current = newValue;
         onChange(newValue);
       }
-    } else {
+    } else if (value !== null && value !== undefined) {
       // If formula is invalid or empty, only pass null if current value is not null
-      if (value !== null && value !== undefined) {
-        lastNotifiedValueRef.current = null;
-        onChange(null);
-      }
+      lastNotifiedValueRef.current = null;
+      onChange(null);
     }
     // Only depend on formulaText, onChange, formattingType, and value
     // rowData, columns, allColumns are accessed from closure and will be latest values
@@ -492,21 +486,21 @@ export const Formula: React.FC<FormulaProps> = ({
     if (previousFormulaTextRef.current === formulaText) {
       return;
     }
-    
+
     // Update ref
     previousFormulaTextRef.current = formulaText;
-    
+
     // Clear previous timeout
     if (formulaChangeTimeoutRef.current) {
       clearTimeout(formulaChangeTimeoutRef.current);
     }
-    
+
     // Debounce the callback to prevent excessive re-renders
     formulaChangeTimeoutRef.current = setTimeout(() => {
       onFormulaChange?.(formulaText);
       evaluateAndNotify();
     }, 300);
-    
+
     // Cleanup timeout on unmount or when dependencies change
     return () => {
       if (formulaChangeTimeoutRef.current) {
@@ -522,17 +516,17 @@ export const Formula: React.FC<FormulaProps> = ({
     // Check if rowData actually changed (not just reference)
     const currentRowDataString = rowData ? JSON.stringify(rowData) : null;
     const previousRowDataString = previousRowDataRef.current;
-    
+
     // Only proceed if rowData actually changed
     if (currentRowDataString === previousRowDataString) {
       // Update ref but don't re-evaluate
       previousRowDataRef.current = currentRowDataString;
       return;
     }
-    
+
     // Update ref with new rowData
     previousRowDataRef.current = currentRowDataString;
-    
+
     // Re-evaluate if formula contains field references OR uses TODAY()
     // Use current formulaText from state, not from dependencies
     // Note: NOW() is excluded - it doesn't update when rowData changes
@@ -541,7 +535,7 @@ export const Formula: React.FC<FormulaProps> = ({
       if (formulaChangeTimeoutRef.current) {
         clearTimeout(formulaChangeTimeoutRef.current);
       }
-      
+
       // Debounce to prevent excessive re-renders
       formulaChangeTimeoutRef.current = setTimeout(() => {
         // Use ref to get latest callback without adding it as dependency
@@ -549,7 +543,7 @@ export const Formula: React.FC<FormulaProps> = ({
           evaluateAndNotifyRef.current();
         }
       }, 300);
-      
+
       return () => {
         if (formulaChangeTimeoutRef.current) {
           clearTimeout(formulaChangeTimeoutRef.current);
@@ -563,25 +557,25 @@ export const Formula: React.FC<FormulaProps> = ({
   // Calculate cursor position in textarea
   const updateCursorPosition = useCallback(() => {
     if (!textareaRef.current) return;
-    
+
     const textarea = textareaRef.current;
     const selectionStart = textarea.selectionStart;
-    
+
     // Get text before cursor
     const textBeforeCursor = formulaText.substring(0, selectionStart);
     const lines = textBeforeCursor.split('\n');
     const currentLine = lines.length - 1;
     const currentLineText = lines[currentLine] || '';
-    
+
     // Create a temporary div to measure text dimensions
     const div = document.createElement('div');
     const style = getComputedStyle(textarea);
-    
+
     // Copy relevant textarea styles
     div.style.position = 'absolute';
     div.style.visibility = 'hidden';
     div.style.whiteSpace = 'pre-wrap';
-    div.style.wordWrap = 'break-word';
+    div.style.overflowWrap = 'break-word';
     div.style.fontFamily = style.fontFamily;
     div.style.fontSize = style.fontSize;
     div.style.fontWeight = style.fontWeight;
@@ -597,43 +591,42 @@ export const Formula: React.FC<FormulaProps> = ({
     div.style.borderBottomWidth = style.borderBottomWidth;
     div.style.boxSizing = style.boxSizing;
     div.style.width = `${textarea.offsetWidth}px`;
-    
+
     // Create a span to measure the actual text width
     const span = document.createElement('span');
     span.textContent = currentLineText || '\u200b'; // Use zero-width space if empty
     div.appendChild(span);
-    
+
     document.body.appendChild(div);
-    
+
     const textareaRect = textarea.getBoundingClientRect();
     const spanRect = span.getBoundingClientRect();
-    const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
-    
+    const lineHeight = Number.parseFloat(style.lineHeight) || Number.parseFloat(style.fontSize) * 1.2;
+
     // Calculate cursor position with small offset below cursor
-    const top = textareaRect.top + (currentLine + 1) * lineHeight - textarea.scrollTop + parseFloat(style.paddingTop) + parseFloat(style.borderTopWidth) + 4;
-    const left = textareaRect.left + spanRect.width + parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth);
-    
-    document.body.removeChild(div);
-    
+    const top = textareaRect.top + (currentLine + 1) * lineHeight - textarea.scrollTop + Number.parseFloat(style.paddingTop) + Number.parseFloat(style.borderTopWidth) + 4;
+    const left = textareaRect.left + spanRect.width + Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.borderLeftWidth);
+
+    div.remove();
+
     setCursorPosition({ top, left });
   }, [formulaText]);
 
   // Check if cursor is inside a field reference (between { and })
   const isInsideFieldReference = useCallback((): boolean => {
     if (!textareaRef.current) return false;
-    
+
     const textarea = textareaRef.current;
     const cursorPos = textarea.selectionStart;
     const textBeforeCursor = formulaText.substring(0, cursorPos);
-    
+
     // Find the last '{' before cursor
     const lastOpenBrace = textBeforeCursor.lastIndexOf('{');
     if (lastOpenBrace === -1) return false;
-    
+
     // Check if there's a closing '}' between the last '{' and cursor
-    const textAfterOpenBrace = textBeforeCursor.substring(lastOpenBrace + 1);
-    const hasClosingBrace = textAfterOpenBrace.includes('}');
-    
+    const hasClosingBrace = textBeforeCursor.substring(lastOpenBrace + 1).includes('}');
+
     // If we're inside a field reference (after { but before })
     return !hasClosingBrace;
   }, [formulaText]);
@@ -654,29 +647,29 @@ export const Formula: React.FC<FormulaProps> = ({
   const handleBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
     // Don't blur if clicking on the dropdown
     const relatedTarget = e.relatedTarget as HTMLElement;
-    if (relatedTarget && relatedTarget.closest('.field-dropdown')) {
+    if (relatedTarget?.closest('.field-dropdown')) {
       return;
     }
-    
+
     setHasBlurred(true);
     setIsTextareaFocused(false);
     setShowFieldDropdown(false);
     setCursorPosition(null);
-    
+
     // Clear any pending debounced callback
     if (formulaChangeTimeoutRef.current) {
       clearTimeout(formulaChangeTimeoutRef.current);
       formulaChangeTimeoutRef.current = null;
     }
-    
+
     // Immediately call onFormulaChange to ensure latest value is saved (for formula definition)
     onFormulaChange?.(formulaText);
-    
+
     // Validate formula (includes both math and text function validation)
     const error = validateFormula(formulaText, formulaContext);
     setFormulaError(error);
     onErrorChange?.(error); // Notify parent of validation error
-    
+
     // Call onChange with the evaluated result, not the formula string
     // This is needed for record modals to save the calculated value to rowData
     if (onChange) {
@@ -695,19 +688,19 @@ export const Formula: React.FC<FormulaProps> = ({
 
   const insertFunction = (functionName: string) => {
     if (!textareaRef.current) return;
-    
+
     const textarea = textareaRef.current;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const text = formulaText;
-    
+
     // Strip any existing parentheses from function name (func.name might be "ADD()")
-    const baseFunctionName = functionName.replace(/\(\)$/, '');
+    const baseFunctionName = functionName.replaceAll(/\(\)$/g, '');
     // Insert function name with parentheses
     const functionWithParens = baseFunctionName + "()";
     const newText = text.substring(0, start) + functionWithParens + text.substring(end);
     setFormulaText(newText);
-    
+
     // Set cursor position inside the parentheses (after the opening parenthesis)
     setTimeout(() => {
       textarea.focus();
@@ -717,23 +710,36 @@ export const Formula: React.FC<FormulaProps> = ({
 
   const insertColumn = (columnName: string) => {
     if (!textareaRef.current) return;
-    
+
     const textarea = textareaRef.current;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const text = formulaText;
-    
+
     // Check if we're inside a field reference (after {)
     const textBeforeCursor = text.substring(0, start);
     const lastOpenBrace = textBeforeCursor.lastIndexOf('{');
-    
-    if (lastOpenBrace !== -1) {
+
+    if (lastOpenBrace === -1) {
+      // Insert column reference with curly braces
+      const columnReference = `{${columnName}}`;
+      const newText = text.substring(0, start) + columnReference + text.substring(end);
+      setFormulaText(newText);
+
+      // Set cursor position after the inserted column reference
+      setTimeout(() => {
+        textarea.focus();
+        const newCursorPos = start + columnReference.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        updateCursorPosition();
+        setShowFieldDropdown(false);
+      }, 0);
+    } else {
       // We're inside a field reference, replace from { to cursor with {FieldName}
-      const textAfterOpenBrace = textBeforeCursor.substring(lastOpenBrace + 1);
       // Check if there's already a closing brace after cursor
       const textAfterCursor = text.substring(end);
       const hasClosingBrace = textAfterCursor.startsWith('}');
-      
+
       let newText: string;
       if (hasClosingBrace) {
         // Replace content between { and }
@@ -743,25 +749,11 @@ export const Formula: React.FC<FormulaProps> = ({
         newText = text.substring(0, lastOpenBrace + 1) + columnName + '}' + text.substring(end);
       }
       setFormulaText(newText);
-      
+
       // Set cursor position after the field name (after closing })
       setTimeout(() => {
         textarea.focus();
         const newCursorPos = lastOpenBrace + 1 + columnName.length + (hasClosingBrace ? 0 : 1);
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
-        updateCursorPosition();
-        setShowFieldDropdown(false);
-      }, 0);
-    } else {
-      // Insert column reference with curly braces
-      const columnReference = `{${columnName}}`;
-      const newText = text.substring(0, start) + columnReference + text.substring(end);
-      setFormulaText(newText);
-      
-      // Set cursor position after the inserted column reference
-      setTimeout(() => {
-        textarea.focus();
-        const newCursorPos = start + columnReference.length;
         textarea.setSelectionRange(newCursorPos, newCursorPos);
         updateCursorPosition();
         setShowFieldDropdown(false);
@@ -803,28 +795,14 @@ export const Formula: React.FC<FormulaProps> = ({
     }, 0);
   };
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch (err) {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = text;
-      textArea.style.position = 'fixed';
-      textArea.style.opacity = '0';
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-    }
-  };
+
 
   // Compute frequently used functions
   const frequentlyUsedFunctions = useMemo(() => {
     const functions: Array<{ name: string; description: string; example: string }> = [];
     Object.values(FORMULA_FUNCTIONS).forEach((funcList) => {
       funcList.forEach((func) => {
-        const funcName = func.name.replace(/[()]/g, '');
+        const funcName = func.name.replaceAll(/[()]/g, '');
         if (FREQUENTLY_USED_FUNCTION_NAMES.includes(funcName)) {
           functions.push(func);
         }
@@ -844,7 +822,7 @@ export const Formula: React.FC<FormulaProps> = ({
 
     Object.entries(FORMULA_FUNCTIONS).forEach(([category, functions]) => {
       const matchingFunctions = functions.filter((func) => {
-        const funcName = func.name.replace(/[()]/g, '').toLowerCase();
+        const funcName = func.name.replaceAll(/[()]/g, '').toLowerCase();
         const description = (func.description || '').toLowerCase();
         return funcName.includes(query) || description.includes(query);
       });
@@ -909,15 +887,15 @@ export const Formula: React.FC<FormulaProps> = ({
   // If disabled (read-only mode), show calculated value
   if (disabled) {
     const { result, error } = evaluateFormula(formulaText, formulaContext, validateFormula);
-    
+
     if (error) {
       return null;
     }
-    
+
     if (result === null) {
       return null;
     }
-    
+
     return <div className={`${className} px-2 truncate`}>{formatResult(result, formattingType, precision, config, formulaText)}</div>;
   }
 
@@ -940,7 +918,7 @@ export const Formula: React.FC<FormulaProps> = ({
             <div className="flex items-center justify-between w-full">
               <label className="field-component-label flex items-center gap-2">
                 <span>Formula</span>
-                <span 
+                <span
                   ref={helpIconRef}
                   className="relative inline-block"
                   onMouseEnter={handleHelpIconMouseEnter}
@@ -948,12 +926,12 @@ export const Formula: React.FC<FormulaProps> = ({
                 >
                   <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
                   {tooltipPosition && createPortal(
-                    <div 
+                    <div
                       className="fixed w-80 bg-card border rounded-xl shadow-lg p-4 text-sm z-[10000]"
                       style={{ top: `${tooltipPosition.top}px`, left: `${tooltipPosition.left}px` }}
                     >
                       <h4 className="mb-3 text-primary font-semibold">How to use formulas:</h4>
-                      
+
                       <ul className="space-y-2 text-gray-600">
                         <li className="pb-2 border-b border-primary">• Use <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--color-utility-bg)] text-gray-700 text-xs font-mono font-semibold">{'{FieldName}'}</span> to refer to other fields — always wrap names in curly brackets and note that they're case-sensitive.</li>
                         <li className="pb-2 border-b border-primary">• You can click any function to add it and combine it with operators like <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--color-utility-bg)] text-gray-700 text-xs font-mono font-semibold">+</span>, <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--color-utility-bg)] text-gray-700 text-xs font-mono font-semibold">-</span>, <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--color-utility-bg)] text-gray-700 text-xs font-mono font-semibold">*</span>, or <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--color-utility-bg)] text-gray-700 text-xs font-mono font-semibold">/</span>.</li>
@@ -984,11 +962,11 @@ export const Formula: React.FC<FormulaProps> = ({
                 onChange={(e) => {
                   const newValue = e.target.value;
                   const cursorPos = e.target.selectionStart;
-                  
+
                   // Check if '{' was just typed
                   const textBeforeCursor = newValue.substring(0, cursorPos);
                   const lastChar = textBeforeCursor[cursorPos - 1];
-                  
+
                   if (lastChar === '{') {
                     // Show dropdown when '{' is typed
                     setShowFieldDropdown(true);
@@ -1006,7 +984,9 @@ export const Formula: React.FC<FormulaProps> = ({
                     // Check if we're still inside a field reference
                     const textBeforeNewCursor = newValue.substring(0, cursorPos);
                     const lastOpenBrace = textBeforeNewCursor.lastIndexOf('{');
-                    if (lastOpenBrace !== -1) {
+                    if (lastOpenBrace === -1) {
+                      setShowFieldDropdown(false);
+                    } else {
                       const textAfterOpenBrace = textBeforeNewCursor.substring(lastOpenBrace + 1);
                       const hasClosingBrace = textAfterOpenBrace.includes('}');
                       setShowFieldDropdown(!hasClosingBrace);
@@ -1014,11 +994,9 @@ export const Formula: React.FC<FormulaProps> = ({
                       setTimeout(() => {
                         updateCursorPosition();
                       }, 0);
-                    } else {
-                      setShowFieldDropdown(false);
                     }
                   }
-                  
+
                   // Clear error when user starts typing (after blur) - validation will happen on blur
                   if (hasBlurred && formulaError) {
                     setFormulaError(null);
@@ -1054,13 +1032,11 @@ export const Formula: React.FC<FormulaProps> = ({
                 }}
                 onMouseUp={updateCursorPosition}
                 placeholder="Enter formula (e.g., ADD({Price}, {Tax})"
-                className={`w-full field-component p-2.5 resize-none !h-[75px] ${
-                  formulaError 
-                    ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                className={`w-full field-component p-2.5 resize-none !h-[75px] ${formulaError
+                    ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                     : 'field-component-focus'
-                } ${isBorder ? "field-component-border" : ""} ${
-                  disabled ? "bg-gray-100 cursor-not-allowed" : ""
-                }`}
+                  } ${isBorder ? "field-component-border" : ""} ${disabled ? "bg-gray-100 cursor-not-allowed" : ""
+                  }`}
                 rows={3}
                 disabled={disabled}
               />
@@ -1070,7 +1046,7 @@ export const Formula: React.FC<FormulaProps> = ({
           {/* Frequently Used Functions - Compact button grid */}
           <div className="flex flex-col">
             <div className="flex items-center justify-between mb-2">
-              <label className="field-component-label text-sm">Quick Functions</label>
+              <span className="field-component-label text-sm">Quick Functions</span>
               <button
                 ref={showAllFunctionsButtonRef}
                 onClick={handleShowAllFunctionsClick}
@@ -1083,10 +1059,10 @@ export const Formula: React.FC<FormulaProps> = ({
             </div>
             <div className="flex flex-wrap gap-1.5">
               {frequentlyUsedFunctions.map((func) => {
-                const functionName = func.name.replace(/[()]/g, '');
+                const functionName = func.name.replaceAll(/[()]/g, '');
                 const fullDescription = func.description || '';
                 const example = func.example || '';
-                
+
                 return (
                   <div key={func.name} className="relative">
                     <button
@@ -1153,11 +1129,11 @@ export const Formula: React.FC<FormulaProps> = ({
 
         {/* Select Field - Dropdown below cursor when '{' is typed */}
         {showFieldDropdown && isTextareaFocused && filteredColumns.length > 0 && cursorPosition && createPortal(
-          <div 
+          <div
             className="field-dropdown fixed z-[10000] bg-white dark:bg-[var(--color-utility-bg)] shadow-lg rounded-xl border min-w-[150px] max-w-[200px] max-h-[200px] overflow-hidden"
-            style={{ 
-              top: `${cursorPosition.top}px`, 
-              left: `${cursorPosition.left}px` 
+            style={{
+              top: `${cursorPosition.top}px`,
+              left: `${cursorPosition.left}px`
             }}
             onMouseDown={(e) => {
               // Prevent textarea from losing focus when clicking dropdown
@@ -1196,10 +1172,10 @@ export const Formula: React.FC<FormulaProps> = ({
 
         {/* All Functions Modal - Fixed position, aligned with NewColumnModal */}
         {showAllFunctions && allFunctionsModalPosition && createPortal(
-          <div 
+          <div
             className="all-functions-modal fixed z-[10000] bg-[var(--color-alpha-white)] shadow-lg border rounded-xl w-[350px] overflow-hidden flex flex-col"
-            style={{ 
-              top: `${allFunctionsModalPosition.top}px`, 
+            style={{
+              top: `${allFunctionsModalPosition.top}px`,
               left: `${allFunctionsModalPosition.left}px`,
               height: allFunctionsModalPosition.height ? `${allFunctionsModalPosition.height}px` : `${Math.max(window.innerHeight * 0.7, 400)}px`,
               maxHeight: allFunctionsModalPosition.height ? `${allFunctionsModalPosition.height}px` : `${Math.max(window.innerHeight * 0.7, 400)}px`
@@ -1244,7 +1220,7 @@ export const Formula: React.FC<FormulaProps> = ({
                 )}
               </div>
             </div>
-            
+
             {/* Modal Content - Single scroll area */}
             <div className="overflow-y-auto flex-1 bg-[var(--color-alpha-white)]">
               {Object.keys(filteredFormulaFunctions).length === 0 ? (
@@ -1254,100 +1230,111 @@ export const Formula: React.FC<FormulaProps> = ({
               ) : (
                 <div className="divide-y divide-gray-100">
                   {Object.entries(filteredFormulaFunctions).map(([category, functions]) => (
-                  <div key={category}>
-                    <button
-                      onClick={() => toggleCategory(category)}
-                      className={`w-full flex items-center justify-between px-4 py-2.5 text-xs font-medium transition-colors ${
-                        expandedCategories.has(category)
-                          ? "text-gray-900 bg-gray-50"
-                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50/50"
-                      }`}
-                    >
-                      <span className="truncate">{category.replace(/\s*Functions\s*$/i, '').replace(/\s*Operators\s*$/i, '')}</span>
-                      {expandedCategories.has(category) ? (
-                        <ChevronUp className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 ml-2" />
-                      ) : (
-                        <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 ml-2" />
-                      )}
-                    </button>
-                    {expandedCategories.has(category) && (
-                      <div className="px-4 py-2 space-y-1.5">
-                        {functions.map((func) => {
-                          const functionKey = `${category}-${func.name}`;
-                          const isExpanded = expandedFunctions.has(functionKey);
-                          return (
-                            <div key={func.name} className="group">
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setSelectedFunction(functionKey);
-                                    insertFunction(func.name);
-                                  }}
-                                  className={`w-full px-3 text-primary py-2 text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] rounded-xl flex items-center gap-2 ${selectedFunction === functionKey ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''} truncate`}
-                                  title={func.description || func.name}
-                                >
-                                  {func.name.replace(/[()]/g, '')}
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    insertFunction(func.name);
-                                  }}
-                                  className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors text-gray-400 hover:text-[var(--color-brand-600)] hover:bg-gray-100"
-                                  aria-label="Insert function"
-                                  title="Insert function"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    toggleFunction(functionKey);
-                                  }}
-                                  className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
-                                    isExpanded
-                                      ? "bg-gray-200 text-gray-700"
-                                      : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                                  }`}
-                                  aria-label="Toggle function details"
-                                  title="Show details"
-                                >
-                                  <HelpCircle className="w-3 h-3" />
-                                </button>
-                              </div>
-                              {isExpanded && (
-                                <div className="mt-1.5 ml-0.5 pl-2.5 py-2 text-xs border-l-2 dark:bg-[var(--color-hover-bg)]">
-                                  {func.description && (
-                                    <div className="text-gray-600 mb-2 leading-relaxed text-xs">{func.description}</div>
-                                  )}
-                                  <div className="space-y-1.5">
-                                    <div>
-                                      <span className="text-gray-500">Syntax: </span>
-                                      <code className="text-gray-800 font-mono bg-gray-50 px-1.5 py-0.5 rounded text-xs">
-                                        {getFunctionSyntax(func.name, func.example || '')}
-                                      </code>
-                                    </div>
-                                    {func.example && (
+                    <div key={category}>
+                      <button
+                        onClick={() => toggleCategory(category)}
+                        className={`w-full flex items-center justify-between px-4 py-2.5 text-xs font-medium transition-colors ${expandedCategories.has(category)
+                            ? "text-gray-900 bg-gray-50"
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50/50"
+                          }`}
+                      >
+                        <span className="truncate">
+                          {(() => {
+                            const trimmedCategory = category.trim();
+                            const functionsSuffix = " Functions";
+                            const operatorsSuffix = " Operators";
+                            if (trimmedCategory.endsWith(functionsSuffix)) {
+                              return trimmedCategory.slice(0, -functionsSuffix.length);
+                            }
+                            if (trimmedCategory.endsWith(operatorsSuffix)) {
+                              return trimmedCategory.slice(0, -operatorsSuffix.length);
+                            }
+                            return trimmedCategory;
+                          })()}
+                        </span>
+                        {expandedCategories.has(category) ? (
+                          <ChevronUp className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 ml-2" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 ml-2" />
+                        )}
+                      </button>
+                      {expandedCategories.has(category) && (
+                        <div className="px-4 py-2 space-y-1.5">
+                          {functions.map((func) => {
+                            const functionKey = `${category}-${func.name}`;
+                            const isExpanded = expandedFunctions.has(functionKey);
+                            return (
+                              <div key={func.name} className="group">
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setSelectedFunction(functionKey);
+                                      insertFunction(func.name);
+                                    }}
+                                    className={`w-full px-3 text-primary py-2 text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] rounded-xl flex items-center gap-2 ${selectedFunction === functionKey ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''} truncate`}
+                                    title={func.description || func.name}
+                                  >
+                                    {func.name.replaceAll(/[()]/g, '')}
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      insertFunction(func.name);
+                                    }}
+                                    className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors text-gray-400 hover:text-[var(--color-brand-600)] hover:bg-gray-100"
+                                    aria-label="Insert function"
+                                    title="Insert function"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      toggleFunction(functionKey);
+                                    }}
+                                    className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${isExpanded
+                                        ? "bg-gray-200 text-gray-700"
+                                        : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                                      }`}
+                                    aria-label="Toggle function details"
+                                    title="Show details"
+                                  >
+                                    <HelpCircle className="w-3 h-3" />
+                                  </button>
+                                </div>
+                                {isExpanded && (
+                                  <div className="mt-1.5 ml-0.5 pl-2.5 py-2 text-xs border-l-2 dark:bg-[var(--color-hover-bg)]">
+                                    {func.description && (
+                                      <div className="text-gray-600 mb-2 leading-relaxed text-xs">{func.description}</div>
+                                    )}
+                                    <div className="space-y-1.5">
                                       <div>
-                                        <span className="text-gray-500">Example: </span>
+                                        <span className="text-gray-500">Syntax: </span>
                                         <code className="text-gray-800 font-mono bg-gray-50 px-1.5 py-0.5 rounded text-xs">
-                                          {func.example}
+                                          {getFunctionSyntax(func.name, func.example || '')}
                                         </code>
                                       </div>
-                                    )}
+                                      {func.example && (
+                                        <div>
+                                          <span className="text-gray-500">Example: </span>
+                                          <code className="text-gray-800 font-mono bg-gray-50 px-1.5 py-0.5 rounded text-xs">
+                                            {func.example}
+                                          </code>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}

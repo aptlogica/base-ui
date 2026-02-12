@@ -6,7 +6,7 @@ import { validateTableName, validateViewName, validateBaseName, ExistingItem } f
 interface EditItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { name: string; description: string; image?: File | null }) => void;
+  onSave: (data: { name: string; description: string; image?: File | null; removeImage?: boolean }) => void;
   title: string;
   subtitle: string;
   icon: React.ReactNode;
@@ -96,18 +96,16 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
       setImagePreview(previewUrl);
       setImageError('');
       
-      // Validate dimensions asynchronously (show error if invalid, and clear the image)
+      // Validate dimensions asynchronously (show error if invalid, but keep the image)
       const img = new Image();
       img.onload = () => {
         if (img.width > 800 || img.height > 400) {
-          setImage(null);
-          setImagePreview(null);
+          // Keep the image but show error - user can remove it manually
           setImageError('Image dimensions must be max 800 x 400px');
         }
       };
       img.onerror = () => {
-        setImage(null);
-        setImagePreview(null);
+        // Keep the image but show error - user can remove it manually
         setImageError('Failed to load image. Please try again.');
       };
       img.src = previewUrl;
@@ -133,18 +131,14 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
         setImagePreview(previewUrl);
         setImageError('');
         
-        // Validate dimensions asynchronously (show error if invalid, and clear the image)
+        // Validate dimensions asynchronously (show error if invalid, but keep the image)
         const img = new Image();
         img.onload = () => {
           if (img.width > 800 || img.height > 400) {
-            setImage(null);
-            setImagePreview(null);
             setImageError('Image dimensions must be max 800 x 400px');
           }
         };
         img.onerror = () => {
-          setImage(null);
-          setImagePreview(null);
           setImageError('Failed to load image. Please try again.');
         };
         img.src = previewUrl;
@@ -165,7 +159,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
     return 'text-gray-400';
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!name.trim()) {
@@ -200,14 +194,21 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      const saveData: { name: string; description: string; image?: File | null } = {
+      const saveData: { name: string; description: string; image?: File | null; removeImage?: boolean } = {
         name: name.trim(),
         description: description.trim(),
       };
       
       // Include image for base type (File for new upload, null for removal)
       if (itemType === 'base') {
-        saveData.image = image;
+        // If image is a File, include it for upload
+        if (image instanceof File) {
+          saveData.image = image;
+        }
+        // If image is null but initialImage was set, user explicitly removed it
+        else if (image === null && initialImage) {
+          saveData.removeImage = true;
+        }
       }
       
       onSave(saveData);
@@ -348,6 +349,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
                         e.stopPropagation();
                         setImage(null);
                         setImagePreview(null);
+                        setImageError('');
                         const input = document.getElementById('edit-image-upload') as HTMLInputElement;
                         if (input) input.value = '';
                       }}

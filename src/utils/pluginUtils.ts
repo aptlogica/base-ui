@@ -1,10 +1,15 @@
-import { Plugin, PluginManifest } from '../core/types';
+import { Plugin } from '../core/types';
 
 export const createPluginId = (name: string): string => {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  const normalized = name.toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, '-');
+
+  let start = 0;
+  let end = normalized.length;
+  while (start < end && normalized[start] === '-') start++;
+  while (end > start && normalized[end - 1] === '-') end--;
+
+  return normalized.slice(start, end);
 };
 
 export const validatePluginId = (id: string): boolean => {
@@ -20,12 +25,12 @@ export const getPluginVersion = (plugin: Plugin): string => {
 };
 
 export const isPluginCompatible = (
-  plugin: Plugin, 
+  plugin: Plugin,
   frameworkVersion: string
 ): boolean => {
   const requiredVersion = (plugin.manifest as any).frameworkVersion;
   if (!requiredVersion) return true;
-  
+
   try {
     // Use mock semver if real one isn't available
     const semver = require('semver');
@@ -92,7 +97,7 @@ export const parseFieldConfig = (config: any): any => {
  */
 export const parseFieldConfigs = (data: any): any => {
   if (!data) return data;
-  
+
   // Handle workspace data structure
   if (data.workspaces) {
     return {
@@ -112,7 +117,7 @@ export const parseFieldConfigs = (data: any): any => {
       }))
     };
   }
-  
+
   // Handle table data structure
   if (data.fields) {
     return {
@@ -123,7 +128,7 @@ export const parseFieldConfigs = (data: any): any => {
       }))
     };
   }
-  
+
   return data;
 };
 

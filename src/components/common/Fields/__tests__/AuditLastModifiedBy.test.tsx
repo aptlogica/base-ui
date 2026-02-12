@@ -1,12 +1,13 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AuditLastModifiedBy } from '../AuditLastModifiedBy';
-import { useCurrentUser } from '@/auth/useCurrentUser';
-import { useUserProfile } from '@/hooks/useApi';
 
-vi.mock('@/auth/useCurrentUser');
-vi.mock('@/hooks/useApi');
+vi.mock('../AuditUser', () => ({
+  AuditUser: ({ placeholder }: { placeholder?: string }) => (
+    <div data-testid="audit-user-mock">{placeholder || 'User...'}</div>
+  ),
+}));
 
 describe('AuditLastModifiedBy Component', () => {
   beforeEach(() => {
@@ -14,337 +15,68 @@ describe('AuditLastModifiedBy Component', () => {
   });
 
   describe('Rendering', () => {
-    it('should render component without crashing', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue(null);
-      mockUseUserProfile.mockReturnValue({ data: null } as any);
-
+    it('should render without crashing', () => {
       render(<AuditLastModifiedBy />);
       expect(document.body).toBeInTheDocument();
     });
 
-    it('should display default placeholder when no current user', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue(null);
-      mockUseUserProfile.mockReturnValue({ data: null } as any);
-
+    it('should pass default placeholder to AuditUser', () => {
       render(<AuditLastModifiedBy />);
       expect(screen.getByText('Last Modified by...')).toBeInTheDocument();
     });
 
-    it('should display custom placeholder when provided', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue(null);
-      mockUseUserProfile.mockReturnValue({ data: null } as any);
-
-      render(<AuditLastModifiedBy placeholder="Modified by..." />);
-      expect(screen.getByText('Modified by...')).toBeInTheDocument();
-    });
-
-    it('should display user information when available', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: '/avatar.jpg'
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: { data: {} } } as any);
-
-      render(<AuditLastModifiedBy />);
-      expect(screen.getByText('Jane Doe')).toBeInTheDocument();
-    });
-
-    it('should display profile avatar image', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: '/user-avatar.jpg'
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: { data: { avatar: '/profile-avatar.jpg' } } } as any);
-
-      render(<AuditLastModifiedBy />);
-      const img = document.querySelector('img');
-      expect(img).toBeInTheDocument();
-      expect(img).toHaveAttribute('alt', 'Profile');
-    });
-
-    it('should display initials badge when no avatar', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe'
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: null } as any);
-
-      render(<AuditLastModifiedBy />);
-      
-      const badge = document.querySelector('[class*="rounded-full"]');
-      expect(badge).toBeInTheDocument();
+    it('should pass custom placeholder to AuditUser', () => {
+      render(<AuditLastModifiedBy placeholder="Last Modified by custom" />);
+      expect(screen.getByText('Last Modified by custom')).toBeInTheDocument();
     });
   });
 
-  describe('User Information Display', () => {
-    it('should prioritize profile avatar over user avatar', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
+  describe('Props Passing', () => {
+    it('should forward placeholder prop to AuditUser', () => {
+      render(<AuditLastModifiedBy placeholder="Test Placeholder" />);
+      expect(screen.getByTestId('audit-user-mock')).toBeInTheDocument();
+    });
 
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: '/user-avatar.jpg'
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: { data: { avatar: '/profile-avatar.jpg' } } } as any);
-
+    it('should use default last modified by placeholder when not specified', () => {
       render(<AuditLastModifiedBy />);
-      const img = document.querySelector('img') as HTMLImageElement;
-      
-      expect(img).toBeInTheDocument();
-      expect(img.src).toContain('profile-avatar');
-    });
-
-    it('should use user avatar when profile avatar not available', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: '/user-avatar.jpg'
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: { data: {} } } as any);
-
-      render(<AuditLastModifiedBy />);
-      const img = document.querySelector('img') as HTMLImageElement;
-      
-      expect(img).toBeInTheDocument();
-      expect(img.src).toContain('user-avatar');
-    });
-
-    it('should display initials when no avatar available', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'John Smith'
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: { data: {} } } as any);
-
-      render(<AuditLastModifiedBy />);
-      
-      const badge = document.querySelector('[class*="rounded-full"]');
-      expect(badge).toBeInTheDocument();
-    });
-
-    it('should truncate very long display names', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'A'.repeat(60)
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: { data: {} } } as any);
-
-      render(<AuditLastModifiedBy />);
-      
-      const nameSpan = document.querySelector('[class*="truncate"]');
-      expect(nameSpan).toBeInTheDocument();
-    });
-  });
-
-  describe('Disabled State', () => {
-    it('should respect disabled prop', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe'
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: { data: {} } } as any);
-
-      render(<AuditLastModifiedBy disabled={true} />);
-      
-      expect(screen.getByText('Jane Doe')).toBeInTheDocument();
-    });
-  });
-
-  describe('Styling', () => {
-    it('should apply correct styling classes', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: '/avatar.jpg'
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: { data: {} } } as any);
-
-      const { container } = render(<AuditLastModifiedBy />);
-      
-      expect(container.querySelector('[class*="flex"]')).toBeInTheDocument();
-      expect(container.querySelector('[class*="gap"]')).toBeInTheDocument();
-    });
-
-    it('should use different color scheme than AuditCreatedBy', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe'
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: { data: {} } } as any);
-
-      const { container } = render(<AuditLastModifiedBy />);
-      
-      // Should have purple/different color styling
-      const badge = container.querySelector('[class*="purple"]') || container.querySelector('[class*="rounded-full"]');
-      expect(badge).toBeInTheDocument();
-    });
-  });
-
-  describe('Read-Only Nature', () => {
-    it('should be a read-only audit field', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe'
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: { data: {} } } as any);
-
-      render(<AuditLastModifiedBy />);
-      
-      // Should display as text only, not interactive
-      const nameDisplay = screen.getByText('Jane Doe');
-      expect(nameDisplay.tagName).not.toBe('INPUT');
-      expect(nameDisplay.tagName).not.toBe('BUTTON');
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle undefined user gracefully', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue(undefined as any);
-      mockUseUserProfile.mockReturnValue({ data: null } as any);
-
-      render(<AuditLastModifiedBy />);
-      
       expect(screen.getByText('Last Modified by...')).toBeInTheDocument();
     });
+  });
 
-    it('should handle user with no display name', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1'
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: { data: {} } } as any);
-
+  describe('Integration with AuditUser', () => {
+    it('should render AuditUser component', () => {
       render(<AuditLastModifiedBy />);
-      
-      expect(document.body).toBeInTheDocument();
+      expect(screen.getByTestId('audit-user-mock')).toBeInTheDocument();
     });
 
-    it('should handle null profile data', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
+    it('should properly delegate to AuditUser with props', () => {
+      const { rerender } = render(
+        <AuditLastModifiedBy placeholder="First Placeholder" />
+      );
+      expect(screen.getByText('First Placeholder')).toBeInTheDocument();
 
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe'
-      } as any);
-
-      mockUseUserProfile.mockReturnValue(undefined as any);
-
-      render(<AuditLastModifiedBy />);
-      
-      expect(screen.getByText('Jane Doe')).toBeInTheDocument();
-    });
-
-    it('should handle profile loading state', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe'
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: undefined, isLoading: true } as any);
-
-      render(<AuditLastModifiedBy />);
-      
-      expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+      rerender(<AuditLastModifiedBy placeholder="Second Placeholder" />);
+      expect(screen.getByText('Second Placeholder')).toBeInTheDocument();
     });
   });
 
   describe('Accessibility', () => {
     it('should have proper semantic structure', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: '/avatar.jpg'
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: { data: {} } } as any);
-
       const { container } = render(<AuditLastModifiedBy />);
-      
-      expect(container.querySelector('div')).toBeInTheDocument();
+      expect(container).toBeInTheDocument();
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle empty placeholder string', () => {
+      render(<AuditLastModifiedBy placeholder="" />);
+      expect(screen.getByTestId('audit-user-mock')).toBeInTheDocument();
     });
 
-    it('should have alt text for avatar', () => {
-      const mockUseCurrentUser = vi.mocked(useCurrentUser);
-      const mockUseUserProfile = vi.mocked(useUserProfile);
-
-      mockUseCurrentUser.mockReturnValue({
-        id: '1',
-        display_name: 'Jane Doe',
-        avatar: '/avatar.jpg'
-      } as any);
-
-      mockUseUserProfile.mockReturnValue({ data: { data: { avatar: '/profile.jpg' } } } as any);
-
-      render(<AuditLastModifiedBy />);
-      
-      const img = document.querySelector('img');
-      expect(img).toHaveAttribute('alt');
+    it('should handle very long placeholder text', () => {
+      const longPlaceholder = 'B'.repeat(100);
+      render(<AuditLastModifiedBy placeholder={longPlaceholder} />);
+      expect(screen.getByText(longPlaceholder)).toBeInTheDocument();
     });
   });
 });

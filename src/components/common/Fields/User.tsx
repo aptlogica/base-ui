@@ -308,7 +308,7 @@ export const User: React.FC<UserProps> = ({
   const getUserInitials = (name: string): string => {
     const parts = name.trim().split(' ');
     if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      return (parts[0][0] + parts.at(-1)![0]).toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
   };
@@ -361,30 +361,29 @@ export const User: React.FC<UserProps> = ({
                     </div>
                   )}
                   <span className="truncate">{user.name}</span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      if (readOnly) return;
-                      e.stopPropagation();
-                      if (allowMultiple) {
-                        handleRemoveUser(user.id);
-                      } else {
-                        setSelectedValue(null);
-                        onChange(null);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (readOnly) return;
-                      if (e.key === 'Enter' || e.key === ' ') {
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
                         e.stopPropagation();
-                      }
-                    }}
-                    disabled={readOnly}
-                    className="ml-1 hover:bg-gray-300 rounded-full p-0.5 flex-shrink-0 border-0 bg-transparent cursor-pointer"
-                    aria-label={`Remove ${user.name}`}
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+                        if (allowMultiple) {
+                          handleRemoveUser(user.id);
+                        } else {
+                          setSelectedValue(null);
+                          onChange(null);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation();
+                        }
+                      }}
+                      className="ml-1 hover:bg-gray-300 rounded-full p-0.5 flex-shrink-0 border-0 bg-transparent cursor-pointer"
+                      aria-label={`Remove ${user.name}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
                 </span>
               ))}
               {selectedUsers.length > 3 && (

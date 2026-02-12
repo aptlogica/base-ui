@@ -14,14 +14,12 @@ interface CreateWorkspaceModalProps {
   onSuccess?: () => void;
   title?: string;
   submitButtonText?: string;
-  // Optional controlled props (when parent wants to manage fields)
   name?: string;
   setName?: (v: string) => void;
   description?: string;
   setDescription?: (v: string) => void;
   error?: string;
-  // If provided, parent handles submit. Should return a Promise if async.
-  onSubmit?: (e?: React.FormEvent) => Promise<void> | void;
+  onSubmit?: (e?: React.SyntheticEvent<HTMLFormElement>) => Promise<void> | void;
   // For edit mode: pass the current workspace ID to exclude it from duplicate validation
   currentWorkspaceId?: string;
 }
@@ -146,7 +144,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   };
 
   // Submit workspace - extracted to reduce complexity
-  const submitWorkspace = async (e: React.FormEvent | undefined, title: string, desc: string) => {
+  const submitWorkspace = async (e:React.SyntheticEvent<HTMLFormElement> | undefined, title: string, desc: string) => {
     if (controlledSubmit) {
       await controlledSubmit(e);
     } else {
@@ -174,7 +172,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
     onSuccess?.();
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.SyntheticEvent<HTMLFormElement>) => {
     e?.preventDefault();
 
     const { title, description: desc } = getFormValues();

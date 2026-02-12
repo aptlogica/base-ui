@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, ExternalLink, PanelRightClose, Plus, List } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ExternalLink, PanelRightClose, List } from "lucide-react";
 import { FilterPopover } from '../../../components/shared/table/FilterPopover';
 import { FieldsPopover } from '../../../components/shared/table/FieldsPopover';
 import { GridColumn } from '../../GridViewPlugin/types/grid.types';
@@ -11,11 +11,7 @@ interface CalendarHeaderProps {
   currentView: string;
   onViewChange: (view: string) => void;
   dateField?: any;
-  dateFields: any[];
-  onDateFieldChange: (fieldId: string) => void;
   onExport: () => void;
-  onCreateRecord?: () => void;
-  sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
   // Props for the popover components
   columns: GridColumn[];
@@ -25,9 +21,7 @@ interface CalendarHeaderProps {
   onAddFilter?: (filter: { column: string; operator: string; value: string }) => void;
   onRemoveFilter?: (index: number) => void;
   onUpdateFilter?: (index: number, updates: Partial<{ column: string; operator: string; value: string }>) => void;
-  onRealTimeFilter?: (filter: { column: string; operator: string; value: string } | null) => void;
   onGroupByChange?: (column: GridColumn | undefined) => void;
-  tableId: string;
   events?: Array<{ date: string; id: string; title: string;[key: string]: any }>;
 }
 
@@ -37,11 +31,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   currentView,
   onViewChange,
   dateField,
-  dateFields,
-  onDateFieldChange,
   onExport,
-  onCreateRecord,
-  sidebarCollapsed,
   onToggleSidebar,
   columns,
   fieldConfig,
@@ -50,9 +40,8 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onAddFilter,
   onRemoveFilter,
   onUpdateFilter,
-  onRealTimeFilter,
   onGroupByChange,
-  tableId,
+  // tableId,
   events = [],
 }) => {
   // Handler to update a filter at a specific index
@@ -64,8 +53,8 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       // Fallback: remove and re-add (legacy behavior)
       if (index < 0 || index >= filters.length) return;
       const updatedFilter = { ...filters[index], ...updates };
-      onRemoveFilter(index);
-      onAddFilter(updatedFilter);
+      if (onRemoveFilter) onRemoveFilter(index);
+      if (onAddFilter) onAddFilter(updatedFilter);
     }
   }, [filters, onAddFilter, onRemoveFilter, onUpdateFilter]);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -291,11 +280,11 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
           {/* Weeks List */}
           <div className="p-3 max-h-64 overflow-y-auto">
-            {weeks.map((week, index) => {
+            {weeks.map((week) => {
               const isCurrentWeek = week.start <= currentDate && week.end >= currentDate;
               return (
                 <button
-                  key={index}
+                  key={week.start.toISOString()}
                   onClick={(e) => {
                     e.stopPropagation();
                     selectWeek(week.start);
@@ -367,28 +356,26 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
             {/* Days */}
             <div className="grid grid-cols-7 gap-1">
-              {days.map((date, index) => {
+              {days.map((date) => {
                 const isCurrentMonth = date.getMonth() === month;
                 const isToday = date.toDateString() === new Date().toDateString();
                 const isSelected = date.toDateString() === currentDate.toDateString();
                 const hasEvents = hasEventsForDate(date);
+                const isSelectedClass = isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : '';
+                const isTodayClass = isToday ? 'text-[var(--color-text-primary)] border border-[var(--color-bg-brand-primary)]' : '';
+                const isCurrentMonthClass = isCurrentMonth ? 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black' : '';
+                const defaultClass = 'text-gray-400 hover:bg-gray-50';
+                const dateButtonClass = isSelectedClass || isTodayClass || isCurrentMonthClass || defaultClass;
 
                 return (
                   <button
-                    key={index}
+                    key={date.toISOString()}
                     onClick={(e) => {
                       e.stopPropagation();
                       onDateChange(date);
                       setShowDatePicker(false);
                     }}
-                    className={`relative w-8 h-8 text-sm rounded-full transition-colors flex flex-col items-center justify-center ${isSelected
-                      ? 'bg-[var(--color-bg-brand-primary)] text-black'
-                      : isToday
-                        ? 'text-[var(--color-text-primary)] border border-[var(--color-bg-brand-primary)]'
-                        : isCurrentMonth
-                          ? 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
-                          : 'text-gray-400 hover:bg-gray-50'
-                      }`}
+                    className={`relative w-8 h-8 text-sm rounded-full transition-colors flex flex-col items-center justify-center ${dateButtonClass}`}
                   >
                     {/* Event indicator - show dot if date has events */}
                     {hasEvents && (
@@ -661,21 +648,19 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                 columns={columns}
                 fieldConfig={fieldConfig}
                 onFieldToggle={onFieldToggle}
-                tableId={tableId}
                 label="Fields"
                 iconComponent={List}
               />
             )}
 
             {/* Filter Popover */}
-            {onAddFilter && (
+            {onAddFilter && onRemoveFilter && (
               <FilterPopover
                 columns={columns}
                 filters={filters}
                 onAddFilter={onAddFilter}
                 onRemoveFilter={onRemoveFilter}
                 onUpdateFilter={handleUpdateFilter}
-                onRealTimeFilter={onRealTimeFilter}
               />
             )}
 
@@ -695,16 +680,6 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               <PanelRightClose className="w-5 h-5" />
             </button>
 
-            {/* Create Record */}
-            {onCreateRecord && (
-              <button 
-                onClick={onCreateRecord}
-                className="px-6 py-2 rounded-xl btn-primary text-[var(--color-text-primary)] font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Plus className="w-3 h-3" />
-                <span>Add Record</span>
-              </button>
-            )}
           </div>
         </div>
 
@@ -744,16 +719,6 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               </button>
             </div>
 
-            {/* Create Record */}
-            {onCreateRecord && (
-              <button
-                onClick={onCreateRecord}
-                className="px-4 py-2 rounded-xl btn-primary text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Plus className="w-3 h-3" />
-                <span>Create</span>
-              </button>
-            )}
           </div>
 
           {/* Second row: View tabs and navigation */}

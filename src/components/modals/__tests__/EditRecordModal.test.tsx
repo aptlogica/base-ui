@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EditRecordModal from '../EditRecordModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useBaseAccess } from '../../../hooks/useBaseAccess';
 
 // Mock hooks
 vi.mock('../../../hooks/useApi', () => ({
@@ -44,7 +45,12 @@ vi.mock('../../common/Toast', () => ({
 }));
 
 vi.mock('../../../utils/standardFieldUtils', () => ({
-  createFieldRendererProps: vi.fn((field) => ({ field })),
+  createFieldRendererProps: vi.fn((field, value, onChange, options = {}) => ({
+    field,
+    value,
+    onChange,
+    ...options,
+  })),
   getFieldDisplayName: vi.fn((field) => field.title || field.name),
   getFieldDefaultValue: vi.fn(() => null),
   getStandardFieldType: vi.fn((type) => type),
@@ -295,8 +301,97 @@ describe('EditRecordModal', () => {
     });
   });
 
+  describe('read-only access', () => {
+    it('hides submit button when user cannot update', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => false,
+        canDeleteRecord: () => false,
+        isBaseReadOnly: () => true,
+      } as any));
+
+      renderWithQueryClient(<EditRecordModal {...defaultProps} />);
+
+      // When user cannot update, the footer with buttons is not rendered
+      const updateButton = screen.queryByRole('button', { name: 'Save changes' });
+      expect(updateButton).not.toBeInTheDocument();
+    });
+
+    it('hides delete button when user cannot delete', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => true,
+        canDeleteRecord: () => false,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      renderWithQueryClient(<EditRecordModal {...defaultProps} onDelete={vi.fn()} />);
+
+      const deleteButton = screen.queryByRole('button', { name: /delete/i });
+      expect(deleteButton).not.toBeInTheDocument();
+    });
+
+    it('shows delete button when user can delete', async () => {
+      const user = userEvent.setup();
+      
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => true,
+        canDeleteRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      renderWithQueryClient(<EditRecordModal {...defaultProps} onDelete={vi.fn()} />);
+
+      // Click the menu button to open the dropdown
+      const menuButton = screen.getByLabelText('Record menu');
+      await user.click(menuButton);
+
+      // Now find the delete button in the menu
+      const deleteButton = await screen.findByText(/Delete record/i);
+      expect(deleteButton).toBeInTheDocument();
+    });
+  });
+
+  describe('form field rendering', () => {
+    it('renders all fields from the record', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => true,
+        canDeleteRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      renderWithQueryClient(<EditRecordModal {...defaultProps} />);
+
+      // Field renderer should be present for field-1
+      expect(screen.getByTestId('field-renderer-field-1')).toBeInTheDocument();
+    });
+
+    it('does not render title field badge', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => true,
+        canDeleteRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      renderWithQueryClient(<EditRecordModal {...defaultProps} />);
+
+      // The title badge should not exist
+      expect(screen.queryByText('Title Field')).not.toBeInTheDocument();
+    });
+  });
+
   describe('accessibility', () => {
     it('has proper button types', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => true,
+        canDeleteRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
       renderWithQueryClient(<EditRecordModal {...defaultProps} />);
 
       const cancelButton = screen.getByRole('button', { name: 'Cancel' });
@@ -304,6 +399,42 @@ describe('EditRecordModal', () => {
 
       expect(cancelButton).toHaveAttribute('type', 'button');
       expect(submitButton).toHaveAttribute('type', 'button');
+    });
+  });
+
+  describe('save button state', () => {
+    it('disables save when no values are changed', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => true,
+        canDeleteRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      renderWithQueryClient(<EditRecordModal {...defaultProps} />);
+
+      const submitButton = screen.getByRole('button', { name: 'Save changes' });
+      expect(submitButton).toBeDisabled();
+    });
+
+    it('enables save when a field value is updated', async () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => true,
+        canDeleteRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      const user = userEvent.setup();
+      renderWithQueryClient(<EditRecordModal {...defaultProps} />);
+
+      const submitButton = screen.getByRole('button', { name: 'Save changes' });
+      expect(submitButton).toBeDisabled();
+
+      await user.clear(screen.getByTestId('field-input-field-1'));
+      await user.type(screen.getByTestId('field-input-field-1'), 'Updated Title');
+
+      expect(submitButton).not.toBeDisabled();
     });
   });
 });

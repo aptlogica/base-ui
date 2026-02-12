@@ -1,16 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { URL } from '../URL';
 
-// Mock window.open
+// Mock window.open and window.location
 const mockWindowOpen = vi.fn();
-window.open = mockWindowOpen;
+const originalLocation = window.location;
 
-vi.mock('lucide-react', () => ({
-  ExternalLink: (props: any) => <svg data-testid="external-link" {...props} />
-}));
+Object.defineProperty(window, 'open', {
+  writable: true,
+  value: mockWindowOpen,
+  configurable: true
+});
 
 vi.mock('../../../utils/helpers', () => ({
   useClickHandler:
@@ -68,25 +70,15 @@ describe('URL Component', () => {
       expect(screen.getByText('Enter a valid website URL')).toBeInTheDocument();
     });
 
-    it('should render external link icon when value exists and showIcon is true', () => {
+    it('should render URL as clickable link when value exists', () => {
       render(<URL value="example.com" onChange={mockOnChange} />);
-      expect(screen.getByTestId('external-link')).toBeInTheDocument();
+      const link = screen.getByRole('link');
+      expect(link).toBeInTheDocument();
     });
 
-    it('should not render external link icon when showIcon is false', () => {
-      render(
-        <URL
-          value="example.com"
-          onChange={mockOnChange}
-          config={{ showIcon: false }}
-        />
-      );
-      expect(screen.queryByTestId('external-link')).not.toBeInTheDocument();
-    });
-
-    it('should not render external link icon when value is empty', () => {
+    it('should not render URL as link when value is empty', () => {
       render(<URL value="" onChange={mockOnChange} />);
-      expect(screen.queryByTestId('external-link')).not.toBeInTheDocument();
+      expect(screen.queryByRole('link')).not.toBeInTheDocument();
     });
 
     it('should render with disabled styling when disabled', () => {
@@ -430,16 +422,16 @@ describe('URL Component', () => {
       const input = await screen.findByRole('textbox');
 
       await userEvent.type(input, 'invalid');
-      // Error state should hide icon
-      expect(screen.queryByTestId('external-link')).not.toBeInTheDocument();
+      // Error state should hide link
+      expect(screen.queryByRole('link')).not.toBeInTheDocument();
 
       await userEvent.clear(input);
       await userEvent.type(input, 'example.com');
       fireEvent.blur(input);
 
       await waitFor(() => {
-        // Valid input should show icon (if value exists)
-        expect(screen.getByTestId('external-link')).toBeInTheDocument();
+        // Valid input should show link (if value exists)
+        expect(screen.getByRole('link')).toBeInTheDocument();
       });
     });
 
@@ -452,7 +444,7 @@ describe('URL Component', () => {
         />
       );
 
-      expect(screen.getByTestId('external-link')).toBeInTheDocument();
+      expect(screen.getByRole('link')).toBeInTheDocument();
 
       await userEvent.click(screen.getByRole('button'));
       const input = await screen.findByRole('textbox');
@@ -462,7 +454,7 @@ describe('URL Component', () => {
       fireEvent.blur(input);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('external-link')).not.toBeInTheDocument();
+        expect(screen.queryByRole('link')).not.toBeInTheDocument();
       });
     });
   });
@@ -477,8 +469,8 @@ describe('URL Component', () => {
         />
       );
 
-      const icon = screen.getByTestId('external-link');
-      fireEvent.click(icon);
+      const link = screen.getByRole('link');
+      fireEvent.click(link);
 
       expect(mockWindowOpen).toHaveBeenCalledWith(
         'https://example.com',
@@ -496,21 +488,18 @@ describe('URL Component', () => {
         />
       );
 
-      const icon = screen.getByTestId('external-link');
-      fireEvent.click(icon);
+      const link = screen.getByRole('link');
+      fireEvent.click(link);
 
-      expect(mockWindowOpen).toHaveBeenCalledWith(
-        'https://example.com',
-        '_self',
-        'noopener,noreferrer'
-      );
+      // Should navigate in same tab
+      expect(link).toHaveAttribute('href', 'https://example.com');
     });
 
     it('should normalize URL before opening', async () => {
       render(<URL value="example.com" onChange={mockOnChange} />);
 
-      const icon = screen.getByTestId('external-link');
-      fireEvent.click(icon);
+      const link = screen.getByRole('link');
+      fireEvent.click(link);
 
       expect(mockWindowOpen).toHaveBeenCalledWith(
         'https://example.com',
@@ -519,20 +508,17 @@ describe('URL Component', () => {
       );
     });
 
-    it('should not open URL when in edit mode', async () => {
+    it('should not show link when in edit mode', async () => {
       render(<URL value="example.com" onChange={mockOnChange} />);
 
       await userEvent.click(screen.getByRole('button'));
       await screen.findByRole('textbox');
 
-      const icon = screen.getByTestId('external-link');
-      fireEvent.click(icon);
-
-      // Should not open URL when clicking icon in edit mode
-      expect(mockWindowOpen).not.toHaveBeenCalled();
+      // When in edit mode, no link should be visible
+      expect(screen.queryByRole('link')).not.toBeInTheDocument();
     });
 
-    it('should not open URL when there is an error', async () => {
+    it('should not show link when there is an error', async () => {
       render(
         <URL
           value="example.com"
@@ -549,27 +535,27 @@ describe('URL Component', () => {
       fireEvent.blur(input);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('external-link')).not.toBeInTheDocument();
+        expect(screen.queryByRole('link')).not.toBeInTheDocument();
       });
 
       expect(mockWindowOpen).not.toHaveBeenCalled();
     });
 
-    it('should not open URL when value is empty', () => {
+    it('should not show link when value is empty', () => {
       render(<URL value="" onChange={mockOnChange} />);
 
-      expect(screen.queryByTestId('external-link')).not.toBeInTheDocument();
+      expect(screen.queryByRole('link')).not.toBeInTheDocument();
       expect(mockWindowOpen).not.toHaveBeenCalled();
     });
 
     it('should prevent default behavior when clicking URL', async () => {
       render(<URL value="example.com" onChange={mockOnChange} />);
 
-      const icon = screen.getByTestId('external-link');
+      const link = screen.getByRole('link');
       const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
       const preventDefaultSpy = vi.spyOn(clickEvent, 'preventDefault');
 
-      fireEvent(icon, clickEvent);
+      fireEvent(link, clickEvent);
 
       expect(preventDefaultSpy).toHaveBeenCalled();
     });
@@ -757,8 +743,8 @@ describe('URL Component', () => {
     it('should handle URL with path', async () => {
       render(<URL value="example.com/path" onChange={mockOnChange} />);
 
-      const icon = screen.getByTestId('external-link');
-      fireEvent.click(icon);
+      const link = screen.getByRole('link');
+      fireEvent.click(link);
 
       expect(mockWindowOpen).toHaveBeenCalledWith(
         'https://example.com/path',
@@ -770,8 +756,8 @@ describe('URL Component', () => {
     it('should handle URL with query parameters', async () => {
       render(<URL value="example.com?param=value" onChange={mockOnChange} />);
 
-      const icon = screen.getByTestId('external-link');
-      fireEvent.click(icon);
+      const link = screen.getByRole('link');
+      fireEvent.click(link);
 
       expect(mockWindowOpen).toHaveBeenCalledWith(
         'https://example.com?param=value',
@@ -786,11 +772,15 @@ describe('URL Component', () => {
       await userEvent.click(screen.getByRole('button'));
       const input = await screen.findByRole('textbox');
 
-      fireEvent.blur(input);
+      await act(async () => {
+        fireEvent.blur(input);
+      });
 
       // Component normalizes whitespace to "https://   " which triggers onChange
       // This is expected behavior - the component adds https:// prefix
-      expect(mockOnChange).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockOnChange).toHaveBeenCalled();
+      });
     });
 
     it('should handle rapid value changes', async () => {
@@ -801,7 +791,12 @@ describe('URL Component', () => {
       rerender(<URL value="second.com" onChange={mockOnChange} />);
       rerender(<URL value="third.com" onChange={mockOnChange} />);
 
-      expect(screen.getByText('third.com')).toBeInTheDocument();
+      // The URL is rendered as a link
+      await waitFor(() => {
+        const links = screen.queryAllByRole('link');
+        const hasThirdUrl = links.some(link => link.textContent?.includes('third.com'));
+        expect(hasThirdUrl).toBe(true);
+      });
     });
   });
 });

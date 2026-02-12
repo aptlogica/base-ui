@@ -20,6 +20,8 @@ import { useBaseAccess } from '../../../hooks/useBaseAccess';
 import { useUpdateBase } from '../../../hooks/useApi';
 import type { TablesResponse } from '../../../types/api.types';
 
+type FieldIdValue = string | { value: string } | null;
+
 interface PinnedTables {
   [tableId: string]: boolean;
 }
@@ -293,7 +295,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   >
                     <span
                       title={table.title}
-                      className="font-medium text-[var(--color-text-tertiary)] truncate max-w-[200px]"
+                      className="font-medium text-[var(--color-text-tertiary)] truncate max-w-[160px]"
                     >
                       {table.title}
                     </span>
@@ -356,7 +358,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         {canCreateTable() && (
           <>
             <button
-              className="w-full flex items-center justify-center gap-2 btn-secondary p-2 rounded transition"
+              className="w-full flex items-center justify-center gap-2 btn-secondary p-2 rounded transition overflow-hidden"
               onClick={(e) => {
                 e.stopPropagation();
                 if (selectedBase?.id && effectiveSelectedWorkspace?.id) {
@@ -372,7 +374,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <Download size={16} /> Import Table
             </button>
             <button
-              className="w-full flex items-center justify-center gap-2 btn-primary p-2 rounded transition"
+              className="w-full flex items-center justify-center gap-2 btn-primary p-2 rounded transition overflow-hidden"
               onClick={(e) => {
                 e.stopPropagation();
                 if (selectedBase?.id) {
@@ -506,9 +508,9 @@ const Sidebar: React.FC<SidebarProps> = ({
               name: string;
               description?: string;
               type: string;
-              fieldId?: string | { value: string } | null;
-              startDateFieldId?: string | { value: string } | null;
-              endDateFieldId?: string | { value: string } | null;
+              fieldId?: FieldIdValue;
+              startDateFieldId?: FieldIdValue;
+              endDateFieldId?: FieldIdValue;
             }) => {
               // Find base_id for the selected table
               const tables = (baseTables as TablesResponse | undefined)?.data || [];

@@ -33,13 +33,3 @@ export type ColumnConfig = BaseColumn;
 export interface GridColumn extends BaseColumn {
   // Grid-specific properties can be added here if needed
 }
-
-// Kanban-specific column interface (extends BaseColumn)
-export interface KanbanColumn extends BaseColumn {
-  // Kanban-specific properties can be added here if needed
-}
-
-// Gallery-specific column interface (extends BaseColumn)
-export interface GalleryColumn extends BaseColumn {
-  // Gallery-specific properties can be added here if needed
-}

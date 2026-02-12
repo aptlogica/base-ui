@@ -23,9 +23,204 @@ export interface FormulaContext {
 }
 
 // Parse field reference from formula (e.g., {Price} -> "Price")
+const isWhitespaceChar = (ch: string) =>
+  ch === ' ' || ch === '\n' || ch === '\r' || ch === '\t' || ch === '\f' || ch === '\v';
+
+const isDigitChar = (ch: string) => ch >= '0' && ch <= '9';
+
+const isUpperAlpha = (ch: string) => ch >= 'A' && ch <= 'Z';
+
+const isIdentStart = (ch: string) => isUpperAlpha(ch) || ch === '_';
+
+const isIdentChar = (ch: string) => isUpperAlpha(ch) || isDigitChar(ch) || ch === '_';
+
+const parseNumberLiteralAt = (input: string, start: number): number => {
+  let i = start;
+  if (input[i] === '-') i++;
+  let digitsBefore = 0;
+  while (i < input.length && isDigitChar(input[i])) {
+    digitsBefore++;
+    i++;
+  }
+  let digitsAfter = 0;
+  if (i < input.length && input[i] === '.') {
+    i++;
+    while (i < input.length && isDigitChar(input[i])) {
+      digitsAfter++;
+      i++;
+    }
+    if (digitsBefore === 0 && digitsAfter === 0) return 0;
+    return i - start;
+  }
+  if (digitsBefore === 0) return 0;
+  return i - start;
+};
+
+const isNumericLiteral = (value: string): boolean => {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  const len = parseNumberLiteralAt(trimmed, 0);
+  return len === trimmed.length;
+};
+
+const containsFunctionCallToken = (value: string): boolean => {
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i];
+    if (!isIdentStart(ch)) continue;
+    let j = i + 1;
+    while (j < value.length && isIdentChar(value[j])) j++;
+    while (j < value.length && isWhitespaceChar(value[j])) j++;
+    if (j < value.length && value[j] === '(') return true;
+    i = j;
+  }
+  return false;
+};
+
+const startsWithFunctionCall = (value: string): boolean => {
+  let i = 0;
+  while (i < value.length && isWhitespaceChar(value[i])) i++;
+  if (i >= value.length || !isIdentStart(value[i])) return false;
+  let j = i + 1;
+  while (j < value.length && isIdentChar(value[j])) j++;
+  while (j < value.length && isWhitespaceChar(value[j])) j++;
+  return j < value.length && value[j] === '(';
+};
+
+const collectNumericLiterals = (input: string): string[] => {
+  const numbers: string[] = [];
+  let i = 0;
+  while (i < input.length) {
+    const ch = input[i];
+    if (ch === '-' || ch === '.' || isDigitChar(ch)) {
+      const len = parseNumberLiteralAt(input, i);
+      if (len > 0) {
+        numbers.push(input.slice(i, i + len));
+        i += len;
+        continue;
+      }
+    }
+    i++;
+  }
+  return numbers;
+};
+
+const extractFieldReferences = (input: string): string[] => {
+  const refs: string[] = [];
+  for (let i = 0; i < input.length; i++) {
+    if (input[i] !== '{') continue;
+    const end = input.indexOf('}', i + 1);
+    if (end === -1) break;
+    refs.push(input.slice(i, end + 1));
+    i = end;
+  }
+  return refs;
+};
+
+const removeFieldRefsAndQuoted = (input: string): string => {
+  let out = '';
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    if (ch === '{') {
+      const end = input.indexOf('}', i + 1);
+      if (end === -1) break;
+      i = end;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      const quote = ch;
+      let j = i + 1;
+      while (j < input.length) {
+        if (input[j] === quote && input[j - 1] !== '\\') break;
+        j++;
+      }
+      if (j >= input.length) break;
+      i = j;
+      continue;
+    }
+    out += ch;
+  }
+  return out;
+};
+
+const getFirstParenContent = (input: string): string | null => {
+  const open = input.indexOf('(');
+  if (open === -1) return null;
+  const close = input.indexOf(')', open + 1);
+  if (close === -1 || close === open + 1) return null;
+  return input.slice(open + 1, close);
+};
+
+const countChar = (input: string, target: string): number => {
+  let count = 0;
+  for (let i = 0; i < input.length; i++) {
+    if (input[i] === target) count++;
+  }
+  return count;
+};
+
+const findFunctionCalls = (
+  formula: string,
+  names: string[]
+): Array<{ name: string; index: number; args: string; openParenIndex: number; closeParenIndex: number }> => {
+  const upperFormula = formula.toUpperCase();
+  const nameSet = new Set(names.map(n => n.toUpperCase()));
+  const matches: Array<{ name: string; index: number; args: string; openParenIndex: number; closeParenIndex: number }> = [];
+
+  for (let i = 0; i < upperFormula.length; i++) {
+    const ch = upperFormula[i];
+    if (!isIdentStart(ch)) continue;
+    let j = i + 1;
+    while (j < upperFormula.length && isIdentChar(upperFormula[j])) j++;
+    const name = upperFormula.slice(i, j);
+    if (!nameSet.has(name)) {
+      i = j - 1;
+      continue;
+    }
+    let k = j;
+    while (k < upperFormula.length && isWhitespaceChar(upperFormula[k])) k++;
+    if (k >= upperFormula.length || upperFormula[k] !== '(') {
+      i = j - 1;
+      continue;
+    }
+    const close = formula.indexOf(')', k + 1);
+    if (close === -1) {
+      i = j - 1;
+      continue;
+    }
+    const args = formula.slice(k + 1, close);
+    matches.push({ name, index: i, args, openParenIndex: k, closeParenIndex: close });
+    i = close;
+  }
+
+  return matches;
+};
+
+const findOperatorMatches = (
+  formula: string,
+  operators: string[]
+): Array<{ op: string; index: number }> => {
+  const matches: Array<{ op: string; index: number }> = [];
+  const ops = [...operators].sort((a, b) => b.length - a.length);
+  for (let i = 0; i < formula.length; i++) {
+    let matched = false;
+    for (const op of ops) {
+      if (formula.startsWith(op, i)) {
+        matches.push({ op, index: i });
+        i += op.length - 1;
+        matched = true;
+        break;
+      }
+    }
+    if (matched) continue;
+  }
+  return matches;
+};
+
 export const parseFieldReference = (ref: string): string => {
-  const match = ref.match(/^\{([^}]+)\}$/);
-  return match ? match[1] : '';
+  if (ref.startsWith('{') && ref.endsWith('}') && ref.length > 2) {
+    return ref.slice(1, -1);
+  }
+  return '';
 };
 
 // Get column identifier (column_name or key) from title/name
@@ -110,30 +305,30 @@ export const getFieldValue = (
     if (columnIdentifier) {
       if (rowData[columnIdentifier] !== undefined) {
         const val = rowData[columnIdentifier];
-        const num = typeof val === 'string' ? parseFloat(val) : Number(val);
-        if (!isNaN(num)) return num;
+        const num = typeof val === 'string' ? Number.parseFloat(val) : Number(val);
+        if (!Number.isNaN(num)) return num;
       }
       
       if (rowData.data && typeof rowData.data === 'object') {
         if (rowData.data[columnIdentifier] !== undefined) {
           const val = rowData.data[columnIdentifier];
-          const num = typeof val === 'string' ? parseFloat(val) : Number(val);
-          if (!isNaN(num)) return num;
+          const num = typeof val === 'string' ? Number.parseFloat(val) : Number(val);
+          if (!Number.isNaN(num)) return num;
         }
       }
     }
     
     if (rowData[fieldName] !== undefined) {
       const val = rowData[fieldName];
-      const num = typeof val === 'string' ? parseFloat(val) : Number(val);
-      if (!isNaN(num)) return num;
+      const num = typeof val === 'string' ? Number.parseFloat(val) : Number(val);
+      if (!Number.isNaN(num)) return num;
     }
     
     if (rowData.data && typeof rowData.data === 'object') {
       if (rowData.data[fieldName] !== undefined) {
         const val = rowData.data[fieldName];
-        const num = typeof val === 'string' ? parseFloat(val) : Number(val);
-        if (!isNaN(num)) return num;
+        const num = typeof val === 'string' ? Number.parseFloat(val) : Number(val);
+        if (!Number.isNaN(num)) return num;
       }
     }
   }
@@ -248,7 +443,7 @@ export const getDateValue = (
   fieldName: string,
   context: FormulaContext
 ): Date | null => {
-  const { columns, allColumns, rowData } = context;
+  const { rowData } = context;
   const columnIdentifier = getColumnIdentifier(fieldName, context);
   
   if (rowData) {
@@ -257,7 +452,7 @@ export const getDateValue = (
         const val = rowData[columnIdentifier];
         if (val) {
           const date = new Date(val);
-          if (!isNaN(date.getTime())) return date;
+          if (!Number.isNaN(date.getTime())) return date;
         }
       }
       
@@ -266,7 +461,7 @@ export const getDateValue = (
           const val = rowData.data[columnIdentifier];
           if (val) {
             const date = new Date(val);
-            if (!isNaN(date.getTime())) return date;
+            if (!Number.isNaN(date.getTime())) return date;
           }
         }
       }
@@ -276,7 +471,7 @@ export const getDateValue = (
       const val = rowData[fieldName];
       if (val) {
         const date = new Date(val);
-        if (!isNaN(date.getTime())) return date;
+        if (!Number.isNaN(date.getTime())) return date;
       }
     }
     
@@ -285,7 +480,7 @@ export const getDateValue = (
         const val = rowData.data[fieldName];
         if (val) {
           const date = new Date(val);
-          if (!isNaN(date.getTime())) return date;
+          if (!Number.isNaN(date.getTime())) return date;
         }
       }
     }
@@ -314,7 +509,7 @@ export const getFieldValueByType = (
     if (boolVal !== null) return boolVal;
     
     const numVal = getFieldValue(fieldName, context);
-    if (numVal !== 0 || (context.rowData && (context.rowData[getColumnIdentifier(fieldName, context) || ''] !== undefined))) {
+    if (numVal !== 0 || context.rowData?.[getColumnIdentifier(fieldName, context) || ''] !== undefined) {
       return numVal;
     }
     
@@ -330,7 +525,7 @@ export const getFieldValueByType = (
 
 // Parse and extract arguments from function call arguments string
 export const parseFunctionArguments = (argsString: string): string[] => {
-  if (!argsString || !argsString.trim()) return [];
+  if (!argsString?.trim()) return [];
   
   const args: string[] = [];
   let currentArg = '';
@@ -396,16 +591,16 @@ export const evaluateArgument = (
     return getFieldValue(fieldName, context);
   }
   
-  if (/^-?\d*\.?\d+$/.test(trimmedArg)) {
-    return parseFloat(trimmedArg);
+  if (isNumericLiteral(trimmedArg)) {
+    return Number.parseFloat(trimmedArg);
   }
   
-  if (/^[A-Z_]+\(/.test(trimmedArg)) {
+  if (startsWithFunctionCall(trimmedArg)) {
     return null;
   }
   
-  const num = parseFloat(trimmedArg);
-  return !isNaN(num) ? num : null;
+  const num = Number.parseFloat(trimmedArg);
+  return Number.isNaN(num) ? null : num;
 };
 
 // Helper function to evaluate a single text argument
@@ -423,7 +618,7 @@ export const evaluateTextArgument = (
   if ((trimmedArg.startsWith('"') && trimmedArg.endsWith('"')) ||
       (trimmedArg.startsWith("'") && trimmedArg.endsWith("'"))) {
     const unquoted = trimmedArg.slice(1, -1);
-    return unquoted.replace(/\\"/g, '"').replace(/\\'/g, "'").replace(/\\\\/g, '\\');
+    return unquoted.replaceAll(String.raw`\"`, '"').replaceAll(String.raw`\'`, "'").replaceAll(String.raw`\\`, '\\');
   }
   
   if (/^[A-Z_]+\(/.test(trimmedArg)) {
@@ -450,7 +645,7 @@ export const evaluateDateArgument = (
   }
   
   const date = new Date(trimmedArg);
-  if (!isNaN(date.getTime())) {
+  if (!Number.isNaN(date.getTime())) {
     return date;
   }
   
@@ -557,7 +752,7 @@ export const evaluateDIVIDE = (formula: string, context: FormulaContext): number
 };
 
 export const evaluateSUM = (formula: string, context: FormulaContext): number | null => {
-  return evaluateADD(formula.replace(/SUM\s*\(/gi, 'ADD('), context);
+  return evaluateADD(formula.replaceAll(/SUM\s*\(/gi, 'ADD('), context);
 };
 
 export const evaluateAVERAGE = (formula: string, context: FormulaContext): number | null => {
@@ -940,7 +1135,7 @@ export const evaluateMID = (formula: string, context: FormulaContext): string | 
 
   const startIndex = Math.max(0, start - 1);
   if (len === 0) return '';
-  return textValue.substr(startIndex, len);
+  return textValue.substring(startIndex, startIndex + len);
 };
 
 export const evaluateFIND = (formula: string, context: FormulaContext): number | null => {
@@ -982,7 +1177,8 @@ export const evaluateREPLACE = (formula: string, context: FormulaContext): strin
   const newText = evaluateTextArgument(args[2], context);
   if (textValue === null || oldText === null || newText === null) return null;
   
-  return textValue.replace(new RegExp(oldText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), newText);
+  const escaped = oldText.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+  return textValue.replaceAll(new RegExp(escaped, 'g'), newText);
 };
 
 // Date Functions Evaluation
@@ -1257,8 +1453,8 @@ const parseComparisonOperand = (operand: string, context: FormulaContext): any =
     return getFieldValueByType(fieldName, context);
   } else if ((operand.startsWith('"') && operand.endsWith('"')) || (operand.startsWith("'") && operand.endsWith("'"))) {
     return operand.slice(1, -1);
-  } else if (/^-?\d*\.?\d+$/.test(operand)) {
-    return parseFloat(operand);
+  } else if (isNumericLiteral(operand)) {
+    return Number.parseFloat(operand);
   } else {
     const lowerOperand = operand.toLowerCase();
     if (lowerOperand === 'true') {
@@ -1267,10 +1463,10 @@ const parseComparisonOperand = (operand: string, context: FormulaContext): any =
       return false;
     } else {
       const dateVal = new Date(operand);
-      if (!isNaN(dateVal.getTime())) {
-        return dateVal;
-      } else {
+      if (Number.isNaN(dateVal.getTime())) {
         return operand;
+      } else {
+        return dateVal;
       }
     }
   }
@@ -1329,9 +1525,9 @@ export const evaluateCondition = (
   }));
   
   for (const { op, regex } of operators) {
-    const match = trimmed.match(regex);
+    const match = regex.exec(trimmed);
     if (match) {
-      const index = match.index!;
+      const index = match.index;
       
       if (!isValidOperatorMatch(trimmed, op, index)) {
         continue;
@@ -1403,11 +1599,11 @@ export const evaluateIF = (formula: string, context: FormulaContext): any => {
   if (trueValue.startsWith('{') && trueValue.endsWith('}')) {
     const fieldName = parseFieldReference(trueValue);
     const value = getFieldValueByType(fieldName, context);
-    trueResult = value !== null ? value : '';
+    trueResult = value === null ? '' : value;
   } else if ((trueValue.startsWith('"') && trueValue.endsWith('"')) || (trueValue.startsWith("'") && trueValue.endsWith("'"))) {
     trueResult = trueValue.slice(1, -1);
-  } else if (/^-?\d*\.?\d+$/.test(trueValue)) {
-    trueResult = parseFloat(trueValue);
+  } else if (isNumericLiteral(trueValue)) {
+    trueResult = Number.parseFloat(trueValue);
   } else {
     const lowerTrueValue = trueValue.toLowerCase();
     if (lowerTrueValue === 'true') {
@@ -1416,10 +1612,10 @@ export const evaluateIF = (formula: string, context: FormulaContext): any => {
       trueResult = false;
     } else {
       const dateVal = new Date(trueValue);
-      if (!isNaN(dateVal.getTime())) {
-        trueResult = dateVal;
-      } else {
+      if (Number.isNaN(dateVal.getTime())) {
         trueResult = trueValue;
+      } else {
+        trueResult = dateVal;
       }
     }
   }
@@ -1428,11 +1624,11 @@ export const evaluateIF = (formula: string, context: FormulaContext): any => {
     if (falseValue.startsWith('{') && falseValue.endsWith('}')) {
       const fieldName = parseFieldReference(falseValue);
       const value = getFieldValueByType(fieldName, context);
-      falseResult = value !== null ? value : '';
+      falseResult = value === null ? '' : value;
     } else if ((falseValue.startsWith('"') && falseValue.endsWith('"')) || (falseValue.startsWith("'") && falseValue.endsWith("'"))) {
       falseResult = falseValue.slice(1, -1);
-    } else if (/^-?\d*\.?\d+$/.test(falseValue)) {
-      falseResult = parseFloat(falseValue);
+    } else if (isNumericLiteral(falseValue)) {
+      falseResult = Number.parseFloat(falseValue);
     } else {
       const lowerFalseValue = falseValue.toLowerCase();
       if (lowerFalseValue === 'true') {
@@ -1441,10 +1637,10 @@ export const evaluateIF = (formula: string, context: FormulaContext): any => {
         falseResult = false;
       } else {
         const dateVal = new Date(falseValue);
-        if (!isNaN(dateVal.getTime())) {
-          falseResult = dateVal;
-        } else {
+        if (Number.isNaN(dateVal.getTime())) {
           falseResult = falseValue;
+        } else {
+          falseResult = dateVal;
         }
       }
     }
@@ -1572,7 +1768,7 @@ export const evaluateISNUMBER = (formula: string, context: FormulaContext): bool
     return isNumericType(fieldType);
   }
   
-  return /^-?\d*\.?\d+$/.test(arg);
+  return isNumericLiteral(arg);
 };
 
 export const evaluateISTEXT = (formula: string, context: FormulaContext): boolean | null => {
@@ -1600,7 +1796,7 @@ export const evaluateISTEXT = (formula: string, context: FormulaContext): boolea
     return true;
   }
   
-  return !/^-?\d*\.?\d+$/.test(arg);
+  return !isNumericLiteral(arg);
 };
 
 export const evaluateISDATE = (formula: string, context: FormulaContext): boolean | null => {
@@ -1625,7 +1821,7 @@ export const evaluateISDATE = (formula: string, context: FormulaContext): boolea
   }
   
   const dateVal = new Date(arg);
-  return !isNaN(dateVal.getTime());
+  return !Number.isNaN(dateVal.getTime());
 };
 
 // Evaluate comparison operators directly
@@ -1639,9 +1835,9 @@ export const evaluateComparison = (formula: string, context: FormulaContext): bo
   }));
   
   for (const { op, regex } of operators) {
-    const match = trimmed.match(regex);
+    const match = regex.exec(trimmed);
     if (match) {
-      const index = match.index!;
+      const index = match.index;
       
       if (!isValidOperatorMatch(trimmed, op, index)) {
         continue;
@@ -1700,7 +1896,7 @@ const evaluateMathExpression = (formula: string, context: FormulaContext): numbe
   
   // Check if formula contains function calls - if so, don't treat as simple math expression
   // (functions should be evaluated first)
-  if (/[A-Z_][A-Z0-9_]*\s*\(/.test(trimmed)) {
+  if (containsFunctionCallToken(trimmed)) {
     return null;
   }
   
@@ -1708,6 +1904,9 @@ const evaluateMathExpression = (formula: string, context: FormulaContext): numbe
     // Parse and evaluate the expression
     return parseAndEvaluateExpression(trimmed, context);
   } catch (error) {
+    // Expression evaluation failed - could be malformed expression or invalid operation
+    // Examples: division by zero, invalid field references, or parsing errors
+    console.error('Formula evaluation error:', error);
     return null;
   }
 };
@@ -1715,7 +1914,7 @@ const evaluateMathExpression = (formula: string, context: FormulaContext): numbe
 // Parse and evaluate a mathematical expression with proper precedence
 const parseAndEvaluateExpression = (expression: string, context: FormulaContext): number | null => {
   // Remove whitespace
-  let expr = expression.replace(/\s+/g, '');
+  let expr = expression.replaceAll(/\s+/g, '');
   
   // Handle parentheses first
   while (expr.includes('(')) {
@@ -1752,7 +1951,7 @@ const parseAndEvaluateExpression = (expression: string, context: FormulaContext)
     // Handle operators
     if (['+', '-', '*', '/'].includes(char)) {
       // Check if it's a unary minus or plus (at start or after operator)
-      if ((char === '-' || char === '+') && (tokens.length === 0 || tokens[tokens.length - 1].type === 'operator')) {
+      if ((char === '-' || char === '+') && (tokens.length === 0 || tokens.at(-1)?.type === 'operator')) {
         // This is a unary minus/plus, start reading a signed number
         i++;
         let numStr = char === '-' ? '-' : '';
@@ -1762,8 +1961,8 @@ const parseAndEvaluateExpression = (expression: string, context: FormulaContext)
         }
         // If we found digits, it's a signed number
         if (numStr !== '' && numStr !== '-') {
-          const num = parseFloat(numStr);
-          if (isNaN(num)) return null;
+          const num = Number.parseFloat(numStr);
+          if (Number.isNaN(num)) return null;
           tokens.push({ type: 'number', value: num });
           continue;
         }
@@ -1793,8 +1992,8 @@ const parseAndEvaluateExpression = (expression: string, context: FormulaContext)
         numStr += expr[i];
         i++;
       }
-      const num = parseFloat(numStr);
-      if (isNaN(num)) return null;
+      const num = Number.parseFloat(numStr);
+      if (Number.isNaN(num)) return null;
       tokens.push({ type: 'number', value: num });
       continue;
     }
@@ -1816,10 +2015,10 @@ const parseAndEvaluateExpression = (expression: string, context: FormulaContext)
     // If we encounter * or /, evaluate immediately (left-associative)
     if (token.type === 'operator' && (token.value === '*' || token.value === '/')) {
       // Need a left operand from processed array
-      if (processed.length === 0 || processed[processed.length - 1].type !== 'number') {
+      if (processed.length === 0 || processed.at(-1)?.type !== 'number') {
         return null;
       }
-      const left = processed[processed.length - 1].value as number;
+      const left = processed.at(-1)?.value as number;
       
       // Get the right operand
       i++;
@@ -1935,8 +2134,8 @@ export const evaluateFormula = (
     [evaluateLEN, null],
     [evaluateFIND, null],
     [evaluateREPLACE, null],
-    [(formula: string) => evaluateTODAY(), (formula: string) => formula.includes('TODAY()')],
-    [(formula: string) => evaluateNOW(), (formula: string) => formula.includes('NOW()')],
+    [() => evaluateTODAY(), (formula: string) => formula.includes('TODAY()')],
+    [() => evaluateNOW(), (formula: string) => formula.includes('NOW()')],
     [evaluateDATEADD, null],
     [evaluateDATEDIFF, null],
     [evaluateYEAR, null],
@@ -2026,8 +2225,7 @@ export const formatResult = (
 
 // Helper to check if formula depends on rowData
 export const formulaDependsOnRowData = (formula: string): boolean => {
-  const fieldRefRegex = /\{([^}]+)\}/;
-  return fieldRefRegex.test(formula);
+  return extractFieldReferences(formula).length > 0;
 };
 
 // Helper to check if formula uses TODAY()
@@ -2038,17 +2236,16 @@ export const formulaUsesToday = (formula: string): boolean => {
 
 // Get function syntax
 export const getFunctionSyntax = (funcName: string, example: string): string => {
-  const baseName = funcName.replace(/\(\)/g, '');
+  const baseName = funcName.replaceAll('()', '');
   
   if (FUNCTION_SYNTAX_MAP[baseName]) {
     return FUNCTION_SYNTAX_MAP[baseName];
   }
   
   if (example) {
-    const match = example.match(/\(([^)]+)\)/);
-    if (match) {
-      const args = match[1];
-      const fieldRefs = args.match(/\{[^}]+\}/g) || [];
+      const args = getFirstParenContent(example);
+    if (args) {
+      const fieldRefs = extractFieldReferences(args);
       if (fieldRefs.length === 1) {
         return `${baseName}(number)`;
       } else if (fieldRefs.length === 2) {
@@ -2073,7 +2270,7 @@ export const detectCurrentFunction = (formula: string): { name: string; descript
     if (!func.name.includes('(')) continue;
     
     const funcName = func.name.replace('()', '').toUpperCase();
-    const regex = new RegExp(`\\b${funcName}\\s*\\(`, 'i');
+    const regex = new RegExp(String.raw`\b${funcName}\s*\(`, 'i');
     if (regex.test(formula)) {
       return func;
     }
@@ -2091,7 +2288,8 @@ export const detectCurrentFunction = (formula: string): { name: string; descript
   
   const singleCharOperators = ['+', '*', '/', '^', '%', '=', '>', '<'];
   for (const op of singleCharOperators) {
-    const regex = new RegExp(`[\\}\\d]\\s*\\${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[\\{\\d]`, 'g');
+    const escapedOp = op.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+    const regex = new RegExp(`[}\\d]\\s*\\${escapedOp}\\s*[{\\d]`, 'g');
     if (regex.test(formula)) {
       const operatorFunc = allFunctions.find(f => f.name === op);
       if (operatorFunc) {
@@ -2101,7 +2299,7 @@ export const detectCurrentFunction = (formula: string): { name: string; descript
   }
   
   if (formula.includes('-')) {
-    const subtractionRegex = /[\}\d]\s*-\s*[\{\d]/;
+    const subtractionRegex = /[}\d]\s*-\s*[{\d]/;
     if (subtractionRegex.test(formula)) {
       const operatorFunc = allFunctions.find(f => f.name === '-');
       if (operatorFunc) {
@@ -2233,8 +2431,8 @@ const validateBasicSyntax = (formula: string): string | null => {
   if (!formula.trim()) return null;
   
   // Check parentheses balance
-  const openParens = (formula.match(/\(/g) || []).length;
-  const closeParens = (formula.match(/\)/g) || []).length;
+  const openParens = countChar(formula, '(');
+  const closeParens = countChar(formula, ')');
   if (openParens !== closeParens) {
     return 'Mismatched parentheses';
   }
@@ -2270,68 +2468,65 @@ const validateBasicSyntax = (formula: string): string | null => {
 // Validate compound statements (multiple expressions without operators)
 const validateCompoundStatements = (formula: string): string | null => {
   const operators = ['+', '-', '*', '/', '^', '%', '=', '!=', '>=', '<=', '>', '<'];
-  
-  // Check for function call followed by function call
-  const funcAfterFunc = /\)\s*([A-Z_][A-Z0-9_]*)\s*\(/gi;
-  let match;
-  while ((match = funcAfterFunc.exec(formula)) !== null) {
-    const matchIndex = match.index;
-    if (isInsideQuotes(formula, matchIndex)) continue;
-    if (isInsideFunctionParens(formula, matchIndex)) continue;
-    const betweenText = match[0].substring(1, match[0].length - 1);
+
+  const checkBetween = (startIndex: number, endIndex: number): string | null => {
+    const betweenText = formula.slice(startIndex + 1, endIndex);
     if (!hasOperator(betweenText, operators)) {
       return 'Compound expressions are not supported.';
     }
-  }
-  
-  // Check for field reference followed by field reference
-  const fieldAfterField = /\}\s*\{/g;
-  while ((match = fieldAfterField.exec(formula)) !== null) {
-    const matchIndex = match.index;
-    if (isInsideQuotes(formula, matchIndex)) continue;
-    if (isInsideFunctionParens(formula, matchIndex)) continue;
-    const betweenText = match[0].substring(1, match[0].length - 1);
-    if (!hasOperator(betweenText, operators)) {
-      return 'Compound expressions are not supported.';
+    return null;
+  };
+
+  for (let i = 0; i < formula.length; i++) {
+    const ch = formula[i];
+    if (ch === ')') {
+      let j = i + 1;
+      while (j < formula.length && isWhitespaceChar(formula[j])) j++;
+      if (j < formula.length && isIdentStart(formula[j])) {
+        let k = j + 1;
+        while (k < formula.length && isIdentChar(formula[k])) k++;
+        while (k < formula.length && isWhitespaceChar(formula[k])) k++;
+        if (k < formula.length && formula[k] === '(') {
+          if (!isInsideQuotes(formula, i) && !isInsideFunctionParens(formula, i)) {
+            const error = checkBetween(i, k);
+            if (error) return error;
+          }
+        }
+      }
+      if (j < formula.length && formula[j] === '{') {
+        if (!isInsideQuotes(formula, i) && !isInsideFunctionParens(formula, i)) {
+          const error = checkBetween(i, j);
+          if (error) return error;
+        }
+      }
+    }
+    if (ch === '}') {
+      let j = i + 1;
+      while (j < formula.length && isWhitespaceChar(formula[j])) j++;
+      if (j < formula.length && formula[j] === '{') {
+        if (!isInsideQuotes(formula, i) && !isInsideFunctionParens(formula, i)) {
+          const error = checkBetween(i, j);
+          if (error) return error;
+        }
+      }
+      if (j < formula.length && isIdentStart(formula[j])) {
+        let k = j + 1;
+        while (k < formula.length && isIdentChar(formula[k])) k++;
+        while (k < formula.length && isWhitespaceChar(formula[k])) k++;
+        if (k < formula.length && formula[k] === '(') {
+          if (!isInsideQuotes(formula, i) && !isInsideFunctionParens(formula, i)) {
+            const error = checkBetween(i, k);
+            if (error) return error;
+          }
+        }
+      }
     }
   }
-  
-  // Check for function call followed by field reference
-  const funcAfterField = /\)\s*\{/g;
-  while ((match = funcAfterField.exec(formula)) !== null) {
-    const matchIndex = match.index;
-    if (isInsideQuotes(formula, matchIndex)) continue;
-    if (isInsideFunctionParens(formula, matchIndex)) continue;
-    const betweenText = match[0].substring(1, match[0].length - 1);
-    if (!hasOperator(betweenText, operators)) {
-      return 'Compound expressions are not supported.';
-    }
-  }
-  
-  // Check for field reference followed by function call
-  const fieldAfterFunc = /\}\s*([A-Z_][A-Z0-9_]*)\s*\(/gi;
-  while ((match = fieldAfterFunc.exec(formula)) !== null) {
-    const matchIndex = match.index;
-    if (isInsideQuotes(formula, matchIndex)) continue;
-    if (isInsideFunctionParens(formula, matchIndex)) continue;
-    const betweenText = match[0].substring(1, match[0].length - 1);
-    if (!hasOperator(betweenText, operators)) {
-      return 'Compound expressions are not supported.';
-    }
-  }
-  
+
   // Check that only one function call is allowed at a time
-  const functionCallPattern = new RegExp(`\\b(${ALL_FUNCTION_NAMES.join('|')})\\s*\\(`, 'gi');
-  const allFunctionCalls: Array<{ name: string; index: number }> = [];
-  
-  functionCallPattern.lastIndex = 0;
-  while ((match = functionCallPattern.exec(formula)) !== null) {
-    const funcName = match[1];
-    const funcIndex = match.index;
-    if (!isInsideQuotes(formula, funcIndex)) {
-      allFunctionCalls.push({ name: funcName, index: funcIndex });
-    }
-  }
+  const allFunctionCalls = findFunctionCalls(formula, ALL_FUNCTION_NAMES)
+    .filter(call => !isInsideQuotes(formula, call.index))
+    .map(call => ({ name: call.name, index: call.index }));
   
   // Count top-level function calls
   let topLevelFunctionCount = 0;
@@ -2374,7 +2569,7 @@ const validateCompoundStatements = (formula: string): string | null => {
 const validateFieldReferences = (formula: string, context: FormulaContext): string | null => {
   const { columns, allColumns } = context;
   
-  const fieldRefs = formula.match(/\{([^}]+)\}/g) || [];
+  const fieldRefs = extractFieldReferences(formula);
   const searchColumns = allColumns.length > 0 ? allColumns : columns;
   
   const validFieldNames = new Set<string>();
@@ -2387,7 +2582,7 @@ const validateFieldReferences = (formula: string, context: FormulaContext): stri
   for (const ref of fieldRefs) {
     const fieldName = ref.slice(1, -1).trim();
     if (fieldName && !validFieldNames.has(fieldName)) {
-      if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+      if (!isNumericLiteral(fieldName)) {
         return `Unknown field: ${fieldName}`;
       }
     }
@@ -2399,17 +2594,16 @@ const validateFieldReferences = (formula: string, context: FormulaContext): stri
 // Validate math functions
 const validateMathFunctions = (formula: string, context: FormulaContext): string | null => {
   for (const funcName of MATH_FUNCTION_NAMES) {
-    const funcRegex = new RegExp(`\\b${funcName}\\s*\\(([^)]*)\\)`, 'gi');
-    const matches = [...formula.matchAll(funcRegex)];
+    const calls = findFunctionCalls(formula, [funcName]);
     
-    for (const match of matches) {
-      if (!match[1]) {
+    for (const call of calls) {
+      if (!call.args) {
         if (['SUM', 'AVERAGE', 'MAX', 'MIN'].includes(funcName)) {
           continue;
         }
       }
-      
-      const argsString = match[1] || '';
+
+      const argsString = call.args || '';
       const args = parseFunctionArguments(argsString);
       
       for (const arg of args) {
@@ -2418,17 +2612,15 @@ const validateMathFunctions = (formula: string, context: FormulaContext): string
         if (trimmedArg.startsWith('{') && trimmedArg.endsWith('}')) {
           const fieldName = parseFieldReference(trimmedArg);
           
-          if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+          if (!isNumericLiteral(fieldName)) {
             const fieldType = getFieldType(fieldName, context);
             if (!isNumericType(fieldType)) {
               return `${funcName}() requires numeric fields. "${fieldName}" is a ${fieldType || 'non-numeric'} field`;
             }
           }
-        } else {
-          if (!/^-?\d*\.?\d+$/.test(trimmedArg)) {
-            if (trimmedArg && !trimmedArg.match(/^[A-Z_]+\(/)) {
-              return `${funcName}() requires numeric values. "${trimmedArg}" is not numeric`;
-            }
+        } else if (!isNumericLiteral(trimmedArg)) {
+          if (trimmedArg && !startsWithFunctionCall(trimmedArg)) {
+            return `${funcName}() requires numeric values. "${trimmedArg}" is not numeric`;
           }
         }
       }
@@ -2441,12 +2633,11 @@ const validateMathFunctions = (formula: string, context: FormulaContext): string
 // Validate text functions
 const validateTextFunctions = (formula: string, context: FormulaContext): string | null => {
   for (const funcName of TEXT_FUNCTION_NAMES) {
-    const funcPattern = funcName === 'CONCATENATE' ? '(?:CONCATENATE|CONCAT)' : funcName;
-    const funcRegex = new RegExp(`${funcPattern}\\s*\\(([^)]*)\\)`, 'gi');
-    const matches = [...formula.matchAll(funcRegex)];
+    const funcNames = funcName === 'CONCATENATE' ? ['CONCATENATE', 'CONCAT'] : [funcName];
+    const matches = findFunctionCalls(formula, funcNames);
     
     for (const match of matches) {
-      const argsString = match[1] || '';
+      const argsString = match.args || '';
       const args = parseFunctionArguments(argsString);
       
       if (funcName === 'CONCATENATE' || funcName === 'CONCAT') {
@@ -2483,16 +2674,14 @@ const validateTextFunctions = (formula: string, context: FormulaContext): string
         const countArg = args[1].trim();
         if (countArg.startsWith('{') && countArg.endsWith('}')) {
           const fieldName = parseFieldReference(countArg);
-          if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+          if (!isNumericLiteral(fieldName)) {
             const fieldType = getFieldType(fieldName, context);
             if (!isNumericType(fieldType)) {
               return `${funcName}() second argument must be numeric or numeric field reference`;
             }
           }
-        } else {
-          if (!/^-?\d*\.?\d+$/.test(countArg)) {
-            return `${funcName}() second argument must be a number`;
-          }
+        } else if (!isNumericLiteral(countArg)) {
+          return `${funcName}() second argument must be a number`;
         }
       }
       
@@ -2510,13 +2699,13 @@ const validateTextFunctions = (formula: string, context: FormulaContext): string
         const checkNumericArg = (argStr: string) => {
           if (argStr.startsWith('{') && argStr.endsWith('}')) {
             const fieldName = parseFieldReference(argStr);
-            if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+            if (!isNumericLiteral(fieldName)) {
               const fieldType = getFieldType(fieldName, context);
               if (!isNumericType(fieldType)) return false;
             }
             return true;
           }
-          return /^-?\d*\.?\d+$/.test(argStr);
+          return isNumericLiteral(argStr);
         };
         
         if (!checkNumericArg(startArg)) {
@@ -2535,11 +2724,10 @@ const validateTextFunctions = (formula: string, context: FormulaContext): string
 // Validate date functions
 const validateDateFunctions = (formula: string, context: FormulaContext): string | null => {
   for (const funcName of DATE_FUNCTION_NAMES) {
-    const funcRegex = new RegExp(`\\b${funcName}\\s*\\(([^)]*)\\)`, 'gi');
-    const matches = [...formula.matchAll(funcRegex)];
+    const matches = findFunctionCalls(formula, [funcName]);
     
     for (const match of matches) {
-      const argsString = match[1] || '';
+      const argsString = match.args || '';
       const args = parseFunctionArguments(argsString);
       
       if (['TODAY', 'NOW'].includes(funcName)) {
@@ -2557,17 +2745,17 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
         const firstArg = args[0].trim();
         if (firstArg.startsWith('{') && firstArg.endsWith('}')) {
           const fieldName = parseFieldReference(firstArg);
-          if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+          if (isNumericLiteral(fieldName)) {
+            return `${funcName}() requires a date field, not a numeric literal`;
+          } else {
             const fieldType = getFieldType(fieldName, context);
             if (!isDateType(fieldType)) {
               return `${funcName}() requires a date field. "${fieldName}" is a ${fieldType || 'non-date'} field`;
             }
-          } else {
-            return `${funcName}() requires a date field, not a numeric literal`;
           }
         } else {
           const testDate = new Date(firstArg);
-          if (isNaN(testDate.getTime())) {
+          if (Number.isNaN(testDate.getTime())) {
             return `${funcName}() requires a date field reference (e.g., {Date}) or valid date string`;
           }
         }
@@ -2582,17 +2770,17 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
         const firstArg = args[0].trim();
         if (firstArg.startsWith('{') && firstArg.endsWith('}')) {
           const fieldName = parseFieldReference(firstArg);
-          if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+          if (isNumericLiteral(fieldName)) {
+            return `${funcName}() first argument requires a date field, not a numeric literal`;
+          } else {
             const fieldType = getFieldType(fieldName, context);
             if (!isDateType(fieldType)) {
               return `${funcName}() first argument requires a date field. "${fieldName}" is a ${fieldType || 'non-date'} field`;
             }
-          } else {
-            return `${funcName}() first argument requires a date field, not a numeric literal`;
           }
         } else {
           const testDate = new Date(firstArg);
-          if (isNaN(testDate.getTime())) {
+          if (Number.isNaN(testDate.getTime())) {
             return `${funcName}() first argument must be a date field reference (e.g., {Date}) or valid date string`;
           }
         }
@@ -2600,16 +2788,14 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
         const secondArg = args[1].trim();
         if (secondArg.startsWith('{') && secondArg.endsWith('}')) {
           const fieldName = parseFieldReference(secondArg);
-          if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+          if (!isNumericLiteral(fieldName)) {
             const fieldType = getFieldType(fieldName, context);
             if (!isNumericType(fieldType)) {
               return `${funcName}() second argument must be numeric. "${fieldName}" is a ${fieldType || 'non-numeric'} field`;
             }
           }
-        } else {
-          if (!/^-?\d*\.?\d+$/.test(secondArg)) {
-            return `${funcName}() second argument must be a number`;
-          }
+        } else if (!isNumericLiteral(secondArg)) {
+          return `${funcName}() second argument must be a number`;
         }
         
         const thirdArg = args[2].trim();
@@ -2636,17 +2822,17 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
         const firstArg = args[0].trim();
         if (firstArg.startsWith('{') && firstArg.endsWith('}')) {
           const fieldName = parseFieldReference(firstArg);
-          if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+          if (isNumericLiteral(fieldName)) {
+            return `${funcName}() first argument requires a date field, not a numeric literal`;
+          } else {
             const fieldType = getFieldType(fieldName, context);
             if (!isDateType(fieldType)) {
               return `${funcName}() first argument requires a date field. "${fieldName}" is a ${fieldType || 'non-date'} field`;
             }
-          } else {
-            return `${funcName}() first argument requires a date field, not a numeric literal`;
           }
         } else {
           const testDate = new Date(firstArg);
-          if (isNaN(testDate.getTime())) {
+          if (Number.isNaN(testDate.getTime())) {
             return `${funcName}() first argument must be a date field reference (e.g., {Date}) or valid date string`;
           }
         }
@@ -2654,17 +2840,17 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
         const secondArg = args[1].trim();
         if (secondArg.startsWith('{') && secondArg.endsWith('}')) {
           const fieldName = parseFieldReference(secondArg);
-          if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+          if (isNumericLiteral(fieldName)) {
+            return `${funcName}() second argument requires a date field, not a numeric literal`;
+          } else {
             const fieldType = getFieldType(fieldName, context);
             if (!isDateType(fieldType)) {
               return `${funcName}() second argument requires a date field. "${fieldName}" is a ${fieldType || 'non-date'} field`;
             }
-          } else {
-            return `${funcName}() second argument requires a date field, not a numeric literal`;
           }
         } else {
           const testDate = new Date(secondArg);
-          if (isNaN(testDate.getTime())) {
+          if (Number.isNaN(testDate.getTime())) {
             return `${funcName}() second argument must be a date field reference (e.g., {Date}) or valid date string`;
           }
         }
@@ -2694,16 +2880,14 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
           const arg = args[i].trim();
           if (arg.startsWith('{') && arg.endsWith('}')) {
             const fieldName = parseFieldReference(arg);
-            if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+            if (!isNumericLiteral(fieldName)) {
               const fieldType = getFieldType(fieldName, context);
               if (!isNumericType(fieldType)) {
                 return `${funcName}() argument ${i + 1} must be numeric. "${fieldName}" is a ${fieldType || 'non-numeric'} field`;
               }
             }
-          } else {
-            if (!/^-?\d*\.?\d+$/.test(arg)) {
-              return `${funcName}() argument ${i + 1} must be a number`;
-            }
+          } else if (!isNumericLiteral(arg)) {
+            return `${funcName}() argument ${i + 1} must be a number`;
           }
         }
         
@@ -2711,15 +2895,15 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
         const dayArg = args[2].trim();
         
         if (!monthArg.startsWith('{')) {
-          const monthValue = parseFloat(monthArg);
-          if (!isNaN(monthValue) && (monthValue < 1 || monthValue > 12)) {
+          const monthValue = Number.parseFloat(monthArg);
+          if (!Number.isNaN(monthValue) && (monthValue < 1 || monthValue > 12)) {
             return `${funcName}() second argument (month) must be between 1 and 12`;
           }
         }
         
         if (!dayArg.startsWith('{')) {
-          const dayValue = parseFloat(dayArg);
-          if (!isNaN(dayValue) && (dayValue < 1 || dayValue > 31)) {
+          const dayValue = Number.parseFloat(dayArg);
+          if (!Number.isNaN(dayValue) && (dayValue < 1 || dayValue > 31)) {
             return `${funcName}() third argument (day) must be between 1 and 31`;
           }
         }
@@ -2748,17 +2932,17 @@ const validateMathOperators = (formula: string, context: FormulaContext): string
   }
   
   // Check if formula contains function calls - if so, validation is handled elsewhere
-  if (/[A-Z_][A-Z0-9_]*\s*\(/.test(formula)) {
+  if (containsFunctionCallToken(formula)) {
     return null;
   }
   
   // Extract all field references from the formula
-  const fieldRefs = formula.match(/\{([^}]+)\}/g) || [];
+  const fieldRefs = extractFieldReferences(formula);
   const uniqueFieldNames = new Set<string>();
   
   for (const ref of fieldRefs) {
     const fieldName = parseFieldReference(ref);
-    if (fieldName && !/^-?\d*\.?\d+$/.test(fieldName)) {
+    if (fieldName && !isNumericLiteral(fieldName)) {
       uniqueFieldNames.add(fieldName);
     }
   }
@@ -2776,14 +2960,12 @@ const validateMathOperators = (formula: string, context: FormulaContext): string
   
   // Validate numeric literals (check for invalid numeric patterns)
   // Extract potential numeric literals (not inside quotes or field references)
-  const numericPattern = /-?\d*\.?\d+/g;
-  let match;
-  const processedFormula = formula.replace(/\{[^}]+\}/g, '').replace(/"[^"]*"/g, '').replace(/'[^']*'/g, '');
+  const processedFormula = removeFieldRefsAndQuoted(formula);
+  const numericLiterals = collectNumericLiterals(processedFormula);
   
-  while ((match = numericPattern.exec(processedFormula)) !== null) {
-    const numStr = match[0];
+  for (const numStr of numericLiterals) {
     // Check if it's a valid number (not part of a function name or invalid)
-    if (numStr && !/^-?\d*\.?\d+$/.test(numStr.trim())) {
+    if (numStr && !isNumericLiteral(numStr.trim())) {
       // This shouldn't happen with the regex, but just in case
       continue;
     }
@@ -2797,80 +2979,58 @@ const validateMathOperators = (formula: string, context: FormulaContext): string
   // Check for truly invalid consecutive operator patterns in the original formula
   // These are patterns where two operators appear next to each other with only whitespace
   // Note: + - and - + are VALID (addition then subtraction)
-  // matchAll requires global flag (g)
-  const invalidPatterns = [
-    /\+\s*\+/g,  // ++ (invalid - not supported as unary)
-    /\-\s*\-/g,  // -- (invalid - not supported as unary)  
-    /\*\s*\*/g,  // ** (invalid)
-    /\/\s*\//g,  // // (invalid) - escaped forward slashes
-    /\*\s*\//g,  // */ (invalid)
-    /\/\s*\*/g   // /* (invalid)
-    // Note: We explicitly DO NOT include + - or - + as these are valid
-  ];
-  
-  for (const pattern of invalidPatterns) {
-    // Check if pattern exists outside of field references and strings
-    // We need to check the formula but ignore operators inside field names
-    const matches = formula.matchAll(pattern);
-    for (const match of matches) {
-      const matchIndex = match.index!;
-      // Check if this match is inside quotes or field references
-      let inQuotes = false;
-      let quoteChar = '';
-      let inFieldRef = false;
-      
-      for (let i = 0; i < matchIndex; i++) {
-        const char = formula[i];
-        const prevChar = i > 0 ? formula[i - 1] : '';
-        
-        // Track quotes
-        if ((char === '"' || char === "'") && prevChar !== '\\') {
-          if (!inQuotes) {
-            inQuotes = true;
-            quoteChar = char;
-          } else if (char === quoteChar) {
-            inQuotes = false;
-            quoteChar = '';
-          }
-        }
-        
-        // Track field references
-        if (!inQuotes) {
-          if (char === '{' && prevChar !== '\\') {
-            inFieldRef = true;
-          } else if (char === '}' && prevChar !== '\\') {
-            inFieldRef = false;
-          }
-        }
+  let inQuotes = false;
+  let quoteChar = '';
+  let inFieldRef = false;
+  for (let i = 0; i < formula.length; i++) {
+    const char = formula[i];
+    const prevChar = i > 0 ? formula[i - 1] : '';
+
+    // Track quotes
+    if ((char === '"' || char === "'") && prevChar !== '\\') {
+      if (!inQuotes) {
+        inQuotes = true;
+        quoteChar = char;
+      } else if (char === quoteChar) {
+        inQuotes = false;
+        quoteChar = '';
       }
-      
-      // If not inside quotes or field ref, and it's a truly invalid pattern, flag it
-      if (!inQuotes && !inFieldRef) {
-        // For ++ and --, check if they're unary (at start or after operator/opening paren)
-        if (pattern.source === '\\+\\s*\\+' || pattern.source === '\\-\\s*\\-') {
-          const beforeMatch = formula.substring(0, matchIndex).trim();
-          const isAtStart = beforeMatch === '';
-          const endsWithOperator = /[+\-*/\(]\s*$/.test(beforeMatch);
-          const endsWithOpeningParen = beforeMatch.endsWith('(');
-          
-          // If it's at start or after operator/paren, it might be unary (but ++ and -- aren't valid unary in our system)
-          // Actually, we don't support ++ or -- as unary, so these are always invalid
+    }
+
+    // Track field references
+    if (!inQuotes) {
+      if (char === '{' && prevChar !== '\\') {
+        inFieldRef = true;
+      } else if (char === '}' && prevChar !== '\\') {
+        inFieldRef = false;
+      }
+    }
+
+    if (inQuotes || inFieldRef) continue;
+
+    if (char === '+' || char === '-' || char === '*' || char === '/') {
+      let j = i + 1;
+      while (j < formula.length && isWhitespaceChar(formula[j])) j++;
+      if (j < formula.length && (formula[j] === '+' || formula[j] === '-' || formula[j] === '*' || formula[j] === '/')) {
+        const pair = char + formula[j];
+        if (pair === '+-' || pair === '-+') continue;
+        if (pair === '++' || pair === '--' || pair === '**' || pair === '//' || pair === '*/' || pair === '/*') {
           return 'Invalid operator usage: operators cannot be consecutive';
         }
-        
-        // For other patterns, they're always invalid
-        return 'Invalid operator usage: operators cannot be consecutive';
       }
     }
   }
   
   // Check for operators at invalid positions (start or end without operands)
   const trimmedFormula = formula.trim();
-  if (trimmedFormula && /^[*/]/.test(trimmedFormula)) {
+  if (trimmedFormula && (trimmedFormula[0] === '*' || trimmedFormula[0] === '/')) {
     return 'Invalid operator usage: expression cannot start with * or /';
   }
-  if (trimmedFormula && /[+\-*/]$/.test(trimmedFormula)) {
-    return 'Invalid operator usage: expression cannot end with an operator';
+  if (trimmedFormula) {
+    const lastChar = trimmedFormula[trimmedFormula.length - 1];
+    if (lastChar === '+' || lastChar === '-' || lastChar === '*' || lastChar === '/') {
+      return 'Invalid operator usage: expression cannot end with an operator';
+    }
   }
   
   return null;
@@ -2887,11 +3047,12 @@ const validateComparisonOperators = (formula: string, context: FormulaContext): 
     if (col.column_name) validFieldNames.add(col.column_name);
   });
   
-  for (const { op, regex } of COMPARISON_OPERATORS) {
-    const matches = [...formula.matchAll(regex)];
-    
-    for (const match of matches) {
-      const matchIndex = match.index!;
+  const operatorMatches = findOperatorMatches(
+    formula,
+    COMPARISON_OPERATORS.map(item => item.op)
+  );
+
+  for (const { op, index: matchIndex } of operatorMatches) {
       
       if (matchIndex > 0) {
         const charBefore = formula[matchIndex - 1];
@@ -2931,59 +3092,136 @@ const validateComparisonOperators = (formula: string, context: FormulaContext): 
       }
       if (parenDepth > 0) continue;
       
-      const leftPattern = /(\{[^}]+\}|-?\d+\.?\d*|-?\.\d+|"[^"]*"|'[^']*'|[A-Z_][A-Z0-9_]*\([^)]*\)|[^\s=!<>]+)$/;
-      const rightPattern = /^(\{[^}]+\}|-?\d+\.?\d*|-?\.\d+|"[^"]*"|'[^']*'|[A-Z_][A-Z0-9_]*\([^)]*\)|[^\s=!<>]+)/;
-      
-      const leftMatch = beforeOp.match(leftPattern);
-      const rightMatch = afterOp.match(rightPattern);
-      
-      if (!leftMatch || !rightMatch) continue;
-      
-      let leftSide = leftMatch[1].trim();
-      let rightSide = rightMatch[1].trim();
+      const extractLeftOperand = (input: string): string | null => {
+        let i = input.length - 1;
+        while (i >= 0 && isWhitespaceChar(input[i])) i--;
+        if (i < 0) return null;
+
+        const endChar = input[i];
+        if (endChar === '}') {
+          const start = input.lastIndexOf('{', i);
+          return start >= 0 ? input.slice(start, i + 1) : null;
+        }
+        if (endChar === '"' || endChar === "'") {
+          const quote = endChar;
+          for (let j = i - 1; j >= 0; j--) {
+            if (input[j] === quote && input[j - 1] !== '\\') {
+              return input.slice(j, i + 1);
+            }
+          }
+          return null;
+        }
+        if (endChar === ')') {
+          let depth = 1;
+          for (let j = i - 1; j >= 0; j--) {
+            const ch = input[j];
+            if (ch === ')') depth++;
+            else if (ch === '(') depth--;
+            if (depth === 0) {
+              let k = j - 1;
+              while (k >= 0 && isIdentChar(input[k])) k--;
+              const nameStart = k + 1;
+              if (nameStart < j && isIdentStart(input[nameStart])) {
+                return input.slice(nameStart, i + 1);
+              }
+              return input.slice(j, i + 1);
+            }
+          }
+          return null;
+        }
+
+        let j = i;
+        while (j >= 0 && !isWhitespaceChar(input[j]) && !['=', '!', '<', '>'].includes(input[j])) j--;
+        return input.slice(j + 1, i + 1);
+      };
+
+      const extractRightOperand = (input: string): string | null => {
+        let i = 0;
+        while (i < input.length && isWhitespaceChar(input[i])) i++;
+        if (i >= input.length) return null;
+
+        const startChar = input[i];
+        if (startChar === '{') {
+          const end = input.indexOf('}', i + 1);
+          return end !== -1 ? input.slice(i, end + 1) : null;
+        }
+        if (startChar === '"' || startChar === "'") {
+          const quote = startChar;
+          for (let j = i + 1; j < input.length; j++) {
+            if (input[j] === quote && input[j - 1] !== '\\') {
+              return input.slice(i, j + 1);
+            }
+          }
+          return null;
+        }
+        if (isIdentStart(startChar)) {
+          let j = i + 1;
+          while (j < input.length && isIdentChar(input[j])) j++;
+          if (input[j] === '(') {
+            let depth = 1;
+            for (let k = j + 1; k < input.length; k++) {
+              const ch = input[k];
+              if (ch === '(') depth++;
+              else if (ch === ')') depth--;
+              if (depth === 0) return input.slice(i, k + 1);
+            }
+            return null;
+          }
+        }
+
+        let j = i;
+        while (j < input.length && !isWhitespaceChar(input[j]) && !['=', '!', '<', '>'].includes(input[j])) j++;
+        return input.slice(i, j);
+      };
+
+      const leftSideRaw = extractLeftOperand(beforeOp);
+      const rightSideRaw = extractRightOperand(afterOp);
+      if (!leftSideRaw || !rightSideRaw) continue;
+
+      let leftSide = leftSideRaw.trim();
+      let rightSide = rightSideRaw.trim();
       
       if (['>', '<', '=', '!'].includes(leftSide)) continue;
       if (['>', '<', '=', '!'].includes(rightSide)) continue;
       
       if (leftSide.startsWith('{') && leftSide.endsWith('}')) {
         const fieldName = parseFieldReference(leftSide);
-        if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+        if (!isNumericLiteral(fieldName)) {
           if (!validFieldNames.has(fieldName)) {
             return `Unknown field in comparison: "${fieldName}"`;
           }
         }
-      } else if (!leftSide.match(/^-?\d*\.?\d+$/) && 
+      } else if (!isNumericLiteral(leftSide) && 
                  !(leftSide.startsWith('"') && leftSide.endsWith('"')) &&
                  !(leftSide.startsWith("'") && leftSide.endsWith("'"))) {
-        if (!leftSide.match(/^[A-Z_]+\(/)) {
+        if (!/^[A-Z_]+\(/.test(leftSide)) {
           return `Invalid left side in comparison: "${leftSide}"`;
         }
       }
       
       if (rightSide.startsWith('{') && rightSide.endsWith('}')) {
         const fieldName = parseFieldReference(rightSide);
-        if (!/^-?\d*\.?\d+$/.test(fieldName)) {
+        if (!isNumericLiteral(fieldName)) {
           if (!validFieldNames.has(fieldName)) {
             return `Unknown field in comparison: "${fieldName}"`;
           }
         }
-      } else if (!rightSide.match(/^-?\d*\.?\d+$/) && 
+      } else if (!isNumericLiteral(rightSide) && 
                  !(rightSide.startsWith('"') && rightSide.endsWith('"')) &&
                  !(rightSide.startsWith("'") && rightSide.endsWith("'"))) {
-        if (!rightSide.match(/^[A-Z_]+\(/)) {
+        if (!startsWithFunctionCall(rightSide)) {
           return `Invalid right side in comparison: "${rightSide}"`;
         }
       }
-    }
   }
   
   return null;
 };
 
 // Validate logical functions
-const validateLogicalFunctions = (formula: string, context: FormulaContext): string | null => {
+const validateLogicalFunctions = (formula: string, _context: FormulaContext): string | null => {
   for (const funcName of LOGICAL_FUNCTION_NAMES) {
-    const funcRegex = new RegExp(`\\b${funcName}\\s*\\(([^)]*)\\)`, 'gi');
+    const funcRegex = new RegExp(String.raw`\b${funcName}\s*\(([^)]*)\)`, 'gi');
     const matches = [...formula.matchAll(funcRegex)];
     
     for (const match of matches) {
@@ -3004,7 +3242,7 @@ const validateLogicalFunctions = (formula: string, context: FormulaContext): str
         const isBooleanLiteral = /^(true|false)$/i.test(conditionArg);
         
         if (!hasOperator && !isFieldRef && !isBooleanLiteral) {
-          if (!conditionArg.match(/^[A-Z_]+\(/)) {
+          if (!/^[A-Z_]+\(/.test(conditionArg)) {
             return `${funcName}() first argument must be a condition (comparison, field reference, or boolean)`;
           }
         }
@@ -3020,7 +3258,7 @@ const validateLogicalFunctions = (formula: string, context: FormulaContext): str
           const isBooleanLiteral = /^(true|false)$/i.test(conditionArg);
           
           if (!hasOperator && !isFieldRef && !isBooleanLiteral) {
-            if (!conditionArg.match(/^[A-Z_]+\(/)) {
+            if (!/^[A-Z_]+\(/.test(conditionArg)) {
               return `${funcName}() argument ${i + 1} must be a condition (comparison, field reference, or boolean)`;
             }
           }
@@ -3039,7 +3277,7 @@ const validateLogicalFunctions = (formula: string, context: FormulaContext): str
         const isBooleanLiteral = /^(true|false)$/i.test(conditionArg);
         
         if (!hasOperator && !isFieldRef && !isBooleanLiteral) {
-          if (!conditionArg.match(/^[A-Z_]+\(/)) {
+          if (!/^[A-Z_]+\(/.test(conditionArg)) {
             return `${funcName}() argument must be a condition (comparison, field reference, or boolean)`;
           }
         }
@@ -3054,8 +3292,8 @@ const validateLogicalFunctions = (formula: string, context: FormulaContext): str
         const arg = args[0].trim();
         const isFieldRef = arg.startsWith('{') && arg.endsWith('}');
         const isQuoted = (arg.startsWith('"') && arg.endsWith('"')) || (arg.startsWith("'") && arg.endsWith("'"));
-        const isNumber = /^-?\d*\.?\d+$/.test(arg);
-        const isFunction = arg.match(/^[A-Z_]+\(/);
+        const isNumber = isNumericLiteral(arg);
+        const isFunction = /^[A-Z_]+\(/.test(arg);
         
         if (!isFieldRef && !isQuoted && !isNumber && !isFunction) {
           return `${funcName}() argument must be a field reference, quoted string, number, or function call`;
@@ -3110,8 +3348,8 @@ export const normalizeForComparison = (val: any): any => {
   if (typeof val === 'boolean') return val;
   // For strings, try to parse as number if it looks like one
   if (typeof val === 'string') {
-    const numVal = parseFloat(val);
-    if (!isNaN(numVal) && isFinite(numVal) && val.trim() === numVal.toString()) {
+    const numVal = Number.parseFloat(val);
+    if (!Number.isNaN(numVal) && Number.isFinite(numVal) && val.trim() === numVal.toString()) {
       return numVal;
     }
   }

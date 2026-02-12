@@ -68,14 +68,25 @@ const toDate = (v: any): number | null => {
   return Number.isNaN(t) ? null : t;
 };
 
+const evaluateStringComparison = (raw: any, op: string, val: any): boolean => {
+  const s = raw == null ? '' : String(raw);
+  if (op === 'is equal') return s === String(val);
+  if (op === 'is not equal') return s !== String(val);
+  if (op === 'contains') return s.toLowerCase().includes(String(val).toLowerCase());
+  if (op === 'does not contain') return !s.toLowerCase().includes(String(val).toLowerCase());
+  return true;
+};
+
 export const matchesFilter = (card: any, f: any, columns: any): boolean => {
-  const findColumnByKey = (key: string) => columns.find((c:any) => c.key === key || c.id === key || c.title === key || c.column_name === key);
+  const findColumnByKey = (key: string) =>
+    columns.find((c: any) => c.key === key || c.id === key || c.title === key || c.column_name === key);
+
   const col = findColumnByKey(f.column);
   if (!col) return true;
-  // Try multiple keys to access the data: key, column_name
+
   const dataKey = col.key || col.column_name;
   const raw = card?.data?.[dataKey as string] ?? card?.[dataKey as string];
-  const type = String((col as any).type || (col as any).uidt);
+  const type = String(col?.type || col?.uidt);
   const op = f.operator;
   const val = f.value;
 
@@ -84,12 +95,8 @@ export const matchesFilter = (card: any, f: any, columns: any): boolean => {
 
   switch (type) {
     case 'multiSelect': {
-      // Normalize both raw and val to string arrays
       const rawArr = normalizeMultiSelect(raw);
-      // For filter values, val is typically a JSON string, so normalize directly
       const valArr = normalizeMultiSelect(val);
-
-      // Helper: set equality (ignores order and duplicates)
       const setEquals = (a: string[], b: string[]) => {
         if (a.length !== b.length) return false;
         const sa = new Set(a);
@@ -98,62 +105,41 @@ export const matchesFilter = (card: any, f: any, columns: any): boolean => {
         for (const x of sa) if (!sb.has(x)) return false;
         return true;
       };
-
-      // Helper: any intersection
       const hasAny = (a: string[], b: string[]) => a.some(x => b.includes(x));
 
       if (op === 'is equal') return setEquals(rawArr, valArr);
       if (op === 'is not equal') return !setEquals(rawArr, valArr);
       if (op === 'contains any of') return hasAny(rawArr, valArr);
-      if (op === 'does not contains any of') return !hasAny(rawArr, valArr);
+      if (op === 'does not contain any of') return !hasAny(rawArr, valArr);
       return true;
     }
     case 'select': {
       const s = raw == null ? '' : String(raw);
       if (op === 'is equal') return s === String(val);
       if (op === 'is not equal') return s !== String(val);
-      if (op === 'contains any of') {
-        // val can be comma-separated or array
-        const values = typeof val === 'string' ? val.split(',').map(v => v.trim()) : Array.isArray(val) ? val : [val];
-        return values.some(v => s === String(v));
+
+      // Extracted logic for determining values
+      let values: string[];
+      if (typeof val === 'string') {
+        values = val.split(',').map(v => v.trim());
+      } else if (Array.isArray(val)) {
+        values = val;
+      } else {
+        values = [val];
       }
-      if (op === 'does not contains any of') {
-        // val can be comma-separated or array
-        const values = typeof val === 'string' ? val.split(',').map(v => v.trim()) : Array.isArray(val) ? val : [val];
-        return !values.some(v => s === String(v));
-      }
+
+      if (op === 'contains any of') return values.some(v => s === String(v));
+      if (op === 'does not contain any of') return !values.some(v => s === String(v));
+
       return true;
     }
+
     case 'text':
     case 'email':
-    case 'longText': {
-      const s = raw == null ? '' : String(raw);
-      if (op === 'is equal') return s === String(val);
-      if (op === 'is not equal') return s !== String(val);
-      if (op === 'contains') return s.toLowerCase().includes(String(val).toLowerCase());
-      if (op === 'does not contain') return !s.toLowerCase().includes(String(val).toLowerCase());
-      return true;
-    }
-
-    case 'json':{
-      const s = raw == null ? '' : JSON.stringify(raw);
-      if (op === 'is equal') return s === String(val);
-      if (op === 'is not equal') return s !== String(val);
-      if (op === 'contains') return s.toLowerCase().includes(String(val).toLowerCase());
-      if (op === 'does not contain') return !s.toLowerCase().includes(String(val).toLowerCase());
-      return true;
-    }
-
-    case 'url':{
-      const s = raw == null ? '' : String(raw);
-      const updatedurl = `https://${val}`
-      const sNoProto = s.toLowerCase().replace(/^https?:\/\//, '');
-      const vNoProto = String(val ?? '').toLowerCase().replace(/^https?:\/\//, '');
-
-      if (op === 'is equal') return s === String(updatedurl);
-      if (op === 'is not equal') return s !== String(updatedurl);
-      if (op === 'contains') return sNoProto.includes(vNoProto);
-      if (op === 'does not contain') return !sNoProto.includes(vNoProto);
+    case 'longText':
+    case 'json':
+    case 'url': {
+      return evaluateStringComparison(raw, op, val);
     }
     case 'boolean': {
       const isTrue = raw === true || String(raw).toLowerCase() === 'true' || String(raw) === '1';
@@ -192,39 +178,32 @@ export const matchesFilter = (card: any, f: any, columns: any): boolean => {
       if (op === 'after') return d > td;
       return true;
     }
-    // case 'time':{
-      
-    // }
     default: {
-      const s = raw == null ? '' : String(raw);
-      if (op === 'is equal') return s === String(val);
-      if (op === 'is not equal') return s !== String(val);
-      if (op === 'contains') return s.toLowerCase().includes(String(val).toLowerCase());
-      if (op === 'does not contain') return !s.toLowerCase().includes(String(val).toLowerCase());
-      return true;
+      return evaluateStringComparison(raw, op, val);
     }
   }
 };
 
+
 export const applyFilters = (cards: any[], filters: any[], columns: any) => {
   if (!Array.isArray(filters) || filters.length === 0) return cards;
-  
+
   return cards.filter(card => {
     // If no filters, include all cards
     if (filters.length === 0) return true;
-    
+
     // First filter always applies
     let result = matchesFilter(card, filters[0], columns);
-    
+
     // Apply remaining filters with their logic
     for (let i = 1; i < filters.length; i++) {
       const filter = filters[i];
       const matches = matchesFilter(card, filter, columns);
-      
+
       // The logic property determines how this filter combines with previous result
       // Default to 'AND' for backward compatibility
       const logic = filter.logic || 'AND';
-      
+
       if (logic === 'OR') {
         // For OR, include if either previous result OR current filter matches
         result = result || matches;
@@ -232,11 +211,11 @@ export const applyFilters = (cards: any[], filters: any[], columns: any) => {
         // For AND, include only if both previous result AND current filter match
         result = result && matches;
       }
-      
+
       // If result is false and we're in AND mode, we can break early
       if (!result) break;
     }
-    
+
     return result;
   });
 };
@@ -261,13 +240,13 @@ export const operatorRequiresValue = (operator: string): boolean => {
  */
 export const isFilterComplete = (filter: Partial<FilterCondition>, inputValue?: string): boolean => {
   if (!filter.column) return false;
-  
-  const value = inputValue !== undefined ? inputValue.trim() : (filter.value || '').trim();
-  
+
+  const value = inputValue === undefined ? (filter.value || '').trim() : inputValue.trim();
+
   if (operatorRequiresValue(filter.operator || '')) {
     return value.length > 0;
   }
-  
+
   // Operators that don't require values are valid if column and operator are set
   return true;
 };
@@ -423,7 +402,7 @@ export const FIELD_TYPE_OPERATORS: Record<string, { value: FilterOp; label: stri
     { value: 'is empty', label: 'is empty' },
     { value: 'is not empty', label: 'is not empty' },
   ],
-  duration:[
+  duration: [
     { value: 'is equal', label: 'is equal' },
     { value: 'is not equal', label: 'is not equal' },
     { value: 'less than', label: 'less than' },
@@ -449,10 +428,10 @@ export const getDefaultOperator = (fieldType: string): FilterOp => {
  */
 export const formatDurationValue = (value: string | number, format: string = 'h:mm'): string => {
   const durationInMinutes = value ? Number(value) : 0;
-  
+
   // Convert minutes to seconds for detailed formats
   const totalSeconds = Math.floor(durationInMinutes * 60);
-  
+
   if (format === 'h:mm') {
     const hours = Math.floor(durationInMinutes / 60);
     const minutes = Math.floor(durationInMinutes % 60);
@@ -466,11 +445,11 @@ export const formatDurationValue = (value: string | number, format: string = 'h:
     const days = Math.floor(totalSeconds / 86400);
     const hours = Math.floor((totalSeconds % 86400) / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
-    return days > 0 
+    return days > 0
       ? `${days}:${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
       : `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   }
-  
+
   return String(durationInMinutes);
 };
 
@@ -482,8 +461,8 @@ export const normalizeFilterValue = (filter: Partial<FilterCondition>, inputValu
   if (!operatorRequiresValue(filter.operator || '')) {
     return '';
   }
-  
-  const value = inputValue !== undefined ? inputValue.trim() : (filter.value || '').trim();
+
+  const value = inputValue === undefined ? (filter.value || '').trim() : inputValue.trim();
   return value;
 };
 
@@ -491,12 +470,17 @@ export const normalizeFilterValue = (filter: Partial<FilterCondition>, inputValu
  * Get visible columns for filtering (excludes system fields and non-filterable fields)
  */
 export const getVisibleColumns = (columns: any[], fieldsToExclude: string[] = []): any[] => {
-  return columns.filter(col => 
-    !col.hidden && 
-    !col.isHidden && 
-    !col.system && 
-    col.key?.toLowerCase() !== 'id' &&
-    col.column_name?.toLowerCase() !== 'id' &&
-    !fieldsToExclude.includes(col.uidt || col.type || '')
-  );
+  const excludedTypes = new Set(fieldsToExclude.map(type => String(type).toLowerCase()));
+
+  return columns.filter(col => {
+    const key = String(col.key || '').toLowerCase();
+    const columnName = String(col.column_name || '').toLowerCase();
+    const columnType = String(col.uidt || col.type || '').toLowerCase();
+
+    if (key === 'id' || columnName === 'id') {
+      return false;
+    }
+
+    return !excludedTypes.has(columnType);
+  });
 };

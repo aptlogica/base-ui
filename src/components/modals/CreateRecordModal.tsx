@@ -34,6 +34,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const [formError, setFormError] = useState<string | null>(null);
     const [rowData, setRowData] = useState<Record<string, any>>({});
     const [createdRecordId, setCreatedRecordId] = useState<string | null>(null);
+    const [initialRowData, setInitialRowData] = useState<Record<string, any>>({});
 
     // Get base_id from table (could be table.base_id or table.model.base_id)
     const baseId = table?.base_id || table?.model?.base_id;
@@ -65,14 +66,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         return field.system;
     };
 
-    // Find title field for validation
-    const titleField = useMemo(() => {
-        return (fields || []).find(f => {
-            const fieldName = f.name?.toLowerCase() || '';
-            const fieldTitle = f.title?.toLowerCase() || '';
-            return (fieldName.includes('title') || fieldTitle.includes('title'));
-        });
-    }, [fields]);
+
 
     const visibleFields = useMemo(
         () => (fields || []).filter(f => !f.is_hidden && !f.hidden && !isSystemField(f) && !isFormulaField(f)),
@@ -105,6 +99,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             data[field.id] = initial === undefined ? getDefaultValueFromConfig(field) : initial;
         });
         setRowData(data);
+        setInitialRowData(data);
         setShowHidden(false);
         setFormError(null);
         setSubmitting(false);
@@ -114,6 +109,42 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const handleFieldChange = (field: any, value: unknown) => {
         setRowData(prev => ({ ...prev, [field.id]: value }));
     };
+
+    const isValuePresent = (value: any): boolean => {
+        if (Array.isArray(value)) return value.length > 0;
+        if (value === null || value === undefined) return false;
+        if (typeof value === 'string') return value.trim() !== '';
+        return true;
+    };
+
+    const normalizeForCompare = (value: any): any => {
+        if (value instanceof Date) return value.toISOString();
+        if (Array.isArray(value)) return JSON.stringify(value.map(normalizeForCompare));
+        if (value && typeof value === 'object') {
+            try {
+                return JSON.stringify(value);
+            } catch (error) {
+                console.warn('Failed to stringify value:', error);
+                return String(value);
+            }
+        }
+        return value;
+    };
+
+    const isValueEqual = (a: any, b: any): boolean => {
+        return normalizeForCompare(a) === normalizeForCompare(b);
+    };
+
+    const hasAnyValue = useMemo(() => {
+        return (fields || []).some(field => isValuePresent(rowData[field.id]));
+    }, [fields, rowData]);
+
+    const hasChanges = useMemo(() => {
+        return (fields || []).some(field => !isValueEqual(rowData[field.id], initialRowData[field.id]));
+    }, [fields, rowData, initialRowData]);
+
+    const canSave = hasAnyValue || hasChanges;
+    const isSaveDisabled = submitting || !canSave;
 
     const validateRequired = (): string[] => {
         const missing = (fields || [])
@@ -347,18 +378,12 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                         {/* Visible fields */}
                         <div className="space-y-4">
                             {visibleFields.map((field) => {
-                                const isTitleField = titleField && field.id === titleField.id;
                                 return (
                                     <div key={field.id} className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-4 items-center">
                                         <div className="text-gray-600 flex items-center gap-2">
                                             {getFieldTypeIconWithMargin(getStandardFieldType(field))}
                                             <span className="text-sm">{getFieldDisplayName(field)}</span>
                                             {field.required && <span className="text-red-500 ml-1 field-component-required">*</span>}
-                                            {isTitleField && (
-                                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                                                    Title Field
-                                                </span>
-                                            )}
                                         </div>
                                         <div className="max-w-[560px] w-full">
                                             {renderField(field)}
@@ -420,9 +445,9 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                         </button>
                         <button
                             type="button"
-                            disabled={submitting}
+                            disabled={isSaveDisabled}
                             onClick={handleSave}
-                            className={`px-16 py-2 rounded-xl btn-primary ${submitting ? 'opacity-60 cursor-not-allowed' : ''}`}
+                            className={`px-16 py-2 rounded-xl btn-primary ${isSaveDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
                         >
                             {submitLabel}
                         </button>

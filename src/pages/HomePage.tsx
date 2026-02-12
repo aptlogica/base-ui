@@ -216,14 +216,15 @@ const HomePage: React.FC = () => {
     setEditingBase(base);
   };
 
-  const handleSaveBase = async ({ name, description, image }: { name: string; description: string; image?: File | string | null }) => {
+  const handleSaveBase = async ({ name, description, image, removeImage }: { name: string; description: string; image?: File | string | null; removeImage?: boolean }) => {
     if (!editingBase) return;
 
     try {
       const updates: {
         title?: string;
         description?: string;
-        image?: File | Blob ;
+        image?: File | Blob;
+        removeImage?: boolean;
       } = {};
 
       console.log(updates)
@@ -242,6 +243,11 @@ const HomePage: React.FC = () => {
       // Include image if provided (must be a File object)
       if (image instanceof File) {
         updates.image = image;
+      }
+
+      // Include removeImage flag if image was explicitly removed
+      if (removeImage) {
+        updates.removeImage = true;
       }
 
       // Check if there are any changes to save
@@ -628,7 +634,7 @@ const HomePage: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <h3
-                        className="font-semibold text-base text-gray-900 leading-tight flex-1 min-w-0"
+                        className="font-semibold text-base text-gray-900 leading-tight truncate flex-1 min-w-0"
                       >
                         {base.title || base.name || 'Untitled Base'}
                       </h3>

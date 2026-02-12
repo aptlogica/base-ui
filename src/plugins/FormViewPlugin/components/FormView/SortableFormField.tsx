@@ -70,6 +70,7 @@ interface SortableFormFieldProps {
   row_id?: number;
   onEdit?: (fieldId: string) => void;
   isReadOnly?: boolean;
+  isSubmitting?: boolean;
 }
 
 // Extract field configuration mapping logic
@@ -301,7 +302,8 @@ const FieldContent: React.FC<{
   fieldRendererProps: any;
   onChange?: (value: unknown) => void;
   isReadOnly: boolean;
-}> = ({ field, appearance = {}, fieldRendererProps, onChange, isReadOnly }) => {
+  isSubmitting?: boolean;
+}> = ({ field, appearance = {}, fieldRendererProps, onChange, isReadOnly, isSubmitting = false }) => {
   const labelPosition = appearance?.labelPosition === 'left' ? 'flex-row items-center' : 'flex-col';
   const isSystemField = field.isSystem && field.column_name !== 'title' && field.title?.toLowerCase() !== 'title';
   
@@ -315,10 +317,11 @@ const FieldContent: React.FC<{
           {getFieldDisplayName(field)}
           {field.required && <span className="ml-1 field-component-required">*</span>}
         </label>
-        <div className={`flex-1 ${isSystemField ? 'pointer-events-none cursor-not-allowed' : ''} ${appearance?.labelPosition === 'left' ? 'relative' : ''}`}>
+        <div className={`flex-1 ${isSystemField || isSubmitting ? 'pointer-events-none cursor-not-allowed opacity-60' : ''} ${appearance?.labelPosition === 'left' ? 'relative' : ''}`}>
           <FieldRenderer
             {...fieldRendererProps}
-            onChange={isReadOnly ? undefined : onChange}
+            onChange={isReadOnly || isSubmitting ? undefined : onChange}
+            disabled={isReadOnly || isSubmitting}
           />
         </div>
       </div>
@@ -348,7 +351,8 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
   model_id,
   row_id,
   onEdit,
-  isReadOnly = false
+  isReadOnly = false,
+  isSubmitting = false
 }) => {
   const inputStyle: React.CSSProperties = {
     color: appearance.textColor || undefined,
@@ -393,6 +397,7 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
         fieldRendererProps={fieldRendererProps}
         onChange={onChange}
         isReadOnly={isReadOnly}
+        isSubmitting={isSubmitting}
       />
     </>
   );

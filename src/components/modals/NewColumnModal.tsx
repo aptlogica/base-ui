@@ -6,7 +6,7 @@ import {
 import Dropdown from '../../plugins/GridViewPlugin/components/shared/DropDown/DropDown';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { FIELD_TYPES } from '../../types/fieldTypes';
-import { DateField, DateTime, Duration, Email, JSONField, Time, URL, Year, User, SingleLineText, LongText, Number, Decimal, Currency, MultiLineText, Formula } from '../../components/common/Fields';
+import { DateField, DateTime, Duration, Email, JSONField, Time, URLField, Year, User, SingleLineText, LongText, Number, Decimal, Currency, MultiLineText, Formula } from '../../components/common/Fields';
 import { convertDateFormat } from '../../utils/helpers';
 import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown';
 import {
@@ -17,8 +17,6 @@ import {
   durationFormatOptions,
   dateFormatOptions,
   timeFormatOptions,
-  buttonStyleOptions,
-  buttonActionOptions,
   timeZoneOptions,
 } from '../../types/constants';
 import { FieldTypeDropdown } from '../common/dropdown/fieldDropdown/FieldTypeDropdown';
@@ -148,7 +146,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const [urlValid, setUrlValid] = useState(false);
   const [urlDefault, setUrlDefault] = useState('');
   const [showUrlDefault, setShowUrlDefault] = useState(false);
-  const [showUrlIcon, setShowUrlIcon] = useState(true);
 
   // Add state for percent and duration configs
   const [displayAsProgress, setDisplayAsProgress] = useState(false);
@@ -158,6 +155,21 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const [durationFormat, setDurationFormat] = useState('h:mm');
   const [showDurationDefault, setShowDurationDefault] = useState(false);
   const [durationDefault, setDurationDefault] = useState(0);
+
+  const isValidPercentInput = (input: string) => {
+    if (input === '' || input === '.') return true;
+    let seenDot = false;
+    for (let i = 0; i < input.length; i++) {
+      const ch = input[i];
+      if (ch === '.') {
+        if (seenDot) return false;
+        seenDot = true;
+        continue;
+      }
+      if (ch < '0' || ch > '9') return false;
+    }
+    return true;
+  };
 
   // Add at the top level, with other useState hooks
   const [ratingIcon, setRatingIcon] = useState('star');
@@ -222,7 +234,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             // Boolean/checkbox fields: check both saved format (icon/color/defaultValue) and state format (checkboxIcon/checkboxColor/checkboxDefault)
             setCheckboxIcon(initialValues.config.checkboxIcon || initialValues.config.icon || 'check');
             setCheckboxColor(initialValues.config.checkboxColor || initialValues.config.color || 'green');
-            setCheckboxDefault(initialValues.config.checkboxDefault === undefined ? (initialValues.config.defaultValue !== undefined ? !!initialValues.config.defaultValue : false) : !!initialValues.config.checkboxDefault);
+            setCheckboxDefault(initialValues.config.checkboxDefault === undefined ? (initialValues.config.defaultValue === undefined ? false : !!initialValues.config.defaultValue) : !!initialValues.config.checkboxDefault);
             break;
           case 'formula':
             setFormulaText(initialValues.config.formula || '');
@@ -279,6 +291,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   // Add state for lookup field config
   const [selectedRelationId, setSelectedRelationId] = useState<string>('');
   const [selectedLookupColumnId, setSelectedLookupColumnId] = useState<string>('');
+  const [hasUserModifiedLookupColumn, setHasUserModifiedLookupColumn] = useState(false);
   const [targetTableFields, setTargetTableFields] = useState<any[]>([]);
 
   // Get all links type fields from current table
@@ -352,7 +365,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       setTargetTableFields(filteredFields);
 
       // If editing a lookup field and we have the lookup column ID, ensure it's set
-      if (initialValues?.type === 'lookup' && isOpen) {
+      if (initialValues?.type === 'lookup' && isOpen && !hasUserModifiedLookupColumn) {
         const config = initialValues.meta || initialValues.config || {};
         const lookupColumnId = config.lookup_column_id;
         if (lookupColumnId && !selectedLookupColumnId) {
@@ -366,7 +379,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     } else {
       setTargetTableFields([]);
     }
-  }, [targetTableData, targetTableId, initialValues, isOpen, selectedLookupColumnId]);
+  }, [targetTableData, targetTableId, initialValues, isOpen, selectedLookupColumnId, hasUserModifiedLookupColumn]);
 
   // Initialize selectedTable when tables are loaded and we have a selectedTableId (for Links fields)
   useEffect(() => {
@@ -408,6 +421,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     // Reset when relation is cleared
     if (!selectedRelationId) {
       setTargetTableFields([]);
+      setSelectedLookupColumnId('');
       previousRelationIdRef.current = '';
     }
   }, [selectedRelationId, initialValues, isOpen]);
@@ -492,6 +506,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
   useEffect(() => {
     if (isOpen) {
+      setHasUserModifiedLookupColumn(false);
       if (initialValues) {
         setStep(2);
         setFieldName(initialValues.title || '');
@@ -514,7 +529,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         // Boolean/checkbox fields: check both saved format (icon/color/defaultValue) and state format (checkboxIcon/checkboxColor/checkboxDefault)
         setCheckboxIcon(config.checkboxIcon || config.icon || 'check');
         setCheckboxColor(config.checkboxColor || config.color || 'green');
-        setCheckboxDefault(config.checkboxDefault === undefined ? (config.defaultValue !== undefined ? !!config.defaultValue : false) : !!config.checkboxDefault);
+        setCheckboxDefault(config.checkboxDefault === undefined ? (config.defaultValue === undefined ? false : !!config.defaultValue) : !!config.checkboxDefault);
         setSelectOptions(
           (config.options || config.selectOptions || []).map((o: any) =>
             typeof o === 'string' ? { option: o, color: '' } : { option: o.option, color: o.color || '' }
@@ -597,19 +612,18 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
         // Note: Lookup field initialization is handled in a separate useEffect
         // that runs when linkFields become available (see above)
-        setShowUrlIcon(config.showUrlIcon !== false);
         setDisplayAsProgress(!!config.displayAsProgress);
         setShowPercentDefault(false);
         // For percent: check defaultValue first (where it's saved), then fallback to percentDefault
         if (fieldType === 'percent') {
-          setPercentDefault(config.defaultValue !== undefined && config.defaultValue !== null ? config.defaultValue : (config.percentDefault || null));
+          setPercentDefault(config.defaultValue ?? (config.percentDefault || null));
         } else {
         setPercentDefault(config.percentDefault || null);
         }
         setDurationFormat(config.durationFormat || 'h:mm');
         // For duration: check defaultValue first (where it's saved), then fallback to durationDefault
         if (fieldType === 'duration') {
-          setDurationDefault(config.defaultValue !== undefined && config.defaultValue !== null ? config.defaultValue : (config.durationDefault || 0));
+          setDurationDefault(config.defaultValue ?? (config.durationDefault || 0));
         } else {
         setDurationDefault(config.durationDefault || 0);
         }
@@ -617,7 +631,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         setCurrencyLocale(config.currencyLocale || 'en-US');
         // For currency: check defaultValue first (where it's saved), then fallback to currencyDefault
         if (fieldType === 'currency') {
-          setCurrencyDefault(config.defaultValue !== undefined && config.defaultValue !== null ? config.defaultValue : (config.currencyDefault || null));
+          setCurrencyDefault(config.defaultValue ?? (config.currencyDefault || null));
         } else {
         setCurrencyDefault(config.currencyDefault || null);
         }
@@ -676,7 +690,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         setUrlValid(false);
         setUrlDefault('');
         setShowUrlDefault(false);
-        setShowUrlIcon(true);
         setDisplayAsProgress(false);
         setShowPercentDefault(false);
         setPercentDefault(null);
@@ -697,6 +710,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         // Reset lookup field config state
         setSelectedRelationId('');
         setSelectedLookupColumnId('');
+        setHasUserModifiedLookupColumn(false);
         setTargetTableFields([]);
         // Reset button field config state
         setButtonStyle('primary');
@@ -752,7 +766,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       setUrlValid(false);
       setUrlDefault('');
       setShowUrlDefault(false);
-      setShowUrlIcon(true);
       setDisplayAsProgress(false);
       setShowPercentDefault(false);
       setPercentDefault(null);
@@ -769,6 +782,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       setSelectedTable(null);
       setSelectedRelationId('');
       setSelectedLookupColumnId('');
+      setHasUserModifiedLookupColumn(false);
       setTargetTableFields([]);
       setButtonStyle('primary');
       setButtonAction('url');
@@ -825,21 +839,16 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     )
   // .sort((a: FieldType, b: FieldType) => a.label.localeCompare(b.label));
 
+  // Check if we're editing a links field (scoped here for use in dropdown)
+  const isLinksFieldEditing = initialValues && (initialValues.type === 'links' || initialValues.uidt === 'links');
 
-  const getOptionColor = (option: string, index: number) => {
-    const colors = [
-      '#DBEAFE', // blue-100
-      '#DCFCE7', // green-100
-      '#F3E8FF', // purple-100
-      '#FFEDD5', // orange-100
-      '#FCE7F3', // pink-100
-      '#E0E7FF', // indigo-100
-      '#CFFAFE', // cyan-100
-      '#FEE2E2', // red-100
-      '#FEF9C3', // yellow-100
-      '#CCFBF1', // green-100
-    ];
-    return colors[index % colors.length];
+  const getOptionColor = () => {
+    // Generate a random hex color
+    const randomColor = `#${(crypto.getRandomValues(new Uint32Array(1))[0] & 0xffffff)
+                            .toString(16)
+                            .padStart(6, '0')
+                          }`;
+    return randomColor;
   };
 
   function getBrowserTimeZone() {
@@ -966,7 +975,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         case 'percent':
           if (defaultValue && (typeof defaultValue === 'string' ? defaultValue.trim() : true)) {
             const parsed = typeof defaultValue === 'string' ? parseFloat(defaultValue) : defaultValue;
-            config.defaultValue = !isNaN(parsed) ? parsed : defaultValue;
+            config.defaultValue = isNaN(parsed) ? defaultValue : parsed;
           }
           break;
         case 'boolean':
@@ -1162,32 +1171,22 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     }
     if (selectedType.key === 'phoneNumber') {
       config.phoneValid = phoneValid;
-      if (phoneDefault && phoneDefault.trim()) {
+      if (phoneDefault?.trim()) {
         config.defaultValue = phoneDefault;
       }
     }
     if (selectedType.key === 'email') {
       config.emailValid = emailValid;
-      if (emailDefault && emailDefault.trim()) {
+      if (emailDefault?.trim()) {
         config.defaultValue = emailDefault;
       }
     }
     if (selectedType.key === 'url') {
       config.urlValid = urlValid;
-      config.showIcon = showUrlIcon;
-      if (urlDefault && urlDefault.trim()) {
+      if (urlDefault?.trim()) {
         config.defaultValue = urlDefault;
       }
     }
-    // if (selectedType.key === 'user') {
-    //   config.allowMultiple = allowMultipleUsers;
-    //   if (userDefault && userDefault.trim()) {
-    //     config.defaultValue = userDefault;
-    //   }
-    //   if (description && description.trim()) {
-    //     config.description = description;
-    //   }
-    // }
     if (selectedType.key === 'user') {
       config.allowMultiple = allowMultipleUsers;
       if (selectedUsers) {
@@ -1201,10 +1200,13 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         setIsSaving(false);
         return; // Prevent saving without target table
       }
-      config.relation = {
-        with: selectedTableId,
-        type: relationType
-      };
+      // Only set relation config when creating a new links field, not when editing
+      if (!initialValues) {
+        config.relation = {
+          with: selectedTableId,
+          type: relationType
+        };
+      }
     }
     if (selectedType.key === 'lookup') {
       if (!selectedRelationId) {
@@ -1260,13 +1262,21 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     // Use getUniqueColumnNameByUidt to ensure no duplicate column names, using type as base
     const uidtBase = selectedType?.key || 'Field';
     const uniqueColName = getUniqueColumnNameByUidt(uidtBase, fields);
+    
+    // For links fields during edit, preserve existing meta instead of sending empty meta
+    let finalMeta = config;
+    if (selectedType.key === 'links' && initialValues) {
+      // During edit, preserve the existing meta (don't overwrite it)
+      finalMeta = initialValues.meta || initialValues.config || {};
+    }
+    
     const colConfig: any = {
       key: fieldName || uniqueColName,
       title: fieldName || uniqueColName,
       name: fieldName || uniqueColName,
       type: selectedType.key,
       description: description,
-      meta: config, // Use 'meta' instead of 'config' for new API format
+      meta: finalMeta, // Use 'meta' instead of 'config' for new API format
     };
 
     onSave(colConfig);
@@ -1309,18 +1319,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const handleJsonChange = (value: any) => {
     const stringify = JSON.stringify(value, null, 2);
     setDefaultValue(stringify);
-  };
-
-  // Format default value based on precision
-  const formatDefaultValueWithPrecision = (value: string, precision: string | number) => {
-    if (!value || !precision) return value;
-
-    const decimalPlaces = typeof precision === 'string' ? (precision.split('.')[1]?.length || 0) : precision;
-
-    const numValue = parseFloat(value);
-    if (isNaN(numValue)) return value;
-
-    return numValue.toFixed(decimalPlaces);
   };
 
   // Handle precision change - components will handle their own formatting
@@ -1390,7 +1388,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 value={defaultValue}
                 onChange={value => setDefaultValue(value)}
                 placeholder="Enter default text value"
-                minRows={4} // Minimum rows for the input
                 isBorder={true}
                 onModalOpen={handleLongtextModalOpen}
                 onModalClose={handleLongtextModalClose}
@@ -1520,7 +1517,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
           </>
         );
       case 'boolean':
-        const iconOptions: { key: string; label: string; checkedIcon: any; uncheckedIcon: any }[] = [
+        { const iconOptions: { key: string; label: string; checkedIcon: any; uncheckedIcon: any }[] = [
           {
             key: 'check',
             label: 'Check',
@@ -1665,7 +1662,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       {selectedIconOption.uncheckedIcon}
                       <span>{selectedIconOption.label}</span>
                     </div>
-                    {!showIconDropdown ? <ChevronDown className="h-4 w-4 ml-auto" /> : <ChevronUp className="h-4 w-4 ml-auto" />}
+                    {showIconDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
                   </button>
 
                   {showIconDropdown && (
@@ -1707,7 +1704,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       <div className={`w-4 h-4 rounded-full ${selectedColorOption.bgClass}`}></div>
                       <span>{selectedColorOption.label}</span>
                     </div>
-                    {!showColorDropdown ? <ChevronDown className="h-4 w-4 ml-auto" /> : <ChevronUp className="h-4 w-4 ml-auto" />}
+                    {showColorDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
                   </button>
 
                   {showColorDropdown && (
@@ -1753,9 +1750,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 </button>
                 <button
                   type="button"
-                  className={`px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${!checkboxDefault
-                    ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
-                    : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'
+                  className={`px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${checkboxDefault
+                    ? 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'
+                    : 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
                     }`}
                   onClick={() => setCheckboxDefault(false)}
                 >
@@ -1782,7 +1779,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               }
             </div>
           </>
-        );
+        ); }
       case 'multiSelect':
         return (
           <>
@@ -1803,9 +1800,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     if (exists) {
                       setOptionError('Option already exists');
                     } else {
+                      const optionColor = color && color !== '#cccccc' ? color : getOptionColor();
                       setSelectOptions([
                         ...selectOptions,
-                        { option: trimmed, color: color && color !== '#cccccc' ? color : '' }
+                        { option: trimmed, color: optionColor }
                       ]);
                       setColor('');
                       setNewOption('');
@@ -1831,9 +1829,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     if (exists) {
                       setOptionError('Option already exists');
                     } else {
+                      const optionColor = color && color !== '#cccccc' ? color : getOptionColor();
                       setSelectOptions([
                         ...selectOptions,
-                        { option: trimmed, color: color && color !== '#cccccc' ? color : '' }
+                        { option: trimmed, color: optionColor }
                       ]);
                       setColor('');
                       setNewOption('');
@@ -1868,7 +1867,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       />
                       <input
                         type="color"
-                        value={opt.color || getOptionColor(opt.option, idx)}
+                        value={opt.color || '#cccccc'}
                         onChange={(e) => {
                           const newOptions = [...selectOptions];
                           newOptions[idx] = { ...newOptions[idx], color: e.target.value };
@@ -1985,9 +1984,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     if (exists) {
                       setOptionError('Option already exists');
                     } else {
+                      const optionColor = color && color !== '#cccccc' ? color : getOptionColor();
                       setSelectOptions([
                         ...selectOptions,
-                        { option: trimmed, color: color && color !== '#cccccc' ? color : '' }
+                        { option: trimmed, color: optionColor }
                       ]);
                       setColor('');
                       setNewOption('');
@@ -2015,9 +2015,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     if (exists) {
                       setOptionError('Option already exists');
                     } else {
+                      const optionColor = color && color !== '#cccccc' ? color : getOptionColor();
                       setSelectOptions([
                         ...selectOptions,
-                        { option: trimmed, color: color && color !== '#cccccc' ? color : '' }
+                        { option: trimmed, color: optionColor }
                       ]);
                       setColor('');
                       setNewOption('');
@@ -2046,7 +2047,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       </label>
                       <input
                         type="color"
-                        value={opt.color || getOptionColor(opt.option, idx)}
+                        value={opt.color || '#cccccc'}
                         onChange={(e) => {
                           const newOptions = [...selectOptions];
                           newOptions[idx] = { ...newOptions[idx], color: e.target.value };
@@ -2118,25 +2119,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 </div>
               </>
             }
-            {/* {
-              selectOptions.length > 0 && (
-                <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Default value</div>
-              )
-            } */}
-            {/* <div className="flex flex-wrap gap-2 mb-3 max-w-full">
-              {selectOptions.map((opt, idx) => (
-                <label key={idx} className="inline-flex items-center gap-1 text-[var(--color-gray-700)] cursor-pointer max-w-[200px] min-w-0">
-                  <input
-                    type="radio"
-                    className="flex-shrink-0"
-                    checked={singleDefault === opt}
-                    onChange={() => setSingleDefault(opt)}
-                  />
-                  <span className="truncate flex-1 min-w-0">{opt}</span>
-                </label>
-              ))}
-            </div> */}
-
+      
             <div className="relative">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
                 <Plus className="w-4 h-4" />
@@ -2496,24 +2479,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             </div>
 
 
-            {/* URL Display Options */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showUrlIcon}
-                    onChange={e => setShowUrlIcon(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                  <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-                </label>
-                <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Show link icon</span>
-              </div>
-              <p className="text-xs text-gray-500">Display a clickable link icon next to URLs</p>
-            </div>
-
             {/* Default Value */}
             <div className="mb-4">
               <button
@@ -2526,14 +2491,13 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               </button>
               {showUrlDefault && (
                 <div className="mt-2">
-                  <URL
+                  <URLField
                     value={urlDefault}
                     onChange={handleUrlChange}
                     placeholder="e.g. https://example.com"
                     isBorder={true}
                     config={{
-                      urlValid: urlValid,
-                      showIcon: showUrlIcon
+                      urlValid: urlValid
                     }}
                   />
                 </div>
@@ -2612,7 +2576,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 value={percentDefault?.toString() || ''}
                 onChange={e => {
                   const value = e.target.value;
-                  if (/^\d*\.?\d*$/.test(value) || value === '') {
+                  if (isValidPercentInput(value)) {
                     const numericValue = parseFloat(value);
                     if (numericValue >= 0 && numericValue <= 100) {
                       setPercentDefault(numericValue);
@@ -2849,7 +2813,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       {selectedRatingIconOption.icon}
                       <span>{selectedRatingIconOption.label}</span>
                     </div>
-                    {!showRatingIconDropdown ? <ChevronDown className="h-4 w-4 ml-auto" /> : <ChevronUp className="h-4 w-4 ml-auto" />}
+                    {showRatingIconDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
                   </button>
 
                   {showRatingIconDropdown && (
@@ -2889,7 +2853,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       <div className={`w-4 h-4 rounded-full`} style={{ backgroundColor: selectedRatingColorOption.color }}></div>
                       <span>{selectedRatingColorOption.label}</span>
                     </div>
-                    {!showRatingColorDropdown ? <ChevronDown className="h-4 w-4 ml-auto" /> : <ChevronUp className="h-4 w-4 ml-auto" />}
+                    {showRatingColorDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
                   </button>
 
                   {showRatingColorDropdown && (
@@ -2937,15 +2901,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               </button>
 
               {showRatingDefault && (
-                <div 
-                  className="flex items-center gap-2"
-                  onMouseLeave={() => setRatingDefaultHover(null)}
-                >
+                <div className="flex items-center gap-2" onMouseLeave={() => setRatingDefaultHover(null)}>
                   <div className="flex gap-1">
                     {Array.from({ length: ratingMax }, (_, i) => {
                       const starIndex = i + 1;
                       // Use hover value if set, otherwise use actual default value
-                      const currentValue = ratingDefaultHover !== null ? ratingDefaultHover : ratingDefault;
+                      const currentValue = ratingDefaultHover ?? ratingDefault;
                       const isFilled = currentValue >= starIndex;
                       return (
                         <button
@@ -3132,7 +3093,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       config={{
                         dateFormat: dateFormat,
                         timeFormat: timeFormat,
-                        hourFormat: hourFormat as '12' | '24',
+                        hourFormat: hourFormat,
                       }}
                       isBorder={true}
                     />
@@ -3233,7 +3194,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         );
       case 'attachment':
         return (
-          <>
             <div className="mb-3 relative">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]" onClick={() => setShowDescription(v => !v)}>
                 <Plus className="w-4 h-4" />
@@ -3254,10 +3214,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 </>
               )}
             </div>
-          </>
         );
       case 'links':
-        const isLinksFieldEditing = initialValues && (initialValues.type === 'links' || initialValues.uidt === 'links');
         return (
           <>
             <div className="mb-4">
@@ -3423,7 +3381,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
           </>
         );
       case 'lookup':
-        const relationOptions = linkFields.map(field => ({
+        { const relationOptions = linkFields.map(field => ({
           value: field.id,
           label: field.title || field.name || field.id
         }));
@@ -3443,7 +3401,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 <AdvancedDropdown
                   options={relationOptions}
                   value={selectedRelationId}
-                  onChange={(value) => setSelectedRelationId(value as string)}
+                  onChange={(value) => {
+                    setHasUserModifiedLookupColumn(true);
+                    setSelectedRelationId(value as string);
+                  }}
                   placeholder="-select-"
                   searchable
                   clearable
@@ -3462,7 +3423,14 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 <AdvancedDropdown
                   options={lookupColumnOptions}
                   value={selectedLookupColumnId}
-                  onChange={(value) => setSelectedLookupColumnId(value as string)}
+                  onChange={(value) => {
+                    setHasUserModifiedLookupColumn(true);
+                    if (typeof value === 'string' && value) {
+                      setSelectedLookupColumnId(value);
+                    } else {
+                      setSelectedLookupColumnId('');
+                    }
+                  }}
                   placeholder="-select-"
                   disabled={!selectedRelationId || isTargetTableLoading}
                   searchable
@@ -3509,64 +3477,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               )}
             </div>
           </>
-        );
-      case 'button':
-        return (
-          <>
-            {/* <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Button Configuration</div> */}
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Button Text</label>
-              <input
-                className="w-full px-3 py-2 border border-[var(--color-gray-300)] text-[var(--color-text-secondary)] bg-[var(--color-alpha-white)] rounded text-sm focus:outline-none"
-                placeholder="Enter button text"
-                value={defaultValue}
-                onChange={e => setDefaultValue(e.target.value)}
-              />
-            </div>
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Button Style</label>
-              <Dropdown
-                options={buttonStyleOptions}
-                value={buttonStyle}
-                onChange={(value) => setButtonStyle(value as string)}
-                placeholder="Select button style"
-              />
-            </div>
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Action</label>
-              <Dropdown
-                options={buttonActionOptions}
-                value={buttonAction}
-                onChange={(value) => setButtonAction(value as string)}
-                placeholder="Select action"
-              />
-            </div>
-            <div className="flex items-center gap-2 mb-3">
-              <input type="checkbox" className="checkbox-primary-brand" id="openInNewTab" checked={openButtonInNewTab} onChange={e => setOpenButtonInNewTab(e.target.checked)} />
-              <label htmlFor="openInNewTab" className="text-sm text-[var(--color-gray-900)]">Open in new tab</label>
-            </div>
-            <div className="mb-3 relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </>
-              )}
-            </div>
-          </>
-        );
+        ); }
       case 'json':
         return (
           <>
@@ -3577,14 +3488,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 Set default value
               </button>
               {showJsonDefault && (
-                <>
                   <JSONField
                     value={defaultValue}
                     onChange={handleJsonChange}
                     placeholder='{"key": "value"}'
                     isBorder={true}
                   />
-                </>
               )}
             </div>
             <div className="relative">
@@ -3613,7 +3522,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         );
       case 'createdBy':
         return (
-          <>
             <div className="relative">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
                 <Plus className="w-4 h-4" />
@@ -3636,11 +3544,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 </>
               )}
             </div>
-          </>
         );
       case 'lastModifiedBy':
         return (
-          <>
             <div className="relative">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
                 <Plus className="w-4 h-4" />
@@ -3663,7 +3569,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 </>
               )}
             </div>
-          </>
         );
       case 'formula':
         return (
@@ -3747,7 +3652,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             <>
               <input
                 ref={fieldNameInputRef}
-                className={`w-full px-3 py-2 bg-[var(--color-alpha-white)] border border-[var(--color-border-primary)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-[var(--text-color-primary)] placeholder:text-[var(--color-text-placeholder)] ${!nameError ? "mb-2" : ""}`}
+                className={`w-full px-3 py-2 bg-[var(--color-alpha-white)] border border-[var(--color-border-primary)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-[var(--text-color-primary)] placeholder:text-[var(--color-text-placeholder)] ${nameError ? "" : "mb-2"}`}
                 placeholder="Enter Field name"
                 value={fieldName}
                 // onChange={e => setFieldName(e.target.value)}
@@ -3766,7 +3671,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     <Search className="w-4 h-4" />
                   </span>
                   <input
-                    className="w-full pl-10 pr-3 py-2 text-sm text-[var(--text-color-primary)] border border-b-0 border-[var(--color-border-primary)] rounded-tl-lg rounded-tr-lg focus:outline-none bg-[var(--color-alpha-white)]"
+                    className="w-full pl-10 pr-3 py-2 text-sm text-[var(--text-color-primary)] border border-[var(--color-border-primary)] rounded-tl-lg rounded-tr-lg focus:outline-none bg-[var(--color-alpha-white)]"
                     placeholder="Search field type"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
@@ -3775,7 +3680,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               </div>
               {/* Scrollable area for filtered types */}
               {filteredTypes.length > 0 && (
-                <div className={`max-h-[230px] p-2 space-y-1 overflow-y-auto rounded-bl-lg rounded-br-lg border bg-[var(--color-alpha-white)] text-[var(--text-color-tertiary)]`}>
+                <div className={`max-h-[230px] p-2 space-y-1 overflow-y-auto rounded-bl-lg border-t-0 rounded-br-lg border bg-[var(--color-alpha-white)] text-[var(--text-color-tertiary)]`}>
                 {filteredTypes.map((type: FieldType) => (
                   <button
                     key={type.key}
@@ -3799,7 +3704,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             <>
               <input
                 ref={fieldNameInputRef}
-                className={`w-full px-3 py-2 bg-[var(--color-alpha-white)] border border-[var(--color-border-primary)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-[var(--text-color-primary)] placeholder:text-[var(--color-text-placeholder)] ${!nameError ? "mb-2" : ""}`}
+                className={`w-full px-3 py-2 bg-[var(--color-alpha-white)] border border-[var(--color-border-primary)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-[var(--text-color-primary)] placeholder:text-[var(--color-text-placeholder)] ${nameError ? "" : "mb-2"}`}
                 placeholder="Enter Field name"
                 value={fieldName}
                 onChange={e => {
@@ -3819,7 +3724,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                   fieldTypes={FIELD_TYPES.filter(type => !(type as any).hidden)}
                   selectedType={selectedType}
                   setSelectedType={handleTypeSelect}
-                  disabled={selectedType?.key === 'lookup' || isFieldUsedInViews}
+                  disabled={selectedType?.key === 'lookup' || isFieldUsedInViews || isLinksFieldEditing}
                 />
                 {isFieldUsedInViews && selectedType?.key !== 'links' && (
                   <div className="flex item-start gap-2 justify-between">
