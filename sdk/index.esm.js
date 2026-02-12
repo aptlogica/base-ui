@@ -1130,6 +1130,9 @@ class UserService {
         if (avatarFile) {
             formData.append('avatar', avatarFile); // db: "avatar"
         }
+        if (params.activity_data) {
+            formData.append('activity_data', JSON.stringify(params.activity_data));
+        }
         return this.http.patch(`/user/profile/${id}`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',

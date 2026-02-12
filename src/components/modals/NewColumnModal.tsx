@@ -17,8 +17,6 @@ import {
   durationFormatOptions,
   dateFormatOptions,
   timeFormatOptions,
-  buttonStyleOptions,
-  buttonActionOptions,
   timeZoneOptions,
 } from '../../types/constants';
 import { FieldTypeDropdown } from '../common/dropdown/fieldDropdown/FieldTypeDropdown';
@@ -236,7 +234,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             // Boolean/checkbox fields: check both saved format (icon/color/defaultValue) and state format (checkboxIcon/checkboxColor/checkboxDefault)
             setCheckboxIcon(initialValues.config.checkboxIcon || initialValues.config.icon || 'check');
             setCheckboxColor(initialValues.config.checkboxColor || initialValues.config.color || 'green');
-            setCheckboxDefault(initialValues.config.checkboxDefault === undefined ? (initialValues.config.defaultValue !== undefined ? !!initialValues.config.defaultValue : false) : !!initialValues.config.checkboxDefault);
+            setCheckboxDefault(initialValues.config.checkboxDefault === undefined ? (initialValues.config.defaultValue === undefined ? false : !!initialValues.config.defaultValue) : !!initialValues.config.checkboxDefault);
             break;
           case 'formula':
             setFormulaText(initialValues.config.formula || '');
@@ -531,7 +529,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         // Boolean/checkbox fields: check both saved format (icon/color/defaultValue) and state format (checkboxIcon/checkboxColor/checkboxDefault)
         setCheckboxIcon(config.checkboxIcon || config.icon || 'check');
         setCheckboxColor(config.checkboxColor || config.color || 'green');
-        setCheckboxDefault(config.checkboxDefault === undefined ? (config.defaultValue !== undefined ? !!config.defaultValue : false) : !!config.checkboxDefault);
+        setCheckboxDefault(config.checkboxDefault === undefined ? (config.defaultValue === undefined ? false : !!config.defaultValue) : !!config.checkboxDefault);
         setSelectOptions(
           (config.options || config.selectOptions || []).map((o: any) =>
             typeof o === 'string' ? { option: o, color: '' } : { option: o.option, color: o.color || '' }
@@ -618,14 +616,14 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         setShowPercentDefault(false);
         // For percent: check defaultValue first (where it's saved), then fallback to percentDefault
         if (fieldType === 'percent') {
-          setPercentDefault(config.defaultValue !== undefined && config.defaultValue !== null ? config.defaultValue : (config.percentDefault || null));
+          setPercentDefault(config.defaultValue ?? (config.percentDefault || null));
         } else {
         setPercentDefault(config.percentDefault || null);
         }
         setDurationFormat(config.durationFormat || 'h:mm');
         // For duration: check defaultValue first (where it's saved), then fallback to durationDefault
         if (fieldType === 'duration') {
-          setDurationDefault(config.defaultValue !== undefined && config.defaultValue !== null ? config.defaultValue : (config.durationDefault || 0));
+          setDurationDefault(config.defaultValue ?? (config.durationDefault || 0));
         } else {
         setDurationDefault(config.durationDefault || 0);
         }
@@ -633,7 +631,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         setCurrencyLocale(config.currencyLocale || 'en-US');
         // For currency: check defaultValue first (where it's saved), then fallback to currencyDefault
         if (fieldType === 'currency') {
-          setCurrencyDefault(config.defaultValue !== undefined && config.defaultValue !== null ? config.defaultValue : (config.currencyDefault || null));
+          setCurrencyDefault(config.defaultValue ?? (config.currencyDefault || null));
         } else {
         setCurrencyDefault(config.currencyDefault || null);
         }
@@ -977,7 +975,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         case 'percent':
           if (defaultValue && (typeof defaultValue === 'string' ? defaultValue.trim() : true)) {
             const parsed = typeof defaultValue === 'string' ? parseFloat(defaultValue) : defaultValue;
-            config.defaultValue = !isNaN(parsed) ? parsed : defaultValue;
+            config.defaultValue = isNaN(parsed) ? defaultValue : parsed;
           }
           break;
         case 'boolean':
@@ -1173,31 +1171,22 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     }
     if (selectedType.key === 'phoneNumber') {
       config.phoneValid = phoneValid;
-      if (phoneDefault && phoneDefault.trim()) {
+      if (phoneDefault?.trim()) {
         config.defaultValue = phoneDefault;
       }
     }
     if (selectedType.key === 'email') {
       config.emailValid = emailValid;
-      if (emailDefault && emailDefault.trim()) {
+      if (emailDefault?.trim()) {
         config.defaultValue = emailDefault;
       }
     }
     if (selectedType.key === 'url') {
       config.urlValid = urlValid;
-      if (urlDefault && urlDefault.trim()) {
+      if (urlDefault?.trim()) {
         config.defaultValue = urlDefault;
       }
     }
-    // if (selectedType.key === 'user') {
-    //   config.allowMultiple = allowMultipleUsers;
-    //   if (userDefault && userDefault.trim()) {
-    //     config.defaultValue = userDefault;
-    //   }
-    //   if (description && description.trim()) {
-    //     config.description = description;
-    //   }
-    // }
     if (selectedType.key === 'user') {
       config.allowMultiple = allowMultipleUsers;
       if (selectedUsers) {
@@ -1330,18 +1319,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const handleJsonChange = (value: any) => {
     const stringify = JSON.stringify(value, null, 2);
     setDefaultValue(stringify);
-  };
-
-  // Format default value based on precision
-  const formatDefaultValueWithPrecision = (value: string, precision: string | number) => {
-    if (!value || !precision) return value;
-
-    const decimalPlaces = typeof precision === 'string' ? (precision.split('.')[1]?.length || 0) : precision;
-
-    const numValue = parseFloat(value);
-    if (isNaN(numValue)) return value;
-
-    return numValue.toFixed(decimalPlaces);
   };
 
   // Handle precision change - components will handle their own formatting
@@ -1540,7 +1517,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
           </>
         );
       case 'boolean':
-        const iconOptions: { key: string; label: string; checkedIcon: any; uncheckedIcon: any }[] = [
+        { const iconOptions: { key: string; label: string; checkedIcon: any; uncheckedIcon: any }[] = [
           {
             key: 'check',
             label: 'Check',
@@ -1685,7 +1662,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       {selectedIconOption.uncheckedIcon}
                       <span>{selectedIconOption.label}</span>
                     </div>
-                    {!showIconDropdown ? <ChevronDown className="h-4 w-4 ml-auto" /> : <ChevronUp className="h-4 w-4 ml-auto" />}
+                    {showIconDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
                   </button>
 
                   {showIconDropdown && (
@@ -1727,7 +1704,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       <div className={`w-4 h-4 rounded-full ${selectedColorOption.bgClass}`}></div>
                       <span>{selectedColorOption.label}</span>
                     </div>
-                    {!showColorDropdown ? <ChevronDown className="h-4 w-4 ml-auto" /> : <ChevronUp className="h-4 w-4 ml-auto" />}
+                    {showColorDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
                   </button>
 
                   {showColorDropdown && (
@@ -1773,9 +1750,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 </button>
                 <button
                   type="button"
-                  className={`px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${!checkboxDefault
-                    ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
-                    : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'
+                  className={`px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${checkboxDefault
+                    ? 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'
+                    : 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
                     }`}
                   onClick={() => setCheckboxDefault(false)}
                 >
@@ -1802,7 +1779,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               }
             </div>
           </>
-        );
+        ); }
       case 'multiSelect':
         return (
           <>
@@ -2142,25 +2119,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 </div>
               </>
             }
-            {/* {
-              selectOptions.length > 0 && (
-                <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Default value</div>
-              )
-            } */}
-            {/* <div className="flex flex-wrap gap-2 mb-3 max-w-full">
-              {selectOptions.map((opt, idx) => (
-                <label key={idx} className="inline-flex items-center gap-1 text-[var(--color-gray-700)] cursor-pointer max-w-[200px] min-w-0">
-                  <input
-                    type="radio"
-                    className="flex-shrink-0"
-                    checked={singleDefault === opt}
-                    onChange={() => setSingleDefault(opt)}
-                  />
-                  <span className="truncate flex-1 min-w-0">{opt}</span>
-                </label>
-              ))}
-            </div> */}
-
+      
             <div className="relative">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
                 <Plus className="w-4 h-4" />
@@ -2854,7 +2813,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       {selectedRatingIconOption.icon}
                       <span>{selectedRatingIconOption.label}</span>
                     </div>
-                    {!showRatingIconDropdown ? <ChevronDown className="h-4 w-4 ml-auto" /> : <ChevronUp className="h-4 w-4 ml-auto" />}
+                    {showRatingIconDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
                   </button>
 
                   {showRatingIconDropdown && (
@@ -2894,7 +2853,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       <div className={`w-4 h-4 rounded-full`} style={{ backgroundColor: selectedRatingColorOption.color }}></div>
                       <span>{selectedRatingColorOption.label}</span>
                     </div>
-                    {!showRatingColorDropdown ? <ChevronDown className="h-4 w-4 ml-auto" /> : <ChevronUp className="h-4 w-4 ml-auto" />}
+                    {showRatingColorDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
                   </button>
 
                   {showRatingColorDropdown && (
@@ -2942,15 +2901,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               </button>
 
               {showRatingDefault && (
-                <div 
-                  className="flex items-center gap-2"
-                  onMouseLeave={() => setRatingDefaultHover(null)}
-                >
+                <div className="flex items-center gap-2" onMouseLeave={() => setRatingDefaultHover(null)}>
                   <div className="flex gap-1">
                     {Array.from({ length: ratingMax }, (_, i) => {
                       const starIndex = i + 1;
                       // Use hover value if set, otherwise use actual default value
-                      const currentValue = ratingDefaultHover !== null ? ratingDefaultHover : ratingDefault;
+                      const currentValue = ratingDefaultHover ?? ratingDefault;
                       const isFilled = currentValue >= starIndex;
                       return (
                         <button
@@ -3137,7 +3093,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                       config={{
                         dateFormat: dateFormat,
                         timeFormat: timeFormat,
-                        hourFormat: hourFormat as '12' | '24',
+                        hourFormat: hourFormat,
                       }}
                       isBorder={true}
                     />
@@ -3238,7 +3194,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         );
       case 'attachment':
         return (
-          <>
             <div className="mb-3 relative">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]" onClick={() => setShowDescription(v => !v)}>
                 <Plus className="w-4 h-4" />
@@ -3259,7 +3214,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 </>
               )}
             </div>
-          </>
         );
       case 'links':
         return (
@@ -3427,7 +3381,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
           </>
         );
       case 'lookup':
-        const relationOptions = linkFields.map(field => ({
+        { const relationOptions = linkFields.map(field => ({
           value: field.id,
           label: field.title || field.name || field.id
         }));
@@ -3523,64 +3477,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               )}
             </div>
           </>
-        );
-      case 'button':
-        return (
-          <>
-            {/* <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Button Configuration</div> */}
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Button Text</label>
-              <input
-                className="w-full px-3 py-2 border border-[var(--color-gray-300)] text-[var(--color-text-secondary)] bg-[var(--color-alpha-white)] rounded text-sm focus:outline-none"
-                placeholder="Enter button text"
-                value={defaultValue}
-                onChange={e => setDefaultValue(e.target.value)}
-              />
-            </div>
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Button Style</label>
-              <Dropdown
-                options={buttonStyleOptions}
-                value={buttonStyle}
-                onChange={(value) => setButtonStyle(value as string)}
-                placeholder="Select button style"
-              />
-            </div>
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Action</label>
-              <Dropdown
-                options={buttonActionOptions}
-                value={buttonAction}
-                onChange={(value) => setButtonAction(value as string)}
-                placeholder="Select action"
-              />
-            </div>
-            <div className="flex items-center gap-2 mb-3">
-              <input type="checkbox" className="checkbox-primary-brand" id="openInNewTab" checked={openButtonInNewTab} onChange={e => setOpenButtonInNewTab(e.target.checked)} />
-              <label htmlFor="openInNewTab" className="text-sm text-[var(--color-gray-900)]">Open in new tab</label>
-            </div>
-            <div className="mb-3 relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </>
-              )}
-            </div>
-          </>
-        );
+        ); }
       case 'json':
         return (
           <>
@@ -3591,14 +3488,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 Set default value
               </button>
               {showJsonDefault && (
-                <>
                   <JSONField
                     value={defaultValue}
                     onChange={handleJsonChange}
                     placeholder='{"key": "value"}'
                     isBorder={true}
                   />
-                </>
               )}
             </div>
             <div className="relative">
@@ -3627,7 +3522,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         );
       case 'createdBy':
         return (
-          <>
             <div className="relative">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
                 <Plus className="w-4 h-4" />
@@ -3650,11 +3544,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 </>
               )}
             </div>
-          </>
         );
       case 'lastModifiedBy':
         return (
-          <>
             <div className="relative">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
                 <Plus className="w-4 h-4" />
@@ -3677,7 +3569,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 </>
               )}
             </div>
-          </>
         );
       case 'formula':
         return (
@@ -3761,7 +3652,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             <>
               <input
                 ref={fieldNameInputRef}
-                className={`w-full px-3 py-2 bg-[var(--color-alpha-white)] border border-[var(--color-border-primary)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-[var(--text-color-primary)] placeholder:text-[var(--color-text-placeholder)] ${!nameError ? "mb-2" : ""}`}
+                className={`w-full px-3 py-2 bg-[var(--color-alpha-white)] border border-[var(--color-border-primary)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-[var(--text-color-primary)] placeholder:text-[var(--color-text-placeholder)] ${nameError ? "" : "mb-2"}`}
                 placeholder="Enter Field name"
                 value={fieldName}
                 // onChange={e => setFieldName(e.target.value)}
@@ -3813,7 +3704,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             <>
               <input
                 ref={fieldNameInputRef}
-                className={`w-full px-3 py-2 bg-[var(--color-alpha-white)] border border-[var(--color-border-primary)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-[var(--text-color-primary)] placeholder:text-[var(--color-text-placeholder)] ${!nameError ? "mb-2" : ""}`}
+                className={`w-full px-3 py-2 bg-[var(--color-alpha-white)] border border-[var(--color-border-primary)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-[var(--text-color-primary)] placeholder:text-[var(--color-text-placeholder)] ${nameError ? "" : "mb-2"}`}
                 placeholder="Enter Field name"
                 value={fieldName}
                 onChange={e => {
