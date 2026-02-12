@@ -424,11 +424,8 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
               Cancel
             </button>
             <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                handleSubmit(e);
-              }}
+              type="submit"
+              form="create-workspace-form"
               disabled={submitting || !!validationError || !(isControlled ? (controlledName || '').trim().length >= 3 : name.trim().length >= 3)}
               className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
