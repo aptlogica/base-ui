@@ -22,7 +22,7 @@
     "lucide-react": "^0.562.0",
     "luxon": "^3.7.2",
     "react": "^19.2.3",
-    "react-dom": "^19.1.0",
+    "react-dom": "^19.2.3",
     "react-router-dom": "^7.6.3",
     "semver": "^7.7.2",
     "uuid": "^11.1.0",
