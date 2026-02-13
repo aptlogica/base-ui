@@ -2,7 +2,7 @@
 export { Table } from './Table';
 
 // Table sub-components
-export { TableHeader, TableRow, ContextMenu, Search } from './Table';
+export { TableRow, ContextMenu, Search, ColumnDropdown, ColumnContextMenu, VirtualizedTableBody } from './Table';
 
 // Table modals
 export { NewColumnModalPortal } from './Table';

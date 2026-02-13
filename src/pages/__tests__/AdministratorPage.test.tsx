@@ -75,7 +75,7 @@ const renderAdministratorPage = (
   );
 };
 
-describe.skip('AdministratorPage', () => {
+describe('AdministratorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

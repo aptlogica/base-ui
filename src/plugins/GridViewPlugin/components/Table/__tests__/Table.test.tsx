@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 let ToastProvider: React.ComponentType<{ children: React.ReactNode }>;
 let Table: typeof import('../Table').Table;
 
@@ -13,6 +13,13 @@ const baseAccess = {
   canUpdateColumn: vi.fn(),
   canDeleteColumn: vi.fn(),
 };
+
+const toast = { success: vi.fn(), error: vi.fn() };
+
+vi.mock('../../../../../components/common/Toast', () => ({
+  ToastProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  useToast: () => toast,
+}));
 
 vi.mock('../../../../../hooks/useBaseAccess', () => ({
   useBaseAccess: () => baseAccess,
@@ -142,7 +149,7 @@ vi.mock('../../../../../components/modals/UpdateFieldConfirmModal', () => ({
   default: () => <div data-testid="update-field-confirm-modal" />,
 }));
 
-describe.skip('Table', () => {
+describe('Table', () => {
   beforeEach(async () => {
     baseAccess.isBaseReadOnly.mockReturnValue(false);
     baseAccess.canCreateColumn.mockReturnValue(true);
@@ -178,7 +185,7 @@ describe.skip('Table', () => {
     expect(screen.getByText('Title')).toBeInTheDocument();
     expect(screen.getByText('Status')).toBeInTheDocument();
     expect(screen.getByText('2 rows')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /add row/i })).toBeInTheDocument();
+    expect(screen.getByTitle('Add new row')).toBeInTheDocument();
   });
 
   it('hides add actions for read-only users', () => {
@@ -199,7 +206,33 @@ describe.skip('Table', () => {
       </ToastProvider>
     );
 
-    expect(screen.queryByRole('button', { name: /add row/i })).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Add new row')).not.toBeInTheDocument();
     expect(screen.queryByTitle('Add column')).not.toBeInTheDocument();
+  });
+
+  it('calls addRow mutation when add row clicked', async () => {
+    const addRow = { mutateAsync: vi.fn().mockResolvedValue({}) } as any;
+
+    render(
+      <ToastProvider>
+        <Table
+          tableData={{
+            model: { id: 't1', base_id: 'b1' },
+            columns: [
+              { id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' },
+            ],
+            records: [{ id: 1, title: 'Row 1' }],
+          }}
+          onRefresh={vi.fn()}
+          actions={{ addRow } as any}
+        />
+      </ToastProvider>
+    );
+
+    const addRowButton = screen.getByTitle('Add new row');
+    fireEvent.click(addRowButton);
+
+    await new Promise(r => setTimeout(r, 0));
+    expect(addRow.mutateAsync).toHaveBeenCalledWith({ model_id: 't1' });
   });
 });

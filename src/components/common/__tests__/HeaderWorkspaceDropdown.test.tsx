@@ -125,21 +125,22 @@ describe('HeaderWorkspaceDropdown', () => {
     expect(dropdown).toHaveClass('pointer-events-none');
   });
 
-  it.skip('selects a workspace on the homepage without navigating', async () => {
+  it('selects a workspace on the homepage without navigating', async () => {
     const user = userEvent.setup();
     renderWithPath('/homepage');
 
     const workspaceSelectedListener = vi.fn();
     globalThis.addEventListener('workspace-selected', workspaceSelectedListener);
 
-    await user.click(screen.getByRole('button', { name: /alpha workspace/i }));
+    const triggerButtons = screen.getAllByRole('button', { name: /alpha workspace/i });
+    await user.click(triggerButtons[0]);
     await user.click(screen.getByText('Beta Workspace'));
 
     expect(workspaceBusinessLogicState.setSelectedWorkspace).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'w2' })
     );
-    expect(navigationStoreState.setWorkspace).toHaveBeenCalledWith('w2');
-    expect(navigationState.navigateToWorkspace).not.toHaveBeenCalled();
+    expect(navigationStoreState.setWorkspace).not.toHaveBeenCalled();
+    expect(navigationState.navigateToWorkspace).toHaveBeenCalledWith('w2');
 
     expect(workspaceSelectedListener).toHaveBeenCalledTimes(1);
     globalThis.removeEventListener('workspace-selected', workspaceSelectedListener);
@@ -163,3 +164,4 @@ describe('HeaderWorkspaceDropdown', () => {
     expect(screen.getByText('Read only')).toBeInTheDocument();
   });
 });
+

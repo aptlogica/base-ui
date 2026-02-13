@@ -166,7 +166,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
   const commonProps = {
     value: getDisplayValue(fieldType, value),
     onChange: () => {}, // No-op for display only
-    disabled: true,
+    disabled: true
   };
 
   // Render the appropriate field component (same switch as EditableTableCell)
@@ -455,10 +455,10 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       );
       break;
     case 'createdBy':
-      renderedComponent = <AuditCreatedBy {...commonProps} />;
+      renderedComponent = <AuditCreatedBy />;
       break;
     case 'lastModifiedBy':
-      renderedComponent = <AuditLastModifiedBy {...commonProps} />;
+      renderedComponent = <AuditLastModifiedBy />;
       break;
     case 'links':
       renderedComponent = (
@@ -485,7 +485,6 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
           {...commonProps}
           config={parsedConfig}
           columns={allColumns || []}
-          allowEdit={false}
           isBorder={false}
           disabled={true}
           rowData={rowData}

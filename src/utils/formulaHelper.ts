@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/cognitive-complexity */
 import {
   NUMERIC_TYPES,
   TEXT_TYPES,
@@ -152,8 +153,8 @@ const getFirstParenContent = (input: string): string | null => {
 
 const countChar = (input: string, target: string): number => {
   let count = 0;
-  for (let i = 0; i < input.length; i++) {
-    if (input[i] === target) count++;
+  for (const element of input) {
+    if (element === target) count++;
   }
   return count;
 };
@@ -3023,11 +3024,11 @@ const validateMathOperators = (formula: string, context: FormulaContext): string
   
   // Check for operators at invalid positions (start or end without operands)
   const trimmedFormula = formula.trim();
-  if (trimmedFormula && (trimmedFormula[0] === '*' || trimmedFormula[0] === '/')) {
+  if (trimmedFormula && (trimmedFormula.startsWith('*') || trimmedFormula.startsWith('/'))) {
     return 'Invalid operator usage: expression cannot start with * or /';
   }
   if (trimmedFormula) {
-    const lastChar = trimmedFormula[trimmedFormula.length - 1];
+    const lastChar = trimmedFormula.at(-1);
     if (lastChar === '+' || lastChar === '-' || lastChar === '*' || lastChar === '/') {
       return 'Invalid operator usage: expression cannot end with an operator';
     }
@@ -3143,7 +3144,7 @@ const validateComparisonOperators = (formula: string, context: FormulaContext): 
         const startChar = input[i];
         if (startChar === '{') {
           const end = input.indexOf('}', i + 1);
-          return end !== -1 ? input.slice(i, end + 1) : null;
+          return end === -1 ? null : input.slice(i, end + 1);
         }
         if (startChar === '"' || startChar === "'") {
           const quote = startChar;

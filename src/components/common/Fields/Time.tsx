@@ -273,7 +273,7 @@ export const Time: React.FC<TimeProps> = ({
             <div className="border-t border-gray-100 px-2 py-2 flex justify-center bg-background flex-shrink-0 rounded-bl-lg rounded-br-lg">
               <button
                 type="button"
-                className="px-4 py-2 rounded-xl bg-[var(--color-bg-brand-primary)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
+                className="px-4 py-2 rounded-xl bg-[var(--color-bg-brand-primary)] text-black hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
                 onClick={() => !readOnly && handleNow()}
                 disabled={readOnly}
               >

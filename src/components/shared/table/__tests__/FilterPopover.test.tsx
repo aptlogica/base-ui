@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FilterPopover } from '../FilterPopover';
+import * as filterUtils from '../../../../utils/filterUtils';
 
 const mockPosition = { top: 100, left: 200 };
 
@@ -158,6 +159,73 @@ describe('FilterPopover', () => {
         expect(mockOnRemoveFilter).toHaveBeenCalledWith(0);
       }
     });
+
+    it('updates logic for non-first filter row', async () => {
+      render(
+        <FilterPopover
+          columns={defaultColumns}
+          filters={[
+            { column: 'name', operator: 'is equal', value: 'x', logic: 'AND' },
+            { column: 'count', operator: 'is equal', value: '1', logic: 'AND' },
+          ]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getAllByRole('button', { name: 'AND' })[0]);
+      await userEvent.click(screen.getByRole('button', { name: 'OR' }));
+
+      expect(mockOnUpdateFilter).toHaveBeenCalledWith(1, { logic: 'OR' });
+    });
+
+    it('updates existing filter operator from dropdown', async () => {
+      vi.mocked(filterUtils.FIELD_TYPE_OPERATORS as any).text = [
+        { value: 'is equal', label: 'is equal' },
+        { value: 'contains', label: 'contains' },
+      ];
+
+      render(
+        <FilterPopover
+          columns={defaultColumns}
+          filters={[{ column: 'name', operator: 'is equal', value: 'abc', logic: 'AND' }]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getByRole('button', { name: 'is equal' }));
+      await userEvent.click(screen.getByRole('button', { name: 'contains' }));
+
+      expect(mockOnUpdateFilter).toHaveBeenCalledWith(0, { operator: 'contains' });
+    });
+
+    it('updates existing filter field and resets operator/value', async () => {
+      render(
+        <FilterPopover
+          columns={defaultColumns}
+          filters={[{ column: 'name', operator: 'contains', value: 'abc', logic: 'AND' }]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getByRole('button', { name: /Name/i }));
+      const fieldDropdown = screen.getByTestId('filter-field-options-0');
+      await userEvent.click(within(fieldDropdown).getByText('Count'));
+
+      expect(mockOnUpdateFilter).toHaveBeenCalledWith(0, {
+        column: 'count',
+        operator: 'is equal',
+        value: '',
+      });
+    });
   });
 
   describe('Column availability controls', () => {
@@ -193,6 +261,121 @@ describe('FilterPopover', () => {
       const dropdownScope = within(dropdown);
       expect(dropdownScope.queryByText('Name')).not.toBeInTheDocument();
       expect(dropdownScope.getByText('Count')).toBeInTheDocument();
+    });
+  });
+
+  describe('Value handling branches', () => {
+    it('does not render value input for boolean fields', async () => {
+      render(
+        <FilterPopover
+          columns={[
+            { id: 'col1', title: 'Done', column_name: 'done', uidt: 'boolean', config: {} },
+          ]}
+          filters={[{ column: 'done', operator: 'is equal', value: 'true', logic: 'AND' }]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      expect(screen.queryByPlaceholderText('Enter a value')).not.toBeInTheDocument();
+    });
+
+    it('shows numeric pill and clears existing number value', async () => {
+      render(
+        <FilterPopover
+          columns={[
+            { id: 'col1', title: 'Count', column_name: 'count', uidt: 'number', config: {} },
+          ]}
+          filters={[{ column: 'count', operator: 'is equal', value: '42', logic: 'AND' }]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      const pill = screen.getByText('42').closest('div');
+      expect(pill).toBeInTheDocument();
+      const clearButton = within(pill as HTMLElement).getByRole('button');
+      fireEvent.click(clearButton);
+
+      expect(mockOnUpdateFilter).toHaveBeenCalledWith(0, { value: '' });
+    });
+
+    it('updates number value on blur for existing filter input', async () => {
+      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(true);
+
+      render(
+        <FilterPopover
+          columns={[
+            { id: 'col1', title: 'Count', column_name: 'count', uidt: 'number', config: {} },
+          ]}
+          filters={[{ column: 'count', operator: 'is equal', value: '', logic: 'AND' }]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      const input = screen.getByRole('spinbutton');
+      fireEvent.change(input, { target: { value: '100' } });
+      fireEvent.blur(input);
+
+      expect(mockOnUpdateFilter).toHaveBeenCalledWith(0, { value: '100' });
+    });
+
+    it('clears date value pill for existing date filter', async () => {
+      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(true);
+      render(
+        <FilterPopover
+          columns={[
+            { id: 'col-date', title: 'Due', column_name: 'due', uidt: 'date', config: {} },
+          ]}
+          filters={[{ column: 'due', operator: 'is equal', value: '2026-01-01', logic: 'AND' }]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      const pill = screen.getByText('2026-01-01').closest('div');
+      const clearButton = within(pill as HTMLElement).getByRole('button');
+      await userEvent.click(clearButton);
+      expect(mockOnUpdateFilter).toHaveBeenCalledWith(0, { value: '' });
+    });
+  });
+
+  describe('New filter flow', () => {
+    it('adds a new filter after selecting field and clicking apply', async () => {
+      render(
+        <FilterPopover
+          columns={defaultColumns}
+          filters={[]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getByRole('button', { name: /Select field/i }));
+      const dropdown = screen.getByTestId('filter-new-field-options');
+      await userEvent.click(within(dropdown).getByText('Name'));
+
+      const applyButton = document.querySelector('button[title="Apply filter"]') as HTMLButtonElement;
+      expect(applyButton).toBeTruthy();
+      await userEvent.click(applyButton);
+
+      expect(mockOnAddFilter).toHaveBeenCalledWith({
+        column: 'name',
+        operator: 'is equal',
+        value: '',
+        logic: 'AND',
+      });
     });
   });
 });

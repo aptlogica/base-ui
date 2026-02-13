@@ -23,8 +23,8 @@ const isTruthy = (v: any) => v !== null && v !== undefined && v !== '';
 function stripHtmlTags(input: string): string {
   let out = '';
   let inTag = false;
-  for (let i = 0; i < input.length; i++) {
-    const ch = input[i];
+  for (const element of input) {
+    const ch = element;
     if (ch === '<') {
       inTag = true;
       continue;
@@ -41,8 +41,8 @@ function stripHtmlTags(input: string): string {
 function collapseWhitespace(input: string): string {
   let out = '';
   let inWs = false;
-  for (let i = 0; i < input.length; i++) {
-    const ch = input[i];
+  for (const element of input) {
+    const ch = element;
     const isWs =
       ch === ' ' ||
       ch === '\n' ||

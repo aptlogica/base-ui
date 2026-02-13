@@ -159,7 +159,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     if (cardElements.length > 0) {
       const lastCard = cardElements.at(-1);
       const lastRect = lastCard?.getBoundingClientRect();
-      if (mouseY > lastRect?.bottom) {
+      if (mouseY > lastRect!.bottom) {
         return cardElements.length;
       }
     }
@@ -469,7 +469,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
             ) : (
               <span
                 style={{ 
-                  backgroundColor: stack.color && stack.color.trim() ? stack.color : '#d1d5db',
+                  backgroundColor: stack.color?.trim() ? stack.color : '#d1d5db',
                   color: stack.name === 'Uncategorized' ? '#666' : '#000'
                 }}
                 className="font-semibold px-2 py-0.5 rounded-lg text-xs border truncate max-w-32"

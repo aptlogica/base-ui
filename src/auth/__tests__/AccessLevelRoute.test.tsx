@@ -40,7 +40,7 @@ const renderWithRouter = (
             </AccessLevelRoute>
           }
         />
-        <Route path="/homepage" element={<div data-testid="homepage">Homepage</div>} />
+        <Route path="/workspace/:workspaceId" element={<div data-testid="workspace-landing">Workspace</div>} />
       </Routes>
     </MemoryRouter>
   );
@@ -97,12 +97,12 @@ describe('AccessLevelRoute', () => {
   });
 
   describe('Failure Cases - Access Denied', () => {
-    it.skip('should navigate to homepage when canAccessSettings returns false', () => {
+    it('should navigate to homepage when canAccessSettings returns false', () => {
       renderWithRouter('test-workspace', false);
 
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
-      expect(screen.getByTestId('homepage')).toBeInTheDocument();
-      expect(screen.getByText('Homepage')).toBeInTheDocument();
+      expect(screen.getByTestId('workspace-landing')).toBeInTheDocument();
+      expect(screen.getByText('Workspace')).toBeInTheDocument();
     });
 
     it('should not render protected content when access is denied', () => {
@@ -128,24 +128,24 @@ describe('AccessLevelRoute', () => {
       consoleWarnSpy.mockRestore();
     });
 
-    it.skip('should use Replace strategy for navigation to homepage', () => {
+    it('should use Replace strategy for navigation to homepage', () => {
       // Navigate to protected route first (denied)
       const { rerender } = renderWithRouter('test-workspace', false);
 
       // Verify we are on homepage
-      expect(screen.getByTestId('homepage')).toBeInTheDocument();
+      expect(screen.getByTestId('workspace-landing')).toBeInTheDocument();
 
       // Re-render with permission granted (simulating a return to the component)
       rerender(
-        <MemoryRouter initialEntries={['/homepage']}>
+        <MemoryRouter initialEntries={['/workspace/test-workspace']}>
           <Routes>
-            <Route path="/homepage" element={<div data-testid="homepage">Homepage</div>} />
+            <Route path="/workspace/:workspaceId" element={<div data-testid="workspace-landing">Workspace</div>} />
           </Routes>
         </MemoryRouter>
       );
 
       // Verify navigation behavior (replace doesn't add to history)
-      expect(screen.getByTestId('homepage')).toBeInTheDocument();
+      expect(screen.getByTestId('workspace-landing')).toBeInTheDocument();
     });
   });
 
@@ -166,7 +166,7 @@ describe('AccessLevelRoute', () => {
                 </AccessLevelRoute>
               }
             />
-            <Route path="/homepage" element={<div data-testid="homepage">Homepage</div>} />
+            <Route path="/workspace/:workspaceId" element={<div data-testid="workspace-landing">Workspace</div>} />
           </Routes>
         </MemoryRouter>
       );
@@ -191,7 +191,7 @@ describe('AccessLevelRoute', () => {
                 </AccessLevelRoute>
               }
             />
-            <Route path="/homepage" element={<div data-testid="homepage">Homepage</div>} />
+            <Route path="/workspace/:workspaceId" element={<div data-testid="workspace-landing">Workspace</div>} />
           </Routes>
         </MemoryRouter>
       );
@@ -217,7 +217,7 @@ describe('AccessLevelRoute', () => {
                 </AccessLevelRoute>
               }
             />
-            <Route path="/homepage" element={<div data-testid="homepage">Homepage</div>} />
+            <Route path="/workspace/:workspaceId" element={<div data-testid="workspace-landing">Workspace</div>} />
           </Routes>
         </MemoryRouter>
       );
@@ -228,7 +228,7 @@ describe('AccessLevelRoute', () => {
       expect(mockCanAccessSettings).toHaveBeenCalled();
     });
 
-    it.skip('should evaluate access permission and conditionally render based on result', () => {
+    it('should evaluate access permission and conditionally render based on result', () => {
       const mockCanAccessSettings = vi.fn().mockReturnValue(false);
       mockUseWorkspaceAccess.mockReturnValue({
         canAccessSettings: mockCanAccessSettings,
@@ -245,7 +245,7 @@ describe('AccessLevelRoute', () => {
                 </AccessLevelRoute>
               }
             />
-            <Route path="/homepage" element={<div data-testid="homepage">Homepage</div>} />
+            <Route path="/workspace/:workspaceId" element={<div data-testid="workspace-landing">Workspace</div>} />
           </Routes>
         </MemoryRouter>
       );
@@ -254,7 +254,7 @@ describe('AccessLevelRoute', () => {
       expect(mockCanAccessSettings).toHaveBeenCalled();
       // Verify navigation occurred based on false return value
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
-      expect(screen.getByTestId('homepage')).toBeInTheDocument();
+      expect(screen.getByTestId('workspace-landing')).toBeInTheDocument();
     });
 
     it('should render multiple children correctly', () => {
@@ -275,7 +275,7 @@ describe('AccessLevelRoute', () => {
                 </AccessLevelRoute>
               }
             />
-            <Route path="/homepage" element={<div data-testid="homepage">Homepage</div>} />
+            <Route path="/workspace/:workspaceId" element={<div data-testid="workspace-landing">Workspace</div>} />
           </Routes>
         </MemoryRouter>
       );
@@ -303,7 +303,7 @@ describe('AccessLevelRoute', () => {
                 </AccessLevelRoute>
               }
             />
-            <Route path="/homepage" element={<div data-testid="homepage">Homepage</div>} />
+            <Route path="/workspace/:workspaceId" element={<div data-testid="workspace-landing">Workspace</div>} />
           </Routes>
         </MemoryRouter>
       );
@@ -332,7 +332,7 @@ describe('AccessLevelRoute', () => {
               path="/workspace/:workspaceId/settings"
               element={<AccessLevelRoute>{children}</AccessLevelRoute>}
             />
-            <Route path="/homepage" element={<div data-testid="homepage">Homepage</div>} />
+            <Route path="/workspace/:workspaceId" element={<div data-testid="workspace-landing">Workspace</div>} />
           </Routes>
         </MemoryRouter>
       );
@@ -353,7 +353,7 @@ describe('AccessLevelRoute', () => {
           <Routes>
             <Route path="/workspace/:workspaceId/settings" element={<AccessLevelRoute><div data-testid="settings">Settings</div></AccessLevelRoute>} />
             <Route path="/workspace/:workspaceId/overview" element={<div data-testid="overview">Overview</div>} />
-            <Route path="/homepage" element={<div data-testid="homepage">Homepage</div>} />
+            <Route path="/workspace/:workspaceId" element={<div data-testid="workspace-landing">Workspace</div>} />
           </Routes>
         </MemoryRouter>
       );
@@ -362,7 +362,7 @@ describe('AccessLevelRoute', () => {
       expect(screen.queryByTestId('overview')).not.toBeInTheDocument();
     });
 
-    it.skip('should preserve navigation state when redirecting to homepage', () => {
+    it('should preserve navigation state when redirecting to homepage', () => {
       mockUseWorkspaceAccess.mockReturnValue({
         canAccessSettings: vi.fn().mockReturnValue(false),
       } as any);
@@ -374,12 +374,12 @@ describe('AccessLevelRoute', () => {
               path="/workspace/:workspaceId/settings"
               element={<AccessLevelRoute><div data-testid="settings">Settings</div></AccessLevelRoute>}
             />
-            <Route path="/homepage" element={<div data-testid="homepage">Homepage</div>} />
+            <Route path="/workspace/:workspaceId" element={<div data-testid="workspace-landing">Workspace</div>} />
           </Routes>
         </MemoryRouter>
       );
 
-      expect(screen.getByTestId('homepage')).toBeInTheDocument();
+      expect(screen.getByTestId('workspace-landing')).toBeInTheDocument();
       expect(screen.queryByTestId('settings')).not.toBeInTheDocument();
       expect(container).not.toBeNull();
     });
@@ -406,7 +406,7 @@ describe('AccessLevelRoute', () => {
       expect(screen.getByTestId('protected-content')).toBeInTheDocument();
     });
 
-    it.skip('should deny access for users with workspace-read access requesting full settings', () => {
+    it('should deny access for users with workspace-read access requesting full settings', () => {
       mockUseWorkspaceAccess.mockReturnValue({
         canAccessSettings: vi.fn().mockReturnValue(false),
       } as any);
@@ -414,17 +414,20 @@ describe('AccessLevelRoute', () => {
       renderWithRouter('test-workspace', false);
 
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
-      expect(screen.getByTestId('homepage')).toBeInTheDocument();
+      expect(screen.getByTestId('workspace-landing')).toBeInTheDocument();
     });
 
-    it.skip('should deny access for base-level members', () => {
+    it('should deny access for base-level members', () => {
       mockUseWorkspaceAccess.mockReturnValue({
         canAccessSettings: vi.fn().mockReturnValue(false),
       } as any);
 
       renderWithRouter('test-workspace', false);
 
-      expect(screen.getByTestId('homepage')).toBeInTheDocument();
+      expect(screen.getByTestId('workspace-landing')).toBeInTheDocument();
     });
   });
 });
+
+
+

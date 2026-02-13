@@ -282,7 +282,7 @@ describe('Dropdown', () => {
         'px-3',
         'py-2',
         'border',
-        'rounded',
+        'rounded-xl',
         'cursor-pointer'
       );
     });
@@ -299,7 +299,7 @@ describe('Dropdown', () => {
         'mt-1',
         'w-full',
         'border',
-        'rounded',
+        'rounded-xl',
         'shadow-lg',
         'z-10'
       );
