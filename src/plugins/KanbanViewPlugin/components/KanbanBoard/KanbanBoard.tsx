@@ -794,7 +794,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     } catch (err) {
       console.error('Failed to persist stack order', err);
     }
-  }, [filteredStacks, view?.id, view?.meta, actions?.updateView]);
+  }, [filteredStacks, view?.id, view?.meta, actions?.updateViewMeta]);
 
   const handleStackDelete = useCallback(async (stackId: string) => {
     if (!groupCol?.id || stackId === 'Uncategorized') return;
@@ -854,10 +854,18 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const handleStackEdit = useCallback(async (oldName: string, newName: string) => {
     if (!groupCol?.id || oldName === newName || newName.trim() === '') return;
     try {
+      const trimmedNewName = newName.trim();
+
       // Convert options to strings for comparison (use 'option' property as the key field)
       const stringOptions = localOptions.map((opt: any) =>
         typeof opt === 'string' ? opt : (opt?.option || opt?.value || opt?.label || String(opt))
       );
+
+      // Prevent duplicate stack names on edit
+      if (trimmedNewName !== oldName && stringOptions.includes(trimmedNewName)) {
+        toast.error(`Stack "${trimmedNewName}" already exists`);
+        return;
+      }
 
       // Only edit if the old name exists in field options (proper Kanban behavior)
       if (stringOptions.includes(oldName)) {
@@ -870,7 +878,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           if (optionName === oldName) {
             // Update the option name but preserve the color
             const existingColor = typeof opt === 'object' && opt.color ? opt.color : '';
-            return { option: newName.trim(), color: existingColor };
+            return { option: trimmedNewName, color: existingColor };
           }
 
           // Preserve existing option structure
@@ -887,7 +895,23 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         // This mutation will automatically invalidate the table query via useUpdateField's onSuccess
         await onUpdateFieldOptions(groupCol.id, preservedOptions);
 
-        // 2. Update all records that have the old value to use the new value
+        // 2. Keep stack order stable by renaming the stack in view.meta.stackOrder
+        const currentViewMeta = view?.meta ?? view?.config ?? {};
+        const currentStackOrder = Array.isArray(currentViewMeta.stackOrder)
+          ? currentViewMeta.stackOrder
+          : [];
+        if (view?.id && actions?.updateViewMeta && currentStackOrder.includes(oldName)) {
+          const renamedStackOrder = currentStackOrder.map((stackName: string) =>
+            stackName === oldName ? trimmedNewName : stackName
+          );
+          await actions.updateViewMeta.mutateAsync({
+            viewId: view.id,
+            meta: { stackOrder: renamedStackOrder },
+            currentMeta: currentViewMeta
+          });
+        }
+
+        // 3. Update all records that have the old value to use the new value
         const recordsToUpdate = tableData?.records?.filter((record: any) =>
           record[groupCol.key] === oldName
         ) || [];
@@ -899,7 +923,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             model_id: String(tableId),
             column_id: String(groupCol.id),
             row_id: Number(record.id),
-            value: newName.trim(),
+            value: trimmedNewName,
           }).catch(error => {
             console.error(`Failed to update record ${record.id}:`, error);
           })
@@ -916,7 +940,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       console.error('Failed to edit stack name', err);
       toast.error('Failed to update stack name');
     }
-  }, [groupCol?.id, groupCol?.key, localOptions, onUpdateFieldOptions, tableData?.records, tableId, actions?.insertRowData, toast]);
+  }, [groupCol?.id, groupCol?.key, localOptions, onUpdateFieldOptions, view?.id, view?.meta, view?.config, tableData?.records, tableId, actions?.insertRowData, actions?.updateViewMeta, toast]);
 
 
   return (

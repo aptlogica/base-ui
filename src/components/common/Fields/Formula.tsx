@@ -1158,7 +1158,7 @@ export const Formula: React.FC<FormulaProps> = ({
                           updateCursorPosition();
                         }, 0);
                       }}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                      className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded transition-colors"
                     >
                       {displayName}
                     </button>

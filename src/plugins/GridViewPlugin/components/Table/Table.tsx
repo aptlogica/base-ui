@@ -245,6 +245,7 @@ export const Table: React.FC<TableProps> = ({
   // Edit record modal state
   const [isEditRecordModalOpen, setIsEditRecordModalOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
   const openEditRecordModal = useCallback((rowId: string) => {
     setSelectedRecordId(rowId);
@@ -257,9 +258,12 @@ export const Table: React.FC<TableProps> = ({
     setSelectedRecordId(null);
   }, []);
 
-  // Wrap handleContextMenu to prevent opening for readonly users
+  // Wrap handleContextMenu to prevent opening for readonly users.
+  // Multi-select is supported with delete-only action.
   const handleContextMenu = useCallback((e: React.MouseEvent, rowId: string) => {
     if (isBaseReadOnly() || !canCreateRecord()) {
+      e.preventDefault();
+      e.stopPropagation();
       return; // Don't show context menu for readonly users
     }
     originalHandleContextMenu(e, rowId);
@@ -322,13 +326,13 @@ export const Table: React.FC<TableProps> = ({
   const tableRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const addColumnButtonRef = useRef<HTMLButtonElement | null>(null);
-  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [openColumnDropdownIndex, setOpenColumnDropdownIndex] = useState<number | null>(null);
 
   // Static column widths (no resize). Prefer view meta widths, else column.width, else 235.
   const columnWidths = useMemo(() => {
     return (visibleColumns || []).map((c) => {
-      const fromView = viewConfigState.columnWidths?.[c.key];
+      const widthKey = String(c.id || c.key);
+      const fromView = viewConfigState.columnWidths?.[widthKey] ?? viewConfigState.columnWidths?.[c.key];
 
       let width = 235;
 
@@ -432,6 +436,10 @@ export const Table: React.FC<TableProps> = ({
     // Use already-sorted data - this ensures rows within groups respect sort settings
     return groupRows(filteredAndSortedData, viewConfigState.groupBy);
   }, [filteredAndSortedData, viewConfigState.groupBy]);
+
+  const totalTableWidth = useMemo(() => {
+    return 48 + columnWidths.reduce((sum, w) => sum + w, 0) + 48;
+  }, [columnWidths]);
 
   const {
     allLoadedData: paginatedData,
@@ -720,7 +728,7 @@ export const Table: React.FC<TableProps> = ({
                 {/* Row selector header */}
                 <div
                   className="group flex-shrink-0 bg-gray-100 border-r border-b border-border/30 flex items-center justify-center"
-                  style={{ position: 'sticky', left: 0, zIndex: 3, height: '35px', boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)' }}
+                  style={{ position: 'sticky', left: 0, zIndex: 3, height: '35px', boxShadow: 'inset 1px 0 0 var(--color-border), 2px 0 4px -2px rgba(0,0,0,0.06)' }}
                 >
                   <input
                     type="checkbox"
@@ -736,7 +744,7 @@ export const Table: React.FC<TableProps> = ({
                   const isColumnDraggable = !column.isSystem && canReorderColumns;
                   return (
                     <div
-                      key={column.key}
+                      key={`${column.id || column.key || 'column'}-${index}`}
                       role="columnheader"
                       className={`relative flex-shrink-0 bg-gray-100 border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${(column as any).isNew !== undefined && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
                       style={{
@@ -839,7 +847,6 @@ export const Table: React.FC<TableProps> = ({
 
             <div ref={tableBodyRef}>
               {(() => {
-                const totalWidth = 48 + columnWidths.reduce((sum, w) => sum + w, 0) + 48;
                 return (
                   <VirtualizedTableBody
                     data={paginatedData}
@@ -853,7 +860,7 @@ export const Table: React.FC<TableProps> = ({
                     setActiveCell={setActiveCell}
                     tableId={tableId}
                     height={tableBodyHeight}
-                    width={totalWidth}
+                    width={totalTableWidth}
                     groupedData={groupedData}
                     expandedGroups={expandedGroups}
                     setExpandedGroups={setExpandedGroups}
@@ -879,8 +886,8 @@ export const Table: React.FC<TableProps> = ({
 
               {/* FRONTEND PAGINATION: Add row button with optional loading indicator */}
               {!isBaseReadOnly() && canCreateRecord() && (
-                <div className="relative w-full" style={{ height: '40px' }}>
-                  <div className="flex-shrink-0 w-[48px] h-10 border-r border-b border-border/30 flex items-center justify-center bg-gray-100 hover:bg-gray-200" style={{ height: '40px', position: 'sticky', left: 0, zIndex: 2, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)' }}>
+                <div className="relative" style={{ height: '40px', width: `${totalTableWidth}px`, minWidth: `${totalTableWidth}px` }}>
+                  <div className="flex-shrink-0 w-[48px] h-10 border-r border-b border-border/30 flex items-center justify-center bg-gray-100 hover:bg-gray-200" style={{ height: '40px', position: 'sticky', left: 0, zIndex: 2, boxShadow: 'inset 1px 0 0 var(--color-border), 2px 0 4px -2px rgba(0,0,0,0.06)' }}>
                     <button className="p-1 rounded hover:bg-muted/50 transition-colors" title="Add row" onClick={() => { setActiveCell(null); addNewRow(); }}>
                       <Plus className="w-5 h-5 text-muted-foreground" />
                     </button>
@@ -951,7 +958,7 @@ export const Table: React.FC<TableProps> = ({
           }}
           canDeleteRecord={canDeleteRecord()}
           onEdit={() => openEditRecordModal(contextMenu.rowId!)}
-          canEditRecord={canUpdateRecord()}
+          canEditRecord={selectedRows.size <= 1 && canUpdateRecord()}
         />
       )}
 

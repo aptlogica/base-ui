@@ -259,9 +259,9 @@ const ResetPasswordPage: React.FC = () => {
                   className="text-gray-500 hover:text-gray-700 focus:outline-none"
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
                     <Eye className="w-4 h-4" />
+                  ) : (
+                    <EyeOff className="w-4 h-4" />
                   )}
                 </button>
               </div>
