@@ -66,9 +66,11 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
   // Convert BaseColumn[] to ColumnConfig[] for FieldsPopover and FilterPopover
   const columnConfigs = useMemo((): ColumnConfig[] => {
     return columns.map((col): ColumnConfig => ({
+      // FilterPopover relies on column_name for select/update flows.
+      // Ensure it is always populated for Gallery columns.
+      column_name: col.column_name || col.key || '',
       id: col.id ? String(col.id) : undefined,
       key: col.key || col.column_name || '',
-      column_name: col.column_name,
       title: col.title || col.column_name || '',
       type: normalizeFieldType(col.type || col.uidt || 'text') as any,
       uidt: col.uidt,

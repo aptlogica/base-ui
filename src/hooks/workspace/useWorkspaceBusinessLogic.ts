@@ -14,6 +14,7 @@ export const useWorkspaceBusinessLogic = () => {
   const toast = useToast();
   const { navigateToBase, navigateToTable, navigateToView } = useNavigation();
   const { handleTableDeletion, handleViewDeletion: navigationHandleViewDeletion } = useNavigationActions();
+  const workspaceState = useWorkspaceStateManager();
 
   // Centralized Data Service
   const {
@@ -41,10 +42,10 @@ export const useWorkspaceBusinessLogic = () => {
     createViewMutation,
     deleteViewMutation,
   } = useWorkspaceDataService(
-    useWorkspaceStateManager().selectedWorkspaceId || undefined,
-    useWorkspaceStateManager().selectedBaseId || undefined,
-    useWorkspaceStateManager().selectedTableId || undefined,
-    useWorkspaceStateManager().selectedViewId || undefined
+    workspaceState.selectedWorkspaceId || undefined,
+    workspaceState.selectedBaseId || undefined,
+    workspaceState.selectedTableId || undefined,
+    workspaceState.selectedViewId || undefined
   );
 
   // Centralized State Manager
@@ -82,7 +83,7 @@ export const useWorkspaceBusinessLogic = () => {
     navigate,
     // Plugin store state
     flyoutOpen,
-  } = useWorkspaceStateManager();
+  } = workspaceState;
 
   // Derived state with proper type guards
   const workspaces = workspacesQuery.data;
@@ -107,6 +108,15 @@ export const useWorkspaceBusinessLogic = () => {
   // Removed tableViewsLoading - views are now fetched on-demand, not during initial load
   const loading = workspacesLoading || basesLoading || tablesLoading || viewsLoading;
   const error = workspacesError || basesError || tablesError || viewsError;
+
+  // Additional UI state for sidebar
+  const [config, setConfig] = useState((globalThis as any).__workspaceConfig || {});
+  const [workspaceDropdownOpen, setWorkspaceDropdownOpen] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  const [newWorkspaceDescription, setNewWorkspaceDescription] = useState('');
+  const [workspaceError, setWorkspaceError] = useState('');
+  const [isError, setIsError] = useState(false);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<any>(null);
 
   // Business logic functions
   const handleCreateWorkspace = useCallback(async (
@@ -134,7 +144,8 @@ export const useWorkspaceBusinessLogic = () => {
         return;
       }
       const firstBase = workspaceData.bases?.[0];
-      const firstTable = firstBase?.tables?.[0]?.model;
+      const firstTable = firstBase?.tables?.[0];
+      const firstTableId = firstTable?.model?.id || firstTable?.id;
 
       // Update navigation store with new workspace ID immediately
       // This ensures bases query refetches with the new workspaceId
@@ -149,10 +160,10 @@ export const useWorkspaceBusinessLogic = () => {
       // Navigate after a brief delay to ensure state updates and query invalidation are processed
       // This prevents blank page issues when navigating immediately after workspace creation
       requestAnimationFrame(() => {
-      if (firstBase && firstTable && authUser?.id) {
+      if (firstBase?.id && firstTableId && authUser?.id) {
         try {
-          navigateAndPersist(workspaceData.id, firstBase.id, firstTable.id, authUser.id);
-          navigate(`/workspace/${workspaceData.id}/base/${firstBase.id}/table/${firstTable.id}/grid`);
+          navigateAndPersist(workspaceData.id, firstBase.id, firstTableId, authUser.id);
+          navigate(`/workspace/${workspaceData.id}/base/${firstBase.id}/table/${firstTableId}/grid`);
         } catch (error_) {
             console.error('Navigation error after workspace creation:', error_);
             // Fallback to workspace homepage if navigation fails
@@ -170,7 +181,7 @@ export const useWorkspaceBusinessLogic = () => {
       console.error('Failed to create workspace:', error_);
       onError?.('Failed to create workspace. Please try again.');
     }
-  }, [createWorkspaceMutation, authUser?.id, navigateAndPersist, navigate, setWorkspace]);
+  }, [createWorkspaceMutation, authUser?.id, navigateAndPersist, navigate, setWorkspace, setSelectedWorkspace]);
 
   const handleCreateBaseForWorkspace = useCallback(async ({ name, description, image }: { name: string; description: string; image?: File | null }) => {
     if (!currentWorkspace) {
@@ -289,15 +300,6 @@ export const useWorkspaceBusinessLogic = () => {
   const isViewActive = useCallback((baseId: string, tableId: string, viewId: string) => {
     return selectedBaseId === baseId && selectedTableId === tableId && selectedViewId === viewId;
   }, [selectedBaseId, selectedTableId, selectedViewId]);
-
-  // Additional UI state for sidebar
-  const [config, setConfig] = useState((globalThis as any).__workspaceConfig || {});
-  const [workspaceDropdownOpen, setWorkspaceDropdownOpen] = useState(false);
-  const [newWorkspaceName, setNewWorkspaceName] = useState('');
-  const [newWorkspaceDescription, setNewWorkspaceDescription] = useState('');
-  const [workspaceError, setWorkspaceError] = useState('');
-  const [isError, setIsError] = useState(false);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<any>(null);
 
   // Workspace config effect
   useEffect(() => {
