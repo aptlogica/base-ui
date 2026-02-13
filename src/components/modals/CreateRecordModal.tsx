@@ -399,7 +399,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                                 <div className="h-px bg-gray-200 flex-1" />
                                 <button
                                     type="button"
-                                    className="px-4 py-2 rounded-full border text-sm text-gray-700 bg-white hover:bg-gray-50"
+                                    className="px-4 py-2 rounded-full border text-sm text-primary bg-card hover:bg-gray-50"
                                     onClick={() => setShowHidden(v => !v)}
                                 >
                                     {showHidden ? `Hide ${hiddenFields.length} hidden fields` : `Show ${hiddenFields.length} hidden fields`}

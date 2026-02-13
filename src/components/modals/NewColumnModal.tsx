@@ -50,19 +50,20 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const toast = useToast();
   // Get current base ID and tables for relations
   const { selectedBaseId } = useNavigationStore();
-  const { data: tablesData } = useBaseTables(selectedBaseId || '') as { data?: { data?: any[] } };
+  const { data: tablesData } = useBaseTables(selectedBaseId || '') as { data?: any };
   // Get all views for field usage validation (fallback)
   const { data: allViews = [] } = useAllViews();
 
   // Get fresh table data with views (preferred source)
   const { data: tableData } = useTable(currentTableId || '') as { data?: { views?: any[] } };
+  const currentTablePayload = useMemo(() => (tableData as any)?.data || tableData || null, [tableData]);
 
   // Prefer tableData.views (fresh) over allViews (cached)
   // Filter views to only include views from the current table
   const currentTableViews = useMemo(() => {
     // First try to use fresh views from tableData
-    if (currentTableId && tableData?.views && Array.isArray(tableData.views)) {
-      return tableData.views;
+    if (currentTableId && currentTablePayload?.views && Array.isArray(currentTablePayload.views)) {
+      return currentTablePayload.views;
     }
 
     // Fallback to filtered allViews
@@ -74,7 +75,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     }
 
     return [];
-  }, [tableData, allViews, currentTableId]);
+  }, [currentTablePayload, allViews, currentTableId]);
 
   // Check if field is used in views (for disabling type change)
   const isFieldUsedInViews = useMemo(() => {
@@ -96,12 +97,20 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
   // Extract tables array from response and filter out current table
   const tables = useMemo(() => {
-    if (!tablesData || !Array.isArray(tablesData)) return [];
-    // Extract model objects from the response structure and filter out current table
-    return (tablesData as any[])
-      .map(item => item.model)
-      .filter(Boolean)
-      .filter(table => table.id !== currentTableId); // Exclude current table from target selection
+    if (!tablesData) return [];
+
+    // Handle both shapes:
+    // 1) direct array
+    // 2) StandardResponse => { data: [...] }
+    const rawTables = Array.isArray(tablesData)
+      ? tablesData
+      : (Array.isArray(tablesData?.data) ? tablesData.data : []);
+
+    // Extract model objects when present, otherwise use table item directly.
+    return rawTables
+      .map((item: any) => item?.model || item)
+      .filter((table: any) => !!table?.id)
+      .filter((table: any) => table.id !== currentTableId); // Exclude current table from target selection
   }, [tablesData, currentTableId]);
 
   // Config state for each type
@@ -242,9 +251,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             });
             break;
           case 'user':
-            setAllowMultipleUsers(initialValues.config.alloMultiple || false);
+              setAllowMultipleUsers(initialValues.config.allowMultiple || false);
             break;
-
           // Add more cases for other field types as needed
         }
       }
@@ -299,6 +307,29 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     return (fields || []).filter(field => field.type === 'links' || field.uidt === 'links');
   }, [fields]);
 
+  const getRelationIdFromLinkField = (field: any): string => {
+    return (
+      field?.meta?.relation_id ||
+      field?.config?.relation_id ||
+      field?.meta?.relation?.id ||
+      field?.config?.relation?.id ||
+      field?.relation_id ||
+      ''
+    );
+  };
+
+  const getTargetTableIdFromLinkField = (field: any): string => {
+    return (
+      field?.meta?.relation?.with ||
+      field?.config?.relation?.with ||
+      field?.meta?.relation?.with_model_id ||
+      field?.config?.relation?.with_model_id ||
+      field?.meta?.relation?.table_id ||
+      field?.config?.relation?.table_id ||
+      ''
+    );
+  };
+
   // Initialize lookup field configuration when linkFields become available
   // Only runs once when modal opens with initialValues
   const hasInitializedRef = useRef(false);
@@ -311,7 +342,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
       if (relationId) {
         const matchingLinkField = linkFields.find(field => {
-          const fieldRelationId = field.meta?.relation_id || field.config?.relation_id;
+          const fieldRelationId = getRelationIdFromLinkField(field);
           return fieldRelationId === relationId;
         });
 
@@ -341,10 +372,11 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     return linkFields.find(field => field.id === selectedRelationId);
   }, [selectedRelationId, linkFields]);
 
-  const targetTableId = selectedRelation?.meta?.relation?.with || selectedRelation?.config?.relation?.with || '';
+  const targetTableId = useMemo(() => getTargetTableIdFromLinkField(selectedRelation), [selectedRelation]);
 
   // Fetch target table data to get its fields (only if we have a valid table ID)
   const { data: targetData, isLoading: isTargetTableLoading } = useTable(targetTableId) as { data?: { columns?: any[] }; isLoading: boolean };
+  const targetTablePayload = useMemo(() => (targetData as any)?.data || targetData || null, [targetData]);
 
   // Extract fields from target table
   useEffect(() => {
@@ -353,10 +385,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       return;
     }
 
-    if (targetData?.columns && Array.isArray(targetData.columns)) {
+    if (targetTablePayload?.columns && Array.isArray(targetTablePayload.columns)) {
       // Filter out links, rollup, and lookup fields
       // Exclude system fields BUT keep 'title' as it's important for lookups
-      const filteredFields = targetData.columns.filter((col: any) =>
+      const filteredFields = targetTablePayload.columns.filter((col: any) =>
         col.uidt !== 'links' &&
         col.uidt !== 'rollup' &&
         col.uidt !== 'lookup' &&
@@ -379,7 +411,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     } else {
       setTargetTableFields([]);
     }
-  }, [targetData, targetTableId, initialValues, isOpen, selectedLookupColumnId, hasUserModifiedLookupColumn]);
+  }, [targetTablePayload, targetTableId, initialValues, isOpen, selectedLookupColumnId, hasUserModifiedLookupColumn]);
 
   // Initialize selectedTable when tables are loaded and we have a selectedTableId (for Links fields)
   useEffect(() => {

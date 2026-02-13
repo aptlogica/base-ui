@@ -61,6 +61,7 @@ export const LongText: React.FC<LongTextProps> = ({
     isEditing: false
   });
   const linkPopupRef = useRef<HTMLDivElement>(null);
+  const savedLinkSelectionRef = useRef<Range | null>(null);
 
   // Helper to strip HTML tags for length validation
   const stripHTML = (html: string): string => {
@@ -234,6 +235,31 @@ export const LongText: React.FC<LongTextProps> = ({
     setModalValue(htmlContent);
   };
 
+  const isSelectionInsideTag = (tagName: string): boolean => {
+    const selection = globalThis.getSelection();
+    if (!selection || selection.rangeCount === 0 || !richTextEditorRef.current) return false;
+
+    let node: Node | null = selection.getRangeAt(0).commonAncestorContainer;
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+
+    const normalizedTag = tagName.toUpperCase();
+    while (node && node !== richTextEditorRef.current) {
+      if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).tagName === normalizedTag) {
+        return true;
+      }
+      node = node.parentNode;
+    }
+    return false;
+  };
+
+  const execFormatBlockWithFallback = (values: string[]): boolean => {
+    for (const formatValue of values) {
+      // @ts-ignore - execCommand is deprecated but still needed for rich text formatting
+      if (document.execCommand('formatBlock', false, formatValue)) return true;
+    }
+    return false;
+  };
+
   const execCommand = (command: string, value: string | null = null, event?: React.MouseEvent) => {
     // Only allow commands in rich text mode
     if (!richText || !richTextEditorRef.current) return;
@@ -246,9 +272,20 @@ export const LongText: React.FC<LongTextProps> = ({
     // Ensure editor has focus before executing command
     richTextEditorRef.current.focus();
 
-    // Execute the command
-    // @ts-ignore - execCommand is deprecated but still needed for rich text formatting
-    const success = document.execCommand(command, false, value || undefined);
+    let success = false;
+    // `formatBlock` for blockquote is inconsistent across browsers.
+    if (command === 'formatBlock' && value?.toLowerCase() === 'blockquote') {
+      if (isSelectionInsideTag('blockquote')) {
+        // Toggle off quote: convert the current block back to a normal paragraph.
+        success = execFormatBlockWithFallback(['p', '<p>', 'div', '<div>']);
+      } else {
+        success = execFormatBlockWithFallback(['blockquote', '<blockquote>', 'BLOCKQUOTE']);
+      }
+    } else {
+      // Execute the command
+      // @ts-ignore - execCommand is deprecated but still needed for rich text formatting
+      success = document.execCommand(command, false, value || undefined);
+    }
 
     if (success) {
       // Update state after command execution
@@ -349,29 +386,38 @@ export const LongText: React.FC<LongTextProps> = ({
     if (!richText || !richTextEditorRef.current) return;
 
     const selection = globalThis.getSelection();
-    const selectedText = selection?.toString().trim() || '';
 
     // Check if we're editing an existing link
     const existingLink = getLinkAtSelection();
     if (existingLink) {
+      savedLinkSelectionRef.current = null;
       showLinkPopup(existingLink);
       return;
     }
 
-    // Create new link - show popup near selection
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      const position = calculatePopupPosition(range);
+    if (!selection || selection.rangeCount === 0) return;
 
-      setLinkEditData({
-        link: null,
-        text: selectedText,
-        url: '',
-        isEditing: false
-      });
-      setLinkPopupPosition(position);
-      setIsLinkPopupOpen(true);
+    const range = selection.getRangeAt(0);
+    const isSelectionInEditor = richTextEditorRef.current.contains(range.commonAncestorContainer);
+
+    // Only open link popup for an explicit, non-collapsed selection inside the editor.
+    if (!isSelectionInEditor || range.collapsed) {
+      return;
     }
+
+    savedLinkSelectionRef.current = range.cloneRange();
+
+    // Create new link - show popup near selection
+    const selectedText = range.toString().trim();
+    const position = calculatePopupPosition(range);
+    setLinkEditData({
+      link: null,
+      text: selectedText,
+      url: '',
+      isEditing: false
+    });
+    setLinkPopupPosition(position);
+    setIsLinkPopupOpen(true);
   };
 
   const showLinkPopup = (link: HTMLAnchorElement) => {
@@ -406,6 +452,7 @@ export const LongText: React.FC<LongTextProps> = ({
       // No URL provided - just close popup
       setIsLinkPopupOpen(false);
       setLinkEditData({ link: null, text: '', url: '', isEditing: false });
+      savedLinkSelectionRef.current = null;
       return;
     }
 
@@ -429,12 +476,15 @@ export const LongText: React.FC<LongTextProps> = ({
       if (!richTextEditorRef.current) return;
 
       const selection = globalThis.getSelection();
-      if (!selection || selection.rangeCount === 0) return;
+      const savedRange = savedLinkSelectionRef.current;
+      if (!selection || !savedRange) return;
 
-      const range = selection.getRangeAt(0);
+      richTextEditorRef.current.focus();
+      selection.removeAllRanges();
+      selection.addRange(savedRange);
 
       // If text is provided, use it; otherwise use selected text
-      const linkText = text.trim() || range.toString().trim() || normalizedUrl;
+      const linkText = text.trim() || savedRange.toString().trim() || normalizedUrl;
 
       // Create the link
       execCommand('createLink', normalizedUrl);
@@ -458,6 +508,7 @@ export const LongText: React.FC<LongTextProps> = ({
 
       setIsLinkPopupOpen(false);
       setLinkEditData({ link: null, text: '', url: '', isEditing: false });
+      savedLinkSelectionRef.current = null;
     }
 
     handleRichTextChange();
@@ -466,6 +517,7 @@ export const LongText: React.FC<LongTextProps> = ({
   const handleLinkCancel = () => {
     setIsLinkPopupOpen(false);
     setLinkEditData({ link: null, text: '', url: '', isEditing: false });
+    savedLinkSelectionRef.current = null;
   };
 
   const handleLinkRemove = () => {
@@ -480,6 +532,7 @@ export const LongText: React.FC<LongTextProps> = ({
 
     setIsLinkPopupOpen(false);
     setLinkEditData({ link: null, text: '', url: '', isEditing: false });
+    savedLinkSelectionRef.current = null;
   };
 
   const handleLinkOpen = () => {
@@ -512,6 +565,7 @@ export const LongText: React.FC<LongTextProps> = ({
       ) {
         setIsLinkPopupOpen(false);
         setLinkEditData({ link: null, text: '', url: '', isEditing: false });
+        savedLinkSelectionRef.current = null;
       }
     };
 
@@ -748,6 +802,25 @@ export const LongText: React.FC<LongTextProps> = ({
                   }
                   [contenteditable] a:visited {
                     color: #7c3aed;
+                  }
+                  [contenteditable] ul {
+                    list-style-type: disc;
+                    margin: 0.5rem 0;
+                    padding-left: 1.5rem;
+                  }
+                  [contenteditable] ol {
+                    list-style-type: decimal;
+                    margin: 0.5rem 0;
+                    padding-left: 1.5rem;
+                  }
+                  [contenteditable] li {
+                    margin: 0.25rem 0;
+                  }
+                  [contenteditable] blockquote {
+                    border-left: 3px solid var(--color-border-secondary);
+                    margin: 0.5rem 0;
+                    padding: 0.25rem 0 0.25rem 0.75rem;
+                    color: var(--color-text-secondary);
                   }
                 `}</style>
               </div>

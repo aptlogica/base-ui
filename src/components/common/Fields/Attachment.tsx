@@ -91,12 +91,12 @@ export const Attachment: React.FC<AttachmentProps> = ({
       return (
         <div className="w-full h-full flex items-center justify-center bg-card">
           <img
-            src={getThumbnailSrc(file) || '/assets/image.png'}
+            src={getThumbnailSrc(file) || '/assets/file.png'}
             alt={fileTitle}
             className="w-full h-full object-contain"
             onError={(e) => {
               // Fallback to generic image icon if thumbnail fails
-              e.currentTarget.src = '/assets/image.png';
+              e.currentTarget.src = '/assets/file.png';
             }}
           />
         </div>
@@ -230,7 +230,7 @@ export const Attachment: React.FC<AttachmentProps> = ({
     return (
       <div className="w-full h-full flex items-center justify-center bg-card">
         <img
-          src="/assets/txt.png"
+          src="/assets/file.png"
           alt="FILE"
           className="w-6 h-6 object-contain"
         />

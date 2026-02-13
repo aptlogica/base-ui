@@ -433,7 +433,7 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
         last_updated_at: new Date().toISOString()
       };
 
-      await updateUserActivity(userId, activityData);
+      await updateUserActivity(userId, activityData, currentActivity);
     } catch (error) {
       console.error('Failed to update activity data:', error);
       throw error; // Re-throw so caller can handle it

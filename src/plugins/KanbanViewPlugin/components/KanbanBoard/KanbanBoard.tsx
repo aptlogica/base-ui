@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useRef } from 'react';
 import { buildInitialValuesForEdit } from '../../../../utils/initialValues';
-import { Plus, List } from 'lucide-react';
+import { Plus, List, Cross, X } from 'lucide-react';
 import { useToast } from '../../../../components/common/Toast';
 import KanbanStack from './KanbanStack';
 import { KanbanFieldConfiguration } from '../KanbanFieldSelector';
@@ -411,6 +411,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }, [searchFilteredRecords, groupCol, view, fieldOptions, optionColorMap, extractDisplayValue]);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const stackNameInputRef = useRef<HTMLInputElement>(null);
 
   // Handle group by column change (following Grid view pattern)
   const handleGroupByChange = useCallback(async (item: Column | undefined) => {
@@ -663,7 +664,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   // Handle new stack creation (add new option to field)
   const handleCreateStackKeyDown = useCallback(async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== 'Enter') return;
+    if (e.key !== 'Enter' && e.key !== 'Escape') return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setUiState(prev => ({ ...prev, newOption: '' }));
+      setShowStackNameInput(prev => !prev);
+      return;
+    }
     const trimmed = uiState.newOption.trim();
     if (!trimmed || !groupCol?.id) return;
 
@@ -704,11 +711,24 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         // Refresh to update the UI immediately
         onRefresh();
         setUiState(prev => ({ ...prev, newOption: '', isCreateStack: false }));
+        setShowStackNameInput(false);
       }
     } catch (error) {
       console.error('Failed to create stack:', error);
     }
   }, [uiState.newOption, localOptions, groupCol?.id, onUpdateFieldOptions, onRefresh, setUiState, toast]);
+
+  const [showStackNameInput, setShowStackNameInput] = React.useState(false);
+
+  React.useEffect(() => {
+    if (showStackNameInput) {
+      stackNameInputRef.current?.focus();
+    }
+  }, [showStackNameInput]);
+
+  const toggleStackNameInput = useCallback(() => {
+    setShowStackNameInput(prev => !prev);
+  }, []);
 
   const handleCreateStackClickSave = useCallback(async () => {
     const trimmed = uiState.newOption.trim();
@@ -751,6 +771,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         // Refresh to update the UI immediately
         onRefresh();
         setUiState(prev => ({ ...prev, newOption: '', isCreateStack: false }));
+        setShowStackNameInput(false);
       }
     } catch (error) {
       console.error('Failed to create stack:', error);
@@ -1046,26 +1067,37 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   onClick={handleCreateStackClick}
                   className="w-full h-14 border border-dashed rounded text-gray-500 hover:text-gray-700 hover:border-gray-400 transition-colors flex items-center justify-center gap-2 text-sm"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus size={16} />
                   New stack
                 </button>
               ) : (
-                <div className="p-1.5 border border-dashed rounded-xl flex items-center justify-between gap-2" ref={dropdownRef}>
-                  <input
-                    className="flex-1 p-2 border border-primary bg-[var(--color-alpha-white)] text-primary rounded-xl text-sm outline-none field-component-focus"
-                    placeholder="Add New Stack"
-                    value={uiState.newOption}
-                    onChange={(e) => handleNewOptionChange(e.target.value)}
-                    onKeyDown={handleCreateStackKeyDown}
-                  />
-                  <button
-                    type="button"
-                    className="p-2 btn-add-option"
-                    onClick={handleCreateStackClickSave}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
+                <>
+                    {
+                      showStackNameInput ?
+                        <div className="p-1.5 border border-dashed rounded-xl flex items-center justify-between gap-2" ref={dropdownRef}>
+                          <input
+                            ref={stackNameInputRef}
+                            className="flex-1 p-2 border border-primary bg-[var(--color-alpha-white)] text-primary rounded-xl text-sm outline-none field-component-focus"
+                            placeholder="Enter Stack Name"
+                            value={uiState.newOption}
+                            onChange={(e) => handleNewOptionChange(e.target.value)}
+                            onKeyDown={handleCreateStackKeyDown}
+                          />
+                          <button className='hover:bg-gray-100 p-2 rounded-md'>
+                            <X className="w-4 h-4 text-gray-500 hover:text-gray-700" onClick={toggleStackNameInput} />
+                          </button>
+                        </div>
+                        :
+                        <button
+                          type="button"
+                          className="p-4 rounded-xl border bg-card flex items-center justify-center w-full gap-2"
+                          onClick={toggleStackNameInput}
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add New Stack
+                        </button>
+                    }
+                </>
               )}
             </div>
           )}
