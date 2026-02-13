@@ -105,6 +105,13 @@ describe('TableRow', () => {
       const row = screen.getByRole('row');
       expect(row).toHaveClass('border-[var(--color-brand-600)]');
     });
+    it('should apply right border to last cell when active row has multiple columns', () => {
+      render(<TableRow {...defaultProps} isSelected={true} />);
+
+      const cells = screen.getAllByRole('gridcell');
+      const lastCell = cells[cells.length - 1];
+      expect(lastCell).toHaveClass('border-r', 'border-[var(--color-brand-600)]');
+    });
   });
 
   describe('cell interactions', () => {
@@ -333,3 +340,4 @@ describe('MemoizedTableRow', () => {
     expect(screen.getByRole('checkbox')).toBeChecked();
   });
 });
+
