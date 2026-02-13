@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, X, Check } from 'lucide-react';
 import { useClickOutside } from '../../../hooks/useClickOutside';
@@ -47,8 +47,12 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   config = {}
 }) => {
   const { defaultValue = [], options: configOptions = options, maxSelections: configMaxSelections = maxSelections } = config;
-  const normalizedOptions: MultiSelectOption[] = (configOptions || []).map((o: string | MultiSelectOption) =>
-    typeof o === 'string' ? { option: o, color: undefined } : { option: o.option, color: o.color }
+  const normalizedOptions: MultiSelectOption[] = useMemo(
+    () =>
+      (configOptions || []).map((o: string | MultiSelectOption) =>
+        typeof o === 'string' ? { option: o, color: undefined } : { option: o.option, color: o.color }
+      ),
+    [configOptions]
   );
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,6 +131,15 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   } else if (Array.isArray(defaultValue) && defaultValue.length > 0) {
     displayValue = defaultValue;
   }
+  const selectedValuesSet = useMemo(() => new Set(displayValue), [displayValue]);
+  const optionIndexMap = useMemo(
+    () => new Map(normalizedOptions.map((opt, index) => [opt.option, index])),
+    [normalizedOptions]
+  );
+  const optionMap = useMemo(
+    () => new Map(normalizedOptions.map((opt) => [opt.option, opt])),
+    [normalizedOptions]
+  );
 
   const validate = (val: string[]) => {
     if (required && val.length === 0) {
@@ -143,7 +156,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   const handleToggleOption = (option: string) => {
     let newValue: string[];
 
-    if (displayValue.includes(option)) {
+    if (selectedValuesSet.has(option)) {
       newValue = displayValue.filter(v => v !== option);
     } else {
       if (configMaxSelections && displayValue.length >= configMaxSelections) {
@@ -221,10 +234,10 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                 <span className="text-gray-500 text-sm text-left truncate overflow-hidden whitespace-nowrap flex-1">{placeholder}</span>
               ) : (
                 displayValue.map((item, index) => {
-                  const optIndex = normalizedOptions.findIndex(o => o.option === item);
-                  const opt = optIndex >= 0 ? normalizedOptions[optIndex] : { option: item, color: undefined };
+                  const optIndex = optionIndexMap.get(item);
+                  const opt = optionMap.get(item) || { option: item, color: undefined };
                   const style = opt.color ? { backgroundColor: opt.color, color: getReadableTextColor(opt.color) } : undefined;
-                  const colorIndex = optIndex >= 0 ? optIndex : index;
+                  const colorIndex = optIndex !== undefined ? optIndex : index;
                   const cls = opt.color ? '' : getOptionColor(item, colorIndex);
                   return (
                     <div
@@ -269,7 +282,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
             ) : (
               normalizedOptions.map((opt, index) => {
                 const label = opt.option;
-                const isSelected = displayValue.includes(label);
+                const isSelected = selectedValuesSet.has(label);
                 const isDisabled = configMaxSelections && !isSelected && displayValue.length >= configMaxSelections;
 
                 return (

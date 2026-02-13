@@ -21,13 +21,18 @@ export interface UserActivityData {
   last_updated_at: string;
 }
 
-export const updateUserActivity = async (userId: string, activityData: UserActivityData) => {
+export const updateUserActivity = async (
+  userId: string,
+  activityData: UserActivityData,
+  currentActivity?: UserActivityData | null
+) => {
   try {
     // Get current activity_data to preserve login_sessions if not provided
-    const currentActivity = await getUserActivity(userId);
+    const existingActivity =
+      currentActivity !== undefined ? currentActivity : await getUserActivity(userId);
     const mergedActivity: UserActivityData = {
       ...activityData,
-      login_sessions: activityData.login_sessions ?? currentActivity?.login_sessions
+      login_sessions: activityData.login_sessions ?? existingActivity?.login_sessions
     };
     
     const result = await client.userService.updateProfile(userId, {

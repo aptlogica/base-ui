@@ -181,6 +181,17 @@ export const Search: React.FC<SearchProps> = ({
     });
   }, [columns, fieldSearchTerm, excludedFieldTypes]);
 
+  // Compute placeholder text for search input
+  const searchPlaceholder = React.useMemo(() => {
+    if (!selectedField) {
+      return placeholder;
+    }
+    const title = selectedField.title.length > 20 
+      ? selectedField.title.substring(0, 20) + '...' 
+      : selectedField.title;
+    return `Search in ${title}`;
+  }, [selectedField, placeholder]);
+
   return (
     <div className={`relative ${className} ${columns.length === 0 ? "opacity-[0.5] pointer-events-none" : ""}`}>
       <div className="flex items-center bg-gray-50 border rounded-xl px-2 py-1 focus-within:outline-none focus-within:ring-1 focus-within:ring-[var(--color-focus-ring)] outline-none transition-all">
@@ -210,7 +221,7 @@ export const Search: React.FC<SearchProps> = ({
           type="text"
           value={searchTerm}
           onChange={(e) => handleSearchChange(e.target.value)}
-          placeholder={selectedField ? `Search in ${selectedField.title.length > 20 ? selectedField.title.substring(0, 20) + '...' : selectedField.title}` : placeholder}
+          placeholder={searchPlaceholder}
           disabled={disabled}
           className="flex-1 ml-2 bg-transparent border-none outline-none text-sm placeholder-gray-400 focus-within:bg-transparent disabled:opacity-50 disabled:cursor-not-allowed min-w-0"
         />
