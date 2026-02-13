@@ -61,6 +61,7 @@ export const LongText: React.FC<LongTextProps> = ({
     isEditing: false
   });
   const linkPopupRef = useRef<HTMLDivElement>(null);
+  const savedLinkSelectionRef = useRef<Range | null>(null);
 
   // Helper to strip HTML tags for length validation
   const stripHTML = (html: string): string => {
@@ -389,6 +390,7 @@ export const LongText: React.FC<LongTextProps> = ({
     // Check if we're editing an existing link
     const existingLink = getLinkAtSelection();
     if (existingLink) {
+      savedLinkSelectionRef.current = null;
       showLinkPopup(existingLink);
       return;
     }
@@ -402,6 +404,8 @@ export const LongText: React.FC<LongTextProps> = ({
     if (!isSelectionInEditor || range.collapsed) {
       return;
     }
+
+    savedLinkSelectionRef.current = range.cloneRange();
 
     // Create new link - show popup near selection
     const selectedText = range.toString().trim();
@@ -448,6 +452,7 @@ export const LongText: React.FC<LongTextProps> = ({
       // No URL provided - just close popup
       setIsLinkPopupOpen(false);
       setLinkEditData({ link: null, text: '', url: '', isEditing: false });
+      savedLinkSelectionRef.current = null;
       return;
     }
 
@@ -471,12 +476,15 @@ export const LongText: React.FC<LongTextProps> = ({
       if (!richTextEditorRef.current) return;
 
       const selection = globalThis.getSelection();
-      if (!selection || selection.rangeCount === 0) return;
+      const savedRange = savedLinkSelectionRef.current;
+      if (!selection || !savedRange) return;
 
-      const range = selection.getRangeAt(0);
+      richTextEditorRef.current.focus();
+      selection.removeAllRanges();
+      selection.addRange(savedRange);
 
       // If text is provided, use it; otherwise use selected text
-      const linkText = text.trim() || range.toString().trim() || normalizedUrl;
+      const linkText = text.trim() || savedRange.toString().trim() || normalizedUrl;
 
       // Create the link
       execCommand('createLink', normalizedUrl);
@@ -500,6 +508,7 @@ export const LongText: React.FC<LongTextProps> = ({
 
       setIsLinkPopupOpen(false);
       setLinkEditData({ link: null, text: '', url: '', isEditing: false });
+      savedLinkSelectionRef.current = null;
     }
 
     handleRichTextChange();
@@ -508,6 +517,7 @@ export const LongText: React.FC<LongTextProps> = ({
   const handleLinkCancel = () => {
     setIsLinkPopupOpen(false);
     setLinkEditData({ link: null, text: '', url: '', isEditing: false });
+    savedLinkSelectionRef.current = null;
   };
 
   const handleLinkRemove = () => {
@@ -522,6 +532,7 @@ export const LongText: React.FC<LongTextProps> = ({
 
     setIsLinkPopupOpen(false);
     setLinkEditData({ link: null, text: '', url: '', isEditing: false });
+    savedLinkSelectionRef.current = null;
   };
 
   const handleLinkOpen = () => {
@@ -554,6 +565,7 @@ export const LongText: React.FC<LongTextProps> = ({
       ) {
         setIsLinkPopupOpen(false);
         setLinkEditData({ link: null, text: '', url: '', isEditing: false });
+        savedLinkSelectionRef.current = null;
       }
     };
 
