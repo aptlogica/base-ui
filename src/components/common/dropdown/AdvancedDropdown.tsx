@@ -280,7 +280,7 @@ export function AdvancedDropdown<T extends string | number>({
   const selectedCount = getSelectedCount(value);
 
   return (
-    <div className={`relative w-full ${className}`} ref={dropdownRef}>
+    <div className={`relative w-full min-w-0 max-w-full ${className}`} ref={dropdownRef}>
       {/* Label with Help Text */}
       {label && (
         <div className="mb-2">
@@ -411,7 +411,7 @@ const DropdownTrigger = React.forwardRef<HTMLButtonElement, {
 }, ref) => {
 
   const baseClasses = `
-    relative w-full px-3 py-2.5 text-left bg-background border rounded-xl shadow-xs text-primary
+    relative w-full min-w-0 max-w-full px-3 py-2.5 text-left bg-background border rounded-xl shadow-xs text-primary
     cursor-pointer transition-all duration-200 ease-in-out
     focus:outline-none focus:border-[--color-brand-600]
     flex items-center justify-between
@@ -433,12 +433,12 @@ const DropdownTrigger = React.forwardRef<HTMLButtonElement, {
       aria-expanded={isOpen}
       aria-haspopup="listbox"
     >
-      <span className={`block truncate ${displayLabel.includes('Select') ? 'var(--color-text-placeholder)' : 'var(--color-text-primary)'
+      <span className={`block min-w-0 flex-1 truncate ${displayLabel.includes('Select') ? 'var(--color-text-placeholder)' : 'var(--color-text-primary)'
         }`}>
         {displayLabel}
       </span>
 
-      <div className="flex items-center space-x-1 ml-2">
+      <div className="flex shrink-0 items-center space-x-1 ml-2">
         {multiple && selectedCount > 0 && (
           <span className="inline-flex items-center justify-center p-3 h-4 w-4 rounded-full text-xs font-medium bg-[var(--color-bg-brand-primary)] text-black">
             {selectedCount}
@@ -562,7 +562,7 @@ function DropdownOptionItem<T>({
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <div className={`font-medium ${isSelected && !multiple ? 'text-black' : ''}`}>
+          <div className={`font-medium truncate ${isSelected && !multiple ? 'text-black' : ''}`}>
             {option.label}
           </div>
           {option.description && (
