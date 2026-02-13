@@ -245,6 +245,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               dateFormat: 'YYYY-MM-DD'
             });
             break;
+          case 'user':
+              setAllowMultipleUsers(initialValues.config.allowMultiple || false);
+            break;
           // Add more cases for other field types as needed
         }
       }
