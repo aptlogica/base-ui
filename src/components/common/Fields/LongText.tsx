@@ -385,7 +385,6 @@ export const LongText: React.FC<LongTextProps> = ({
     if (!richText || !richTextEditorRef.current) return;
 
     const selection = globalThis.getSelection();
-    const selectedText = selection?.toString().trim() || '';
 
     // Check if we're editing an existing link
     const existingLink = getLinkAtSelection();
@@ -394,20 +393,27 @@ export const LongText: React.FC<LongTextProps> = ({
       return;
     }
 
-    // Create new link - show popup near selection
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      const position = calculatePopupPosition(range);
+    if (!selection || selection.rangeCount === 0) return;
 
-      setLinkEditData({
-        link: null,
-        text: selectedText,
-        url: '',
-        isEditing: false
-      });
-      setLinkPopupPosition(position);
-      setIsLinkPopupOpen(true);
+    const range = selection.getRangeAt(0);
+    const isSelectionInEditor = richTextEditorRef.current.contains(range.commonAncestorContainer);
+
+    // Only open link popup for an explicit, non-collapsed selection inside the editor.
+    if (!isSelectionInEditor || range.collapsed) {
+      return;
     }
+
+    // Create new link - show popup near selection
+    const selectedText = range.toString().trim();
+    const position = calculatePopupPosition(range);
+    setLinkEditData({
+      link: null,
+      text: selectedText,
+      url: '',
+      isEditing: false
+    });
+    setLinkPopupPosition(position);
+    setIsLinkPopupOpen(true);
   };
 
   const showLinkPopup = (link: HTMLAnchorElement) => {

@@ -1046,6 +1046,36 @@ describe('LongText Component', () => {
       }, { timeout: 3000 });
     });
 
+    it('should not open link popup when there is no text selection', async () => {
+      const { container } = render(
+        <LongText
+          value=""
+          onChange={mockOnChange}
+          config={{ richText: true }}
+          allowEdit={true}
+        />
+      );
+
+      await openModal(container);
+
+      const editor = getEditor();
+      editor.innerHTML = 'Selected text';
+      const textNode = editor.firstChild;
+      expect(textNode).toBeTruthy();
+
+      const range = document.createRange();
+      range.setStart(textNode as ChildNode, 0);
+      range.collapse(true);
+      const selection = globalThis.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      const linkButton = screen.getByTitle(/Link/i);
+      fireEvent.mouseDown(linkButton);
+
+      expect(screen.queryByPlaceholderText('https://example.com')).not.toBeInTheDocument();
+    });
+
     it('should create new link with URL', async () => {
       const { container } = render(
         <LongText
