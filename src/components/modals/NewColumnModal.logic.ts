@@ -350,7 +350,12 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
       return { error: 'Please select a Lookup Field' };
     }
     const selectedLinkField = params.linkFields.find(f => f.id === params.selectedRelationId);
-    const relationIdFromMeta = selectedLinkField?.meta?.relation_id || selectedLinkField?.config?.relation_id;
+    const relationIdFromMeta =
+      selectedLinkField?.meta?.relation_id ||
+      selectedLinkField?.config?.relation_id ||
+      selectedLinkField?.meta?.relation?.id ||
+      selectedLinkField?.config?.relation?.id ||
+      selectedLinkField?.relation_id;
     if (!relationIdFromMeta) {
       return { error: 'Selected link field does not have a valid relation_id' };
     }
