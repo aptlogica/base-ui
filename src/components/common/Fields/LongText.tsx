@@ -234,6 +234,31 @@ export const LongText: React.FC<LongTextProps> = ({
     setModalValue(htmlContent);
   };
 
+  const isSelectionInsideTag = (tagName: string): boolean => {
+    const selection = globalThis.getSelection();
+    if (!selection || selection.rangeCount === 0 || !richTextEditorRef.current) return false;
+
+    let node: Node | null = selection.getRangeAt(0).commonAncestorContainer;
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+
+    const normalizedTag = tagName.toUpperCase();
+    while (node && node !== richTextEditorRef.current) {
+      if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).tagName === normalizedTag) {
+        return true;
+      }
+      node = node.parentNode;
+    }
+    return false;
+  };
+
+  const execFormatBlockWithFallback = (values: string[]): boolean => {
+    for (const formatValue of values) {
+      // @ts-ignore - execCommand is deprecated but still needed for rich text formatting
+      if (document.execCommand('formatBlock', false, formatValue)) return true;
+    }
+    return false;
+  };
+
   const execCommand = (command: string, value: string | null = null, event?: React.MouseEvent) => {
     // Only allow commands in rich text mode
     if (!richText || !richTextEditorRef.current) return;
@@ -246,9 +271,20 @@ export const LongText: React.FC<LongTextProps> = ({
     // Ensure editor has focus before executing command
     richTextEditorRef.current.focus();
 
-    // Execute the command
-    // @ts-ignore - execCommand is deprecated but still needed for rich text formatting
-    const success = document.execCommand(command, false, value || undefined);
+    let success = false;
+    // `formatBlock` for blockquote is inconsistent across browsers.
+    if (command === 'formatBlock' && value?.toLowerCase() === 'blockquote') {
+      if (isSelectionInsideTag('blockquote')) {
+        // Toggle off quote: convert the current block back to a normal paragraph.
+        success = execFormatBlockWithFallback(['p', '<p>', 'div', '<div>']);
+      } else {
+        success = execFormatBlockWithFallback(['blockquote', '<blockquote>', 'BLOCKQUOTE']);
+      }
+    } else {
+      // Execute the command
+      // @ts-ignore - execCommand is deprecated but still needed for rich text formatting
+      success = document.execCommand(command, false, value || undefined);
+    }
 
     if (success) {
       // Update state after command execution
@@ -748,6 +784,25 @@ export const LongText: React.FC<LongTextProps> = ({
                   }
                   [contenteditable] a:visited {
                     color: #7c3aed;
+                  }
+                  [contenteditable] ul {
+                    list-style-type: disc;
+                    margin: 0.5rem 0;
+                    padding-left: 1.5rem;
+                  }
+                  [contenteditable] ol {
+                    list-style-type: decimal;
+                    margin: 0.5rem 0;
+                    padding-left: 1.5rem;
+                  }
+                  [contenteditable] li {
+                    margin: 0.25rem 0;
+                  }
+                  [contenteditable] blockquote {
+                    border-left: 3px solid var(--color-border-secondary);
+                    margin: 0.5rem 0;
+                    padding: 0.25rem 0 0.25rem 0.75rem;
+                    color: var(--color-text-secondary);
                   }
                 `}</style>
               </div>
