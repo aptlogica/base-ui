@@ -286,12 +286,13 @@ export function useColumnManagement({
         updatedValue: pendingEditColumnChanges,
       });
       safeRefresh();
-    }
+    }    
     setUpdateFieldConfirmModalOpen(false);
     setPendingEditColumnChanges(null);
     setEditModalOpen(false);
     setEditColumn(null);
     setEditColumnIndex(null);
+    toast?.success('Column type updated', { title: 'Success' });
   }, [pendingEditColumnChanges, editColumn, updateFieldMutation, safeRefresh]);
 
   // Ask for confirmation then delete a column
