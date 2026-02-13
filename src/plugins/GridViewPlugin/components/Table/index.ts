@@ -2,10 +2,12 @@
 export { Table } from './Table';
 
 // Table sub-components
-export { TableHeader } from './components/TableHeader';
 export { TableRow } from './components/TableRow';
 export { ContextMenu } from './components/ContextMenu';
-export { default as Search } from './components/Search';
+export { ColumnDropdown } from './components/ColumnDropdown';
+export { ColumnContextMenu } from './components/ColumnContextMenu';
+export { VirtualizedTableBody } from './components/VirtualizedTableBody';
+export { Search } from '../../../../components/shared/table/Search';
 
 // Table modals
 export { NewColumnModalPortal } from './modals/NewColumnModalPortal';

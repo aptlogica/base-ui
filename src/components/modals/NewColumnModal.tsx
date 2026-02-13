@@ -1,22 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  Plus, Search, X, Square, Check, Star, Heart, ThumbsUp, ThumbsDown, Flag, Circle, CheckCircle, BadgeCheck, ShieldCheck, Award, Trophy, Medal, Zap, Sparkles, Crown, Gem, Diamond, Trash2, ChevronDown, ChevronUp, Info, Loader2,
+  Search, X, Info, Loader2,
 } from 'lucide-react';
 
-import Dropdown from '../../plugins/GridViewPlugin/components/shared/DropDown/DropDown';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { FIELD_TYPES } from '../../types/fieldTypes';
-import { DateField, DateTime, Duration, Email, JSONField, Time, URLField, Year, User, SingleLineText, LongText, Number, Decimal, Currency, MultiLineText, Formula } from '../../components/common/Fields';
-import { convertDateFormat } from '../../utils/helpers';
-import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown';
 import {
-  ratingColorOptions, precisionOptions,
-  currencyOptions,
-  currencyLocaleOptions,
-  progressColorOptions,
-  durationFormatOptions,
-  dateFormatOptions,
-  timeFormatOptions,
   timeZoneOptions,
 } from '../../types/constants';
 import { FieldTypeDropdown } from '../common/dropdown/fieldDropdown/FieldTypeDropdown';
@@ -24,6 +13,13 @@ import { useBaseTables, useTable, useAllViews } from '../../hooks/useApi';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { useToast } from '../../components/common/Toast';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../utils/fieldUsageUtils';
+import { renderNewColumnConfigStep } from './NewColumnModalConfigStep';
+import {
+  buildColumnPayload,
+  buildFieldMeta,
+  getUniqueColumnNameByUidt,
+  isDuplicateFieldName
+} from './NewColumnModal.logic';
 
 interface FieldType {
   key: string;
@@ -54,31 +50,31 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const toast = useToast();
   // Get current base ID and tables for relations
   const { selectedBaseId } = useNavigationStore();
-  const { data: tablesResponse } = useBaseTables(selectedBaseId || '');
+  const { data: tablesData } = useBaseTables(selectedBaseId || '') as { data?: { data?: any[] } };
   // Get all views for field usage validation (fallback)
   const { data: allViews = [] } = useAllViews();
 
   // Get fresh table data with views (preferred source)
-  const { data: tableDataResponse } = useTable(currentTableId || '');
+  const { data: tableData } = useTable(currentTableId || '') as { data?: { views?: any[] } };
 
   // Prefer tableData.views (fresh) over allViews (cached)
   // Filter views to only include views from the current table
   const currentTableViews = useMemo(() => {
     // First try to use fresh views from tableData
-    if (currentTableId && tableDataResponse?.data?.views && Array.isArray(tableDataResponse.data.views)) {
-      return tableDataResponse.data.views;
+    if (currentTableId && tableData?.views && Array.isArray(tableData.views)) {
+      return tableData.views;
     }
 
     // Fallback to filtered allViews
     if (currentTableId && allViews && allViews.length > 0) {
       const filtered = allViews.filter((view: any) =>
-      String(view.model_id || view.modelId || '') === String(currentTableId)
-    );
+        String(view.model_id || view.modelId || '') === String(currentTableId)
+      );
       return filtered;
     }
 
     return [];
-  }, [tableDataResponse, allViews, currentTableId]);
+  }, [tableData, allViews, currentTableId]);
 
   // Check if field is used in views (for disabling type change)
   const isFieldUsedInViews = useMemo(() => {
@@ -100,13 +96,13 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
   // Extract tables array from response and filter out current table
   const tables = useMemo(() => {
-    if (!tablesResponse?.data || !Array.isArray(tablesResponse.data)) return [];
+    if (!tablesData || !Array.isArray(tablesData)) return [];
     // Extract model objects from the response structure and filter out current table
-    return tablesResponse.data
+    return (tablesData as any[])
       .map(item => item.model)
       .filter(Boolean)
       .filter(table => table.id !== currentTableId); // Exclude current table from target selection
-  }, [tablesResponse, currentTableId]);
+  }, [tablesData, currentTableId]);
 
   // Config state for each type
   const [defaultValue, setDefaultValue] = useState('');
@@ -159,8 +155,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const isValidPercentInput = (input: string) => {
     if (input === '' || input === '.') return true;
     let seenDot = false;
-    for (let i = 0; i < input.length; i++) {
-      const ch = input[i];
+    for (const element of input) {
+      const ch = element;
       if (ch === '.') {
         if (seenDot) return false;
         seenDot = true;
@@ -347,19 +343,19 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const targetTableId = selectedRelation?.meta?.relation?.with || selectedRelation?.config?.relation?.with || '';
 
   // Fetch target table data to get its fields (only if we have a valid table ID)
-  const { data: targetTableData, isLoading: isTargetTableLoading } = useTable(targetTableId);
+  const { data: targetData, isLoading: isTargetTableLoading } = useTable(targetTableId) as { data?: { columns?: any[] }; isLoading: boolean };
 
   // Extract fields from target table
   useEffect(() => {
-    if (!targetTableId || !targetTableData) {
+    if (!targetTableId || !targetData) {
       setTargetTableFields([]);
       return;
     }
 
-    if (targetTableData?.data?.columns && Array.isArray(targetTableData.data.columns)) {
+    if (targetData?.columns && Array.isArray(targetData.columns)) {
       // Filter out links, rollup, and lookup fields
       // Exclude system fields BUT keep 'title' as it's important for lookups
-      const filteredFields = targetTableData.data.columns.filter((col: any) =>
+      const filteredFields = targetData.columns.filter((col: any) =>
         col.uidt !== 'links' &&
         col.uidt !== 'rollup' &&
         col.uidt !== 'lookup' &&
@@ -382,7 +378,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     } else {
       setTargetTableFields([]);
     }
-  }, [targetTableData, targetTableId, initialValues, isOpen, selectedLookupColumnId, hasUserModifiedLookupColumn]);
+  }, [targetData, targetTableId, initialValues, isOpen, selectedLookupColumnId, hasUserModifiedLookupColumn]);
 
   // Initialize selectedTable when tables are loaded and we have a selectedTableId (for Links fields)
   useEffect(() => {
@@ -477,36 +473,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const [optionError, setOptionError] = useState<string>('');
   const editInputRef = useRef<HTMLInputElement>(null);
 
-  // Utility to convert a string to Title Case
-  function toTitleCase(str: string): string {
-    return str.replace(/([a-z])([A-Z])/g, '$1 $2')
-      .replace(/[_-]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .toLowerCase()
-      .replace(/\b\w/g, c => c.toUpperCase());
-  }
-
-  // Utility to generate a unique column name by appending/incrementing a number if duplicates exist, using uidt as base
-  function getUniqueColumnNameByUidt(uidt: string, fields: any[]): string {
-    const baseName = toTitleCase(uidt);
-    const existingNames = fields.map(f => (f.name || f.title || f.key || '').toLowerCase());
-    let name = baseName;
-    let counter = 1;
-    while (existingNames.includes(name.toLowerCase())) {
-      const match = name.match(/^(.*?)(\s(\d+))?$/);
-      if (match) {
-        const prefix = match[1];
-        const num = match[3] ? parseInt(match[3], 10) : 0;
-        counter = num + 1;
-        name = `${prefix} ${counter}`;
-      } else {
-        name = `${baseName} ${counter}`;
-      }
-    }
-    return name;
-  }
-
   useEffect(() => {
     if (isOpen) {
       setHasUserModifiedLookupColumn(false);
@@ -542,12 +508,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         if (fieldType === 'multiSelect') {
           setMultiDefault(Array.isArray(config.defaultValue) ? config.defaultValue : (config.multiDefault || []));
         } else {
-        setMultiDefault(config.multiDefault || []);
+          setMultiDefault(config.multiDefault || []);
         }
         if (fieldType === 'select') {
           setSingleDefault(typeof config.defaultValue === 'string' && config.defaultValue ? config.defaultValue : (config.singleDefault || ''));
         } else {
-        setSingleDefault(config.singleDefault || '');
+          setSingleDefault(config.singleDefault || '');
         }
         setRatingIcon(config.ratingIcon || 'star');
         setRatingColor(config.ratingColor || 'yellow');
@@ -566,26 +532,26 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         if (fieldType === 'datetime') {
           setDateTimeDefault(config.defaultValue || config.dateTimeDefault || '');
         } else {
-        setDateTimeDefault(config.dateTimeDefault || '');
+          setDateTimeDefault(config.dateTimeDefault || '');
         }
         setShowDateTimeDefault(false);
         // For year: check defaultValue first (where it's saved), then fallback to yearDefault
         if (fieldType === 'year') {
           setYearDefault(config.defaultValue ?? (config.yearDefault || null));
         } else {
-        setYearDefault(config.yearDefault || null);
+          setYearDefault(config.yearDefault || null);
         }
         // For date: check defaultValue first (where it's saved), then fallback to dateDefault
         if (fieldType === 'date') {
           setDateDefault(config.defaultValue || config.dateDefault || '');
         } else {
-        setDateDefault(config.dateDefault || '');
+          setDateDefault(config.dateDefault || '');
         }
         // For time: check defaultValue first (where it's saved), then fallback to timeDefault
         if (fieldType === 'time') {
           setTimeDefault(config.defaultValue || config.timeDefault || '');
         } else {
-        setTimeDefault(config.timeDefault || '');
+          setTimeDefault(config.timeDefault || '');
         }
         setShowTimeDefault(false);
         setPhoneValid(!!config.phoneValid);
@@ -593,7 +559,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         if (fieldType === 'phoneNumber') {
           setPhoneDefault(config.defaultValue || config.phoneDefault || '');
         } else {
-        setPhoneDefault(config.phoneDefault || '');
+          setPhoneDefault(config.phoneDefault || '');
         }
         setShowPhoneDefault(false);
         setEmailValid(!!config.emailValid);
@@ -601,7 +567,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         if (fieldType === 'email') {
           setEmailDefault(config.defaultValue || config.emailDefault || '');
         } else {
-        setEmailDefault(config.emailDefault || '');
+          setEmailDefault(config.emailDefault || '');
         }
         setShowEmailDefault(false);
         setUrlValid(!!config.urlValid);
@@ -609,7 +575,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         if (fieldType === 'url') {
           setUrlDefault(config.defaultValue || config.urlDefault || '');
         } else {
-        setUrlDefault(config.urlDefault || '');
+          setUrlDefault(config.urlDefault || '');
         }
         setShowUrlDefault(false);
 
@@ -621,14 +587,14 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         if (fieldType === 'percent') {
           setPercentDefault(config.defaultValue ?? (config.percentDefault || null));
         } else {
-        setPercentDefault(config.percentDefault || null);
+          setPercentDefault(config.percentDefault || null);
         }
         setDurationFormat(config.durationFormat || 'h:mm');
         // For duration: check defaultValue first (where it's saved), then fallback to durationDefault
         if (fieldType === 'duration') {
           setDurationDefault(config.defaultValue ?? (config.durationDefault || 0));
         } else {
-        setDurationDefault(config.durationDefault || 0);
+          setDurationDefault(config.durationDefault || 0);
         }
         setCurrencyType(config.currencyType || 'USD');
         setCurrencyLocale(config.currencyLocale || 'en-US');
@@ -636,7 +602,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         if (fieldType === 'currency') {
           setCurrencyDefault(config.defaultValue ?? (config.currencyDefault || null));
         } else {
-        setCurrencyDefault(config.currencyDefault || null);
+          setCurrencyDefault(config.currencyDefault || null);
         }
         setShowCurrencyDefault(false);
         // Initialize Links field configuration
@@ -806,13 +772,13 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       clearTimeout(debounceTimeout.current);
     }
     debounceTimeout.current = setTimeout(() => {
-      const trimmed = fieldName.trim().toLowerCase();
       const currentId = initialValues?.id || initialValues?.key;
-      const isDuplicate = fields.some(f =>
-        (f.name || f.title || f.key || '').toLowerCase() === trimmed &&
-        (currentId ? (f.id || f.key) !== currentId : true)
-      );
-      if (trimmed && isDuplicate) {
+      const isDuplicate = isDuplicateFieldName({
+        fieldName,
+        fields,
+        currentId
+      });
+      if (fieldName.trim() && isDuplicate) {
         setNameError('Field name already exists');
       } else {
         setNameError(null);
@@ -848,9 +814,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const getOptionColor = () => {
     // Generate a random hex color
     const randomColor = `#${(crypto.getRandomValues(new Uint32Array(1))[0] & 0xffffff)
-                            .toString(16)
-                            .padStart(6, '0')
-                          }`;
+      .toString(16)
+      .padStart(6, '0')
+      }`;
     return randomColor;
   };
 
@@ -946,12 +912,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       setFieldName(finalFieldName); // Optionally update the UI as well
     }
 
-    const trimmed = fieldName.trim().toLowerCase();
     const currentId = initialValues?.id || initialValues?.key;
-    const isDuplicate = fields.some(f =>
-      (f.name || f.title || f.key || '').toLowerCase() === trimmed &&
-      (currentId ? (f.id || f.key) !== currentId : true)
-    );
+    const isDuplicate = isDuplicateFieldName({
+      fieldName,
+      fields,
+      currentId
+    });
     if (isDuplicate) {
       setNameError('Field name already exists');
       setIsSaving(false);
@@ -969,318 +935,77 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       return;
     }
 
-    const config: any = {};
-    if (defaultValue && (typeof defaultValue === 'string' ? defaultValue.trim() : true)) {
-      switch (selectedType.key) {
-        case 'number':
-        case 'decimal':
-        case 'currency':
-        case 'percent':
-          if (defaultValue && (typeof defaultValue === 'string' ? defaultValue.trim() : true)) {
-            const parsed = typeof defaultValue === 'string' ? parseFloat(defaultValue) : defaultValue;
-            config.defaultValue = isNaN(parsed) ? defaultValue : parsed;
-          }
-          break;
-        case 'boolean':
-          config.defaultValue = defaultValue === 'true' || defaultValue === '1';
-          break;
-        case 'rating':
-          config.defaultValue = parseInt(defaultValue) || 0;
-          break;
-        case 'year':
-          config.defaultValue = typeof defaultValue === 'string' ? (parseInt(defaultValue) || defaultValue) : defaultValue;
-          break;
-        case 'json':
-          if (typeof defaultValue === 'object') {
-            config.defaultValue = defaultValue;
-          } else {
-            try {
-              config.defaultValue = JSON.parse(defaultValue);
-            } catch {
-              config.defaultValue = defaultValue;
-            }
-          }
-          break;
-        default:
-          config.defaultValue = defaultValue;
-      }
+    const { meta, error } = buildFieldMeta({
+      selectedTypeKey: selectedType.key,
+      defaultValue,
+      richText,
+      showThousands,
+      precision,
+      checkboxIcon,
+      checkboxColor,
+      checkboxDefault,
+      selectOptions,
+      singleDefault,
+      multiDefault,
+      ratingIcon,
+      ratingColor,
+      ratingMax,
+      ratingDefault,
+      description,
+      dateFormat,
+      timeFormat,
+      hourFormat,
+      displayTimeZone,
+      sameTimezone,
+      timeZone,
+      timeZoneOptions,
+      dateTimeDefault,
+      currencyType,
+      currencyLocale,
+      displayAsProgress,
+      progressColor,
+      percentDefault,
+      durationFormat,
+      durationDefault,
+      yearDefault,
+      dateDefault,
+      timeDefault,
+      phoneValid,
+      phoneDefault,
+      emailValid,
+      emailDefault,
+      urlValid,
+      urlDefault,
+      allowMultipleUsers,
+      selectedUsers,
+      selectedTableId,
+      selectedTable,
+      relationType,
+      selectedRelationId,
+      selectedLookupColumnId,
+      linkFields,
+      buttonStyle,
+      buttonAction,
+      openButtonInNewTab,
+      formulaText,
+      formulaFormatting,
+      getBrowserTimeZone
+    });
+
+    if (error) {
+      toast.error(error);
+      setIsSaving(false);
+      return;
     }
 
-    // Don't add description to config - it's handled at column level
-
-    // Add type-specific config
-    if (selectedType.key === 'longText') {
-      config.richText = richText;
-    }
-    if (selectedType.key === 'number') {
-      config.showThousands = showThousands;
-    }
-    if (selectedType.key === 'decimal') {
-      config.precision = precision;
-      config.showThousands = showThousands;
-    }
-    if (selectedType.key === 'boolean') {
-      config.icon = checkboxIcon;
-      config.color = checkboxColor;
-      config.defaultValue = checkboxDefault;
-    }
-    if (selectedType.key === 'select') {
-      config.options = selectOptions;
-      if (singleDefault && singleDefault.trim()) {
-        config.defaultValue = singleDefault;
-      }
-    }
-    if (selectedType.key === 'multiSelect') {
-      config.options = selectOptions;
-      if (multiDefault && multiDefault.length > 0) {
-        config.defaultValue = multiDefault;
-      }
-    }
-    if (selectedType.key === 'rating') {
-      config.ratingIcon = ratingIcon;
-      config.ratingColor = ratingColor;
-      config.ratingMax = ratingMax;
-      config.ratingDefault = ratingDefault;
-      config.ratingDescription = description;
-
-    }
-    if (selectedType.key === 'datetime') {
-      config.dateFormat = dateFormat;
-      // Use the selected timeFormat without overriding
-      config.timeFormat = timeFormat;
-      config.hourFormat = hourFormat;
-      config.displayTimeZone = displayTimeZone;
-      config.sameTimezone = sameTimezone;
-      if (sameTimezone && timeZone) {
-        const selectedCode = timeZoneOptions.find((o: any) => o.label === timeZone)?.value || '';
-        config.timeZone = selectedCode;
-        config.timeZoneLabel = timeZone;
-      } else if (displayTimeZone && !sameTimezone) {
-        const browserLabel = getBrowserTimeZone();
-        const browserCode = timeZoneOptions.find((o: any) => o.label === browserLabel)?.value || '';
-        if (browserCode) {
-          config.timeZone = browserCode;
-          config.timeZoneLabel = browserLabel;
-        }
-      }
-      if (dateTimeDefault && dateTimeDefault.trim()) {
-        // Ensure datetime includes both date and time
-        let formattedDateTime = dateTimeDefault;
-        if (!formattedDateTime.includes('T')) {
-          // If only time is provided, add current date
-          const today = new Date().toISOString().split('T')[0];
-          formattedDateTime = `${today}T${formattedDateTime}`;
-        }
-        config.defaultValue = formattedDateTime;
-      }
-    }
-    if (selectedType.key === 'createdTime') {
-      config.dateFormat = dateFormat;
-      // Use the selected timeFormat without overriding
-      config.timeFormat = timeFormat;
-      config.hourFormat = hourFormat;
-      config.displayTimeZone = displayTimeZone;
-      config.sameTimezone = sameTimezone;
-      if (sameTimezone && timeZone) {
-        const selectedCode = timeZoneOptions.find((o: any) => o.label === timeZone)?.value || '';
-        config.timeZone = selectedCode;
-        config.timeZoneLabel = timeZone;
-      } else if (displayTimeZone && !sameTimezone) {
-        const browserLabel = getBrowserTimeZone();
-        const browserCode = timeZoneOptions.find((o: any) => o.label === browserLabel)?.value || '';
-        if (browserCode) {
-          config.timeZone = browserCode;
-          config.timeZoneLabel = browserLabel;
-        }
-      }
-      // No default value for createdTime - it's automatically set by the system
-    }
-    if (selectedType.key === 'lastModifiedTime') {
-      config.dateFormat = dateFormat;
-      // Use the selected timeFormat without overriding
-      config.timeFormat = timeFormat;
-      config.hourFormat = hourFormat;
-      config.displayTimeZone = displayTimeZone;
-      config.sameTimezone = sameTimezone;
-      if (sameTimezone && timeZone) {
-        const selectedCode = timeZoneOptions.find((o: any) => o.label === timeZone)?.value || '';
-        config.timeZone = selectedCode;
-        config.timeZoneLabel = timeZone;
-      } else if (displayTimeZone && !sameTimezone) {
-        const browserLabel = getBrowserTimeZone();
-        const browserCode = timeZoneOptions.find((o: any) => o.label === browserLabel)?.value || '';
-        if (browserCode) {
-          config.timeZone = browserCode;
-          config.timeZoneLabel = browserLabel;
-        }
-      }
-      // No default value for lastModifiedTime - it's automatically set by the system
-    }
-    if (selectedType.key === 'currency') {
-      config.currencyType = currencyType;
-      config.currencyLocale = currencyLocale;
-      config.precision = precision;
-      if (currencyDefault) {
-        config.defaultValue = currencyDefault;
-      }
-    }
-    if (selectedType.key === 'percent') {
-      config.displayAsProgress = displayAsProgress;
-      config.progressColor = progressColor;
-      if (percentDefault !== null) {
-        config.defaultValue = percentDefault;
-      }
-    }
-    if (selectedType.key === 'duration') {
-      config.durationFormat = durationFormat;
-      if (durationDefault) {
-        config.defaultValue = durationDefault;
-      }
-    }
-    if (selectedType.key === 'year') {
-      if (yearDefault !== null) {
-        config.defaultValue = yearDefault;
-      }
-    }
-    if (selectedType.key === 'date') {
-      config.dateFormat = dateFormat;
-      if (dateDefault && dateDefault.trim()) {
-        config.defaultValue = dateDefault;
-      }
-    }
-    if (selectedType.key === 'time') {
-      config.hourFormat = hourFormat;
-      // Use the selected timeFormat without overriding
-      config.timeFormat = timeFormat;
-      if (timeDefault && timeDefault.trim()) {
-        // Ensure time is in 24-hour format for storage
-        let formattedTime = timeDefault;
-        if (hourFormat === '12' && timeDefault.includes(' ')) {
-          const [time, period] = timeDefault.split(' ');
-          const [hours, minutes] = time.split(':');
-          let hour = parseInt(hours);
-          if (period === 'PM' && hour !== 12) hour += 12;
-          if (period === 'AM' && hour === 12) hour = 0;
-          formattedTime = `${hour.toString().padStart(2, '0')}:${minutes}`;
-        }
-        config.defaultValue = formattedTime;
-      }
-    }
-    if (selectedType.key === 'text') {
-      // Text field specific config
-      if (defaultValue && (typeof defaultValue === 'string' ? defaultValue.trim() : true)) {
-        config.defaultValue = defaultValue;
-      }
-    }
-    if (selectedType.key === 'phoneNumber') {
-      config.phoneValid = phoneValid;
-      if (phoneDefault?.trim()) {
-        config.defaultValue = phoneDefault;
-      }
-    }
-    if (selectedType.key === 'email') {
-      config.emailValid = emailValid;
-      if (emailDefault?.trim()) {
-        config.defaultValue = emailDefault;
-      }
-    }
-    if (selectedType.key === 'url') {
-      config.urlValid = urlValid;
-      if (urlDefault?.trim()) {
-        config.defaultValue = urlDefault;
-      }
-    }
-    if (selectedType.key === 'user') {
-      config.allowMultiple = allowMultipleUsers;
-      if (selectedUsers) {
-        config.defaultValue = selectedUsers;
-      }
-    }
-
-    if (selectedType.key === 'links') {
-      if (!selectedTableId || !selectedTable) {
-        toast.error('Target table is required for relation fields');
-        setIsSaving(false);
-        return; // Prevent saving without target table
-      }
-      // Only set relation config when creating a new links field, not when editing
-      if (!initialValues) {
-        config.relation = {
-          with: selectedTableId,
-          type: relationType
-        };
-      }
-    }
-    if (selectedType.key === 'lookup') {
-      if (!selectedRelationId) {
-        toast.error('Please select a Link Field');
-        setIsSaving(false);
-        return;
-      }
-      if (!selectedLookupColumnId) {
-        toast.error('Please select a Lookup Field');
-        setIsSaving(false);
-        return;
-      }
-      // Get the relation_id from the selected link field's meta, not the field's ID
-      const selectedLinkField = linkFields.find(f => f.id === selectedRelationId);
-      const relationIdFromMeta = selectedLinkField?.meta?.relation_id || selectedLinkField?.config?.relation_id;
-
-      if (!relationIdFromMeta) {
-        toast.error('Selected link field does not have a valid relation_id');
-        setIsSaving(false);
-        return;
-      }
-
-      // Send the correct meta structure for lookup field (matching API expected format)
-      // relation_id should come from the link field's meta.relation_id, not the field ID
-      config.relation_id = relationIdFromMeta;
-      config.lookup_column_id = selectedLookupColumnId;
-    }
-    if (selectedType.key === 'button') {
-      if (defaultValue && (typeof defaultValue === 'string' ? defaultValue.trim() : true)) {
-        config.buttonText = String(defaultValue);
-      }
-      config.buttonStyle = buttonStyle;
-      config.action = buttonAction;
-      config.openInNewTab = openButtonInNewTab;
-    }
-    if (selectedType.key === 'json') {
-      // JSON field always uses pretty print and collapsible (no longer configurable)
-      if (defaultValue && (typeof defaultValue === 'string' ? defaultValue.trim() : true)) {
-        config.defaultValue = defaultValue;
-      }
-    }
-    if (selectedType.key === 'formula') {
-      config.formula = formulaText;
-      config.formatting = {
-        type: formulaFormatting.type,
-        precision: formulaFormatting.precision,
-        currency: formulaFormatting.currency,
-        dateFormat: formulaFormatting.dateFormat
-      };
-    }
-    // Attachment field only supports description configuration
-
-    // Use getUniqueColumnNameByUidt to ensure no duplicate column names, using type as base
-    const uidtBase = selectedType?.key || 'Field';
-    const uniqueColName = getUniqueColumnNameByUidt(uidtBase, fields);
-    
-    // For links fields during edit, preserve existing meta instead of sending empty meta
-    let finalMeta = config;
-    if (selectedType.key === 'links' && initialValues) {
-      // During edit, preserve the existing meta (don't overwrite it)
-      finalMeta = initialValues.meta || initialValues.config || {};
-    }
-    
-    const colConfig: any = {
-      key: fieldName || uniqueColName,
-      title: fieldName || uniqueColName,
-      name: fieldName || uniqueColName,
-      type: selectedType.key,
-      description: description,
-      meta: finalMeta, // Use 'meta' instead of 'config' for new API format
-    };
+    const colConfig = buildColumnPayload({
+      fieldName,
+      selectedTypeKey: selectedType.key,
+      description,
+      fields,
+      initialValues,
+      meta
+    });
 
     onSave(colConfig);
     // Don't reset state here - let the parent component close the modal
@@ -1289,2349 +1014,174 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
   if (!isOpen) return null;
 
-  const handleDateChange = (value: any) => {
-    if (value) {
-      setDateDefault(value);
-    }
-  };
-
-  const handleYearChange = (value: number | null | string) => {
-    if (typeof value === 'number') {
-      setYearDefault(value);
-    } else if (value === null || value === '') {
-      setYearDefault(null);
-    } else {
-      const parsedValue = parseInt(value);
-      setYearDefault(isNaN(parsedValue) ? null : parsedValue);
-    }
-  };
-
-  const formatDefaultDate = (date: any) => {
-    // Format the date based on the selected format
-    if (date) {
-      const currentFormat = dateFormat; // Use your detection logic
-      return convertDateFormat(date, currentFormat, dateFormat);
-    }
-    return '';
-  };
-
-  const handleUrlChange = (value: string) => {
-    setUrlDefault(value);
-  };
-
-  const handleJsonChange = (value: any) => {
-    const stringify = JSON.stringify(value, null, 2);
-    setDefaultValue(stringify);
-  };
-
-  // Handle precision change - components will handle their own formatting
-  const handlePrecisionChange = (newPrecision: string | number) => {
-    setPrecision(newPrecision);
-  };
-
-  // Config step for each type
-  function renderConfigStep() {
-    switch (selectedType?.key) {
-      case 'text':
-      case 'uuid':
-        return (
-          <>
-            <div className="mb-3 space-y-2 " >
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]"
-                onClick={() => setShowTextDefault(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Set default value
-              </button>
-              {showTextDefault && (
-                <SingleLineText
-                  value={defaultValue}
-                  onChange={value => setDefaultValue(value)}
-                  placeholder="Enter default text"
-                  isBorder={true}
-                />
-              )}
-            </div>
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'longText':
-        return (
-          <>
-            <div className="mb-3 flex items-center gap-2">
-              <input type="checkbox" className="checkbox-primary-brand" id="richText" checked={richText} onChange={e => setRichText(e.target.checked)} />
-              <label htmlFor="richText" className="text-sm text-[var(--text-color-secondary)]">Enable rich text</label>
-            </div>
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowTextDefault(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Set default value
-            </button>
-            {showTextDefault && (
-              <LongText
-                value={defaultValue}
-                onChange={value => setDefaultValue(value)}
-                placeholder="Enter default text value"
-                isBorder={true}
-                onModalOpen={handleLongtextModalOpen}
-                onModalClose={handleLongtextModalClose}
-              />
-            )}
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'number':
-        return (
-          <>
-            <div className="mb-3 flex items-center gap-2">
-              <input type="checkbox" className="checkbox-primary-brand" id="showThousands" checked={showThousands} onChange={e => setShowThousands(e.target.checked)} />
-              <label htmlFor="showThousands" className="text-sm text-[var(--text-color-secondary)]" >Show thousands separator</label>
-            </div>
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowTextDefault(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Set default value
-            </button>
-            {showTextDefault && (
-              <Number
-                value={defaultValue}
-                onChange={value => setDefaultValue(value?.toString() || '')}
-                config={{
-                  showThousands: showThousands
-                }}
-                isBorder={true}
-              />
-            )}
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'decimal':
-        return (
-          <>
-            <div className="mb-2 text-sm font-medium text-[var(--color-gray-700)]">Precision</div>
-            <AdvancedDropdown
-              options={precisionOptions}
-              value={precision}
-              onChange={(val) => handlePrecisionChange(val as string)}
-            />
-
-            <div className="my-3 flex items-center gap-2">
-              <input type="checkbox" className="checkbox-primary-brand" id="showThousands" checked={showThousands} onChange={e => setShowThousands(e.target.checked)} />
-              <label htmlFor="showThousands" className="text-sm text-[var(--text-color-secondary)]">Show thousands separator</label>
-            </div>
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowTextDefault(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Set default value
-            </button>
-            {showTextDefault && (
-              <Decimal
-                value={defaultValue ? parseFloat(defaultValue) : null}
-                onChange={(value: any) => setDefaultValue(value?.toString() || '')}
-                showThousands={showThousands}
-                config={{
-                  precision: typeof precision === 'string' ? (precision.split('.')[1]?.length || 0) : precision,
-                  defaultValue: defaultValue ? (isNaN(parseFloat(defaultValue)) ? defaultValue : parseFloat(defaultValue)) : undefined
-                }}
-                isBorder={true}
-              />
-            )}
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'boolean':
-        { const iconOptions: { key: string; label: string; checkedIcon: any; uncheckedIcon: any }[] = [
-          {
-            key: 'check',
-            label: 'Check',
-            checkedIcon: (
-              <div className="w-4 h-4 rounded flex items-center justify-center bg-green-500 border-green-500">
-                <Check className="w-2.5 h-2.5 text-primary" />
-              </div>
-            ),
-            uncheckedIcon: (
-              <div className="w-4 h-4 rounded flex items-center justify-center">
-                <Square className="w-4 h-4 text-gray-400" />
-              </div>
-            )
-          },
-          {
-            key: 'circle',
-            label: 'Circle',
-            checkedIcon: (
-              <div className="w-4 h-4 rounded-full flex items-center justify-center bg-green-500 border-green-500">
-                <Check className="w-2.5 h-2.5 text-primary" />
-              </div>
-            ),
-            uncheckedIcon: (
-              <div className="w-4 h-4 rounded-full flex items-center justify-center">
-                <Circle className="w-4 h-4 text-gray-400" />
-              </div>
-            )
-          },
-          {
-            key: 'star',
-            label: 'Star',
-            checkedIcon: <Star className="w-4 h-4 text-yellow-500 fill-current" />,
-            uncheckedIcon: <Star className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'heart',
-            label: 'Heart',
-            checkedIcon: <Heart className="w-4 h-4 text-red-500 fill-current" />,
-            uncheckedIcon: <Heart className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'thumb',
-            label: 'Thumb',
-            checkedIcon: <ThumbsUp className="w-4 h-4 text-green-500 fill-current" />,
-            uncheckedIcon: <ThumbsDown className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'flag',
-            label: 'Flag',
-            checkedIcon: <Flag className="w-4 h-4 text-red-500 fill-current" />,
-            uncheckedIcon: <Flag className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'badge',
-            label: 'Badge',
-            checkedIcon: <BadgeCheck className="w-4 h-4 text-blue-500 fill-current" />,
-            uncheckedIcon: <BadgeCheck className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'shield',
-            label: 'Shield',
-            checkedIcon: <ShieldCheck className="w-4 h-4 text-purple-500 fill-current" />,
-            uncheckedIcon: <ShieldCheck className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'award',
-            label: 'Award',
-            checkedIcon: <Award className="w-4 h-4 text-orange-500 fill-current" />,
-            uncheckedIcon: <Award className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'trophy',
-            label: 'Trophy',
-            checkedIcon: <Trophy className="w-4 h-4 text-yellow-500 fill-current" />,
-            uncheckedIcon: <Trophy className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'medal',
-            label: 'Medal',
-            checkedIcon: <Medal className="w-4 h-4 text-amber-500 fill-current" />,
-            uncheckedIcon: <Medal className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'crown',
-            label: 'Crown',
-            checkedIcon: <Crown className="w-4 h-4 text-yellow-500 fill-current" />,
-            uncheckedIcon: <Crown className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'gem',
-            label: 'Gem',
-            checkedIcon: <Gem className="w-4 h-4 text-purple-500 fill-current" />,
-            uncheckedIcon: <Gem className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'diamond',
-            label: 'Diamond',
-            checkedIcon: <Diamond className="w-4 h-4 text-blue-500 fill-current" />,
-            uncheckedIcon: <Diamond className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'zap',
-            label: 'Zap',
-            checkedIcon: <Zap className="w-4 h-4 text-yellow-500 fill-current" />,
-            uncheckedIcon: <Zap className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'sparkles',
-            label: 'Sparkles',
-            checkedIcon: <Sparkles className="w-4 h-4 text-pink-500 fill-current" />,
-            uncheckedIcon: <Sparkles className="w-4 h-4 text-gray-400" />
-          },
-        ];
-
-        // Checkbox color options
-        const colorOptions: { key: string; label: string; className: string; color: string; bgClass: string }[] = [
-          { key: 'green', label: 'Green', className: 'text-green-600', color: 'green', bgClass: 'bg-green-500' },
-          { key: 'blue', label: 'Blue', className: 'text-blue-600', color: 'blue', bgClass: 'bg-blue-500' },
-          { key: 'yellow', label: 'Yellow', className: 'text-yellow-500', color: 'yellow', bgClass: 'bg-yellow-400' },
-          { key: 'red', label: 'Red', className: 'text-red-600', color: 'red', bgClass: 'bg-red-500' },
-          { key: 'purple', label: 'Purple', className: 'text-purple-600', color: 'purple', bgClass: 'bg-purple-500' },
-          { key: 'gray', label: 'Gray', className: 'text-gray-600', color: 'gray', bgClass: 'bg-gray-500' },
-        ];
-
-        const selectedIconOption = iconOptions.find(opt => opt.key === checkboxIcon) || iconOptions[0];
-        const selectedColorOption = colorOptions.find(opt => opt.key === checkboxColor) || colorOptions[0];
-
-        return (
-          <>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              {/* Icon Selection */}
-              <div>
-                <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Icon</div>
-                <div className="relative icon-dropdown">
-                  <button
-                    type="button"
-                    className="w-full px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] flex items-center justify-between"
-                    onClick={() => setShowIconDropdown(v => !v)}
-                  >
-                    <div className="flex items-center gap-2">
-                      {selectedIconOption.checkedIcon}
-                      {selectedIconOption.uncheckedIcon}
-                      <span>{selectedIconOption.label}</span>
-                    </div>
-                    {showIconDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
-                  </button>
-
-                  {showIconDropdown && (
-                    <div className="absolute p-2 space-y-1 top-full left-0 right-0 mt-1 bg-[var(--color-alpha-white)] text-[var(--color-text-secondary)] border rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
-                      {iconOptions.map((option) => (
-                        <button
-                          key={option.key}
-                          type="button"
-                          className={`w-full px-3 py-2 rounded-xl text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${checkboxIcon === option.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
-                            }`}
-                          onClick={() => {
-                            setCheckboxIcon(option.key);
-                            setShowIconDropdown(false);
-                          }}
-                        >
-                          {option.checkedIcon}
-                          {option.uncheckedIcon}
-                          <span>{option.label}</span>
-                          {checkboxIcon === option.key && (
-                            <Check className="w-4 h-4 ml-auto text-black" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Color Selection */}
-              <div>
-                <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Colour</div>
-                <div className="relative color-dropdown">
-                  <button
-                    type="button"
-                    className="w-full px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] flex items-center justify-between"
-                    onClick={() => setShowColorDropdown(v => !v)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full ${selectedColorOption.bgClass}`}></div>
-                      <span>{selectedColorOption.label}</span>
-                    </div>
-                    {showColorDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
-                  </button>
-
-                  {showColorDropdown && (
-                    <div className="absolute p-2 space-y-1 top-full left-0 right-0 mt-1 bg-[var(--color-alpha-white)] text-[var(--color-text-secondary)] border border-[var(--color-gray-300)] rounded shadow-lg z-50 max-h-60 overflow-y-auto">
-                      {colorOptions.map((color) => (
-                        <button
-                          key={color.key}
-                          type="button"
-                          className={`w-full px-3 py-2 rounded-xl text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${checkboxColor === color.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
-                            }`}
-                          onClick={() => {
-                            setCheckboxColor(color.key);
-                            setShowColorDropdown(false);
-                          }}
-                        >
-                          <div className={`w-4 h-4 rounded-full ${color.bgClass}`}></div>
-                          <span>{color.label}</span>
-                          {checkboxColor === color.key && (
-                            <Check className="w-4 h-4 ml-auto text-black" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Default Value - Full Width */}
-            <div className="mb-4">
-              <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Default value</div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className={`px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${checkboxDefault
-                    ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
-                    : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'
-                    }`}
-                  onClick={() => setCheckboxDefault(true)}
-                >
-                  {selectedIconOption.checkedIcon}
-                  <span>Checked</span>
-                </button>
-                <button
-                  type="button"
-                  className={`px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${checkboxDefault
-                    ? 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'
-                    : 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
-                    }`}
-                  onClick={() => setCheckboxDefault(false)}
-                >
-                  {selectedIconOption.uncheckedIcon}
-                  <span>Unchecked</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="relative">
-              <div className="text-sm font-medium text-[var(--color-text-tertiary)] my-3 space-y-2">Description</div>
-              <MultiLineText
-                placeholder="Enter field description..."
-                value={description}
-                onChange={value => setDescription(value)}
-                rows={4}
-                isBorder={true}
-              />
-              {description &&
-                <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              }
-            </div>
-          </>
-        ); }
-      case 'multiSelect':
-        return (
-          <>
-            <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Options</div>
-            <div className="flex gap-2 mb-3">
-              <input
-                className="flex-1 px-3 py-2 border border-[var(--color-gray-300)] bg-[var(--color-alpha-white)] text-[var(--color-gray-900)] rounded-xl text-sm outline-none field-component-focus"
-                placeholder="Add option"
-                value={newOption}
-                onChange={e => {
-                  setNewOption(e.target.value);
-                  if (optionError) setOptionError('');
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && newOption.trim()) {
-                    const trimmed = newOption.trim();
-                    const exists = selectOptions.some(opt => opt.option.toLowerCase() === trimmed.toLowerCase());
-                    if (exists) {
-                      setOptionError('Option already exists');
-                    } else {
-                      const optionColor = color && color !== '#cccccc' ? color : getOptionColor();
-                      setSelectOptions([
-                        ...selectOptions,
-                        { option: trimmed, color: optionColor }
-                      ]);
-                      setColor('');
-                      setNewOption('');
-                      setOptionError('');
-                    }
-                  }
-                }}
-              />
-              {/* <input
-                type="color"
-                value={color || '#cccccc'}
-                onChange={(e) => setColor(e.target.value)}
-                className="flex-shrink-0 inline-flex items-center justify-center px-2 h-9 border border-[var(--color-gray-300)] text-[var(--color-text-tertiary)] rounded-xl hover:bg-[var(--color-hover-bg)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]"
-                style={{ cursor: 'pointer' }}
-              /> */}
-              <button
-                type="button"
-                className="px-3 py-1 btn-add-option text-sm"
-                onClick={() => {
-                  if (newOption.trim()) {
-                    const trimmed = newOption.trim();
-                    const exists = selectOptions.some(opt => opt.option.toLowerCase() === trimmed.toLowerCase());
-                    if (exists) {
-                      setOptionError('Option already exists');
-                    } else {
-                      const optionColor = color && color !== '#cccccc' ? color : getOptionColor();
-                      setSelectOptions([
-                        ...selectOptions,
-                        { option: trimmed, color: optionColor }
-                      ]);
-                      setColor('');
-                      setNewOption('');
-                      setOptionError('');
-                    }
-                  }
-                }}
-              >
-                Add option
-              </button>
-            </div>
-            {optionError && <div className="text-red-500 text-xs mt-1 mb-3">{optionError}</div>}
-
-            {selectOptions.length > 0 &&
-              <>
-                <span className='text-primary'>Select Default Value</span>
-                <div className="flex flex-col gap-1 my-2 max-w-full border border-primary rounded-xl p-2 group max-h-48 overflow-auto">
-                  {selectOptions.map((opt, idx) => (
-                    <div key={idx} className="relative flex items-center gap-2 min-w-0 hover:bg-[var(--color-hover-bg)] rounded-xl px-1">
-                      <input
-                        type="checkbox"
-                        checked={multiDefault.includes(opt.option)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setMultiDefault([...multiDefault, opt.option]);
-                          } else {
-                            setMultiDefault(multiDefault.filter(v => v !== opt.option));
-                          }
-                        }}
-                        className="checkbox-primary-brand"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <input
-                        type="color"
-                        value={opt.color || '#cccccc'}
-                        onChange={(e) => {
-                          const newOptions = [...selectOptions];
-                          newOptions[idx] = { ...newOptions[idx], color: e.target.value };
-                          setSelectOptions(newOptions);
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="color-input"
-                      />
-                      {editingOptionIndex === idx ? (
-                        <input
-                          ref={editInputRef}
-                          className='flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] border border-[var(--color-gray-300)] text-xs min-w-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]'
-                          value={editingOptionValue}
-                          onChange={(e) => setEditingOptionValue(e.target.value)}
-                          onBlur={() => {
-                            const trimmedValue = editingOptionValue.trim();
-                            if (trimmedValue && trimmedValue !== opt.option) {
-                              const newOptions = [...selectOptions];
-                              newOptions[idx] = { ...newOptions[idx], option: trimmedValue };
-                              setSelectOptions(newOptions);
-
-                              // Update default values if this option was selected
-                              if (multiDefault.includes(opt.option)) {
-                                setMultiDefault(multiDefault.map(v => v === opt.option ? trimmedValue : v));
-                              }
-                            }
-                            setEditingOptionIndex(null);
-                            setEditingOptionValue('');
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.currentTarget.blur();
-                            } else if (e.key === 'Escape') {
-                              setEditingOptionIndex(null);
-                              setEditingOptionValue('');
-                            }
-                          }}
-                          autoFocus
-                        />
-                      ) : (
-                        <span
-                          className="flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] text-xs truncate min-w-0 cursor-pointer"
-                          onClick={() => {
-                            setEditingOptionIndex(idx);
-                            setEditingOptionValue(opt.option);
-                          }}
-                        >
-                          {opt.option}
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        className="h-8 w-8 rounded flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectOptions(selectOptions.filter((o, i) => i !== idx));
-                          // Remove from defaults if this option was selected
-                          if (multiDefault.includes(opt.option)) {
-                            setMultiDefault(multiDefault.filter(v => v !== opt.option));
-                          }
-                        }}
-                      >
-                        <Trash2 className='w-4 h-4 text-[var(--color-error-400)]' />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </>
-            }
-
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <div className="mb-3 relative">
-                    <MultiLineText
-                      placeholder="Enter field description..."
-                      value={description}
-                      onChange={value => setDescription(value)}
-                      rows={4}
-                      isBorder={true}
-                    />
-                  </div>
-                  {description && (
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-
-          </>
-        );
-      case 'select':
-        return (
-          <>
-            <div className="flex gap-2 mb-3 w-full">
-              <input
-                className="flex-1 px-3 py-2 border border-[var(--color-gray-300)] bg-[var(--color-alpha-white)] text-[var(--color-gray-900)] rounded-xl text-sm outline-none field-component-focus"
-                placeholder="Add option"
-                value={newOption}
-                onChange={e => {
-                  setNewOption(e.target.value);
-                  if (optionError) setOptionError('');
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && newOption.trim()) {
-                    const trimmed = newOption.trim();
-                    const exists = selectOptions.some(opt => opt.option.toLowerCase() === trimmed.toLowerCase());
-                    if (exists) {
-                      setOptionError('Option already exists');
-                    } else {
-                      const optionColor = color && color !== '#cccccc' ? color : getOptionColor();
-                      setSelectOptions([
-                        ...selectOptions,
-                        { option: trimmed, color: optionColor }
-                      ]);
-                      setColor('');
-                      setNewOption('');
-                      setOptionError('');
-                    }
-                  }
-                }}
-              />
-              {/* <input
-                type="color"
-                value={color || '#cccccc'}
-                onChange={(e) => setColor(e.target.value)}
-                className="flex-shrink-0 inline-flex items-center justify-center px-2 h-9 border border-[var(--color-gray-300)] text-[var(--color-text-tertiary)] rounded-xl hover:bg-[var(--color-hover-bg)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]"
-                style={{ cursor: 'pointer' }}
-              /> */}
-
-              <button
-                type="button"
-                className="px-3 py-1 btn-add-option"
-                onClick={() => {
-                  if (newOption.trim()) {
-                    const trimmed = newOption.trim();
-                    const exists = selectOptions.some(opt => opt.option.toLowerCase() === trimmed.toLowerCase());
-
-                    if (exists) {
-                      setOptionError('Option already exists');
-                    } else {
-                      const optionColor = color && color !== '#cccccc' ? color : getOptionColor();
-                      setSelectOptions([
-                        ...selectOptions,
-                        { option: trimmed, color: optionColor }
-                      ]);
-                      setColor('');
-                      setNewOption('');
-                      setOptionError('');
-                    }
-                  }
-                }}
-              >
-                Add option
-              </button>
-            </div>
-            {optionError && <div className="text-red-500 text-xs mt-1">{optionError}</div>}
-            {selectOptions.length > 0 &&
-              <>
-                <div className="m-2 text-sm font-medium text-[var(--color-text-tertiary)]">Select Default value</div>
-                <div className="flex flex-col gap-1 mb-2 max-w-full border border-primary rounded-xl p-2 group max-h-48 overflow-auto">
-                  {selectOptions.map((opt, idx) => (
-                    <div key={idx} className="relative flex items-center gap-2 min-w-0 hover:bg-[var(--color-hover-bg)] rounded-xl px-1">
-                      <label key={idx} className="inline-flex items-center gap-1 text-[var(--color-gray-700)] cursor-pointer max-w-[200px] min-w-0">
-                        <input
-                          type="radio"
-                          className="flex-shrink-0 checkbox-primary-brand"
-                          checked={singleDefault === opt.option}
-                          onChange={() => setSingleDefault(opt.option)}
-                        />
-                      </label>
-                      <input
-                        type="color"
-                        value={opt.color || '#cccccc'}
-                        onChange={(e) => {
-                          const newOptions = [...selectOptions];
-                          newOptions[idx] = { ...newOptions[idx], color: e.target.value };
-                          setSelectOptions(newOptions);
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="color-input"
-                      />
-
-
-                      {editingOptionIndex === idx ? (
-                        <input
-                          ref={editInputRef}
-                          className='flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] border border-[var(--color-gray-300)] text-xs min-w-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]'
-                          value={editingOptionValue}
-                          onChange={(e) => setEditingOptionValue(e.target.value)}
-                          onBlur={() => {
-                            const trimmedValue = editingOptionValue.trim();
-                            if (trimmedValue && trimmedValue !== opt.option) {
-                              const newOptions = [...selectOptions];
-                              newOptions[idx] = { ...newOptions[idx], option: trimmedValue };
-                              setSelectOptions(newOptions);
-
-                              // Update default value if this option was selected
-                              if (singleDefault === opt.option) {
-                                setSingleDefault(trimmedValue);
-                              }
-                            }
-                            setEditingOptionIndex(null);
-                            setEditingOptionValue('');
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.currentTarget.blur();
-                            } else if (e.key === 'Escape') {
-                              setEditingOptionIndex(null);
-                              setEditingOptionValue('');
-                            }
-                          }}
-                          autoFocus
-                        />
-                      ) : (
-                        <span
-                          className="flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] text-xs truncate min-w-0 cursor-pointer"
-                          onClick={() => {
-                            setEditingOptionIndex(idx);
-                            setEditingOptionValue(opt.option);
-                          }}
-                        >
-                          {opt.option}
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        className=" h-8 w-8 rounded flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectOptions(selectOptions.filter((o, i) => i !== idx));
-                          // Clear default if this option was selected
-                          if (singleDefault === opt.option) {
-                            setSingleDefault('');
-                          }
-                        }}
-                      >
-                        <Trash2 className='w-4 h-4 text-[var(--color-error-400)]' />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </>
-            }
-      
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <div className="mb-3 relative">
-                    <MultiLineText
-                      placeholder="Enter field description..."
-                      value={description}
-                      onChange={value => setDescription(value)}
-                      rows={4}
-                      isBorder={true}
-                    />
-                  </div>
-                  {description && (
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'date':
-        return (
-          <>
-            <div className="mb-3 space-y-2">
-              <div className="mb-3">
-                <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Date format</div>
-                <AdvancedDropdown
-                  options={dateFormatOptions}
-                  value={dateFormat}
-                  onChange={(val) => setDateFormat(val as string)}
-                />
-              </div>
-              <div>
-                <button
-                  className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-2 space-y-2"
-                  onClick={() => setShowDateDefault(v => !v)}
-                >
-                  <Plus className="w-4 h-4" />
-                  Set default value
-                </button>
-                {showDateDefault && (
-                  <DateField
-                    value={formatDefaultDate(dateDefault)}
-                    onChange={handleDateChange}
-                    format={dateFormat}
-                    isBorder={true}
-                  />
-                )}
-              </div>
-            </div>
-
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'year':
-        return (
-          <>
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowYearDefault(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Set default value
-            </button>
-            {showYearDefault && (
-              <Year
-                value={yearDefault}
-                onChange={handleYearChange}
-                isBorder={true}
-              />
-            )}
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description && (
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'time':
-        return (
-          <>
-            <div className="">
-              <div>
-                <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Time Display</div>
-                <div className="grid grid-cols-2 gap-4 mb-2">
-                  <label className={`flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '12' ?
-                    'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
-                    <input
-                      type="radio"
-                      className="hidden"
-                      checked={hourFormat === '12'}
-                      onChange={() => setHourFormat('12')}
-                    />
-                    12 Hrs
-                  </label>
-                  <label className={`flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '24' ?
-                    'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
-                    <input
-                      type="radio"
-                      className="hidden"
-                      checked={hourFormat === '24'}
-                      onChange={() => setHourFormat('24')}
-                    />
-                    24 Hrs
-                  </label>
-                </div>
-              </div>
-
-              {/* Default Value */}
-              <div>
-                <button
-                  className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2"
-                  onClick={() => setShowTimeDefault(v => !v)}
-                >
-                  <Plus className="w-4 h-4" />
-                  Set default value
-                </button>
-                {showTimeDefault && (
-                  <div className="mt-2">
-                    <Time
-                      value={timeDefault}
-                      onChange={setTimeDefault}
-                      config={{
-                        hourFormat: hourFormat,
-                      }}
-                      isBorder={true}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Description - Full Width */}
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description && (
-                    <button
-                      className="absolute right-2 top-0 text-gray-400 hover:text-gray-600 text-sm"
-                      onClick={() => setDescription('')}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'phoneNumber':
-        return (
-          <>
-            <div className="mb-3 space-y-2">
-              <div className="flex items-center gap-2 mb-4">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={phoneValid}
-                    onChange={e => setPhoneValid(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                  <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-                </label>
-                <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Accept only valid phone numbers</span>
-              </div>
-              <div>
-                <button
-                  className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2"
-                  onClick={() => setShowPhoneDefault(v => !v)}
-                >
-                  <Plus className="w-4 h-4" />
-                  Set default value
-                </button>
-                {showPhoneDefault && (
-                  <input
-                    className="field-component field-component-border field-component-focus"
-                    placeholder="Enter default phone number"
-                    value={phoneDefault}
-                    onChange={e => {
-                      const value = e.target.value;
-                      if (/^\d{0,12}$/.test(value)) {
-                        setPhoneDefault(value);
-                      }
-                    }}
-                  />
-                )}
-              </div>
-            </div>
-
-            {/* Description - Full Width */}
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description && (
-                    <button
-                      className="absolute right-2 top-0.5 text-gray-400 hover:text-gray-600 text-sm"
-                      onClick={() => setDescription('')}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'email':
-        return (
-          <>
-            <div className="flex items-center gap-2 mb-3">
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={emailValid}
-                  onChange={e => setEmailValid(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-              </label>
-              <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Email validation</span>
-            </div>
-
-            {/* Default Value */}
-            <div className="mb-0">
-              <button
-                type="button"
-                className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2"
-                onClick={() => setShowEmailDefault(v => !v)}
-              >
-                <Plus className="w-4 h-4" />
-                Set default value
-              </button>
-              {showEmailDefault && (
-                <Email
-                  value={emailDefault}
-                  onChange={value => setEmailDefault(value)}
-                  placeholder="Enter default email..."
-                  isBorder={true}
-                  config={{
-                    emailValid: emailValid
-                  }}
-                />
-              )}
-            </div>
-
-            {/* Description */}
-            <div className="relative">
-              <button
-                type="button"
-                className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2"
-                onClick={() => setShowDescription(v => !v)}
-              >
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <textarea
-                    className="w-full px-3 py-2 description text-sm focus:outline-none min-h-[60px]"
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={e => setDescription(e.target.value)}
-                  />
-                  {description && (
-                    <button
-                      className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
-                      onClick={() => setDescription('')}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'url':
-        return (
-          <>
-            <div className="flex items-center gap-2 mb-3">
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={urlValid}
-                  onChange={e => setUrlValid(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-              </label>
-              <span className="text-sm font-medium text-[var(--color-text-tertiary)]">URL validation</span>
-            </div>
-
-
-            {/* Default Value */}
-            <div className="mb-4">
-              <button
-                type="button"
-                className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]"
-                onClick={() => setShowUrlDefault(v => !v)}
-              >
-                <Plus className="w-4 h-4" />
-                Set default value
-              </button>
-              {showUrlDefault && (
-                <div className="mt-2">
-                  <URLField
-                    value={urlDefault}
-                    onChange={handleUrlChange}
-                    placeholder="e.g. https://example.com"
-                    isBorder={true}
-                    config={{
-                      urlValid: urlValid
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Description */}
-            <div className="relative">
-              <button
-                type="button"
-                className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2"
-                onClick={() => setShowDescription(v => !v)}
-              >
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description && (
-                    <button
-                      className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
-                      onClick={() => setDescription('')}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'percent':
-        return (
-          <>
-            <div className="flex items-center gap-2 mb-3">
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={displayAsProgress}
-                  onChange={e => setDisplayAsProgress(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-              </label>
-              <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Display as progress</span>
-            </div>
-
-            {displayAsProgress && (
-              <>
-                <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Progress color</div>
-                <AdvancedDropdown
-                  options={progressColorOptions}
-                  value={progressColor}
-                  onChange={(val: any) => setProgressColor(val as string)}
-                  placeholder="Select progress color"
-                />
-              </>
-            )}
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowPercentDefault(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Set default value
-            </button>
-            {showPercentDefault && (
-              <input
-                type="text"
-                className="field-component field-component-border field-component-focus"
-                placeholder="Enter default percentage"
-                value={percentDefault?.toString() || ''}
-                onChange={e => {
-                  const value = e.target.value;
-                  if (isValidPercentInput(value)) {
-                    const numericValue = parseFloat(value);
-                    if (numericValue >= 0 && numericValue <= 100) {
-                      setPercentDefault(numericValue);
-                    }
-                  }
-                }}
-              />
-            )}
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'currency':
-        return (
-          <>
-            <div className='flex gap-2 mb-2'>
-              <div className='flex-1'>
-                <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Currency Locale</div>
-                <AdvancedDropdown
-                  options={currencyLocaleOptions}
-                  value={currencyLocale}
-                  onChange={(val) => setCurrencyLocale(val as string)}
-                  placeholder="Select Locale"
-                  searchable={true}
-                />
-              </div>
-              <div className='flex-1'>
-              <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Currency Code</div>
-              <AdvancedDropdown
-                options={currencyOptions}
-                value={currencyType}
-                onChange={(val) => setCurrencyType(val as string)}
-                placeholder="Select Currency"
-                  searchable={true}
-              />
-              </div>
-            </div>
-            <div className="mb-4 text-xs text-gray-600">
-              Selected currency : {
-                currencyType === 'USD' ? '$' :
-                  currencyType === 'EUR' ? '€' :
-                    currencyType === 'GBP' ? '£' :
-                      currencyType === 'JPY' ? '¥' :
-                        currencyType === 'CAD' ? 'C$' :
-                          currencyType === 'AUD' ? 'A$' :
-                            currencyType === 'CHF' ? 'CHF' :
-                              currencyType === 'CNY' ? '¥' :
-                                currencyType === 'INR' ? '₹' :
-                                  currencyType === 'BRL' ? 'R$' : currencyType
-              }
-            </div>
-            <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Precision</div>
-            <AdvancedDropdown
-              options={precisionOptions}
-              value={precision}
-              onChange={(val) => handlePrecisionChange(val as string)}
-              placeholder="Select precision"
-              clearable
-            />
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowCurrencyDefault(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Set default value
-            </button>
-            {showCurrencyDefault && (
-              <Currency
-                value={currencyDefault}
-                onChange={(value: any) => setCurrencyDefault(value)}
-                config={{
-                  currencyType: currencyType,
-                  currencyLocale: currencyLocale,
-                  precision: typeof precision === 'string' ? (precision.split('.')[1]?.length || 0) : precision,
-                  defaultValue: currencyDefault?.toString() || ''
-                }}
-                isBorder={true}
-              />
-            )}
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'duration':
-        return (
-          <>
-            <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Format</div>
-            <AdvancedDropdown
-              options={durationFormatOptions}
-              value={durationFormat}
-              onChange={(val) => setDurationFormat(val as string)}
-            />
-
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDurationDefault(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Set default value
-            </button>
-
-            {showDurationDefault && (
-              <Duration
-                value={durationDefault}
-                onChange={(value) => setDurationDefault(value)}
-                isBorder={true}
-                config={{
-                  durationFormat: durationFormat as "h:mm" | "h:mm:ss" | "h:mm:ss.s" | "h:mm:ss.ss" | "h:mm:ss.sss" | "d:h:mm" | undefined,
-                }}
-              />
-            )}
-
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'rating':
-        const ratingIconOptions = [
-          { key: 'star', label: 'Star', icon: <Star className="w-4 h-4" /> },
-          { key: 'heart', label: 'Heart', icon: <Heart className="w-4 h-4" /> },
-          { key: 'circle', label: 'Circle', icon: <Circle className="w-4 h-4" /> },
-          { key: 'thumb', label: 'Thumb', icon: <ThumbsUp className="w-4 h-4" /> },
-          { key: 'flag', label: 'Flag', icon: <Flag className="w-4 h-4" /> },
-          { key: 'check', label: 'Check', icon: <CheckCircle className="w-4 h-4" /> },
-          { key: 'badge', label: 'Badge', icon: <BadgeCheck className="w-4 h-4" /> },
-          { key: 'shield', label: 'Shield', icon: <ShieldCheck className="w-4 h-4" /> },
-          { key: 'award', label: 'Award', icon: <Award className="w-4 h-4" /> },
-          { key: 'trophy', label: 'Trophy', icon: <Trophy className="w-4 h-4" /> },
-          { key: 'medal', label: 'Medal', icon: <Medal className="w-4 h-4" /> },
-          { key: 'zap', label: 'Zap', icon: <Zap className="w-4 h-4" /> },
-          { key: 'sparkles', label: 'Sparkles', icon: <Sparkles className="w-4 h-4" /> },
-          { key: 'crown', label: 'Crown', icon: <Crown className="w-4 h-4" /> },
-          { key: 'gem', label: 'Gem', icon: <Gem className="w-4 h-4" /> },
-          { key: 'diamond', label: 'Diamond', icon: <Diamond className="w-4 h-4" /> },
-        ];
-
-        const selectedRatingIconOption = ratingIconOptions.find(opt => opt.key === ratingIcon) || ratingIconOptions[0];
-        const selectedRatingColorOption = ratingColorOptions.find(opt => opt.key === ratingColor) || ratingColorOptions[0];
-
-        // Helper to render icons for preview - with fill support for filled icons
-        const getIcon = (icon: string, isFilled: boolean = false) => {
-          const iconProps = {
-            className: "w-5 h-5",
-            fill: isFilled ? "currentColor" : "none",
-          };
-          
-          const iconMap: Record<string, React.ReactNode> = {
-            star: <Star {...iconProps} />,
-            heart: <Heart {...iconProps} />,
-            circle: <Circle {...iconProps} />,
-            thumb: <ThumbsUp {...iconProps} />,
-            flag: <Flag {...iconProps} />,
-            check: <CheckCircle {...iconProps} />,
-            badge: <BadgeCheck {...iconProps} />,
-            shield: <ShieldCheck {...iconProps} />,
-            award: <Award {...iconProps} />,
-            trophy: <Trophy {...iconProps} />,
-            medal: <Medal {...iconProps} />,
-            zap: <Zap {...iconProps} />,
-            sparkles: <Sparkles {...iconProps} />,
-            crown: <Crown {...iconProps} />,
-            gem: <Gem {...iconProps} />,
-            diamond: <Diamond {...iconProps} />
-          };
-          return iconMap[icon] || iconMap.star;
-        };
-
-        return (
-          <>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Icon</div>
-                <div className="relative rating-icon-dropdown">
-                  <button
-                    type="button"
-                    className="w-full px-3 py-2 border border-[var(--color-gray-300)] text-[var(--color-text-tertiary)] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] flex items-center justify-between"
-                    onClick={() => setShowRatingIconDropdown(v => !v)}
-                  >
-                    <div className="flex items-center gap-2">
-                      {selectedRatingIconOption.icon}
-                      <span>{selectedRatingIconOption.label}</span>
-                    </div>
-                    {showRatingIconDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
-                  </button>
-
-                  {showRatingIconDropdown && (
-                    <div className="absolute top-full p-2 space-y-1 left-0 right-0 mt-1 bg-[var(--color-alpha-white)] text-[var(--color-text-secondary)] border border-[var(--color-gray-300)] rounded shadow-lg z-50 max-h-60 overflow-y-auto">
-                      {ratingIconOptions.map((option) => (
-                        <button
-                          key={option.key}
-                          type="button"
-                          className={`w-full px-3 py-2 text-left rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${ratingIcon === option.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
-                          onClick={() => {
-                            setRatingIcon(option.key);
-                            setShowRatingIconDropdown(false);
-                          }}
-                        >
-                          {option.icon}
-                          <span>{option.label}</span>
-                          {ratingIcon === option.key && (
-                            <Check className="w-4 h-4 ml-auto text-black" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Color Selection */}
-              <div>
-                <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Colour</div>
-                <div className="relative rating-color-dropdown">
-                  <button
-                    type="button"
-                    className="w-full px-3 py-2 border text-[var(--color-text-tertiary)] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] flex items-center justify-between"
-                    onClick={() => setShowRatingColorDropdown(v => !v)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full`} style={{ backgroundColor: selectedRatingColorOption.color }}></div>
-                      <span>{selectedRatingColorOption.label}</span>
-                    </div>
-                    {showRatingColorDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
-                  </button>
-
-                  {showRatingColorDropdown && (
-                    <div className="absolute top-full p-2 space-y-1 left-0 right-0 mt-1 bg-[var(--color-alpha-white)] text-[var(--color-text-secondary)] border border-[var(--color-gray-300)] rounded shadow-lg z-50 max-h-60 overflow-y-auto">
-                      {ratingColorOptions.map((color) => (
-                        <button
-                          key={color.key}
-                          type="button"
-                          className={`w-full px-3 py-2 text-left rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${ratingColor === color.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
-                            }`}
-                          onClick={() => {
-                            setRatingColor(color.key);
-                            setShowRatingColorDropdown(false);
-                          }}
-                        >
-                          <div className={`w-4 h-4 rounded-full`} style={{ backgroundColor: color.color }}></div>
-                          <span>{color.label}</span>
-                          {ratingColor === color.key && (
-                            <Check className="w-4 h-4 ml-auto text-black" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Max Rating - Full Width */}
-            <div className="mb-4">
-              <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Max rating</div>
-              <Dropdown
-                options={[1, 2, 3, 4, 5, 6, 7].map(n => ({ label: n.toString(), value: n.toString() }))}
-                value={ratingMax.toString()}
-                onChange={(value: any) => setRatingMax(value)}
-                placeholder="Select max rating"
-              />
-            </div>
-
-            {/* Default Value */}
-            <div className="mb-3">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-1" onClick={() => setShowRatingDefault(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Set default value
-              </button>
-
-              {showRatingDefault && (
-                <div className="flex items-center gap-2" onMouseLeave={() => setRatingDefaultHover(null)}>
-                  <div className="flex gap-1">
-                    {Array.from({ length: ratingMax }, (_, i) => {
-                      const starIndex = i + 1;
-                      // Use hover value if set, otherwise use actual default value
-                      const currentValue = ratingDefaultHover ?? ratingDefault;
-                      const isFilled = currentValue >= starIndex;
-                      return (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => setRatingDefault(starIndex)}
-                          onMouseEnter={() => setRatingDefaultHover(starIndex)}
-                          className={`my-1 h-8 w-8 flex items-center justify-center transition-all duration-150 ${isFilled ? 'scale-110' : 'hover:scale-105'
-                            }`}
-                          title={`Set default to ${starIndex}`}
-                        >
-                          <span className={isFilled ?
-                            (ratingColor === 'yellow' ? 'text-yellow-400 fill-yellow-400' :
-                              ratingColor === 'blue' ? 'text-blue-400 fill-blue-400' :
-                                ratingColor === 'red' ? 'text-red-400 fill-red-400' :
-                                  ratingColor === 'green' ? 'text-green-400 fill-green-400' :
-                                    ratingColor === 'purple' ? 'text-purple-400 fill-purple-400' :
-                                      ratingColor === 'pink' ? 'text-pink-400 fill-pink-400' :
-                                        ratingColor === 'orange' ? 'text-orange-400 fill-orange-400' :
-                                          ratingColor === 'indigo' ? 'text-indigo-400 fill-indigo-400' :
-                                            ratingColor === 'teal' ? 'text-teal-400 fill-teal-400' :
-                                              ratingColor === 'gray' ? 'text-gray-400 fill-gray-400' : 'text-yellow-400 fill-yellow-400') : 'text-gray-300'}>
-                            {getIcon(ratingIcon, isFilled)}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {ratingDefault > 0 && (
-                    <button
-                      type="button"
-                      className="ml-2 text-gray-400 hover:text-gray-600 text-sm"
-                      onClick={() => setRatingDefault(0)}
-                      title="Clear default"
-                    >
-                      Clear
-                    </button>
-                  )}
-                  {
-                    ratingDefault > 0 && (
-                      <span className="text-xs text-gray-500 ml-2">
-                        {`Default: ${ratingDefault}/${ratingMax}`}
-                      </span>
-                    )
-                  }
-                </div>
-              )}
-            </div>
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'datetime':
-      case 'createdTime':
-      case 'lastModifiedTime':
-        return (
-          <>
-            {/* Date Format */}
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Date Format</label>
-              <AdvancedDropdown
-                options={dateFormatOptions}
-                value={dateFormat}
-                onChange={(val) => setDateFormat(val as string)}
-              />
-            </div>
-            {/* Time Format */}
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Time Format</label>
-              <AdvancedDropdown
-                options={timeFormatOptions}
-                value={timeFormat}
-                onChange={(value: any) => setTimeFormat(value)}
-              />
-            </div>
-
-            {/* Time Display Preference */}
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Time Display</label>
-              <div className="flex items-center gap-2">
-                <label className={`flex items-center px-3 py-1.5 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '12'
-                  ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
-                  <input
-                    type="radio"
-                    className="hidden"
-                    checked={hourFormat === '12'}
-                    onChange={() => setHourFormat('12')}
-                  />
-                  12 Hrs
-                </label>
-                <label className={`flex items-center px-3 py-1.5 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '24' ?
-                  'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
-                  <input
-                    type="radio"
-                    className="hidden"
-                    checked={hourFormat === '24'}
-                    onChange={() => setHourFormat('24')}
-                  />
-                  24 Hrs
-                </label>
-              </div>
-            </div>
-
-            {/* Timezone Options */}
-            <div className="mb-3">
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <div className="relative inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={displayTimeZone}
-                      onChange={e => setDisplayTimeZone(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                    <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-                  </div>
-                  <span className="text-sm text-[var(--color-text-tertiary)]">Display time zone</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <div className="relative inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={sameTimezone}
-                      onChange={e => setSameTimezone(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                    <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-                  </div>
-                  <span className="text-sm text-[var(--color-text-tertiary)]">Use same timezone for all members</span>
-                </label>
-                {sameTimezone && (
-                  <div className="mt-2">
-                    <AdvancedDropdown
-                      options={timeZoneOptions.map((o: any) => ({ label: o.label, value: o.label, rightLabel: o.value, description: o.value }))}
-                      value={timeZone}
-                      onChange={(val: any) => setTimeZone(val as string)}
-                      searchable={true}
-                      placeholder="Select time zone"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Default Value - Only show for datetime, not for createdTime/lastModifiedTime */}
-            {selectedType?.key === 'datetime' && (
-              <div className="mb-3">
-                <button
-                  type="button"
-                  className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]"
-                  onClick={() => setShowDateTimeDefault(v => !v)}
-                >
-                  <Plus className="w-4 h-4" />
-                  Set default value
-                </button>
-                {showDateTimeDefault && (
-                  <div className="mt-2">
-                    <DateTime
-                      value={dateTimeDefault}
-                      onChange={(value: any) => setDateTimeDefault(value)}
-                      config={{
-                        dateFormat: dateFormat,
-                        timeFormat: timeFormat,
-                        hourFormat: hourFormat,
-                      }}
-                      isBorder={true}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Description */}
-            <div className="relative">
-              <button
-                type="button"
-                className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2"
-                onClick={() => setShowDescription(v => !v)}
-              >
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description && (
-                    <button
-                      className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
-                      onClick={() => setDescription('')}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'user':
-        return (
-          <>
-            <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Multiple users</div>
-            <div className="flex items-center gap-2 mb-3">
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={allowMultipleUsers}
-                  onChange={e => setAllowMultipleUsers(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-              </label>
-              <span className="text-sm text-gray-600">When enabled, users can select multiple users</span>
-            </div>
-
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowUserDefault(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Set default value
-            </button>
-            {showUserDefault && (
-              <User
-                value={selectedUsers}
-                onChange={(user: any) => setSelectedUsers(user)}
-                config={{
-                  allowMultiple: allowMultipleUsers,
-                  showAvatar: true,
-                }}
-                isBorder={true}
-                placeholder="Select users..."
-              />
-            )}
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'attachment':
-        return (
-            <div className="mb-3 relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </>
-              )}
-            </div>
-        );
-      case 'links':
-        return (
-          <>
-            <div className="mb-4">
-              <div className="mb-2">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Relation Type</span>
-                </div>
-                <div className="text-xs text-gray-500 bg-gray-50 border border rounded-md p-2 mb-2">
-                  <span className="font-medium text-gray-700">What is a Link?</span> A link creates a relationship between tables to reference related records.
-                  Example: link "Orders" to "Customers" to see which customer placed each order.
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  disabled={isLinksFieldEditing}
-                  className={`p-3 rounded-xl border-2 transition-all ${isLinksFieldEditing
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:bg-gray-50'
-                    } ${relationType === 'one-to-one'
-                      ? 'text-[var(--color-text-primary)] rounded-xl border-[var(--color-border-brand)]'
-                    : 'text-[var(--color-text-primary)] border'
-                    }`}
-                  onClick={() => !isLinksFieldEditing && setRelationType('one-to-one')}
-                  title="Each record in this table links to exactly one record in the target table, and vice versa"
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                      <svg className="w-5 h-5" stroke="currentColor" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M13 10C11.8954 10 11 9.10457 11 8C11 6.89543 11.8954 6 13 6C14.1046 6 15 6.89543 15 8C15 9.10457 14.1046 10 13 10Z" stroke="#9333EA" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M3 10C1.89543 10 1 9.10457 1 8C1 6.89543 1.89543 6 3 6C4.10457 6 5 6.89543 5 8C5 9.10457 4.10457 10 3 10Z" stroke="#9333EA" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M5 8L11 8" stroke="#9333EA" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                    <span className="text-xs font-medium">One to One</span>
-                    <p className="text-xs text-gray-500 text-center mt-1 px-1">
-                      Each record links to exactly one related record
-                    </p>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  disabled={isLinksFieldEditing}
-                  className={`p-3 rounded-xl border-2 transition-all ${isLinksFieldEditing
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:bg-gray-50'
-                    } ${relationType === 'has-many'
-                      ? 'text-[var(--color-text-primary)] rounded-xl border-[var(--color-border-brand)]'
-                    : 'text-[var(--color-text-primary)] border'
-                    }`}
-                  onClick={() => !isLinksFieldEditing && setRelationType('has-many')}
-                  title="Each record in this table can link to multiple records in the target table"
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
-                      <svg className="w-5 h-5" stroke="currentColor" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <g>
-                          <path d="M3 10C4.10457 10 5 9.10457 5 8C5 6.89543 4.10457 6 3 6C1.89543 6 1 6.89543 1 8C1 9.10457 1.89543 10 3 10Z" stroke="#FA8231" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M13 10C14.1046 10 15 9.10457 15 8C15 6.89543 14.1046 6 13 6C11.8954 6 11 6.89543 11 8C11 9.10457 11.8954 10 13 10Z" stroke="#FA8231" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M9 15C10.1046 15 11 14.1046 11 13C11 11.8954 10.1046 11 9 11C7.89543 11 7 11.8954 7 13C7 14.1046 7.89543 15 9 15Z" stroke="#FA8231" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M9 5C10.1046 5 11 4.10457 11 3C11 1.89543 10.1046 1 9 1C7.89543 1 7 1.89543 7 3C7 4.10457 7.89543 5 9 5Z" stroke="#FA8231" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M11 8L5 8" stroke="#FA8231" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M7 4L5 6" stroke="#FA8231" strokeWidth="1.33333" strokeLinecap="square" strokeLinejoin="round" />
-                          <path d="M7 12L5 10" stroke="#FA8231" strokeWidth="1.33333" strokeLinecap="square" strokeLinejoin="round" />
-                        </g>
-                      </svg>
-                    </div>
-                    <span className="text-xs font-medium">Has Many</span>
-                    <p className="text-xs text-gray-500 text-center mt-1 px-1">
-                      One record can link to many related records
-                    </p>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  disabled={isLinksFieldEditing}
-                  className={`p-3 rounded-xl border-2 transition-all ${isLinksFieldEditing
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:bg-gray-50'
-                    } ${relationType === 'many-to-many'
-                      ? 'text-[var(--color-text-primary)] rounded-xl border-[var(--color-border-brand)]'
-                    : 'text-[var(--color-text-primary)] border'
-                    }`}
-                  onClick={() => !isLinksFieldEditing && setRelationType('many-to-many')}
-                  title="Records in both tables can link to multiple records in the other table"
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center">
-                      <svg className="w-5 h-5" stroke="currentColor" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 6C10.8954 6 10 5.10457 10 4C10 2.89543 10.8954 2 12 2C13.1046 2 14 2.89543 14 4C14 5.10457 13.1046 6 12 6Z" stroke="#FC3AC6" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M12 14C10.8954 14 10 13.1046 10 12C10 10.8954 10.8954 10 12 10C13.1046 10 14 10.8954 14 12C14 13.1046 13.1046 14 12 14Z" stroke="#FC3AC6" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M4 14C2.89543 14 2 13.1046 2 12C2 10.8954 2.89543 10 4 10C5.10457 10 6 10.8954 6 12C6 13.1046 5.10457 14 4 14Z" stroke="#FC3AC6" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M4 6C2.89543 6 2 5.10457 2 4C2 2.89543 2.89543 2 4 2C5.10457 2 6 2.89543 6 4C6 5.10457 5.10457 6 4 6Z" stroke="#FC3AC6" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M5.5 10.5L10.5 5.5" stroke="#FC3AC6" strokeWidth="1.33333" strokeLinecap="square" strokeLinejoin="round" />
-                        <path d="M5.5 5.5L10.5 10.5" stroke="#FC3AC6" strokeWidth="1.33333" strokeLinecap="square" strokeLinejoin="round" />
-                        <path d="M6 4L10 4" stroke="#FC3AC6" strokeWidth="1.33333" strokeLinecap="square" strokeLinejoin="round" />
-                        <path d="M6 12L10 12" stroke="#FC3AC6" strokeWidth="1.33333" strokeLinecap="square" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                    <span className="text-xs font-medium">Many to Many</span>
-                    <p className="text-xs text-gray-500 text-center mt-1 px-1">
-                      Multiple records link to multiple related records
-                    </p>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Target Table</div>
-              <AdvancedDropdown
-                options={Array.isArray(tables) ? tables.map(table => ({
-                  value: table.id,
-                  label: table.title || table.alias || `Table ${table.id}`
-                })) : []}
-                value={selectedTableId}
-                onChange={(value) => {
-                  if (!isLinksFieldEditing) {
-                  setSelectedTableId(value as string);
-                  const table = Array.isArray(tables) ? tables.find(t => t.id === value) : null;
-                  setSelectedTable(table);
-                  }
-                }}
-                placeholder="Select table to link"
-                searchable
-                clearable
-                disabled={isLinksFieldEditing}
-              />
-              {selectedTable && (
-                <div className="mt-2 text-xs text-gray-500">
-                  Linking to: <span className="font-medium">{selectedTable.title || selectedTable.alias}</span>
-                </div>
-              )}
-              {selectedType.key === 'links' && !selectedTableId && (
-                <div className="mt-1 text-xs text-red-500">
-                  Target table is required for relation fields
-                </div>
-              )}
-            </div>
-
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description && (
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'lookup':
-        { const relationOptions = linkFields.map(field => ({
-          value: field.id,
-          label: field.title || field.name || field.id
-        }));
-
-        const lookupColumnOptions = targetTableFields.map(field => ({
-          value: field.id,
-          label: field.title || field.column_name || field.id
-        }));
-
-        return (
-          <>
-            <div className="flex flex-col md:flex-row gap-3">
-              <div className="mb-4 w-full">
-                <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-2">
-                  Link Field
-                </label>
-                <AdvancedDropdown
-                  options={relationOptions}
-                  value={selectedRelationId}
-                  onChange={(value) => {
-                    setHasUserModifiedLookupColumn(true);
-                    setSelectedRelationId(value as string);
-                  }}
-                  placeholder="-select-"
-                  searchable
-                  clearable
-                />
-                {!selectedRelationId && linkFields.length === 0 && (
-                  <div className="mt-1 text-xs text-orange-500">
-                    No link fields found in this table. Create a link field first.
-                  </div>
-                )}
-              </div>
-
-              <div className="mb-4 w-full">
-                <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-2">
-                  Lookup Field
-                </label>
-                <AdvancedDropdown
-                  options={lookupColumnOptions}
-                  value={selectedLookupColumnId}
-                  onChange={(value) => {
-                    setHasUserModifiedLookupColumn(true);
-                    if (typeof value === 'string' && value) {
-                      setSelectedLookupColumnId(value);
-                    } else {
-                      setSelectedLookupColumnId('');
-                    }
-                  }}
-                  placeholder="-select-"
-                  disabled={!selectedRelationId || isTargetTableLoading}
-                  searchable
-                  clearable
-                />
-                {selectedRelationId && isTargetTableLoading && (
-                  <div className="mt-1 text-xs text-gray-500">Loading fields...</div>
-                )}
-                {selectedRelationId && !isTargetTableLoading && targetTableFields.length === 0 && (
-                  <div className="mt-1 text-xs text-gray-500">No fields available</div>
-                )}
-              </div>
-            </div>
-
-            {selectedRelationId && selectedLookupColumnId && (
-              <div className="mb-4 p-3 bg-gray-50 border rounded-xl">
-                <div className="text-sm text-secondary">
-                  This field will display the <span className="font-semibold">{targetTableFields.find(f => f.id === selectedLookupColumnId)?.title || selectedLookupColumnId} </span>
-                  from the linked record via <span className="font-semibold">{linkFields.find(f => f.id === selectedRelationId)?.title || selectedRelationId}</span>
-                </div>
-              </div>
-            )}
-
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description && (
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </>
-        ); }
-      case 'json':
-        return (
-          <>
-            <div className="mb-3">
-              {/* <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Default JSON</label> */}
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowJsonDefault(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Set default value
-              </button>
-              {showJsonDefault && (
-                  <JSONField
-                    value={defaultValue}
-                    onChange={handleJsonChange}
-                    placeholder='{"key": "value"}'
-                    isBorder={true}
-                  />
-              )}
-            </div>
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
-          </>
-        );
-      case 'createdBy':
-        return (
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
-        );
-      case 'lastModifiedBy':
-        return (
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
-        );
-      case 'formula':
-        return (
-          <>
-              <Formula
-                label="Formula"
-                value={formulaText}
-                config={{
-                  formula: formulaText,
-                  formatting: {
-                    type: formulaFormatting.type,
-                    precision: formulaFormatting.precision,
-                    currency: formulaFormatting.currency,
-                    dateFormat: formulaFormatting.dateFormat
-                  }
-                }}
-                columns={fields.map(field => ({
-                  id: field.id,
-                  name: field.title || field.column_name || field.key,
-                title: field.title || field.column_name || field.key,
-                column_name: field.column_name,
-                key: field.key || field.column_name,
-                type: field.type || field.uidt,
-                system: field.system || field.isSystem
-                }))}
-                onFormulaChange={(formula) => setFormulaText(formula)}
-              onErrorChange={(error) => setFormulaError(error)}
-                isBorder={true}
-                allowEdit={true}
-              helperText="Use {FieldName} to reference other fields."
-              />
-            <div className="relative mt-3">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
-          </>
-        );
-      default:
-        return null;
-    }
-  }
-
+  const renderConfigStep = () => renderNewColumnConfigStep({
+    selectedType,
+    defaultValue,
+    setDefaultValue,
+    description,
+    setDescription,
+    richText,
+    setRichText,
+    showThousands,
+    setShowThousands,
+    precision,
+    setPrecision,
+    checkboxIcon,
+    setCheckboxIcon,
+    checkboxColor,
+    setCheckboxColor,
+    checkboxDefault,
+    setCheckboxDefault,
+    selectOptions,
+    setSelectOptions,
+    color,
+    setColor,
+    newOption,
+    setNewOption,
+    multiDefault,
+    setMultiDefault,
+    singleDefault,
+    setSingleDefault,
+    editingOptionIndex,
+    setEditingOptionIndex,
+    editingOptionValue,
+    setEditingOptionValue,
+    optionError,
+    setOptionError,
+    dateFormat,
+    setDateFormat,
+    dateDefault,
+    setDateDefault,
+    showDateDefault,
+    setShowDateDefault,
+    yearDefault,
+    setYearDefault,
+    showYearDefault,
+    setShowYearDefault,
+    timeFormat,
+    setTimeFormat,
+    timeDefault,
+    setTimeDefault,
+    showTimeDefault,
+    setShowTimeDefault,
+    hourFormat,
+    setHourFormat,
+    displayTimeZone,
+    setDisplayTimeZone,
+    sameTimezone,
+    setSameTimezone,
+    timeZone,
+    setTimeZone,
+    dateTimeDefault,
+    setDateTimeDefault,
+    showDateTimeDefault,
+    setShowDateTimeDefault,
+    phoneValid,
+    setPhoneValid,
+    phoneDefault,
+    setPhoneDefault,
+    showPhoneDefault,
+    setShowPhoneDefault,
+    emailValid,
+    setEmailValid,
+    emailDefault,
+    setEmailDefault,
+    showEmailDefault,
+    setShowEmailDefault,
+    urlValid,
+    setUrlValid,
+    urlDefault,
+    setUrlDefault,
+    showUrlDefault,
+    setShowUrlDefault,
+    displayAsProgress,
+    setDisplayAsProgress,
+    progressColor,
+    setProgressColor,
+    showPercentDefault,
+    setShowPercentDefault,
+    percentDefault,
+    setPercentDefault,
+    durationFormat,
+    setDurationFormat,
+    showDurationDefault,
+    setShowDurationDefault,
+    durationDefault,
+    setDurationDefault,
+    currencyType,
+    setCurrencyType,
+    currencyLocale,
+    setCurrencyLocale,
+    showCurrencyDefault,
+    setShowCurrencyDefault,
+    currencyDefault,
+    setCurrencyDefault,
+    ratingIcon,
+    setRatingIcon,
+    ratingColor,
+    setRatingColor,
+    ratingMax,
+    setRatingMax,
+    ratingDefault,
+    setRatingDefault,
+    showRatingDefault,
+    setShowRatingDefault,
+    ratingDefaultHover,
+    setRatingDefaultHover,
+    allowMultipleUsers,
+    setAllowMultipleUsers,
+    showUserDefault,
+    setShowUserDefault,
+    selectedUsers,
+    setSelectedUsers,
+    relationType,
+    setRelationType,
+    selectedTableId,
+    setSelectedTableId,
+    selectedTable,
+    setSelectedTable,
+    selectedRelationId,
+    setSelectedRelationId,
+    selectedLookupColumnId,
+    setSelectedLookupColumnId,
+    setHasUserModifiedLookupColumn,
+    buttonStyle,
+    setButtonStyle,
+    buttonAction,
+    setButtonAction,
+    openButtonInNewTab,
+    setOpenButtonInNewTab,
+    formulaText,
+    setFormulaText,
+    formulaFormatting,
+    setFormulaFormatting,
+    showJsonDefault,
+    setShowJsonDefault,
+    showTextDefault,
+    setShowTextDefault,
+    showDescription,
+    setShowDescription,
+    showIconDropdown,
+    setShowIconDropdown,
+    showColorDropdown,
+    setShowColorDropdown,
+    showRatingIconDropdown,
+    setShowRatingIconDropdown,
+    showRatingColorDropdown,
+    setShowRatingColorDropdown,
+    fields,
+    tables,
+    linkFields,
+    targetTableFields,
+    isTargetTableLoading,
+    getOptionColor,
+    editInputRef,
+    handleLongtextModalOpen,
+    handleLongtextModalClose,
+    setFormulaError,
+    isValidPercentInput,
+    isLinksFieldEditing,
+  });
   return (
     <div
       ref={modalRef}
@@ -3674,7 +1224,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     <Search className="w-4 h-4" />
                   </span>
                   <input
-                    className="w-full pl-10 pr-3 py-2 text-sm text-[var(--text-color-primary)] border border-[var(--color-border-primary)] rounded-tl-lg rounded-tr-lg focus:outline-none bg-[var(--color-alpha-white)]"
+                    className="w-full pl-10 pr-3 py-2 text-sm text-[var(--text-color-primary)] border rounded-tl-lg rounded-tr-lg focus:outline-none bg-[var(--color-alpha-white)]"
                     placeholder="Search field type"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
@@ -3684,21 +1234,21 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               {/* Scrollable area for filtered types */}
               {filteredTypes.length > 0 && (
                 <div className={`max-h-[230px] p-2 space-y-1 overflow-y-auto rounded-bl-lg border-t-0 rounded-br-lg border bg-[var(--color-alpha-white)] text-[var(--text-color-tertiary)]`}>
-                {filteredTypes.map((type: FieldType) => (
-                  <button
-                    key={type.key}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors ${selectedType?.key === type.key ? 'bg-blue-100' : ''}`}
-                    onClick={() => handleTypeSelect(type)}
-                    style={{ fontWeight: 500, fontSize: 14 }}
-                  >
-                    {(() => {
-                      const IconComponent = type.icon;
-                      return <IconComponent className="w-4 h-4 text-gray-400" />;
-                    })()}
-                    <span className="text-xs">{type.label}</span>
-                  </button>
-                ))}
-              </div>
+                  {filteredTypes.map((type: FieldType) => (
+                    <button
+                      key={type.key}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors ${selectedType?.key === type.key ? 'bg-blue-100' : ''}`}
+                      onClick={() => handleTypeSelect(type)}
+                      style={{ fontWeight: 500, fontSize: 14 }}
+                    >
+                      {(() => {
+                        const IconComponent = type.icon;
+                        return <IconComponent className="w-4 h-4 text-gray-400" />;
+                      })()}
+                      <span className="text-xs">{type.label}</span>
+                    </button>
+                  ))}
+                </div>
               )}
             </>
           )}
@@ -3772,4 +1322,5 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     </div>
   );
 }
+
 

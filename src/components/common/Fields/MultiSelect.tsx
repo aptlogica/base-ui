@@ -281,7 +281,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                     className={`w-full text-left text-sm rounded-xl flex items-center justify-between ${isDisabled || readOnly
                       ? 'text-gray-400 cursor-not-allowed'
                       : 'cursor-pointer'
-                      } ${isSelected ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
+                      } ${isSelected ? 'text-black font-bold' : ''}`}
                   >
                     <div
                       className={`inline-flex justify-between items-center w-full p-1 px-2 rounded-full text-xs min-w-0 ${opt.color ? '' : getOptionColor(label, index)} ${isDisabled ? 'opacity-50' : ''}`}

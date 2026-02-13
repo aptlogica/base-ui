@@ -70,6 +70,7 @@ export function useClickHandler(
 }
 
 // Convert date from one format to another
+// eslint-disable-next-line sonarjs/cognitive-complexity
 export function convertDateFormat(date: string, fromFormat: string, toFormat: string): string {
   if (!date) return '';
 

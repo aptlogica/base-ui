@@ -330,9 +330,8 @@ describe('ImportModal', () => {
   });
 
   describe('file validation', () => {
-    it.skip('shows error when file type is invalid', async () => {
-      // This test requires server-side validation or hook implementation
-      const user = userEvent.setup();
+    it('shows error when file type is invalid', async () => {
+      const user = userEvent.setup({ applyAccept: false });
       renderWithQueryClient(<ImportModal {...defaultProps} importType="csv" />);
 
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -341,13 +340,12 @@ describe('ImportModal', () => {
       await user.upload(fileInput, invalidFile);
 
       await waitFor(() => {
-        expect(screen.getByText(/Invalid file type/i)).toBeInTheDocument();
+        expect(screen.getByText(/Please select a CSV file/i)).toBeInTheDocument();
       });
     });
 
-    it.skip('shows red border on file upload area when there is a file error', async () => {
-      // This test requires file validation error state to be implemented
-      const user = userEvent.setup();
+    it('shows red border on file upload area when there is a file error', async () => {
+      const user = userEvent.setup({ applyAccept: false });
       renderWithQueryClient(<ImportModal {...defaultProps} />);
 
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -487,3 +485,4 @@ describe('ImportModal', () => {
     });
   });
 });
+

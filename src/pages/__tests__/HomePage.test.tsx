@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -754,6 +754,25 @@ describe('HomePage', () => {
         expect(screen.queryByText('Z-A')).not.toBeInTheDocument();
       });
     });
+
+    it('should close sort dropdown on outside click', async () => {
+      const user = userEvent.setup();
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: [createMockBase({ id: 'base-1', title: 'Test Base' })] },
+        isLoading: false,
+      });
+
+      renderWithProviders(<HomePage />);
+
+      const sortButton = screen.getByRole('button', { name: /recents/i });
+      await user.click(sortButton);
+      expect(screen.getByRole('button', { name: /^A-Z$/i })).toBeInTheDocument();
+
+      fireEvent.mouseDown(document.body);
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: /^A-Z$/i })).not.toBeInTheDocument();
+      });
+    });
   });
 
   // ========================================
@@ -864,6 +883,35 @@ describe('HomePage', () => {
         );
       });
       consoleErrorSpy.mockRestore();
+    });
+
+    it('should navigate when tables response is object-shaped data', async () => {
+      const user = userEvent.setup();
+      const mockBases = [createMockBase({ id: 'base-1', title: 'Object Data Base' })];
+      const mockNavigateToFirstView = vi.fn().mockResolvedValue(undefined);
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: mockBases },
+        isLoading: false,
+      });
+
+      mockUseBaseTables.mockReturnValue({
+        data: [{ id: 'table-1', title: 'T1' }],
+        isLoading: false,
+      });
+
+      mockUseNavigateToBaseFirstView.mockReturnValue({
+        navigateToFirstView: mockNavigateToFirstView,
+      });
+
+      renderWithProviders(<HomePage />);
+
+      const baseCard = screen.getByText('Object Data Base').closest('div');
+      await user.click(baseCard!);
+
+      await waitFor(() => {
+        expect(mockNavigateToFirstView).toHaveBeenCalledWith('base-1');
+      });
     });
   });
 

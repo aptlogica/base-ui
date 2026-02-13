@@ -250,5 +250,58 @@ describe('validatePasswordStrength', () => {
     expect(result.containsNameAndEmail).toBe(true);
     expect(result.isValid).toBe(true);
   });
+
+  // Test 12: Returns detailed missing-requirements message
+  it('should return missing requirements error message when basic checks fail', () => {
+    const result = validatePasswordStrength(
+      'short',
+      '',
+      '',
+      ''
+    );
+
+    expect(result.isValid).toBe(false);
+    expect(result.errorMessage).toContain('at least 8 characters');
+    expect(result.errorMessage).toContain('an uppercase letter');
+    expect(result.errorMessage).toContain('a number');
+    expect(result.errorMessage).toContain('a symbol');
+  });
+
+  // Test 13: Returns name/email-specific error when structure is otherwise valid
+  it('should return name/email specific error message', () => {
+    const result = validatePasswordStrength(
+      'John123!Ab',
+      'John',
+      '',
+      'john@example.com'
+    );
+
+    expect(result.hasLength).toBe(true);
+    expect(result.hasUpper).toBe(true);
+    expect(result.hasLower).toBe(true);
+    expect(result.hasNumber).toBe(true);
+    expect(result.hasSymbol).toBe(true);
+    expect(result.containsNameAndEmail).toBe(false);
+    expect(result.errorMessage).toBe("Password must not contain your first name, last name, or email");
+  });
+
+  // Test 14: Returns common-word error when all other checks pass
+  it('should return common-word specific error message', () => {
+    const result = validatePasswordStrength(
+      'Password1!',
+      '',
+      '',
+      ''
+    );
+
+    expect(result.hasLength).toBe(true);
+    expect(result.hasUpper).toBe(true);
+    expect(result.hasLower).toBe(true);
+    expect(result.hasNumber).toBe(true);
+    expect(result.hasSymbol).toBe(true);
+    expect(result.containsNameAndEmail).toBe(true);
+    expect(result.containsCommon).toBe(false);
+    expect(result.errorMessage).toContain("Password must not contain common words");
+  });
 });
 

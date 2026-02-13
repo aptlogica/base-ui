@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/cognitive-complexity */
 export type FilterOp =
   | 'is equal'
   | 'is not equal'

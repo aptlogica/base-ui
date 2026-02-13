@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/cognitive-complexity */
 import React, { useRef, useEffect, useMemo, useState, Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom';
 import { Pin, ChevronDown, Sheet, Plus, Download } from 'lucide-react';

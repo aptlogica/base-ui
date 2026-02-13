@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/cognitive-complexity */
 import { useNavigate } from 'react-router-dom';
 import { replaceNavigate } from '../utils/navigationRedirect';
 import { 

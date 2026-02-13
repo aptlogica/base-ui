@@ -9,6 +9,10 @@ import {
   getBestNavigationTarget,
   resolveWorkspaceIdFromBaseId,
   getSafeNavigationTarget,
+  cleanupWorkspaceNavigation,
+  cleanupBaseNavigation,
+  cleanupTableNavigation,
+  cleanupViewNavigation,
 } from '../navigationPersistence';
 
 function createMemoryStorage() {
@@ -179,5 +183,52 @@ describe('navigationPersistence', () => {
     ];
 
     expect(getSafeNavigationTarget(workspaces as any)).toBe('/workspace/w1/base/b1/table/t1/v1');
+  });
+
+  it('cleanup*Navigation helpers should clear matching scoped ids and report match status', () => {
+    saveLastNavigation({ workspaceId: 'w1', baseId: 'b1', tableId: 't1', viewId: 'v1' }, 'u1');
+
+    expect(cleanupViewNavigation('v1', 'u1')).toBe(true);
+    expect(getLastNavigation('u1')).toEqual({ workspaceId: 'w1', baseId: 'b1', tableId: 't1', viewId: null });
+
+    saveLastNavigation({ workspaceId: 'w1', baseId: 'b1', tableId: 't1', viewId: 'v2' }, 'u1');
+    expect(cleanupTableNavigation('t1', 'u1')).toBe(true);
+    expect(getLastNavigation('u1')).toEqual({ workspaceId: 'w1', baseId: 'b1', tableId: null, viewId: null });
+
+    saveLastNavigation({ workspaceId: 'w1', baseId: 'b1', tableId: null, viewId: null }, 'u1');
+    expect(cleanupBaseNavigation('b1', 'u1')).toBe(true);
+    expect(getLastNavigation('u1')).toEqual({ workspaceId: 'w1', baseId: null, tableId: null, viewId: null });
+
+    saveLastNavigation({ workspaceId: 'w1', baseId: 'b2', tableId: 't2', viewId: 'v2' }, 'u1');
+    expect(cleanupWorkspaceNavigation('w1', 'u1')).toBe(true);
+    expect(getLastNavigation('u1')).toEqual({ workspaceId: null, baseId: null, tableId: null, viewId: null });
+  });
+
+  it('cleanup helpers should return false when deleted id is not current', () => {
+    saveLastNavigation({ workspaceId: 'w2', baseId: 'b2', tableId: 't2', viewId: 'v2' }, 'u1');
+    expect(cleanupWorkspaceNavigation('w1', 'u1')).toBe(false);
+    expect(cleanupBaseNavigation('b1', 'u1')).toBe(false);
+    expect(cleanupTableNavigation('t1', 'u1')).toBe(false);
+    expect(cleanupViewNavigation('v1', 'u1')).toBe(false);
+  });
+
+  it('handles parse and storage failures safely', () => {
+    sessionStorage.setItem('serenibase_session_nav_u1', '{invalid-json');
+    const parseResult = getLastNavigation('u1');
+    expect(parseResult).toEqual({ workspaceId: null, baseId: null, tableId: null, viewId: null });
+
+    const getItemSpy = vi.spyOn(sessionStorage, 'getItem').mockImplementation(() => {
+      throw new Error('storage-read-fail');
+    });
+    expect(hasLastNavigation('u1')).toBe(false);
+    getItemSpy.mockRestore();
+
+    const setItemSpy = vi.spyOn(sessionStorage, 'setItem').mockImplementation(() => {
+      throw new Error('storage-write-fail');
+    });
+    expect(() =>
+      saveLastNavigation({ workspaceId: 'w1', baseId: null, tableId: null, viewId: null }, 'u1')
+    ).not.toThrow();
+    setItemSpy.mockRestore();
   });
 });
