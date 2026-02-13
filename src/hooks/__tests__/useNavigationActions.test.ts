@@ -247,6 +247,16 @@ describe('handleWorkspaceDeletion', () => {
     );
     expect(navigateSpy).toHaveBeenCalledWith('/workspace', { replace: true });
   });
+
+  it('navigates to /workspace when safe target is unavailable', () => {
+    vi.mocked(navPersistenceModule.getSafeNavigationTarget).mockReturnValue('');
+    resetStoreState({ selectedWorkspaceId: 'ws-1' });
+    const { result } = renderHook(() => useNavigationActions(), { wrapper });
+
+    result.current.handleWorkspaceDeletion('ws-1');
+
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace', { replace: true });
+  });
 });
 
 describe('handleBaseDeletion', () => {
@@ -294,6 +304,52 @@ describe('handleBaseDeletion', () => {
     expect(setBase).not.toHaveBeenCalled();
     expect(navigateSpy).not.toHaveBeenCalled();
   });
+
+  it('navigates to first remaining base > first table > first view in same workspace', () => {
+    const ws = [
+      {
+        id: 'ws-1',
+        bases: [
+          { id: 'base-1', tables: [] },
+          {
+            id: 'base-2',
+            tables: [{ id: 'table-2', views: [{ id: 'view-2' }] }],
+          },
+        ],
+      },
+    ];
+    vi.mocked(useWorkspaceDataModule.default).mockReturnValue({ workspaces: ws } as any);
+    resetStoreState({ selectedWorkspaceId: 'ws-1', selectedBaseId: 'base-1' });
+    const { result } = renderHook(() => useNavigationActions(), { wrapper });
+
+    result.current.handleBaseDeletion('base-1');
+
+    expect(navigateToView).toHaveBeenCalledWith('ws-1', 'base-2', 'table-2', 'view-2');
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1/base/base-2/table/table-2/view-2', { replace: true });
+  });
+
+  it('navigates to first remaining table grid when no views are available', () => {
+    const ws = [
+      {
+        id: 'ws-1',
+        bases: [
+          { id: 'base-1', tables: [] },
+          {
+            id: 'base-2',
+            tables: [{ id: 'table-2', views: [] }],
+          },
+        ],
+      },
+    ];
+    vi.mocked(useWorkspaceDataModule.default).mockReturnValue({ workspaces: ws } as any);
+    resetStoreState({ selectedWorkspaceId: 'ws-1', selectedBaseId: 'base-1' });
+    const { result } = renderHook(() => useNavigationActions(), { wrapper });
+
+    result.current.handleBaseDeletion('base-1');
+
+    expect(navigateToTable).toHaveBeenCalledWith('ws-1', 'base-2', 'table-2');
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1/base/base-2/table/table-2/grid', { replace: true });
+  });
 });
 
 describe('handleTableDeletion', () => {
@@ -338,6 +394,41 @@ describe('handleTableDeletion', () => {
     // Assert
     expect(setTable).not.toHaveBeenCalled();
     expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
+  it('navigates to first remaining table > first view in same base', () => {
+    const ws = [
+      {
+        id: 'ws-1',
+        bases: [
+          {
+            id: 'base-1',
+            tables: [
+              { id: 'table-1', views: [] },
+              { id: 'table-2', views: [{ id: 'view-2' }] },
+            ],
+          },
+        ],
+      },
+    ];
+    vi.mocked(useWorkspaceDataModule.default).mockReturnValue({ workspaces: ws } as any);
+    resetStoreState({ selectedWorkspaceId: 'ws-1', selectedBaseId: 'base-1', selectedTableId: 'table-1' });
+    const { result } = renderHook(() => useNavigationActions(), { wrapper });
+
+    result.current.handleTableDeletion('table-1');
+
+    expect(navigateToView).toHaveBeenCalledWith('ws-1', 'base-1', 'table-2', 'view-2');
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1/base/base-1/table/table-2/view-2', { replace: true });
+  });
+
+  it('navigates to workspace when selected workspace/base ids are missing', () => {
+    vi.mocked(navPersistenceModule.cleanupTableNavigation).mockReturnValue(true);
+    resetStoreState({ selectedWorkspaceId: null, selectedBaseId: null, selectedTableId: 'table-1' });
+    const { result } = renderHook(() => useNavigationActions(), { wrapper });
+
+    result.current.handleTableDeletion('table-1');
+
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace', { replace: true });
   });
 });
 

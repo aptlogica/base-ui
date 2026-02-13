@@ -7,14 +7,14 @@ export const validateEmail = (value: string): string | null => {
   if (!value?.trim()) return 'This field is required';
   const trimmed = value.trim();
   if (!trimmed) return 'This field is required';
-  for (let i = 0; i < trimmed.length; i++) {
+  for (const element of trimmed) {
     if (
-      trimmed[i] === ' ' ||
-      trimmed[i] === '\n' ||
-      trimmed[i] === '\r' ||
-      trimmed[i] === '\t' ||
-      trimmed[i] === '\f' ||
-      trimmed[i] === '\v'
+      element === ' ' ||
+      element === '\n' ||
+      element === '\r' ||
+      element === '\t' ||
+      element === '\f' ||
+      element === '\v'
     ) {
       return 'Please enter a valid email address';
     }

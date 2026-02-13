@@ -255,7 +255,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   const {
     currentDate,
     setCurrentDate,
-    selectedDate,
     setSelectedDate,
     currentView,
     setCurrentView,
@@ -275,7 +274,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     draftFilter,
     localFieldConfig,
     visibleColumns,
-    handleRealTimeFilter,
     handleAddFilter,
     handleRemoveFilter,
     handleUpdateFilter,
@@ -471,9 +469,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         onAddFilter={handleAddFilter}
         onRemoveFilter={handleRemoveFilter}
         onUpdateFilter={handleUpdateFilter}
-        onRealTimeFilter={handleRealTimeFilter}
         onGroupByChange={isReadOnly ? undefined : handleGroupByChange}
-        tableId={uiTableId}
+        // tableId={uiTableId}
         events={sortedEvents.map(e => ({ ...e, id: String(e.id) }))}
       />
 
@@ -487,7 +484,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               events={sortedEvents}
               onEventClick={onEventClickHandler}
               onDateClick={onDateClickHandler}
-              onDateSelect={setSelectedDate}
               columns={visibleColumns}
               fieldConfig={localFieldConfig}
             />
@@ -498,7 +494,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               events={sortedEvents}
               onEventClick={onEventClickHandler}
               onDateClick={onDateClickHandler}
-              onDateSelect={setSelectedDate}
               dateField={dateField}
               columns={visibleColumns}
               fieldConfig={localFieldConfig}
@@ -510,7 +505,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               events={sortedEvents}
               onEventClick={onEventClickHandler}
               onDateClick={onDateClickHandler }
-              onDateSelect={setSelectedDate}
               dateField={dateField}
               columns={visibleColumns}
               fieldConfig={localFieldConfig}
@@ -520,8 +514,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             <YearView
               currentDate={currentDate}
               events={sortedEvents}
-              onEventClick={onEventClickHandler}
-              onDateClick={onDateClickHandler}
               onDateSelect={setSelectedDate}
               onViewChange={handleViewChange}
             />
@@ -534,8 +526,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             <EventsSidebar
               events={sortedEvents}
               onEventClick={onEventClickHandler}
-              onDateSelect={setSelectedDate}
-              selectedDate={selectedDate}
               currentView={currentView}
               currentDate={currentDate}
               columns={visibleColumns}
@@ -582,7 +572,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           isOpen={modalState.export.isOpen}
           onClose={handleCloseExportModal}
           events={events}
-          dateField={dateField}
         />
       )}
     </div>

@@ -303,7 +303,7 @@ export const Duration: React.FC<DurationProps> = ({
 
   const displayContent = localValue !== null && localValue !== undefined
     ? formatDuration(localValue, durationFormat)
-    : <span className="text-gray-400">{durationFormat}</span>;
+    : <span className="!text-gray-400">{durationFormat}</span>;
 
   return (
     <div className="w-full relative">

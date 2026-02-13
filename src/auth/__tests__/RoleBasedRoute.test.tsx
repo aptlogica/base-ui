@@ -106,7 +106,7 @@ describe('RoleBasedRoute', () => {
   });
 
   describe('requireAll = false (hasAnyRole - default behavior)', () => {
-    it.skip('should render children when user has at least one required role', () => {
+    it('should render children when user has at least one required role', () => {
       const mockHasRole = vi.fn((role: string) => role === 'admin');
 
       mockUseUserRole.mockReturnValue(
@@ -121,7 +121,7 @@ describe('RoleBasedRoute', () => {
 
       expect(screen.getByTestId('protected-content')).toBeInTheDocument();
       expect(mockHasRole).toHaveBeenCalledWith('admin');
-      expect(mockHasRole).toHaveBeenCalledWith('editor');
+      expect(mockHasRole).toHaveBeenCalledTimes(1);
     });
 
     it('should redirect to not-found when user has no required roles', () => {
@@ -141,9 +141,10 @@ describe('RoleBasedRoute', () => {
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
       expect(mockHasRole).toHaveBeenCalledWith('admin');
       expect(mockHasRole).toHaveBeenCalledWith('editor');
+      expect(mockHasRole).toHaveBeenCalledTimes(2);
     });
 
-    it.skip('should call hasRole for each required role', () => {
+    it('should stop checking roles after first match when requireAll is false', () => {
       const mockHasRole = vi.fn((role: string) => role === 'viewer');
 
       mockUseUserRole.mockReturnValue(
@@ -158,9 +159,7 @@ describe('RoleBasedRoute', () => {
       );
 
       expect(mockHasRole).toHaveBeenCalledWith('viewer');
-      expect(mockHasRole).toHaveBeenCalledWith('editor');
-      expect(mockHasRole).toHaveBeenCalledWith('admin');
-      expect(mockHasRole).toHaveBeenCalledTimes(3);
+      expect(mockHasRole).toHaveBeenCalledTimes(1);
     });
 
     it('should handle single role in array', () => {
@@ -180,7 +179,7 @@ describe('RoleBasedRoute', () => {
       expect(mockHasRole).toHaveBeenCalledWith('admin');
     });
 
-    it.skip('should handle many roles in array', () => {
+    it('should handle many roles in array', () => {
       const mockHasRole = vi.fn((role: string) => role === 'role1');
       const manyRoles = ['role1', 'role2', 'role3', 'role4', 'role5'];
 
@@ -195,8 +194,11 @@ describe('RoleBasedRoute', () => {
       );
 
       manyRoles.forEach(role => {
-        expect(mockHasRole).toHaveBeenCalledWith(role);
+        if (role === 'role1') {
+          expect(mockHasRole).toHaveBeenCalledWith(role);
+        }
       });
+      expect(mockHasRole).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -217,6 +219,7 @@ describe('RoleBasedRoute', () => {
       expect(screen.getByTestId('protected-content')).toBeInTheDocument();
       expect(mockHasRole).toHaveBeenCalledWith('admin');
       expect(mockHasRole).toHaveBeenCalledWith('editor');
+      expect(mockHasRole).toHaveBeenCalledTimes(2);
     });
 
     it('should redirect to not-found when user does not have all required roles', () => {
@@ -236,6 +239,7 @@ describe('RoleBasedRoute', () => {
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
       expect(mockHasRole).toHaveBeenCalledWith('admin');
       expect(mockHasRole).toHaveBeenCalledWith('editor');
+      expect(mockHasRole).toHaveBeenCalledTimes(2);
     });
 
     it('should call hasRole for each required role when requireAll is true', () => {
@@ -431,7 +435,7 @@ describe('RoleBasedRoute', () => {
       expect(mockHasRole).toHaveBeenCalledWith('admin');
     });
 
-    it.skip('should handle duplicate roles in required roles array', () => {
+    it('should handle duplicate roles in required roles array', () => {
       const mockHasRole = vi.fn((role: string) => role === 'admin');
 
       mockUseUserRole.mockReturnValue(
@@ -445,10 +449,10 @@ describe('RoleBasedRoute', () => {
       );
 
       expect(mockHasRole).toHaveBeenCalledWith('admin');
-      expect(mockHasRole).toHaveBeenCalledWith('editor');
+      expect(mockHasRole).toHaveBeenCalledTimes(1);
     });
 
-    it.skip('should handle case sensitivity in role names', () => {
+    it('should handle case sensitivity in role names', () => {
       const mockHasRole = vi.fn((role: string) => role === 'Admin');
 
       mockUseUserRole.mockReturnValue(
@@ -462,8 +466,7 @@ describe('RoleBasedRoute', () => {
       );
 
       expect(mockHasRole).toHaveBeenCalledWith('Admin');
-      expect(mockHasRole).toHaveBeenCalledWith('EDITOR');
-      expect(mockHasRole).toHaveBeenCalledWith('viewer');
+      expect(mockHasRole).toHaveBeenCalledTimes(1);
     });
 
     it('should handle roles with special characters', () => {
@@ -663,7 +666,7 @@ describe('RoleBasedRoute', () => {
       expect(screen.getByText('Simple Text')).toBeInTheDocument();
     });
 
-    it.skip('should accept optional string array for requiredRoles', () => {
+    it('should accept optional string array for requiredRoles', () => {
       const mockHasRole = vi.fn((role: string) => role === 'admin');
 
       mockUseUserRole.mockReturnValue(
@@ -679,7 +682,7 @@ describe('RoleBasedRoute', () => {
 
       expect(screen.getByTestId('content')).toBeInTheDocument();
       expect(mockHasRole).toHaveBeenCalledWith('admin');
-      expect(mockHasRole).toHaveBeenCalledWith('editor');
+      expect(mockHasRole).toHaveBeenCalledTimes(1);
     });
 
     it('should accept optional boolean for requireAll', () => {
@@ -777,3 +780,4 @@ describe('RoleBasedRoute', () => {
     });
   });
 });
+

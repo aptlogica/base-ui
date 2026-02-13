@@ -161,3 +161,84 @@ describe('formulaHelper helpers', () => {
     expect(convertResultToValue(5, 'number')).toBe(5);
   });
 });
+
+describe('formulaHelper edge coverage', () => {
+  it('handles evaluateFormula guard and fallback paths', () => {
+    expect(evaluateFormula('   ', context, validateNone)).toEqual({ result: null, error: null });
+
+    const validationError = evaluateFormula('ADD(1,2)', context, () => 'forced error');
+    expect(validationError.result).toBeNull();
+    expect(validationError.error).toBe('forced error');
+
+    const unknown = evaluateFormula('UNKNOWN_FN(1)', context, validateNone);
+    expect(unknown).toEqual({ result: null, error: null });
+  });
+
+  it('covers formatResult date/number fallback branches', () => {
+    const nowText = formatResult(new Date('2024-01-02T10:20:30Z'), 'date', 0, {}, 'NOW()');
+    expect(nowText.length).toBeGreaterThan(0);
+
+    expect(formatResult(42, 'text', 2, {}, '')).toBe('42');
+    expect(formatResult('abc', 'text', 2, {}, '')).toBe('abc');
+  });
+
+  it('covers helper fallbacks for column resolution and values', () => {
+    const allColumnsContext: FormulaContext = {
+      columns: [],
+      allColumns: [{ id: 'x1', title: 'Amount', column_name: 'amount', uidt: 'number', key: 'amount_key' }],
+      rowData: { data: { amount_key: '12.5' } },
+    };
+
+    expect(getColumnIdentifier('Amount', allColumnsContext)).toBe('amount_key');
+    expect(getFieldType('Amount', allColumnsContext)).toBe('number');
+    expect(getFieldValue('Amount', allColumnsContext)).toBe(12.5);
+
+    const previewContext: FormulaContext = {
+      columns: [{ id: 'b1', title: 'IsActive', column_name: 'is_active', uidt: 'boolean', key: 'is_active' }],
+      allColumns: [],
+    };
+
+    expect(getBooleanValue('IsActive', previewContext)).toBe(false);
+    expect(getTextFieldValue('Missing', previewContext)).toBe('');
+  });
+
+  it('covers getFieldValueByType unknown-type fallback ordering \(boolean-first\)', () => {
+    const unknownTypeContext: FormulaContext = {
+      columns: [{ id: 'u1', title: 'Score', column_name: 'score', uidt: 'unknown', key: 'score' }],
+      allColumns: [],
+      rowData: { score: '9' },
+    };
+
+    expect(getFieldValueByType('Score', unknownTypeContext)).toBe(true);
+  });
+
+  it('covers function hint helpers and cursor guards', () => {
+    expect(getFunctionSyntax('CUSTOM()', 'CUSTOM({A}, {B})')).toBe('CUSTOM(number1, number2)');
+    expect(getFunctionSyntax('X()', '')).toBe('X(...)');
+
+    expect(detectCurrentFunction('{Price} >= {Qty}')?.name).toBe('>=');
+    expect(getFunctionAtCursor('ADD({Price}, 1)', -1)).toBeNull();
+    expect(getFunctionAtCursor('ADD({Price}, 1)', 999)).toBeNull();
+  });
+
+  it('covers normalize and convert edge paths', () => {
+    expect(normalizeForComparison('1e3')).toBe('1e3');
+    expect(normalizeForComparison(' 12 ')).toBe(12);
+    expect(normalizeForComparison(null)).toBeNull();
+
+    expect(convertResultToValue(false, 'boolean')).toBe(false);
+    expect(convertResultToValue('hello', 'text')).toBe('hello');
+  });
+
+  it('covers validation error paths for operator usage', () => {
+    const invalidPair = validateFormula('{Price} ++ {Qty}', context);
+    expect(invalidPair).toContain('Invalid operator usage');
+
+    const invalidStart = validateFormula('* {Price}', context);
+    expect(invalidStart).toContain('cannot start with * or /');
+
+    const invalidEnd = validateFormula('{Price} +', context);
+    expect(invalidEnd).toContain('cannot end with an operator');
+  });
+});
+

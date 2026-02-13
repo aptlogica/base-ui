@@ -391,7 +391,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       } else {
         const optionColor = optionColorMap.get(stackName);
         // Only use option color if it's a valid non-empty hex/color string
-        if (optionColor && optionColor.trim() && optionColor !== '') {
+        if (optionColor?.trim() && optionColor !== '') {
           stackColor = optionColor.trim();
         } else {
           // Fall back to default color if no valid color found

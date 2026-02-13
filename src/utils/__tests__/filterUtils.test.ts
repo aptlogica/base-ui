@@ -5,7 +5,17 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseMultiSelectValue } from '../filterUtils';
+import {
+  parseMultiSelectValue,
+  matchesFilter,
+  applyFilters,
+  operatorRequiresValue,
+  isFilterComplete,
+  getDefaultOperator,
+  formatDurationValue,
+  normalizeFilterValue,
+  getVisibleColumns,
+} from '../filterUtils';
 
 describe('parseMultiSelectValue', () => {
   // Test 1: Simple array of strings (happy path)
@@ -85,6 +95,105 @@ describe('parseMultiSelectValue', () => {
     // Should convert to string representation
     expect(result).toHaveLength(2);
     expect(typeof result[0]).toBe('string');
+  });
+});
+
+describe('matchesFilter and applyFilters', () => {
+  const columns = [
+    { key: 'name', uidt: 'text' },
+    { key: 'status', uidt: 'select' },
+    { key: 'tags', uidt: 'multiSelect' },
+    { key: 'score', uidt: 'number' },
+    { key: 'done', uidt: 'boolean' },
+    { key: 'due', uidt: 'date' },
+  ];
+
+  const card = {
+    data: {
+      name: 'Alpha Task',
+      status: 'Open',
+      tags: ['red', 'blue'],
+      score: 10,
+      done: true,
+      due: '2026-01-10',
+    },
+  };
+
+  it('handles text/select/multiselect comparisons', () => {
+    expect(matchesFilter(card, { column: 'name', operator: 'contains', value: 'alpha' }, columns)).toBe(true);
+    expect(matchesFilter(card, { column: 'status', operator: 'is equal', value: 'Open' }, columns)).toBe(true);
+    expect(matchesFilter(card, { column: 'tags', operator: 'contains any of', value: ['green', 'red'] }, columns)).toBe(true);
+    expect(matchesFilter(card, { column: 'tags', operator: 'does not contain any of', value: ['yellow'] }, columns)).toBe(true);
+  });
+
+  it('handles numeric/boolean/date operators', () => {
+    expect(matchesFilter(card, { column: 'score', operator: 'greater than', value: 9 }, columns)).toBe(true);
+    expect(matchesFilter(card, { column: 'done', operator: 'is checked', value: '' }, columns)).toBe(true);
+    expect(matchesFilter(card, { column: 'due', operator: 'after', value: '2026-01-01' }, columns)).toBe(true);
+  });
+
+  it('returns true when referenced column is missing', () => {
+    expect(matchesFilter(card, { column: 'missing', operator: 'is equal', value: 'x' }, columns)).toBe(true);
+  });
+
+  it('applies filters with AND/OR logic correctly', () => {
+    const cards = [
+      { data: { name: 'Alpha', score: 10 } },
+      { data: { name: 'Beta', score: 2 } },
+      { data: { name: 'Gamma', score: 20 } },
+    ];
+
+    const filtered = applyFilters(cards, [
+      { column: 'name', operator: 'contains', value: 'a', logic: 'AND' },
+      { column: 'score', operator: 'greater than', value: 15, logic: 'OR' },
+    ], [{ key: 'name', uidt: 'text' }, { key: 'score', uidt: 'number' }]);
+
+    expect(filtered).toHaveLength(3);
+
+    const andFiltered = applyFilters(cards, [
+      { column: 'name', operator: 'contains', value: 'a', logic: 'AND' },
+      { column: 'score', operator: 'greater than', value: 15, logic: 'AND' },
+    ], [{ key: 'name', uidt: 'text' }, { key: 'score', uidt: 'number' }]);
+
+    expect(andFiltered.map((c: any) => c.data.name)).toEqual(['Gamma']);
+  });
+});
+
+describe('filter helper utilities', () => {
+  it('checks operator value requirements and filter completeness', () => {
+    expect(operatorRequiresValue('is empty')).toBe(false);
+    expect(operatorRequiresValue('is equal')).toBe(true);
+
+    expect(isFilterComplete({ column: 'name', operator: 'is equal', value: 'x' })).toBe(true);
+    expect(isFilterComplete({ column: 'name', operator: 'is empty', value: '' })).toBe(true);
+    expect(isFilterComplete({ column: '', operator: 'is equal', value: 'x' })).toBe(false);
+  });
+
+  it('resolves default operator and normalizes values', () => {
+    expect(getDefaultOperator('number')).toBe('is equal');
+    expect(getDefaultOperator('unknown-type')).toBe('is equal');
+
+    expect(normalizeFilterValue({ operator: 'is empty', value: 'abc' }, 'abc')).toBe('');
+    expect(normalizeFilterValue({ operator: 'is equal', value: ' abc ' }, undefined)).toBe('abc');
+  });
+
+  it('formats duration values across supported formats', () => {
+    expect(formatDurationValue(90, 'h:mm')).toBe('1:30');
+    expect(formatDurationValue(90, 'h:mm:ss')).toBe('1:30:00');
+    expect(formatDurationValue(1500, 'd:h:mm')).toBe('1:01:00');
+    expect(formatDurationValue(5, 'custom')).toBe('5');
+  });
+
+  it('filters visible columns by id and excluded types', () => {
+    const cols = [
+      { key: 'id', uidt: 'number' },
+      { key: 'name', uidt: 'text' },
+      { column_name: 'status', uidt: 'select' },
+      { key: 'meta', uidt: 'json' },
+    ];
+
+    const visible = getVisibleColumns(cols, ['json', 'select']);
+    expect(visible.map((c) => c.key || c.column_name)).toEqual(['name']);
   });
 });
 

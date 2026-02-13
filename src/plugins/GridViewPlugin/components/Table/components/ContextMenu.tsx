@@ -50,7 +50,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     // Use requestAnimationFrame to ensure menu is rendered before measuring
     requestAnimationFrame(() => {
       if (!menuRef.current) return;
-      
+
       const menuRect = menuRef.current.getBoundingClientRect();
       const menuHeight = menuRect.height || 200; // Fallback estimate
       const menuWidth = menuRect.width || 180; // Fallback estimate
@@ -126,11 +126,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
       {/* Delete record - only show if user can delete */}
       {canDeleteRecord && (
-        <>
-          <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors" onClick={onDelete}>
-            <Trash2 className="w-4 h-4" /> Delete record
-          </button>
-        </>
+        <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors" onClick={onDelete}>
+          <Trash2 className="w-4 h-4" /> Delete record
+        </button>
       )}
     </div>
   );

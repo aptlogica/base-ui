@@ -30,7 +30,7 @@ vi.mock('../../../types/fieldTypes', () => {
   return {
     FIELD_TYPES: [
       'text','number','decimal','boolean','select','multiSelect','rating','datetime','createdTime','lastModifiedTime',
-      'currency','percent','duration','year','date','time','phoneNumber','email','url','user','button','json','formula','links'
+      'currency','percent','duration','year','date','time','phoneNumber','email','url','user','button','json','formula','links','lookup'
     ].map(makeType),
   };
 });
@@ -113,11 +113,94 @@ describe('NewColumnModal', () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
+  it('renders nothing when modal is closed', () => {
+    const { container } = render(
+      <NewColumnModal
+        isOpen={false}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />
+    );
+
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('calls onClose when Cancel is clicked', () => {
+    const onClose = vi.fn();
+    render(
+      <NewColumnModal
+        isOpen={true}
+        onClose={onClose}
+        onSave={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('does not save when field type is not selected', () => {
+    const onSave = vi.fn();
+    render(
+      <NewColumnModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Save Field'));
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('allows same field name for current field in edit mode', () => {
+    const onSave = vi.fn();
+    render(
+      <NewColumnModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={onSave}
+        fields={[{ id: 'c1', title: 'Status' }]}
+        initialValues={{ id: 'c1', title: 'Status', type: 'text' }}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Save Field'));
+    expect(onSave).toHaveBeenCalled();
+  });
+
   it('blocks saving links field without target table', () => {
     const onSave = renderWithType('links');
     fireEvent.click(screen.getByText('Save Field'));
     expect(onSave).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledWith('Target table is required for relation fields');
+  });
+
+  it('blocks saving lookup field without selecting link field', () => {
+    const onSave = renderWithType('lookup');
+    fireEvent.click(screen.getByText('Save Field'));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith('Please select a Link Field');
+  });
+
+  it('auto-generates a field name when empty', () => {
+    const onSave = vi.fn();
+    render(
+      <NewColumnModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={onSave}
+        fields={[{ id: 'c2', title: 'Text' }]}
+      />
+    );
+
+    fireEvent.click(screen.getByText('text'));
+    fireEvent.click(screen.getByText('Save Field'));
+
+    expect(onSave).toHaveBeenCalled();
+    const payload = onSave.mock.calls[0][0];
+    expect(payload.name).toBe('Text 1');
+    expect(payload.title).toBe('Text 1');
   });
 
   it.each([

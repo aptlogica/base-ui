@@ -158,13 +158,13 @@ export const Search: React.FC<SearchProps> = ({
   const filteredFields = React.useMemo(() => {
     // Normalize search term to lowercase for case-insensitive comparison
     const normalizedSearchTerm = fieldSearchTerm.toLowerCase().trim();
-    
+
     return columns.filter(column => {
       // Include if it matches the search term (case-insensitive)
       const columnTitle = (column.title || '').toLowerCase();
       const columnName = (column.column_name || '').toLowerCase();
-      const matchesSearch = normalizedSearchTerm === '' || 
-        columnTitle.includes(normalizedSearchTerm) || 
+      const matchesSearch = normalizedSearchTerm === '' ||
+        columnTitle.includes(normalizedSearchTerm) ||
         columnName.includes(normalizedSearchTerm);
 
       // Exclude system fields except Title (case-insensitive comparison)
@@ -196,7 +196,7 @@ export const Search: React.FC<SearchProps> = ({
           <span className='flex items-center gap-1 text-sm '>{getFieldIcon(selectedField?.type || '')} {selectedField?.title}</span>
           {isDropdownOpen ? (
             <ChevronUp className="w-3 h-3 transition-transform" />
-          ):(
+          ) : (
             <ChevronDown className="w-3 h-3 transition-transform" />
           )}
         </button>

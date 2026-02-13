@@ -50,7 +50,6 @@ const EventChip: React.FC<EventChipProps> = ({
       options: {
         formatTime,
         fieldConfig,
-        selectedDateFieldId: undefined,
       },
     });
   }, [showTooltip, event, columns, fieldConfig, formatTime]);

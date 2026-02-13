@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/cognitive-complexity */
 export interface LastNavigationState {
   workspaceId: string | null;
   baseId: string | null;

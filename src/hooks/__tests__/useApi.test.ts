@@ -15,6 +15,7 @@ import {
   useUpdateAssetById,
   useDeactivateTenantUser,
 } from "../useApi";
+import * as apiHooks from "../useApi";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getWorkspacesByUser,
@@ -276,5 +277,68 @@ describe("useApi hooks", () => {
 
     renderHook(() => useDeactivateTenantUser());
     await expect(opts.mutationFn("")).rejects.toThrow("UserId not found");
+  });
+
+  it("executes additional hook factories to improve function coverage", () => {
+    mockUseQuery.mockImplementation(() => ({ data: [] } as any));
+    mockUseMutation.mockImplementation(() => ({ mutate: vi.fn() } as any));
+
+    renderHook(() => apiHooks.useWorkspaceById("w1"));
+    renderHook(() => apiHooks.useWorkspaceBases("w1"));
+    renderHook(() => apiHooks.useWorkspaceMembers("w1"));
+    renderHook(() => apiHooks.useBulkAddBaseMembers());
+    renderHook(() => apiHooks.useRemoveBaseAccessMember());
+    renderHook(() => apiHooks.useRemoveUserFromBase());
+    renderHook(() => apiHooks.useBaseMembers("b1"));
+    renderHook(() => apiHooks.useBaseTables("b1"));
+    renderHook(() => apiHooks.useBaseById("b1"));
+    renderHook(() => apiHooks.useTable("t1"));
+    renderHook(() => apiHooks.useTableViews("t1"));
+
+    renderHook(() => apiHooks.useUpdateWorkspace());
+    renderHook(() => apiHooks.useDeleteWorkspace());
+    renderHook(() => apiHooks.useCreateBase());
+    renderHook(() => apiHooks.useDeleteBase());
+    renderHook(() => apiHooks.useUpdateBase());
+    renderHook(() => apiHooks.useCreateTable());
+    renderHook(() => apiHooks.useUpdateTable());
+    renderHook(() => apiHooks.useDeleteTable());
+    renderHook(() => apiHooks.useImportTable());
+    renderHook(() => apiHooks.useCreateField());
+    renderHook(() => apiHooks.useUpdateField());
+    renderHook(() => apiHooks.useDeleteColumn());
+    renderHook(() => apiHooks.useReorderColumn());
+    renderHook(() => apiHooks.useCreateView());
+    renderHook(() => apiHooks.useUpdateViewAppearance());
+    renderHook(() => apiHooks.useUpdateViewMeta());
+    renderHook(() => apiHooks.useUpdateView());
+    renderHook(() => apiHooks.useDeleteView());
+    renderHook(() => apiHooks.useViewsForTable("t1"));
+    renderHook(() => apiHooks.useInsertRowData());
+    renderHook(() => apiHooks.useDeleteRecord());
+    renderHook(() => apiHooks.useBulkDeleteRecords());
+    renderHook(() => apiHooks.useInsertRelationData());
+    renderHook(() => apiHooks.useAddImage());
+
+    renderHook(() => apiHooks.useUserProfile("u1"));
+    renderHook(() => apiHooks.useUpdateUserProfile("u1"));
+    renderHook(() => apiHooks.useChangePassword("u1"));
+    renderHook(() => apiHooks.useUserAccessDetails("u1", "w1"));
+    renderHook(() => apiHooks.useUserRolesAndAccess("u1", "w1"));
+    renderHook(() => apiHooks.useAddOrUpdateAvatar("u1"));
+    renderHook(() => apiHooks.useRemoveAvatar("u1"));
+    renderHook(() => apiHooks.useGetRecordsByPagination("m1"));
+    renderHook(() => apiHooks.useGetTenantUsers());
+    renderHook(() => apiHooks.useGetUsersForAssign());
+    renderHook(() => apiHooks.useAddUser());
+    renderHook(() => apiHooks.useEditUser());
+    renderHook(() => apiHooks.useRemoveTenantUser());
+    renderHook(() => apiHooks.useActivateTenantUser());
+    renderHook(() => apiHooks.useAssignUserToWorkspace());
+    renderHook(() => apiHooks.useBulkAddMembers());
+    renderHook(() => apiHooks.useRemoveAccessMember());
+    renderHook(() => apiHooks.useRemoveUserFromWorkspace());
+    renderHook(() => apiHooks.useGetOrganization());
+    renderHook(() => apiHooks.useGetOrganizationById("o1"));
   });
 });

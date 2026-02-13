@@ -536,3 +536,147 @@ describe('buildEventTooltip', () => {
     });
   });
 });
+
+describe('buildEventTooltipLines - additional coverage', () => {
+  const formatTime = (t: string) => `fmt-${t}`;
+
+  it('skips category/tag/type keys', () => {
+    const event = {
+      title: 'Event',
+      dateTime: new Date('2026-01-30T14:30:00'),
+      data: { category: 'Work', tags: 'Blue', itemType: 'Task', notes: 'Visible' },
+    };
+
+    const columns = [
+      { id: '1', columnName: 'category', type: 'text' },
+      { id: '2', columnName: 'tags', type: 'text' },
+      { id: '3', columnName: 'itemType', type: 'text' },
+      { id: '4', columnName: 'notes', type: 'text' },
+    ];
+
+    const lines = buildEventTooltipLines({ event, columns, options: { formatTime } });
+    const joined = lines.join(' ');
+    expect(joined).toContain('Visible');
+    expect(joined).not.toContain('Work');
+    expect(joined).not.toContain('Blue');
+    expect(joined).not.toContain('Task');
+  });
+
+  it('falls back to event root value when data map is missing', () => {
+    const event = {
+      title: 'Event',
+      dateTime: new Date('2026-01-30T14:30:00'),
+      owner: 'Alice',
+    };
+
+    const columns = [{ id: '1', columnName: 'owner', type: 'text' }];
+    const lines = buildEventTooltipLines({ event, columns, options: { formatTime } });
+
+    expect(lines.join(' ')).toContain('Alice');
+  });
+
+  it('uses raw time string when pattern is not HH:mm', () => {
+    const event = {
+      title: 'Event',
+      dateTime: new Date('2026-01-30T14:30:00'),
+      data: { slot: '9am' },
+    };
+
+    const columns = [{ id: '1', columnName: 'slot', type: 'time' }];
+    const lines = buildEventTooltipLines({ event, columns, options: { formatTime } });
+
+    expect(lines.join(' ')).toContain('9am');
+    expect(lines.join(' ')).not.toContain('fmt-9am');
+  });
+
+  it('truncates very long plain text values', () => {
+    const longText = 'x'.repeat(80);
+    const event = {
+      title: 'Event',
+      dateTime: new Date('2026-01-30T14:30:00'),
+      data: { notes: longText },
+    };
+
+    const columns = [{ id: '1', columnName: 'notes', type: 'text' }];
+    const lines = buildEventTooltipLines({ event, columns, options: { formatTime } });
+
+    expect(lines.join(' ')).toContain('...' );
+  });
+});
+
+describe('buildEventTooltipLines - rich text and fallback branches', () => {
+  const formatTime = (t: string) => `fmt-${t}`;
+
+  it('cleans rich text entities and css-like fragments aggressively', () => {
+    const event = {
+      title: 'Event',
+      dateTime: new Date('2026-01-30T14:30:00'),
+      data: {
+        notes: '<div>Alpha&nbsp;&amp;&quot;Beta&quot; color:red; margin:10px; width:5em; opacity:50%; rgb(1,2,3) #abcdef</div>',
+      },
+    };
+    const columns = [{ id: '1', columnName: 'notes', uidt: 'longText', type: 'longtext' }];
+
+    const lines = buildEventTooltipLines({ event, columns, options: { formatTime } });
+    const joined = lines.join(' ');
+    expect(lines.length).toBeGreaterThanOrEqual(1);
+    expect(joined).toContain('Event');
+    expect(joined).not.toContain('rgb(');
+    expect(joined).not.toContain('#abcdef');
+    expect(joined).not.toContain('10px');
+  });
+
+  it('formats array values using filename and fileName fallbacks', () => {
+    const event = {
+      title: 'Event',
+      dateTime: new Date('2026-01-30T14:30:00'),
+      data: {
+        files: [{ filename: 'a.pdf' }, { fileName: 'b.docx' }],
+      },
+    };
+    const columns = [{ id: '1', columnName: 'files', type: 'attachment' }];
+
+    const lines = buildEventTooltipLines({ event, columns, options: { formatTime } });
+    expect(lines.join(' ')).toContain('a.pdf, b.docx');
+  });
+
+  it('renders unknown object shape as hyphen', () => {
+    const event = {
+      title: 'Event',
+      dateTime: new Date('2026-01-30T14:30:00'),
+      data: {
+        obj: { deep: { nested: true } },
+      },
+    };
+    const columns = [{ id: '1', columnName: 'obj', type: 'lookup' }];
+
+    const lines = buildEventTooltipLines({ event, columns, options: { formatTime } });
+    expect(lines.join(' ')).toContain('-');
+  });
+
+  it('orders prioritized fields before plain text in grouped lines', () => {
+    const event = {
+      title: 'Event',
+      dateTime: new Date('2026-01-30T14:30:00'),
+      data: {
+        textField: 'tail',
+        price: 10,
+        percent: 20,
+        email: 'x@y.com',
+      },
+    };
+    const columns = [
+      { id: 't', columnName: 'textField', type: 'text' },
+      { id: 'p1', columnName: 'price', type: 'currency' },
+      { id: 'p2', columnName: 'percent', type: 'percent' },
+      { id: 'p3', columnName: 'email', type: 'email' },
+    ];
+
+    const lines = buildEventTooltipLines({ event, columns, options: { formatTime } });
+    expect(lines[1]).toContain('$10.00');
+    expect(lines[1]).toContain('20%');
+    expect(lines[1]).toContain('x@y.com');
+  });
+});
+
+

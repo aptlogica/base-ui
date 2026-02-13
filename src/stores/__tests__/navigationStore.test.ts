@@ -145,6 +145,40 @@ describe("navigationStore", () => {
     expect(navigate).toHaveBeenCalledWith("/workspace/w1/base/b1/table/t1/v1");
   });
 
+  it("navigates to workspace route when last location has base only", () => {
+    const navigate = vi.fn();
+    vi.mocked(getLastNavigation).mockReturnValue({
+      workspaceId: "w1",
+      baseId: "b1",
+      tableId: null,
+      viewId: null,
+    } as any);
+
+    const result = useNavigationStore
+      .getState()
+      .navigateToLastLocation("u1", "w1", {}, navigate);
+
+    expect(result).toBe(true);
+    expect(navigate).toHaveBeenCalledWith("/workspace/w1");
+  });
+
+  it("returns false when last location does not match current workspace", () => {
+    const navigate = vi.fn();
+    vi.mocked(getLastNavigation).mockReturnValue({
+      workspaceId: "other-ws",
+      baseId: "b1",
+      tableId: "t1",
+      viewId: "v1",
+    } as any);
+
+    const result = useNavigationStore
+      .getState()
+      .navigateToLastLocation("u1", "w1", {}, navigate);
+
+    expect(result).toBe(false);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   it("navigates to first table view when available", () => {
     const navigate = vi.fn();
     const workspaceData = {
@@ -172,6 +206,40 @@ describe("navigationStore", () => {
     expect(navigate).toHaveBeenCalledWith("/workspace/w1/base/b1/table/t1/v1");
   });
 
+  it("navigates to first table grid when first table has no views", () => {
+    const navigate = vi.fn();
+    const workspaceData = {
+      data: {
+        workspaces: [
+          {
+            id: "w1",
+            bases: [
+              {
+                id: "b1",
+                tables: [{ id: "t1", views: [] }],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const result = useNavigationStore
+      .getState()
+      .navigateToFirstTableView(workspaceData, "b1", navigate);
+    expect(result).toBe(true);
+    expect(navigate).toHaveBeenCalledWith("/workspace/w1/base/b1/table/t1/grid");
+  });
+
+  it("returns false when first table view target is not found", () => {
+    const navigate = vi.fn();
+    const result = useNavigationStore
+      .getState()
+      .navigateToFirstTableView({ data: { workspaces: [] } }, "b1", navigate);
+    expect(result).toBe(false);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   it("navigates to first base when tables are missing", () => {
     const navigate = vi.fn();
     const workspaceData = {
@@ -187,6 +255,22 @@ describe("navigationStore", () => {
       .navigateToFirstBase("w1", workspaceData, navigate);
     expect(result).toBe(true);
     expect(navigate).toHaveBeenCalledWith("/workspace/w1");
+  });
+
+  it("navigates to first base using array workspace data shape", () => {
+    const navigate = vi.fn();
+    const workspaceData = [
+      {
+        id: "w1",
+        bases: [{ id: "b1", tables: [{ id: "t1", views: [{ id: "v1" }] }] }],
+      },
+    ];
+
+    const result = useNavigationStore
+      .getState()
+      .navigateToFirstBase("w1", workspaceData, navigate);
+    expect(result).toBe(true);
+    expect(navigate).toHaveBeenCalledWith("/workspace/w1/base/b1/table/t1/v1");
   });
 
   it("getNavigationPath builds expected path", () => {
@@ -235,6 +319,41 @@ describe("navigationStore", () => {
     expect(updateUserActivity).toHaveBeenCalled();
   });
 
+  it("updates an existing same-device login session on login", async () => {
+    vi.mocked(getUserActivity).mockResolvedValue({
+      login_sessions: [
+        {
+          browser: "b",
+          browser_version: "1",
+          os: "o",
+          device_type: "d",
+          login_at: "old",
+          timezone: "old-tz",
+          language: "en",
+          device_memory: "4",
+        },
+      ],
+    } as any);
+
+    vi.mocked(createLoginSession).mockReturnValue({
+      browser: "b",
+      browser_version: "1",
+      os: "o",
+      device_type: "d",
+      login_at: "new",
+      timezone: "new-tz",
+      language: "en",
+      device_memory: "8",
+    } as any);
+
+    await useNavigationStore.getState().updateActivityData("u1", true);
+
+    const payload = vi.mocked(updateUserActivity).mock.calls[0][1] as any;
+    expect(payload.login_sessions).toHaveLength(1);
+    expect(payload.login_sessions[0].login_at).toBe("new");
+    expect(payload.login_sessions[0].timezone).toBe("new-tz");
+  });
+
   it("loads from activity data and returns true for full path", async () => {
     vi.mocked(getUserActivity).mockResolvedValue({
       last_workspace_id: "w1",
@@ -247,9 +366,26 @@ describe("navigationStore", () => {
     expect(result).toBe(true);
   });
 
+  it("returns false when loadFromActivityData has no activity data", async () => {
+    vi.mocked(getUserActivity).mockResolvedValue(null);
+    const result = await useNavigationStore.getState().loadFromActivityData("u1");
+    expect(result).toBe(false);
+  });
+
+  it("returns false when loadFromActivityData throws", async () => {
+    vi.mocked(getUserActivity).mockRejectedValue(new Error("boom"));
+    const result = await useNavigationStore.getState().loadFromActivityData("u1");
+    expect(result).toBe(false);
+  });
+
   it("clears activity data without throwing", async () => {
     vi.mocked(clearUserActivity).mockResolvedValue(undefined);
     await useNavigationStore.getState().clearActivityData("u1");
     expect(clearUserActivity).toHaveBeenCalledWith("u1");
+  });
+
+  it("does not throw when clearActivityData fails", async () => {
+    vi.mocked(clearUserActivity).mockRejectedValue(new Error("boom"));
+    await expect(useNavigationStore.getState().clearActivityData("u1")).resolves.toBeUndefined();
   });
 });
