@@ -238,6 +238,20 @@ describe('NewColumnModal.logic', () => {
       linkFields: [{ id: 'rel1', meta: {} }],
     });
     expect(missingRelationId.error).toBe('Selected link field does not have a valid relation_id');
+
+    const relationIdFromRelationObject = buildFieldMeta({
+      ...baseParams,
+      selectedRelationId: 'rel2',
+      selectedLookupColumnId: 'lookup2',
+      linkFields: [{ id: 'rel2', meta: { relation: { id: 'relation-xyz' } } }],
+    });
+    expect(relationIdFromRelationObject.error).toBeUndefined();
+    expect(relationIdFromRelationObject.meta).toEqual(
+      expect.objectContaining({
+        relation_id: 'relation-xyz',
+        lookup_column_id: 'lookup2',
+      })
+    );
   });
 
   it('builds time, json, user, button and formula meta branches', () => {

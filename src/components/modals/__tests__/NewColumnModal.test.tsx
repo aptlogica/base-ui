@@ -4,6 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { NewColumnModal } from '../NewColumnModal';
 
 const toast = { error: vi.fn(), success: vi.fn() };
+const mockUseBaseTables = vi.fn(() => ({ data: null }));
 
 vi.mock('../../common/Toast', () => ({
   ToastProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -11,7 +12,7 @@ vi.mock('../../common/Toast', () => ({
 }));
 
 vi.mock('../../../hooks/useApi', () => ({
-  useBaseTables: () => ({ data: null }),
+  useBaseTables: (...args: any[]) => mockUseBaseTables(...args),
   useTable: () => ({ data: null, isLoading: false }),
   useAllViews: () => ({ data: [] }),
 }));
@@ -90,6 +91,7 @@ describe('NewColumnModal', () => {
   beforeEach(() => {
     toast.error.mockClear();
     toast.success.mockClear();
+    mockUseBaseTables.mockReturnValue({ data: null });
   });
 
   it('blocks save when field name is duplicate', () => {
@@ -174,6 +176,37 @@ describe('NewColumnModal', () => {
     fireEvent.click(screen.getByText('Save Field'));
     expect(onSave).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledWith('Target table is required for relation fields');
+  });
+
+  it('shows selected target table for links field when base tables come in StandardResponse shape', () => {
+    mockUseBaseTables.mockReturnValue({
+      data: {
+        data: [{ model: { id: 'table-2', title: 'Customers' } }]
+      }
+    });
+
+    render(
+      <NewColumnModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+        currentTableId="table-1"
+        initialValues={{
+          id: 'field-1',
+          title: 'Customer',
+          type: 'links',
+          config: {
+            relation: {
+              with: 'table-2',
+              type: 'one-to-one'
+            }
+          }
+        }}
+      />
+    );
+
+    expect(screen.getByText(/Linking to:/)).toBeInTheDocument();
+    expect(screen.getByText('Customers')).toBeInTheDocument();
   });
 
   it('blocks saving lookup field without selecting link field', () => {
