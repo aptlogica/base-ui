@@ -365,7 +365,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                           return (
                             <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
                               <img
-                                src="/assets/txt.png"
+                                src="/assets/file.png"
                                 alt="FILE"
                                 className="w-1/2 h-1/2 object-contain"
                               />

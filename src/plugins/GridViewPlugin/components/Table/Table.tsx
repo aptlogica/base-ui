@@ -612,43 +612,6 @@ export const Table: React.FC<TableProps> = ({
     handleEditColumnFromHook(col, index, event);
   }, [handleEditColumnFromHook]);
 
-  // Scroll synchronization between header and body
-  useEffect(() => {
-    const header = headerRef.current;
-    const body = tableRef.current;
-
-    if (!header || !body) return;
-
-    let isScrolling = false;
-
-    const handleHeaderScroll = () => {
-      if (!isScrolling) {
-        isScrolling = true;
-        body.scrollLeft = header.scrollLeft;
-        setTimeout(() => { isScrolling = false; }, 10);
-      }
-    };
-
-    const handleBodyScroll = () => {
-      if (!isScrolling) {
-        isScrolling = true;
-        header.scrollLeft = body.scrollLeft;
-        setTimeout(() => { isScrolling = false; }, 10);
-      }
-    };
-
-    header.addEventListener('scroll', handleHeaderScroll);
-    body.addEventListener('scroll', handleBodyScroll);
-
-    return () => {
-      header.removeEventListener('scroll', handleHeaderScroll);
-      body.removeEventListener('scroll', handleBodyScroll);
-    };
-  }, []);
-
-
-
-
   return (
     <div ref={tableContainerRef} className="w-full h-[calc(100vh-43px)] bg-background flex flex-col relative" >
       {/* Fixed Header - Toolbar */}
@@ -721,14 +684,15 @@ export const Table: React.FC<TableProps> = ({
                 className="grid bg-background"
                 style={{
                   gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`,
-                  minWidth: '100vw',
+                  width: `${totalTableWidth}px`,
+                  minWidth: `${totalTableWidth}px`,
                   height: '35px'
                 }}
               >
                 {/* Row selector header */}
                 <div
                   className="group flex-shrink-0 bg-gray-100 border-r border-b border-border/30 flex items-center justify-center"
-                  style={{ position: 'sticky', left: 0, zIndex: 3, height: '35px', boxShadow: 'inset 1px 0 0 var(--color-border), 2px 0 4px -2px rgba(0,0,0,0.06)' }}
+                  style={{ position: 'sticky', left: 0, zIndex: 25, width: '48px', minWidth: '48px', maxWidth: '48px', height: '35px', boxShadow: 'inset 1px 0 0 var(--color-border), 2px 0 4px -2px rgba(0,0,0,0.06)' }}
                 >
                   <input
                     type="checkbox"
