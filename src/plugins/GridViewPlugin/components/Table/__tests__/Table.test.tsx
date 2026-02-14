@@ -3,6 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 let ToastProvider: React.ComponentType<{ children: React.ReactNode }>;
 let Table: typeof import('../Table').Table;
+const originalHandleContextMenuMock = vi.fn();
+const handleCloseContextMenuMock = vi.fn();
+const handleColContextMenuMock = vi.fn();
+const tableModalsState = {
+  contextMenu: { open: false, rowId: null as string | null, x: 0, y: 0 },
+  colMenu: { open: false, colIndex: null as number | null, x: 0, y: 0 },
+};
 
 const baseAccess = {
   isBaseReadOnly: vi.fn(),
@@ -15,6 +22,7 @@ const baseAccess = {
 };
 
 const toast = { success: vi.fn(), error: vi.fn() };
+const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 vi.mock('../../../../../components/common/Toast', () => ({
   ToastProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -57,11 +65,11 @@ vi.mock('../../../hooks/useTableViewConfig', () => ({
 
 vi.mock('../../../hooks/useTableModals', () => ({
   useTableModals: () => ({
-    contextMenu: { open: false, rowId: null, x: 0, y: 0 },
-    handleContextMenu: vi.fn(),
-    handleCloseContextMenu: vi.fn(),
-    colMenu: { open: false, colIndex: null, x: 0, y: 0 },
-    handleColContextMenu: vi.fn(),
+    contextMenu: tableModalsState.contextMenu,
+    handleContextMenu: originalHandleContextMenuMock,
+    handleCloseContextMenu: handleCloseContextMenuMock,
+    colMenu: tableModalsState.colMenu,
+    handleColContextMenu: handleColContextMenuMock,
     handleCloseColMenu: vi.fn(),
   }),
 }));
@@ -128,8 +136,30 @@ vi.mock('../../../../../components/shared/table/FieldsPopover', () => ({
 vi.mock('../../../../../components/shared/table/Search', () => ({
   Search: () => <div data-testid="search" />,
 }));
+vi.mock('../components/ContextMenu', () => ({
+  ContextMenu: ({ onDelete, onEdit, canDeleteRecord, canEditRecord }: any) => (
+    <div data-testid="context-menu">
+      <button type="button" onClick={onEdit} disabled={!canEditRecord}>
+        Edit record
+      </button>
+      <button type="button" onClick={onDelete} disabled={!canDeleteRecord}>
+        Delete record
+      </button>
+    </div>
+  ),
+}));
 vi.mock('../components/VirtualizedTableBody', () => ({
-  VirtualizedTableBody: () => <div data-testid="virtualized-body" />,
+  VirtualizedTableBody: ({ onContextMenu }: any) => (
+    <div data-testid="virtualized-body">
+      <button
+        type="button"
+        data-testid="row-context-trigger"
+        onClick={() => onContextMenu?.({ preventDefault: vi.fn(), stopPropagation: vi.fn() }, '1')}
+      >
+        Open Context
+      </button>
+    </div>
+  ),
 }));
 vi.mock('../modals/NewColumnModalPortal', () => ({
   NewColumnModalPortal: React.forwardRef((_props: any, ref: any) => (
@@ -140,7 +170,14 @@ vi.mock('../components/ColumnDropdown', () => ({
   ColumnDropdown: () => <div data-testid="column-dropdown" />,
 }));
 vi.mock('../../../../../components/modals/EditRecordModal', () => ({
-  default: () => <div data-testid="edit-record-modal" />,
+  default: ({ recordId, onDelete }: any) => (
+    <div data-testid="edit-record-modal">
+      <div data-testid="edit-record-id">{String(recordId)}</div>
+      <button type="button" data-testid="edit-record-delete" onClick={() => onDelete?.(String(recordId))}>
+        Delete From Modal
+      </button>
+    </div>
+  ),
 }));
 vi.mock('../../../../../components/modals/DeleteConfirmModal', () => ({
   default: () => <div data-testid="delete-confirm-modal" />,
@@ -151,6 +188,15 @@ vi.mock('../../../../../components/modals/UpdateFieldConfirmModal', () => ({
 
 describe('Table', () => {
   beforeEach(async () => {
+    globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      cb(0);
+      return 0;
+    }) as any;
+    tableModalsState.contextMenu = { open: false, rowId: null, x: 0, y: 0 };
+    tableModalsState.colMenu = { open: false, colIndex: null, x: 0, y: 0 };
+    originalHandleContextMenuMock.mockReset();
+    handleCloseContextMenuMock.mockReset();
+    handleColContextMenuMock.mockReset();
     baseAccess.isBaseReadOnly.mockReturnValue(false);
     baseAccess.canCreateColumn.mockReturnValue(true);
     baseAccess.canDeleteRecord.mockReturnValue(true);
@@ -234,5 +280,164 @@ describe('Table', () => {
 
     await new Promise(r => setTimeout(r, 0));
     expect(addRow.mutateAsync).toHaveBeenCalledWith({ model_id: 't1' });
+  });
+
+  it('shows toast error when add row mutation fails', async () => {
+    const addRow = { mutateAsync: vi.fn().mockRejectedValue(new Error('add failed')) } as any;
+    render(
+      <ToastProvider>
+        <Table
+          tableData={{
+            model: { id: 't1', base_id: 'b1' },
+            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
+            records: [{ id: 1, title: 'Row 1' }],
+          }}
+          onRefresh={vi.fn()}
+          actions={{ addRow } as any}
+        />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getByTitle('Add new row'));
+    await new Promise(r => setTimeout(r, 0));
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('prevents row context menu open for readonly users', () => {
+    baseAccess.isBaseReadOnly.mockReturnValue(true);
+    render(
+      <ToastProvider>
+        <Table
+          tableData={{
+            model: { id: 't1', base_id: 'b1' },
+            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
+            records: [{ id: 1, title: 'Row 1' }],
+          }}
+          onRefresh={vi.fn()}
+        />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getByTestId('row-context-trigger'));
+    expect(originalHandleContextMenuMock).not.toHaveBeenCalled();
+  });
+
+  it('opens row context menu for editable users', () => {
+    render(
+      <ToastProvider>
+        <Table
+          tableData={{
+            model: { id: 't1', base_id: 'b1' },
+            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
+            records: [{ id: 1, title: 'Row 1' }],
+          }}
+          onRefresh={vi.fn()}
+        />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getByTestId('row-context-trigger'));
+    expect(originalHandleContextMenuMock).toHaveBeenCalled();
+  });
+
+  it('opens edit record flow from row context menu', async () => {
+    tableModalsState.contextMenu = { open: true, rowId: '1', x: 20, y: 20 };
+    render(
+      <ToastProvider>
+        <Table
+          tableData={{
+            model: { id: 't1', base_id: 'b1' },
+            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
+            records: [{ id: 1, title: 'Row 1' }],
+          }}
+          onRefresh={vi.fn()}
+        />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /edit record/i }));
+    await new Promise(r => setTimeout(r, 0));
+    expect(screen.getByTestId('edit-record-modal')).toBeInTheDocument();
+    expect(handleCloseContextMenuMock).toHaveBeenCalled();
+  });
+
+  it('deletes via modal when record id is valid numeric', async () => {
+    const deleteRecord = { mutateAsync: vi.fn().mockResolvedValue({}) } as any;
+    tableModalsState.contextMenu = { open: true, rowId: '1', x: 10, y: 10 };
+
+    render(
+      <ToastProvider>
+        <Table
+          tableData={{
+            model: { id: 't1', base_id: 'b1' },
+            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
+            records: [{ id: 1, title: 'Row 1' }],
+          }}
+          onRefresh={vi.fn()}
+          actions={{ deleteRecord } as any}
+        />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /edit record/i }));
+    await new Promise(r => setTimeout(r, 0));
+    fireEvent.click(screen.getByTestId('edit-record-delete'));
+
+    await new Promise(r => setTimeout(r, 0));
+    expect(deleteRecord.mutateAsync).toHaveBeenCalledWith({ model_id: 't1', row_id: 1 });
+  });
+
+  it('shows error and skips delete when record id is invalid', async () => {
+    const deleteRecord = { mutateAsync: vi.fn().mockResolvedValue({}) } as any;
+    tableModalsState.contextMenu = { open: true, rowId: 'bad-id', x: 10, y: 10 };
+
+    render(
+      <ToastProvider>
+        <Table
+          tableData={{
+            model: { id: 't1', base_id: 'b1' },
+            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
+            records: [{ id: 1, title: 'Row 1' }],
+          }}
+          onRefresh={vi.fn()}
+          actions={{ deleteRecord } as any}
+        />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /edit record/i }));
+    await new Promise(r => setTimeout(r, 0));
+    expect(screen.getByTestId('edit-record-id')).toHaveTextContent('bad-id');
+
+    fireEvent.click(screen.getByTestId('edit-record-delete'));
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(deleteRecord.mutateAsync).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('deletes single row from context menu when no multi-selection', async () => {
+    const deleteRecord = { mutateAsync: vi.fn().mockResolvedValue({}) } as any;
+    tableModalsState.contextMenu = { open: true, rowId: '1', x: 10, y: 10 };
+
+    render(
+      <ToastProvider>
+        <Table
+          tableData={{
+            model: { id: 't1', base_id: 'b1' },
+            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
+            records: [{ id: 1, title: 'Row 1' }, { id: 2, title: 'Row 2' }],
+          }}
+          onRefresh={vi.fn()}
+          actions={{ deleteRecord } as any}
+        />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /delete record/i }));
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(deleteRecord.mutateAsync).toHaveBeenCalledWith({ model_id: 't1', row_id: 1 });
+    expect(handleCloseContextMenuMock).toHaveBeenCalled();
   });
 });

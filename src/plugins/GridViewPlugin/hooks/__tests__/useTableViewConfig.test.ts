@@ -257,6 +257,7 @@ describe('useTableViewConfig', () => {
       const { result } = renderHook(() => useTableViewConfig(defaultOptions));
       expect(typeof result.current.handleFieldOrderChange).toBe('function');
     });
+
   });
 
   describe('backend synchronization', () => {

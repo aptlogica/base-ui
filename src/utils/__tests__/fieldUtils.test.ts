@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { getFieldDefaultValue, getTypeDefaultValue, processFieldValue } from '../fieldUtils';
+import {
+  getFieldDefaultValue,
+  getTypeDefaultValue,
+  processFieldValue,
+  isSystemField,
+  mapFieldConfig,
+  validateRequiredFields,
+  isFormulaField,
+} from '../fieldUtils';
 
 describe('fieldUtils', () => {
   describe('getTypeDefaultValue', () => {
@@ -243,6 +251,95 @@ describe('fieldUtils', () => {
       const field = { type: 'json' };
       const result = processFieldValue(field, { key: 'value' });
       expect(result).toBeDefined();
+    });
+
+    it('should process formula and non-array multiselect safely', () => {
+      expect(processFieldValue({ type: 'formula' }, 'anything')).toBe('');
+      expect(processFieldValue({ type: 'multiSelect' }, 'not-array')).toEqual([]);
+    });
+
+    it('should normalize numeric and null-ish values', () => {
+      expect(processFieldValue({ type: 'number' }, '12')).toBe(12);
+      expect(processFieldValue({ type: 'number' }, 'abc')).toBe(0);
+      expect(processFieldValue({ type: 'text' }, null)).toBe('null');
+      expect(processFieldValue({ type: 'text' }, undefined)).toBe('undefined');
+    });
+  });
+
+  describe('isSystemField', () => {
+    it('should detect system flags and known system names', () => {
+      expect(isSystemField({ type: 'text', isSystem: true })).toBe(true);
+      expect(isSystemField({ type: 'text', name: 'created_at' })).toBe(true);
+      expect(isSystemField({ type: 'text', name: 'title' })).toBe(false);
+    });
+  });
+
+  describe('mapFieldConfig', () => {
+    it('should map boolean config with field priority', () => {
+      const meta = mapFieldConfig({
+        type: 'boolean',
+        checkboxIcon: 'x',
+        checkboxColor: 'red',
+        checkboxDefault: true,
+        meta: { checkboxIcon: 'check', checkboxColor: 'green', defaultValue: false },
+      });
+      expect(meta).toMatchObject({
+        icon: 'x',
+        color: 'red',
+        defaultValue: true,
+      });
+    });
+
+    it('should map rating/multi/select defaults', () => {
+      expect(mapFieldConfig({ type: 'rating', ratingMax: 7, ratingDefault: 2 })).toMatchObject({
+        ratingIcon: 'star',
+        ratingColor: 'yellow',
+        ratingMax: 7,
+        ratingDefault: 2,
+      });
+
+      expect(
+        mapFieldConfig({ type: 'multiSelect', options: ['a'], multiDefault: ['a'], meta: { defaultValue: [] } })
+      ).toMatchObject({
+        options: ['a'],
+        defaultValue: ['a'],
+      });
+
+      expect(
+        mapFieldConfig({ type: 'select', options: ['x'], singleDefault: 'x', meta: { defaultValue: '' } })
+      ).toMatchObject({
+        options: ['x'],
+        defaultValue: 'x',
+      });
+    });
+
+    it('should map fallback defaults for other types', () => {
+      expect(mapFieldConfig({ type: 'phoneNumber', phoneDefault: '+1', meta: {} })).toMatchObject({
+        defaultValue: '+1',
+      });
+      expect(mapFieldConfig({ type: 'duration', durationDefault: '01:00:00', meta: {} })).toMatchObject({
+        defaultValue: '01:00:00',
+      });
+    });
+  });
+
+  describe('validateRequiredFields', () => {
+    it('should return only required fields with empty values', () => {
+      const fields = [
+        { id: 'a', type: 'text', required: true },
+        { id: 'b', type: 'text', required: true },
+        { id: 'c', type: 'text', required: false },
+      ];
+      const data = { a: '  ', b: 'value', c: '' };
+      expect(validateRequiredFields(fields, data)).toEqual([{ id: 'a', type: 'text', required: true }]);
+    });
+  });
+
+  describe('isFormulaField', () => {
+    it('should detect formula by type or uidt', () => {
+      expect(isFormulaField({ type: 'formula' } as any)).toBe(true);
+      expect(isFormulaField({ type: 'text', uidt: 'formula' } as any)).toBe(true);
+      expect(isFormulaField({ type: 'text' } as any)).toBe(false);
     });
   });
 });

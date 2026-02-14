@@ -3,6 +3,7 @@ import { Upload, X, Loader2, FileText, HelpCircle } from 'lucide-react';
 import { useImportTable } from '../../hooks/useApi';
 import { useToast } from '../common/Toast';
 import { MultiLineText } from '../common/Fields/MultiLineText';
+import { isNameDuplicate, validateTableName } from '../../utils/nameValidation';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -79,10 +80,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const config = IMPORT_CONFIG[importType];
 
   const isTitleUnique = (titleToCheck: string): boolean => {
-    const trimmedTitle = titleToCheck.trim().toLowerCase();
-    return !existingTables.some((table: any) => 
-      table.title?.toLowerCase() === trimmedTitle
-    );
+    const trimmedTitle = titleToCheck.trim();
+    if (!trimmedTitle) return true;
+    return !isNameDuplicate(trimmedTitle, existingTables as any[]);
   };
 
   // Reset form when modal opens/closes
@@ -127,23 +127,20 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   };
 
   const validateTitle = (titleValue: string): string | null => {
-    if (!titleValue.trim()) {
+    const result = validateTableName(titleValue, existingTables as any[]);
+    if (result.isValid) return null;
+
+    if (result.error === 'Table name is required') {
       return 'Table title is required';
     }
-
-    if (titleValue.trim().length < 3) {
+    if (result.error === 'Table name must be at least 3 characters') {
       return 'Table title must be at least 3 characters long';
     }
-
-    const trimmedTitle = titleValue.trim().toLowerCase();
-    const isUnique = !existingTables.some((table: any) => 
-      table.title?.toLowerCase() === trimmedTitle
-    );
-    if (!isUnique) {
+    if (result.error === 'Table name already exists') {
       return 'Table title must be unique. This title is already in use.';
     }
 
-    return null;
+    return result.error || 'Invalid table title';
   };
 
   const handleFileSelect = (file: File) => {

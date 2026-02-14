@@ -8,6 +8,8 @@ let initialRoute = '/login';
 let workspacesState = { isLoading: false, error: null as any };
 let tableState = { isLoading: false, error: null as any, data: null as any, refetch: vi.fn() };
 let baseTablesState = { isLoading: false, error: null as any };
+let shouldThrowPluginConfig = false;
+let pluginConfigState: { builtin: Array<{ id: string; path: string; enabled?: boolean }> } = { builtin: [] };
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -20,7 +22,12 @@ vi.mock('react-router-dom', async () => {
 });
 
 vi.mock('../config/plugins.json', () => ({
-  plugins: { builtin: [] },
+  get plugins() {
+    if (shouldThrowPluginConfig) {
+      throw new Error('plugin config load failed');
+    }
+    return pluginConfigState;
+  },
 }));
 
 vi.mock('../service/clientService', () => ({
@@ -50,7 +57,14 @@ vi.mock('../auth/AccessLevelRoute', () => ({
 }));
 
 vi.mock('../components/AnnouncementBar', () => ({
-  AnnouncementBar: () => <div>Announcement</div>,
+  AnnouncementBar: ({ message, buttons }: any) => (
+    <div>
+      <span>{message}</span>
+      {buttons?.map((btn: any) => (
+        <button key={btn.label} onClick={btn.onClick}>{btn.label}</button>
+      ))}
+    </div>
+  ),
 }));
 
 vi.mock('../components/AppInitializer', () => ({
@@ -119,6 +133,11 @@ vi.mock('../hooks/useApi', () => ({
 }));
 
 describe('App', () => {
+  beforeEach(() => {
+    shouldThrowPluginConfig = false;
+    pluginConfigState = { builtin: [] };
+  });
+
   it('renders login route after loading', async () => {
     initialRoute = '/login';
     workspacesState = { isLoading: false, error: null };
@@ -264,5 +283,27 @@ describe('App', () => {
 
     render(<App />);
     await waitFor(() => expect(screen.getByText('Ext view')).toBeInTheDocument());
+  });
+
+  it('dismisses announcement when remind me later is clicked', async () => {
+    initialRoute = '/login';
+    workspacesState = { isLoading: false, error: null };
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByText(/free trial ends in 3 days/i)).toBeInTheDocument());
+    act(() => {
+      screen.getByRole('button', { name: /remind me later/i }).click();
+    });
+    await waitFor(() => expect(screen.queryByText(/free trial ends in 3 days/i)).not.toBeInTheDocument());
+  });
+
+  it('renders plugin initialization error screen when plugin config import fails', async () => {
+    shouldThrowPluginConfig = true;
+    initialRoute = '/login';
+    workspacesState = { isLoading: false, error: null };
+
+    render(<App />);
+    await waitFor(() => expect(screen.getByText(/plugin initialization error/i)).toBeInTheDocument());
+    expect(screen.getByText(/plugin config load failed/i)).toBeInTheDocument();
   });
 });

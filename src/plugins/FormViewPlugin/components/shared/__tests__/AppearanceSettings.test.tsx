@@ -1,14 +1,42 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { AppearanceSettings } from '../AppearanceSettings';
 import { ToastProvider } from '../../../../../components/common/Toast';
 
+const mutateAsyncMock = vi.fn();
 vi.mock('../../../../../hooks/useApi', () => ({
   useAddImage: () => ({
-    mutateAsync: vi.fn().mockResolvedValue({ data: { url: 'https://example.com/image.png' } }),
+    mutateAsync: mutateAsyncMock,
   }),
+}));
+
+vi.mock('../../../../../components/common/dropdown/AdvancedDropdown', () => ({
+  __esModule: true,
+  default: ({
+    id,
+    options,
+    value,
+    onChange,
+  }: {
+    id?: string;
+    options: Array<{ label: string; value: string }>;
+    value?: string;
+    onChange: (value: string | string[]) => void;
+  }) => (
+    <select
+      data-testid={id || 'advanced-dropdown'}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
 }));
 
 const createWrapper = () => {
@@ -39,6 +67,7 @@ describe('AppearanceSettings', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mutateAsyncMock.mockResolvedValue({ data: { url: 'https://example.com/image.png' } });
   });
 
   describe('Rendering', () => {
@@ -284,6 +313,22 @@ describe('AppearanceSettings', () => {
       fireEvent.change(allInputs[0], { target: { value: '#ff0000' } });
       expect(mockOnChange).toHaveBeenCalled();
     });
+
+    it('should call onChange when text color changes', () => {
+      render(
+        <AppearanceSettings
+          appearance={defaultAppearance}
+          onChange={mockOnChange}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      const allInputs = document.querySelectorAll('input[type="color"]');
+      fireEvent.change(allInputs[1], { target: { value: '#00ff00' } });
+      expect(mockOnChange).toHaveBeenCalledWith(
+        expect.objectContaining({ textColor: '#00ff00' })
+      );
+    });
   });
 
   describe('URL input buttons', () => {
@@ -311,6 +356,156 @@ describe('AppearanceSettings', () => {
 
       const browseButtons = screen.getAllByText('Browse');
       expect(browseButtons.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('shows validation error for invalid logo URL', () => {
+      render(
+        <AppearanceSettings
+          appearance={defaultAppearance}
+          onChange={mockOnChange}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(screen.getAllByText('Insert via URL')[0]);
+      const input = screen.getByPlaceholderText('https://...');
+      fireEvent.change(input, { target: { value: 'notaurl' } });
+
+      expect(screen.getByText('Invalid URL')).toBeInTheDocument();
+    });
+
+    it('accepts valid logo URL and calls onChange', () => {
+      render(
+        <AppearanceSettings
+          appearance={defaultAppearance}
+          onChange={mockOnChange}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(screen.getAllByText('Insert via URL')[0]);
+      const input = screen.getByPlaceholderText('https://...');
+      fireEvent.change(input, { target: { value: 'https://example.com/logo.png' } });
+
+      expect(mockOnChange).toHaveBeenCalledWith(
+        expect.objectContaining({ logoUrl: 'https://example.com/logo.png' })
+      );
+    });
+  });
+
+  describe('Image upload flows', () => {
+    it('uploads logo image and calls mutation', async () => {
+      const file = new File(['logo'], 'logo.png', { type: 'image/png' });
+      render(
+        <AppearanceSettings
+          appearance={defaultAppearance}
+          onChange={mockOnChange}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      const fileInputs = document.querySelectorAll('input[type="file"]');
+      fireEvent.change(fileInputs[0], { target: { files: [file] } });
+
+      await waitFor(() => {
+        expect(mutateAsyncMock).toHaveBeenCalledWith({ files: [file] });
+      });
+      expect(mockOnChange).toHaveBeenCalledWith(
+        expect.objectContaining({ logoUrl: 'https://example.com/image.png' })
+      );
+    });
+
+    it('rejects non-image upload file', async () => {
+      const file = new File(['text'], 'readme.txt', { type: 'text/plain' });
+      render(
+        <AppearanceSettings
+          appearance={defaultAppearance}
+          onChange={mockOnChange}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      const fileInputs = document.querySelectorAll('input[type="file"]');
+      fireEvent.change(fileInputs[0], { target: { files: [file] } });
+
+      await waitFor(() => {
+        expect(mutateAsyncMock).not.toHaveBeenCalled();
+      });
+    });
+
+    it('handles mutation upload error', async () => {
+      mutateAsyncMock.mockRejectedValueOnce(new Error('upload failed'));
+      const file = new File(['logo'], 'logo.png', { type: 'image/png' });
+      render(
+        <AppearanceSettings
+          appearance={defaultAppearance}
+          onChange={mockOnChange}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      const fileInputs = document.querySelectorAll('input[type="file"]');
+      fireEvent.change(fileInputs[0], { target: { files: [file] } });
+
+      await waitFor(() => {
+        expect(mutateAsyncMock).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('Preview actions and dropdown changes', () => {
+    it('removes existing logo from preview action', () => {
+      render(
+        <AppearanceSettings
+          appearance={{ ...defaultAppearance, logoUrl: 'https://example.com/logo.png' }}
+          onChange={mockOnChange}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      const removeButton = screen.getByRole('button', { name: 'Remove logo' });
+      fireEvent.click(removeButton);
+
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ logoUrl: '' }));
+    });
+
+    it('removes existing banner from preview action', () => {
+      render(
+        <AppearanceSettings
+          appearance={{ ...defaultAppearance, bannerUrl: 'https://example.com/banner.png' }}
+          onChange={mockOnChange}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      const removeButton = screen.getByRole('button', { name: 'Remove banner' });
+      fireEvent.click(removeButton);
+
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ bannerUrl: '' }));
+    });
+
+    it('updates layout and appearance dropdown fields', () => {
+      render(
+        <AppearanceSettings
+          appearance={defaultAppearance}
+          onChange={mockOnChange}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.change(screen.getByTestId('layout-width-label'), { target: { value: 'full' } });
+      fireEvent.change(screen.getByTestId('title-alignment-label'), { target: { value: 'center' } });
+      fireEvent.change(screen.getByTestId('label-position-label'), { target: { value: 'left' } });
+      fireEvent.change(screen.getByTestId('field-layout-label'), { target: { value: 'grid-2' } });
+      fireEvent.change(screen.getByTestId('card-style-label'), { target: { value: 'elevated' } });
+      fireEvent.change(screen.getByTestId('rounded-corners-label'), { target: { value: 'xl' } });
+
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ layoutWidth: 'full' }));
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ align: 'center' }));
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ labelPosition: 'left' }));
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ fieldLayout: 'grid-2' }));
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ cardStyle: 'elevated' }));
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ rounded: 'xl' }));
     });
   });
 

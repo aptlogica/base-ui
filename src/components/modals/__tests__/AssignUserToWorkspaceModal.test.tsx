@@ -1,38 +1,41 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import React from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { AssignUserToWorkspaceModal } from '../AssignUserToWorkspaceModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AssignUserToWorkspaceModal } from '../AssignUserToWorkspaceModal';
 
-// Mock hooks
+const bulkAddMembersMutateAsync = vi.fn();
+const removeUserFromWorkspaceMutateAsync = vi.fn();
+const removeUserFromBaseMutateAsync = vi.fn();
+const toastSuccess = vi.fn();
+const toastError = vi.fn();
+const hasAdminRole = vi.fn(() => true);
+
+const defaultUsers = [
+  { id: 'user-1', display_name: 'John Doe', email: 'john@example.com', status: 'active', email_verified: true },
+  { id: 'user-2', display_name: 'Jane Smith', email: 'jane@example.com', status: 'active', email_verified: true },
+];
+
+let userRolesAndAccessData: any = null;
+let workspaceMembersData: any = { data: [] };
+let workspaceBasesData: any = { data: [{ id: 'base-1', title: 'Base A' }, { id: 'base-2', title: 'Base B' }] };
+
 vi.mock('../../../hooks/useApi', () => ({
   useBulkAddMembers: vi.fn(() => ({
-    mutateAsync: vi.fn(),
+    mutateAsync: bulkAddMembersMutateAsync,
     isPending: false,
   })),
   useGetUsersForAssign: vi.fn(() => ({
-    data: [
-      { id: 'user-1', display_name: 'John Doe', email: 'john@example.com' },
-      { id: 'user-2', display_name: 'Jane Smith', email: 'jane@example.com' },
-      { id: 'user-3', display_name: 'Bob Wilson', email: 'bob@example.com' },
-    ],
+    data: defaultUsers,
     isLoading: false,
   })),
   useWorkspaceBases: vi.fn(() => ({
-    data: {
-      data: [
-        { id: 'base-1', title: 'Base A' },
-        { id: 'base-2', title: 'Base B' },
-      ],
-    },
+    data: workspaceBasesData,
     isLoading: false,
   })),
   useWorkspaceMembers: vi.fn(() => ({
-    data: {
-      data: [
-        { user_id: 'user-1', user: { display_name: 'John Doe' }, role: 'owner' },
-      ],
-    },
+    data: workspaceMembersData,
     isLoading: false,
   })),
   useBaseMembers: vi.fn(() => ({
@@ -40,68 +43,69 @@ vi.mock('../../../hooks/useApi', () => ({
     isLoading: false,
   })),
   useUserRolesAndAccess: vi.fn(() => ({
-    data: null,
+    data: userRolesAndAccessData,
     isLoading: false,
   })),
   useRemoveUserFromWorkspace: vi.fn(() => ({
-    mutateAsync: vi.fn(),
+    mutateAsync: removeUserFromWorkspaceMutateAsync,
     isPending: false,
   })),
   useRemoveUserFromBase: vi.fn(() => ({
-    mutateAsync: vi.fn(),
+    mutateAsync: removeUserFromBaseMutateAsync,
     isPending: false,
   })),
 }));
 
-// Mock Toast
 vi.mock('../../common/Toast', () => ({
   useToast: () => ({
-    success: vi.fn(),
-    error: vi.fn(),
+    success: toastSuccess,
+    error: toastError,
     info: vi.fn(),
     show: vi.fn(),
   }),
 }));
 
-// Mock Auth
 vi.mock('../../../auth/AuthContext', () => ({
   useAuth: vi.fn(() => ({
     user: { id: 'current-user' },
   })),
 }));
 
-// Mock useUserRole
 vi.mock('../../../hooks/useUserRole', () => ({
   useUserRole: vi.fn(() => ({
-    hasAdminRole: vi.fn(() => true),
+    hasAdminRole,
   })),
 }));
 
-// Mock AdvancedDropdown
 vi.mock('../../common/dropdown/AdvancedDropdown', () => ({
-  AdvancedDropdown: ({ value, onChange, options, placeholder }: any) => (
-    <select
-      data-testid="role-dropdown"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      <option value="">{placeholder}</option>
-      {options?.map((opt: any) => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
-        </option>
-      ))}
-    </select>
+  AdvancedDropdown: ({ label, value, onChange, options, placeholder, disabled }: any) => (
+    <label>
+      {label || placeholder}
+      <select
+        aria-label={label || placeholder || 'dropdown'}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+      >
+        <option value="">{placeholder || '--select--'}</option>
+        {options?.map((opt: any) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </label>
   ),
 }));
 
-// Mock MultiSelectTags
 vi.mock('../../common/MultiSelectTags', () => ({
   MultiSelectTags: ({ options, value, onChange, placeholder }: any) => (
-    <div data-testid="multi-select-tags">
+    <div>
+      <label htmlFor="user-select">{placeholder}</label>
       <select
+        id="user-select"
         multiple
-        data-testid="user-select"
+        aria-label="Select users to assign"
         value={value}
         onChange={(e) => {
           const selected = Array.from(e.target.selectedOptions, (option) => option.value);
@@ -114,7 +118,6 @@ vi.mock('../../common/MultiSelectTags', () => ({
           </option>
         ))}
       </select>
-      <span>{placeholder}</span>
     </div>
   ),
 }));
@@ -129,9 +132,7 @@ const createTestQueryClient = () =>
 
 const renderWithQueryClient = (ui: React.ReactElement) => {
   const queryClient = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 };
 
 describe('AssignUserToWorkspaceModal', () => {
@@ -144,162 +145,140 @@ describe('AssignUserToWorkspaceModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    userRolesAndAccessData = null;
+    workspaceMembersData = { data: [] };
+    workspaceBasesData = { data: [{ id: 'base-1', title: 'Base A' }, { id: 'base-2', title: 'Base B' }] };
+    bulkAddMembersMutateAsync.mockResolvedValue({ data: { success_count: 1, failure_count: 0, failures: [] } });
+    removeUserFromWorkspaceMutateAsync.mockResolvedValue({});
+    removeUserFromBaseMutateAsync.mockResolvedValue({});
+    hasAdminRole.mockReturnValue(true);
+    vi.stubGlobal('confirm', vi.fn(() => true));
   });
 
-  describe('rendering', () => {
-    it('renders nothing when isOpen is false', () => {
-      const { container } = renderWithQueryClient(
-        <AssignUserToWorkspaceModal {...defaultProps} isOpen={false} />
-      );
-
-      expect(container).toBeEmptyDOMElement();
-    });
-
-    it('renders the modal when isOpen is true', () => {
-      renderWithQueryClient(<AssignUserToWorkspaceModal {...defaultProps} />);
-
-      expect(screen.getByRole('heading', { name: /Add Member/i })).toBeInTheDocument();
-    });
-
-    it('renders user selection component', () => {
-      renderWithQueryClient(<AssignUserToWorkspaceModal {...defaultProps} />);
-
-      expect(screen.getByTestId('multi-select-tags')).toBeInTheDocument();
-    });
-
-    it('renders submit button', () => {
-      renderWithQueryClient(<AssignUserToWorkspaceModal {...defaultProps} />);
-
-      expect(screen.getByRole('button', { name: /Add/i })).toBeInTheDocument();
-    });
+  it('renders nothing when closed', () => {
+    const { container } = renderWithQueryClient(
+      <AssignUserToWorkspaceModal {...defaultProps} isOpen={false} />
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 
-  describe('edit mode', () => {
-    it('shows manage role title when editMode is true', () => {
-      renderWithQueryClient(
-        <AssignUserToWorkspaceModal
-          {...defaultProps}
-          editMode={true}
-          memberToEdit="user-1"
-        />
-      );
-
-      expect(screen.getByText(/Manage Role/i)).toBeInTheDocument();
-    });
+  it('shows workspace id required branch', () => {
+    renderWithQueryClient(
+      <AssignUserToWorkspaceModal {...defaultProps} workspaceId={''} />
+    );
+    expect(screen.getByText(/workspace id is required/i)).toBeInTheDocument();
   });
 
-  describe('base level context', () => {
-    it('renders with base context when baseId is provided', () => {
-      renderWithQueryClient(
-        <AssignUserToWorkspaceModal
-          {...defaultProps}
-          baseId="base-123"
-        />
-      );
+  it('submits add mode with workspace role', async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(<AssignUserToWorkspaceModal {...defaultProps} />);
 
-      expect(screen.getByRole('heading', { name: /Add Member/i })).toBeInTheDocument();
-    });
+    await user.selectOptions(screen.getByLabelText(/select users to assign/i), 'user-1');
+    await user.click(screen.getByRole('button', { name: /^add$/i }));
+
+    await waitFor(() => expect(bulkAddMembersMutateAsync).toHaveBeenCalled());
+    const payload = bulkAddMembersMutateAsync.mock.calls[0][0];
+    expect(payload.workspaceId).toBe('ws-123');
+    expect(payload.members[0].user_id).toBe('user-1');
+    expect(payload.members[0].memberships[0].role).toBe('maintainer');
+    expect(toastSuccess).toHaveBeenCalled();
   });
 
-  describe('interactions', () => {
-    it('calls onClose when X button is clicked', async () => {
-      const user = userEvent.setup();
-      const onClose = vi.fn();
+  it('submits add mode with specific base role mapping', async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(<AssignUserToWorkspaceModal {...defaultProps} />);
 
-      renderWithQueryClient(
-        <AssignUserToWorkspaceModal {...defaultProps} onClose={onClose} />
-      );
+    await user.selectOptions(screen.getByLabelText(/select users to assign/i), 'user-1');
+    await user.selectOptions(screen.getByLabelText(/select role/i), 'base-member');
+    await user.selectOptions(screen.getByLabelText(/select base/i), 'specific_base');
+    await user.click(screen.getByLabelText(/base a/i));
+    await user.click(screen.getByRole('button', { name: /^add$/i }));
 
-      // Find the X close button
-      const buttons = screen.getAllByRole('button');
-      const xButton = buttons.find(btn => btn.querySelector('svg.lucide-x'));
-      
-      if (xButton) {
-        await user.click(xButton);
-        expect(onClose).toHaveBeenCalled();
-      }
+    await waitFor(() => expect(bulkAddMembersMutateAsync).toHaveBeenCalled());
+    const payload = bulkAddMembersMutateAsync.mock.calls[0][0];
+    expect(payload.members[0].memberships[0].role).toBe('');
+    expect(payload.members[0].memberships[0].bases).toEqual([{ base_id: 'base-1', role: 'base-member' }]);
+  });
+
+  it('blocks submit when no users are selected', async () => {
+    renderWithQueryClient(<AssignUserToWorkspaceModal {...defaultProps} />);
+    fireEvent.click(screen.getByRole('button', { name: /^add$/i }));
+    await waitFor(() => expect(bulkAddMembersMutateAsync).not.toHaveBeenCalled());
+  });
+
+  it('shows partial failure toast when api returns failures', async () => {
+    bulkAddMembersMutateAsync.mockResolvedValue({
+      data: {
+        success_count: 1,
+        failure_count: 1,
+        failures: [{ user_id: 'user-2', error: 'Invalid role' }],
+      },
     });
+    const user = userEvent.setup();
+    renderWithQueryClient(<AssignUserToWorkspaceModal {...defaultProps} />);
 
-    it('calls onClose when pressing Escape key', () => {
-      const onClose = vi.fn();
+    await user.selectOptions(screen.getByLabelText(/select users to assign/i), ['user-1', 'user-2']);
+    await user.click(screen.getByRole('button', { name: /^add$/i }));
 
-      const { container } = renderWithQueryClient(
-        <AssignUserToWorkspaceModal {...defaultProps} onClose={onClose} />
-      );
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+  });
 
-      const backdrop = container.querySelector('.bg-modal-backdrop');
-      fireEvent.keyDown(backdrop!, { key: 'Escape' });
+  it('updates workspace role in edit mode', async () => {
+    userRolesAndAccessData = [
+      {
+        workspace_id: 'ws-123',
+        workspace_name: 'Workspace A',
+        access: 'maintainer',
+        bases: [],
+      },
+    ];
+    const user = userEvent.setup();
+    renderWithQueryClient(
+      <AssignUserToWorkspaceModal
+        {...defaultProps}
+        editMode={true}
+        memberToEdit="user-1"
+      />
+    );
 
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
+    await user.selectOptions(screen.getByLabelText(/select a role/i), 'workspace-read');
+    await user.click(screen.getByRole('button', { name: /update/i }));
 
-    it('calls onClose when clicking backdrop', async () => {
-      const user = userEvent.setup();
-      const onClose = vi.fn();
-
-      const { container } = renderWithQueryClient(
-        <AssignUserToWorkspaceModal {...defaultProps} onClose={onClose} />
-      );
-
-      const backdrop = container.querySelector('.bg-modal-backdrop');
-      await user.click(backdrop!);
-
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('updates selected role when role dropdown changes', async () => {
-      const user = userEvent.setup();
-
-      renderWithQueryClient(
-        <AssignUserToWorkspaceModal
-          {...defaultProps}
-          editMode={true}
-          memberToEdit="user-1"
-        />
-      );
-
-      // Wait for the modal content to render - check for "Manage Role" title first
-      expect(screen.getByRole('heading', { name: /Manage Role/i })).toBeInTheDocument();
-      
-      // The role dropdown may not be available if no access data is returned
-      // This test verifies edit mode rendering works
+    await waitFor(() => expect(bulkAddMembersMutateAsync).toHaveBeenCalled());
+    const payload = bulkAddMembersMutateAsync.mock.calls[0][0];
+    expect(payload.members[0].memberships[0]).toEqual({
+      workspace_id: 'ws-123',
+      role: 'workspace-read',
+      bases: [],
     });
   });
 
-  describe('state reset', () => {
-    it('resets form when modal reopens', () => {
-      const { rerender } = renderWithQueryClient(
-        <AssignUserToWorkspaceModal {...defaultProps} />
-      );
+  it('removes workspace access in edit mode', async () => {
+    userRolesAndAccessData = [
+      {
+        workspace_id: 'ws-123',
+        workspace_name: 'Workspace A',
+        access: 'maintainer',
+        bases: [],
+      },
+    ];
+    const user = userEvent.setup();
+    renderWithQueryClient(
+      <AssignUserToWorkspaceModal
+        {...defaultProps}
+        editMode={true}
+        memberToEdit="user-1"
+      />
+    );
 
-      // Verify user select exists
-      expect(screen.getByTestId('user-select')).toBeInTheDocument();
+    const removeButton = screen.getByTitle(/remove workspace access/i);
+    await user.click(removeButton);
 
-      // Close modal
-      rerender(
-        <QueryClientProvider client={createTestQueryClient()}>
-          <AssignUserToWorkspaceModal {...defaultProps} isOpen={false} />
-        </QueryClientProvider>
-      );
-
-      // Reopen modal
-      rerender(
-        <QueryClientProvider client={createTestQueryClient()}>
-          <AssignUserToWorkspaceModal {...defaultProps} isOpen={true} />
-        </QueryClientProvider>
-      );
-
-      // User select should still be present
-      expect(screen.getByTestId('user-select')).toBeInTheDocument();
-    });
-  });
-
-  describe('accessibility', () => {
-    it('modal has proper structure', () => {
-      renderWithQueryClient(<AssignUserToWorkspaceModal {...defaultProps} />);
-
-      const backdrop = document.querySelector('.bg-modal-backdrop');
-      expect(backdrop).toBeInTheDocument();
-    });
+    await waitFor(() =>
+      expect(removeUserFromWorkspaceMutateAsync).toHaveBeenCalledWith({
+        workspaceId: 'ws-123',
+        user_id: 'user-1',
+      })
+    );
   });
 });

@@ -287,17 +287,18 @@ describe('Duration Component', () => {
 
     it('should exit edit mode when readOnly becomes true', async () => {
       const { container, rerender } = render(
-        <Duration value={90} onChange={mockOnChange} readOnly={false} />
+        <Duration value={90} onChange={mockOnChange} allowEdit={true} readOnly={false} />
       );
 
-      const wrapper = container.querySelector('.field-component')?.parentElement!;
-      fireEvent.click(wrapper);
+      const triggerButton = container.querySelector('button');
+      expect(triggerButton).toBeInTheDocument();
+      fireEvent.click(triggerButton as HTMLButtonElement);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
+        expect(container.querySelector('input')).not.toBeNull();
       }, { timeout: 300 });
 
-      rerender(<Duration value={90} onChange={mockOnChange} readOnly={true} />);
+      rerender(<Duration value={90} onChange={mockOnChange} allowEdit={true} readOnly={true} />);
 
       await waitFor(() => {
         expect(container.querySelector('input')).not.toBeInTheDocument();

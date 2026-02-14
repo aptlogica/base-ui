@@ -18,6 +18,10 @@ export default defineConfig({
       exclude: [
         'node_modules/',
         'src/test/',
+        '**/__tests__/**',
+        '**/*.test.*',
+        '**/*.spec.*',
+        '**/__mocks__/**',
         '**/*.d.ts',
         '**/*.config.*',
         '**/dist/**',

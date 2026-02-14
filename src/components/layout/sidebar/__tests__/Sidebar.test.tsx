@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import Sidebar from '../Sidebar';
@@ -71,7 +71,17 @@ vi.mock('../../../modals/CreateTableModal', () => ({
 }));
 
 vi.mock('../../../modals/ImportModal', () => ({
-  ImportModal: () => <div data-testid="import-modal">Import Modal</div>,
+  ImportModal: ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () => void }) => (
+    <div data-testid="import-modal">
+      Import Modal
+      <button type="button" onClick={onClose}>
+        Close Import Modal
+      </button>
+      <button type="button" onClick={() => onSuccess?.()}>
+        Import Success
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock('react-dom', async () => {
@@ -94,7 +104,14 @@ vi.mock('../../../modals/CreateBaseModal', () => ({
 }));
 
 vi.mock('../../../tables/TableOptionsMenu', () => ({
-  default: () => <div data-testid="table-options-menu">Table Options</div>,
+  default: ({ onPinToggle, isPinned, table }: { onPinToggle?: (id: string, status: boolean) => void; isPinned?: boolean; table: { id: string } }) => (
+    <div data-testid="table-options-menu">
+      Table Options
+      <button type="button" onClick={() => onPinToggle?.(table.id, !isPinned)}>
+        Toggle Pin
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock('../components/TableViewsWithData', () => ({
@@ -253,6 +270,15 @@ describe('Sidebar', () => {
       render(<Sidebar />);
       expect(screen.getByRole('button', { name: /import table/i })).toBeInTheDocument();
     });
+
+    it('should disable Import Table button when selectedBase is null', () => {
+      useWorkspaceBusinessLogicMock.mockReturnValue({
+        ...getDefaultWorkspaceState(),
+        selectedBase: null,
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      render(<Sidebar />);
+      expect(screen.getByRole('button', { name: /import table/i })).toBeDisabled();
+    });
   });
 
   describe('Interaction', () => {
@@ -298,6 +324,61 @@ describe('Sidebar', () => {
 
       expect(mockToggleTableExpansion).toHaveBeenCalledWith('table-1');
     });
+
+    it('opens import modal when Import Table is clicked', async () => {
+      const user = userEvent.setup();
+      render(<Sidebar />);
+
+      await user.click(screen.getByRole('button', { name: /import table/i }));
+
+      expect(await screen.findByTestId('import-modal')).toBeInTheDocument();
+    });
+
+    it('closes import modal when import modal onClose is triggered', async () => {
+      const user = userEvent.setup();
+      render(<Sidebar />);
+
+      await user.click(screen.getByRole('button', { name: /import table/i }));
+      expect(await screen.findByTestId('import-modal')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /close import modal/i }));
+      expect(screen.queryByTestId('import-modal')).not.toBeInTheDocument();
+    });
+
+    it('closes import modal and shows success toast on import success', async () => {
+      const user = userEvent.setup();
+      render(<Sidebar />);
+
+      await user.click(screen.getByRole('button', { name: /import table/i }));
+      expect(await screen.findByTestId('import-modal')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /import success/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('import-modal')).not.toBeInTheDocument();
+      });
+      expect(mockToast.success).toHaveBeenCalledWith('Table imported successfully');
+    });
+
+    it('persists pinned state when toggled from table options', async () => {
+      const user = userEvent.setup();
+      render(<Sidebar />);
+
+      await user.click(screen.getByRole('button', { name: /toggle pin/i }));
+
+      await waitFor(() => {
+        expect(mockUpdateBaseMutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            baseId: 'base-1',
+            updates: expect.objectContaining({
+              meta: expect.objectContaining({
+                pinnedTables: { 'table-1': true },
+              }),
+            }),
+          })
+        );
+      });
+    });
   });
 
   describe('selectedWorkspace prop', () => {
@@ -339,6 +420,57 @@ describe('Sidebar', () => {
     it('should render TableOptionsMenu for each table', () => {
       render(<Sidebar />);
       expect(screen.getByTestId('table-options-menu')).toBeInTheDocument();
+    });
+
+    it('renders create base modal when requested and closes it', async () => {
+      const user = userEvent.setup();
+      useWorkspaceBusinessLogicMock.mockReturnValue({
+        ...getDefaultWorkspaceState(),
+        showCreateBaseWorkspaceId: 'ws-1',
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      render(<Sidebar />);
+
+      expect(screen.getByTestId('create-base-modal')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /close base modal/i }));
+      expect(mockSetShowCreateBaseWorkspaceId).toHaveBeenCalledWith(null);
+    });
+
+    it('cleans orphaned pinned table ids and persists cleaned meta', async () => {
+      useWorkspaceBusinessLogicMock.mockReturnValue({
+        ...getDefaultWorkspaceState(),
+        selectedBase: {
+          ...mockSelectedBase,
+          meta: { pinnedTables: { 'table-1': true, orphan: true } },
+        },
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+
+      render(<Sidebar />);
+
+      await waitFor(() => {
+        expect(mockUpdateBaseMutate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            baseId: 'base-1',
+            updates: expect.objectContaining({
+              meta: expect.objectContaining({
+                pinnedTables: { 'table-1': true },
+              }),
+            }),
+          })
+        );
+      });
+    });
+
+    it('shows pinned indicator when table is pinned', () => {
+      useWorkspaceBusinessLogicMock.mockReturnValue({
+        ...getDefaultWorkspaceState(),
+        selectedBase: {
+          ...mockSelectedBase,
+          meta: { pinnedTables: { 'table-1': true } },
+        },
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      const { container } = render(<Sidebar />);
+      const pinIcon = container.querySelector('svg.lucide-pin');
+      expect(pinIcon).toBeInTheDocument();
     });
   });
 });

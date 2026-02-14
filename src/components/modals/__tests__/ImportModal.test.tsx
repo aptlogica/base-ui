@@ -421,6 +421,24 @@ describe('ImportModal', () => {
       });
     });
 
+    it('detects duplicate title from model.title structure', async () => {
+      const user = userEvent.setup();
+      const existingTables = [
+        { model: { id: 't1', title: 'Sales Data' } }
+      ];
+
+      renderWithQueryClient(
+        <ImportModal {...defaultProps} existingTables={existingTables as any[]} />
+      );
+
+      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
+      await user.type(titleInput, 'sales data');
+
+      await waitFor(() => {
+        expect(screen.getByText(/Table title must be unique/i)).toBeInTheDocument();
+      });
+    });
+
     it('clears title error when valid title is entered', async () => {
       const user = userEvent.setup();
       renderWithQueryClient(<ImportModal {...defaultProps} />);

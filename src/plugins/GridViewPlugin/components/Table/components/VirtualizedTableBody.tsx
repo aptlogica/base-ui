@@ -25,6 +25,8 @@ interface VirtualizedTableBodyProps {
   visibleColumns?: ColumnConfig[];
   allColumns?: ColumnConfig[]; // All columns for formula field name mapping
   canEdit?: boolean; // Permission to edit cells
+  pinnedColumnIds?: string[];
+  pinnedColumnOffsets?: Record<string, number>;
 }
 
 const ROW_HEIGHT = 40; // Row height in pixels
@@ -32,7 +34,7 @@ const GROUP_HEADER_HEIGHT = 40; // Group header height in pixels
 
 // Flatten grouped data into a single array for virtualization
 type FlattenedItem =
-  | { type: 'group'; group: any; level: number; index: number }
+  | { type: 'group'; group: any; level: number; index: number; isFirstTopLevelGroup?: boolean }
   | { type: 'row'; row: TableData; rowIndex: number; groupRowNumber?: number };
 
 const flattenGroupedData = (
@@ -54,6 +56,7 @@ const flattenGroupedData = (
       type: 'group',
       group,
       level,
+      isFirstTopLevelGroup: level === 0 ? items.filter(item => item.type === 'group' && item.level === 0).length === 0 : false,
       index: currentIndex++
     });
 
@@ -103,6 +106,8 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
   setExpandedGroups,
   visibleColumns = columns,
   allColumns,
+  pinnedColumnIds = [],
+  pinnedColumnOffsets = {},
 }) => {
   // Calculate total table width (selector + columns + add column button)
   const totalWidth = 48 + columnWidths.reduce((sum, w) => sum + w, 0);
@@ -133,7 +138,11 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
     (index: number) => {
       const item = flattenedItems[index];
       if (!item) return ROW_HEIGHT;
-      return item.type === 'group' ? GROUP_HEADER_HEIGHT : ROW_HEIGHT;
+      if (item.type === 'group') {
+        const topLevelGap = item.level === 0 && !item.isFirstTopLevelGroup ? 8 : 0;
+        return GROUP_HEADER_HEIGHT + topLevelGap;
+      }
+      return ROW_HEIGHT;
     },
     [flattenedItems]
   );
@@ -167,32 +176,36 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
     virtualizer.measure();
   }, [flattenedItems.length, expandedGroups.size, virtualizer]);
 
-  // Helper to get group background color
   const getGroupBackgroundColor = useCallback((level: number, isHover: boolean = false): string => {
-    if (level === 0) {
-      return isHover ? 'var(--color-utility-purple-100)' : 'var(--color-utility-purple-50)';
-    }
-    if (level === 1) {
-      return isHover ? 'var(--color-utility-gray-blue-100)' : 'var(--color-utility-gray-blue-50)';
-    }
-    return isHover ? 'var(--color-gray-100)' : 'var(--color-gray-50)';
+    if (level === 0) return isHover ? 'var(--color-gray-100)' : 'var(--color-gray-50)';
+    if (level === 1) return isHover ? 'var(--color-gray-50)' : 'var(--color-bg-card)';
+    return isHover ? 'var(--color-bg-card)' : 'var(--color-bg-primary)';
   }, []);
 
-  // Helper to get border left style
-  const getBorderLeftStyle = useCallback((level: number): string => {
-    if (level === 0) return 'none';
-    if (level === 1) return '3px solid var(--color-utility-purple-300)';
-    return '3px solid var(--color-gray-300)';
+  const getGroupRailColor = useCallback((level: number): string => {
+    if (level === 0) return 'var(--color-gray-300)';
+    if (level === 1) return 'var(--color-gray-200)';
+    return 'var(--color-gray-150, var(--color-gray-200))';
   }, []);
 
-  // Render group header
+  // Render group header aligned to grid columns (not full-width banner)
   const renderGroupHeader = useCallback((item: FlattenedItem & { type: 'group' }) => {
-    const { group, level } = item;
+    const { group, level, isFirstTopLevelGroup } = item;
     const isNestedGroup = Array.isArray(group.rows) && group.rows.length > 0 && group.rows[0].groupValue;
     const column = visibleColumns.find(col => col.key === group.groupColumn);
+    // Noco-like UX: always render grouping labels in the left grouping lane
+    // (first visible data column), regardless of which field is grouped at this depth.
+    const groupColumnIndex = 0;
     const columnTitle = column?.title || group.groupColumn;
     const groupId = `${group.groupColumn}-${group.groupValue}-${level}`;
     const isExpanded = expandedGroups.has(groupId);
+    let lastPinnedColumnId: string | null = null;
+    visibleColumns.forEach((col) => {
+      const identity = String(col.id || col.key || '');
+      if (pinnedColumnIds.includes(identity)) {
+        lastPinnedColumnId = identity;
+      }
+    });
 
     const toggleGroup = () => {
       if (setExpandedGroups) {
@@ -223,8 +236,16 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
       e.currentTarget.style.backgroundColor = getGroupBackgroundColor(level, false);
     };
 
+    const topLevelGap = level === 0 && !isFirstTopLevelGroup ? 8 : 0;
+
     return (
-      // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
+      <div
+        style={{
+          paddingTop: `${topLevelGap}px`,
+          height: `${GROUP_HEADER_HEIGHT + topLevelGap}px`,
+          boxSizing: 'border-box',
+        }}
+      >
       <div
         className="grid border-b border-primary/10 font-semibold text-foreground text-sm cursor-pointer transition-all duration-200"
         style={{
@@ -233,8 +254,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
           minHeight: '40px',
           maxHeight: '40px',
           backgroundColor: getGroupBackgroundColor(level, false),
-          borderLeft: getBorderLeftStyle(level),
-          paddingLeft: `${12 + level * 24}px`,
+          borderLeft: 'none',
           boxShadow: level === 0 ? 'var(--shadow-xs)' : 'none'
         }}
         onClick={toggleGroup}
@@ -246,39 +266,77 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
         aria-expanded={isExpanded}
         aria-label={`Toggle group ${columnTitle}: ${group.groupValue}`}
       >
-        <div className="col-span-full flex items-center px-4 py-2 gap-3">
-          <div
-            className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded transition-all duration-200"
-            style={{
-              backgroundColor: isExpanded ? 'var(--color-utility-purple-100)' : 'var(--color-utility-purple-50)'
-            }}
-          >
-            {isExpanded ? (
-              <ChevronDown className="w-4 h-4 transition-transform" style={{ color: 'var(--color-utility-purple-600)' }} />
-            ) : (
-              <ChevronRight className="w-4 h-4 transition-transform" style={{ color: 'var(--color-utility-purple-600)' }} />
-            )}
-          </div>
-          <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            <span className="font-bold text-sm tracking-wide" style={{ color: 'var(--color-utility-purple-700)' }}>
-              {columnTitle}:
-            </span>
-            <span className="font-semibold text-foreground">{group.groupValue}</span>
-            <span
-              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+        <div
+          className="flex-shrink-0 border-r border-b border-border/30"
+          style={{
+            position: 'sticky',
+            left: 0,
+            zIndex: 20,
+            boxShadow: 'inset 1px 0 0 var(--color-border), 2px 0 4px -2px rgba(0,0,0,0.06)'
+          }}
+        />
+
+        {visibleColumns.map((visibleColumn, index) => {
+          const columnIdentity = String(visibleColumn.id || visibleColumn.key || '');
+          const isPinned = pinnedColumnIds.includes(columnIdentity);
+          const isGroupedColumn = index === groupColumnIndex;
+
+          return (
+            <div
+              key={`group-cell-${groupId}-${columnIdentity}-${index}`}
+              className="border-r border-b border-border/30 flex items-center px-3 min-w-0"
               style={{
-                backgroundColor: 'var(--color-utility-purple-100)',
-                color: 'var(--color-utility-purple-700)',
-                borderColor: 'var(--color-utility-purple-300)'
+                position: isPinned ? 'sticky' : 'relative',
+                left: isPinned ? `${pinnedColumnOffsets[columnIdentity] ?? 48}px` : undefined,
+                zIndex: isPinned ? 19 : undefined,
+                boxShadow: isPinned && columnIdentity === lastPinnedColumnId ? '2px 0 4px -3px rgba(15,23,42,0.12)' : undefined,
               }}
             >
-              {group.rows.length} {isNestedGroup ? 'group' : 'row'}{group.rows.length > 1 ? 's' : ''}
-            </span>
-          </div>
-        </div>
+              {isGroupedColumn && (
+                <div className="flex items-center gap-1.5 min-w-0 w-full" style={{ paddingLeft: `${8 + level * 20}px` }}>
+                  <div
+                    className="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-md transition-all duration-200"
+                    style={{
+                      backgroundColor: level === 0
+                        ? (isExpanded ? 'var(--color-gray-200)' : 'var(--color-gray-100)')
+                        : (isExpanded ? 'var(--color-gray-100)' : 'var(--color-bg-card)')
+                    }}
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="w-3.5 h-3.5 transition-transform text-gray-700" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5 transition-transform text-gray-700" />
+                    )}
+                  </div>
+                  <div
+                    className="flex items-center gap-2 min-w-0 px-2 py-1 rounded-md"
+                    style={{
+                      borderLeft: `${level > 0 ? 2 : 0}px solid ${getGroupRailColor(level)}`,
+                      paddingLeft: `${level > 0 ? 8 : 0}px`,
+                      backgroundColor: level > 0 ? 'var(--color-bg-card)' : 'transparent',
+                    }}
+                  >
+                    <span className="font-medium text-[11px] tracking-wide uppercase whitespace-nowrap text-gray-500">
+                      {columnTitle}:
+                    </span>
+                    <span className={`truncate ${level === 0 ? 'font-semibold text-foreground' : 'font-medium text-secondary'}`}>
+                      {group.groupValue}
+                    </span>
+                    <span className="text-xs text-gray-500 whitespace-nowrap px-1.5 py-0.5 rounded bg-gray-100">
+                      {isNestedGroup ? `${group.rows.length} group${group.rows.length > 1 ? 's' : ''}` : `${group.rows.length} row${group.rows.length > 1 ? 's' : ''}`}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        <div className="border-b border-border/30" />
+      </div>
       </div>
     );
-  }, [visibleColumns, columnWidths, expandedGroups, setExpandedGroups, getGroupBackgroundColor, getBorderLeftStyle]);
+  }, [visibleColumns, columnWidths, expandedGroups, setExpandedGroups, getGroupBackgroundColor, getGroupRailColor, pinnedColumnIds, pinnedColumnOffsets]);
 
   // Render regular row
   const renderRow = useCallback((item: FlattenedItem & { type: 'row' }) => {
@@ -304,9 +362,11 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
         tableId={tableId}
         allColumns={allColumns ?? columns}
         canEdit={canEdit}
+        pinnedColumnIds={pinnedColumnIds}
+        pinnedColumnOffsets={pinnedColumnOffsets}
       />
     );
-  }, [columns, columnWidths, selectedRows, onRowSelect, onCellChange, onContextMenu, activeCell, setActiveCell, tableId, allColumns, canEdit]);
+  }, [columns, columnWidths, selectedRows, onRowSelect, onCellChange, onContextMenu, activeCell, setActiveCell, tableId, allColumns, canEdit, pinnedColumnIds, pinnedColumnOffsets]);
 
   const virtualItems = virtualizer.getVirtualItems();
 

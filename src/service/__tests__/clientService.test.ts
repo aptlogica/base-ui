@@ -406,4 +406,63 @@ describe('clientService', () => {
     expect((client.baseService as any).update).toHaveBeenCalledWith('b1', { title: 'Base' });
     expect((client.baseService as any).uploadImage).toHaveBeenCalledTimes(1);
   });
+
+  it('refreshes expired token during auth check', async () => {
+    const accessToken = createJwt({ exp: Math.floor(Date.now() / 1000) - 10, user_id: 'user-1' });
+    const refreshToken = createJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
+    const newAccess = createJwt({ exp: Math.floor(Date.now() / 1000) + 3600, user_id: 'user-1' });
+    const newRefresh = createJwt({ exp: Math.floor(Date.now() / 1000) + 7200 });
+
+    sessionStorage.setItem('_st_', accessToken);
+    sessionStorage.setItem('_te_', String(Math.floor(Date.now() / 1000) - 10));
+    sessionStorage.setItem('_rt_', refreshToken);
+    sessionStorage.setItem('_rte_', String(Math.floor(Date.now() / 1000) + 3600));
+    sessionStorage.setItem('user_id', 'user-1');
+
+    (client.auth as any).refreshToken = vi.fn().mockResolvedValue({
+      data: { token: { access_token: newAccess, refresh_token: newRefresh } },
+    });
+
+    await expect(isAuthenticated()).resolves.toBe(true);
+    expect((client.auth as any).refreshToken).toHaveBeenCalledTimes(1);
+    expect(getStoredAccessToken()).toBe(newAccess);
+    expect(getStoredRefreshToken()).toBe(newRefresh);
+  });
+
+  it('retries an authenticated call once after 401 with refresh', async () => {
+    const accessToken = createJwt({ exp: Math.floor(Date.now() / 1000) + 3600, user_id: 'user-1' });
+    const refreshToken = createJwt({ exp: Math.floor(Date.now() / 1000) + 7200 });
+    const newAccess = createJwt({ exp: Math.floor(Date.now() / 1000) + 3600, user_id: 'user-1' });
+
+    sessionStorage.setItem('_st_', accessToken);
+    sessionStorage.setItem('_te_', String(Math.floor(Date.now() / 1000) + 3600));
+    sessionStorage.setItem('_rt_', refreshToken);
+    sessionStorage.setItem('_rte_', String(Math.floor(Date.now() / 1000) + 7200));
+    sessionStorage.setItem('user_id', 'user-1');
+
+    (client.auth as any).refreshToken = vi.fn().mockResolvedValue({
+      data: { token: { access_token: newAccess, refresh_token: refreshToken } },
+    });
+
+    const createSpy = vi.fn()
+      .mockRejectedValueOnce({ response: { status: 401 } })
+      .mockResolvedValueOnce({ data: { id: 'w1' } });
+    (client.workspace as any).create = createSpy;
+
+    await expect(createWorkspaceService({ title: 'W' } as any)).resolves.toEqual({ data: { id: 'w1' } });
+    expect(createSpy).toHaveBeenCalledTimes(2);
+    expect((client.auth as any).refreshToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('initializes client token from storage', async () => {
+    const setAuthSpy = vi.spyOn(client, 'setAuth');
+    const accessToken = createJwt({ exp: Math.floor(Date.now() / 1000) + 3600, user_id: 'user-1' });
+    sessionStorage.setItem('_st_', accessToken);
+    sessionStorage.setItem('_te_', String(Math.floor(Date.now() / 1000) + 3600));
+
+    const svc = await import('../clientService');
+    await svc.initializeClientToken();
+
+    expect(setAuthSpy).toHaveBeenCalledWith(accessToken);
+  });
 });

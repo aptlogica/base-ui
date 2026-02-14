@@ -161,9 +161,9 @@ describe('PhoneNumber Component', () => {
     });
 
     it('reverts value on Escape key', async () => {
-      render(<PhoneNumber value="123" onChange={mockOnChange} />);
+      render(<PhoneNumber value="123" allowEdit={true} onChange={mockOnChange} />);
       await userEvent.click(screen.getByText('123'));
-      const input = screen.getByRole('textbox') as HTMLInputElement;
+      const input = await screen.findByRole('textbox') as HTMLInputElement;
       await userEvent.clear(input);
       await userEvent.type(input, '999');
       fireEvent.keyDown(input, { key: 'Escape' });

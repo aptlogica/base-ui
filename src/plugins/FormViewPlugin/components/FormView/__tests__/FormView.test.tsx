@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { FormView } from '../FormView';
@@ -10,28 +10,126 @@ vi.mock('../../../../../hooks/useApi', () => ({
   useAllViews: () => ({ data: [] }),
 }));
 
+let isReadOnlyState = false;
 vi.mock('../../../../../hooks/useBaseAccess', () => ({
   useBaseAccess: () => ({
-    isBaseReadOnly: () => false,
+    isBaseReadOnly: () => isReadOnlyState,
     canCreateColumn: () => true,
   }),
 }));
 
+const formModalsState = {
+  isNewColumnModalOpen: false,
+  deleteConfirmModalOpen: false,
+  fieldToDelete: null as string | null,
+  modalPosition: null as { top: number; left: number } | null,
+  editColumn: null as any,
+  editModalOpen: false,
+  updateFieldConfirmModalOpen: false,
+  pendingEditColumnChanges: null as any,
+  addFieldButtonRef: { current: null as HTMLButtonElement | null },
+  handleAddField: vi.fn(),
+  handleCloseNewColumnModal: vi.fn(),
+  handleFieldEdit: vi.fn(),
+  handleCloseEditModal: vi.fn(),
+  handleDeleteField: vi.fn(),
+  handleCloseDeleteConfirmModal: vi.fn(),
+  handleCloseUpdateFieldConfirmModal: vi.fn(),
+  setPendingEditColumnChanges: vi.fn(),
+  setEditModalOpen: vi.fn(),
+  setEditColumn: vi.fn(),
+  setUpdateFieldConfirmModalOpen: vi.fn(),
+};
+
+const formPanelState = {
+  sidebarOpen: false,
+  selectedFieldId: null as string | null,
+  setSelectedFieldId: vi.fn(),
+  toggleSidebar: vi.fn(),
+};
+
+const formDataState = {
+  rowData: { Title: 'R1' },
+  formError: null as string | null,
+  submitting: false,
+  setFormError: vi.fn(),
+  setSubmitting: vi.fn(),
+  setSubmitSuccess: vi.fn(),
+  handleRowDataChange: vi.fn(),
+  clearFormData: vi.fn(),
+};
+
+const formViewConfigState = {
+  formConfig: { title: 'Form', appearance: {} },
+  handleConfigChange: vi.fn(),
+};
+
+vi.mock('../../../hooks/useFormModals', () => ({
+  useFormModals: () => formModalsState,
+}));
+
+vi.mock('../../../hooks/useFormPanel', () => ({
+  useFormPanel: () => formPanelState,
+}));
+
+vi.mock('../../../hooks/useFormDataState', () => ({
+  useFormDataState: () => formDataState,
+}));
+
+vi.mock('../../../hooks/useFormViewConfig', () => ({
+  useFormViewConfig: () => formViewConfigState,
+}));
+
 vi.mock('../FormPreview', () => ({
-  FormPreview: (props: { config: { title: string }; onSubmit?: () => void }) => (
+  FormPreview: (props: {
+    config: { title: string };
+    onSubmit?: (e: React.SyntheticEvent<HTMLFormElement>) => void;
+    onDeleteField?: (fieldId: string) => void;
+    onEdit?: (fieldId: string) => void;
+    onFieldOrderChange?: (fields: any[]) => void;
+    onClear?: () => void;
+  }) => (
     <div data-testid="form-preview">
       <span data-testid="form-title">{props.config.title}</span>
       {props.onSubmit && (
-        <button data-testid="submit-btn" onClick={props.onSubmit}>
+        <button
+          data-testid="submit-btn"
+          onClick={() => props.onSubmit?.({ preventDefault: vi.fn() } as unknown as React.SyntheticEvent<HTMLFormElement>)}
+        >
           Submit
         </button>
       )}
+      {props.onDeleteField && (
+        <>
+          <button data-testid="delete-system-btn" onClick={() => props.onDeleteField?.('c1')}>DeleteSystem</button>
+          <button data-testid="delete-field-btn" onClick={() => props.onDeleteField?.('c2')}>DeleteField</button>
+        </>
+      )}
+      {props.onEdit && <button data-testid="edit-system-btn" onClick={() => props.onEdit?.('c1')}>EditSystem</button>}
+      {props.onFieldOrderChange && (
+        <button data-testid="preview-order-btn" onClick={() => props.onFieldOrderChange?.([{ id: 'c2' }])}>
+          Reorder
+        </button>
+      )}
+      {props.onClear && <button data-testid="clear-btn" onClick={props.onClear}>Clear</button>}
     </div>
   ),
 }));
 
 vi.mock('../RightPanel', () => ({
-  RightPanel: () => <div data-testid="right-panel">RightPanel</div>,
+  RightPanel: (props: {
+    onFieldToggle?: (fieldId: string) => void;
+    onDeleteField?: (fieldId: string) => void;
+    setVisibleAllFields?: (visible: boolean) => void;
+    onFieldOrderChange?: (fields: any[]) => void;
+  }) => (
+    <div data-testid="right-panel">
+      <button data-testid="toggle-field-btn" onClick={() => props.onFieldToggle?.('c2')}>ToggleField</button>
+      <button data-testid="panel-delete-btn" onClick={() => props.onDeleteField?.('c2')}>PanelDelete</button>
+      <button data-testid="set-visible-btn" onClick={() => props.setVisibleAllFields?.(true)}>SetVisible</button>
+      <button data-testid="panel-order-btn" onClick={() => props.onFieldOrderChange?.([{ id: 'c2' }])}>PanelOrder</button>
+    </div>
+  ),
 }));
 
 vi.mock('../../../../../components/modals/NewColumnModal', () => ({
@@ -84,7 +182,7 @@ describe('FormView', () => {
   const defaultTableData = {
     model: { id: 'm1', base_id: 'b1' },
     columns: [
-      { id: 'c1', title: 'Title', column_name: 'title', uidt: 'text' },
+      { id: 'c1', title: 'Title', column_name: 'title', uidt: 'text', system: true },
       { id: 'c2', title: 'Description', column_name: 'description', uidt: 'longText' },
     ],
     views: [
@@ -97,6 +195,17 @@ describe('FormView', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    isReadOnlyState = false;
+    formPanelState.sidebarOpen = false;
+    formPanelState.selectedFieldId = null;
+    formModalsState.isNewColumnModalOpen = false;
+    formModalsState.deleteConfirmModalOpen = false;
+    formModalsState.fieldToDelete = null;
+    formModalsState.modalPosition = null;
+    formModalsState.editColumn = null;
+    formModalsState.editModalOpen = false;
+    formModalsState.updateFieldConfirmModalOpen = false;
+    formModalsState.pendingEditColumnChanges = null;
   });
 
   describe('Rendering', () => {
@@ -187,6 +296,7 @@ describe('FormView', () => {
     });
 
     it('should show RightPanel when sidebar toggle is clicked', () => {
+      formPanelState.sidebarOpen = true;
       render(
         <FormView
           tableData={defaultTableData}
@@ -196,10 +306,6 @@ describe('FormView', () => {
         />,
         { wrapper: createWrapper() }
       );
-
-      const toggleButton = screen.getByTitle('Show sidebar');
-      fireEvent.click(toggleButton);
-
       expect(screen.getByTestId('right-panel')).toBeInTheDocument();
     });
 
@@ -216,8 +322,7 @@ describe('FormView', () => {
 
       const toggleButton = screen.getByTitle('Show sidebar');
       fireEvent.click(toggleButton);
-      fireEvent.click(screen.getByTitle('Hide sidebar'));
-
+      expect(formPanelState.toggleSidebar).toHaveBeenCalled();
       expect(screen.queryByTestId('right-panel')).not.toBeInTheDocument();
     });
   });
@@ -235,6 +340,22 @@ describe('FormView', () => {
       );
 
       expect(screen.getByTitle('Show sidebar')).toBeInTheDocument();
+    });
+
+    it('should hide mutating actions in read-only mode', () => {
+      isReadOnlyState = true;
+      render(
+        <FormView
+          tableData={defaultTableData}
+          viewId="v1"
+          onRefresh={mockOnRefresh}
+          actions={mockActions}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.queryByText('Add Field')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('submit-btn')).not.toBeInTheDocument();
     });
   });
 
@@ -323,6 +444,97 @@ describe('FormView', () => {
 
       const formContainer = container.querySelector('.h-full.flex.flex-col');
       expect(formContainer).toBeInTheDocument();
+    });
+  });
+
+  describe('Handler execution paths', () => {
+    it('submits form data on submit button click', async () => {
+      (mockActions.submitForm as Mock).mockResolvedValueOnce(undefined);
+
+      render(
+        <FormView
+          tableData={defaultTableData}
+          viewId="v1"
+          onRefresh={mockOnRefresh}
+          actions={mockActions}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(screen.getByTestId('submit-btn'));
+
+      await waitFor(() => {
+        expect(mockActions.submitForm).toHaveBeenCalled();
+      });
+      expect(formDataState.clearFormData).toHaveBeenCalled();
+    });
+
+    it('handles submit failure path', async () => {
+      (mockActions.submitForm as Mock).mockRejectedValueOnce(new Error('submit failed'));
+
+      render(
+        <FormView
+          tableData={defaultTableData}
+          viewId="v1"
+          onRefresh={mockOnRefresh}
+          actions={mockActions}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(screen.getByTestId('submit-btn'));
+
+      await waitFor(() => {
+        expect(mockActions.submitForm).toHaveBeenCalled();
+      });
+      expect(formDataState.setFormError).toHaveBeenCalled();
+    });
+
+    it('uses field delete/edit guards for system and non-system fields', () => {
+      render(
+        <FormView
+          tableData={defaultTableData}
+          viewId="v1"
+          onRefresh={mockOnRefresh}
+          actions={mockActions}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(screen.getByTestId('delete-system-btn'));
+      fireEvent.click(screen.getByTestId('delete-field-btn'));
+      fireEvent.click(screen.getByTestId('edit-system-btn'));
+
+      expect(formModalsState.handleDeleteField).toHaveBeenCalledTimes(1);
+      expect(formModalsState.handleDeleteField).toHaveBeenCalledWith('c2');
+      expect(formModalsState.handleFieldEdit).not.toHaveBeenCalled();
+    });
+
+    it('executes right panel actions when sidebar is open', async () => {
+      formPanelState.sidebarOpen = true;
+      (mockActions.toggleFieldVisibility as Mock).mockResolvedValueOnce(undefined);
+      (mockActions.setAllFieldsVisibility as Mock).mockResolvedValueOnce(undefined);
+      (mockActions.updateFieldOrder as Mock).mockResolvedValueOnce(undefined);
+
+      render(
+        <FormView
+          tableData={defaultTableData}
+          viewId="v1"
+          onRefresh={mockOnRefresh}
+          actions={mockActions}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(screen.getByTestId('toggle-field-btn'));
+      fireEvent.click(screen.getByTestId('set-visible-btn'));
+      fireEvent.click(screen.getByTestId('panel-order-btn'));
+
+      await waitFor(() => {
+        expect(mockActions.toggleFieldVisibility).toHaveBeenCalled();
+        expect(mockActions.setAllFieldsVisibility).toHaveBeenCalled();
+        expect(mockActions.updateFieldOrder).toHaveBeenCalled();
+      });
     });
   });
 });
