@@ -3,6 +3,7 @@ import ReactDOM, { createPortal } from 'react-dom';
 import { MoreVertical, Search, ChevronsUpDown, UserX, UserCheck, Trash2, Filter, Edit, Loader2 } from 'lucide-react';
 import { useUserRole } from '../../hooks/useUserRole';
 import { useUserRolesAndAccess } from '../../hooks/useApi';
+import { formatCreatedDate, formatRelativeLastActive, getAvatarColor, getRolePillStyle } from './userTableUtils';
 
 export interface TenantUser {
   id: string;
@@ -85,68 +86,16 @@ const getTimezoneName = (timezone: string, _activityData?: TenantUser['activity_
   return tzObj ? tzObj.label : timezone;
 };
 
-const formatCreatedTime = (createdTime?: string) => {
-  if (!createdTime) return '-';
-
-  try {
-    const date = new Date(createdTime);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  } catch {
-    return '-';
-  }
-};
+const formatCreatedTime = (createdTime?: string) => formatCreatedDate(createdTime);
 
 const formatLastActive = (lastActiveAt?: string, lastLoginAt?: string, activityData?: TenantUser['activity_data']) => {
-  // Try activity_data.last_updated_at first
-  let dateStr = activityData?.last_updated_at || lastActiveAt || lastLoginAt;
-
-  if (!dateStr || dateStr === '0001-01-01T00:00:00Z') {
-    return '-';
-  }
-
-  try {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-
-    return date.toLocaleDateString();
-  } catch {
-    return '-';
-  }
+  return formatRelativeLastActive(lastActiveAt, lastLoginAt, activityData?.last_updated_at);
 };
 
 const getAvatarInitials = (firstName: string, lastName: string) => {
   const first = (firstName?.[0] || '').toUpperCase();
   const last = (lastName?.[0] || '').toUpperCase();
   return first + last || 'U';
-};
-
-const getAvatarColor = (userId: string) => {
-  const colors = [
-    'bg-blue-500',
-    'bg-green-500',
-    'bg-purple-500',
-    'bg-pink-500',
-    'bg-yellow-500',
-    'bg-red-500',
-    'bg-indigo-500',
-    'bg-cyan-500'
-  ];
-
-  const hash = userId.split('').reduce((acc, char) => acc + (char.codePointAt(0) || 0), 0);
-  return colors[hash % colors.length];
 };
 
 // Language mapping utility
@@ -243,25 +192,6 @@ const getOverallRoles = (user: TenantUser): string[] => {
   }
 
   return [...new Set(roles)]; // Remove duplicates
-};
-
-// Role pill styling
-const getRolePillStyle = (role: string) => {
-  const roleLower = role.toLowerCase();
-  if (roleLower.includes('owner')) {
-    return 'bg-green-100 text-green-700 border border-green-200';
-  } else if (roleLower.includes('co-owner')) {
-    return 'bg-green-50 text-green-600 border border-green-200';
-  } else if (roleLower.includes('workspace maintainer')) {
-    return 'bg-purple-100 text-purple-700 border border-purple-200';
-  } else if (roleLower.includes('workspace read only')) {
-    return 'bg-orange-100 text-orange-700 border border-orange-200';
-  } else if (roleLower.includes('base member')) {
-    return 'bg-red-100 text-red-700 border border-red-200';
-  } else if (roleLower.includes('base read only')) {
-    return 'bg-gray-100 text-gray-700 border border';
-  }
-  return 'bg-gray-100 text-gray-700 border border';
 };
 
 // Expandable Row Component for Access Details
@@ -1138,9 +1068,9 @@ export const UserTable: React.FC<UserTableProps> = ({
                     onDeactivateUser(openActionMenu);
                     setOpenActionMenu(null);
                   }}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl flex items-center gap-2"
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2"
                 >
-                  <UserX className="w-4 h-4 text-gray-500" />
+                  <UserX className="w-4 h-4" />
                   Deactivate User
                 </button>
               );

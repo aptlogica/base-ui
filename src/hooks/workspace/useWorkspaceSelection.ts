@@ -1,11 +1,45 @@
 import { useEffect } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 
+const PENDING_NEW_WORKSPACE_KEY = 'pending_new_workspace';
+const PENDING_NEW_WORKSPACE_TTL_MS = 15000;
+
 // Helper: Check if selected workspace is invalid
 const isSelectedWorkspaceInvalid = (selectedWorkspace: any, workspaceList: any[]): boolean => {
   if (!selectedWorkspace) return true;
   if (!selectedWorkspace.id) return true;
   return !workspaceList.some(ws => ws.id === selectedWorkspace.id);
+};
+
+const shouldDeferInvalidWorkspaceFallback = (workspaceList: any[], selectedWorkspaceId: string | null): boolean => {
+  if (!selectedWorkspaceId) return false;
+
+  const pendingWorkspaceRaw = sessionStorage.getItem(PENDING_NEW_WORKSPACE_KEY);
+  if (!pendingWorkspaceRaw) return false;
+
+  try {
+    const pendingWorkspace = JSON.parse(pendingWorkspaceRaw) as { id?: string; createdAt?: number };
+    const isExpired = !pendingWorkspace?.createdAt || (Date.now() - pendingWorkspace.createdAt) > PENDING_NEW_WORKSPACE_TTL_MS;
+    if (isExpired) {
+      sessionStorage.removeItem(PENDING_NEW_WORKSPACE_KEY);
+      return false;
+    }
+
+    if (pendingWorkspace.id !== selectedWorkspaceId) {
+      return false;
+    }
+
+    // Workspace reached query data - clear pending marker
+    if (workspaceList.some(ws => ws.id === selectedWorkspaceId)) {
+      sessionStorage.removeItem(PENDING_NEW_WORKSPACE_KEY);
+      return false;
+    }
+
+    return true;
+  } catch {
+    sessionStorage.removeItem(PENDING_NEW_WORKSPACE_KEY);
+    return false;
+  }
 };
 
 // Helper: Select and persist first workspace
@@ -45,9 +79,6 @@ const syncWorkspaceFromStoreId = (
     }
     return;
   }
-  
-  // Workspace ID in store doesn't exist - fallback to first workspace
-  selectFirstWorkspace(workspaceList, setSelectedWorkspace, setWorkspace, navigateAndPersist, userId);
 };
 
 // Helper: Handle auto-selection on initial load
@@ -104,6 +135,7 @@ export const useWorkspaceSelection = (
 
     const workspaceList = workspaces;
     const isInvalid = isSelectedWorkspaceInvalid(selectedWorkspace, workspaceList);
+    const shouldDeferFallback = shouldDeferInvalidWorkspaceFallback(workspaceList, selectedWorkspaceId);
 
     // Priority 1: If store has selectedWorkspaceId, sync the workspace object
     if (selectedWorkspaceId) {
@@ -128,7 +160,7 @@ export const useWorkspaceSelection = (
     }
 
     // Additional safety check: fallback if selectedWorkspace is invalid
-    if (isInvalid) {
+    if (isInvalid && !shouldDeferFallback) {
       handleInvalidWorkspaceFallback(
         workspaceList,
         selectedWorkspaceId,

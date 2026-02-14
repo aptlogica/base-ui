@@ -63,6 +63,23 @@ interface NavigationState {
   getNavigationPath: () => string;
 }
 
+const expandIfMissing = (items: string[], id: string): string[] => {
+  return items.includes(id) ? items : [...items, id];
+};
+
+const persistNavigationForCurrentUser = (saveUserNavigation: (userId: string) => void): void => {
+  const userId = sessionStorage.getItem('user_id');
+  if (!userId) {
+    return;
+  }
+
+  try {
+    saveUserNavigation(userId);
+  } catch (err) {
+    console.warn('Failed to save navigation to sessionStorage', err);
+  }
+};
+
 export const useNavigationStore = create<NavigationState>()((set, get) => ({
   // Initial state
   selectedWorkspaceId: null,
@@ -88,65 +105,33 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
       expandedBases: [],
       expandedTables: [],
     });
-    // Auto-save to sessionStorage SYNCHRONOUSLY after state update
-    // This ensures sessionStorage is always in sync with store
-    const userId = sessionStorage.getItem('user_id');
-    if (userId) {
-      try {
-        // Save immediately - state is already updated by set() above
-        get().saveUserNavigation(userId);
-      } catch (err) {
-        console.warn('Failed to save navigation to sessionStorage', err);
-      }
-    }
+    persistNavigationForCurrentUser((userId) => get().saveUserNavigation(userId));
   },
 
   navigateToBase: (workspaceId, baseId) => {
+    const state = get();
     set({
       selectedWorkspaceId: workspaceId,
       selectedBaseId: baseId,
       selectedTableId: null,
       selectedViewId: null,
       expandedTables: [],
-      // Add base to expanded bases if not already expanded
-      expandedBases: get().expandedBases.includes(baseId)
-        ? get().expandedBases
-        : [...get().expandedBases, baseId]
+      expandedBases: expandIfMissing(state.expandedBases, baseId)
     });
-    // Auto-save to sessionStorage SYNCHRONOUSLY after state update
-    const userId = sessionStorage.getItem('user_id');
-    if (userId) {
-      try {
-        get().saveUserNavigation(userId);
-      } catch (err) {
-        console.warn('Failed to save navigation to sessionStorage', err);
-      }
-    }
+    persistNavigationForCurrentUser((userId) => get().saveUserNavigation(userId));
   },
 
   navigateToTable: (workspaceId, baseId, tableId) => {
+    const state = get();
     set({
       selectedWorkspaceId: workspaceId,
       selectedBaseId: baseId,
       selectedTableId: tableId,
       selectedViewId: null,
-      // Ensure base and table are expanded
-      expandedBases: get().expandedBases.includes(baseId)
-        ? get().expandedBases
-        : [...get().expandedBases, baseId],
-      expandedTables: get().expandedTables.includes(tableId)
-        ? get().expandedTables
-        : [...get().expandedTables, tableId]
+      expandedBases: expandIfMissing(state.expandedBases, baseId),
+      expandedTables: expandIfMissing(state.expandedTables, tableId)
     });
-    // Auto-save to sessionStorage SYNCHRONOUSLY after state update
-    const userId = sessionStorage.getItem('user_id');
-    if (userId) {
-      try {
-        get().saveUserNavigation(userId);
-      } catch (err) {
-        console.warn('Failed to save navigation to sessionStorage', err);
-      }
-    }
+    persistNavigationForCurrentUser((userId) => get().saveUserNavigation(userId));
   },
 
   // Convenience helper: navigate and cache in sessionStorage only
@@ -166,28 +151,16 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
   },
 
   navigateToView: (workspaceId, baseId, tableId, viewId) => {
+    const state = get();
     set({
       selectedWorkspaceId: workspaceId,
       selectedBaseId: baseId,
       selectedTableId: tableId,
       selectedViewId: viewId,
-      // Ensure base and table are expanded
-      expandedBases: get().expandedBases.includes(baseId)
-        ? get().expandedBases
-        : [...get().expandedBases, baseId],
-      expandedTables: get().expandedTables.includes(tableId)
-        ? get().expandedTables
-        : [...get().expandedTables, tableId]
+      expandedBases: expandIfMissing(state.expandedBases, baseId),
+      expandedTables: expandIfMissing(state.expandedTables, tableId)
     });
-    // Auto-save to sessionStorage SYNCHRONOUSLY after state update
-    const userId = sessionStorage.getItem('user_id');
-    if (userId) {
-      try {
-        get().saveUserNavigation(userId);
-      } catch (err) {
-        console.warn('Failed to save navigation to sessionStorage', err);
-      }
-    }
+    persistNavigationForCurrentUser((userId) => get().saveUserNavigation(userId));
   },
 
   // UI state management

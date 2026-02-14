@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { X, Pencil, MoreHorizontal, Trash2 } from 'lucide-react';
 import FieldRenderer from '../../plugins/FormViewPlugin/components/shared/FieldRenderer';
-import { useInsertRowData } from '../../hooks/useApi';
+import { useInsertRowData, useAddAttachment, useRemoveAttachments, useInsertRelationData } from '../../hooks/useApi';
 import { getFieldTypeIconWithMargin } from '../../types/fieldTypes';
 import {
   createFieldRendererProps,
@@ -54,6 +54,9 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   const isReadOnly = isBaseReadOnly();
 
   const insertValueMutation = useInsertRowData();
+  const addAttachmentMutation = useAddAttachment();
+  const removeAttachmentsMutation = useRemoveAttachments();
+  const insertRelationMutation = useInsertRelationData();
   const toast = useToast();
 
   // Close menu when clicking outside
@@ -173,6 +176,13 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     } else if ((fieldType === 'datetime' || field.uidt === 'datetime') && value instanceof Date) {
       // Convert Date objects to ISO datetime string
       return value.toISOString();
+    } else if (fieldType === 'links' || field.uidt === 'links') {
+      const ids = (Array.isArray(value) ? value : [])
+        .map((item: any) => item?.id ?? item)
+        .map((id: any) => String(id))
+        .filter((id: string) => id.trim() !== '')
+        .sort();
+      return ids.join(',');
     }
     return value;
   };
@@ -183,10 +193,38 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     return String(na) === String(nb);
   };
 
+  const getAttachmentKey = (file: any): string => {
+    return String(file?.id ?? file?.url ?? file?.name ?? '');
+  };
+
+  const hasAttachmentChanges = (field: any): boolean => {
+    const currentFiles = Array.isArray(rowData[field.id]) ? rowData[field.id] : [];
+    const originalFiles = Array.isArray(originalData[field.id]) ? originalData[field.id] : [];
+
+    if (currentFiles.some((file: any) => file?.file instanceof File)) {
+      return true;
+    }
+
+    const currentKeys = new Set(currentFiles.map(getAttachmentKey).filter(Boolean));
+    const originalKeys = new Set(originalFiles.map(getAttachmentKey).filter(Boolean));
+
+    if (currentKeys.size !== originalKeys.size) {
+      return true;
+    }
+
+    for (const key of originalKeys) {
+      if (!currentKeys.has(key)) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   const hasChanges = useMemo(() => {
     return (fields || []).some(field => {
       if (field.type === 'attachment' || field.uidt === 'attachment') {
-        return false;
+        return hasAttachmentChanges(field);
       }
       return !valuesEqual(field, originalData[field.id], rowData[field.id]);
     });
@@ -213,7 +251,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
       const updates = (fields || [])
         .filter(f => {
           // Skip attachment fields - they handle their own API calls
-          if (f.type === 'attachment' || f.uidt === 'attachment') {
+          if (f.type === 'attachment' || f.uidt === 'attachment' || f.type === 'links' || f.uidt === 'links') {
             return false;
           }
           return !valuesEqual(f, originalData[f.id], rowData[f.id]);
@@ -232,6 +270,110 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
             value: u.value,
           })
         )
+      );
+
+      await Promise.all(
+        (fields || [])
+          .filter(f => f.type === 'attachment' || f.uidt === 'attachment')
+          .map(async (field) => {
+            const currentFiles = Array.isArray(rowData[field.id]) ? rowData[field.id] : [];
+            const originalFiles = Array.isArray(originalData[field.id]) ? originalData[field.id] : [];
+
+            const filesToUpload = currentFiles
+              .filter((file: any) => file?.file instanceof File)
+              .map((file: any) => file.file);
+
+            const currentKeys = new Set(currentFiles.map(getAttachmentKey).filter(Boolean));
+            const attachmentsToRemove = originalFiles
+              .filter((file: any) => {
+                const key = getAttachmentKey(file);
+                return Boolean(key) && !currentKeys.has(key);
+              })
+              .map((file: any) => file?.id)
+              .filter(Boolean);
+
+            const operations: Promise<any>[] = [];
+
+            if (filesToUpload.length > 0) {
+              operations.push(
+                addAttachmentMutation.mutateAsync({
+                  model_id: String(table.id),
+                  column_id: field.id,
+                  row_id: Number(recordId),
+                  files: filesToUpload
+                })
+              );
+            }
+
+            if (attachmentsToRemove.length > 0) {
+              operations.push(
+                removeAttachmentsMutation.mutateAsync({
+                  model_id: String(table.id),
+                  column_id: field.id,
+                  row_id: Number(recordId),
+                  attachments: attachmentsToRemove
+                })
+              );
+            }
+
+            if (operations.length > 0) {
+              await Promise.all(operations);
+            }
+          })
+      );
+
+      await Promise.all(
+        (fields || [])
+          .filter(f => f.type === 'links' || f.uidt === 'links')
+          .map(async (field) => {
+            const originalIds = new Set(
+              (Array.isArray(originalData[field.id]) ? originalData[field.id] : [])
+                .map((item: any) => item?.id ?? item)
+                .map((id: any) => Number.parseInt(String(id), 10))
+                .filter((id: number) => Number.isFinite(id))
+            );
+
+            const currentIds = new Set(
+              (Array.isArray(rowData[field.id]) ? rowData[field.id] : [])
+                .map((item: any) => item?.id ?? item)
+                .map((id: any) => Number.parseInt(String(id), 10))
+                .filter((id: number) => Number.isFinite(id))
+            );
+
+            const toLink = Array.from(currentIds).filter(id => !originalIds.has(id));
+            const toUnlink = Array.from(originalIds).filter(id => !currentIds.has(id));
+
+            const operations: Promise<any>[] = [];
+            for (const targetRowId of toLink) {
+              operations.push(
+                insertRelationMutation.mutateAsync({
+                  model_id: String(table.id),
+                  column_id: String(field.id),
+                  source_row_id: Number(recordId),
+                  target_row_id: targetRowId,
+                  action: 'link',
+                  target_table_id: field?.meta?.relation?.with
+                })
+              );
+            }
+
+            for (const targetRowId of toUnlink) {
+              operations.push(
+                insertRelationMutation.mutateAsync({
+                  model_id: String(table.id),
+                  column_id: String(field.id),
+                  source_row_id: Number(recordId),
+                  target_row_id: targetRowId,
+                  action: 'unlink',
+                  target_table_id: field?.meta?.relation?.with
+                })
+              );
+            }
+
+            if (operations.length > 0) {
+              await Promise.all(operations);
+            }
+          })
       );
 
       toast.success('Record updated successfully');
@@ -274,7 +416,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
       column_id: field.id,
       row_id: Number(recordId),
       showPreview: false,
-      persistImmediately: true, // Edit modal has row_id, so upload immediately
+      persistImmediately: false,
       readOnly: isReadOnly,
       allowEdit: !isReadOnly
     } : {};

@@ -5,10 +5,27 @@ import EditRecordModal from '../EditRecordModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
 
+const insertRowDataMutateAsyncMock = vi.fn(() => Promise.resolve({}));
+const addAttachmentMutateAsyncMock = vi.fn(() => Promise.resolve({}));
+const removeAttachmentsMutateAsyncMock = vi.fn(() => Promise.resolve({}));
+const insertRelationMutateAsyncMock = vi.fn(() => Promise.resolve({}));
+
 // Mock hooks
 vi.mock('../../../hooks/useApi', () => ({
   useInsertRowData: vi.fn(() => ({
-    mutateAsync: vi.fn(() => Promise.resolve({})),
+    mutateAsync: insertRowDataMutateAsyncMock,
+    isPending: false,
+  })),
+  useAddAttachment: vi.fn(() => ({
+    mutateAsync: addAttachmentMutateAsyncMock,
+    isPending: false,
+  })),
+  useRemoveAttachments: vi.fn(() => ({
+    mutateAsync: removeAttachmentsMutateAsyncMock,
+    isPending: false,
+  })),
+  useInsertRelationData: vi.fn(() => ({
+    mutateAsync: insertRelationMutateAsyncMock,
     isPending: false,
   })),
 }));
@@ -23,9 +40,14 @@ vi.mock('../../../hooks/useBaseAccess', () => ({
 
 // Mock FieldRenderer
 vi.mock('../../../plugins/FormViewPlugin/components/shared/FieldRenderer', () => ({
-  default: ({ field, value, onChange }: any) => (
+  default: ({ field, value, onChange, persistImmediately }: any) => (
     <div data-testid={`field-renderer-${field.id}`}>
       <label>{field.title || field.name}</label>
+      {(field.type === 'attachment' || field.uidt === 'attachment') && (
+        <div data-testid={`attachment-persist-${field.id}`}>
+          {String(persistImmediately)}
+        </div>
+      )}
       <input
         data-testid={`field-input-${field.id}`}
         value={value || ''}
@@ -380,6 +402,26 @@ describe('EditRecordModal', () => {
       // The title badge should not exist
       expect(screen.queryByText('Title Field')).not.toBeInTheDocument();
     });
+
+    it('passes persistImmediately=false to attachment fields', () => {
+      const fieldsWithAttachment = [
+        ...mockFields,
+        { id: 'field-4', name: 'files', title: 'Files', uidt: 'attachment', type: 'attachment' },
+      ];
+
+      renderWithQueryClient(
+        <EditRecordModal
+          {...defaultProps}
+          fields={fieldsWithAttachment}
+          initialValues={{
+            ...defaultProps.initialValues,
+            'field-4': [{ id: 'att-1', url: '/files/1.png', title: '1.png' }],
+          }}
+        />
+      );
+
+      expect(screen.getByTestId('attachment-persist-field-4')).toHaveTextContent('false');
+    });
   });
 
   describe('accessibility', () => {
@@ -434,6 +476,56 @@ describe('EditRecordModal', () => {
       await user.type(screen.getByTestId('field-input-field-1'), 'Updated Title');
 
       expect(submitButton).not.toBeDisabled();
+    });
+  });
+
+  describe('links persistence', () => {
+    it('uses relation API for links update and not insertRowData', async () => {
+      const user = userEvent.setup();
+      const fieldsWithLinks = [
+        { id: 'field-1', name: 'title', title: 'Title', uidt: 'SingleLineText' },
+        {
+          id: 'field-links',
+          name: 'links',
+          title: 'Links',
+          uidt: 'links',
+          type: 'links',
+          meta: { relation: { with: 'table-related' } },
+        },
+      ];
+
+      renderWithQueryClient(
+        <EditRecordModal
+          {...defaultProps}
+          recordId="123"
+          fields={fieldsWithLinks}
+          initialValues={{
+            'field-1': 'Existing Title',
+            'field-links': [{ id: '100', title: 'Existing linked record' }],
+          }}
+        />
+      );
+
+      await user.clear(screen.getByTestId('field-input-field-links'));
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+      await waitFor(() => {
+        expect(insertRelationMutateAsyncMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            model_id: 'table-123',
+            column_id: 'field-links',
+            source_row_id: 123,
+            target_row_id: 100,
+            action: 'unlink',
+          })
+        );
+      });
+
+      expect(
+        insertRowDataMutateAsyncMock.mock.calls.some(
+          ([payload]) => payload?.column_id === 'field-links'
+        )
+      ).toBe(false);
     });
   });
 });

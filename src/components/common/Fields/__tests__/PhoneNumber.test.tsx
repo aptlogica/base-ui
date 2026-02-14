@@ -31,6 +31,11 @@ describe('PhoneNumber Component', () => {
       expect(screen.getByText('Helper')).toBeInTheDocument();
     });
 
+    it('does not render helper text when allowEdit is false', () => {
+      render(<PhoneNumber helperText="Helper" allowEdit={false} onChange={mockOnChange} />);
+      expect(screen.queryByText('Helper')).not.toBeInTheDocument();
+    });
+
     it('renders formatted value when not editing', () => {
       render(<PhoneNumber value="1234567890" onChange={mockOnChange} />);
       expect(screen.getByText('(123) 456-7890')).toBeInTheDocument();
@@ -88,6 +93,31 @@ describe('PhoneNumber Component', () => {
       fireEvent.blur(input);
       await waitFor(() => {
         expect(mockOnChange).toHaveBeenCalledWith('1234567890');
+      });
+    });
+
+    it('sanitizes pasted value when phoneValid is true', async () => {
+      render(<PhoneNumber value="" onChange={mockOnChange} />);
+      await userEvent.click(screen.getByText('Enter phone number...'));
+      const input = screen.getByRole('textbox') as HTMLInputElement;
+
+      fireEvent.paste(input, {
+        clipboardData: {
+          getData: () => '+1 (234) 567-8900'
+        }
+      });
+
+      expect(input.value).toBe('12345678900');
+    });
+
+    it('commits non-numeric value when phoneValid is false', async () => {
+      render(<PhoneNumber value="" onChange={mockOnChange} config={{ phoneValid: false }} />);
+      await userEvent.click(screen.getByText('Enter phone number...'));
+      const input = screen.getByRole('textbox');
+      await userEvent.type(input, 'abc123');
+      fireEvent.blur(input);
+      await waitFor(() => {
+        expect(mockOnChange).toHaveBeenCalledWith('abc123');
       });
     });
 
@@ -184,6 +214,15 @@ describe('PhoneNumber Component', () => {
 
       rerender(<PhoneNumber value="222" onChange={mockOnChange} />);
       expect(screen.getByText('222')).toBeInTheDocument();
+    });
+
+    it('exits edit mode when readOnly changes to true', async () => {
+      const { rerender } = render(<PhoneNumber value="123" onChange={mockOnChange} />);
+      await userEvent.click(screen.getByText('123'));
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
+
+      rerender(<PhoneNumber value="123" readOnly onChange={mockOnChange} />);
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     });
   });
 });

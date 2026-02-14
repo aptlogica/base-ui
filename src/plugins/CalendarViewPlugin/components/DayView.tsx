@@ -3,6 +3,12 @@ import { CalendarIcon, Plus } from "lucide-react";
 import EventChip from "./EventChip";
 import MoreEventsDropdown from "./MoreEventsDropdown";
 import { CalendarEvent } from "../hooks/useCalendarData";
+import {
+  getEventsForDateKey,
+  getEventsForTimeSlot,
+  getHourLabel,
+  isDateTimeFieldType,
+} from "../utils/calendarViewUtils";
 
 interface DayViewProps {
   currentDate: Date;
@@ -13,13 +19,6 @@ interface DayViewProps {
   columns?: any[];
   fieldConfig?: any[];
 }
-
-const DATETIME_TYPES = new Set([
-  'datetime',
-  'createdtime',
-  'lastmodifiedtime'
-]);
-
 
 const DayView: React.FC<DayViewProps> = ({
   currentDate,
@@ -32,23 +31,8 @@ const DayView: React.FC<DayViewProps> = ({
 }) => {
   // Check if the date field is datetime type
   const isDateTimeField = useMemo(() => {
-    if (!dateField) return false;
-
-    const type = dateField.type?.toLowerCase();
-    const uidt = dateField.uidt?.toLowerCase();
-
-    return (
-      (type && DATETIME_TYPES.has(type)) ||
-      (uidt && DATETIME_TYPES.has(uidt))
-    );
+    return isDateTimeFieldType(dateField);
   }, [dateField]);
-
-  const getHourLabel = (hour: number): string => {
-    if (hour === 0) return '12 am';
-    if (hour < 12) return `${hour} am`;
-    if (hour === 12) return '12 pm';
-    return `${hour - 12} pm`;
-  };
 
   // Generate time slots for datetime fields
   const timeSlots = useMemo(() => {
@@ -68,31 +52,6 @@ const DayView: React.FC<DayViewProps> = ({
   }, [isDateTimeField]);
 
   // Get events for the current date
-  const getEventsForDate = (date: Date) => {
-    // Use local date format to match event.date format (event.date is extracted from string)
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
-    return events.filter(event => event.date === dateStr);
-  };
-
-  // Get events for a specific time slot (datetime fields only)
-  const getEventsForTimeSlot = (date: Date, hour: number) => {
-    if (!isDateTimeField) return [];
-
-    // Use local date format to match event.date format (event.date is extracted from string)
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
-
-    return events.filter(event => {
-      if (event.date !== dateStr) return false;
-      const eventHour = new Date(event.dateTime).getHours();
-      return eventHour === hour;
-    });
-  };
 
   // Format date for display
   const formatDate = (date: Date) => {
@@ -134,7 +93,7 @@ const DayView: React.FC<DayViewProps> = ({
             {/* Events column */}
             <div className="flex-1 relative">
               {timeSlots.map((slot, _slotIndex) => {
-                const slotEvents = getEventsForTimeSlot(currentDate, slot.hour);
+                const slotEvents = isDateTimeField ? getEventsForTimeSlot(events, currentDate, slot.hour) : [];
                 const hasEvents = slotEvents.length > 0;
 
                 return (
@@ -241,7 +200,7 @@ const DayView: React.FC<DayViewProps> = ({
         {/* Events list */}
         <div className="flex-1 overflow-y-auto p-4">
           <div className="space-y-4">
-            {getEventsForDate(currentDate).length === 0 ? (
+            {getEventsForDateKey(events, currentDate).length === 0 ? (
               <div className="text-center text-gray-500 py-8">
                 <div className="text-4xl mb-2"><CalendarIcon className="w-8 h-8 mx-auto mb-2" /></div>
                 <p>No events scheduled for this day</p>
@@ -256,7 +215,7 @@ const DayView: React.FC<DayViewProps> = ({
               </div>
             ) : (
               <div className="space-y-2">
-                {getEventsForDate(currentDate).map((event) => (
+                {getEventsForDateKey(events, currentDate).map((event) => (
                   <EventChip
                     key={event.id}
                     event={event}

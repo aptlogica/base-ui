@@ -2,16 +2,7 @@ import { ROLES } from '../types/roles';
 
 export function useUserRole() {
   const getRole = (): string | null => {
-    // Try to get from decoded token in sessionStorage
-    try {
-      const tokenData = sessionStorage.getItem('user_token_data');
-      if (tokenData) {
-        const parsed = JSON.parse(tokenData);
-        return parsed.roles || null;
-      }
-    } catch {}
-    
-    // Fallback: check if role stored directly
+    // Single source of truth for cached role
     const role = sessionStorage.getItem('user_role');
     return role || null;
   };

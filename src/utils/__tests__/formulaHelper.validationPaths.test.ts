@@ -54,9 +54,27 @@ describe('formulaHelper validateFormula branch paths', () => {
       .toBe('ISNUMBER() argument must be a field reference, quoted string, number, or function call');
   });
 
+  it('validates logical function arity and argument shape', () => {
+    expect(validateFormula('IF({Flag})', context))
+      .toBe('IF() requires at least 2 arguments: IF(condition, value_if_true, value_if_false)');
+
+    expect(validateFormula('NOT({Flag}, true)', context))
+      .toBe('NOT() accepts only 1 argument, but 2 provided');
+
+    expect(validateFormula('AND(abc)', context))
+      .toBe('AND() argument 1 must be a condition (comparison, field reference, or boolean)');
+  });
+
+  it('validates comparison with unknown fields on either side', () => {
+    expect(validateFormula('{Price} = {MissingField}', context))
+      .toBe('Unknown field: MissingField');
+
+    expect(validateFormula('{MissingField} = {Price}', context))
+      .toBe('Unknown field: MissingField');
+  });
+
   it('validates compound function-statement restrictions', () => {
     expect(validateFormula('ADD(1,2) + SUM(3,4)', context))
       .toBe('Only one function call is allowed at a time. Compound expressions are not supported.');
   });
 });
-

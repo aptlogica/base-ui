@@ -237,7 +237,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                   const optIndex = optionIndexMap.get(item);
                   const opt = optionMap.get(item) || { option: item, color: undefined };
                   const style = opt.color ? { backgroundColor: opt.color, color: getReadableTextColor(opt.color) } : undefined;
-                  const colorIndex = optIndex !== undefined ? optIndex : index;
+                  const colorIndex = optIndex ?? index;
                   const cls = opt.color ? '' : getOptionColor(item, colorIndex);
                   return (
                     <div

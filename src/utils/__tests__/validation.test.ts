@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { validateEmail, validatePassword, validatePasswordStrength } from '../validation';
+import { validateEmail, validatePassword, validatePasswordStrength, validateRequired, validateLogin } from '../validation';
 
 // ============================================================================
 // EXAMPLE 1: Testing validateEmail (Simple function)
@@ -302,6 +302,38 @@ describe('validatePasswordStrength', () => {
     expect(result.containsNameAndEmail).toBe(true);
     expect(result.containsCommon).toBe(false);
     expect(result.errorMessage).toContain("Password must not contain common words");
+  });
+});
+
+describe('validateRequired', () => {
+  it('returns required error for blank values', () => {
+    expect(validateRequired('')).toBe('This field is required');
+    expect(validateRequired('   ')).toBe('This field is required');
+  });
+
+  it('returns null for non-empty values', () => {
+    expect(validateRequired('value')).toBeNull();
+  });
+});
+
+describe('validateLogin', () => {
+  it('returns both errors when email and password are invalid', () => {
+    const errors = validateLogin({ email: '', password: '' });
+    expect(errors).toEqual({
+      email: 'This field is required',
+      password: 'This field is required',
+    });
+  });
+
+  it('returns only email error when password is valid', () => {
+    const errors = validateLogin({ email: 'bad-email', password: 'Valid123!' });
+    expect(errors.email).toBe('Please enter a valid email address');
+    expect(errors.password).toBeUndefined();
+  });
+
+  it('returns empty errors object for valid login values', () => {
+    const errors = validateLogin({ email: 'user@example.com', password: 'password123' });
+    expect(errors).toEqual({});
   });
 });
 

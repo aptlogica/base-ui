@@ -55,4 +55,31 @@ describe('useWorkspaceSelection', () => {
     expect(setSelectedWorkspace).toHaveBeenCalledWith(workspaces[0]);
     expect(setWorkspace).toHaveBeenCalledWith('ws1');
   });
+
+  it('does not fallback immediately when selected workspace is newly created and pending sync', () => {
+    const setSelectedWorkspace = vi.fn();
+    const setWorkspace = vi.fn();
+    const navigateAndPersist = vi.fn();
+    const workspaces = [{ id: 'ws1' }];
+
+    sessionStorage.setItem('pending_new_workspace', JSON.stringify({
+      id: 'ws-new',
+      createdAt: Date.now(),
+    }));
+
+    renderHook(() =>
+      useWorkspaceSelection(
+        workspaces,
+        true,
+        null,
+        'ws-new',
+        setSelectedWorkspace,
+        setWorkspace,
+        navigateAndPersist
+      )
+    );
+
+    expect(setSelectedWorkspace).not.toHaveBeenCalled();
+    expect(setWorkspace).not.toHaveBeenCalled();
+  });
 });

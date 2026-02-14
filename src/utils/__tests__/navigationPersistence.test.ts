@@ -142,6 +142,11 @@ describe('navigationPersistence', () => {
     expect(getBestNavigationTarget(workspaces as any)).toBe('/workspace/w1/base/b1/table/t1/grid');
   });
 
+  it('getBestNavigationTarget should fall back to workspace path when bases or tables are missing', () => {
+    expect(getBestNavigationTarget([{ id: 'w1', bases: [] }] as any)).toBe('/workspace/w1');
+    expect(getBestNavigationTarget([{ id: 'w1', bases: [{ id: 'b1', tables: [] }] }] as any)).toBe('/workspace/w1');
+  });
+
   it('getBestNavigationTarget should handle nested table model ids', () => {
     const workspaces = [
       {
@@ -183,6 +188,20 @@ describe('navigationPersistence', () => {
     ];
 
     expect(getSafeNavigationTarget(workspaces as any)).toBe('/workspace/w1/base/b1/table/t1/v1');
+  });
+
+  it('getSafeNavigationTarget should return grid or workspace when views/tables are missing', () => {
+    expect(
+      getSafeNavigationTarget([
+        { id: 'w1', bases: [{ id: 'b1', tables: [{ id: 't1', views: [] }] }] },
+      ] as any)
+    ).toBe('/workspace/w1/base/b1/table/t1/grid');
+
+    expect(
+      getSafeNavigationTarget([
+        { id: 'w1', bases: [{ id: 'b1', tables: [] }] },
+      ] as any)
+    ).toBe('/workspace/w1');
   });
 
   it('cleanup*Navigation helpers should clear matching scoped ids and report match status', () => {

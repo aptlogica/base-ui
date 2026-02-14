@@ -5,6 +5,7 @@ import { extractFieldConfigFromMeta, generateDefaultFieldConfig, mergeFieldConfi
 import { applyFilters } from '../../../utils/filterUtils';
 import { isFormulaField } from '../../../utils/fieldUtils';
 import { GanttTask } from './useGanttData';
+import { buildPositionSignature, buildReorderedFieldConfig } from '../../../utils/viewConfigShared';
 
 export type FilterType = { column: string; operator: string; value: string };
 
@@ -56,18 +57,16 @@ export function useGanttViewConfig({
     if (!columns.length) return;
 
     const existingFieldConfig = extractFieldConfigFromMeta(view?.meta);
-    const sortedExistingConfig = [...existingFieldConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
-    const backendConfigStr = JSON.stringify(sortedExistingConfig);
+    const backendConfigStr = buildPositionSignature(existingFieldConfig);
 
     // If we haven't initialized yet, initialize from backend or generate default
     if (!initializedRef.current) {
       if (existingFieldConfig.length > 0) {
         // Use backend config if it exists, but ensure all columns are included
         const completeConfig = mergeFieldConfigWithColumns(existingFieldConfig, columns);
-        const sortedCompleteConfig = [...completeConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
         
         setLocalFieldConfig(completeConfig);
-        lastBackendConfigRef.current = JSON.stringify(sortedCompleteConfig);
+        lastBackendConfigRef.current = buildPositionSignature(completeConfig);
         initializedRef.current = true;
       } else {
         // Generate default config (first 3-4 fields visible by default)
@@ -83,8 +82,7 @@ export function useGanttViewConfig({
           }
         );
 
-        const sortedDefaultConfig = [...defaultFieldConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
-        const defaultConfigStr = JSON.stringify(sortedDefaultConfig);
+        const defaultConfigStr = buildPositionSignature(defaultFieldConfig);
         setLocalFieldConfig(defaultFieldConfig);
         lastBackendConfigRef.current = defaultConfigStr;
         initializedRef.current = true;
@@ -95,10 +93,9 @@ export function useGanttViewConfig({
     // After initialization, only update if backend config actually changed
     if (initializedRef.current && backendConfigStr !== lastBackendConfigRef.current && existingFieldConfig.length > 0) {
       const mergedConfig = mergeFieldConfigWithColumns(existingFieldConfig, columns);
-      const sortedMergedConfig = [...mergedConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
       
       setLocalFieldConfig(mergedConfig);
-      lastBackendConfigRef.current = JSON.stringify(sortedMergedConfig);
+      lastBackendConfigRef.current = buildPositionSignature(mergedConfig);
     } else if (initializedRef.current && existingFieldConfig.length === 0 && localFieldConfig.length > 0) {
       // No backend config but we have local config - check for new columns
       const mergedConfig = mergeFieldConfigWithColumns(localFieldConfig, columns);
@@ -128,8 +125,7 @@ export function useGanttViewConfig({
             fieldConfig
           }
         });
-        const sortedFieldConfig = [...fieldConfig].sort((a, b) => (a.position || 0) - (b.position || 0));
-        lastBackendConfigRef.current = JSON.stringify(sortedFieldConfig);
+        lastBackendConfigRef.current = buildPositionSignature(fieldConfig);
       } catch (error) {
         console.error('Failed to save field config:', error);
       }
@@ -257,56 +253,9 @@ export function useGanttViewConfig({
     if (!updateView || !view?.id) return;
 
     const existingFieldConfig = (view?.meta?.fieldConfig || []) as any[];
-    
-    // Create Maps for O(1) lookups instead of O(n) find() calls
-    const newColumnMap = new Map<string, number>();
-    const newColumnDataMap = new Map<string, any>();
-    newColumns.forEach((col, index) => {
-      if (col.id) {
-        newColumnMap.set(String(col.id), index);
-        newColumnDataMap.set(String(col.id), col);
-      }
-    });
+    const finalFieldConfig = buildReorderedFieldConfig(existingFieldConfig, newColumns);
 
-    const updatedFieldConfig = existingFieldConfig.map((fc: any) => {
-      const newPosition = newColumnMap.get(String(fc.id));
-      if (newPosition !== undefined) {
-        const col = newColumnDataMap.get(String(fc.id));
-        let isHidden: boolean;
-        if (typeof col?.hidden === 'boolean') {
-          isHidden = col.hidden;
-        } else if (typeof col?.isHidden === 'boolean') {
-          isHidden = col.isHidden;
-        } else {
-          isHidden = fc.isHidden;
-        }
-        return { 
-          ...fc, 
-          position: newPosition,
-          isHidden
-        };
-      }
-      return fc;
-    });
-
-    const existingIds = new Set(existingFieldConfig.map((fc: any) => String(fc.id)));
-    newColumns.forEach((col, index) => {
-      if (col.id && !existingIds.has(String(col.id))) {
-        updatedFieldConfig.push({
-          id: col.id,
-          position: index,
-          isHidden: !!(col.hidden || col.isHidden)
-        });
-      }
-    });
-
-    updatedFieldConfig.sort((a: any, b: any) => (a.position || 0) - (b.position || 0));
-    const finalFieldConfig = updatedFieldConfig.map((fc: any, idx: number) => ({
-      ...fc,
-      position: idx
-    }));
-
-    setLocalFieldConfig(finalFieldConfig);
+    setLocalFieldConfig(finalFieldConfig as any[]);
 
     await updateView(view.id, {
       meta: {

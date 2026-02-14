@@ -55,6 +55,33 @@ import {
   deactivateTenantUserService,
   activateTenantUserService,
   removeUserService,
+  getAllWorkspacesService,
+  bulkAddBaseMembersService,
+  getUserProfileByIDService,
+  updateUserProfileService,
+  getUserAccessDetailsService,
+  getUserRolesAndAccessService,
+  changePasswordService,
+  addOrUpdateAvatarService,
+  removeAvatarService,
+  assignUserToWorkspaceService,
+  bulkAddMembersService,
+  updateTableService,
+  deleteTableService,
+  getColumnsByTableIdService,
+  createFieldService,
+  getFieldByIdService,
+  updateFieldService,
+  deleteFieldService,
+  reorderColumnService,
+  createViewService,
+  getViewByIdService,
+  updateViewService,
+  deleteViewService,
+  addImageService,
+  getOrganizationService,
+  updateOrganizationService,
+  getOrganizationServiceById,
 } from '../clientService';
 
 const createJwt = (payload: Record<string, unknown>) => {
@@ -174,6 +201,28 @@ describe('clientService', () => {
     await expect(resetPassword({ token: 't', new_password: 'pw' })).resolves.toEqual({ data: { success: true } });
   });
 
+  it('throws normalized errors for auth helpers', async () => {
+    (client.auth as any).verifyOtp = vi.fn().mockRejectedValue(new Error('bad otp'));
+    (client.auth as any).resendOtp = vi.fn().mockRejectedValue({});
+    (client.auth as any).forgotPassword = vi.fn().mockRejectedValue({});
+    (client.auth as any).resetPassword = vi.fn().mockRejectedValue({});
+
+    await expect(verifyOtp({} as any)).rejects.toThrow('bad otp');
+    await expect(resendOtp({} as any)).rejects.toThrow('Failed to resend OTP');
+    await expect(forgotPassword({ email: 'user@example.com' })).rejects.toThrow('Failed to send reset password email');
+    await expect(resetPassword({ token: 't', new_password: 'pw' })).rejects.toThrow('Failed to reset password');
+  });
+
+  it('handles getAllWorkspaces auth-validation and schema errors', async () => {
+    localStorage.removeItem('user_id');
+    sessionStorage.removeItem('user_id');
+    await expect(getAllWorkspacesService()).rejects.toThrow('Missing required authentication data');
+
+    sessionStorage.setItem('user_id', 'u1');
+    (client.userService as any).getWorkspaces = vi.fn().mockRejectedValue({ message: 'schema invalid' });
+    await expect(getAllWorkspacesService()).rejects.toThrow('Workspace access denied. Please log in again to refresh your session.');
+  });
+
   it('proxies workspace/base/table/user/org service wrappers to SDK', async () => {
     sessionStorage.setItem('user_id', 'user-1');
     const workspaceApi = client.workspace as any;
@@ -198,12 +247,26 @@ describe('clientService', () => {
     baseApi.update = vi.fn().mockResolvedValue({ data: { id: 'b1' } });
     baseApi.delete = vi.fn().mockResolvedValue({ data: { ok: true } });
     baseApi.getMembersWithRoles = vi.fn().mockResolvedValue({ data: [] });
+    baseApi.bulkAddMembers = vi.fn().mockResolvedValue({ data: { ok: true } });
     baseApi.removeAccessMember = vi.fn().mockResolvedValue({ data: { ok: true } });
     baseApi.removeUserFromBase = vi.fn().mockResolvedValue({ data: { ok: true } });
+    baseApi.uploadImage = vi.fn().mockResolvedValue({ data: { ok: true } });
 
     tableApi.create = vi.fn().mockResolvedValue({ data: { id: 't1' } });
     tableApi.getById = vi.fn().mockResolvedValue({ data: { id: 't1' } });
     tableApi.getAll = vi.fn().mockResolvedValue({ data: [] });
+    tableApi.update = vi.fn().mockResolvedValue({ data: { id: 't1' } });
+    tableApi.delete = vi.fn().mockResolvedValue({ data: { ok: true } });
+    tableApi.getColumnsByTableId = vi.fn().mockResolvedValue({ data: [] });
+    tableApi.addColumn = vi.fn().mockResolvedValue({ data: { id: 'c1' } });
+    tableApi.getColumnById = vi.fn().mockResolvedValue({ data: { id: 'c1' } });
+    tableApi.updateColumn = vi.fn().mockResolvedValue({ data: { ok: true } });
+    tableApi.deleteColumn = vi.fn().mockResolvedValue({ data: { ok: true } });
+    tableApi.reorderColumn = vi.fn().mockResolvedValue({ data: { ok: true } });
+    tableApi.createView = vi.fn().mockResolvedValue({ data: { id: 'v1' } });
+    tableApi.getViewById = vi.fn().mockResolvedValue({ data: { id: 'v1' } });
+    tableApi.updateView = vi.fn().mockResolvedValue({ data: { ok: true } });
+    tableApi.deleteView = vi.fn().mockResolvedValue({ data: { ok: true } });
     tableApi.getAllColumns = vi.fn().mockResolvedValue({ data: [] });
     tableApi.getAllViews = vi.fn().mockResolvedValue({ data: [] });
     tableApi.getViewsByModelId = vi.fn().mockResolvedValue({ data: [] });
@@ -221,11 +284,26 @@ describe('clientService', () => {
     userApi.listUsers = vi.fn().mockResolvedValue({ data: [] });
     userApi.listUsersForAssign = vi.fn().mockResolvedValue({ data: [] });
     userApi.getWorkspaces = vi.fn().mockResolvedValue({ data: [] });
+    userApi.getProfile = vi.fn().mockResolvedValue({ data: { id: 'u1' } });
+    userApi.updateProfile = vi.fn().mockResolvedValue({ data: { id: 'u1' } });
+    userApi.getUserAccessDetails = vi.fn().mockResolvedValue({ data: {} });
+    userApi.getUserRolesAndAccess = vi.fn().mockResolvedValue({ data: {} });
+    userApi.changePassword = vi.fn().mockResolvedValue({ data: { ok: true } });
+    userApi.addOrUpdateAvatar = vi.fn().mockResolvedValue({ data: { ok: true } });
+    userApi.removeAvatar = vi.fn().mockResolvedValue({ data: { ok: true } });
     userApi.addUser = vi.fn().mockResolvedValue({ data: { id: 'u1' } });
     userApi.editUser = vi.fn().mockResolvedValue({ data: { id: 'u1' } });
     userApi.deactivateUser = vi.fn().mockResolvedValue({ data: { ok: true } });
     userApi.activateUser = vi.fn().mockResolvedValue({ data: { ok: true } });
     userApi.removeUser = vi.fn().mockResolvedValue({ data: { ok: true } });
+    workspaceApi.inviteUser = vi.fn().mockResolvedValue({ data: { ok: true } });
+    workspaceApi.bulkAddMembers = vi.fn().mockResolvedValue({ data: { ok: true } });
+    (client as any).assetService = (client as any).assetService || {};
+    (client as any).organization = (client as any).organization || {};
+    (client.assetService as any).addImage = vi.fn().mockResolvedValue({ data: { ok: true } });
+    (client.organization as any).getAll = vi.fn().mockResolvedValue({ data: [] });
+    (client.organization as any).update = vi.fn().mockResolvedValue({ data: { ok: true } });
+    (client.organization as any).getById = vi.fn().mockResolvedValue({ data: { id: 'o1' } });
 
 
     await createWorkspaceService({ title: 'w' } as any);
@@ -246,14 +324,30 @@ describe('clientService', () => {
     await updateBaseService('b1', { title: 'B' });
     await deleteBaseService('b1');
     await getBaseMembersService('b1');
+    await bulkAddBaseMembersService('b1', {
+      workspaceId: 'w1',
+      members: [{ user_id: 'u1', role: 'base-member' }],
+    });
     await removeBaseAccessMemberService('b1', 'a1');
     await removeUserFromBaseService('b1', { user_id: 'u1' });
 
     await createTableService({ title: 't' });
     await getTableByIdService('t1', { includeColumns: true });
     await getAllTablesService();
+    await updateTableService('t1', { title: 't2' });
+    await deleteTableService('t1');
+    await getColumnsByTableIdService('t1');
+    await createFieldService({ model_id: 'm1', title: 'C1' });
+    await getFieldByIdService('c1');
     await getAllFieldsService();
+    await updateFieldService('c1', { title: 'C2' });
+    await deleteFieldService('c1');
+    await reorderColumnService({ source_column_id: 'c1', target_column_id: 'c2' });
+    await createViewService({ model_id: 'm1', type: 'grid' });
+    await getViewByIdService('v1');
     await getAllViewsService();
+    await updateViewService('v1', { title: 'V2' });
+    await deleteViewService('v1');
     await getViewsByModelIdService('m1');
     await addRow('m1');
     await deleteRowService({ model_id: 'm1', row_id: 1 });
@@ -264,17 +358,52 @@ describe('clientService', () => {
     await addAttachmentService({ model_id: 'm1', column_id: 'c1', row_id: 1, files: [] });
     await removeAttachmentsService({ model_id: 'm1', column_id: 'c1', row_id: 1, attachments: ['x'] });
     await updateAssetByIdService('a1', { title: 'asset' });
+    await addImageService([new File(['a'], 'a.png')]);
     await importTableService({ workspace_id: 'w1', title: 'T', description: '', order_index: 0, file: new File(['a'], 'a.csv') });
 
     await getTenantUsersService();
     await getUsersForAssignService();
+    await getUserProfileByIDService('u1');
+    await updateUserProfileService('u1', { display_name: 'User' });
+    await getUserAccessDetailsService('u1', 'w1');
+    await getUserRolesAndAccessService('u1', 'w1');
+    await changePasswordService('u1', { old_password: 'x', new_password: 'y' });
+    await addOrUpdateAvatarService('u1', new File(['a'], 'a.png'));
+    await removeAvatarService('u1');
     await addUserService({ firstname: 'A', lastname: 'B', email: 'a@b.com' });
     await editUserService({ user_id: 'u1', firstname: 'A' });
     await deactivateTenantUserService('u1');
     await activateTenantUserService('u1');
     await removeUserService('u1');
+    await assignUserToWorkspaceService({
+      workspace_id: 'w1',
+      user_ids: ['u1'],
+      access_level: 'workspace-member',
+      bases_ids: 'b1',
+    });
+    await bulkAddMembersService('w1', {
+      members: [{
+        user_id: 'u1',
+        memberships: [{ workspace_id: 'w1', role: 'workspace-member' }],
+      }],
+    });
+    await getOrganizationService();
+    await updateOrganizationService('o1', { name: 'Org', description: 'desc' });
+    await getOrganizationServiceById('o1');
     expect(client.workspace.create).toHaveBeenCalled();
     expect(client.baseService.getAll).toHaveBeenCalled();
     expect(client.tableService.createRow).toHaveBeenCalledWith({ model_id: 'm1' });
+    expect(client.organization.getAll).toHaveBeenCalled();
+  });
+
+  it('continues base update when image upload fails', async () => {
+    sessionStorage.setItem('user_id', 'u1');
+    (client.baseService as any).update = vi.fn().mockResolvedValue({ data: { id: 'b1' } });
+    (client.baseService as any).uploadImage = vi.fn().mockRejectedValue(new Error('upload failed'));
+
+    const result = await updateBaseService('b1', { title: 'Base', image: new File(['x'], 'x.png') });
+    expect(result).toEqual({ data: { id: 'b1' } });
+    expect((client.baseService as any).update).toHaveBeenCalledWith('b1', { title: 'Base' });
+    expect((client.baseService as any).uploadImage).toHaveBeenCalledTimes(1);
   });
 });
