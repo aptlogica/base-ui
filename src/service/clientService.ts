@@ -123,6 +123,10 @@ const clearTokens = (): void => {
     sessionStorage.removeItem(REFRESH_KEY);
     sessionStorage.removeItem('_te_');
     sessionStorage.removeItem('_rte_');
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem('_te_');
+    localStorage.removeItem('_rte_');
   } catch (error) {
     console.error('Error clearing tokens:', error);
   }
@@ -318,6 +322,7 @@ export const forceLogout = async (): Promise<void> => {
     sessionStorage.removeItem(k);
     localStorage.removeItem(k);
   });
+  localStorage.removeItem('sb_auth');
 
   // Dispatch custom event for React Router navigation (prevents page refresh)
   globalThis.dispatchEvent(new CustomEvent('auth_token_expired', { detail: { navigate: true } }));

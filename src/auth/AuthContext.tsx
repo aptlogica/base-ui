@@ -92,6 +92,7 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
         // Remove known keys (only what we actually store)
         const keys = ['user_id', 'user_display_name', 'user_avatar', 'user_role'];
         keys.forEach(k => { sessionStorage.removeItem(k); localStorage.removeItem(k); });
+        localStorage.removeItem('sb_auth');
         // Clear navigation for current user if any
         const remoteUserId = sessionStorage.getItem('user_id') || localStorage.getItem('user_id');
         if (remoteUserId) clearUserNavigation(remoteUserId);
@@ -190,6 +191,14 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
     try {
       // Store user data in sessionStorage
       storeUserData(userInfo);
+
+      // Cross-tab flag (no tokens stored): signals an active session in another tab
+      try {
+        localStorage.setItem('sb_auth', JSON.stringify({
+          user_id: userInfo.id,
+          ts: Date.now()
+        }));
+      } catch { }
 
       // Set minimal user state
       setUser({
@@ -351,6 +360,7 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
       try { sessionStorage.removeItem(k); } catch { }
       try { localStorage.removeItem(k); } catch { }
     });
+    try { localStorage.removeItem('sb_auth'); } catch { }
 
     // STEP 7: Clear user navigation persistence for this user (if any)
     try {

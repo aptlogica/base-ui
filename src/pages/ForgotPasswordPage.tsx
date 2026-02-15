@@ -179,7 +179,7 @@ const ForgotPasswordPage: React.FC = () => {
           </div>
 
           {error && (
-            <div className="text-destructive text-sm">{error}</div>
+            <div className="text-red-500 text-sm">{error}</div>
           )}
 
           <button

@@ -25,7 +25,10 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.config.*',
         '**/dist/**',
-        '**/sdk/**'
+        '**/sdk/**',
+        'src/coverage-vitest/**',
+        'src/types/**',
+        'src/**/types/**'
       ],
       thresholds: {
         lines: 40,

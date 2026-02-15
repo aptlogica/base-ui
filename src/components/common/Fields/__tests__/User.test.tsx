@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
 // Mock the service function to prevent real API calls
-vi.mock('../../../service/clientService', () => ({
+vi.mock('../../../../service/clientService', () => ({
   getTenantUsersService: vi.fn(() => Promise.resolve({
     data: [
       { id: '1', display_name: 'John Doe', email: 'john@example.com', avatar: 'j', status: 'active', email_verified: true },
@@ -16,26 +16,28 @@ vi.mock('../../../service/clientService', () => ({
 }));
 
 // Mock the hook entirely to avoid React Query complexity
-const mockUseGetTenantUsers = vi.fn(() => ({
-  data: [
-    { id: '1', display_name: 'John Doe', email: 'john@example.com', avatar: 'j', status: 'active', email_verified: true },
-    { id: '2', display_name: 'Jane Smith', email: 'jane@example.com', avatar: 'js', status: 'active', email_verified: true },
-    { id: '3', display_name: 'Bob Johnson', email: 'bob@example.com', avatar: 'bj', status: 'active', email_verified: true }
-  ],
-  isLoading: false,
-  error: null,
-  isPending: false,
-  status: 'success',
-  refetch: vi.fn(),
-  isRefetching: false,
-  isFetched: true,
-  isFetching: false,
-  dataUpdatedAt: Date.now(),
-  failureCount: 0,
-  failureReason: null,
+const { mockUseGetTenantUsers } = vi.hoisted(() => ({
+  mockUseGetTenantUsers: vi.fn(() => ({
+    data: [
+      { id: '1', display_name: 'John Doe', email: 'john@example.com', avatar: 'j', status: 'active', email_verified: true },
+      { id: '2', display_name: 'Jane Smith', email: 'jane@example.com', avatar: 'js', status: 'active', email_verified: true },
+      { id: '3', display_name: 'Bob Johnson', email: 'bob@example.com', avatar: 'bj', status: 'active', email_verified: true }
+    ],
+    isLoading: false,
+    error: null,
+    isPending: false,
+    status: 'success',
+    refetch: vi.fn(),
+    isRefetching: false,
+    isFetched: true,
+    isFetching: false,
+    dataUpdatedAt: Date.now(),
+    failureCount: 0,
+    failureReason: null,
+  })),
 }));
 
-vi.mock('../../../hooks/useApi', () => ({
+vi.mock('../../../../hooks/useApi', () => ({
   useGetTenantUsers: mockUseGetTenantUsers,
 }));
 
@@ -77,7 +79,7 @@ describe('User Component', () => {
     mockOnChange = vi.fn();
     vi.clearAllMocks();
     // Reset the mock to return the default data
-    mockUseGetTenantUsers.mockReturnValue({
+    mockUseGetTenantUsers.mockImplementation(() => ({
       data: [
         { id: '1', display_name: 'John Doe', email: 'john@example.com', avatar: 'j', status: 'active', email_verified: true },
         { id: '2', display_name: 'Jane Smith', email: 'jane@example.com', avatar: 'js', status: 'active', email_verified: true },
@@ -94,7 +96,7 @@ describe('User Component', () => {
       dataUpdatedAt: Date.now(),
       failureCount: 0,
       failureReason: null,
-    });
+    }));
   });
 
   describe('Rendering', () => {
@@ -177,6 +179,33 @@ describe('User Component', () => {
 
       // Component renders with required prop
       expect(document.body).toBeInTheDocument();
+    });
+
+    it('should show loading placeholder when users are loading', () => {
+      mockUseGetTenantUsers.mockReturnValue({
+        data: [],
+        isLoading: true,
+        error: null,
+        isPending: true,
+        status: 'pending',
+        refetch: vi.fn(),
+        isRefetching: false,
+        isFetched: false,
+        isFetching: true,
+        dataUpdatedAt: Date.now(),
+        failureCount: 0,
+        failureReason: null,
+      });
+
+      renderWithProviders(
+        <User
+          value={null}
+          onChange={mockOnChange}
+          config={{}}
+        />
+      );
+
+      expect(screen.getByText('Loading users...')).toBeInTheDocument();
     });
   });
 
@@ -261,6 +290,72 @@ describe('User Component', () => {
       const button = screen.getByRole('button');
       expect(button).toBeInTheDocument();
     });
+
+    it('should show "No users found" when search yields no results', () => {
+      mockUseGetTenantUsers.mockImplementation(() => ({
+        data: [
+          { id: '1', display_name: 'John Doe', email: 'john@example.com', avatar: 'j', status: 'active', email_verified: true },
+          { id: '2', display_name: 'Jane Smith', email: 'jane@example.com', avatar: 'js', status: 'active', email_verified: true }
+        ],
+        isLoading: false,
+        error: null,
+        isPending: false,
+        status: 'success',
+        refetch: vi.fn(),
+        isRefetching: false,
+        isFetched: true,
+        isFetching: false,
+        dataUpdatedAt: Date.now(),
+        failureCount: 0,
+        failureReason: null,
+      }));
+
+      renderWithProviders(
+        <User
+          value={null}
+          onChange={mockOnChange}
+          config={{}}
+        />
+      );
+
+      const button = screen.getByRole('button', { name: /select user/i });
+      fireEvent.click(button);
+
+      const searchInput = screen.getByLabelText('Search users');
+      fireEvent.change(searchInput, { target: { value: 'zzzzz' } });
+
+      expect(screen.getByText('No users found')).toBeInTheDocument();
+    });
+
+    it('should show error message when hook returns error', () => {
+      mockUseGetTenantUsers.mockImplementation(() => ({
+        data: [],
+        isLoading: false,
+        error: 'Failed to load',
+        isPending: false,
+        status: 'error',
+        refetch: vi.fn(),
+        isRefetching: false,
+        isFetched: true,
+        isFetching: false,
+        dataUpdatedAt: Date.now(),
+        failureCount: 1,
+        failureReason: null,
+      }));
+
+      renderWithProviders(
+        <User
+          value={null}
+          onChange={mockOnChange}
+          config={{}}
+        />
+      );
+
+      const button = screen.getByRole('button', { name: /select user/i });
+      fireEvent.click(button);
+
+      expect(screen.getByText('Failed to load')).toBeInTheDocument();
+    });
   });
 
   describe('User Display', () => {
@@ -327,6 +422,70 @@ describe('User Component', () => {
       // Component renders with user value that includes email
       expect(document.body).toBeInTheDocument();
     });
+
+    it('should support comma-separated value for allowMultiple', () => {
+      mockUseGetTenantUsers.mockImplementation(() => ({
+        data: [
+          { id: '1', display_name: 'John Doe', email: 'john@example.com', avatar: 'j', status: 'active', email_verified: true },
+          { id: '2', display_name: 'Jane Smith', email: 'jane@example.com', avatar: 'js', status: 'active', email_verified: true }
+        ],
+        isLoading: false,
+        error: null,
+        isPending: false,
+        status: 'success',
+        refetch: vi.fn(),
+        isRefetching: false,
+        isFetched: true,
+        isFetching: false,
+        dataUpdatedAt: Date.now(),
+        failureCount: 0,
+        failureReason: null,
+      }));
+
+      renderWithProviders(
+        <User
+          value="1, 2"
+          onChange={mockOnChange}
+          config={{ allowMultiple: true }}
+        />
+      );
+
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+    });
+
+    it('should show +N indicator and count when more than 3 users selected', () => {
+      mockUseGetTenantUsers.mockImplementation(() => ({
+        data: [
+          { id: '1', display_name: 'John Doe', email: 'john@example.com', avatar: 'j', status: 'active', email_verified: true },
+          { id: '2', display_name: 'Jane Smith', email: 'jane@example.com', avatar: 'js', status: 'active', email_verified: true },
+          { id: '3', display_name: 'Bob Johnson', email: 'bob@example.com', avatar: 'bj', status: 'active', email_verified: true },
+          { id: '4', display_name: 'Alice Blue', email: 'alice@example.com', avatar: 'ab', status: 'active', email_verified: true }
+        ],
+        isLoading: false,
+        error: null,
+        isPending: false,
+        status: 'success',
+        refetch: vi.fn(),
+        isRefetching: false,
+        isFetched: true,
+        isFetching: false,
+        dataUpdatedAt: Date.now(),
+        failureCount: 0,
+        failureReason: null,
+      }));
+
+      renderWithProviders(
+        <User
+          value={['1', '2', '3', '4']}
+          onChange={mockOnChange}
+          config={{ allowMultiple: true }}
+        />
+      );
+
+      expect(screen.getByText('+1')).toBeInTheDocument();
+      expect(screen.getByText('(4)')).toBeInTheDocument();
+    });
   });
 
   describe('User Removal', () => {
@@ -355,6 +514,42 @@ describe('User Component', () => {
       // Component renders with multiple users for removal
       expect(document.body).toBeInTheDocument();
     });
+
+    it('should clear selection from dropdown and call onChange(null)', () => {
+      mockUseGetTenantUsers.mockImplementation(() => ({
+        data: [
+          { id: '1', display_name: 'John Doe', email: 'john@example.com', avatar: 'j', status: 'active', email_verified: true }
+        ],
+        isLoading: false,
+        error: null,
+        isPending: false,
+        status: 'success',
+        refetch: vi.fn(),
+        isRefetching: false,
+        isFetched: true,
+        isFetching: false,
+        dataUpdatedAt: Date.now(),
+        failureCount: 0,
+        failureReason: null,
+      }));
+
+      renderWithProviders(
+        <User
+          value="1"
+          onChange={mockOnChange}
+          config={{}}
+        />
+      );
+
+      const button = screen.getAllByRole('button').find(el => el.tagName === 'DIV');
+      expect(button).toBeTruthy();
+      fireEvent.click(button as HTMLElement);
+
+      const clearButton = screen.getByRole('button', { name: /clear/i });
+      fireEvent.click(clearButton);
+
+      expect(mockOnChange).toHaveBeenCalledWith(null);
+    });
   });
 
   describe('Disabled & ReadOnly State', () => {
@@ -368,8 +563,8 @@ describe('User Component', () => {
         />
       );
 
-      const button = screen.getByRole('button');
-      expect(button).toHaveAttribute('disabled');
+      const button = screen.getAllByRole('button').find(el => el.tagName === 'DIV');
+      expect(button).toHaveAttribute('aria-disabled', 'true');
     });
 
     it('should prevent changes when readOnly', () => {
@@ -383,6 +578,19 @@ describe('User Component', () => {
       );
 
       expect(document.body).toBeInTheDocument();
+    });
+
+    it('should hide remove buttons when readOnly', () => {
+      renderWithProviders(
+        <User
+          value="1"
+          onChange={mockOnChange}
+          config={{}}
+          readOnly
+        />
+      );
+
+      expect(screen.queryByLabelText('Remove John Doe')).not.toBeInTheDocument();
     });
   });
 

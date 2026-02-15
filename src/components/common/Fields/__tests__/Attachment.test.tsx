@@ -19,6 +19,12 @@ vi.mock('../../../../plugins/GalleryViewPlugin/components/shared/Modals/Attachme
           <button type="button" onClick={() => onChange([{ id: 1, url: 'file-a' }])}>
             Apply Files
           </button>
+          <button
+            type="button"
+            onClick={() => onChange([{ id: 2, url: 'file-b', file: new File(['x'], 'file-b.txt', { type: 'text/plain' }) }])}
+          >
+            Apply Files With Object
+          </button>
           <button type="button" onClick={() => onChange([])}>
             Clear Files
           </button>
@@ -71,5 +77,67 @@ describe('Attachment', () => {
 
     expect(onChange).toHaveBeenCalledWith([]);
     expect(screen.getByText('Please attach at least one file')).toBeInTheDocument();
+  });
+
+  it('does not call API mutations when persistImmediately is false', () => {
+    render(
+      <Attachment
+        value={[]}
+        onChange={vi.fn()}
+        persistImmediately={false}
+      />
+    );
+
+    fireEvent.click(screen.getByTitle('Add attachment'));
+    fireEvent.click(screen.getByText('Apply Files'));
+
+    expect(addAttachmentMock).not.toHaveBeenCalled();
+    expect(removeAttachmentsMock).not.toHaveBeenCalled();
+  });
+
+  it('calls addAttachmentMutation when persistImmediately is true and file objects exist', async () => {
+    render(
+      <Attachment
+        value={[]}
+        onChange={vi.fn()}
+        persistImmediately={true}
+        model_id="m1"
+        column_id="c1"
+        row_id={1}
+      />
+    );
+
+    fireEvent.click(screen.getByTitle('Add attachment'));
+    fireEvent.click(screen.getByText('Apply Files With Object'));
+
+    expect(addAttachmentMock).toHaveBeenCalledWith({
+      model_id: 'm1',
+      column_id: 'c1',
+      row_id: 1,
+      files: expect.any(Array),
+    });
+  });
+
+  it('calls removeAttachmentsMutation when files are removed', async () => {
+    render(
+      <Attachment
+        value={[{ id: 'att-1', url: 'file-a' }]}
+        onChange={vi.fn()}
+        persistImmediately={true}
+        model_id="m1"
+        column_id="c1"
+        row_id={1}
+      />
+    );
+
+    fireEvent.click(screen.getByTitle('Add attachment'));
+    fireEvent.click(screen.getByText('Clear Files'));
+
+    expect(removeAttachmentsMock).toHaveBeenCalledWith({
+      model_id: 'm1',
+      column_id: 'c1',
+      row_id: 1,
+      attachments: ['att-1'],
+    });
   });
 });

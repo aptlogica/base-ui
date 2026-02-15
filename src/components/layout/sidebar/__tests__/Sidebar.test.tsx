@@ -67,7 +67,26 @@ vi.mock('../../../../hooks/useApi', () => ({
 }));
 
 vi.mock('../../../modals/CreateTableModal', () => ({
-  CreateTableModal: () => <div data-testid="create-table-modal">Create Table Modal</div>,
+  CreateTableModal: ({
+    isOpen,
+    onClose,
+    onCreate,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+    onCreate: (payload: { name: string; description?: string }) => Promise<void>;
+  }) =>
+    isOpen ? (
+      <div data-testid="create-table-modal">
+        Create Table Modal
+        <button type="button" onClick={() => onCreate({ name: 'Created Table', description: 'Desc' })}>
+          Submit Create Table
+        </button>
+        <button type="button" onClick={onClose}>
+          Close Create Table
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock('../../../modals/ImportModal', () => ({
@@ -119,10 +138,48 @@ vi.mock('../components/TableViewsWithData', () => ({
 }));
 
 vi.mock('../components/CreateViewModalWrapper', () => ({
-  CreateViewModalWrapper: ({ onClose }: { onClose: () => void }) => (
+  CreateViewModalWrapper: ({
+    onClose,
+    onCreate,
+  }: {
+    onClose: () => void;
+    onCreate: (payload: {
+      name: string;
+      description?: string;
+      type: string;
+      fieldId?: string | { value: string } | null;
+      startDateFieldId?: string | { value: string } | null;
+      endDateFieldId?: string | { value: string } | null;
+    }) => Promise<void>;
+  }) => (
     <div data-testid="create-view-modal-wrapper">
       <button type="button" onClick={onClose}>
         Close View Modal
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onCreate({
+            name: 'Calendar View',
+            type: 'calendar',
+            fieldId: { value: 'date-col' },
+          })
+        }
+      >
+        Submit Calendar View
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onCreate({
+            name: 'Gantt View',
+            type: 'ganttchart',
+            startDateFieldId: { value: 'start-col' },
+            endDateFieldId: { value: 'end-col' },
+          })
+        }
+      >
+        Submit Gantt View
       </button>
     </div>
   ),
@@ -185,6 +242,8 @@ describe('Sidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUpdateBaseMutateAsync.mockResolvedValue(undefined);
+    mockCreateTableMutateAsync.mockResolvedValue({ data: { id: 'new-table-id' } });
+    mockCreateViewMutateAsync.mockResolvedValue({ data: { id: 'new-view-id' } });
     useWorkspaceBusinessLogicMock.mockReturnValue(
       getDefaultWorkspaceState() as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>
     );
@@ -471,6 +530,117 @@ describe('Sidebar', () => {
       const { container } = render(<Sidebar />);
       const pinIcon = container.querySelector('svg.lucide-pin');
       expect(pinIcon).toBeInTheDocument();
+    });
+
+    it('creates table from create-table modal and navigates to new table', async () => {
+      const user = userEvent.setup();
+      useWorkspaceBusinessLogicMock.mockReturnValue({
+        ...getDefaultWorkspaceState(),
+        showCreateTableBaseId: 'base-1',
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      render(<Sidebar />);
+
+      expect(await screen.findByTestId('create-table-modal')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /submit create table/i }));
+
+      await waitFor(() => {
+        expect(mockCreateTableMutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            base_id: 'base-1',
+            workspace_id: 'ws-1',
+            title: 'Created Table',
+            description: 'Desc',
+          })
+        );
+      });
+      expect(mockNavigateToTable).toHaveBeenCalledWith('ws-1', 'base-1', 'new-table-id');
+      expect(mockSetShowCreateTableBaseId).toHaveBeenCalledWith(null);
+    });
+
+    it('handles create table mutation failure with error toast', async () => {
+      const user = userEvent.setup();
+      mockCreateTableMutateAsync.mockRejectedValueOnce(new Error('fail'));
+      useWorkspaceBusinessLogicMock.mockReturnValue({
+        ...getDefaultWorkspaceState(),
+        showCreateTableBaseId: 'base-1',
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      render(<Sidebar />);
+
+      expect(await screen.findByTestId('create-table-modal')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /submit create table/i }));
+
+      await waitFor(() => {
+        expect(mockToast.error).toHaveBeenCalledWith('Failed to create table. Please try again.', { title: 'Error' });
+      });
+    });
+
+    it('creates calendar view with normalized fieldId meta and closes modal', async () => {
+      const user = userEvent.setup();
+      useWorkspaceBusinessLogicMock.mockReturnValue({
+        ...getDefaultWorkspaceState(),
+        showCreateViewModal: { tableId: 'table-1', viewType: 'calendar' },
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      render(<Sidebar />);
+
+      expect(await screen.findByTestId('create-view-modal-wrapper')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /submit calendar view/i }));
+
+      await waitFor(() => {
+        expect(mockCreateViewMutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            model_id: 'table-1',
+            base_id: 'base-1',
+            type: 'calendar',
+            meta: { date_field_id: 'date-col' },
+          })
+        );
+      });
+      expect(mockSetShowCreateViewModal).toHaveBeenCalledWith(null);
+      expect(mockToast.success).toHaveBeenCalledWith('View created successfully');
+    });
+
+    it('shows error when creating view without base id', async () => {
+      const user = userEvent.setup();
+      useWorkspaceBusinessLogicMock.mockReturnValue({
+        ...getDefaultWorkspaceState(),
+        selectedBaseId: null,
+        baseTables: { data: [{ model: { id: 'table-1', base_id: null, workspace_id: 'ws-1', title: 'Table 1' } }] },
+        showCreateViewModal: { tableId: 'table-1', viewType: 'calendar' },
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      render(<Sidebar />);
+
+      expect(await screen.findByTestId('create-view-modal-wrapper')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /submit calendar view/i }));
+
+      await waitFor(() => {
+        expect(mockToast.error).toHaveBeenCalledWith('Base ID is required to create a view', { title: 'Error' });
+      });
+    });
+
+    it('creates gantt view with normalized start/end meta', async () => {
+      const user = userEvent.setup();
+      useWorkspaceBusinessLogicMock.mockReturnValue({
+        ...getDefaultWorkspaceState(),
+        showCreateViewModal: { tableId: 'table-1', viewType: 'ganttchart' },
+      } as unknown as ReturnType<typeof useWorkspaceBusinessLogicMock>);
+      render(<Sidebar />);
+
+      expect(await screen.findByTestId('create-view-modal-wrapper')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /submit gantt view/i }));
+
+      await waitFor(() => {
+        expect(mockCreateViewMutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            model_id: 'table-1',
+            base_id: 'base-1',
+            type: 'ganttchart',
+            meta: {
+              start_date_field_id: 'start-col',
+              end_date_field_id: 'end-col',
+            },
+          })
+        );
+      });
     });
   });
 });

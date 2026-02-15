@@ -465,4 +465,70 @@ describe('clientService', () => {
 
     expect(setAuthSpy).toHaveBeenCalledWith(accessToken);
   });
+
+  it('initializes workspace/base headers from navigation store state', async () => {
+    const setHeadersSpy = vi.spyOn(client, 'setHeaders');
+    vi.doMock('../../stores/navigationStore', () => ({
+      useNavigationStore: {
+        getState: () => ({
+          selectedWorkspaceId: 'w-nav',
+          selectedBaseId: 'b-nav',
+        }),
+      },
+    }));
+
+    const svc = await import('../clientService');
+    await svc.initializeClientToken();
+
+    expect(setHeadersSpy).toHaveBeenCalledWith({ workspace: 'w-nav', base: 'b-nav' });
+  });
+
+  it('uses localStorage user_id for authenticated state fallback', async () => {
+    sessionStorage.setItem('_st_', 'access-token');
+    localStorage.setItem('user_id', 'user-local');
+    await expect(isAuthenticated()).resolves.toBe(true);
+  });
+
+  it('forceLogout does not hard-redirect when already on login route', async () => {
+    const setAuthSpy = vi.spyOn(client, 'setAuth');
+    sessionStorage.setItem('user_id', 'user-1');
+    (globalThis as any).location.pathname = '/login';
+    (globalThis as any).location.href = '/login';
+
+    vi.useFakeTimers();
+    await forceLogout();
+    vi.runAllTimers();
+
+    expect(setAuthSpy).toHaveBeenCalledWith('');
+    expect((globalThis as any).location.href).toBe('/login');
+    vi.useRealTimers();
+  });
+
+  it('stores user_role when login token contains a string role', async () => {
+    const accessToken = createJwt({
+      exp: Math.floor(Date.now() / 1000) + 3600,
+      roles: 'workspace-owner',
+      user_id: 'user-1',
+      email: 'user@example.com',
+      email_verified: true,
+    });
+    const refreshToken = createJwt({ exp: Math.floor(Date.now() / 1000) + 7200 });
+
+    (client.auth as any).login = vi.fn().mockResolvedValue({
+      data: {
+        token: {
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        },
+        user: {
+          id: 'user-1',
+          email: 'user@example.com',
+          display_name: 'User One',
+        },
+      },
+    });
+
+    await login({ email: 'user@example.com', password: 'pw' } as any);
+    expect(sessionStorage.getItem('user_role')).toBe('workspace-owner');
+  });
 });
