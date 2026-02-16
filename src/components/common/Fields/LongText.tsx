@@ -274,14 +274,59 @@ export const LongText: React.FC<LongTextProps> = ({
 
     const range = selection.getRangeAt(0);
     const blockquote = getClosestAncestorTag(range.commonAncestorContainer, 'blockquote');
-    if (!blockquote || !blockquote.parentNode) return false;
+    if (!blockquote?.parentNode) return false;
 
     const parent = blockquote.parentNode;
     while (blockquote.firstChild) {
       parent.insertBefore(blockquote.firstChild, blockquote);
     }
-    parent.removeChild(blockquote);
+    blockquote.remove();
 
+    return true;
+  };
+
+  const wrapListWithBlockquoteAtSelection = (): boolean => {
+    const selection = globalThis.getSelection();
+    if (!richTextEditorRef.current) return false;
+
+    const editor = richTextEditorRef.current;
+    const getListAncestor = (node: Node | null): HTMLElement | null => {
+      if (!node) return null;
+      const unorderedList = getClosestAncestorTag(node, 'ul');
+      const orderedList = getClosestAncestorTag(node, 'ol');
+      return unorderedList || orderedList;
+    };
+    let list: HTMLElement | null = null;
+
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      list = getListAncestor(range.commonAncestorContainer);
+
+      // If selection is at editor/root level, resolve by cursor offset child.
+      if (!list && range.startContainer === editor) {
+        const childAtCursor = editor.childNodes[range.startOffset] ?? editor.childNodes[Math.max(0, range.startOffset - 1)] ?? null;
+        list = getListAncestor(childAtCursor);
+      }
+    }
+
+    // Selection may move off list after quote toggle; if editor has a single list, use it.
+    if (!list) {
+      const lists = Array.from(editor.querySelectorAll('ul, ol')) as HTMLElement[];
+      if (lists.length === 1) {
+        list = lists[0];
+      }
+    }
+
+    if (!list || !list.parentNode) return false;
+
+    // Already quoted (directly or by an ancestor blockquote).
+    if (getClosestAncestorTag(list, 'blockquote')) {
+      return true;
+    }
+
+    const blockquote = document.createElement('blockquote');
+    list.parentNode.insertBefore(blockquote, list);
+    blockquote.appendChild(list);
     return true;
   };
 
@@ -309,14 +354,19 @@ export const LongText: React.FC<LongTextProps> = ({
     // `formatBlock` for blockquote is inconsistent across browsers.
     if (command === 'formatBlock' && value?.toLowerCase() === 'blockquote') {
       if (isSelectionInsideTag('blockquote')) {
-        // Toggle off quote: convert the current block back to a normal paragraph.
-        success = execFormatBlockWithFallback(['p', '<p>', 'div', '<div>']);
-        // Some browsers keep blockquote when it contains lists; force-unwrapping keeps toggle deterministic.
-        if (isSelectionInsideTag('blockquote')) {
-          success = unwrapBlockquoteAtSelection() || success;
+        // Toggle off quote by unwrapping first, so nested lists keep their structure.
+        // Fallback to formatBlock only if unwrapping fails for any reason.
+        success = unwrapBlockquoteAtSelection();
+        if (!success) {
+          success = execFormatBlockWithFallback(['p', '<p>', 'div', '<div>']);
         }
       } else {
-        success = execFormatBlockWithFallback(['blockquote', '<blockquote>', 'BLOCKQUOTE']);
+        // Adding quote inside a list should preserve ul/ol/li structure.
+        // Prefer manual list wrapping; fallback to formatBlock for non-list content.
+        success = wrapListWithBlockquoteAtSelection();
+        if (!success) {
+          success = execFormatBlockWithFallback(['blockquote', '<blockquote>', 'BLOCKQUOTE']);
+        }
       }
     } else {
       // Execute the command
