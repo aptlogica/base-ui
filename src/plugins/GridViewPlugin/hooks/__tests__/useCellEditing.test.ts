@@ -349,5 +349,154 @@ describe('useCellEditing', () => {
       // Verify function handles numeric IDs
       expect(result.current.handleCellChange).toBeDefined();
     });
+
+    it('should debounce multiSelect longer and update local state immediately', async () => {
+      const testMutation = createMockMutation();
+      const onRecordsUpdate = vi.fn();
+      const props = {
+        data: [
+          {
+            id: 1,
+            tags: ['A'],
+            _meta: {
+              id: 1,
+              created_at: '2020-01-01',
+              updated_at: '2020-01-01',
+              deleted_at: null,
+              position: 1,
+            },
+          },
+        ],
+        columns: [
+          { id: 'col-tags', title: 'Tags', uidt: 'multiSelect', type: 'multiSelect' as any, key: 'tags' },
+        ],
+        tableId: 'table-1',
+        insertRowDataMutation: testMutation,
+        onRecordsUpdate,
+      };
+
+      const { result } = renderHook(() => useCellEditing(props as any));
+
+      await act(async () => {
+        result.current.handleCellChange(1 as any, 'tags', ['A', 'B']);
+      });
+
+      // local update should happen immediately
+      expect(onRecordsUpdate).toHaveBeenCalled();
+
+      // debounce window should be longer (1200ms)
+      vi.advanceTimersByTime(1100);
+      expect(testMutation.mutateAsync).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(200);
+      await Promise.resolve();
+      expect(testMutation.mutateAsync).toHaveBeenCalled();
+    });
+
+    it('should skip API call for attachment fields and update local state', async () => {
+      const testMutation = createMockMutation();
+      const onRecordsUpdate = vi.fn();
+      const props = {
+        data: [
+          {
+            id: '1',
+            files: [],
+            _meta: {
+              id: '1',
+              created_at: '2020-01-01',
+              updated_at: '2020-01-01',
+              deleted_at: null,
+              position: 1,
+            },
+          },
+        ],
+        columns: [
+          { id: 'col-files', title: 'Files', uidt: 'attachment', type: 'attachment' as any, key: 'files' },
+        ],
+        tableId: 'table-1',
+        insertRowDataMutation: testMutation,
+        onRecordsUpdate,
+      };
+
+      const { result } = renderHook(() => useCellEditing(props as any));
+
+      await act(async () => {
+        result.current.handleCellChange('1', 'files', [{ name: 'a.png' }]);
+        vi.advanceTimersByTime(500);
+      });
+
+      expect(onRecordsUpdate).toHaveBeenCalled();
+      expect(testMutation.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('should skip API call for links fields and update local state', async () => {
+      const testMutation = createMockMutation();
+      const onRecordsUpdate = vi.fn();
+      const props = {
+        data: [
+          {
+            id: '1',
+            links: [],
+            _meta: {
+              id: '1',
+              created_at: '2020-01-01',
+              updated_at: '2020-01-01',
+              deleted_at: null,
+              position: 1,
+            },
+          },
+        ],
+        columns: [
+          { id: 'col-links', title: 'Links', uidt: 'links', type: 'links' as any, key: 'links' },
+        ],
+        tableId: 'table-1',
+        insertRowDataMutation: testMutation,
+        onRecordsUpdate,
+      };
+
+      const { result } = renderHook(() => useCellEditing(props as any));
+
+      await act(async () => {
+        result.current.handleCellChange('1', 'links', [{ id: 2 }]);
+        vi.advanceTimersByTime(500);
+      });
+
+      expect(onRecordsUpdate).toHaveBeenCalled();
+      expect(testMutation.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('should skip API call for invalid row ids', async () => {
+      const testMutation = createMockMutation();
+      const props = {
+        data: [
+          {
+            id: '1',
+            name: 'John',
+            _meta: {
+              id: '1',
+              created_at: '2020-01-01',
+              updated_at: '2020-01-01',
+              deleted_at: null,
+              position: 1,
+            },
+          },
+        ],
+        columns: [
+          { id: 'col-1', title: 'Name', type: 'text' as const, key: 'name' },
+        ],
+        tableId: 'table-1',
+        insertRowDataMutation: testMutation,
+        onRecordsUpdate: vi.fn(),
+      };
+
+      const { result } = renderHook(() => useCellEditing(props as any));
+
+      await act(async () => {
+        result.current.handleCellChange('0', 'name', 'Nope');
+        vi.advanceTimersByTime(500);
+      });
+
+      expect(testMutation.mutateAsync).not.toHaveBeenCalled();
+    });
   });
 });

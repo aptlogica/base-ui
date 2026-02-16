@@ -470,6 +470,7 @@ describe('FormView', () => {
     });
 
     it('handles submit failure path', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       (mockActions.submitForm as Mock).mockRejectedValueOnce(new Error('submit failed'));
 
       render(
@@ -488,6 +489,7 @@ describe('FormView', () => {
         expect(mockActions.submitForm).toHaveBeenCalled();
       });
       expect(formDataState.setFormError).toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
     });
 
     it('uses field delete/edit guards for system and non-system fields', () => {

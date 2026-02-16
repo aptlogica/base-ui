@@ -1020,6 +1020,9 @@ describe('LongText Component', () => {
 
       const editor = getEditor();
       vi.spyOn(editor, 'focus').mockImplementation(() => {});
+      await waitFor(() => {
+        expect(editor.querySelector('li')).toBeTruthy();
+      });
       const listTextNode = editor.querySelector('li')?.firstChild;
       expect(listTextNode).toBeTruthy();
 

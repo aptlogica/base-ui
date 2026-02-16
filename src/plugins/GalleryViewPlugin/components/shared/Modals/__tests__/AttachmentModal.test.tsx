@@ -133,6 +133,7 @@ describe('AttachmentModal', () => {
   });
 
   it('handles upload API failure and shows error', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     addAttachmentMutateAsync.mockRejectedValueOnce(new Error('upload failed'));
     render(
       <AttachmentModal
@@ -151,6 +152,7 @@ describe('AttachmentModal', () => {
     await waitFor(() => {
       expect(screen.getByText(/upload failed/i)).toBeInTheDocument();
     });
+    consoleErrorSpy.mockRestore();
   });
 
   it('removes selected file and closes via cancel', async () => {

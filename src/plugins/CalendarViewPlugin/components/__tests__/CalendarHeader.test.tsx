@@ -1,6 +1,6 @@
 import React from 'react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CalendarHeader from '../CalendarHeader';
 import type { GridColumn } from '../../../../plugins/GridViewPlugin/types/grid.types';
@@ -28,7 +28,14 @@ vi.mock('lucide-react', async (importOriginal) => {
 });
 
 vi.mock('../../../../components/shared/table/FilterPopover', () => ({
-  FilterPopover: () => <div data-testid="filter-popover" />
+  FilterPopover: (props: any) => (
+    <button
+      data-testid="filter-popover"
+      onClick={() => props.onUpdateFilter?.(0, { value: 'updated' })}
+    >
+      Filter Popover
+    </button>
+  )
 }));
 
 vi.mock('../../../../components/shared/table/FieldsPopover', () => ({
@@ -62,6 +69,21 @@ describe('CalendarHeader', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(window, 'innerWidth', { value: 1440, configurable: true });
+    Object.defineProperty(window, 'innerHeight', { value: 900, configurable: true });
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      value: 1440,
+    });
+    (global as any).ResizeObserver = class {
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+    };
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe('rendering', () => {
@@ -90,9 +112,9 @@ describe('CalendarHeader', () => {
       render(<CalendarHeader {...defaultProps} />);
 
       expect(screen.getAllByText(/Month/).length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByText(/Week/)).toBeInTheDocument();
-      expect(screen.getByText(/Day/)).toBeInTheDocument();
-      expect(screen.getByText(/Year/)).toBeInTheDocument();
+      expect(screen.getAllByText(/Week/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/Day/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/Year/).length).toBeGreaterThanOrEqual(1);
     });
 
     it('should render field selector', () => {
@@ -163,47 +185,85 @@ describe('CalendarHeader', () => {
     });
   });
 
+  describe('date picker', () => {
+    it('opens day picker and shows event dot for matching date', async () => {
+      const events = [{ id: 'e1', title: 'Event', date: '2026-01-15' }];
+      render(<CalendarHeader {...defaultProps} currentView="day" events={events} />);
+
+      const trigger = screen.getAllByText(/Jan/)[0];
+      await userEvent.click(trigger);
+
+      const dot = document.querySelector('.w-1\\.5.h-1\\.5.rounded-full');
+      expect(dot).toBeTruthy();
+    });
+
+    it('closes date picker on outside click', async () => {
+      render(<CalendarHeader {...defaultProps} currentView="day" />);
+
+      const trigger = screen.getAllByText(/Jan/)[0];
+      await userEvent.click(trigger);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      fireEvent.mouseDown(document.body);
+
+      await waitFor(() => {
+        const picker = document.querySelector('.w-80.bg-card.border.rounded-xl.shadow-lg.z-50');
+        expect(picker).toBeNull();
+      });
+    });
+  });
+
   describe('view switching', () => {
     it('should call onViewChange when month view is selected', async () => {
-      render(<CalendarHeader {...defaultProps} currentView="week" />);
+      const { container } = render(<CalendarHeader {...defaultProps} currentView="week" />);
 
-      const monthButtons = screen.getAllByText('Month');
+      const desktop = container.querySelector('.hidden.md\\:flex') as HTMLElement | null;
+      expect(desktop).toBeTruthy();
+      const monthButtons = within(desktop!).getAllByText('Month');
       await userEvent.click(monthButtons[0]);
 
       expect(defaultProps.onViewChange).toHaveBeenCalledWith('month');
     });
 
     it('should call onViewChange when week view is selected', async () => {
-      render(<CalendarHeader {...defaultProps} currentView="month" />);
+      const { container } = render(<CalendarHeader {...defaultProps} currentView="month" />);
 
-      const weekButton = screen.getByText('Week');
+      const desktop = container.querySelector('.hidden.md\\:flex') as HTMLElement | null;
+      expect(desktop).toBeTruthy();
+      const weekButton = within(desktop!).getAllByText('Week')[0];
       await userEvent.click(weekButton);
 
       expect(defaultProps.onViewChange).toHaveBeenCalledWith('week');
     });
 
     it('should call onViewChange when day view is selected', async () => {
-      render(<CalendarHeader {...defaultProps} currentView="month" />);
+      const { container } = render(<CalendarHeader {...defaultProps} currentView="month" />);
 
-      const dayButton = screen.getByText('Day');
+      const desktop = container.querySelector('.hidden.md\\:flex') as HTMLElement | null;
+      expect(desktop).toBeTruthy();
+      const dayButton = within(desktop!).getAllByText('Day')[0];
       await userEvent.click(dayButton);
 
       expect(defaultProps.onViewChange).toHaveBeenCalledWith('day');
     });
 
     it('should call onViewChange when year view is selected', async () => {
-      render(<CalendarHeader {...defaultProps} currentView="month" />);
+      const { container } = render(<CalendarHeader {...defaultProps} currentView="month" />);
 
-      const yearButton = screen.getByText('Year');
+      const desktop = container.querySelector('.hidden.md\\:flex') as HTMLElement | null;
+      expect(desktop).toBeTruthy();
+      const yearButton = within(desktop!).getAllByText('Year')[0];
       await userEvent.click(yearButton);
 
       expect(defaultProps.onViewChange).toHaveBeenCalledWith('year');
     });
 
     it('should highlight active view', () => {
-      render(<CalendarHeader {...defaultProps} currentView="month" />);
+      const { container } = render(<CalendarHeader {...defaultProps} currentView="month" />);
 
-      const monthButtons = screen.getAllByText('Month');
+      const desktop = container.querySelector('.hidden.md\\:flex') as HTMLElement | null;
+      expect(desktop).toBeTruthy();
+      const monthButtons = within(desktop!).getAllByText('Month');
       const monthButton = monthButtons[0].closest('button');
       expect(monthButton).toBeInTheDocument();
     });
@@ -238,6 +298,28 @@ describe('CalendarHeader', () => {
       render(<CalendarHeader {...defaultProps} />);
 
       expect(screen.getByText(/Field Selector/)).toBeInTheDocument();
+    });
+  });
+
+  describe('filters', () => {
+    it('falls back to remove+add when onUpdateFilter is missing', async () => {
+      const onAddFilter = vi.fn();
+      const onRemoveFilter = vi.fn();
+      const filters = [{ column: 'a', operator: 'eq', value: '1' }];
+
+      render(
+        <CalendarHeader
+          {...defaultProps}
+          filters={filters}
+          onAddFilter={onAddFilter}
+          onRemoveFilter={onRemoveFilter}
+          onUpdateFilter={undefined}
+        />
+      );
+
+      await userEvent.click(screen.getByTestId('filter-popover'));
+      expect(onRemoveFilter).toHaveBeenCalledWith(0);
+      expect(onAddFilter).toHaveBeenCalledWith({ column: 'a', operator: 'eq', value: 'updated' });
     });
   });
 
@@ -300,6 +382,49 @@ describe('CalendarHeader', () => {
       expect(screen.getAllByText('Today').length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText(/Month/).length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/Field Selector/)).toBeInTheDocument();
+    });
+
+    it('uses view dropdown when container width is narrow', async () => {
+      Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+        configurable: true,
+        value: 800,
+      });
+      const { container } = render(<CalendarHeader {...defaultProps} />);
+
+      const desktop = container.querySelector('.hidden.md\\:flex') as HTMLElement | null;
+      expect(desktop).toBeTruthy();
+      const dropdownTrigger = within(desktop!)
+        .getAllByRole('button', { name: 'Month' })
+        .find((button) => button.querySelector('svg.lucide-chevron-down'));
+      expect(dropdownTrigger).toBeTruthy();
+      await userEvent.click(dropdownTrigger!);
+
+      const dropdownMenu = container.querySelector('div.absolute.top-full.left-0') as HTMLElement | null;
+      expect(dropdownMenu).toBeTruthy();
+      expect(within(dropdownMenu!).getByText('Day')).toBeInTheDocument();
+    });
+
+    it('changes view via dropdown selection', async () => {
+      Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+        configurable: true,
+        value: 800,
+      });
+      const { container } = render(<CalendarHeader {...defaultProps} currentView="month" />);
+
+      const desktop = container.querySelector('.hidden.md\\:flex') as HTMLElement | null;
+      expect(desktop).toBeTruthy();
+      const dropdownTrigger = within(desktop!)
+        .getAllByRole('button', { name: 'Month' })
+        .find((button) => button.querySelector('svg.lucide-chevron-down'));
+      expect(dropdownTrigger).toBeTruthy();
+      await userEvent.click(dropdownTrigger!);
+
+      const dropdownMenu = container.querySelector('div.absolute.top-full.left-0') as HTMLElement | null;
+      expect(dropdownMenu).toBeTruthy();
+      const weekOption = within(dropdownMenu!).getByText('Week');
+      await userEvent.click(weekOption);
+
+      expect(defaultProps.onViewChange).toHaveBeenCalledWith('week');
     });
   });
 

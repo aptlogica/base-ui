@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import {
   useWorkspaces,
@@ -166,6 +166,15 @@ vi.mock("../../service/clientService", () => ({
 }));
 
 describe("useApi hooks", () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
   const invalidateQueries = vi.fn();
   const cancelQueries = vi.fn();
   const setQueryData = vi.fn();

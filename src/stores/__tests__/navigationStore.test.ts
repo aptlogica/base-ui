@@ -373,9 +373,11 @@ describe("navigationStore", () => {
   });
 
   it("returns false when loadFromActivityData throws", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(getUserActivity).mockRejectedValue(new Error("boom"));
     const result = await useNavigationStore.getState().loadFromActivityData("u1");
     expect(result).toBe(false);
+    consoleErrorSpy.mockRestore();
   });
 
   it("clears activity data without throwing", async () => {
@@ -385,7 +387,9 @@ describe("navigationStore", () => {
   });
 
   it("does not throw when clearActivityData fails", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(clearUserActivity).mockRejectedValue(new Error("boom"));
     await expect(useNavigationStore.getState().clearActivityData("u1")).resolves.toBeUndefined();
+    consoleErrorSpy.mockRestore();
   });
 });
