@@ -181,7 +181,8 @@ export const TableRow: React.FC<TableRowProps> = ({
         if (props.isActive) {
           borderClass = 'border border-[var(--color-brand-600)]';
         } else if (isRowActive) {
-          borderClass = ''; // Row border handles top/bottom, no cell border needed
+          // Keep row-level top/bottom border, but force right border on the visible last data cell
+          borderClass = props.isLast ? 'border-r border-[var(--color-brand-600)]' : '';
         } else {
           borderClass = 'border-b border-border/30';
         }
