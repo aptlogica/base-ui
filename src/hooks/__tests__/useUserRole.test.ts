@@ -34,23 +34,10 @@ describe('useUserRole', () => {
       expect(result.current.getRole()).toBeNull();
     });
 
-    it('should return role from user_token_data when available', () => {
-      sessionStorage.setItem('user_token_data', JSON.stringify({ roles: 'owner' }));
-      const { result } = renderHook(() => useUserRole());
-      expect(result.current.getRole()).toBe('owner');
-    });
-
-    it('should fallback to user_role when user_token_data is not present', () => {
+    it('should return role from user_role when available', () => {
       sessionStorage.setItem('user_role', 'owner');
       const { result } = renderHook(() => useUserRole());
       expect(result.current.getRole()).toBe('owner');
-    });
-
-    it('should handle invalid JSON in user_token_data gracefully', () => {
-      sessionStorage.setItem('user_token_data', 'invalid-json');
-      sessionStorage.setItem('user_role', 'maintainer');
-      const { result } = renderHook(() => useUserRole());
-      expect(result.current.getRole()).toBe('maintainer');
     });
   });
 

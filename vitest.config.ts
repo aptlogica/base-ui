@@ -18,10 +18,17 @@ export default defineConfig({
       exclude: [
         'node_modules/',
         'src/test/',
+        '**/__tests__/**',
+        '**/*.test.*',
+        '**/*.spec.*',
+        '**/__mocks__/**',
         '**/*.d.ts',
         '**/*.config.*',
         '**/dist/**',
-        '**/sdk/**'
+        '**/sdk/**',
+        'src/coverage-vitest/**',
+        'src/types/**',
+        'src/**/types/**'
       ],
       thresholds: {
         lines: 40,

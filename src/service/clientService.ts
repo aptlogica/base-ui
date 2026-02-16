@@ -123,6 +123,10 @@ const clearTokens = (): void => {
     sessionStorage.removeItem(REFRESH_KEY);
     sessionStorage.removeItem('_te_');
     sessionStorage.removeItem('_rte_');
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem('_te_');
+    localStorage.removeItem('_rte_');
   } catch (error) {
     console.error('Error clearing tokens:', error);
   }
@@ -313,11 +317,12 @@ export const forceLogout = async (): Promise<void> => {
   updateClientToken('');
 
   // Clear all stored user and tenant data (only what we actually store)
-  const keys = ['user_id', 'user_email', 'user_display_name', 'user_avatar', 'user_role', 'user_token_data'];
+  const keys = ['user_id', 'user_display_name', 'user_avatar', 'user_role'];
   keys.forEach(k => {
     sessionStorage.removeItem(k);
     localStorage.removeItem(k);
   });
+  localStorage.removeItem('sb_auth');
 
   // Dispatch custom event for React Router navigation (prevents page refresh)
   globalThis.dispatchEvent(new CustomEvent('auth_token_expired', { detail: { navigate: true } }));
@@ -476,9 +481,6 @@ function storeUserDataInSession(user: any): void {
   if (!user?.id) return;
 
   sessionStorage.setItem('user_id', user.id);
-  if (user.email) {
-    sessionStorage.setItem('user_email', user.email);
-  }
   if (user.display_name) {
     sessionStorage.setItem('user_display_name', user.display_name);
   }
@@ -510,13 +512,6 @@ function extractAndStoreRole(accessDecoded: any): void {
 
   if (role) {
     sessionStorage.setItem('user_role', role);
-    // Also store full token data for reference
-    sessionStorage.setItem('user_token_data', JSON.stringify({
-      user_id: accessDecoded.user_id,
-      email: accessDecoded.email,
-      roles: role,
-      email_verified: accessDecoded.email_verified,
-    }));
   }
 }
 

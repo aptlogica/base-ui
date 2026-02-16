@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { X, CirclePlus } from 'lucide-react';
 import FieldRenderer from '../../plugins/FormViewPlugin/components/shared/FieldRenderer';
-import { useAddRow, useInsertRowData, useAddAttachment } from '../../hooks/useApi';
+import { useAddRow, useInsertRowData, useAddAttachment, useInsertRelationData } from '../../hooks/useApi';
 import { getFieldTypeIconWithMargin } from '../../types/fieldTypes';
 import { getStandardFieldType, getFieldDisplayName, getFieldDefaultValue, createFieldRendererProps } from '../../utils/standardFieldUtils';
 import { isFormulaField } from '../../utils/fieldUtils';
@@ -44,6 +44,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const addRowMutation = useAddRow();
     const insertValueMutation = useInsertRowData();
     const addAttachmentMutation = useAddAttachment();
+    const insertRelationMutation = useInsertRelationData();
     const toast = useToast();
 
     const isAuditField = (field: any): boolean => {
@@ -181,7 +182,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             setCreatedRecordId(recordId);
             await Promise.all((fields || []).map(async (f) => {
                 // Skip attachment fields - they handle their own API calls
-                if (f.type === 'attachment' || f.uidt === 'attachment') {
+                if (f.type === 'attachment' || f.uidt === 'attachment' || f.type === 'links' || f.uidt === 'links') {
                     return;
                 }
 
@@ -259,6 +260,39 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                     // Don't block form submission if attachment uploads fail
                     setFormError('Record created, but some attachments may not have uploaded. Please check and retry.');
                 }
+            }
+
+            // Handle links fields - persist relations after record is created
+            const relationPromises: Promise<any>[] = [];
+            for (const field of (fields || [])) {
+                if (field.type !== 'links' && field.uidt !== 'links') {
+                    continue;
+                }
+
+                const linksValue = rowData[field.id];
+                const relatedIds = (Array.isArray(linksValue) ? linksValue : [])
+                    .map((item: any) => item?.id ?? item)
+                    .map((id: any) => Number.parseInt(String(id), 10))
+                    .filter((id: number) => Number.isFinite(id));
+
+                for (const targetRowId of relatedIds) {
+                    relationPromises.push(
+                        insertRelationMutation.mutateAsync({
+                            model_id: String(table.id),
+                            column_id: String(field.id),
+                            source_row_id: Number(recordId),
+                            target_row_id: targetRowId,
+                            action: 'link',
+                            target_table_id: field?.meta?.relation?.with
+                        }).catch((error) => {
+                            console.error(`Failed to link relation for field ${field.title} (${field.id})`, error);
+                        })
+                    );
+                }
+            }
+
+            if (relationPromises.length > 0) {
+                await Promise.all(relationPromises);
             }
 
             setSubmitting(false);

@@ -647,7 +647,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
             onClick={handleNewRecordClick}
             className="w-full inline-flex items-center justify-center gap-1 text-primary-brand hover:text-hover-primary-dark text-xs font-medium p-3"
           >
-            <Plus className="w-3 h-3" />
+            <Plus className="w-5 h-5" />
             New record
           </button>
         </div>

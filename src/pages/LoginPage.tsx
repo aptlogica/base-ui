@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from '../auth/AuthContext';
-import { login as apiLogin, resendOtp } from '../service/clientService';
+import { isAuthenticated, login as apiLogin, resendOtp } from '../service/clientService';
 import { useToast } from "../components/common/Toast";
 
 interface FormData {
@@ -17,10 +17,71 @@ const LogIn: React.FC = () => {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [hasOtherSession, setHasOtherSession] = useState(false);
+  const hasRedirectedRef = useRef(false);
+  const hasNotifiedOtherSessionRef = useRef(false);
   const toast = useToast();
   const navigate = useNavigate();
   const auth = useAuth();
   const login = typeof auth?.login === 'function' ? auth.login : () => { };
+
+  useEffect(() => {
+    let isActive = true;
+    const getCrossTabFlag = () => {
+      try {
+        return localStorage.getItem('sb_auth');
+      } catch {
+        return null;
+      }
+    };
+    const checkExistingSession = async () => {
+      try {
+        const alreadyAuthed = await isAuthenticated();
+        if (!isActive || hasRedirectedRef.current) return;
+        if (alreadyAuthed) {
+          hasRedirectedRef.current = true;
+          toast.info('You are already signed in. Redirecting...');
+          navigate('/', { replace: true });
+          return;
+        }
+
+        const crossTabFlag = getCrossTabFlag();
+        if (crossTabFlag) {
+          setHasOtherSession(true);
+          if (!hasNotifiedOtherSessionRef.current) {
+            hasNotifiedOtherSessionRef.current = true;
+            toast.info('You are already signed in in another tab.');
+          }
+        } else {
+          setHasOtherSession(false);
+          hasNotifiedOtherSessionRef.current = false;
+        }
+      } catch (error) {
+        console.warn('LoginPage auth check failed:', error);
+      }
+    };
+
+    checkExistingSession();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'sb_auth') {
+        if (e.newValue) {
+          setHasOtherSession(true);
+          if (!hasNotifiedOtherSessionRef.current) {
+            hasNotifiedOtherSessionRef.current = true;
+            toast.info('You are already signed in in another tab.');
+          }
+        } else {
+          setHasOtherSession(false);
+          hasNotifiedOtherSessionRef.current = false;
+        }
+      }
+    };
+    globalThis.addEventListener('storage', onStorage);
+    return () => {
+      isActive = false;
+      globalThis.removeEventListener('storage', onStorage);
+    };
+  }, [navigate, toast]);
 
   const validateEmail = (value: string) => {
     const trimmed = value.trim();
@@ -127,6 +188,11 @@ const LogIn: React.FC = () => {
 
           <h2 className="text-3xl font-bold text-foreground text-left">Welcome back</h2>
           <p className="text-base lg:text-lg text-white/90 leading-relaxed drop-shadow-md">Welcome back! Please enter your details.</p>
+          {hasOtherSession && (
+            <div className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
+              You are already signed in in another tab. You can continue there or sign in again.
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
               <label htmlFor="email" className="field-component-label">
@@ -203,14 +269,14 @@ const LogIn: React.FC = () => {
             <div className="flex items-center justify-between text-sm">
               <Link to="/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
             </div>
-            {error && <div className="text-destructive text-sm text-center">{error}</div>}
             <button
               type="submit"
               disabled={isSendingOtp}
               className="w-full btn-primary py-2 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+              >
               {isSendingOtp ? 'Sending OTP...' : 'Sign in'}
             </button>
+              {error && <div className="text-red-500 text-sm text-center">{error}</div>}
           </form>
         </div>
       </div>

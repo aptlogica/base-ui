@@ -8,15 +8,19 @@ const {
   mockAuthLogin,
   mockApiLogin,
   mockResendOtp,
+  mockIsAuthenticated,
   mockToastSuccess,
   mockToastError,
+  mockToastInfo,
   mockNavigate,
 } = vi.hoisted(() => ({
   mockAuthLogin: vi.fn(),
   mockApiLogin: vi.fn(),
   mockResendOtp: vi.fn(),
+  mockIsAuthenticated: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
+  mockToastInfo: vi.fn(),
   mockNavigate: vi.fn(),
 }));
 
@@ -30,12 +34,14 @@ vi.mock('../../auth/AuthContext', () => ({
 vi.mock('../../service/clientService', () => ({
   login: mockApiLogin,
   resendOtp: mockResendOtp,
+  isAuthenticated: mockIsAuthenticated,
 }));
 
 vi.mock('../../components/common/Toast', () => ({
   useToast: () => ({
     success: mockToastSuccess,
     error: mockToastError,
+    info: mockToastInfo,
   }),
 }));
 
@@ -62,6 +68,8 @@ const renderWithRouter = () => {
 describe('LoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    mockIsAuthenticated.mockResolvedValue(false);
   });
 
   describe('Rendering', () => {
@@ -124,6 +132,32 @@ describe('LoginPage', () => {
 
       const image = screen.getByAltText('Calendar View Preview');
       expect(image).toBeInTheDocument();
+    });
+
+    it('should redirect when already authenticated', async () => {
+      mockIsAuthenticated.mockResolvedValue(true);
+
+      renderWithRouter();
+
+      await waitFor(() => {
+        expect(mockToastInfo).toHaveBeenCalledWith('You are already signed in. Redirecting...');
+        expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+      });
+    });
+
+    it('should show cross-tab session info when another tab is signed in', async () => {
+      localStorage.setItem('sb_auth', JSON.stringify({ user_id: 'user-1', ts: Date.now() }));
+
+      renderWithRouter();
+
+      await waitFor(() => {
+        expect(mockToastInfo).toHaveBeenCalledWith('You are already signed in in another tab.');
+      });
+
+      expect(
+        screen.getByText('You are already signed in in another tab. You can continue there or sign in again.')
+      ).toBeInTheDocument();
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
   });
 

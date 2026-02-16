@@ -46,24 +46,12 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
 
   // Get user role from sessionStorage or user object
   const userRole = React.useMemo(() => {
-    try {
-      // Try to get from token data
-      const tokenData = sessionStorage.getItem('user_token_data');
-      if (tokenData) {
-        const parsed = JSON.parse(tokenData);
-        return parsed.roles || null;
-      }
-      // Fallback: check if role stored directly
-      const role = sessionStorage.getItem('user_role');
-      if (role) return role;
-      // Fallback to user.roles if available
-      if (user?.roles) {
-        return typeof user.roles === 'string' ? user.roles : null;
-      }
-      return null;
-    } catch {
-      return null;
+    const role = sessionStorage.getItem('user_role');
+    if (role) return role;
+    if (user?.roles) {
+      return typeof user.roles === 'string' ? user.roles : null;
     }
+    return null;
   }, [user]);
 
   // Debug helper – enable by setting window.__NAV_DEBUG__ = true in console
@@ -102,8 +90,9 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
         }
 
         // Remove known keys (only what we actually store)
-        const keys = ['user_id', 'user_email', 'user_display_name', 'user_avatar', 'user_role', 'user_token_data'];
+        const keys = ['user_id', 'user_display_name', 'user_avatar', 'user_role'];
         keys.forEach(k => { sessionStorage.removeItem(k); localStorage.removeItem(k); });
+        localStorage.removeItem('sb_auth');
         // Clear navigation for current user if any
         const remoteUserId = sessionStorage.getItem('user_id') || localStorage.getItem('user_id');
         if (remoteUserId) clearUserNavigation(remoteUserId);
@@ -144,7 +133,6 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
       if (isAuth) {
         // Only read minimal data needed for initialization
         const user_id = sessionStorage.getItem('user_id') || localStorage.getItem('user_id');
-        const user_email = sessionStorage.getItem('user_email');
         const user_display_name = sessionStorage.getItem('user_display_name');
         const user_avatar = sessionStorage.getItem('user_avatar');
 
@@ -162,7 +150,6 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
           // Set minimal user state - full profile will be fetched via useUserProfile hook
           setUser({
             id: user_id,
-            email: user_email || undefined,
             display_name: user_display_name || undefined,
             avatar: user_avatar || undefined,
           });
@@ -205,6 +192,14 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
       // Store user data in sessionStorage
       storeUserData(userInfo);
 
+      // Cross-tab flag (no tokens stored): signals an active session in another tab
+      try {
+        localStorage.setItem('sb_auth', JSON.stringify({
+          user_id: userInfo.id,
+          ts: Date.now()
+        }));
+      } catch { }
+
       // Set minimal user state
       setUser({
         id: userInfo.id,
@@ -241,7 +236,6 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
   const storeUserData = (userInfo: any) => {
     if (userInfo?.id) {
       sessionStorage.setItem('user_id', userInfo.id);
-      if (userInfo.email) sessionStorage.setItem('user_email', userInfo.email);
       if (userInfo.display_name) sessionStorage.setItem('user_display_name', userInfo.display_name);
       if (userInfo.avatar) sessionStorage.setItem('user_avatar', userInfo.avatar);
     }
@@ -361,11 +355,12 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
     }
 
     // STEP 6: Remove user & tenant data from storage
-    const keysToRemove = ['user_id', 'user_email', 'user_display_name', 'user_avatar', 'tenant_schema', 'user_role', 'user_token_data'];
+    const keysToRemove = ['user_id', 'user_display_name', 'user_avatar', 'user_role'];
     keysToRemove.forEach(k => {
       try { sessionStorage.removeItem(k); } catch { }
       try { localStorage.removeItem(k); } catch { }
     });
+    try { localStorage.removeItem('sb_auth'); } catch { }
 
     // STEP 7: Clear user navigation persistence for this user (if any)
     try {

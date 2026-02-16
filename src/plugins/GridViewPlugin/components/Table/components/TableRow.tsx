@@ -17,6 +17,8 @@ interface TableRowProps {
   displayRowNumber?: number; // Optional: override the displayed row number (for grouped rows)
   allColumns?: ColumnConfig[]; // All columns for formula field name mapping
   canEdit?: boolean; // Permission to edit cells
+  pinnedColumnIds?: string[];
+  pinnedColumnOffsets?: Record<string, number>;
 }
 
 // Helper to extract row ID
@@ -27,6 +29,10 @@ const getRowId = (row: TableData): string => {
 // Helper to get cell value from row
 const getCellValue = (row: TableData, columnKey: string): any => {
   return (row as any)[columnKey] ?? (row as any).data?.[columnKey] ?? (row as any)._meta?.[columnKey];
+};
+
+const getColumnIdentity = (column: ColumnConfig): string => {
+  return String(column.id || column.key || '');
 };
 
 export const TableRow: React.FC<TableRowProps> = ({
@@ -43,7 +49,9 @@ export const TableRow: React.FC<TableRowProps> = ({
   tableId,
   displayRowNumber,
   allColumns,
-  canEdit = true
+  canEdit = true,
+  pinnedColumnIds = [],
+  pinnedColumnOffsets = {},
 }) => {
   // Memoize rowId to avoid recalculating on every render
   const rowId = useMemo(() => getRowId(row), [row]);
@@ -59,11 +67,23 @@ export const TableRow: React.FC<TableRowProps> = ({
 
   // Memoize column objects to prevent recreating them on every render
   const memoizedColumnProps = useMemo(() => {
+    const pinnedSet = new Set(pinnedColumnIds.map(String));
+    let lastPinnedColumnId: string | null = null;
+    columns.forEach((column) => {
+      const identity = getColumnIdentity(column);
+      if (pinnedSet.has(identity)) {
+        lastPinnedColumnId = identity;
+      }
+    });
+
     return columns.map((column, index) => {
       const value = getCellValue(row, column.key);
       const isActive = activeCell?.rowId === rowId && activeCell?.colKey === column.key;
+      const columnIdentity = getColumnIdentity(column);
+      const isPinned = pinnedSet.has(columnIdentity);
 
       return {
+        columnIdentity,
         column: {
           id: column.id || '',
           title: column.title,
@@ -82,9 +102,12 @@ export const TableRow: React.FC<TableRowProps> = ({
         isSystemField: column.isSystem || column.system || false,
         isActive,
         currentRowId: Number.parseInt(rowId),
+        isPinned,
+        isLastPinned: isPinned && columnIdentity === lastPinnedColumnId,
+        pinnedLeft: isPinned ? (pinnedColumnOffsets[columnIdentity] ?? 48) : 0,
       };
     });
-  }, [columns, row, columnWidths, activeCell, rowId, tableId]);
+  }, [columns, row, columnWidths, activeCell, rowId, tableId, pinnedColumnIds, pinnedColumnOffsets]);
 
   // Handle row click to deselect active cell
   const handleRowClick = useCallback(() => {
@@ -158,7 +181,8 @@ export const TableRow: React.FC<TableRowProps> = ({
         if (props.isActive) {
           borderClass = 'border border-[var(--color-brand-600)]';
         } else if (isRowActive) {
-          borderClass = ''; // Row border handles top/bottom, no cell border needed
+          // Keep row-level top/bottom border, but force right border on the visible last data cell
+          borderClass = props.isLast ? 'border-r border-[var(--color-brand-600)]' : '';
         } else {
           borderClass = 'border-b border-border/30';
         }
@@ -168,7 +192,17 @@ export const TableRow: React.FC<TableRowProps> = ({
           <div
             key={`${column.id || column.key || 'column'}-${index}`}
             className={borderClass}
-            style={{ height: '40px', minHeight: '40px', maxHeight: '40px', overflow: 'hidden', boxSizing: 'border-box' }}
+            style={{
+              height: '40px',
+              minHeight: '40px',
+              maxHeight: '40px',
+              overflow: 'hidden',
+              boxSizing: 'border-box',
+              position: props.isPinned ? 'sticky' : 'relative',
+              left: props.isPinned ? `${props.pinnedLeft}px` : undefined,
+              zIndex: props.isPinned ? (props.isActive ? 20 : 18) : undefined,
+              boxShadow: props.isLastPinned ? '2px 0 4px -3px rgba(15,23,42,0.12)' : undefined,
+            }}
             onClick={(e) => handleCellClick(e, column.key)}
             onKeyDown={(e) => handleCellKeyDown(e, column.key)}
             role="gridcell"
@@ -317,6 +351,26 @@ const compareColumnWidths = (prevProps: TableRowProps, nextProps: TableRowProps)
   return true;
 };
 
+const comparePinnedState = (prevProps: TableRowProps, nextProps: TableRowProps): boolean => {
+  const prevPinnedIds = prevProps.pinnedColumnIds || [];
+  const nextPinnedIds = nextProps.pinnedColumnIds || [];
+  if (prevPinnedIds.length !== nextPinnedIds.length) return false;
+  for (let i = 0; i < prevPinnedIds.length; i++) {
+    if (prevPinnedIds[i] !== nextPinnedIds[i]) return false;
+  }
+
+  const prevOffsets = prevProps.pinnedColumnOffsets || {};
+  const nextOffsets = nextProps.pinnedColumnOffsets || {};
+  const prevKeys = Object.keys(prevOffsets);
+  const nextKeys = Object.keys(nextOffsets);
+  if (prevKeys.length !== nextKeys.length) return false;
+  for (const key of prevKeys) {
+    if (prevOffsets[key] !== nextOffsets[key]) return false;
+  }
+
+  return true;
+};
+
 // Memoize TableRow to prevent unnecessary re-renders
 export const MemoizedTableRow = React.memo(TableRow, (prevProps, nextProps) => {
   // Custom comparison for better performance
@@ -337,6 +391,10 @@ export const MemoizedTableRow = React.memo(TableRow, (prevProps, nextProps) => {
   }
 
   if (!compareColumnWidths(prevProps, nextProps)) {
+    return false;
+  }
+
+  if (!comparePinnedState(prevProps, nextProps)) {
     return false;
   }
 

@@ -166,4 +166,49 @@ describe('Search', () => {
 
     expect(screen.getByText('Name')).toBeInTheDocument();
   });
+
+  it('truncates long selected field title in search placeholder', () => {
+    const longTitle = 'This is a very long field title for search placeholder';
+    render(
+      <Search
+        columns={[{ key: 'long', title: longTitle, column_name: 'long', type: 'text' }] as any}
+        onSearch={mockOnSearch}
+      />
+    );
+    expect(screen.getByPlaceholderText('Search in This is a very long ...')).toBeInTheDocument();
+  });
+
+  it('shows no fields found when internal search has no matches', async () => {
+    render(<Search columns={defaultColumns} onSearch={mockOnSearch} />);
+    const selector = screen.getByRole('button', { name: /name/i });
+    await userEvent.click(selector as HTMLButtonElement);
+
+    const fieldSearch = screen.getByPlaceholderText('Search fields');
+    await userEvent.type(fieldSearch, 'zzzzzz');
+    expect(screen.getByText('No fields found')).toBeInTheDocument();
+  });
+
+  it('does not open dropdown when disabled is true', async () => {
+    render(<Search columns={defaultColumns} onSearch={mockOnSearch} disabled />);
+    const selector = screen.getByRole('button', { name: /name/i });
+    await userEvent.click(selector as HTMLButtonElement);
+    expect(screen.queryByPlaceholderText('Search fields')).not.toBeInTheDocument();
+  });
+
+  it('cancels debounced search when input is cleared immediately', () => {
+    vi.useFakeTimers();
+    render(<Search columns={defaultColumns} onSearch={mockOnSearch} />);
+
+    const input = screen.getByPlaceholderText('Search in Name');
+    fireEvent.change(input, { target: { value: 'abc' } });
+    fireEvent.change(input, { target: { value: '' } });
+
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    expect(mockOnSearch).toHaveBeenCalledWith('', expect.anything());
+    expect(mockOnSearch).not.toHaveBeenCalledWith('abc', expect.anything());
+    vi.useRealTimers();
+  });
 });

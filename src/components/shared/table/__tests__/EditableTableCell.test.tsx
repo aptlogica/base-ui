@@ -23,7 +23,11 @@ const MockField = ({
 );
 
 vi.mock('../../../../utils/fieldType', () => ({
-  normalizeFieldType: (t: string) => (t || 'text').toLowerCase(),
+  normalizeFieldType: (t: string) => {
+    const s = (t || 'text').toLowerCase();
+    if (s === 'multiselect') return 'multiSelect';
+    return s;
+  },
 }));
 
 vi.mock('../../../../utils/dateUtils', () => ({
@@ -248,6 +252,120 @@ describe('EditableTableCell', () => {
         />
       );
       expect(screen.getByTestId('single-line-text')).toBeInTheDocument();
+    });
+
+    it('should parse column.meta when it is a JSON string', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'select', meta: '{"options":["A"]}' }}
+          value=""
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('single-select')).toBeInTheDocument();
+    });
+
+    it('should handle invalid JSON in column.meta gracefully', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, meta: '{bad-json' }}
+          value=""
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('single-line-text')).toBeInTheDocument();
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe('Value normalization', () => {
+    it('should normalize numeric values with commas for number fields', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'number' }}
+          value="1,234"
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('number')).toHaveTextContent('1234');
+    });
+
+    it('should use default numeric value when number input is invalid', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'number', meta: { defaultValue: '5' } }}
+          value="not-a-number"
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('number')).toHaveTextContent('5');
+    });
+
+    it('should normalize date values and fall back to dateDefault', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'date', meta: { dateDefault: '2024-01-01' } }}
+          value="invalid-date"
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('date-field')).toHaveTextContent('2024-01-01');
+    });
+
+    it('should normalize time values and fall back to timeDefault', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'time', meta: { timeDefault: '12:30' } }}
+          value="not-time"
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('time')).toHaveTextContent('12:30');
+    });
+
+    it('should normalize year values and fall back to yearDefault', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'year', meta: { yearDefault: 2020 } }}
+          value="abc"
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('year')).toHaveTextContent('2020');
+    });
+
+    it('should format system datetime fields using selected timezone', () => {
+      vi.mocked(globalThis.localStorage.getItem).mockReturnValue('UTC');
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'datetime' }}
+          value="2024-01-01T00:00:00"
+          onChange={mockOnChange}
+          width={200}
+          isSystemField
+        />
+      );
+      expect(screen.getByText('2024-01-01T00:00:00Z')).toBeInTheDocument();
+    });
+
+    it('should parse multiSelect values from JSON string', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'multiSelect', meta: { options: ['A', 'B'] } }}
+          value='["A","B"]'
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('multi-select')).toHaveTextContent('A,B');
     });
   });
 

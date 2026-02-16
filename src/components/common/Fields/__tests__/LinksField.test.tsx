@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { LinksField } from '../LinksField';
 
 if (!Element.prototype.scrollIntoView) {
@@ -53,6 +54,7 @@ describe('LinksField', () => {
   });
 
   it('opens dropdown and links a record', async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(
       <LinksField
@@ -64,18 +66,19 @@ describe('LinksField', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /rel/i }));
+    await user.click(screen.getByRole('button', { name: /rel/i }));
     expect(screen.getByText('One to One')).toBeInTheDocument();
 
     const record = screen.getByText('Record One');
-    fireEvent.click(record);
+    await user.click(record);
 
-    expect(onChange).toHaveBeenCalled();
-    expect(mutateAsyncMock).toHaveBeenCalled();
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalled());
     await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
   });
 
   it('removes a selected record with optimistic update', async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(
       <LinksField
@@ -87,10 +90,10 @@ describe('LinksField', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /rel/i }));
+    await user.click(screen.getByRole('button', { name: /rel/i }));
     const unlinkButton = screen.getByRole('button', { name: /unlink record one/i });
-    fireEvent.click(unlinkButton);
+    await user.click(unlinkButton);
 
-    expect(onChange).toHaveBeenCalled();
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
   });
 });

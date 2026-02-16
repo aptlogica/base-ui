@@ -3,6 +3,12 @@ import { Plus } from "lucide-react";
 import EventChip from "./EventChip";
 import MoreEventsDropdown from "./MoreEventsDropdown";
 import { CalendarEvent } from "../hooks/useCalendarData";
+import {
+  getEventsForDateKey,
+  getEventsForTimeSlot,
+  getHourLabel,
+  isDateTimeFieldType
+} from "../utils/calendarViewUtils";
 
 interface WeekViewProps {
   currentDate: Date;
@@ -13,12 +19,6 @@ interface WeekViewProps {
   columns?: any[];
   fieldConfig?: any[];
 }
-
-const DATETIME_TYPES = new Set([
-  'datetime',
-  'createdtime',
-  'lastmodifiedtime'
-]);
 
 const WeekView: React.FC<WeekViewProps> = ({
   currentDate,
@@ -33,15 +33,7 @@ const WeekView: React.FC<WeekViewProps> = ({
 
   // Check if the date field is datetime type
   const isDateTimeField = useMemo(() => {
-    if (!dateField) return false;
-
-    const type = dateField.type?.toLowerCase();
-    const uidt = dateField.uidt?.toLowerCase();
-
-    return (
-      (type && DATETIME_TYPES.has(type)) ||
-      (uidt && DATETIME_TYPES.has(uidt))
-    );
+    return isDateTimeFieldType(dateField);
   }, [dateField]);
 
   // Generate week days
@@ -59,13 +51,6 @@ const WeekView: React.FC<WeekViewProps> = ({
     }
     return days;
   }, [currentDate]);
-
-  const getHourLabel = (hour: number): string => {
-    if (hour === 0) return '12 am';
-    if (hour < 12) return `${hour} am`;
-    if (hour === 12) return '12 pm';
-    return `${hour - 12} pm`;
-  };
 
   // Generate time slots for datetime fields
   const timeSlots = useMemo(() => {
@@ -85,31 +70,6 @@ const WeekView: React.FC<WeekViewProps> = ({
   }, [isDateTimeField]);
 
   // Get events for a specific date
-  const getEventsForDate = (date: Date) => {
-    // Use local date format to match event.date format (event.date is extracted from string)
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
-    return events.filter(event => event.date === dateStr);
-  };
-
-  // Get events for a specific time slot (datetime fields only)
-  const getEventsForTimeSlot = (date: Date, hour: number) => {
-    if (!isDateTimeField) return [];
-
-    // Use local date format to match event.date format (event.date is extracted from string)
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
-
-    return events.filter(event => {
-      if (event.date !== dateStr) return false;
-      const eventHour = new Date(event.dateTime).getHours();
-      return eventHour === hour;
-    });
-  };
 
   // Check if date is today
   const isToday = (date: Date) => {
@@ -183,7 +143,7 @@ const WeekView: React.FC<WeekViewProps> = ({
                   className={`border-r ${isWeekendDay ? 'bg-gray-50' : ''}`}
                 >
                   {timeSlots.map((slot) => {
-                    const slotEvents = getEventsForTimeSlot(date, slot.hour);
+                    const slotEvents = isDateTimeField ? getEventsForTimeSlot(events, date, slot.hour) : [];
                     const hasEvents = slotEvents.length > 0;
 
                     return (
@@ -333,7 +293,7 @@ const WeekView: React.FC<WeekViewProps> = ({
           <div className="grid grid-cols-7 h-full">
             {weekDaysData.map((date) => {
               const isWeekendDay = isWeekend(date);
-              const dayEvents = getEventsForDate(date);
+              const dayEvents = getEventsForDateKey(events, date);
 
               return (
                 <div

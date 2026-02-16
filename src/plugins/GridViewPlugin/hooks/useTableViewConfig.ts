@@ -116,7 +116,7 @@ export function useTableViewConfig({
     });
 
     // Filter by visibility using Map lookup
-    return sortedColumns.filter(column => {
+    const currentlyVisibleColumns = sortedColumns.filter(column => {
       if (!column.id) return true; // Show columns without IDs (fallback)
 
       const fieldConfig = fieldConfigMap.get(String(column.id));
@@ -127,6 +127,8 @@ export function useTableViewConfig({
       // If no fieldConfig entry exists, show the column by default
       return true;
     });
+
+    return currentlyVisibleColumns;
   }, [columns, localFieldConfig]);
 
   // Persist the entire view configuration
@@ -143,6 +145,7 @@ export function useTableViewConfig({
       });
     }
   }, [effectiveViewId, updateViewMutation, baseMeta]);
+
 
   // Store current values in refs to avoid recreating debounced function
   const effectiveViewIdRef = useRef(effectiveViewId);
@@ -389,4 +392,3 @@ export function useTableViewConfig({
     updateViewConfigBackend,
   };
 }
-

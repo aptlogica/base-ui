@@ -388,6 +388,39 @@ describe('MultiSelect Component', () => {
       fireEvent.click(button);
       expect(mockOnChange).not.toHaveBeenCalled();
     });
+
+    it('opens dropdown in readOnly mode but blocks option selection', async () => {
+      render(
+        <MultiSelect
+          value={['Option 1']}
+          onChange={mockOnChange}
+          options={defaultOptions}
+          readOnly
+        />
+      );
+      const button = screen.getByRole('button');
+      await userEvent.click(button);
+      await waitFor(() => expect(screen.getByText('Option 2')).toBeInTheDocument());
+
+      const option2 = screen.getByText('Option 2').closest('button');
+      expect(option2).toBeTruthy();
+      await userEvent.click(option2!);
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
+
+    it('does not open dropdown when allowEdit is false', async () => {
+      render(
+        <MultiSelect
+          value={[]}
+          onChange={mockOnChange}
+          options={defaultOptions}
+          allowEdit={false}
+        />
+      );
+      const button = screen.getByRole('button');
+      await userEvent.click(button);
+      expect(screen.queryByText('Option 1')).not.toBeInTheDocument();
+    });
   });
 
   describe('Config Props', () => {
@@ -420,6 +453,31 @@ describe('MultiSelect Component', () => {
       await waitFor(() => expect(screen.getByText('Custom 1')).toBeInTheDocument());
 
       expect(screen.getByText('Custom 2')).toBeInTheDocument();
+    });
+
+    it('applies maxSelections from config and disables additional options', async () => {
+      const TestWrapper = () => {
+        const [value, setValue] = useState<string[]>(['Option 1']);
+        return (
+          <MultiSelect
+            value={value}
+            onChange={setValue}
+            options={defaultOptions}
+            config={{ maxSelections: 1 }}
+          />
+        );
+      };
+
+      render(<TestWrapper />);
+      const button = screen.getByRole('button');
+      await userEvent.click(button);
+      await waitFor(() => expect(screen.getByText('Option 2')).toBeInTheDocument());
+
+      const option2 = screen.getByText('Option 2').closest('button');
+      expect(option2).toBeTruthy();
+      await userEvent.click(option2!);
+      expect(option2).toHaveClass('cursor-not-allowed');
+      expect(screen.queryByText('Maximum 1 selections allowed')).not.toBeInTheDocument();
     });
   });
 
@@ -458,6 +516,18 @@ describe('MultiSelect Component', () => {
         />
       );
       expect(screen.getByRole('button') || document.body).toBeInTheDocument();
+    });
+
+    it('shows no options available message when dropdown is open and options are empty', async () => {
+      render(
+        <MultiSelect
+          value={[]}
+          onChange={mockOnChange}
+          options={[]}
+        />
+      );
+      await userEvent.click(screen.getByRole('button'));
+      expect(screen.getByText('No options available')).toBeInTheDocument();
     });
 
     it('should handle single option', async () => {
@@ -535,6 +605,23 @@ describe('MultiSelect Component', () => {
         />
       );
       expect(screen.getByText('Unknown Option')).toBeInTheDocument();
+    });
+
+    it('supports object options with custom color', async () => {
+      render(
+        <MultiSelect
+          value={['Hot']}
+          onChange={mockOnChange}
+          options={[{ option: 'Hot', color: '#ff0000' }, { option: 'Cold', color: '#ffffff' }]}
+        />
+      );
+
+      const selectedTag = screen.getByText('Hot').closest('div');
+      expect(selectedTag).toBeInTheDocument();
+      expect(selectedTag).toHaveStyle({ backgroundColor: 'rgb(255, 0, 0)' });
+
+      await userEvent.click(screen.getByRole('button'));
+      expect(screen.getByText('Cold')).toBeInTheDocument();
     });
 
     it('should handle rapid selections', async () => {

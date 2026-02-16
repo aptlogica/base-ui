@@ -24,7 +24,7 @@ vi.mock('../../common/Fields', () => ({
   Email: (props: { value: unknown }) => <MockField value={props.value} data-testid="email" />,
   SingleSelect: (props: { value: unknown }) => <MockField value={props.value} data-testid="single-select" />,
   MultiSelect: (props: { value: unknown }) => <MockField value={JSON.stringify(props.value)} data-testid="multi-select" />,
-  URL: (props: { value: unknown }) => <MockField value={props.value} data-testid="url" />,
+  URLField: (props: { value: unknown }) => <MockField value={props.value} data-testid="url-field" />,
   Rating: (props: { value: unknown }) => <MockField value={props.value} data-testid="rating" />,
   PhoneNumber: (props: { value: unknown }) => <MockField value={props.value} data-testid="phone-number" />,
   Currency: (props: { value: unknown }) => <MockField value={props.value} data-testid="currency" />,
@@ -214,6 +214,109 @@ describe('FieldDisplay', () => {
         />
       );
       expect(screen.getByTestId('multi-select')).toBeInTheDocument();
+    });
+
+    it('should fallback to empty array for invalid JSON in multiSelect', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      render(
+        <FieldDisplay
+          field={{ uidt: 'multiSelect', title: 'Tags', meta: { options: ['X', 'Y'] } }}
+          value="not-json"
+        />
+      );
+      expect(screen.getByText('[]')).toBeInTheDocument();
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe('Additional branch coverage', () => {
+    it('should render URLField for url type', () => {
+      render(
+        <FieldDisplay
+          field={{ uidt: 'url', title: 'Website' }}
+          value="https://example.com"
+        />
+      );
+      expect(screen.getByTestId('url-field')).toBeInTheDocument();
+    });
+
+    it('should render links, formula, lookup and attachment fields', () => {
+      const { rerender } = render(
+        <FieldDisplay
+          field={{ uidt: 'links', id: 'c1', title: 'Links', model_id: 'm1' }}
+          value={[]}
+          currentRowId={1}
+        />
+      );
+      expect(screen.getByTestId('links-field')).toBeInTheDocument();
+
+      rerender(
+        <FieldDisplay
+          field={{ uidt: 'formula', title: 'Calc' }}
+          value={10}
+          rowData={{ a: 1 }}
+          allColumns={[{ id: 'a' }]}
+        />
+      );
+      expect(screen.getByTestId('formula')).toBeInTheDocument();
+
+      rerender(
+        <FieldDisplay
+          field={{ uidt: 'lookup', title: 'Lookup' }}
+          value="x"
+        />
+      );
+      expect(screen.getByTestId('lookup')).toBeInTheDocument();
+
+      rerender(
+        <FieldDisplay
+          field={{ uidt: 'attachment', id: 'c2', model_id: 'm1', title: 'File' }}
+          value={[]}
+          currentRowId={2}
+        />
+      );
+      expect(screen.getByTestId('attachment')).toBeInTheDocument();
+    });
+
+    it('should normalize boolean string values', () => {
+      const { rerender } = render(
+        <FieldDisplay field={{ uidt: 'boolean', title: 'B' }} value="true" />
+      );
+      expect(screen.getByTestId('checkbox')).toHaveTextContent('true');
+
+      rerender(<FieldDisplay field={{ uidt: 'boolean', title: 'B' }} value="0" />);
+      expect(screen.getByTestId('checkbox')).toHaveTextContent('false');
+
+      rerender(<FieldDisplay field={{ uidt: 'boolean', title: 'B', meta: { checkboxDefault: true } }} value="legacy-text" />);
+      expect(screen.getByTestId('checkbox')).toHaveTextContent('true');
+    });
+
+    it('should render decimal and currency branches with precision config', () => {
+      const { rerender } = render(
+        <FieldDisplay
+          field={{ uidt: 'decimal', title: 'D', meta: { precision: '0.000' } }}
+          value={1.234}
+        />
+      );
+      expect(screen.getByTestId('decimal')).toBeInTheDocument();
+
+      rerender(
+        <FieldDisplay
+          field={{ uidt: 'currency', title: 'C', meta: { precision: '0.00' } }}
+          value={10.5}
+        />
+      );
+      expect(screen.getByTestId('currency')).toBeInTheDocument();
+    });
+
+    it('should use default value from config when value is empty', () => {
+      render(
+        <FieldDisplay
+          field={{ uidt: 'text', title: 'Name', meta: { defaultValue: 'Default Name' } }}
+          value={null}
+        />
+      );
+      expect(screen.getByText('Default Name')).toBeInTheDocument();
     });
   });
 

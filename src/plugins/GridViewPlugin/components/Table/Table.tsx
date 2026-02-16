@@ -170,6 +170,43 @@ export const Table: React.FC<TableProps> = ({
     });
   }, [tableData?.records]); // Full dataset from backend
 
+  // Grid selection/context uses string ids, but record APIs require numeric row ids.
+  // Keep a resolver map from any visible id form to internal numeric row id.
+  const numericRowIdByAnyId = useMemo(() => {
+    const map = new Map<string, number>();
+
+    for (const row of allRecords) {
+      const rawId = row?.id;
+      const metaId = row?._meta?.id;
+      const rawNumeric = Number(rawId);
+      const metaNumeric = Number(metaId);
+      const numericId = Number.isFinite(rawNumeric)
+        ? rawNumeric
+        : (Number.isFinite(metaNumeric) ? metaNumeric : null);
+
+      if (numericId === null) continue;
+      if (rawId !== undefined && rawId !== null) {
+        map.set(String(rawId), numericId);
+      }
+      if (metaId !== undefined && metaId !== null) {
+        map.set(String(metaId), numericId);
+      }
+    }
+
+    return map;
+  }, [allRecords]);
+
+  const resolveNumericRowId = useCallback((rowId: string | number | null | undefined): number | null => {
+    if (rowId === null || rowId === undefined) return null;
+    const key = String(rowId);
+
+    const mapped = numericRowIdByAnyId.get(key);
+    if (mapped !== undefined) return mapped;
+
+    const fallback = Number(key);
+    return Number.isFinite(fallback) ? fallback : null;
+  }, [numericRowIdByAnyId]);
+
   // Global click handler to remove active cell when clicking outside table rows
   useEffect(() => {
     if (!activeCell) return;
@@ -327,6 +364,7 @@ export const Table: React.FC<TableProps> = ({
   const headerRef = useRef<HTMLDivElement>(null);
   const addColumnButtonRef = useRef<HTMLButtonElement | null>(null);
   const [openColumnDropdownIndex, setOpenColumnDropdownIndex] = useState<number | null>(null);
+  const dragPinnedStateRef = useRef<boolean | null>(null);
 
   // Static column widths (no resize). Prefer view meta widths, else column.width, else 235.
   const columnWidths = useMemo(() => {
@@ -347,6 +385,44 @@ export const Table: React.FC<TableProps> = ({
       return width;
     });
   }, [visibleColumns, viewConfigState.columnWidths]);
+
+  // Keep only first visible column pinned by default (Noco-like behavior)
+  const pinnedColumnIds = useMemo(() => {
+    const firstVisibleColumn = visibleColumns?.[0];
+    if (!firstVisibleColumn) return [];
+    return [String(firstVisibleColumn.id || firstVisibleColumn.key)];
+  }, [visibleColumns]);
+
+  const pinnedColumnIdSet = useMemo(() => new Set(pinnedColumnIds), [pinnedColumnIds]);
+
+  const pinnedColumnOffsets = useMemo(() => {
+    const offsets: Record<string, number> = {};
+    let currentLeft = 48; // row selector column width
+    const pinnedSet = new Set(pinnedColumnIds);
+
+    visibleColumns.forEach((column, index) => {
+      const columnIdentity = String(column.id || column.key);
+      if (!pinnedSet.has(columnIdentity)) {
+        return;
+      }
+      offsets[columnIdentity] = currentLeft;
+      currentLeft += columnWidths[index] ?? 235;
+    });
+
+    return offsets;
+  }, [visibleColumns, columnWidths, pinnedColumnIds]);
+
+  const lastPinnedColumnId = useMemo(() => {
+    let lastPinnedId: string | null = null;
+    const pinnedSet = new Set(pinnedColumnIds);
+    visibleColumns.forEach((column) => {
+      const columnIdentity = String(column.id || column.key);
+      if (pinnedSet.has(columnIdentity)) {
+        lastPinnedId = columnIdentity;
+      }
+    });
+    return lastPinnedId;
+  }, [visibleColumns, pinnedColumnIds]);
 
 
   // Memoize minimal columns for sorting (only recreates when visibleColumns change)
@@ -530,10 +606,9 @@ export const Table: React.FC<TableProps> = ({
   // Delete a row by id (memoized to prevent recreation)
   const handleDelete = useCallback(async (rowId: string) => {
     try {
-      const numericRowId = Number(rowId);
-      if (!tableId || Number.isNaN(numericRowId)) {
-        // Fallback: just remove locally if no numeric row id
-        // legacy onDataChange removed
+      const numericRowId = resolveNumericRowId(rowId);
+      if (!tableId || numericRowId === null) {
+        toast.error('Unable to delete record: invalid row id', { title: 'Error' });
         return;
       }
       await deleteRecordMutation.mutateAsync({ model_id: String(tableId), row_id: numericRowId });
@@ -545,7 +620,7 @@ export const Table: React.FC<TableProps> = ({
       console.error('[Delete] Failed to delete record:', rowId, err);
       alert('Failed to delete record. Please try again.');
     }
-  }, [deleteRecordMutation, tableId, toast, onRefresh]);
+  }, [deleteRecordMutation, tableId, toast, onRefresh, resolveNumericRowId]);
 
   // Bulk delete selected rows
   const handleBulkDelete = useCallback(async () => {
@@ -557,8 +632,8 @@ export const Table: React.FC<TableProps> = ({
       // Convert selected row IDs to numeric IDs
       const rowIds: number[] = [];
       for (const rowId of selectedRows) {
-        const numericRowId = Number(rowId);
-        if (!Number.isNaN(numericRowId)) {
+        const numericRowId = resolveNumericRowId(rowId);
+        if (numericRowId !== null) {
           rowIds.push(numericRowId);
         }
       }
@@ -582,29 +657,49 @@ export const Table: React.FC<TableProps> = ({
       console.error('[Bulk Delete] Failed to delete records:', err);
       toast.error('Failed to delete records. Please try again.', { title: 'Error' });
     }
-  }, [selectedRows, tableId, bulkDeleteRecordsMutation, toast, onRefresh, setSelectedRows]);
+  }, [selectedRows, tableId, bulkDeleteRecordsMutation, toast, onRefresh, setSelectedRows, resolveNumericRowId]);
+
+  const selectedRecordApiId = useMemo(() => {
+    const resolvedId = resolveNumericRowId(selectedRecordId);
+    if (resolvedId !== null) return String(resolvedId);
+    return selectedRecordId || '';
+  }, [resolveNumericRowId, selectedRecordId]);
 
   // Column drag and drop handler wrapper (uses hook's handleColumnDragEnd with proper params)
   const handleColumnDragStart = useCallback((index: number) => {
     if (!canReorderColumns) return;
+    const draggedColumn = visibleColumns[index];
+    const draggedColumnIdentity = String(draggedColumn?.id || draggedColumn?.key || '');
+    dragPinnedStateRef.current = pinnedColumnIdSet.has(draggedColumnIdentity);
     handleColumnDragStartFromHook(index, visibleColumns);
-  }, [canReorderColumns, handleColumnDragStartFromHook, visibleColumns]);
+  }, [canReorderColumns, handleColumnDragStartFromHook, visibleColumns, pinnedColumnIdSet]);
 
   const handleColumnDragEnter = useCallback((index: number) => {
     if (!canReorderColumns) return;
+    const sourceIsPinned = dragPinnedStateRef.current;
+    if (sourceIsPinned === null) return;
+    const targetColumn = visibleColumns[index];
+    const targetIdentity = String(targetColumn?.id || targetColumn?.key || '');
+    const targetIsPinned = pinnedColumnIdSet.has(targetIdentity);
+    // Prevent crossing pinned/unpinned boundaries; reorder only within same group.
+    if (targetIsPinned !== sourceIsPinned) return;
     handleColumnDragEnterFromHook(index);
-  }, [canReorderColumns, handleColumnDragEnterFromHook]);
+  }, [canReorderColumns, handleColumnDragEnterFromHook, visibleColumns, pinnedColumnIdSet]);
 
   const handleColumnDragEnd = useCallback(async () => {
-    if (!canReorderColumns) return;
-    await handleColumnDragEndFromHook(
-      visibleColumns,
-      localFieldConfig,
-      effectiveViewId,
-      baseMeta,
-      actions?.updateView,
-      handleFieldOrderChange
-    );
+    try {
+      if (!canReorderColumns) return;
+      await handleColumnDragEndFromHook(
+        visibleColumns,
+        localFieldConfig,
+        effectiveViewId,
+        baseMeta,
+        actions?.updateView,
+        handleFieldOrderChange
+      );
+    } finally {
+      dragPinnedStateRef.current = null;
+    }
   }, [canReorderColumns, handleColumnDragEndFromHook, visibleColumns, localFieldConfig, effectiveViewId, baseMeta, actions?.updateView, handleFieldOrderChange]);
 
   // Wrapper for handleEditColumn to use hook's version
@@ -706,6 +801,9 @@ export const Table: React.FC<TableProps> = ({
                 {/* Column headers */}
                 {visibleColumns.map((column, index) => {
                   const isColumnDraggable = !column.isSystem && canReorderColumns;
+                  const columnIdentity = String(column.id || column.key);
+                  const isPinned = pinnedColumnIds.includes(columnIdentity);
+                  const isLastPinned = isPinned && lastPinnedColumnId === columnIdentity;
                   return (
                     <div
                       key={`${column.id || column.key || 'column'}-${index}`}
@@ -716,7 +814,11 @@ export const Table: React.FC<TableProps> = ({
                         minWidth: '80px',
                         whiteSpace: 'nowrap',
                         height: '35px',
-                        maxHeight: '35px'
+                        maxHeight: '35px',
+                        position: isPinned ? 'sticky' : 'relative',
+                        left: isPinned ? `${pinnedColumnOffsets[columnIdentity] ?? 48}px` : undefined,
+                        zIndex: isPinned ? 35 : undefined,
+                        boxShadow: isLastPinned ? '2px 0 4px -3px rgba(15,23,42,0.14)' : undefined,
                       }}
                       onContextMenu={(e) => {
                         e.preventDefault();
@@ -816,6 +918,8 @@ export const Table: React.FC<TableProps> = ({
                     data={paginatedData}
                     columns={visibleColumns}
                     columnWidths={columnWidths}
+                    pinnedColumnIds={pinnedColumnIds}
+                    pinnedColumnOffsets={pinnedColumnOffsets}
                     selectedRows={selectedRows}
                     onRowSelect={handleRowSelect}
                     onCellChange={handleCellChange}
@@ -1011,10 +1115,10 @@ export const Table: React.FC<TableProps> = ({
         isOpen={isEditRecordModalOpen}
         onClose={closeEditRecordModal}
         onSuccess={() => { try { onRefresh?.(); } catch {} closeEditRecordModal(); }}
-        recordId={selectedRecordId || ''}
+        recordId={selectedRecordApiId}
         table={tableData?.model}
-        fields={tableData?.columns}
-        initialValues={buildInitialValuesForEdit({ recordId: selectedRecordId, columns: tableData?.columns || [], rawRecords: tableData?.records || [] })}
+        fields={tableData?.columns || []}
+        initialValues={buildInitialValuesForEdit({ recordId: selectedRecordId ?? undefined, columns: tableData?.columns || [], rawRecords: tableData?.records || [] })}
         onDelete={async (id: string) => { 
           try { 
             await handleDelete(id); 

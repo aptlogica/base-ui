@@ -62,6 +62,16 @@ describe('ContextMenu', () => {
       
       expect(screen.queryByText('Delete record')).not.toBeInTheDocument();
     });
+
+    it('should render edit option by default', () => {
+      render(<ContextMenu {...defaultProps} />);
+      expect(screen.getByText('Edit record')).toBeInTheDocument();
+    });
+
+    it('should hide edit option when canEditRecord is false', () => {
+      render(<ContextMenu {...defaultProps} canEditRecord={false} />);
+      expect(screen.queryByText('Edit record')).not.toBeInTheDocument();
+    });
   });
 
   describe('positioning', () => {
@@ -208,6 +218,28 @@ describe('ContextMenu', () => {
       render(<ContextMenu {...propsWithNoDeletePermission} />);
 
       expect(screen.queryByText('Delete record')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('edit functionality', () => {
+    it('should call onEdit and close menu when edit button is clicked', async () => {
+      const mockOnEdit = vi.fn();
+      render(<ContextMenu {...defaultProps} onEdit={mockOnEdit} />);
+
+      const editButton = screen.getByText('Edit record');
+      await userEvent.click(editButton);
+
+      expect(mockOnEdit).toHaveBeenCalledTimes(1);
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('should close menu even when onEdit is not provided', async () => {
+      render(<ContextMenu {...defaultProps} onEdit={undefined} />);
+
+      const editButton = screen.getByText('Edit record');
+      await userEvent.click(editButton);
+
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
   });
 

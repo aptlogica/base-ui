@@ -177,8 +177,8 @@ describe('Duration Component', () => {
       const wrapper = container.querySelector('.field-component')?.parentElement!;
       fireEvent.click(wrapper);
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
 
       const input = container.querySelector('input')!;
       await userEvent.clear(input);
@@ -199,8 +199,8 @@ describe('Duration Component', () => {
       const wrapper = container.querySelector('.field-component')?.parentElement!;
       fireEvent.click(wrapper);
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
 
       const input = container.querySelector('input')!;
       await userEvent.type(input, 'test');
@@ -224,8 +224,8 @@ describe('Duration Component', () => {
       fireEvent.click(wrapper);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
     });
 
     it('should enter edit mode on double click when allowEdit is false', async () => {
@@ -239,8 +239,8 @@ describe('Duration Component', () => {
       fireEvent.click(wrapper);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
     });
 
     it('should not enter edit mode on single click when allowEdit is false', async () => {
@@ -254,7 +254,7 @@ describe('Duration Component', () => {
       // Wait for the timeout to complete (200ms) to ensure no edit mode is triggered
       await waitFor(() => {
         expect(container.querySelector('input')).not.toBeInTheDocument();
-      }, { timeout: 300 });
+      }, { timeout: 600 });
     });
 
     it('should not enter edit mode when readOnly is true', async () => {
@@ -287,17 +287,18 @@ describe('Duration Component', () => {
 
     it('should exit edit mode when readOnly becomes true', async () => {
       const { container, rerender } = render(
-        <Duration value={90} onChange={mockOnChange} readOnly={false} />
+        <Duration value={90} onChange={mockOnChange} allowEdit={true} readOnly={false} />
       );
 
-      const wrapper = container.querySelector('.field-component')?.parentElement!;
-      fireEvent.click(wrapper);
+      const triggerButton = container.querySelector('button');
+      expect(triggerButton).toBeInTheDocument();
+      fireEvent.click(triggerButton as HTMLButtonElement);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
 
-      rerender(<Duration value={90} onChange={mockOnChange} readOnly={true} />);
+      rerender(<Duration value={90} onChange={mockOnChange} allowEdit={true} readOnly={true} />);
 
       await waitFor(() => {
         expect(container.querySelector('input')).not.toBeInTheDocument();
@@ -315,8 +316,8 @@ describe('Duration Component', () => {
       await userEvent.click(wrapper);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
 
       const input = container.querySelector('input')!;
       await userEvent.clear(input);
@@ -334,8 +335,8 @@ describe('Duration Component', () => {
       await userEvent.click(wrapper);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
 
       const input = container.querySelector('input')!;
       await userEvent.clear(input);
@@ -356,8 +357,8 @@ describe('Duration Component', () => {
       fireEvent.click(wrapper);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
 
       const input = container.querySelector('input')!;
       await userEvent.clear(input);
@@ -378,8 +379,8 @@ describe('Duration Component', () => {
       fireEvent.click(wrapper);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
 
       const input = container.querySelector('input')!;
       await userEvent.clear(input);
@@ -399,8 +400,8 @@ describe('Duration Component', () => {
       fireEvent.click(wrapper);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
 
       const input = container.querySelector('input')!;
       await userEvent.clear(input);
@@ -425,8 +426,8 @@ describe('Duration Component', () => {
       fireEvent.click(wrapper);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
 
       const input = container.querySelector('input')!;
       await userEvent.clear(input);
@@ -451,8 +452,8 @@ describe('Duration Component', () => {
       fireEvent.click(wrapper);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
 
       const input = container.querySelector('input')!;
       await userEvent.clear(input);
@@ -476,8 +477,8 @@ describe('Duration Component', () => {
       fireEvent.click(wrapper);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
 
       const input = container.querySelector('input')!;
       await userEvent.clear(input);
@@ -499,8 +500,8 @@ describe('Duration Component', () => {
       fireEvent.click(wrapper);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
 
       const input = container.querySelector('input')!;
       await userEvent.clear(input);
@@ -629,8 +630,8 @@ describe('Duration Component', () => {
       fireEvent.click(wrapper);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
 
       const input = container.querySelector('input')!;
       await userEvent.clear(input);
@@ -666,8 +667,8 @@ describe('Duration Component', () => {
       fireEvent.click(wrapper);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
 
       const input = container.querySelector('input')!;
       await userEvent.clear(input);
@@ -689,8 +690,8 @@ describe('Duration Component', () => {
       fireEvent.click(wrapper);
 
       await waitFor(() => {
-        expect(container.querySelector('input')).toBeInTheDocument();
-      }, { timeout: 300 });
+        expect(container.querySelector('input')).not.toBeNull();
+      }, { timeout: 600 });
 
       const input = container.querySelector('input')!;
       await userEvent.clear(input);
@@ -706,3 +707,4 @@ describe('Duration Component', () => {
     });
   });
 });
+

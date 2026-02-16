@@ -314,7 +314,7 @@ export const Attachment: React.FC<AttachmentProps> = ({
         </div>
         {/* Floating action buttons */}
         <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1 z-10">
-         {attachmentArray.length > 5 && (
+         {attachmentArray.length > 4 && (
             <div
               className="w-7 h-7 text-gray-400 flex items-center justify-center rounded-lg border transition-all disabled:opacity-50 text-xs"
               title={`+${attachmentArray.length - 4} more`}

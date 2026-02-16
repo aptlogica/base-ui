@@ -752,7 +752,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                       {columnOptions.map((col) => (
                         <button
                           key={col.column_name}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap ${filter.column === col.column_name ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'
+                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap ${filter.column === col.column_name ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'
                             }`}
                           onClick={() => {
                             // Reset operator and value when field changes
@@ -793,7 +793,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                       {filterOperatorOptions.map((op) => (
                         <button
                           key={op.value}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${filter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
+                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${filter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
                             }`}
                           onClick={() => {
                             onUpdateFilter(idx, { operator: op.value });

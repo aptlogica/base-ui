@@ -250,7 +250,7 @@ describe('AuthContext', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('user-id')).toHaveTextContent(userId);
-        expect(screen.getByTestId('user-email')).toHaveTextContent(userEmail);
+        expect(screen.getByTestId('user-email')).toHaveTextContent('');
         expect(screen.getByTestId('user-display-name')).toHaveTextContent(userDisplayName);
         expect(screen.getByTestId('user-avatar')).toHaveTextContent(userAvatar);
       });
@@ -351,7 +351,6 @@ describe('AuthContext', () => {
       });
 
       expect(sessionStorage.setItem).toHaveBeenCalledWith('user_id', 'user-123');
-      expect(sessionStorage.setItem).toHaveBeenCalledWith('user_email', 'test@example.com');
       expect(sessionStorage.setItem).toHaveBeenCalledWith('user_display_name', 'Test User');
       expect(screen.getByTestId('user-id')).toHaveTextContent('user-123');
     });
@@ -762,7 +761,6 @@ describe('AuthContext', () => {
 
       await waitFor(() => {
         expect(sessionStorage.removeItem).toHaveBeenCalledWith('user_id');
-        expect(sessionStorage.removeItem).toHaveBeenCalledWith('user_email');
         expect(sessionStorage.removeItem).toHaveBeenCalledWith('user_display_name');
         expect(sessionStorage.removeItem).toHaveBeenCalledWith('user_avatar');
         expect(sessionStorage.removeItem).toHaveBeenCalledWith('user_role');
@@ -1211,7 +1209,7 @@ describe('AuthContext', () => {
       });
 
       expect(result.current.user?.id).toBe('user-123');
-      expect(result.current.user?.email).toBe('test@example.com');
+      expect(result.current.user?.email).toBeUndefined();
     });
 
     it('should return login function', async () => {
@@ -1317,29 +1315,6 @@ describe('AuthContext', () => {
       expect(result.current.userRole).toBe('owner');
     });
 
-    it('should return userRole from user_token_data', async () => {
-      (sessionStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) => {
-        if (key === 'user_token_data') {
-          return JSON.stringify({ roles: 'maintainer' });
-        }
-        return null;
-      });
-
-      let result: any;
-      await act(async () => {
-        const hook = renderHook(() => useAuth(), {
-          wrapper: ({ children }) => (
-            <QueryClientProvider client={queryClient}>
-              <DefaultAuthProvider>{children}</DefaultAuthProvider>
-            </QueryClientProvider>
-          ),
-        });
-        result = hook.result;
-      });
-
-      expect(result.current.userRole).toBe('maintainer');
-    });
-
     it('should return null userRole when not available', async () => {
       (sessionStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue(null);
 
@@ -1364,11 +1339,8 @@ describe('AuthContext', () => {
   // ============================================================================
 
   describe('userRole Computation', () => {
-    it('should prioritize user_token_data over user_role', async () => {
+    it('should use user_role as source of cached role', async () => {
       (sessionStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) => {
-        if (key === 'user_token_data') {
-          return JSON.stringify({ roles: 'token-role' });
-        }
         if (key === 'user_role') {
           return 'storage-role';
         }
@@ -1387,60 +1359,7 @@ describe('AuthContext', () => {
         result = hook.result;
       });
 
-      expect(result.current.userRole).toBe('token-role');
-    });
-
-    it('should handle invalid JSON in user_token_data gracefully', async () => {
-      (sessionStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) => {
-        if (key === 'user_token_data') {
-          return 'invalid-json';
-        }
-        if (key === 'user_role') {
-          return 'fallback-role';
-        }
-        return null;
-      });
-
-      let result: any;
-      await act(async () => {
-        const hook = renderHook(() => useAuth(), {
-          wrapper: ({ children }) => (
-            <QueryClientProvider client={queryClient}>
-              <DefaultAuthProvider>{children}</DefaultAuthProvider>
-            </QueryClientProvider>
-          ),
-        });
-        result = hook.result;
-      });
-
-      // When JSON parsing fails, it returns null, not the fallback
-      // This is because the catch block returns null and doesn't check user_role on error
-      expect(result.current.userRole).toBeNull();
-    });
-
-    it('should return null when userRole is array', async () => {
-      (sessionStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) => {
-        if (key === 'user_token_data') {
-          return JSON.stringify({ roles: ['owner', 'maintainer'] });
-        }
-        return null;
-      });
-
-      let result: any;
-      await act(async () => {
-        const hook = renderHook(() => useAuth(), {
-          wrapper: ({ children }) => (
-            <QueryClientProvider client={queryClient}>
-              <DefaultAuthProvider>{children}</DefaultAuthProvider>
-            </QueryClientProvider>
-          ),
-        });
-        result = hook.result;
-      });
-
-      // The code only returns if user.roles is a string, not an array
-      // So this returns the array as-is
-      expect(Array.isArray(result.current.userRole)).toBe(true);
+      expect(result.current.userRole).toBe('storage-role');
     });
 
     it('should get userRole from user.roles if available', async () => {

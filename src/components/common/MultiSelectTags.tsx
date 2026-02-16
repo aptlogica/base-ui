@@ -340,7 +340,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
                   const isDisabled = Boolean(option.disabled || (maxSelections && !isSelected && value.length >= maxSelections));
 
                   return (
-                    <li key={optionValue} className="bg-card">
+                    <li key={optionValue} className="bg-card p-2">
                       <button
                         type="button"
                         onClick={(e) => {
@@ -349,11 +349,11 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
                         }}
                         disabled={isDisabled}
                         className={`
-                          w-full px-4 py-2 text-left text-sm bg-card
+                          w-full px-4 py-1 rounded-xl text-left text-sm bg-card
                           flex items-center justify-between
                           transition-colors
                           ${isFocused ? 'bg-gray-100' : ''}
-                          ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 cursor-pointer'}
+                          ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 cursor-pointer'}
                           ${option.disabled && !isSelected ? 'bg-gray-50' : ''}
                         `}
                         onMouseEnter={() => setFocusedIndex(index)}

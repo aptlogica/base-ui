@@ -5,18 +5,27 @@ import CreateRecordModal from '../CreateRecordModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
 
+const addRowMutateAsyncMock = vi.fn(() => Promise.resolve({ id: 123 }));
+const insertRowDataMutateAsyncMock = vi.fn(() => Promise.resolve({}));
+const addAttachmentMutateAsyncMock = vi.fn(() => Promise.resolve({}));
+const insertRelationMutateAsyncMock = vi.fn(() => Promise.resolve({}));
+
 // Mock hooks
 vi.mock('../../../hooks/useApi', () => ({
   useAddRow: vi.fn(() => ({
-    mutateAsync: vi.fn(() => Promise.resolve({ id: 'row-123' })),
+    mutateAsync: addRowMutateAsyncMock,
     isPending: false,
   })),
   useInsertRowData: vi.fn(() => ({
-    mutateAsync: vi.fn(() => Promise.resolve({})),
+    mutateAsync: insertRowDataMutateAsyncMock,
     isPending: false,
   })),
   useAddAttachment: vi.fn(() => ({
-    mutateAsync: vi.fn(() => Promise.resolve({})),
+    mutateAsync: addAttachmentMutateAsyncMock,
+    isPending: false,
+  })),
+  useInsertRelationData: vi.fn(() => ({
+    mutateAsync: insertRelationMutateAsyncMock,
     isPending: false,
   })),
 }));
@@ -331,6 +340,51 @@ describe('CreateRecordModal', () => {
 
       const submitButton = screen.getByRole('button', { name: 'Save record' });
       expect(submitButton).not.toBeDisabled();
+    });
+  });
+
+  describe('links persistence', () => {
+    it('uses relation API for links and not insertRowData', async () => {
+      const user = userEvent.setup();
+      const fieldsWithLinks = [
+        { id: 'field-1', name: 'title', title: 'Title', uidt: 'SingleLineText' },
+        {
+          id: 'field-links',
+          name: 'links',
+          title: 'Links',
+          uidt: 'links',
+          type: 'links',
+          meta: { relation: { with: 'table-related' } },
+        },
+      ];
+
+      renderWithQueryClient(
+        <CreateRecordModal
+          {...defaultProps}
+          fields={fieldsWithLinks}
+          initialValues={{ 'field-links': [{ id: '42', title: 'Related' }] }}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Save record' }));
+
+      await waitFor(() => {
+        expect(insertRelationMutateAsyncMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            model_id: 'table-123',
+            column_id: 'field-links',
+            source_row_id: 123,
+            target_row_id: 42,
+            action: 'link',
+          })
+        );
+      });
+
+      expect(
+        insertRowDataMutateAsyncMock.mock.calls.some(
+          ([payload]) => payload?.column_id === 'field-links'
+        )
+      ).toBe(false);
     });
   });
 });

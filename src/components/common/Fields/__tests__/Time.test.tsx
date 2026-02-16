@@ -36,6 +36,18 @@ describe('Time Component', () => {
       expect(screen.getByText('Enter time in HH:mm format')).toBeInTheDocument();
     });
 
+    it('should hide helper text when allowEdit is false', () => {
+      render(
+        <Time
+          value=""
+          onChange={mockOnChange}
+          helperText="Hidden helper"
+          allowEdit={false}
+        />
+      );
+      expect(screen.queryByText('Hidden helper')).not.toBeInTheDocument();
+    });
+
     it('should show required indicator', () => {
       render(
         <Time
@@ -243,6 +255,18 @@ describe('Time Component', () => {
         expect(call).toMatch(/\d{2}:\d{2}/);
       });
     });
+
+    it('should output 24-hour storage value when selecting from 12-hour dropdown', async () => {
+      render(<Time value="" onChange={mockOnChange} config={{ hourFormat: '12' }} />);
+      fireEvent.click(screen.getByRole('button'));
+
+      await waitFor(() => {
+        const option = screen.getByRole('button', { name: '1:00 PM' });
+        fireEvent.click(option);
+      });
+
+      expect(mockOnChange).toHaveBeenCalledWith('13:00');
+    });
   });
 
   describe('Validation', () => {
@@ -395,6 +419,31 @@ describe('Time Component', () => {
       const timeOptions = screen.queryAllByRole('button').filter(btn => /\d{1,2}:\d{2}/.test(btn.textContent || ''));
       expect(timeOptions.length).toBe(0);
     });
+
+    it('should close opened dropdown when readOnly toggles to true', async () => {
+      const { rerender } = render(
+        <Time
+          value=""
+          onChange={mockOnChange}
+          readOnly={false}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button'));
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Now' })).toBeInTheDocument());
+
+      rerender(
+        <Time
+          value=""
+          onChange={mockOnChange}
+          readOnly
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: 'Now' })).not.toBeInTheDocument();
+      });
+    });
   });
 
   describe('Configuration Props', () => {
@@ -508,6 +557,19 @@ describe('Time Component', () => {
 
       const button = screen.getByRole('button');
       expect(button.textContent).toMatch(/23:59/);
+    });
+
+    it('should keep component stable with malformed input value', () => {
+      render(
+        <Time
+          value={'bad-value' as unknown as string}
+          onChange={mockOnChange}
+          config={{ hourFormat: '12' }}
+        />
+      );
+
+      const button = screen.getByRole('button');
+      expect(button).toBeInTheDocument();
     });
   });
 

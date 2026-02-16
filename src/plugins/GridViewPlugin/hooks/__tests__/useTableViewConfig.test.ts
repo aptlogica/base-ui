@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useTableViewConfig, FilterType, GroupByItem, SortType } from '../useTableViewConfig';
 import { GridColumn } from '../../types/grid.types';
 
@@ -226,6 +226,94 @@ describe('useTableViewConfig', () => {
       const { result } = renderHook(() => useTableViewConfig(defaultOptions));
       expect(typeof result.current.handleRealTimeFilter).toBe('function');
     });
+
+    it('should add filters and sync to backend when not readonly', async () => {
+      const { result } = renderHook(() => useTableViewConfig(defaultOptions));
+      const newFilter = { column: 'title', operator: 'contains', value: 'hello' };
+
+      await act(async () => {
+        await result.current.handleAddFilter(newFilter);
+      });
+
+      expect(result.current.viewConfigState.filters).toEqual([newFilter]);
+      expect(mockUpdateViewMutation.mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          viewId: 'view-1',
+          view: {
+            meta: expect.objectContaining({
+              filters: [newFilter]
+            })
+          }
+        })
+      );
+    });
+
+    it('should remove filters and clear realTimeFilter', async () => {
+      const baseMeta = {
+        filters: [{ column: 'title', operator: 'equals', value: 'keep' }]
+      };
+      const { result } = renderHook(() =>
+        useTableViewConfig({ ...defaultOptions, baseMeta })
+      );
+
+      await act(async () => {
+        await result.current.handleRemoveFilter(0);
+      });
+
+      expect(result.current.viewConfigState.filters).toEqual([]);
+      expect(result.current.realTimeFilter).toBeNull();
+      expect(mockUpdateViewMutation.mutateAsync).toHaveBeenCalled();
+    });
+
+    it('should update a filter in place and sync', async () => {
+      const baseMeta = {
+        filters: [{ column: 'title', operator: 'equals', value: 'old' }]
+      };
+      const { result } = renderHook(() =>
+        useTableViewConfig({ ...defaultOptions, baseMeta })
+      );
+      await waitFor(() => {
+        expect(result.current.viewConfigState.filters.length).toBe(1);
+      });
+
+      await act(async () => {
+        await result.current.handleUpdateFilter(0, { operator: 'contains', value: 'new' });
+      });
+
+      expect(result.current.viewConfigState.filters).toEqual([
+        { column: 'title', operator: 'contains', value: 'new' }
+      ]);
+    });
+
+    it('should no-op updateFilter for invalid index', async () => {
+      const baseMeta = {
+        filters: [{ column: 'title', operator: 'equals', value: 'old' }]
+      };
+      const { result } = renderHook(() =>
+        useTableViewConfig({ ...defaultOptions, baseMeta })
+      );
+
+      await act(async () => {
+        await result.current.handleUpdateFilter(5, { operator: 'contains' });
+      });
+
+      expect(result.current.viewConfigState.filters).toEqual(baseMeta.filters);
+      expect(mockUpdateViewMutation.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('should respect readonly mode and avoid backend sync', async () => {
+      const { result } = renderHook(() =>
+        useTableViewConfig({ ...defaultOptions, isReadOnly: true })
+      );
+      const newFilter = { column: 'title', operator: 'contains', value: 'hello' };
+
+      await act(async () => {
+        await result.current.handleAddFilter(newFilter);
+      });
+
+      expect(result.current.viewConfigState.filters).toEqual([newFilter]);
+      expect(mockUpdateViewMutation.mutateAsync).not.toHaveBeenCalled();
+    });
   });
 
   describe('groupBy operations', () => {
@@ -233,12 +321,41 @@ describe('useTableViewConfig', () => {
       const { result } = renderHook(() => useTableViewConfig(defaultOptions));
       expect(typeof result.current.handleGroupByChange).toBe('function');
     });
+
+    it('should filter out empty groupBy entries and sync', async () => {
+      const { result } = renderHook(() => useTableViewConfig(defaultOptions));
+      const newGroupBy = [
+        { id: '1', column: 'title', direction: 'asc' },
+        { id: '2', column: '', direction: 'desc' }
+      ];
+
+      await act(async () => {
+        await result.current.handleGroupByChange(newGroupBy);
+      });
+
+      expect(result.current.viewConfigState.groupBy).toEqual([
+        { id: '1', column: 'title', direction: 'asc' }
+      ]);
+      expect(mockUpdateViewMutation.mutateAsync).toHaveBeenCalled();
+    });
   });
 
   describe('sort operations', () => {
     it('should provide handleSortChange function', () => {
       const { result } = renderHook(() => useTableViewConfig(defaultOptions));
       expect(typeof result.current.handleSortChange).toBe('function');
+    });
+
+    it('should update sorts and sync', async () => {
+      const { result } = renderHook(() => useTableViewConfig(defaultOptions));
+      const newSorts = [{ column: 'title', direction: 'asc' }];
+
+      await act(async () => {
+        await result.current.handleSortChange(newSorts);
+      });
+
+      expect(result.current.viewConfigState.sorts).toEqual(newSorts);
+      expect(mockUpdateViewMutation.mutateAsync).toHaveBeenCalled();
     });
   });
 
@@ -256,6 +373,63 @@ describe('useTableViewConfig', () => {
     it('should provide handleFieldOrderChange function', () => {
       const { result } = renderHook(() => useTableViewConfig(defaultOptions));
       expect(typeof result.current.handleFieldOrderChange).toBe('function');
+    });
+
+    it('should register missing fields and sync', async () => {
+      const baseMeta = {
+        fieldConfig: [{ id: 'col-1', position: 0, isHidden: false }]
+      };
+      const { result } = renderHook(() =>
+        useTableViewConfig({ ...defaultOptions, baseMeta })
+      );
+
+      await act(async () => {
+        await result.current.handleEnsureAllFieldsRegistered();
+      });
+
+      expect(result.current.localFieldConfig.length).toBeGreaterThan(1);
+      expect(mockUpdateViewMutation.mutateAsync).toHaveBeenCalled();
+    });
+
+    it('should toggle field visibility and trigger debounced update', async () => {
+      const { result } = renderHook(() => useTableViewConfig(defaultOptions));
+      await waitFor(() => {
+        expect(result.current.localFieldConfig.length).toBeGreaterThan(0);
+      });
+      const target = result.current.localFieldConfig.find(fc => fc.id === 'col-1');
+      const initialHidden = target?.isHidden ?? false;
+
+      await act(async () => {
+        await result.current.handleFieldToggle('col-1');
+      });
+
+      const updated = result.current.localFieldConfig.find(fc => fc.id === 'col-1');
+      expect(updated?.isHidden).toBe(!initialHidden);
+      await waitFor(() => {
+        expect(mockUpdateViewMutation.mutateAsync).toHaveBeenCalled();
+      });
+    });
+
+    it('should reorder fields and sync to backend', async () => {
+      const { result } = renderHook(() => useTableViewConfig(defaultOptions));
+      const reordered = [sampleColumns[2], sampleColumns[0], sampleColumns[1]];
+
+      await act(async () => {
+        await result.current.handleFieldOrderChange(reordered);
+      });
+
+      const positions = result.current.localFieldConfig.reduce<Record<string, number>>(
+        (acc, fc) => {
+          acc[String(fc.id)] = fc.position;
+          return acc;
+        },
+        {}
+      );
+
+      expect(positions['col-3']).toBe(0);
+      expect(positions['col-1']).toBe(1);
+      expect(positions['col-2']).toBe(2);
+      expect(mockUpdateViewMutation.mutateAsync).toHaveBeenCalled();
     });
   });
 

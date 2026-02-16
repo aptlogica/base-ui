@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  parseFunctionArguments,
   evaluateArgument,
   evaluateTextArgument,
   evaluateDateArgument,
+  evaluateTODAY,
+  evaluateNOW,
+  evaluateISBLANK,
   evaluateDIVIDE,
   evaluateSQRT,
   evaluateMOD,
@@ -72,6 +76,10 @@ describe('formulaHelper evaluator edges', () => {
 
     const diffBadUnit = evaluateDATEDIFF('DATEDIFF("2024-01-01", "2024-01-03", "fortnights")', context);
     expect(diffBadUnit).toBeNull();
+
+    expect(evaluateDATEADD('DATEADD("2024-01-01", 1, "weeks")', context)).toBeInstanceOf(Date);
+    expect(evaluateDATEADD('DATEADD("2024-01-01", 90, "minutes")', context)).toBeInstanceOf(Date);
+    expect(evaluateDATEDIFF('DATEDIFF("2024-01-01", "2024-01-01T01:30:00", "minutes")', context)).toBeNull();
   });
 
   it('validates DATE argument bounds', () => {
@@ -95,6 +103,8 @@ describe('formulaHelper evaluator edges', () => {
   });
 
   it('evaluates IS* helpers and comparison parser edge cases', () => {
+    expect(evaluateISBLANK('ISBLANK({Name})', context)).toBe(false);
+    expect(evaluateISBLANK('ISBLANK(   )', context)).toBeNull();
     expect(evaluateISNUMBER('ISNUMBER({Price})', context)).toBe(true);
     expect(evaluateISTEXT('ISTEXT({Name})', context)).toBe(true);
     expect(evaluateISDATE('ISDATE({Date})', context)).toBe(true);
@@ -102,5 +112,18 @@ describe('formulaHelper evaluator edges', () => {
     expect(evaluateComparison('{Price} >= 8', context)).toBe(true);
     expect(evaluateComparison('"a=b" = "a=b"', context)).toBeNull();
     expect(evaluateComparison('not-a-comparison', context)).toBeNull();
+  });
+
+  it('covers TODAY/NOW and argument parser nested tokens', () => {
+    const today = evaluateTODAY();
+    const now = evaluateNOW();
+    expect(today).toBeInstanceOf(Date);
+    expect(now).toBeInstanceOf(Date);
+    expect(today?.getHours()).toBe(0);
+    expect(today?.getMinutes()).toBe(0);
+
+    expect(
+      parseFunctionArguments(String.raw`{Name}, "x, y", IF({Price} > 1, "A", "B"), "q\"uote"`)
+    ).toEqual(['{Name}', '"x, y"', 'IF({Price} > 1, "A", "B")', '"q\\"uote"']);
   });
 });

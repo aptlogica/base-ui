@@ -121,4 +121,69 @@ describe('activityService', () => {
       activity_data: null,
     });
   });
+
+  it('detects browser/os via userAgent fallback paths', () => {
+    (globalThis.navigator as any).userAgentData = undefined;
+    setNavigatorProperty('userAgent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X) Firefox/122.0');
+    expect(getDeviceInfo()).toMatchObject({ browser: 'Firefox', os: 'macOS', device_type: 'desktop' });
+
+    setNavigatorProperty('userAgent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Version/17.0 Mobile Safari/604.1');
+    expect(getDeviceInfo()).toMatchObject({ browser: 'Safari', os: 'iOS', device_type: 'mobile' });
+
+    setNavigatorProperty('userAgent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36');
+    expect(getDeviceInfo()).toMatchObject({ browser: 'Chrome', os: 'Linux', device_type: 'desktop' });
+  });
+
+  it('returns null for invalid activity payload and on profile errors', async () => {
+    (client.userService as any).getProfile = vi.fn().mockResolvedValue({ data: { activity_data: 'bad' } });
+    await expect(getUserActivity('user-1')).resolves.toBeNull();
+
+    (client.userService as any).getProfile = vi.fn().mockRejectedValue(new Error('boom'));
+    await expect(getUserActivity('user-1')).resolves.toBeNull();
+  });
+
+  it('uses provided currentActivity and preserves login sessions', async () => {
+    const getProfileSpy = vi.fn();
+    (client.userService as any).getProfile = getProfileSpy;
+    (client.userService as any).updateProfile = vi.fn().mockResolvedValue({ data: { success: true } });
+
+    const existing = {
+      login_sessions: [
+        {
+          browser: 'Chrome',
+          browser_version: '120',
+          os: 'Windows',
+          device_type: 'desktop',
+          login_at: '2026-02-10T00:00:00.000Z',
+        },
+      ],
+      last_updated_at: '2026-02-10T00:00:00.000Z',
+    };
+
+    await updateUserActivity(
+      'user-1',
+      { last_workspace_id: 'w3', last_updated_at: '2026-02-12T00:00:00.000Z' },
+      existing
+    );
+
+    expect(getProfileSpy).not.toHaveBeenCalled();
+    expect((client.userService as any).updateProfile).toHaveBeenCalledWith('user-1', {
+      activity_data: {
+        last_workspace_id: 'w3',
+        last_updated_at: '2026-02-12T00:00:00.000Z',
+        login_sessions: existing.login_sessions,
+      },
+    });
+  });
+
+  it('throws when update/clear activity fails', async () => {
+    (client.userService as any).getProfile = vi.fn().mockResolvedValue({ data: { activity_data: null } });
+    (client.userService as any).updateProfile = vi.fn().mockRejectedValue(new Error('fail'));
+
+    await expect(
+      updateUserActivity('user-1', { last_workspace_id: 'w4', last_updated_at: '2026-02-12T00:00:00.000Z' })
+    ).rejects.toThrow('fail');
+
+    await expect(clearUserActivity('user-1')).rejects.toThrow('fail');
+  });
 });

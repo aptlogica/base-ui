@@ -16,6 +16,42 @@ vi.mock('../../../../types/fieldTypes', () => ({
   getFieldTypeIconComponent: vi.fn(() => null),
 }));
 
+vi.mock('../../../common/Fields/DateField', () => ({
+  DateField: ({ value, onChange }: { value?: string; onChange: (value: string) => void }) => (
+    <button type="button" data-testid="mock-date-field" onClick={() => onChange(value ? `${value}-updated` : '2026-02-14')}>
+      mock-date-field
+    </button>
+  ),
+}));
+
+vi.mock('../../../common/Fields', () => ({
+  Duration: ({ onChange }: { onChange: (value: number) => void }) => (
+    <button type="button" data-testid="mock-duration" onClick={() => onChange(125)}>
+      mock-duration
+    </button>
+  ),
+  MultiSelect: ({ onChange }: { onChange: (value: string[]) => void }) => (
+    <button type="button" data-testid="mock-multiselect" onClick={() => onChange(['A', 'B'])}>
+      mock-multiselect
+    </button>
+  ),
+  Rating: ({ onChange }: { onChange: (value: number) => void }) => (
+    <button type="button" data-testid="mock-rating" onClick={() => onChange(4)}>
+      mock-rating
+    </button>
+  ),
+  SingleSelect: ({ value, onChange }: { value?: string; onChange: (value: string) => void }) => (
+    <button type="button" data-testid="mock-singleselect" onClick={() => onChange(value ? '' : 'Open')}>
+      mock-singleselect
+    </button>
+  ),
+  Time: ({ value, onChange }: { value?: string; onChange: (value: string) => void }) => (
+    <button type="button" data-testid="mock-time" onClick={() => onChange(value ? `${value}:updated` : '10:30')}>
+      mock-time
+    </button>
+  ),
+}));
+
 vi.mock('../../../../utils/filterUtils', () => ({
   FIELD_TYPE_OPERATORS: { text: [{ value: 'is equal', label: 'is equal' }], default: [{ value: 'is equal', label: 'is equal' }] },
   isFilterComplete: vi.fn((f: { column: string; value: string }) => !!f.column && f.value !== undefined),
@@ -346,6 +382,132 @@ describe('FilterPopover', () => {
       const clearButton = within(pill as HTMLElement).getByRole('button');
       await userEvent.click(clearButton);
       expect(mockOnUpdateFilter).toHaveBeenCalledWith(0, { value: '' });
+    });
+
+    it('renders date field input and updates existing date value', async () => {
+      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(false);
+      render(
+        <FilterPopover
+          columns={[
+            { id: 'col-date', title: 'Due', column_name: 'due', uidt: 'date', config: {} },
+          ]}
+          filters={[{ column: 'due', operator: 'is equal', value: '', logic: 'AND' }]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getByTestId('mock-date-field'));
+      expect(mockOnUpdateFilter).toHaveBeenCalledWith(0, { value: '2026-02-14' });
+    });
+
+    it('renders duration input and updates existing duration value', async () => {
+      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(false);
+      render(
+        <FilterPopover
+          columns={[
+            { id: 'col-duration', title: 'Duration', column_name: 'duration', uidt: 'duration', config: {} },
+          ]}
+          filters={[{ column: 'duration', operator: 'is equal', value: '', logic: 'AND' }]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getByTestId('mock-duration'));
+      expect(mockOnUpdateFilter).toHaveBeenCalledWith(0, { value: '125' });
+    });
+
+    it('renders rating input and updates existing rating value', async () => {
+      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(false);
+      render(
+        <FilterPopover
+          columns={[
+            { id: 'col-rating', title: 'Rating', column_name: 'rating', uidt: 'rating', config: {} },
+          ]}
+          filters={[{ column: 'rating', operator: 'is equal', value: '', logic: 'AND' }]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getByTestId('mock-rating'));
+      expect(mockOnUpdateFilter).toHaveBeenCalledWith(0, { value: '4' });
+    });
+
+    it('renders time input and updates existing time value', async () => {
+      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(false);
+      render(
+        <FilterPopover
+          columns={[
+            { id: 'col-time', title: 'Time', column_name: 'time', uidt: 'time', config: {} },
+          ]}
+          filters={[{ column: 'time', operator: 'is equal', value: '', logic: 'AND' }]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getByTestId('mock-time'));
+      expect(mockOnUpdateFilter).toHaveBeenCalledWith(0, { value: '10:30' });
+    });
+
+    it('renders single-select input and updates existing select value', async () => {
+      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(false);
+      render(
+        <FilterPopover
+          columns={[
+            {
+              id: 'col-select',
+              title: 'Status',
+              column_name: 'status',
+              uidt: 'select',
+              config: { options: [{ title: 'Open', value: 'Open' }] },
+            },
+          ]}
+          filters={[{ column: 'status', operator: 'is equal', value: '', logic: 'AND' }]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getByTestId('mock-singleselect'));
+      expect(mockOnUpdateFilter).toHaveBeenCalledWith(0, { value: 'Open' });
+    });
+
+    it('renders multi-select input and updates existing multiselect value', async () => {
+      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(false);
+      render(
+        <FilterPopover
+          columns={[
+            {
+              id: 'col-multi',
+              title: 'Tags',
+              column_name: 'tags',
+              uidt: 'multiselect',
+              config: { options: [{ title: 'A', value: 'A' }, { title: 'B', value: 'B' }] },
+            },
+          ]}
+          filters={[{ column: 'tags', operator: 'is equal', value: '', logic: 'AND' }]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getByTestId('mock-multiselect'));
+      expect(mockOnUpdateFilter).toHaveBeenCalledWith(0, { value: '["A","B"]' });
     });
   });
 
