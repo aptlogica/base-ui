@@ -153,13 +153,7 @@ export const useWorkspaceBusinessLogic = () => {
         setWorkspace(workspaceData.id);
         // Also update selectedWorkspace state so dropdown shows the new workspace
         setSelectedWorkspace(workspaceData);
-        // Mark new workspace as pending in query data to avoid fallback loops
-        sessionStorage.setItem('pending_new_workspace', JSON.stringify({
-          id: workspaceData.id,
-          createdAt: Date.now()
-        }));
-        // Note: workspaces query will be refetched automatically via mutation's onSuccess
-        // which uses refetchType: 'active' for immediate update
+        // Note: workspaces query is updated optimistically in useCreateWorkspace
       }
 
       // Navigate after a brief delay to ensure state updates and query invalidation are processed

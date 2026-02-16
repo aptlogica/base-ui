@@ -527,6 +527,16 @@ export const useCreateWorkspace = () => {
     mutationFn: ({ workspace }: { workspace: WorkspaceBaseInput }) =>
       createWorkspaceService(workspace),
     onSuccess: (data: any) => {
+      const workspaceData = data?.data ?? data;
+      if (workspaceData?.id) {
+        queryClient.setQueryData(queryKeys.workspaces, (oldData: any) => {
+          const existing = Array.isArray(oldData) ? oldData : [];
+          if (existing.some((ws: any) => ws.id === workspaceData.id)) {
+            return existing;
+          }
+          return [workspaceData, ...existing];
+        });
+      }
       // Invalidate and immediately refetch workspaces list for instant UI update
       queryClient.invalidateQueries({ 
         queryKey: queryKeys.workspaces,

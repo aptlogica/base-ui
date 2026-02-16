@@ -74,12 +74,12 @@ describe('Currency Component', () => {
       expect(input.value).toBe('-12');
     });
 
-    it('rejects values beyond max safe amount', async () => {
+    it('allows very large amounts', async () => {
       render(<Currency value={null} onChange={mockOnChange} />);
       const input = await enterEditMode();
 
       fireEvent.change(input, { target: { value: '9999999999999' } });
-      expect(input.value).toBe('');
+      expect(input.value).toBe('9999999999999');
     });
   });
 

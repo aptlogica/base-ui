@@ -2,10 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useFormViewConfig } from '../useFormViewConfig';
 
+const toastSuccess = vi.fn();
+const toastError = vi.fn();
+
 vi.mock('../../../../components/common/Toast', () => ({
   useToast: () => ({
-    success: vi.fn(),
-    error: vi.fn(),
+    success: toastSuccess,
+    error: toastError,
   }),
 }));
 
@@ -208,6 +211,52 @@ describe('useFormViewConfig', () => {
 
       expect(mockUpdateAppearance).not.toHaveBeenCalled();
     });
+
+    it('skips persistence when no fields are provided', async () => {
+      mockUpdateAppearance.mockResolvedValue(undefined);
+
+      const { result } = renderHook(() =>
+        useFormViewConfig({
+          view: defaultView,
+          formFields: defaultFormFields,
+          updateAppearance: mockUpdateAppearance,
+        })
+      );
+
+      act(() => {
+        result.current.handleConfigChange({});
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(700);
+      });
+
+      expect(mockUpdateAppearance).not.toHaveBeenCalled();
+    });
+
+    it('shows error toast when updateAppearance fails', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockUpdateAppearance.mockRejectedValue(new Error('boom'));
+
+      const { result } = renderHook(() =>
+        useFormViewConfig({
+          view: defaultView,
+          formFields: defaultFormFields,
+          updateAppearance: mockUpdateAppearance,
+        })
+      );
+
+      act(() => {
+        result.current.handleConfigChange({ title: 'Changed Title' });
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(700);
+      });
+
+      expect(toastError).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('setFormConfig', () => {
@@ -247,6 +296,37 @@ describe('useFormViewConfig', () => {
       rerender({ formFields: newFields });
 
       expect(result.current.formConfig.fields).toHaveLength(3);
+    });
+  });
+
+  describe('external appearance sync', () => {
+    it('updates state when view meta formViewAppearance changes', () => {
+      const { result, rerender } = renderHook(
+        ({ view }) =>
+          useFormViewConfig({
+            view,
+            formFields: defaultFormFields,
+            updateAppearance: mockUpdateAppearance,
+          }),
+        { initialProps: { view: defaultView } }
+      );
+
+      const updatedView = {
+        ...defaultView,
+        meta: {
+          formViewAppearance: {
+            formTitle: 'Remote Title',
+            formDescription: 'Remote Desc',
+            backgroundColor: '#111111',
+          },
+        },
+      };
+
+      rerender({ view: updatedView });
+
+      expect(result.current.formConfig.title).toBe('Remote Title');
+      expect(result.current.formConfig.description).toBe('Remote Desc');
+      expect(result.current.formConfig.appearance?.backgroundColor).toBe('#111111');
     });
   });
 

@@ -6,7 +6,8 @@ import {
   validateViewName,
   getDefaultTableName,
   validateBaseName,
-  getDefaultViewName
+  getDefaultViewName,
+  validateWorkspaceName
 } from '../nameValidation';
 import type { ExistingItem } from '../nameValidation';
 
@@ -311,6 +312,47 @@ describe('getDefaultViewName', () => {
     ];
     const result = getDefaultViewName('grid', existing);
     expect(result).toBe('Grid View 2');
+  });
+});
+
+describe('validateWorkspaceName', () => {
+  const existingWorkspaces: ExistingItem[] = [
+    { id: '1', name: 'Existing Workspace' }
+  ];
+
+  it('should return error for empty name', () => {
+    const result = validateWorkspaceName('', existingWorkspaces);
+    expect(result.isValid).toBe(false);
+    expect(result.error).toBe('Workspace name is required');
+  });
+
+  it('should return error for name too short', () => {
+    const result = validateWorkspaceName('ab', existingWorkspaces);
+    expect(result.isValid).toBe(false);
+    expect(result.error).toBe('Workspace name must be at least 3 characters');
+  });
+
+  it('should return error for name too long', () => {
+    const longName = 'a'.repeat(51);
+    const result = validateWorkspaceName(longName, existingWorkspaces);
+    expect(result.isValid).toBe(false);
+    expect(result.error).toBe('Workspace name must be less than 50 characters');
+  });
+
+  it('should return error for duplicate name', () => {
+    const result = validateWorkspaceName('Existing Workspace', existingWorkspaces);
+    expect(result.isValid).toBe(false);
+    expect(result.error).toBe('Workspace name already exists');
+  });
+
+  it('should return valid for unique name', () => {
+    const result = validateWorkspaceName('New Workspace', existingWorkspaces);
+    expect(result.isValid).toBe(true);
+  });
+
+  it('should allow editing same item', () => {
+    const result = validateWorkspaceName('Existing Workspace', existingWorkspaces, '1');
+    expect(result.isValid).toBe(true);
   });
 });
 

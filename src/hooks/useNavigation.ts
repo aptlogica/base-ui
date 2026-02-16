@@ -53,20 +53,52 @@ export const useNavigation = () => {
             const viewTypeSlugs = ['grid', 'form', 'gallery', 'kanban', 'calendar', 'gantt'];
             const isViewSlug = viewTypeSlugs.includes(viewId.toLowerCase());
             
-            if (selectedWorkspaceId !== workspaceId || selectedBaseId !== baseId || selectedTableId !== tableId || selectedViewId !== viewId) {
-              if (isViewSlug) {
-                // Don't save slug as selectedViewId - only update table/base
-                // This prevents "grid" from being saved and causing redirects
+            const storeState = useNavigationStore.getState ? useNavigationStore.getState() : null;
+            const effectiveState = storeState ?? {
+              selectedWorkspaceId,
+              selectedBaseId,
+              selectedTableId,
+              selectedViewId,
+            };
+            const {
+              selectedWorkspaceId: currentWorkspaceId,
+              selectedBaseId: currentBaseId,
+              selectedTableId: currentTableId,
+              selectedViewId: currentViewId,
+            } = effectiveState;
+
+            if (isViewSlug) {
+              // Don't save slug as selectedViewId - only update table/base
+              // This prevents "grid" from being saved and causing redirects
+              if (currentWorkspaceId !== workspaceId || currentBaseId !== baseId || currentTableId !== tableId) {
                 navigateToTable(workspaceId, baseId, tableId);
-              } else {
-                // Real view ID - save it
-                navigateToView(workspaceId, baseId, tableId, viewId);
               }
+            } else if (currentWorkspaceId !== workspaceId || currentBaseId !== baseId || currentTableId !== tableId || currentViewId !== viewId) {
+              // Real view ID - save it
+              navigateToView(workspaceId, baseId, tableId, viewId);
             }
           } else if (match.length === 2) {
             // Workspace route: /workspace/{workspaceId}
             const [, workspaceId] = match;
-            if (selectedWorkspaceId !== workspaceId) {
+            const storeState = useNavigationStore.getState ? useNavigationStore.getState() : null;
+            const effectiveState = storeState ?? {
+              selectedWorkspaceId,
+              selectedBaseId,
+              selectedTableId,
+              selectedViewId,
+            };
+            const {
+              selectedWorkspaceId: currentWorkspaceId,
+              selectedBaseId: currentBaseId,
+              selectedTableId: currentTableId,
+              selectedViewId: currentViewId,
+            } = effectiveState;
+            if (
+              currentWorkspaceId !== workspaceId ||
+              currentBaseId !== null ||
+              currentTableId !== null ||
+              currentViewId !== null
+            ) {
               navigateToWorkspace(workspaceId);
             }
           }
@@ -76,7 +108,9 @@ export const useNavigation = () => {
     };
 
     parseCurrentRoute();
-  }, [location.pathname, selectedWorkspaceId, selectedBaseId, selectedTableId, selectedViewId]);
+    // Only re-parse on path changes to avoid update loops when other state changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   // Cache navigation in sessionStorage on changes (per-user)
   // Note: This only caches in sessionStorage for session recovery

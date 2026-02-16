@@ -5,6 +5,8 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MembersTable, type Member } from '../MembersTable';
 
+const useUserRolesAndAccessMock = vi.fn(() => ({ data: [], isLoading: false, error: null }));
+
 vi.mock('axios', () => ({
   default: {
     create: () => ({
@@ -21,7 +23,7 @@ vi.mock('../../hooks/useClickOutside', () => ({
 }));
 
 vi.mock('../../hooks/useApi', () => ({
-  useUserRolesAndAccess: vi.fn(() => ({ data: [], isLoading: false, error: null })),
+  useUserRolesAndAccess: (...args: any[]) => useUserRolesAndAccessMock(...args),
   useTenantUsers: vi.fn(() => ({ data: [], isLoading: false, error: null })),
 }));
 
@@ -86,6 +88,7 @@ const createMember = (overrides: Partial<Member> = {}): Member => ({
 describe('MembersTable', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useUserRolesAndAccessMock.mockReturnValue({ data: [], isLoading: false, error: null });
   });
 
   describe('Rendering', () => {
@@ -178,6 +181,46 @@ describe('MembersTable', () => {
     });
   });
 
+  describe('Role Filter', () => {
+    it('filters members by selected role', async () => {
+      const members = [
+        createMember({
+          id: '1',
+          roles: [{ id: 'r1', name: 'owner', scope_level: 'system' }],
+        }),
+        createMember({
+          id: '2',
+          roles: [{ id: 'r2', name: 'base-member', scope_level: 'workspace' }],
+        }),
+      ];
+
+      renderWithQueryClient(<MembersTable members={members} showSearch />);
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getByText('Owner'));
+
+      expect(screen.getByText('Owner')).toBeInTheDocument();
+      expect(screen.queryByText('Base Member')).not.toBeInTheDocument();
+    });
+
+    it('shows empty state when no members match role filter', async () => {
+      const members = [
+        createMember({
+          id: '1',
+          roles: [{ id: 'r1', name: 'base-member', scope_level: 'workspace' }],
+        }),
+      ];
+
+      renderWithQueryClient(<MembersTable members={members} showSearch />);
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getByText('Owner'));
+
+      expect(screen.getByText('No members found with the role')).toBeInTheDocument();
+      expect(screen.getByText('"Owner"')).toBeInTheDocument();
+    });
+  });
+
   describe('Sort', () => {
     it('should have sortable User column', () => {
       renderWithQueryClient(<MembersTable members={[createMember()]} />);
@@ -240,6 +283,12 @@ describe('MembersTable', () => {
       const expandButton = screen.getByText('View in detail ↓');
       await userEvent.click(expandButton);
       expect(screen.getByText('Collapse ↑')).toBeInTheDocument();
+    });
+    it('shows loading state for access details', async () => {
+      useUserRolesAndAccessMock.mockReturnValueOnce({ data: null, isLoading: true, error: null });
+      renderWithQueryClient(<MembersTable members={[createMember()]} />);
+      await userEvent.click(screen.getByText('View in detail â†“'));
+      expect(screen.getByText('Loading access details...')).toBeInTheDocument();
     });
   });
 

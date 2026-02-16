@@ -145,4 +145,79 @@ describe('useClickOutside', () => {
     document.body.removeChild(excludedRef1.current!);
     document.body.removeChild(excludedRef2.current!);
   });
+
+  it('should not call onClose when clicking inside portal area near modal', () => {
+    const { result } = renderHook(() =>
+      useClickOutside({ isOpen: true, onClose: mockOnClose })
+    );
+
+    // Set modal ref and mock its rect
+    const modalElement = document.createElement('div');
+    document.body.appendChild(modalElement);
+    (result.current as any).current = modalElement;
+    (modalElement as any).getBoundingClientRect = () => ({
+      left: 100,
+      right: 200,
+      top: 100,
+      bottom: 200,
+      width: 100,
+      height: 100,
+    });
+
+    // Target inside extended modal area
+    const portalTarget = document.createElement('div');
+    (portalTarget as any).getBoundingClientRect = () => ({
+      left: 120,
+      right: 180,
+      top: 120,
+      bottom: 180,
+      width: 60,
+      height: 60,
+    });
+
+    const event = new MouseEvent('mousedown', { bubbles: true });
+    Object.defineProperty(event, 'target', { value: portalTarget, enumerable: true });
+    document.dispatchEvent(event);
+
+    expect(mockOnClose).not.toHaveBeenCalled();
+
+    document.body.removeChild(modalElement);
+  });
+
+  it('should call onClose when clicking outside portal area', () => {
+    const { result } = renderHook(() =>
+      useClickOutside({ isOpen: true, onClose: mockOnClose })
+    );
+
+    // Set modal ref and mock its rect
+    const modalElement = document.createElement('div');
+    document.body.appendChild(modalElement);
+    (result.current as any).current = modalElement;
+    (modalElement as any).getBoundingClientRect = () => ({
+      left: 100,
+      right: 200,
+      top: 100,
+      bottom: 200,
+      width: 100,
+      height: 100,
+    });
+
+    const farTarget = document.createElement('div');
+    (farTarget as any).getBoundingClientRect = () => ({
+      left: 400,
+      right: 450,
+      top: 400,
+      bottom: 450,
+      width: 50,
+      height: 50,
+    });
+
+    const event = new MouseEvent('mousedown', { bubbles: true });
+    Object.defineProperty(event, 'target', { value: farTarget, enumerable: true });
+    document.dispatchEvent(event);
+
+    expect(mockOnClose).toHaveBeenCalledOnce();
+
+    document.body.removeChild(modalElement);
+  });
 });

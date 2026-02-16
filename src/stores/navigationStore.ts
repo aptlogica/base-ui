@@ -97,6 +97,17 @@ export const useNavigationStore = create<NavigationState>()((set, get) => ({
 
   // Navigation with hierarchy management
   navigateToWorkspace: (workspaceId) => {
+    const state = get();
+    if (
+      state.selectedWorkspaceId === workspaceId &&
+      state.selectedBaseId === null &&
+      state.selectedTableId === null &&
+      state.selectedViewId === null &&
+      state.expandedBases.length === 0 &&
+      state.expandedTables.length === 0
+    ) {
+      return;
+    }
     set({
       selectedWorkspaceId: workspaceId,
       selectedBaseId: null,
