@@ -402,7 +402,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
         } else if (typeof value === 'string') {
           multiSelectValue = JSON.parse(value || '[]');
         }
-        return <MultiSelect value={multiSelectValue} onChange={(newValue) => onChange(newValue)} options={parsedConfig?.options || []} maxSelections={10} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+        return <MultiSelect value={multiSelectValue} onChange={(newValue) => onChange(newValue)} options={parsedConfig?.options || []} maxSelections={10} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} useInternalState />;
       }
       case 'rating': return <Rating {...commonProps} value={value} max={parsedConfig?.ratingMax || 5} readOnly={!allowEdit} config={parsedConfig} />;
       case 'user': return <User {...commonProps} readOnly={!allowEdit} config={parsedConfig} />;

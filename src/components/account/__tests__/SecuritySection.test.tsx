@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { SecuritySection } from '../SecuritySection';
 
 const toastSuccess = vi.fn();
@@ -73,16 +73,20 @@ describe('SecuritySection', () => {
     };
   });
 
-  it('renders loading state', () => {
+  it('renders loading state', async () => {
     profileState = { data: undefined, isLoading: true, error: null };
     render(<SecuritySection />);
-    expect(screen.getByText('Loading security settings...')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Loading security settings...')).toBeInTheDocument();
+    });
   });
 
-  it('renders error state', () => {
+  it('renders error state', async () => {
     profileState = { data: undefined, isLoading: false, error: new Error('fail') };
     render(<SecuritySection />);
-    expect(screen.getByText('Failed to load security settings')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Failed to load security settings')).toBeInTheDocument();
+    });
   });
 
   it('renders sections and login sessions', async () => {

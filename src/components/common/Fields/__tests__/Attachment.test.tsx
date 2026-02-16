@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Attachment } from '../Attachment';
 
 const addAttachmentMock = vi.fn();
@@ -46,21 +47,25 @@ describe('Attachment', () => {
     removeAttachmentsMock.mockResolvedValue(undefined);
   });
 
-  it('renders placeholder actions and opens preview', () => {
+  it('renders placeholder actions and opens preview', async () => {
+    const user = userEvent.setup();
     render(
       <Attachment
-        value={[]}
+        value={[{ id: 'att-1', url: 'file-a' }]}
         onChange={vi.fn()}
         showPreview={true}
       />
     );
 
     const previewButton = screen.getByRole('button', { name: /preview attachments/i });
-    fireEvent.click(previewButton);
-    expect(screen.getByText('Preview Open')).toBeInTheDocument();
+    await user.click(previewButton);
+    await waitFor(() => {
+      expect(screen.getByText('Preview Open')).toBeInTheDocument();
+    });
   });
 
-  it('shows validation error when required and empty after change', () => {
+  it('shows validation error when required and empty after change', async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(
       <Attachment
@@ -72,14 +77,17 @@ describe('Attachment', () => {
     );
 
     const addButton = screen.getByTitle('Add attachment');
-    fireEvent.click(addButton);
-    fireEvent.click(screen.getByText('Clear Files'));
+    await user.click(addButton);
+    await user.click(screen.getByText('Clear Files'));
 
-    expect(onChange).toHaveBeenCalledWith([]);
-    expect(screen.getByText('Please attach at least one file')).toBeInTheDocument();
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith([]));
+    await waitFor(() => {
+      expect(screen.getByText('Please attach at least one file')).toBeInTheDocument();
+    });
   });
 
-  it('does not call API mutations when persistImmediately is false', () => {
+  it('does not call API mutations when persistImmediately is false', async () => {
+    const user = userEvent.setup();
     render(
       <Attachment
         value={[]}
@@ -88,14 +96,15 @@ describe('Attachment', () => {
       />
     );
 
-    fireEvent.click(screen.getByTitle('Add attachment'));
-    fireEvent.click(screen.getByText('Apply Files'));
+    await user.click(screen.getByTitle('Add attachment'));
+    await user.click(screen.getByText('Apply Files'));
 
     expect(addAttachmentMock).not.toHaveBeenCalled();
     expect(removeAttachmentsMock).not.toHaveBeenCalled();
   });
 
   it('calls addAttachmentMutation when persistImmediately is true and file objects exist', async () => {
+    const user = userEvent.setup();
     render(
       <Attachment
         value={[]}
@@ -107,18 +116,21 @@ describe('Attachment', () => {
       />
     );
 
-    fireEvent.click(screen.getByTitle('Add attachment'));
-    fireEvent.click(screen.getByText('Apply Files With Object'));
+    await user.click(screen.getByTitle('Add attachment'));
+    await user.click(screen.getByText('Apply Files With Object'));
 
-    expect(addAttachmentMock).toHaveBeenCalledWith({
-      model_id: 'm1',
-      column_id: 'c1',
-      row_id: 1,
-      files: expect.any(Array),
-    });
+    await waitFor(() =>
+      expect(addAttachmentMock).toHaveBeenCalledWith({
+        model_id: 'm1',
+        column_id: 'c1',
+        row_id: 1,
+        files: expect.any(Array),
+      })
+    );
   });
 
   it('calls removeAttachmentsMutation when files are removed', async () => {
+    const user = userEvent.setup();
     render(
       <Attachment
         value={[{ id: 'att-1', url: 'file-a' }]}
@@ -130,14 +142,16 @@ describe('Attachment', () => {
       />
     );
 
-    fireEvent.click(screen.getByTitle('Add attachment'));
-    fireEvent.click(screen.getByText('Clear Files'));
+    await user.click(screen.getByTitle('Add attachment'));
+    await user.click(screen.getByText('Clear Files'));
 
-    expect(removeAttachmentsMock).toHaveBeenCalledWith({
-      model_id: 'm1',
-      column_id: 'c1',
-      row_id: 1,
-      attachments: ['att-1'],
-    });
+    await waitFor(() =>
+      expect(removeAttachmentsMock).toHaveBeenCalledWith({
+        model_id: 'm1',
+        column_id: 'c1',
+        row_id: 1,
+        attachments: ['att-1'],
+      })
+    );
   });
 });

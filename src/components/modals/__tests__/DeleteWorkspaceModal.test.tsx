@@ -1,10 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { DeleteWorkspaceModal } from '../DeleteWorkspaceModal';
 
 describe('DeleteWorkspaceModal', () => {
   it('requires exact name to enable delete', async () => {
+    const user = userEvent.setup();
     const onConfirm = vi.fn().mockResolvedValue(undefined);
     const onClose = vi.fn();
     render(
@@ -19,14 +21,15 @@ describe('DeleteWorkspaceModal', () => {
     const deleteButton = screen.getByRole('button', { name: 'Delete Workspace' }) as HTMLButtonElement;
     expect(deleteButton.disabled).toBe(true);
 
-    fireEvent.change(screen.getByPlaceholderText('Enter workspace name'), { target: { value: 'My Workspace' } });
-    expect(deleteButton.disabled).toBe(false);
+    await user.type(screen.getByPlaceholderText('Enter workspace name'), 'My Workspace');
+    await waitFor(() => expect(deleteButton.disabled).toBe(false));
 
-    fireEvent.click(deleteButton);
-    expect(onConfirm).toHaveBeenCalledWith('w1');
+    await user.click(deleteButton);
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith('w1'));
   });
 
-  it('closes on cancel', () => {
+  it('closes on cancel', async () => {
+    const user = userEvent.setup();
     const onClose = vi.fn();
     render(
       <DeleteWorkspaceModal
@@ -36,7 +39,7 @@ describe('DeleteWorkspaceModal', () => {
         onConfirm={vi.fn().mockResolvedValue(undefined)}
       />
     );
-    fireEvent.click(screen.getByText('Cancel'));
-    expect(onClose).toHaveBeenCalled();
+    await user.click(screen.getByText('Cancel'));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 });

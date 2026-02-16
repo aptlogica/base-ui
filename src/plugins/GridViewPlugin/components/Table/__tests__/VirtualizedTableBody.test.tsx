@@ -105,6 +105,29 @@ describe('VirtualizedTableBody', () => {
       const virtualizedDiv = container.querySelector('[data-virtualizer="tanstack-react-virtual"]');
       expect(virtualizedDiv).toBeInTheDocument();
     });
+
+    it('calls onScroll when parent scrolls', () => {
+      const scrollHost = document.createElement('div');
+      scrollHost.style.overflow = 'auto';
+      scrollHost.style.height = '200px';
+      scrollHost.style.width = '400px';
+      document.body.appendChild(scrollHost);
+
+      const outerRef = { current: scrollHost } as React.RefObject<HTMLDivElement>;
+      render(
+        <VirtualizedTableBody
+          {...defaultProps}
+          outerRef={outerRef}
+          onScroll={mockOnScroll}
+        />
+      );
+
+      scrollHost.scrollTop = 120;
+      fireEvent.scroll(scrollHost);
+
+      expect(mockOnScroll).toHaveBeenCalledWith(120);
+      document.body.removeChild(scrollHost);
+    });
   });
 
   describe('grouped data', () => {
