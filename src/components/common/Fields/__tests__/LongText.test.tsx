@@ -1005,6 +1005,39 @@ describe('LongText Component', () => {
 
       expect(screen.getByText('Long Text')).toBeInTheDocument();
     });
+
+    it('should remove quote when toggling quote inside a list item', async () => {
+      const { container } = render(
+        <LongText
+          value="<blockquote><ul><li>List item</li></ul></blockquote>"
+          onChange={mockOnChange}
+          config={{ richText: true }}
+          allowEdit={true}
+        />
+      );
+
+      await openModal(container);
+
+      const editor = getEditor();
+      vi.spyOn(editor, 'focus').mockImplementation(() => {});
+      const listTextNode = editor.querySelector('li')?.firstChild;
+      expect(listTextNode).toBeTruthy();
+
+      const range = document.createRange();
+      range.setStart(listTextNode as ChildNode, 0);
+      range.collapse(true);
+      const selection = globalThis.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      const quoteButton = screen.getByTitle(/Quote/i);
+      fireEvent.mouseDown(quoteButton);
+
+      await waitFor(() => {
+        expect(editor.querySelector('blockquote')).toBeNull();
+      });
+      expect(editor.querySelector('ul')).toBeInTheDocument();
+    });
   });
 
   describe('Link Popup Functionality', () => {

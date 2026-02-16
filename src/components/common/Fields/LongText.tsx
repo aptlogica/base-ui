@@ -252,6 +252,39 @@ export const LongText: React.FC<LongTextProps> = ({
     return false;
   };
 
+  const getClosestAncestorTag = (startNode: Node | null, tagName: string): HTMLElement | null => {
+    if (!startNode || !richTextEditorRef.current) return null;
+
+    let node: Node | null = startNode.nodeType === Node.TEXT_NODE ? startNode.parentNode : startNode;
+    const normalizedTag = tagName.toUpperCase();
+
+    while (node && node !== richTextEditorRef.current) {
+      if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).tagName === normalizedTag) {
+        return node as HTMLElement;
+      }
+      node = node.parentNode;
+    }
+
+    return null;
+  };
+
+  const unwrapBlockquoteAtSelection = (): boolean => {
+    const selection = globalThis.getSelection();
+    if (!selection || selection.rangeCount === 0 || !richTextEditorRef.current) return false;
+
+    const range = selection.getRangeAt(0);
+    const blockquote = getClosestAncestorTag(range.commonAncestorContainer, 'blockquote');
+    if (!blockquote || !blockquote.parentNode) return false;
+
+    const parent = blockquote.parentNode;
+    while (blockquote.firstChild) {
+      parent.insertBefore(blockquote.firstChild, blockquote);
+    }
+    parent.removeChild(blockquote);
+
+    return true;
+  };
+
   const execFormatBlockWithFallback = (values: string[]): boolean => {
     for (const formatValue of values) {
       // @ts-ignore - execCommand is deprecated but still needed for rich text formatting
@@ -278,6 +311,10 @@ export const LongText: React.FC<LongTextProps> = ({
       if (isSelectionInsideTag('blockquote')) {
         // Toggle off quote: convert the current block back to a normal paragraph.
         success = execFormatBlockWithFallback(['p', '<p>', 'div', '<div>']);
+        // Some browsers keep blockquote when it contains lists; force-unwrapping keeps toggle deterministic.
+        if (isSelectionInsideTag('blockquote')) {
+          success = unwrapBlockquoteAtSelection() || success;
+        }
       } else {
         success = execFormatBlockWithFallback(['blockquote', '<blockquote>', 'BLOCKQUOTE']);
       }
