@@ -1041,6 +1041,159 @@ describe('LongText Component', () => {
       });
       expect(editor.querySelector('ul')).toBeInTheDocument();
     });
+
+    it('should preserve list tags when removing quote even if formatBlock mutates structure', async () => {
+      const { container } = render(
+        <LongText
+          value="<blockquote><ul><li>List item</li></ul></blockquote>"
+          onChange={mockOnChange}
+          config={{ richText: true }}
+          allowEdit={true}
+        />
+      );
+
+      await openModal(container);
+
+      const editor = getEditor();
+      vi.spyOn(editor, 'focus').mockImplementation(() => {});
+      await waitFor(() => {
+        expect(editor.querySelector('li')).toBeInTheDocument();
+      });
+      const listTextNode = editor.querySelector('li')?.firstChild;
+      expect(listTextNode).toBeTruthy();
+
+      const range = document.createRange();
+      range.setStart(listTextNode as ChildNode, 0);
+      range.collapse(true);
+      const selection = globalThis.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      // Simulate browsers that flatten quoted lists when formatBlock('p') is used.
+      mockExecCommand.mockImplementation((command: string, _showUi: boolean, value?: string) => {
+        if (command === 'formatBlock' && ['p', '<p>', 'div', '<div>'].includes(String(value))) {
+          editor.innerHTML = '<p>List item</p>';
+          return true;
+        }
+        return true;
+      });
+
+      const quoteButton = screen.getByTitle(/Quote/i);
+      fireEvent.mouseDown(quoteButton);
+
+      await waitFor(() => {
+        expect(editor.querySelector('blockquote')).toBeNull();
+      });
+      expect(editor.querySelector('ul')).toBeInTheDocument();
+      expect(editor.querySelector('li')).toBeInTheDocument();
+    });
+
+    it('should preserve list tags when adding quote even if formatBlock mutates structure', async () => {
+      const { container } = render(
+        <LongText
+          value="<ul><li>List item</li></ul>"
+          onChange={mockOnChange}
+          config={{ richText: true }}
+          allowEdit={true}
+        />
+      );
+
+      await openModal(container);
+
+      const editor = getEditor();
+      vi.spyOn(editor, 'focus').mockImplementation(() => {});
+      await waitFor(() => {
+        expect(editor.querySelector('li')).toBeInTheDocument();
+      });
+      const listTextNode = editor.querySelector('li')?.firstChild;
+      expect(listTextNode).toBeTruthy();
+
+      const range = document.createRange();
+      range.setStart(listTextNode as ChildNode, 0);
+      range.collapse(true);
+      const selection = globalThis.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      // Simulate browsers that flatten lists when formatBlock('blockquote') is used.
+      mockExecCommand.mockImplementation((command: string, _showUi: boolean, value?: string) => {
+        if (command === 'formatBlock' && ['blockquote', '<blockquote>', 'BLOCKQUOTE'].includes(String(value))) {
+          editor.innerHTML = '<p>List item</p>';
+          return true;
+        }
+        return true;
+      });
+
+      const quoteButton = screen.getByTitle(/Quote/i);
+      fireEvent.mouseDown(quoteButton);
+
+      await waitFor(() => {
+        expect(editor.querySelector('blockquote')).toBeInTheDocument();
+      });
+      expect(editor.querySelector('ul')).toBeInTheDocument();
+      expect(editor.querySelector('li')).toBeInTheDocument();
+    });
+
+    it('should preserve list tags when quote is removed and re-added with root-level selection', async () => {
+      const { container } = render(
+        <LongText
+          value="<blockquote><ul><li>List item</li></ul></blockquote>"
+          onChange={mockOnChange}
+          config={{ richText: true }}
+          allowEdit={true}
+        />
+      );
+
+      await openModal(container);
+
+      const editor = getEditor();
+      vi.spyOn(editor, 'focus').mockImplementation(() => {});
+      await waitFor(() => {
+        expect(editor.querySelector('li')).toBeInTheDocument();
+      });
+
+      const listTextNode = editor.querySelector('li')?.firstChild;
+      expect(listTextNode).toBeTruthy();
+
+      const removeRange = document.createRange();
+      removeRange.setStart(listTextNode as ChildNode, 0);
+      removeRange.collapse(true);
+      const selection = globalThis.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(removeRange);
+
+      const quoteButton = screen.getByTitle(/Quote/i);
+      fireEvent.mouseDown(quoteButton);
+
+      await waitFor(() => {
+        expect(editor.querySelector('blockquote')).toBeNull();
+      });
+      expect(editor.querySelector('ul')).toBeInTheDocument();
+
+      // Simulate caret moving to editor root before adding quote again.
+      const rootRange = document.createRange();
+      rootRange.setStart(editor, 0);
+      rootRange.collapse(true);
+      selection?.removeAllRanges();
+      selection?.addRange(rootRange);
+
+      // Simulate browsers that flatten lists when formatBlock('blockquote') is used.
+      mockExecCommand.mockImplementation((command: string, _showUi: boolean, value?: string) => {
+        if (command === 'formatBlock' && ['blockquote', '<blockquote>', 'BLOCKQUOTE'].includes(String(value))) {
+          editor.innerHTML = '<p>List item</p>';
+          return true;
+        }
+        return true;
+      });
+
+      fireEvent.mouseDown(quoteButton);
+
+      await waitFor(() => {
+        expect(editor.querySelector('blockquote')).toBeInTheDocument();
+      });
+      expect(editor.querySelector('ul')).toBeInTheDocument();
+      expect(editor.querySelector('li')).toBeInTheDocument();
+    });
   });
 
   describe('Link Popup Functionality', () => {
@@ -1605,5 +1758,3 @@ describe('LongText Component', () => {
     });
   });
 });
-
-

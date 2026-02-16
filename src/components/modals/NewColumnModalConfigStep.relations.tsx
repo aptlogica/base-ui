@@ -165,7 +165,7 @@ export function renderRelationsConfigStep(props: any) {
               </div>
             )}
             {selectedType.key === 'links' && !selectedTableId && (
-              <div className="mt-1 text-xs text-red-500">
+              <div className="mt-1 text-xs text-orange-500">
                 Target table is required for relation fields
               </div>
             )}
