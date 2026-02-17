@@ -317,7 +317,7 @@ export const LongText: React.FC<LongTextProps> = ({
       }
     }
 
-    if (!list || !list.parentNode) return false;
+    if (!list?.parentNode) return false;
 
     // Already quoted (directly or by an ancestor blockquote).
     if (getClosestAncestorTag(list, 'blockquote')) {
