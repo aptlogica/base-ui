@@ -190,6 +190,38 @@ describe('useFormViewConfig', () => {
       expect(mockUpdateAppearance).toHaveBeenCalled();
     });
 
+    it('should call updateAppearance even when merged appearance is unchanged', async () => {
+      mockUpdateAppearance.mockResolvedValue(undefined);
+      const viewWithAppearance = {
+        ...defaultView,
+        meta: {
+          formViewAppearance: {
+            formTitle: 'Test Form',
+            formDescription: 'Test description',
+            backgroundColor: '#f8fafc',
+          },
+        },
+      };
+
+      const { result } = renderHook(() =>
+        useFormViewConfig({
+          view: viewWithAppearance,
+          formFields: defaultFormFields,
+          updateAppearance: mockUpdateAppearance,
+        })
+      );
+
+      act(() => {
+        result.current.handleConfigChange({ title: 'Test Form' });
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(700);
+      });
+
+      expect(mockUpdateAppearance).toHaveBeenCalled();
+    });
+
     it('should not call updateAppearance when view has no id', async () => {
       const viewWithoutId = { ...defaultView, id: undefined };
 
@@ -256,6 +288,44 @@ describe('useFormViewConfig', () => {
 
       expect(toastError).toHaveBeenCalled();
       consoleSpy.mockRestore();
+    });
+
+    it('persists merged appearance and shows success toast', async () => {
+      mockUpdateAppearance.mockResolvedValue(undefined);
+      const viewWithMeta = {
+        ...defaultView,
+        meta: { formViewAppearance: { backgroundColor: '#f8fafc' } },
+      };
+
+      const { result } = renderHook(() =>
+        useFormViewConfig({
+          view: viewWithMeta,
+          formFields: defaultFormFields,
+          updateAppearance: mockUpdateAppearance,
+        })
+      );
+
+      act(() => {
+        result.current.handleConfigChange({
+          title: 'Updated Title',
+          description: 'Updated Desc',
+          appearance: { primaryColor: '#111111' },
+        });
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(700);
+      });
+
+      expect(mockUpdateAppearance).toHaveBeenCalledWith(
+        expect.objectContaining({
+          formTitle: 'Updated Title',
+          formDescription: 'Updated Desc',
+          primaryColor: '#111111',
+        }),
+        viewWithMeta
+      );
+      expect(toastSuccess).toHaveBeenCalled();
     });
   });
 

@@ -148,6 +148,64 @@ describe('NewColumnModalConfigStep split modules', () => {
     expect(setDefaultValue).toHaveBeenCalledWith('9.99');
   });
 
+  it('basic: number type toggles thousands and updates default value', () => {
+    const setShowThousands = vi.fn();
+    const setShowTextDefault = vi.fn();
+    const setDefaultValue = vi.fn();
+
+    renderStep(
+      renderBasicConfigStep({
+        selectedType: { key: 'number' },
+        showThousands: false,
+        setShowThousands,
+        showTextDefault: true,
+        setShowTextDefault,
+        defaultValue: '12',
+        setDefaultValue,
+        showDescription: false,
+        setShowDescription: vi.fn(),
+        description: '',
+        setDescription: vi.fn(),
+      })
+    );
+
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.change(screen.getByTestId('number-field'), { target: { value: '1234' } });
+
+    expect(setShowThousands).toHaveBeenCalledWith(true);
+    expect(setDefaultValue).toHaveBeenCalledWith('1234');
+  });
+
+  it('basic: longText type toggles rich text and updates default', () => {
+    const setRichText = vi.fn();
+    const setShowTextDefault = vi.fn();
+    const setDefaultValue = vi.fn();
+
+    renderStep(
+      renderBasicConfigStep({
+        selectedType: { key: 'longText' },
+        richText: false,
+        setRichText,
+        showTextDefault: true,
+        setShowTextDefault,
+        defaultValue: '',
+        setDefaultValue,
+        showDescription: false,
+        setShowDescription: vi.fn(),
+        description: '',
+        setDescription: vi.fn(),
+        handleLongtextModalOpen: vi.fn(),
+        handleLongtextModalClose: vi.fn(),
+      })
+    );
+
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.change(screen.getByTestId('long-text'), { target: { value: 'long text' } });
+
+    expect(setRichText).toHaveBeenCalledWith(true);
+    expect(setDefaultValue).toHaveBeenCalledWith('long text');
+  });
+
   it('contact: phone type enforces max length and toggles validation', () => {
     const setPhoneDefault = vi.fn();
     const setPhoneValid = vi.fn();

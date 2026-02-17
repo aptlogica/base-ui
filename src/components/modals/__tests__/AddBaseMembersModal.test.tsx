@@ -4,10 +4,16 @@ import userEvent from '@testing-library/user-event';
 import { AddBaseMembersModal } from '../AddBaseMembersModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+const bulkAddMock = vi.fn();
+const removeMock = vi.fn();
+const refetchMock = vi.fn();
+const toastSuccess = vi.fn();
+const toastError = vi.fn();
+
 // Mock useApi hooks
 vi.mock('../../../hooks/useApi', () => ({
   useBulkAddBaseMembers: vi.fn(() => ({
-    mutateAsync: vi.fn(),
+    mutateAsync: bulkAddMock,
     isPending: false,
   })),
   useGetUsersForAssign: vi.fn(() => ({
@@ -25,10 +31,10 @@ vi.mock('../../../hooks/useApi', () => ({
       ],
     },
     isLoading: false,
-    refetch: vi.fn(),
+    refetch: refetchMock,
   })),
   useRemoveUserFromBase: vi.fn(() => ({
-    mutateAsync: vi.fn(),
+    mutateAsync: removeMock,
     isPending: false,
   })),
 }));
@@ -36,8 +42,8 @@ vi.mock('../../../hooks/useApi', () => ({
 // Mock Toast
 vi.mock('../../common/Toast', () => ({
   useToast: () => ({
-    success: vi.fn(),
-    error: vi.fn(),
+    success: toastSuccess,
+    error: toastError,
     info: vi.fn(),
     show: vi.fn(),
   }),
@@ -110,6 +116,8 @@ describe('AddBaseMembersModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    bulkAddMock.mockResolvedValue(undefined);
+    removeMock.mockResolvedValue(undefined);
   });
 
   describe('rendering', () => {
@@ -191,6 +199,60 @@ describe('AddBaseMembersModal', () => {
       await user.selectOptions(roleDropdown, 'base-read');
 
       expect(roleDropdown).toHaveValue('base-read');
+    });
+
+    it('adds selected members when Save is clicked', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<AddBaseMembersModal {...defaultProps} />);
+
+      const userSelect = screen.getByTestId('user-select');
+      await user.selectOptions(userSelect, ['user-2']);
+
+      await user.click(screen.getByRole('button', { name: 'Add' }));
+
+      await waitFor(() => {
+        expect(bulkAddMock).toHaveBeenCalledWith({
+          baseId: 'base-123',
+          workspaceId: 'ws-123',
+          members: [{ user_id: 'user-2', role: 'base-member' }],
+        });
+      });
+      expect(toastSuccess).toHaveBeenCalled();
+    });
+
+    it('updates role for existing member when pending change exists', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<AddBaseMembersModal {...defaultProps} />);
+
+      const roleDropdown = screen.getAllByTestId('role-dropdown')[0];
+      await user.selectOptions(roleDropdown, 'base-read');
+
+      await user.click(screen.getByRole('button', { name: 'Update' }));
+
+      await waitFor(() => {
+        expect(bulkAddMock).toHaveBeenCalledWith({
+          baseId: 'base-123',
+          workspaceId: 'ws-123',
+          members: [{ user_id: 'user-1', role: 'base-read' }],
+        });
+      });
+      expect(toastSuccess).toHaveBeenCalled();
+    });
+
+    it('removes member when remove button clicked', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<AddBaseMembersModal {...defaultProps} />);
+
+      const removeButtons = screen.getAllByLabelText('Remove member');
+      await user.click(removeButtons[0]);
+
+      await waitFor(() => {
+        expect(removeMock).toHaveBeenCalledWith({
+          baseId: 'base-123',
+          user_id: 'user-1',
+        });
+      });
+      expect(toastSuccess).toHaveBeenCalled();
     });
   });
 

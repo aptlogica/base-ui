@@ -271,6 +271,7 @@ describe('fieldUtils', () => {
       expect(isSystemField({ type: 'text', isSystem: true })).toBe(true);
       expect(isSystemField({ type: 'text', name: 'created_at' })).toBe(true);
       expect(isSystemField({ type: 'text', name: 'title' })).toBe(false);
+      expect(isSystemField({ type: 'text', name: 'lastModifiedBy' })).toBe(true);
     });
   });
 
@@ -286,6 +287,18 @@ describe('fieldUtils', () => {
       expect(meta).toMatchObject({
         icon: 'x',
         color: 'red',
+        defaultValue: true,
+      });
+    });
+
+    it('should fall back to meta checkbox defaults when field values are missing', () => {
+      const meta = mapFieldConfig({
+        type: 'checkbox',
+        meta: { checkboxIcon: 'check', checkboxColor: 'green', checkboxDefault: true },
+      });
+      expect(meta).toMatchObject({
+        icon: 'check',
+        color: 'green',
         defaultValue: true,
       });
     });

@@ -350,8 +350,7 @@ describe('Breadcrumb', () => {
 
   describe('Outside Click', () => {
     it('closes dropdown when clicking outside', async () => {
-      vi.useFakeTimers();
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const user = userEvent.setup();
       Element.prototype.getBoundingClientRect = mockGetBoundingClientRect;
       renderBreadcrumb();
 
@@ -363,14 +362,16 @@ describe('Breadcrumb', () => {
         expect(screen.getByText('Bases')).toBeInTheDocument();
       }, { timeout: 2000 });
 
-      vi.advanceTimersByTime(150);
-      fireEvent.mouseDown(document.body);
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      const outsideEl = document.createElement('div');
+      document.body.appendChild(outsideEl);
+      await user.click(outsideEl);
 
       await waitFor(() => {
         expect(screen.queryByText('Bases')).not.toBeInTheDocument();
       }, { timeout: 2000 });
 
-      vi.useRealTimers();
+      outsideEl.remove();
     });
   });
 

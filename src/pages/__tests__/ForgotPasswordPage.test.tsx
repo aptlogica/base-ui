@@ -203,6 +203,56 @@ describe('ForgotPasswordPage', () => {
         expect(screen.queryByText(/please enter a valid email address/i)).not.toBeInTheDocument();
       }
     });
+
+    it('rejects emails longer than 254 chars', async () => {
+      const user = userEvent.setup();
+      renderWithRouter();
+
+      const emailInput = screen.getByPlaceholderText('Enter your email address');
+      const longLocal = 'a'.repeat(200);
+      const longEmail = `${longLocal}@example.com`;
+
+      await user.type(emailInput, longEmail);
+      await user.tab();
+
+      expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
+    });
+
+    it('rejects emails with local part longer than 64 chars', async () => {
+      const user = userEvent.setup();
+      renderWithRouter();
+
+      const emailInput = screen.getByPlaceholderText('Enter your email address');
+      const longLocal = 'a'.repeat(65);
+      const email = `${longLocal}@example.com`;
+
+      await user.type(emailInput, email);
+      await user.tab();
+
+      expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
+    });
+
+    it('rejects emails with invalid domain characters', async () => {
+      const user = userEvent.setup();
+      renderWithRouter();
+
+      const emailInput = screen.getByPlaceholderText('Enter your email address');
+      await user.type(emailInput, 'user@exa mple.com');
+      await user.tab();
+
+      expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
+    });
+
+    it('rejects emails with short TLD', async () => {
+      const user = userEvent.setup();
+      renderWithRouter();
+
+      const emailInput = screen.getByPlaceholderText('Enter your email address');
+      await user.type(emailInput, 'user@example.c');
+      await user.tab();
+
+      expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
+    });
   });
 
   describe('Form Submission', () => {

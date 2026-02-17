@@ -175,6 +175,31 @@ describe('AccessLevelRoute', () => {
       expect(mockUseWorkspaceAccess).toHaveBeenCalledWith(undefined);
     });
 
+    it('should navigate to /workspace when workspaceId is missing and access denied', () => {
+      mockUseWorkspaceAccess.mockReturnValue({
+        canAccessSettings: vi.fn().mockReturnValue(false),
+      } as any);
+
+      render(
+        <MemoryRouter initialEntries={['/workspace/settings']}>
+          <Routes>
+            <Route
+              path="/workspace/settings"
+              element={
+                <AccessLevelRoute>
+                  <div data-testid="protected-content">Settings</div>
+                </AccessLevelRoute>
+              }
+            />
+            <Route path="/workspace" element={<div data-testid="workspace-root">Workspace Root</div>} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
+      expect(screen.getByTestId('workspace-root')).toBeInTheDocument();
+    });
+
     it('should render content when workspace parameter matches expected pattern', () => {
       mockUseWorkspaceAccess.mockReturnValue({
         canAccessSettings: vi.fn().mockReturnValue(true),
