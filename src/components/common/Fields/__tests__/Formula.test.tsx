@@ -256,4 +256,59 @@ describe('Formula', () => {
       expect(screen.queryByText('Amount')).not.toBeInTheDocument();
     });
   });
+
+  it('filters columns by compatible types when function at cursor', async () => {
+    getFunctionAtCursorMock.mockReturnValue('SUM');
+    getCompatibleFieldTypesMock.mockReturnValue(['number']);
+
+    render(
+      <Formula
+        columns={[
+          { id: 'c1', title: 'Amount', type: 'number' },
+          { id: 'c2', title: 'Name', type: 'text' }
+        ]}
+        allColumns={[
+          { id: 'c1', title: 'Amount', type: 'number' },
+          { id: 'c2', title: 'Name', type: 'text' }
+        ]}
+      />
+    );
+
+    const textarea = screen.getByPlaceholderText(/enter formula/i);
+    fireEvent.focus(textarea);
+    fireEvent.change(textarea, { target: { value: '{' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Amount')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Name')).not.toBeInTheDocument();
+  });
+
+  it('renders formatted result when disabled', () => {
+    formatResultMock.mockReturnValue('Formatted');
+    render(
+      <Formula
+        disabled
+        config={{ formula: 'SUM({Amount})' }}
+        columns={[{ id: 'c1', title: 'Amount', type: 'number' }]}
+        allColumns={[]}
+      />
+    );
+
+    expect(screen.getByText('Formatted')).toBeInTheDocument();
+  });
+
+  it('renders nothing in disabled mode when evaluation fails', () => {
+    evaluateFormulaMock.mockReturnValue({ result: null, error: 'bad' });
+    const { container } = render(
+      <Formula
+        disabled
+        config={{ formula: 'BAD(' }}
+        columns={[]}
+        allColumns={[]}
+      />
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
 });

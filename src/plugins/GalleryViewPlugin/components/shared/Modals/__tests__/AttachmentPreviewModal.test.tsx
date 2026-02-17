@@ -168,4 +168,55 @@ describe('AttachmentPreviewModal', () => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith('http://example.com/a.jpg');
     });
   });
+
+  it('renders empty state when no attachments exist', () => {
+    render(<AttachmentPreviewModal {...baseProps} attachments={[]} />);
+    expect(screen.getByText('No attachments to preview')).toBeInTheDocument();
+  });
+
+  it('hides attach button when allowEdit is false', () => {
+    render(<AttachmentPreviewModal {...baseProps} allowEdit={false} />);
+    expect(screen.queryByRole('button', { name: /attach file/i })).not.toBeInTheDocument();
+  });
+
+  it('updates local state without API when identifiers are missing', async () => {
+    removeAttachmentsMutateAsync.mockResolvedValue({ data: { ok: true } });
+    const onAttachmentsChange = vi.fn();
+
+    render(
+      <AttachmentPreviewModal
+        {...baseProps}
+        onAttachmentsChange={onAttachmentsChange}
+      />
+    );
+
+    const firstCard = screen.getByText('A Image').closest('.cursor-pointer') as HTMLElement;
+    fireEvent.mouseEnter(firstCard);
+    fireEvent.click(screen.getAllByTitle('Delete')[0]);
+
+    await waitFor(() => {
+      expect(onAttachmentsChange).toHaveBeenCalled();
+    });
+    expect(removeAttachmentsMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('logs error when copy url fails', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: vi.fn().mockRejectedValue(new Error('copy failed')),
+      },
+    });
+
+    render(<AttachmentPreviewModal {...baseProps} />);
+    const firstCard = screen.getAllByText('A Image')[0].closest('.cursor-pointer') as HTMLElement;
+    fireEvent.mouseEnter(firstCard);
+    fireEvent.click(screen.getAllByTitle('Copy URL')[0]);
+
+    await waitFor(() => {
+      expect(errorSpy).toHaveBeenCalled();
+    });
+    errorSpy.mockRestore();
+  });
 });

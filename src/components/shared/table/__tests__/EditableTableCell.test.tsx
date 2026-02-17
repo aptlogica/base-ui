@@ -223,6 +223,56 @@ describe('EditableTableCell', () => {
       );
       expect(screen.getByTestId('single-line-text')).toBeInTheDocument();
     });
+
+    it('renders LinksField for links type', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'links', model_id: 'm1' }}
+          value={[]}
+          onChange={mockOnChange}
+          width={200}
+          currentRowId={1}
+        />
+      );
+      expect(screen.getByTestId('links-field')).toBeInTheDocument();
+    });
+
+    it('renders Attachment for attachment type', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'attachment', model_id: 'm1' }}
+          value={[]}
+          onChange={mockOnChange}
+          width={200}
+          currentRowId={1}
+        />
+      );
+      expect(screen.getByTestId('attachment')).toBeInTheDocument();
+    });
+
+    it('renders Lookup for lookup type', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'lookup' }}
+          value="lookup"
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('lookup')).toBeInTheDocument();
+    });
+
+    it('renders Formula for formula type', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'formula' }}
+          value="10"
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('formula')).toBeInTheDocument();
+    });
   });
 
   describe('memo comparison', () => {

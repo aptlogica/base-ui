@@ -22,6 +22,8 @@ describe('useSmartPopover', () => {
     panelElement.style.position = 'fixed';
     panelElement.style.width = '300px';
     panelElement.style.height = '200px';
+    Object.defineProperty(panelElement, 'offsetWidth', { value: 300, configurable: true });
+    Object.defineProperty(panelElement, 'offsetHeight', { value: 200, configurable: true });
     document.body.appendChild(panelElement);
 
     triggerRef = { current: triggerElement };
@@ -282,6 +284,83 @@ describe('useSmartPopover', () => {
     );
 
     expect(result.current.position).not.toBeNull();
+  });
+
+  it('falls back to left when preferred right does not fit', () => {
+    vi.spyOn(triggerRef.current!, 'getBoundingClientRect').mockReturnValue({
+      top: 100,
+      left: 350,
+      right: 390,
+      bottom: 140,
+      width: 40,
+      height: 40,
+      x: 350,
+      y: 100,
+      toJSON: () => ({})
+    });
+    Object.defineProperty(window, 'innerWidth', { value: 400, writable: true });
+
+    const { result } = renderHook(() =>
+      useSmartPopover({
+        open: true,
+        triggerRef,
+        panelRef,
+        preferred: { horizontal: 'right' }
+      })
+    );
+
+    expect(result.current.position?.left).toBe(390 - 300);
+  });
+
+  it('positions above when there is not enough space below', () => {
+    vi.spyOn(triggerRef.current!, 'getBoundingClientRect').mockReturnValue({
+      top: 350,
+      left: 100,
+      right: 200,
+      bottom: 390,
+      width: 100,
+      height: 40,
+      x: 100,
+      y: 350,
+      toJSON: () => ({})
+    });
+    Object.defineProperty(window, 'innerHeight', { value: 420, writable: true });
+
+    const { result } = renderHook(() =>
+      useSmartPopover({
+        open: true,
+        triggerRef,
+        panelRef,
+        preferred: { vertical: 'bottom' }
+      })
+    );
+
+    expect(result.current.position?.top).toBe(350 - 200 - 8);
+  });
+
+  it('clamps position within viewport margins', () => {
+    vi.spyOn(triggerRef.current!, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      left: -50,
+      right: 10,
+      bottom: 40,
+      width: 60,
+      height: 40,
+      x: -50,
+      y: 0,
+      toJSON: () => ({})
+    });
+    Object.defineProperty(window, 'innerWidth', { value: 320, writable: true });
+
+    const { result } = renderHook(() =>
+      useSmartPopover({
+        open: true,
+        triggerRef,
+        panelRef
+      })
+    );
+
+    expect(result.current.position?.left).toBeGreaterThanOrEqual(8);
   });
 
   it('should return null position when trigger ref is null', () => {
