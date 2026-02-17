@@ -5,9 +5,14 @@ const PENDING_NEW_WORKSPACE_KEY = 'pending_new_workspace';
 const PENDING_NEW_WORKSPACE_TTL_MS = 15000;
 
 // Helper: Check if selected workspace is invalid
-const isSelectedWorkspaceInvalid = (selectedWorkspace: any, workspaceList: any[]): boolean => {
+const isSelectedWorkspaceInvalid = (
+  selectedWorkspace: any,
+  workspaceList: any[],
+  selectedWorkspaceId: string | null
+): boolean => {
   if (!selectedWorkspace) return true;
   if (!selectedWorkspace.id) return true;
+  if (selectedWorkspaceId && selectedWorkspace.id !== selectedWorkspaceId) return true;
   return !workspaceList.some(ws => ws.id === selectedWorkspace.id);
 };
 
@@ -79,6 +84,10 @@ const syncWorkspaceFromStoreId = (
     }
     return;
   }
+
+  if (selectedWorkspace?.id && selectedWorkspace.id !== selectedWorkspaceId) {
+    setSelectedWorkspace(null);
+  }
 };
 
 // Helper: Handle auto-selection on initial load
@@ -134,7 +143,7 @@ export const useWorkspaceSelection = (
     if (!workspaces || !Array.isArray(workspaces) || workspaces.length === 0) return;
 
     const workspaceList = workspaces;
-    const isInvalid = isSelectedWorkspaceInvalid(selectedWorkspace, workspaceList);
+    const isInvalid = isSelectedWorkspaceInvalid(selectedWorkspace, workspaceList, selectedWorkspaceId);
     const shouldDeferFallback = shouldDeferInvalidWorkspaceFallback(workspaceList, selectedWorkspaceId);
 
     // Priority 1: If store has selectedWorkspaceId, sync the workspace object

@@ -110,10 +110,6 @@ const HeaderWorkspaceDropdown: React.FC = () => {
         return selectedWorkspace;
       }
     }
-    // Priority 3: Use selectedWorkspace even if not in workspaces array yet (newly created)
-    if (selectedWorkspace?.id === selectedWorkspaceId) {
-      return selectedWorkspace;
-    }
     // FALLBACK: If no workspace is selected but workspaces are available, return first one for display
     // The actual selection will be handled by the useEffect below
     if (workspaces && Array.isArray(workspaces) && workspaces.length > 0) {

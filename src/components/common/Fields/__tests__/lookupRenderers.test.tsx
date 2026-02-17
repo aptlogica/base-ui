@@ -49,6 +49,12 @@ describe('lookupRenderers', () => {
 
     const checkbox = renderNode(renderCheckboxPill({ value: true, sourceColumn: {}, index: 0 }));
     expect(within(checkbox.container).getByText('True')).toBeInTheDocument();
+
+    const checkboxFalse = renderNode(renderCheckboxPill({ value: false, sourceColumn: {}, index: 0 }));
+    expect(within(checkboxFalse.container).getByText('False')).toBeInTheDocument();
+
+    const durationWithMs = renderNode(renderDurationPill({ value: '20.5', sourceColumn: { meta: { durationFormat: 'h:mm:ss.s' } }, index: 0 }));
+    expect(within(durationWithMs.container).getByText('00:00:20.500')).toBeInTheDocument();
   });
 
   it('renders email, user, attachment, and link pills', () => {
@@ -60,6 +66,9 @@ describe('lookupRenderers', () => {
 
     const attachment = renderNode(renderAttachmentPill({ value: [{ title: 'file.txt' }], sourceColumn: {}, index: 0 }));
     expect(within(attachment.container).getByText('file.txt')).toBeInTheDocument();
+
+    const multiAttachment = renderNode(renderAttachmentPill({ value: [{ title: 'a.txt' }, { title: 'b.txt' }], sourceColumn: {}, index: 0 }));
+    expect(within(multiAttachment.container).getByText(/a\.txt \(2\)/)).toBeInTheDocument();
 
     const url = renderNode(renderURLPill({ value: 'https://example.com', sourceColumn: {}, index: 0 }));
     expect(within(url.container).getByText('https://example.com')).toBeInTheDocument();
@@ -104,5 +113,24 @@ describe('lookupRenderers', () => {
       index: 0
     }));
     expect(within(single.container).getByText('Blue')).toBeInTheDocument();
+  });
+
+  it('handles null and invalid values', () => {
+    expect(renderDateTimePill({ value: null, sourceColumn: {}, index: 0 })).toBeNull();
+    expect(renderCurrencyPill({ value: 'not-number', sourceColumn: {}, index: 0 })).toBeNull();
+    expect(renderPercentPill({ value: 'abc', sourceColumn: {}, index: 0 })).toBeNull();
+    expect(renderNumberPill({ value: 'abc', sourceColumn: {}, index: 0 })).toBeNull();
+    expect(renderDecimalPill({ value: null, sourceColumn: {}, index: 0 })).toBeNull();
+  });
+
+  it('renders nested multiselect values', () => {
+    const multi = renderNode(renderMultiSelectPill({
+      value: [['Alpha', 'Beta'], [null, 'Gamma']],
+      sourceColumn: { meta: { options: [] } },
+      index: 0
+    }));
+
+    const multiQueries = within(multi.container);
+    expect(multiQueries.getByText('Alpha')).toBeInTheDocument();
   });
 });

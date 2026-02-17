@@ -9,7 +9,7 @@ const mockUseKanbanModals = vi.fn();
 const mockUseKanbanStacks = vi.fn();
 
 vi.mock('../../../../../components/common/Toast', () => ({
-  useToast: vi.fn(() => ({ showToast: mockShowToast }))
+  useToast: vi.fn(() => ({ showToast: mockShowToast, error: mockShowToast }))
 }));
 
 vi.mock('../../../../../hooks/useBaseAccess', () => ({
@@ -588,6 +588,22 @@ describe('KanbanBoard Component', () => {
   });
 
   describe('Stack Management', () => {
+    it('should toggle stack name input when Add New Stack is clicked', () => {
+      render(
+        <KanbanBoard
+          tableData={mockTableData}
+          viewId="view1"
+          onRefresh={vi.fn()}
+          actions={mockActions}
+        />
+      );
+
+      const addStackButton = screen.getByRole('button', { name: /add new stack/i });
+      fireEvent.click(addStackButton);
+
+      expect(screen.getByPlaceholderText('Enter Stack Name')).toBeInTheDocument();
+    });
+
     it('should handle stack collapse', () => {
       const mockHandleStackCollapse = vi.fn();
       mockUseKanbanStacks.mockReturnValue({
@@ -615,7 +631,7 @@ describe('KanbanBoard Component', () => {
     it('should handle create stack click', () => {
       const mockHandleCreateStackClick = vi.fn();
       mockUseKanbanStacks.mockReturnValue({
-        uiState: { showNewStackInput: true, newStackOption: '' },
+        uiState: { isCreateStack: true, newOption: '' },
         collapsedStacks: new Set(),
         setUiState: vi.fn(),
         handleStackCollapse: vi.fn(),
@@ -634,6 +650,9 @@ describe('KanbanBoard Component', () => {
       );
 
       expect(container.querySelector('.h-full')).toBeInTheDocument();
+      const newStackButton = screen.getByRole('button', { name: /new stack/i });
+      fireEvent.click(newStackButton);
+      expect(mockHandleCreateStackClick).toHaveBeenCalled();
     });
   });
 
@@ -667,6 +686,29 @@ describe('KanbanBoard Component', () => {
       );
 
       expect(container.querySelector('.h-full')).toBeInTheDocument();
+    });
+  });
+
+  describe('Read-only UI', () => {
+    it('should hide stack add actions when read-only', () => {
+      mockUseBaseAccess.mockReturnValue({
+        isBaseReadOnly: vi.fn(() => true),
+        canCreateRecord: vi.fn(() => false),
+        canDeleteRecord: vi.fn(() => false),
+        canUpdateRecord: vi.fn(() => false)
+      });
+
+      render(
+        <KanbanBoard
+          tableData={mockTableData}
+          viewId="view1"
+          onRefresh={vi.fn()}
+          actions={mockActions}
+        />
+      );
+
+      expect(screen.queryByText('Add New Stack')).not.toBeInTheDocument();
+      expect(screen.queryByText('New stack')).not.toBeInTheDocument();
     });
   });
 

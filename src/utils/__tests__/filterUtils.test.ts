@@ -132,6 +132,32 @@ describe('matchesFilter and applyFilters', () => {
     expect(matchesFilter(card, { column: 'due', operator: 'after', value: '2026-01-01' }, columns)).toBe(true);
   });
 
+  it('handles empty checks and not-equal comparisons', () => {
+    const localCard = { data: { name: '', score: null, status: 'Open', tags: ['red'] } };
+    expect(matchesFilter(localCard, { column: 'name', operator: 'is empty', value: '' }, columns)).toBe(true);
+    expect(matchesFilter(localCard, { column: 'score', operator: 'is empty', value: '' }, columns)).toBe(true);
+    expect(matchesFilter(localCard, { column: 'status', operator: 'is not equal', value: 'Closed' }, columns)).toBe(true);
+    expect(matchesFilter(localCard, { column: 'tags', operator: 'is not equal', value: ['blue'] }, columns)).toBe(true);
+  });
+
+  it('handles select contains any of with array and string', () => {
+    expect(matchesFilter(card, { column: 'status', operator: 'contains any of', value: ['Open', 'Closed'] }, columns)).toBe(true);
+    expect(matchesFilter(card, { column: 'status', operator: 'contains any of', value: 'Closed,Open' }, columns)).toBe(true);
+    expect(matchesFilter(card, { column: 'status', operator: 'does not contain any of', value: ['Done'] }, columns)).toBe(true);
+  });
+
+  it('handles boolean normalization and invalid numeric/date values', () => {
+    const localColumns = [
+      { key: 'done', uidt: 'boolean' },
+      { key: 'score', uidt: 'number' },
+      { key: 'due', uidt: 'date' },
+    ];
+    const localCard = { data: { done: '1', score: 'not-a-number', due: 'invalid' } };
+    expect(matchesFilter(localCard, { column: 'done', operator: 'is checked', value: '' }, localColumns)).toBe(true);
+    expect(matchesFilter(localCard, { column: 'score', operator: 'greater than', value: 1 }, localColumns)).toBe(false);
+    expect(matchesFilter(localCard, { column: 'due', operator: 'before', value: '2026-01-01' }, localColumns)).toBe(false);
+  });
+
   it('returns true when referenced column is missing', () => {
     expect(matchesFilter(card, { column: 'missing', operator: 'is equal', value: 'x' }, columns)).toBe(true);
   });

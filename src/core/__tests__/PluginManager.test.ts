@@ -75,20 +75,24 @@ describe('PluginManagerImpl', () => {
 
   it('throws when loading unknown plugin or unresolved dependency', async () => {
     const manager = new PluginManagerImpl();
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await expect(manager.load('missing')).rejects.toThrow('not registered');
 
     manager.register(createPlugin('needs-dep', { dependencies: { absent: '^1.0.0' } }));
     await expect(manager.load('needs-dep')).rejects.toThrow('Failed to resolve dependencies');
+    consoleErrorSpy.mockRestore();
   });
 
   it('validates plugin compatibility using framework version', () => {
     const manager = new PluginManagerImpl();
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const ok = createPlugin('ok', { frameworkVersion: '>=1.0.0' });
     const bad = createPlugin('bad', { frameworkVersion: '>2.0.0' });
 
     expect(manager.validatePluginCompatibility(ok)).toBe(true);
     expect(manager.validatePluginCompatibility(bad)).toBe(false);
+    consoleErrorSpy.mockRestore();
   });
 
   it('supports core extension points and extension change subscriptions', () => {
@@ -178,4 +182,3 @@ describe('PluginManagerImpl', () => {
     expect(onConfigurationUpdate).toHaveBeenCalledWith({ n: 1 }, {});
   });
 });
-

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GanttChart } from '../GanttChart';
 import type { TableResponse, Column } from '../../../../types/api.types';
@@ -12,6 +12,9 @@ const useGanttModalsMock = vi.fn();
 const useGanttFieldConfigMock = vi.fn();
 const useFrontendPaginationMock = vi.fn();
 const useBaseAccessMock = vi.fn();
+const createRecordModalProps: any[] = [];
+const editRecordModalProps: any[] = [];
+const deleteConfirmModalProps: any[] = [];
 
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: () => ({
@@ -62,17 +65,33 @@ vi.mock('../../../../components/shared/table/FieldsPopover', () => ({
 
 vi.mock('../../../../components/modals/CreateRecordModal', () => ({
   __esModule: true,
-  default: () => null,
+  default: (props: any) => {
+    createRecordModalProps.push(props);
+    return <div data-testid="create-record-modal" />;
+  },
 }));
 
 vi.mock('../../../../components/modals/EditRecordModal', () => ({
   __esModule: true,
-  default: () => null,
+  default: (props: any) => {
+    editRecordModalProps.push(props);
+    return (
+      <div
+        data-testid="edit-record-modal"
+        data-recordid={props.recordId}
+        data-has-delete={Boolean(props.onDelete)}
+        data-has-duplicate={Boolean(props.onDuplicate)}
+      />
+    );
+  },
 }));
 
 vi.mock('../../../../components/modals/DeleteConfirmModal', () => ({
   __esModule: true,
-  default: () => null,
+  default: (props: any) => {
+    deleteConfirmModalProps.push(props);
+    return <div data-testid="delete-confirm-modal">{props.message}</div>;
+  },
 }));
 
 vi.mock('../../../../components/ui/Loader', () => ({
@@ -167,10 +186,20 @@ const buildActions = () => ({
 const setupMocks = (overrides?: {
   isReadOnly?: boolean;
   hasMore?: boolean;
+  totalItems?: number;
+  paginatedTasks?: GanttTask[];
+  filteredTasks?: GanttTask[];
+  modalState?: any;
+  deleteConfirmModalOpen?: boolean;
+  taskToDelete?: GanttTask | null;
+  handleAddFilter?: any;
+  handleRemoveFilter?: any;
+  handleUpdateFilter?: any;
 }) => {
   const columns = [buildColumn({ id: 'title', column_name: 'title' })];
+  const filteredTasks = overrides?.filteredTasks ?? [sampleTask];
   useGanttTaskProcessingMock.mockReturnValue({
-    tasks: [sampleTask],
+    tasks: filteredTasks,
     columns,
     currentView: { id: 'view-1', meta: {} },
     startDateField: columns[0],
@@ -181,22 +210,26 @@ const setupMocks = (overrides?: {
   });
 
   const paginationData = {
-    allLoadedData: [sampleTask],
+    allLoadedData: overrides?.paginatedTasks ?? [sampleTask],
     loadNextPage: vi.fn(),
     hasMore: overrides?.hasMore ?? false,
-    totalItems: 1,
+    totalItems: overrides?.totalItems ?? 1,
   };
   useFrontendPaginationMock.mockReturnValue(paginationData);
+
+  const handleAddFilter = ('handleAddFilter' in (overrides ?? {})) ? overrides?.handleAddFilter : vi.fn();
+  const handleRemoveFilter = ('handleRemoveFilter' in (overrides ?? {})) ? overrides?.handleRemoveFilter : vi.fn();
+  const handleUpdateFilter = ('handleUpdateFilter' in (overrides ?? {})) ? overrides?.handleUpdateFilter : vi.fn();
 
   useGanttViewConfigMock.mockReturnValue({
     filters: [],
     sorts: [],
     localFieldConfig: [],
-    filteredTasks: [sampleTask],
-    sortedTasksForSidebar: [sampleTask],
-    handleAddFilter: vi.fn(),
-    handleRemoveFilter: vi.fn(),
-    handleUpdateFilter: vi.fn(),
+    filteredTasks,
+    sortedTasksForSidebar: filteredTasks,
+    handleAddFilter,
+    handleRemoveFilter,
+    handleUpdateFilter,
     handleSortChange: vi.fn(),
     handleFieldToggle: vi.fn(),
   });
@@ -220,9 +253,9 @@ const setupMocks = (overrides?: {
   useGanttTimelineMock.mockReturnValue(timelineHandlers);
 
   const modalsHandlers = {
-    modalState: { create: { isOpen: false }, edit: { isOpen: false, selectedTask: null } },
-    deleteConfirmModalOpen: false,
-    taskToDelete: null,
+    modalState: overrides?.modalState ?? { create: { isOpen: false }, edit: { isOpen: false, selectedTask: null } },
+    deleteConfirmModalOpen: overrides?.deleteConfirmModalOpen ?? false,
+    taskToDelete: overrides?.taskToDelete ?? null,
     handleCreateRecord: vi.fn(),
     handleEditTask: vi.fn(),
     handleDeleteTask: vi.fn(),
@@ -263,7 +296,7 @@ const setupMocks = (overrides?: {
 };
 
 const renderChart = (overrides?: { isReadOnly?: boolean; hasMore?: boolean }) => {
-  const state = setupMocks(overrides);
+  const state = setupMocks(overrides as any);
   const actions = buildActions();
   render(<GanttChart tableData={tableData} onRefresh={() => undefined} actions={actions} />);
   return { ...state, actions };
@@ -272,6 +305,9 @@ const renderChart = (overrides?: { isReadOnly?: boolean; hasMore?: boolean }) =>
 describe('GanttChart', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    createRecordModalProps.length = 0;
+    editRecordModalProps.length = 0;
+    deleteConfirmModalProps.length = 0;
   });
 
   it('renders the new record button and triggers create handler', async () => {
@@ -313,5 +349,54 @@ describe('GanttChart', () => {
     expect(timelineHandlers.zoomOut).toHaveBeenCalledTimes(1);
     expect(timelineHandlers.resetZoom).toHaveBeenCalledTimes(1);
     expect(timelineHandlers.zoomIn).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders empty state when no tasks exist', () => {
+    setupMocks({ totalItems: 0, paginatedTasks: [], filteredTasks: [] });
+    render(<GanttChart tableData={tableData} onRefresh={() => undefined} actions={buildActions()} />);
+    expect(screen.getByText('No tasks found')).toBeInTheDocument();
+    expect(screen.getByText('Try adjusting your filters')).toBeInTheDocument();
+  });
+
+  it('loads more when load more button is clicked', async () => {
+    const { paginationData } = setupMocks({ hasMore: true, totalItems: 2, paginatedTasks: [sampleTask] });
+    render(<GanttChart tableData={tableData} onRefresh={() => undefined} actions={buildActions()} />);
+
+    const loadMore = screen.getByRole('button', { name: /Load more/ });
+    await userEvent.click(loadMore);
+    expect(paginationData.loadNextPage).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders edit modal with delete/duplicate when editable', () => {
+    setupMocks({
+      modalState: { create: { isOpen: false }, edit: { isOpen: true, selectedTask: sampleTask } },
+    });
+    render(<GanttChart tableData={tableData} onRefresh={() => undefined} actions={buildActions()} />);
+
+    const modal = screen.getByTestId('edit-record-modal');
+    expect(modal.getAttribute('data-recordid')).toBe(sampleTask.id);
+    expect(modal.getAttribute('data-has-delete')).toBe('true');
+    expect(modal.getAttribute('data-has-duplicate')).toBe('true');
+  });
+
+  it('renders delete confirmation modal when requested', () => {
+    setupMocks({
+      deleteConfirmModalOpen: true,
+      taskToDelete: sampleTask,
+    });
+    render(<GanttChart tableData={tableData} onRefresh={() => undefined} actions={buildActions()} />);
+
+    expect(screen.getByTestId('delete-confirm-modal')).toBeInTheDocument();
+    expect(screen.getByText(/Are you sure you want to delete the record/)).toBeInTheDocument();
+  });
+
+  it('omits filter popover when handlers are missing', () => {
+    setupMocks({
+      handleAddFilter: undefined,
+      handleRemoveFilter: undefined,
+      handleUpdateFilter: undefined,
+    });
+    render(<GanttChart tableData={tableData} onRefresh={() => undefined} actions={buildActions()} />);
+    expect(screen.queryByTestId('filter-popover')).toBeNull();
   });
 });

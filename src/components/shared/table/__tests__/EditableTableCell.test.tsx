@@ -342,6 +342,66 @@ describe('EditableTableCell', () => {
       expect(screen.getByTestId('year')).toHaveTextContent('2020');
     });
 
+    it('should use checkbox default when boolean value is "false"', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'boolean', meta: { checkboxDefault: true } }}
+          value="false"
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('checkbox')).toHaveTextContent('true');
+    });
+
+    it('should accept boolean string "true"', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'boolean' }}
+          value="true"
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('checkbox')).toHaveTextContent('true');
+    });
+
+    it('should normalize decimal values with commas', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'decimal', meta: { precision: '1.000' } }}
+          value="1,234.5"
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('decimal')).toHaveTextContent('1234.5');
+    });
+
+    it('should accept 12-hour time strings', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'time' }}
+          value="1:23 PM"
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('time')).toHaveTextContent('1:23 PM');
+    });
+
+    it('should fall back to default year when out of range', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'year', meta: { yearDefault: 2022 } }}
+          value={99999}
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('year')).toHaveTextContent('2022');
+    });
+
     it('should format system datetime fields using selected timezone', () => {
       vi.mocked(globalThis.localStorage.getItem).mockReturnValue('UTC');
       render(

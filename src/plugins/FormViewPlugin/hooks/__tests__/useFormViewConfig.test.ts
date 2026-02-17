@@ -2,10 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useFormViewConfig } from '../useFormViewConfig';
 
+const toastSuccess = vi.fn();
+const toastError = vi.fn();
+
 vi.mock('../../../../components/common/Toast', () => ({
   useToast: () => ({
-    success: vi.fn(),
-    error: vi.fn(),
+    success: toastSuccess,
+    error: toastError,
   }),
 }));
 
@@ -187,6 +190,38 @@ describe('useFormViewConfig', () => {
       expect(mockUpdateAppearance).toHaveBeenCalled();
     });
 
+    it('should call updateAppearance even when merged appearance is unchanged', async () => {
+      mockUpdateAppearance.mockResolvedValue(undefined);
+      const viewWithAppearance = {
+        ...defaultView,
+        meta: {
+          formViewAppearance: {
+            formTitle: 'Test Form',
+            formDescription: 'Test description',
+            backgroundColor: '#f8fafc',
+          },
+        },
+      };
+
+      const { result } = renderHook(() =>
+        useFormViewConfig({
+          view: viewWithAppearance,
+          formFields: defaultFormFields,
+          updateAppearance: mockUpdateAppearance,
+        })
+      );
+
+      act(() => {
+        result.current.handleConfigChange({ title: 'Test Form' });
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(700);
+      });
+
+      expect(mockUpdateAppearance).toHaveBeenCalled();
+    });
+
     it('should not call updateAppearance when view has no id', async () => {
       const viewWithoutId = { ...defaultView, id: undefined };
 
@@ -207,6 +242,90 @@ describe('useFormViewConfig', () => {
       });
 
       expect(mockUpdateAppearance).not.toHaveBeenCalled();
+    });
+
+    it('skips persistence when no fields are provided', async () => {
+      mockUpdateAppearance.mockResolvedValue(undefined);
+
+      const { result } = renderHook(() =>
+        useFormViewConfig({
+          view: defaultView,
+          formFields: defaultFormFields,
+          updateAppearance: mockUpdateAppearance,
+        })
+      );
+
+      act(() => {
+        result.current.handleConfigChange({});
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(700);
+      });
+
+      expect(mockUpdateAppearance).not.toHaveBeenCalled();
+    });
+
+    it('shows error toast when updateAppearance fails', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockUpdateAppearance.mockRejectedValue(new Error('boom'));
+
+      const { result } = renderHook(() =>
+        useFormViewConfig({
+          view: defaultView,
+          formFields: defaultFormFields,
+          updateAppearance: mockUpdateAppearance,
+        })
+      );
+
+      act(() => {
+        result.current.handleConfigChange({ title: 'Changed Title' });
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(700);
+      });
+
+      expect(toastError).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('persists merged appearance and shows success toast', async () => {
+      mockUpdateAppearance.mockResolvedValue(undefined);
+      const viewWithMeta = {
+        ...defaultView,
+        meta: { formViewAppearance: { backgroundColor: '#f8fafc' } },
+      };
+
+      const { result } = renderHook(() =>
+        useFormViewConfig({
+          view: viewWithMeta,
+          formFields: defaultFormFields,
+          updateAppearance: mockUpdateAppearance,
+        })
+      );
+
+      act(() => {
+        result.current.handleConfigChange({
+          title: 'Updated Title',
+          description: 'Updated Desc',
+          appearance: { primaryColor: '#111111' },
+        });
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(700);
+      });
+
+      expect(mockUpdateAppearance).toHaveBeenCalledWith(
+        expect.objectContaining({
+          formTitle: 'Updated Title',
+          formDescription: 'Updated Desc',
+          primaryColor: '#111111',
+        }),
+        viewWithMeta
+      );
+      expect(toastSuccess).toHaveBeenCalled();
     });
   });
 
@@ -247,6 +366,37 @@ describe('useFormViewConfig', () => {
       rerender({ formFields: newFields });
 
       expect(result.current.formConfig.fields).toHaveLength(3);
+    });
+  });
+
+  describe('external appearance sync', () => {
+    it('updates state when view meta formViewAppearance changes', () => {
+      const { result, rerender } = renderHook(
+        ({ view }) =>
+          useFormViewConfig({
+            view,
+            formFields: defaultFormFields,
+            updateAppearance: mockUpdateAppearance,
+          }),
+        { initialProps: { view: defaultView } }
+      );
+
+      const updatedView = {
+        ...defaultView,
+        meta: {
+          formViewAppearance: {
+            formTitle: 'Remote Title',
+            formDescription: 'Remote Desc',
+            backgroundColor: '#111111',
+          },
+        },
+      };
+
+      rerender({ view: updatedView });
+
+      expect(result.current.formConfig.title).toBe('Remote Title');
+      expect(result.current.formConfig.description).toBe('Remote Desc');
+      expect(result.current.formConfig.appearance?.backgroundColor).toBe('#111111');
     });
   });
 

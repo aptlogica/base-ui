@@ -21,6 +21,7 @@ describe('PluginConfigManager', () => {
   });
 
   it('falls back to default config when fetch fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('boom')) as any;
 
     const manager = new PluginConfigManager('/config/test.json');
@@ -28,6 +29,7 @@ describe('PluginConfigManager', () => {
 
     expect(config.plugins.builtin.length).toBeGreaterThan(0);
     expect(config.settings.pluginTimeout).toBe(10000);
+    consoleErrorSpy.mockRestore();
   });
 
   it('gets and updates plugin config and enabled state', async () => {

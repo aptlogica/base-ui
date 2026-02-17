@@ -232,6 +232,8 @@ describe('navigationPersistence', () => {
   });
 
   it('handles parse and storage failures safely', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     sessionStorage.setItem('serenibase_session_nav_u1', '{invalid-json');
     const parseResult = getLastNavigation('u1');
     expect(parseResult).toEqual({ workspaceId: null, baseId: null, tableId: null, viewId: null });
@@ -249,5 +251,7 @@ describe('navigationPersistence', () => {
       saveLastNavigation({ workspaceId: 'w1', baseId: null, tableId: null, viewId: null }, 'u1')
     ).not.toThrow();
     setItemSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
   });
 });

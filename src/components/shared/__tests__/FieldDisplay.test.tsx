@@ -8,7 +8,11 @@ const MockField = ({ value, 'data-testid': testId }: { value: unknown; 'data-tes
 
 vi.mock('../../../utils/fieldType', () => ({
   normalizeFieldType: (t: string) => {
-    const s = (t || 'text').toLowerCase();
+    const raw = t || 'text';
+    if (['createdTime', 'lastModifiedTime', 'createdBy', 'lastModifiedBy'].includes(raw)) {
+      return raw;
+    }
+    const s = raw.toLowerCase();
     if (s === 'multiselect') return 'multiSelect';
     return s;
   },
@@ -317,6 +321,54 @@ describe('FieldDisplay', () => {
         />
       );
       expect(screen.getByText('Default Name')).toBeInTheDocument();
+    });
+
+    it('should render remaining field branches', () => {
+      const { rerender } = render(
+        <FieldDisplay field={{ uidt: 'percent', title: 'P' }} value={5} />
+      );
+      expect(screen.getByTestId('percent')).toBeInTheDocument();
+
+      rerender(<FieldDisplay field={{ uidt: 'duration', title: 'D' }} value={60} />);
+      expect(screen.getByTestId('duration')).toBeInTheDocument();
+
+      rerender(<FieldDisplay field={{ uidt: 'year', title: 'Y' }} value={2024} />);
+      expect(screen.getByTestId('year')).toBeInTheDocument();
+
+      rerender(<FieldDisplay field={{ uidt: 'time', title: 'T' }} value="10:00" />);
+      expect(screen.getByTestId('time')).toBeInTheDocument();
+
+      rerender(<FieldDisplay field={{ uidt: 'date', title: 'D' }} value="2024-01-01" />);
+      expect(screen.getByTestId('date-field')).toBeInTheDocument();
+
+      rerender(<FieldDisplay field={{ uidt: 'rating', title: 'R' }} value={3} />);
+      expect(screen.getByTestId('rating')).toBeInTheDocument();
+
+      rerender(<FieldDisplay field={{ uidt: 'user', title: 'U' }} value="user" />);
+      expect(screen.getByTestId('user')).toBeInTheDocument();
+
+      rerender(<FieldDisplay field={{ uidt: 'json', title: 'J' }} value={{ a: 1 }} />);
+      expect(screen.getByTestId('json-field')).toBeInTheDocument();
+
+      rerender(<FieldDisplay field={{ uidt: 'createdTime', title: 'CT' }} value="2024-01-01" />);
+      expect(screen.getByTestId('audit-created-time')).toBeInTheDocument();
+
+      rerender(<FieldDisplay field={{ uidt: 'lastModifiedTime', title: 'LMT' }} value="2024-01-02" />);
+      expect(screen.getByTestId('audit-last-modified-time')).toBeInTheDocument();
+
+      rerender(<FieldDisplay field={{ uidt: 'createdBy', title: 'CB' }} value="x" />);
+      expect(screen.getByTestId('audit-created-by')).toBeInTheDocument();
+
+      rerender(<FieldDisplay field={{ uidt: 'lastModifiedBy', title: 'LMB' }} value="x" />);
+      expect(screen.getByTestId('audit-last-modified-by')).toBeInTheDocument();
+
+      rerender(
+        <FieldDisplay
+          field={{ uidt: 'select', title: 'S', meta: { options: ['A'] } }}
+          value="A"
+        />
+      );
+      expect(screen.getByTestId('single-select')).toBeInTheDocument();
     });
   });
 

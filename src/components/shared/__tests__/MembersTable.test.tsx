@@ -5,6 +5,8 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MembersTable, type Member } from '../MembersTable';
 
+const useUserRolesAndAccessMock = vi.fn(() => ({ data: [], isLoading: false, error: null }));
+
 vi.mock('axios', () => ({
   default: {
     create: () => ({
@@ -21,7 +23,7 @@ vi.mock('../../hooks/useClickOutside', () => ({
 }));
 
 vi.mock('../../hooks/useApi', () => ({
-  useUserRolesAndAccess: vi.fn(() => ({ data: [], isLoading: false, error: null })),
+  useUserRolesAndAccess: (...args: any[]) => useUserRolesAndAccessMock(...args),
   useTenantUsers: vi.fn(() => ({ data: [], isLoading: false, error: null })),
 }));
 
@@ -86,6 +88,7 @@ const createMember = (overrides: Partial<Member> = {}): Member => ({
 describe('MembersTable', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useUserRolesAndAccessMock.mockReturnValue({ data: [], isLoading: false, error: null });
   });
 
   describe('Rendering', () => {
@@ -178,6 +181,46 @@ describe('MembersTable', () => {
     });
   });
 
+  describe('Role Filter', () => {
+    it('filters members by selected role', async () => {
+      const members = [
+        createMember({
+          id: '1',
+          roles: [{ id: 'r1', name: 'owner', scope_level: 'system' }],
+        }),
+        createMember({
+          id: '2',
+          roles: [{ id: 'r2', name: 'base-member', scope_level: 'workspace' }],
+        }),
+      ];
+
+      renderWithQueryClient(<MembersTable members={members} showSearch />);
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getByRole('button', { name: 'Owner' }));
+
+      expect(screen.getAllByText('Owner').length).toBeGreaterThan(0);
+      expect(screen.queryByText('Base Member')).not.toBeInTheDocument();
+    });
+
+    it('shows empty state when no members match role filter', async () => {
+      const members = [
+        createMember({
+          id: '1',
+          roles: [{ id: 'r1', name: 'base-member', scope_level: 'workspace' }],
+        }),
+      ];
+
+      renderWithQueryClient(<MembersTable members={members} showSearch />);
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getByRole('button', { name: 'Owner' }));
+
+      expect(screen.getByText('No members found with the role')).toBeInTheDocument();
+      expect(screen.getByText('"Owner"')).toBeInTheDocument();
+    });
+  });
+
   describe('Sort', () => {
     it('should have sortable User column', () => {
       renderWithQueryClient(<MembersTable members={[createMember()]} />);
@@ -232,14 +275,20 @@ describe('MembersTable', () => {
   describe('Expand access details', () => {
     it('should show View in detail button for member row', () => {
       renderWithQueryClient(<MembersTable members={[createMember()]} />);
-      expect(screen.getByText('View in detail ↓')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /View in detail/i })).toBeInTheDocument();
     });
 
     it('should toggle to Collapse when View in detail is clicked', async () => {
       renderWithQueryClient(<MembersTable members={[createMember()]} />);
-      const expandButton = screen.getByText('View in detail ↓');
+      const expandButton = screen.getByRole('button', { name: /View in detail/i });
       await userEvent.click(expandButton);
-      expect(screen.getByText('Collapse ↑')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Collapse/i })).toBeInTheDocument();
+    });
+    it('shows loading state for access details', async () => {
+      useUserRolesAndAccessMock.mockReturnValue({ data: null, isLoading: true, error: null });
+      renderWithQueryClient(<MembersTable members={[createMember()]} />);
+      await userEvent.click(screen.getByRole('button', { name: /View in detail/i }));
+      expect(screen.getByText(/access details/i)).toBeInTheDocument();
     });
   });
 
@@ -249,8 +298,8 @@ describe('MembersTable', () => {
         createMember({ id: `m${i}`, name: `User ${i}`, email: `u${i}@x.com` })
       );
       renderWithQueryClient(<MembersTable members={members} />);
-      expect(screen.getByText('Next →')).toBeInTheDocument();
-      expect(screen.getByText('← Previous')).toBeInTheDocument();
+      expect(screen.getByText(/Next/i)).toBeInTheDocument();
+      expect(screen.getByText(/Previous/i)).toBeInTheDocument();
     });
 
     it('should not show pagination when 10 or fewer members', () => {
@@ -258,7 +307,7 @@ describe('MembersTable', () => {
         createMember({ id: `m${i}`, name: `User ${i}` })
       );
       renderWithQueryClient(<MembersTable members={members} />);
-      expect(screen.queryByText('Next →')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Next/i)).not.toBeInTheDocument();
     });
   });
 
@@ -277,3 +326,4 @@ describe('MembersTable', () => {
     });
   });
 });
+

@@ -57,6 +57,12 @@ describe('AttachmentPreviewModal', () => {
     expect(baseProps.onClose).toHaveBeenCalled();
   });
 
+  it('closes on Escape when not editing or in carousel', () => {
+    render(<AttachmentPreviewModal {...baseProps} />);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(baseProps.onClose).toHaveBeenCalled();
+  });
+
   it('calls onAttachFile and opens carousel on card click', async () => {
     render(<AttachmentPreviewModal {...baseProps} />);
     fireEvent.click(screen.getByRole('button', { name: /attach file/i }));
@@ -106,6 +112,45 @@ describe('AttachmentPreviewModal', () => {
         attachments: ['1'],
       });
     });
+  });
+
+  it('cancels edit on Escape and does not call update mutation', async () => {
+    render(<AttachmentPreviewModal {...baseProps} />);
+    const firstCard = screen.getByText('A Image').closest('.cursor-pointer') as HTMLElement;
+    fireEvent.mouseEnter(firstCard);
+
+    fireEvent.click(screen.getAllByTitle('Edit')[0]);
+    const editInput = screen.getByPlaceholderText('Enter filename...');
+    fireEvent.change(editInput, { target: { value: 'Renamed' } });
+    fireEvent.keyDown(editInput, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(updateAssetMutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  it('triggers download when download button is clicked', () => {
+    const clickSpy = vi.fn();
+    const originalCreateElement = document.createElement.bind(document);
+    const createElementSpy = vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+      if (tagName.toLowerCase() === 'a') {
+        return {
+          click: clickSpy,
+          set href(_val: string) {},
+          set download(_val: string) {},
+        } as any;
+      }
+      return originalCreateElement(tagName);
+    });
+
+    render(<AttachmentPreviewModal {...baseProps} />);
+    const firstCard = screen.getByText('A Image').closest('.cursor-pointer') as HTMLElement;
+    fireEvent.mouseEnter(firstCard);
+    fireEvent.click(screen.getAllByTitle('Download')[0]);
+
+    expect(createElementSpy).toHaveBeenCalledWith('a');
+    expect(clickSpy).toHaveBeenCalled();
+    createElementSpy.mockRestore();
   });
 
   it('copies url and hides edit controls in readOnly mode', async () => {

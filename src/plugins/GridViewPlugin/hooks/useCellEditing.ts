@@ -282,6 +282,13 @@ export function useCellEditing({
       return;
     }
 
+    const isMultiSelectField = String(column.uidt || column.type || '').toLowerCase() === 'multiselect';
+
+    // Update local state immediately for multi-select to keep UI responsive
+    if (isMultiSelectField && onRecordsUpdate) {
+      onRecordsUpdate(prevRecords => updateLocalRecord(prevRecords, rowId, columnKey, value));
+    }
+
     // Create a unique key for this cell
     const cellKey = `${rowId}-${columnKey}`;
 
@@ -322,6 +329,7 @@ export function useCellEditing({
     }
 
     // Set new timeout to send API call after 500ms of no typing
+    const debounceMs = isMultiSelectField ? 1200 : 500;
     const timeout = setTimeout(async () => {
       const change = pendingChanges.current.get(cellKey);
       if (change && column.id) {
@@ -329,7 +337,7 @@ export function useCellEditing({
       }
       pendingChanges.current.delete(cellKey);
       debounceTimeouts.current.delete(cellKey);
-    }, 500);
+    }, debounceMs);
 
     debounceTimeouts.current.set(cellKey, timeout);
   }, [

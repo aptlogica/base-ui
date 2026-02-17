@@ -25,6 +25,9 @@ describe('CreateBaseModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn(() => 'blob:preview'),
+    } as any);
   });
 
   it('renders nothing when closed', () => {
@@ -152,6 +155,78 @@ describe('CreateBaseModal', () => {
 
     expect(screen.getByText(/please upload a valid image file/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create Base' })).toBeDisabled();
+  });
+
+  it('shows image dimension error for large image', async () => {
+    const OriginalImage = globalThis.Image;
+    class MockImage {
+      width = 900;
+      height = 500;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_value: string) {
+        this.onload?.();
+      }
+    }
+    (globalThis as any).Image = MockImage;
+
+    render(
+      <CreateBaseModal
+        isOpen={true}
+        onClose={onClose}
+        onCreate={onCreate}
+        workspaceId="w1"
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Enter base name'), {
+      target: { value: 'Valid Base' },
+    });
+
+    const fileInput = document.getElementById('image-upload') as HTMLInputElement;
+    const goodFile = new File(['img'], 'image.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [goodFile] } });
+
+    expect(screen.getByText(/Image dimensions must be max 800 x 400px/i)).toBeInTheDocument();
+
+    (globalThis as any).Image = OriginalImage;
+  });
+
+  it('handles drop upload and sets preview', async () => {
+    const OriginalImage = globalThis.Image;
+    class MockImage {
+      width = 200;
+      height = 200;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_value: string) {
+        this.onload?.();
+      }
+    }
+    (globalThis as any).Image = MockImage;
+
+    render(
+      <CreateBaseModal
+        isOpen={true}
+        onClose={onClose}
+        onCreate={onCreate}
+        workspaceId="w1"
+      />
+    );
+
+    const dropZone = screen.getByText(/Click to upload/i).closest('button');
+    const dropFile = new File(['img'], 'image.png', { type: 'image/png' });
+    fireEvent.drop(dropZone as HTMLElement, {
+      dataTransfer: { files: [dropFile] },
+    });
+
+    await waitFor(() => {
+      const img = screen.getByAltText('Preview') as HTMLImageElement;
+      expect(img).toBeInTheDocument();
+      expect(img.src).toContain('blob:preview');
+    });
+
+    (globalThis as any).Image = OriginalImage;
   });
 
   it('calls onClose for escape key and cancel button', () => {

@@ -103,6 +103,23 @@ describe('Attachment', () => {
     expect(removeAttachmentsMock).not.toHaveBeenCalled();
   });
 
+  it('does not call API mutations when required identifiers are missing', async () => {
+    const user = userEvent.setup();
+    render(
+      <Attachment
+        value={[]}
+        onChange={vi.fn()}
+        persistImmediately={true}
+      />
+    );
+
+    await user.click(screen.getByTitle('Add attachment'));
+    await user.click(screen.getByText('Apply Files With Object'));
+
+    expect(addAttachmentMock).not.toHaveBeenCalled();
+    expect(removeAttachmentsMock).not.toHaveBeenCalled();
+  });
+
   it('calls addAttachmentMutation when persistImmediately is true and file objects exist', async () => {
     const user = userEvent.setup();
     render(
@@ -127,6 +144,34 @@ describe('Attachment', () => {
         files: expect.any(Array),
       })
     );
+  });
+
+  it('reverts local change when addAttachmentMutation fails', async () => {
+    addAttachmentMock.mockRejectedValueOnce(new Error('upload failed'));
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const initialValue = [{ id: 'att-1', url: 'file-a' }];
+
+    render(
+      <Attachment
+        value={initialValue}
+        onChange={onChange}
+        persistImmediately={true}
+        model_id="m1"
+        column_id="c1"
+        row_id={1}
+      />
+    );
+
+    await user.click(screen.getByTitle('Add attachment'));
+    await user.click(screen.getByText('Apply Files With Object'));
+
+    await waitFor(() => {
+      expect(onChange).toHaveBeenCalled();
+    });
+
+    const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1]?.[0];
+    expect(lastCall).toEqual(initialValue);
   });
 
   it('calls removeAttachmentsMutation when files are removed', async () => {

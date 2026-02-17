@@ -59,7 +59,7 @@ describe('useInfiniteScroll', () => {
         { id: 'rec-5', name: 'Record 5', _meta: { id: 'rec-5' } }
       ];
       
-      mockMutateAsync.mockResolvedValueOnce({ records: newRecords });
+      mockMutateAsync.mockResolvedValueOnce({ data: { records: newRecords } });
 
       const { result } = renderHook(() => 
         useInfiniteScroll({ 
@@ -88,7 +88,7 @@ describe('useInfiniteScroll', () => {
     });
 
     it('should handle empty response and set hasMore to false', async () => {
-      mockMutateAsync.mockResolvedValueOnce({ records: [] });
+      mockMutateAsync.mockResolvedValueOnce({ data: { records: [] } });
 
       const { result } = renderHook(() => 
         useInfiniteScroll({ tableId: 'table-1' })
@@ -157,7 +157,7 @@ describe('useInfiniteScroll', () => {
     });
 
     it('should not fetch when hasMore is false', async () => {
-      mockMutateAsync.mockResolvedValueOnce({ records: [] });
+      mockMutateAsync.mockResolvedValueOnce({ data: { records: [] } });
 
       const { result } = renderHook(() => 
         useInfiniteScroll({ tableId: 'table-1' })
@@ -292,6 +292,51 @@ describe('useInfiniteScroll', () => {
 
       expect(result.current.allRecords).toEqual(recordsV2);
     });
+
+    it('should preserve page 2+ records when preservePagesOnNextUpdate is used', async () => {
+      const page1 = [
+        { id: 'rec-1', name: 'Record 1', last_modified_time: '2023-01-01' },
+        { id: 'rec-2', name: 'Record 2', last_modified_time: '2023-01-01' }
+      ];
+      const page1Updated = [
+        { id: 'rec-1', name: 'Record 1 updated', last_modified_time: '2023-01-02' },
+        { id: 'rec-2', name: 'Record 2', last_modified_time: '2023-01-01' }
+      ];
+
+      mockMutateAsync.mockResolvedValueOnce({
+        data: {
+          records: [{ id: 'rec-3', name: 'Record 3', _meta: { id: 'rec-3' } }]
+        }
+      });
+
+      const { result, rerender } = renderHook(
+        (props: { initialRecords: any[] }) =>
+          useInfiniteScroll({
+            tableId: 'table-1',
+            initialRecords: props.initialRecords
+          }),
+        {
+          initialProps: { initialRecords: page1 }
+        }
+      );
+
+      await act(async () => {
+        await result.current.fetchMoreRecords();
+      });
+
+      expect(result.current.allRecords.some(r => r.id === 'rec-3')).toBe(true);
+
+      act(() => {
+        result.current.preservePagesOnNextUpdate();
+      });
+
+      rerender({ initialRecords: page1Updated });
+
+      expect(result.current.allRecords.map(r => r.id)).toEqual(
+        expect.arrayContaining(['rec-1', 'rec-2', 'rec-3'])
+      );
+      expect(result.current.allRecords.find(r => r.id === 'rec-1')?.name).toBe('Record 1 updated');
+    });
   });
 
   describe('loading states', () => {
@@ -367,6 +412,26 @@ describe('useInfiniteScroll', () => {
       );
 
       expect(result.current.allRecords).toEqual(recordsWithArrays);
+    });
+  });
+
+  describe('hasMore behavior', () => {
+    it('should set hasMore to false when fewer than page size records are returned', async () => {
+      mockMutateAsync.mockResolvedValueOnce({
+        data: {
+          records: Array.from({ length: 5 }, (_, i) => ({ id: `rec-${i + 10}` }))
+        }
+      });
+
+      const { result } = renderHook(() =>
+        useInfiniteScroll({ tableId: 'table-1' })
+      );
+
+      await act(async () => {
+        await result.current.fetchMoreRecords();
+      });
+
+      expect(result.current.hasMore).toBe(false);
     });
   });
 });

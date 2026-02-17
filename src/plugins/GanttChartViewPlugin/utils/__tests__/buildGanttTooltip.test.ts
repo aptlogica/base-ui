@@ -339,5 +339,56 @@ describe('buildGanttTooltipLines - richer branch coverage', () => {
     const lines = buildGanttTooltipLines({ task, columns, options: baseOptions });
     expect(lines.join(' ')).toContain('a.pdf, b.docx');
   });
+
+  it('formats time values and keeps invalid time raw', () => {
+    const task = {
+      ...baseTask,
+      rawData: {
+        validTime: '07:30',
+        invalidTime: '7:3',
+      },
+    };
+    const columns = [
+      { id: 't1', column_name: 'validTime', uidt: 'time' },
+      { id: 't2', column_name: 'invalidTime', uidt: 'time' },
+    ];
+
+    const lines = buildGanttTooltipLines({ task, columns, options: baseOptions });
+    const joined = lines.join(' ');
+    expect(joined).toContain('formatted-07:30');
+    expect(joined).toContain('7:3');
+  });
+
+  it('returns hyphen for invalid numeric values and unknown objects', () => {
+    const task = {
+      ...baseTask,
+      rawData: {
+        count: 'NaN',
+        ratio: 'not-a-number',
+        unknownObj: { foo: 'bar' },
+      },
+    };
+    const columns = [
+      { id: 'n', column_name: 'count', uidt: 'Number' },
+      { id: 'd', column_name: 'ratio', uidt: 'Decimal' },
+      { id: 'o', column_name: 'unknownObj', uidt: 'text' },
+    ];
+
+    const lines = buildGanttTooltipLines({ task, columns, options: baseOptions });
+    expect(lines.join(' ')).toContain('-');
+  });
+
+  it('truncates long string values', () => {
+    const task = {
+      ...baseTask,
+      rawData: {
+        note: 'x'.repeat(80),
+      },
+    };
+    const columns = [{ id: 'n', column_name: 'note', uidt: 'text' }];
+
+    const lines = buildGanttTooltipLines({ task, columns, options: baseOptions });
+    expect(lines.join(' ')).toContain('...');
+  });
 });
 
