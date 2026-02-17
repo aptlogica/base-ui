@@ -774,7 +774,7 @@ export const Table: React.FC<TableProps> = ({
         >
           <div className="bg-background w-full">
             {/* Sticky Table Header */}
-            <div ref={headerRef} className="sticky top-0 z-20 w-full" onClick={() => setActiveCell(null)}>
+            <div ref={headerRef} className="sticky top-0 z-20 w-full" onClick={() => setActiveCell(null)} onKeyDown={(e) => {}}>
               <div
                 className="grid bg-background"
                 style={{

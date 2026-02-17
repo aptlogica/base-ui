@@ -799,14 +799,7 @@ export function renderNewColumnConfigStep(props: any) {
                   }
                 }}
               />
-              {/* <input
-                type="color"
-                value={color || '#cccccc'}
-                onChange={(e) => setColor(e.target.value)}
-                className="flex-shrink-0 inline-flex items-center justify-center px-2 h-9 border border-[var(--color-gray-300)] text-[var(--color-text-tertiary)] rounded-xl hover:bg-[var(--color-hover-bg)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]"
-                style={{ cursor: 'pointer' }}
-              /> */}
-
+          
               <button
                 type="button"
                 className="px-3 py-1 btn-add-option"
@@ -953,17 +946,18 @@ export function renderNewColumnConfigStep(props: any) {
         return (
           <>
             <div className="flex items-center gap-2 mb-3">
-              <label className="relative inline-flex items-center cursor-pointer">
+              <label htmlFor='display-as-progress' className="relative inline-flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
+                  id="display-as-progress"
                   checked={displayAsProgress}
                   onChange={e => setDisplayAsProgress(e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-              </label>
+                <div className="absolute left-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
               <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Display as progress</span>
+              </label>
             </div>
 
             {displayAsProgress && (
@@ -1420,9 +1414,7 @@ export function renderNewColumnConfigStep(props: any) {
                     className="hidden"
                     checked={hourFormat === '12'}
                     onChange={() => setHourFormat('12')}
-                  />
-                  12 Hrs
-                </label>
+                  />12 Hrs</label>
                 <label className={`flex items-center px-3 py-1.5 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '24' ?
                   'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
                   <input
@@ -1430,9 +1422,7 @@ export function renderNewColumnConfigStep(props: any) {
                     className="hidden"
                     checked={hourFormat === '24'}
                     onChange={() => setHourFormat('24')}
-                  />
-                  24 Hrs
-                </label>
+                  />24 Hrs</label>
               </div>
             </div>
 
@@ -1545,9 +1535,10 @@ export function renderNewColumnConfigStep(props: any) {
           <>
             <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Multiple users</div>
             <div className="flex items-center gap-2 mb-3">
-              <label className="relative inline-flex items-center cursor-pointer">
+              <label htmlFor='multi-user-select' className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
+                  id="multi-user-select"
                   checked={allowMultipleUsers}
                   onChange={e => setAllowMultipleUsers(e.target.checked)}
                   className="sr-only peer"

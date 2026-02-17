@@ -222,7 +222,7 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
   }
   if (params.selectedTypeKey === 'select') {
     config.options = params.selectOptions;
-    if (params.singleDefault && params.singleDefault.trim()) {
+    if (params.singleDefault?.trim()) {
       config.defaultValue = params.singleDefault;
     }
   }
@@ -241,7 +241,7 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
   }
   if (params.selectedTypeKey === 'datetime') {
     applyDateTimeConfig(config, params);
-    if (params.dateTimeDefault && params.dateTimeDefault.trim()) {
+    if (params.dateTimeDefault?.trim()) {
       let formattedDateTime = params.dateTimeDefault;
       if (!formattedDateTime.includes('T')) {
         const today = new Date().toISOString().split('T')[0];
@@ -284,14 +284,14 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
   }
   if (params.selectedTypeKey === 'date') {
     config.dateFormat = params.dateFormat;
-    if (params.dateDefault && params.dateDefault.trim()) {
+    if (params.dateDefault?.trim()) {
       config.defaultValue = params.dateDefault;
     }
   }
   if (params.selectedTypeKey === 'time') {
     config.hourFormat = params.hourFormat;
     config.timeFormat = params.timeFormat;
-    if (params.timeDefault && params.timeDefault.trim()) {
+    if (params.timeDefault?.trim()) {
       let formattedTime = params.timeDefault;
       if (params.hourFormat === '12' && params.timeDefault.includes(' ')) {
         const [time, period] = params.timeDefault.split(' ');

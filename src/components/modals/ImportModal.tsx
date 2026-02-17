@@ -82,7 +82,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const isTitleUnique = (titleToCheck: string): boolean => {
     const trimmedTitle = titleToCheck.trim();
     if (!trimmedTitle) return true;
-    return !isNameDuplicate(trimmedTitle, existingTables as any[]);
+    return !isNameDuplicate(trimmedTitle, existingTables);
   };
 
   // Reset form when modal opens/closes
@@ -127,7 +127,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   };
 
   const validateTitle = (titleValue: string): string | null => {
-    const result = validateTableName(titleValue, existingTables as any[]);
+    const result = validateTableName(titleValue, existingTables);
     if (result.isValid) return null;
 
     if (result.error === 'Table name is required') {

@@ -179,9 +179,9 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     } else if (fieldType === 'links' || field.uidt === 'links') {
       const ids = (Array.isArray(value) ? value : [])
         .map((item: any) => item?.id ?? item)
-        .map((id: any) => String(id))
+        .map(String)
         .filter((id: string) => id.trim() !== '')
-        .sort();
+        .sort((a, b) => a.localeCompare(b));
       return ids.join(',');
     }
     return value;

@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
+import { useContextMenuDismiss, useContextMenuPosition } from './useContextMenu';
 
 interface ColumnContextMenuProps {
   x: number;
@@ -21,75 +22,13 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
   canDelete = true
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ top: y, left: x });
+  const position = useContextMenuPosition(x, y, menuRef, {
+    menuHeightFallback: 120,
+    menuWidthFallback: 180,
+    margin: 10,
+  });
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    }
-    function handleEsc(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose();
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEsc);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEsc);
-    };
-  }, [onClose]);
-
-  // Calculate position to prevent going off-screen (similar to ContextMenu)
-  useEffect(() => {
-    if (!menuRef.current) return;
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const margin = 10;
-
-    // Use requestAnimationFrame to ensure menu is rendered before measuring
-    requestAnimationFrame(() => {
-      if (!menuRef.current) return;
-      
-      const menuRect = menuRef.current.getBoundingClientRect();
-      const menuHeight = menuRect.height || 120; // Fallback estimate
-      const menuWidth = menuRect.width || 180; // Fallback estimate
-
-      let adjustedTop = y;
-      let adjustedLeft = x;
-
-      // Check if menu would go off bottom of screen
-      const spaceBelow = viewportHeight - y;
-      const spaceAbove = y;
-
-      // If not enough space below and more space above, open above
-      if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
-        adjustedTop = y - menuHeight;
-      }
-
-      // Ensure menu doesn't go above viewport
-      if (adjustedTop < margin) {
-        adjustedTop = margin;
-      }
-
-      // Ensure menu doesn't go below viewport
-      if (adjustedTop + menuHeight > viewportHeight - margin) {
-        adjustedTop = viewportHeight - menuHeight - margin;
-      }
-
-      // Check if menu would go off right edge
-      if (x + menuWidth > viewportWidth - margin) {
-        adjustedLeft = viewportWidth - menuWidth - margin;
-      }
-
-      // Ensure menu doesn't go off left edge
-      if (adjustedLeft < margin) {
-        adjustedLeft = margin;
-      }
-
-      setPosition({ top: adjustedTop, left: adjustedLeft });
-    });
-  }, [x, y]);
+  useContextMenuDismiss(menuRef, onClose);
 
   const style: React.CSSProperties = {
     position: 'fixed',

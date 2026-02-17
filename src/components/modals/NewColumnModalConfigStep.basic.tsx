@@ -1,6 +1,4 @@
-import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-
 import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown';
 import {
   SingleLineText,
@@ -201,7 +199,7 @@ export function renderBasicConfigStep(props: any) {
             />
           )}
           <div className="relative">
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
+            <button className="flex items-center gap-2 text-primarpnewy-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
               <Plus className="w-4 h-4" />
               Add description
             </button>

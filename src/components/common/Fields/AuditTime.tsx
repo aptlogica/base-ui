@@ -1,7 +1,7 @@
 import React from 'react';
-import { AuditTime } from './AuditTime';
+import { DateTime } from './DateTime';
 
-interface AuditLastModifiedTimeProps {
+interface AuditTimeProps {
   label?: string;
   value: string;
   onChange: (value: string) => void;
@@ -25,6 +25,6 @@ interface AuditLastModifiedTimeProps {
   };
 }
 
-export const AuditLastModifiedTime: React.FC<AuditLastModifiedTimeProps> = (props) => {
-  return <AuditTime {...props} />;
+export const AuditTime: React.FC<AuditTimeProps> = (props) => {
+  return <DateTime {...props} />;
 };

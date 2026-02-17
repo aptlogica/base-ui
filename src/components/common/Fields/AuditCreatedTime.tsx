@@ -1,5 +1,5 @@
 import React from 'react';
-import { DateTime } from './DateTime';
+import { AuditTime } from './AuditTime';
 
 interface AuditCreatedTimeProps {
   label?: string;
@@ -26,5 +26,5 @@ interface AuditCreatedTimeProps {
 }
 
 export const AuditCreatedTime: React.FC<AuditCreatedTimeProps> = (props) => {
-  return <DateTime {...props} />;
+  return <AuditTime {...props} />;
 };
