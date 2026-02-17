@@ -150,6 +150,18 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
 
   // Helper to get display value - show "-" for empty values (except for fields that handle empty states themselves)
   const getDisplayValue = (fieldType: string, val: any): any => {
+    if (fieldType === 'duration') {
+      if (isEmpty(val)) return '-';
+      if (typeof val === 'number') return globalThis.Number.isFinite(val) ? val : '-';
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        if (!trimmed || trimmed === '-') return '-';
+        const parsed = globalThis.Number(trimmed);
+        return globalThis.Number.isFinite(parsed) ? parsed : '-';
+      }
+      return '-';
+    }
+
     // Fields that shouldn't show "-" (they have their own empty state handling)
     const noDashFields = ['boolean', 'rating', 'user', 'attachment', 'links', 'multiSelect', 'json'];
     if (noDashFields.includes(fieldType)) {
@@ -217,7 +229,9 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
         const parts = parsedConfig.precision.split('.');
         precision = parts[1] ? parts[1].length : 2;
       }
-      renderedComponent = (
+      renderedComponent = commonProps.value === '-' ? (
+        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-muted-foreground">-</div>
+      ) : (
         <Decimal
           {...commonProps}
           decimals={precision}
@@ -271,7 +285,9 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
         const parts = parsedConfig.precision.split('.');
         precision = parts[1] ? parts[1].length : 2;
       }
-      renderedComponent = (
+      renderedComponent = commonProps.value === '-' ? (
+        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-muted-foreground">-</div>
+      ) : (
         <Currency
           {...commonProps}
           config={{ ...parsedConfig, precision }}
@@ -292,7 +308,9 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       );
       break;
     case 'duration':
-      renderedComponent = (
+      renderedComponent = commonProps.value === '-' ? (
+        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-muted-foreground">-</div>
+      ) : (
         <Duration
           {...commonProps}
           config={parsedConfig}
@@ -323,7 +341,9 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       );
       break;
     case 'datetime':
-      renderedComponent = isSystemField ? (
+      renderedComponent = commonProps.value === '-' ? (
+        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-muted-foreground">-</div>
+      ) : isSystemField ? (
         <div className="w-full px-3 py-2 text-sm text-muted-foreground cursor-not-allowed">
           {value ? new Date(value).toLocaleString() : getDisplayValue(fieldType, value)}
         </div>
@@ -367,7 +387,9 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       );
       break;
     case 'url':
-      renderedComponent = (
+      renderedComponent = commonProps.value === '-' ? (
+        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-muted-foreground">-</div>
+      ) : (
         <URLField
           {...commonProps}
           config={{ ...parsedConfig, showIcon: !hideActionButtons }}
