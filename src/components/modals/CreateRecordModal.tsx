@@ -111,13 +111,6 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         setRowData(prev => ({ ...prev, [field.id]: value }));
     };
 
-    const isValuePresent = (value: any): boolean => {
-        if (Array.isArray(value)) return value.length > 0;
-        if (value === null || value === undefined) return false;
-        if (typeof value === 'string') return value.trim() !== '';
-        return true;
-    };
-
     const normalizeForCompare = (value: any): any => {
         if (value instanceof Date) return value.toISOString();
         if (Array.isArray(value)) return JSON.stringify(value.map(normalizeForCompare));
@@ -136,15 +129,11 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         return normalizeForCompare(a) === normalizeForCompare(b);
     };
 
-    const hasAnyValue = useMemo(() => {
-        return (fields || []).some(field => isValuePresent(rowData[field.id]));
-    }, [fields, rowData]);
-
     const hasChanges = useMemo(() => {
         return (fields || []).some(field => !isValueEqual(rowData[field.id], initialRowData[field.id]));
     }, [fields, rowData, initialRowData]);
 
-    const canSave = hasAnyValue || hasChanges;
+    const canSave = hasChanges;
     const isSaveDisabled = submitting || !canSave;
 
     const validateRequired = (): string[] => {
