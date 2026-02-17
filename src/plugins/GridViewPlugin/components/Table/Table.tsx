@@ -791,11 +791,11 @@ export const Table: React.FC<TableProps> = ({
                 >
                   <input
                     type="checkbox"
-                    className="hidden group-hover:inline-block w-4 h-4 text-primary rounded-xl focus:ring-primary checkbox-primary-brand"
+                    className={`checkbox-primary-brand w-4 h-4 text-primary rounded-xl focus:ring-primary ${selectedRows.size === filteredAndSortedData.length && filteredAndSortedData.length > 0 ? '!grid' : '!hidden group-hover:!grid'}`}
                     checked={selectedRows.size === filteredAndSortedData.length && filteredAndSortedData.length > 0}
                     onChange={(e) => handleSelectAll(e.target.checked)}
                   />
-                  <span className="text-xs font-medium text-tertiary ml-2 inline-block group-hover:hidden">#</span>
+                  <span className={`text-xs font-medium text-tertiary ml-2 inline-block ${selectedRows.size === filteredAndSortedData.length && filteredAndSortedData.length > 0 ? 'hidden' : 'group-hover:hidden'}`}>#</span>
                 </div>
 
                 {/* Column headers */}
