@@ -118,6 +118,18 @@ const defaultColumn = {
 
 describe('EditableTableCell', () => {
   const mockOnChange = vi.fn();
+  const compare = (EditableTableCell as any).compare as (prev: any, next: any) => boolean;
+  const baseProps = {
+    column: defaultColumn,
+    value: 'a',
+    onChange: mockOnChange,
+    width: 200,
+    isLast: false,
+    allowEdit: true,
+    isBorder: false,
+    isSystemField: false,
+    currentRowId: 1,
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -210,6 +222,56 @@ describe('EditableTableCell', () => {
         />
       );
       expect(screen.getByTestId('single-line-text')).toBeInTheDocument();
+    });
+  });
+
+  describe('memo comparison', () => {
+    it('returns true when props are equivalent', () => {
+      const prevProps = { ...baseProps };
+      const nextProps = { ...baseProps };
+      expect(compare(prevProps, nextProps)).toBe(true);
+    });
+
+    it('returns false when width changes', () => {
+      const prevProps = { ...baseProps };
+      const nextProps = { ...baseProps, width: 240 };
+      expect(compare(prevProps, nextProps)).toBe(false);
+    });
+
+    it('returns false when array value lengths differ', () => {
+      const prevProps = { ...baseProps, value: ['a'] };
+      const nextProps = { ...baseProps, value: ['a', 'b'] };
+      expect(compare(prevProps, nextProps)).toBe(false);
+    });
+
+    it('returns true when array values are equal', () => {
+      const prevProps = { ...baseProps, value: ['a', 'b'] };
+      const nextProps = { ...baseProps, value: ['a', 'b'] };
+      expect(compare(prevProps, nextProps)).toBe(true);
+    });
+
+    it('returns false when object value keys differ', () => {
+      const prevProps = { ...baseProps, value: { a: 1 } };
+      const nextProps = { ...baseProps, value: { a: 1, b: 2 } };
+      expect(compare(prevProps, nextProps)).toBe(false);
+    });
+
+    it('returns false when config values differ', () => {
+      const prevProps = { ...baseProps, column: { ...defaultColumn, config: { icon: 'a' } } };
+      const nextProps = { ...baseProps, column: { ...defaultColumn, config: { icon: 'b' } } };
+      expect(compare(prevProps, nextProps)).toBe(false);
+    });
+
+    it('returns false when meta object values differ', () => {
+      const prevProps = { ...baseProps, column: { ...defaultColumn, meta: { a: 1 } } };
+      const nextProps = { ...baseProps, column: { ...defaultColumn, meta: { a: 2 } } };
+      expect(compare(prevProps, nextProps)).toBe(false);
+    });
+
+    it('returns false when onChange reference changes', () => {
+      const prevProps = { ...baseProps, onChange: vi.fn() };
+      const nextProps = { ...baseProps, onChange: vi.fn() };
+      expect(compare(prevProps, nextProps)).toBe(false);
     });
   });
 
@@ -366,6 +428,18 @@ describe('EditableTableCell', () => {
       expect(screen.getByTestId('checkbox')).toHaveTextContent('true');
     });
 
+    it('should accept boolean string "1" and treat it as true', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'boolean' }}
+          value="1"
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('checkbox')).toHaveTextContent('true');
+    });
+
     it('should normalize decimal values with commas', () => {
       render(
         <EditableTableCell
@@ -414,6 +488,34 @@ describe('EditableTableCell', () => {
         />
       );
       expect(screen.getByText('2024-01-01T00:00:00Z')).toBeInTheDocument();
+    });
+
+    it('should render "-" when timezone lookup throws', () => {
+      vi.spyOn(globalThis.sessionStorage, 'getItem').mockImplementation(() => {
+        throw new Error('boom');
+      });
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'datetime' }}
+          value="2024-01-01T00:00:00"
+          onChange={mockOnChange}
+          width={200}
+          isSystemField
+        />
+      );
+      expect(screen.getByText('-')).toBeInTheDocument();
+    });
+
+    it('should keep duration null when default is empty', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'duration', meta: { defaultValue: '' } }}
+          value={null}
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('duration')).toHaveTextContent('null');
     });
 
     it('should parse multiSelect values from JSON string', () => {

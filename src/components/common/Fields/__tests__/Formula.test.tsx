@@ -50,6 +50,7 @@ vi.mock('react-dom', async () => {
 
 describe('Formula', () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     evaluateFormulaMock.mockReturnValue({ result: 10, error: null });
     formatResultMock.mockImplementation((value: any) => value);
@@ -127,6 +128,71 @@ describe('Formula', () => {
       expect(evaluateFormulaMock).toHaveBeenCalled();
       expect(onChange).toHaveBeenCalledWith(123);
     });
+  });
+
+  it('re-evaluates when rowData changes and formula uses TODAY()', async () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    formulaDependsOnRowDataMock.mockReturnValue(false);
+    formulaUsesTodayMock.mockReturnValue(true);
+    convertResultToValueMock.mockReturnValue(456);
+
+    try {
+      const { rerender } = render(
+        <Formula
+          value={null}
+          onChange={onChange}
+          config={{ formula: 'TODAY()' }}
+          columns={[]}
+          allColumns={[]}
+          rowData={{ a: 1 }}
+        />
+      );
+
+      rerender(
+        <Formula
+          value={null}
+          onChange={onChange}
+          config={{ formula: 'TODAY()' }}
+          columns={[]}
+          allColumns={[]}
+          rowData={{ a: 2 }}
+        />
+      );
+
+      vi.advanceTimersByTime(400);
+
+      expect(evaluateFormulaMock).toHaveBeenCalled();
+      expect(onChange).toHaveBeenCalledWith(456);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('clears value when formula evaluation returns error', () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    evaluateFormulaMock.mockReturnValue({ result: null, error: 'bad' });
+
+    try {
+      render(
+        <Formula
+          value={10}
+          onChange={onChange}
+          config={{ formula: '' }}
+          columns={[]}
+          allColumns={[]}
+        />
+      );
+
+      const textarea = screen.getByPlaceholderText(/enter formula/i);
+      fireEvent.change(textarea, { target: { value: 'BAD(' } });
+
+      vi.runOnlyPendingTimers();
+      expect(onChange).toHaveBeenCalledWith(null);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('clears formula when clear button is clicked', () => {

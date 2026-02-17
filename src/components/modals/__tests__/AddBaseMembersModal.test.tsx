@@ -9,6 +9,9 @@ const removeMock = vi.fn();
 const refetchMock = vi.fn();
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
+let mockUsers: Array<{ id: string; display_name: string; email: string }> = [];
+let mockBaseMembers: any = null;
+let mockBaseMembersLoading = false;
 
 // Mock useApi hooks
 vi.mock('../../../hooks/useApi', () => ({
@@ -17,20 +20,12 @@ vi.mock('../../../hooks/useApi', () => ({
     isPending: false,
   })),
   useGetUsersForAssign: vi.fn(() => ({
-    data: [
-      { id: 'user-1', display_name: 'John Doe', email: 'john@example.com' },
-      { id: 'user-2', display_name: 'Jane Smith', email: 'jane@example.com' },
-      { id: 'user-3', display_name: 'Bob Wilson', email: 'bob@example.com' },
-    ],
+    data: mockUsers,
     isLoading: false,
   })),
   useBaseMembers: vi.fn(() => ({
-    data: {
-      data: [
-        { user_id: 'user-1', user: { display_name: 'John Doe', email: 'john@example.com' }, role: 'base-member' },
-      ],
-    },
-    isLoading: false,
+    data: mockBaseMembers,
+    isLoading: mockBaseMembersLoading,
     refetch: refetchMock,
   })),
   useRemoveUserFromBase: vi.fn(() => ({
@@ -118,6 +113,17 @@ describe('AddBaseMembersModal', () => {
     vi.clearAllMocks();
     bulkAddMock.mockResolvedValue(undefined);
     removeMock.mockResolvedValue(undefined);
+    mockUsers = [
+      { id: 'user-1', display_name: 'John Doe', email: 'john@example.com' },
+      { id: 'user-2', display_name: 'Jane Smith', email: 'jane@example.com' },
+      { id: 'user-3', display_name: 'Bob Wilson', email: 'bob@example.com' },
+    ];
+    mockBaseMembers = {
+      data: [
+        { user_id: 'user-1', user: { display_name: 'John Doe', email: 'john@example.com' }, role: 'base-member' },
+      ],
+    };
+    mockBaseMembersLoading = false;
   });
 
   describe('rendering', () => {
@@ -239,6 +245,24 @@ describe('AddBaseMembersModal', () => {
       expect(toastSuccess).toHaveBeenCalled();
     });
 
+    it('updates roles and adds members when both pending changes and new selections exist', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<AddBaseMembersModal {...defaultProps} />);
+
+      const existingRoleDropdown = screen.getAllByTestId('role-dropdown')[0];
+      await user.selectOptions(existingRoleDropdown, 'base-read');
+
+      const userSelect = screen.getByTestId('user-select');
+      await user.selectOptions(userSelect, ['user-2']);
+
+      await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      await waitFor(() => {
+        expect(bulkAddMock).toHaveBeenCalledTimes(2);
+      });
+      expect(toastSuccess).toHaveBeenCalled();
+    });
+
     it('removes member when remove button clicked', async () => {
       const user = userEvent.setup();
       renderWithQueryClient(<AddBaseMembersModal {...defaultProps} />);
@@ -253,6 +277,18 @@ describe('AddBaseMembersModal', () => {
         });
       });
       expect(toastSuccess).toHaveBeenCalled();
+    });
+
+    it('shows an error when removing member without a user id', async () => {
+      const user = userEvent.setup();
+      mockBaseMembers = { data: [{ access_id: 'access-1', display_name: 'Missing Id' }] };
+
+      renderWithQueryClient(<AddBaseMembersModal {...defaultProps} />);
+
+      const removeButtons = screen.getAllByLabelText('Remove member');
+      await user.click(removeButtons[0]);
+
+      expect(toastError).toHaveBeenCalledWith('Unable to identify user to remove');
     });
   });
 
@@ -293,6 +329,46 @@ describe('AddBaseMembersModal', () => {
       const optionValues = Array.from(options).map(opt => opt.value);
       expect(optionValues).toContain('base-member');
       expect(optionValues).toContain('base-read');
+    });
+  });
+
+  describe('data shaping', () => {
+    it('disables users that already have access', () => {
+      renderWithQueryClient(<AddBaseMembersModal {...defaultProps} />);
+
+      const userSelect = screen.getByTestId('user-select');
+      const options = userSelect.querySelectorAll('option');
+      const john = Array.from(options).find(option => option.value === 'user-1');
+      expect(john).toHaveAttribute('disabled');
+    });
+
+    it('derives base-read role from roles array', () => {
+      mockBaseMembers = {
+        data: [
+          {
+            user_id: 'user-1',
+            display_name: 'John Doe',
+            email: 'john@example.com',
+            roles: [{ name: 'base-read', scope_level: 'base' }],
+          },
+        ],
+      };
+
+      renderWithQueryClient(<AddBaseMembersModal {...defaultProps} />);
+
+      const roleDropdown = screen.getAllByTestId('role-dropdown')[0];
+      expect(roleDropdown).toHaveValue('base-read');
+    });
+  });
+
+  describe('form submission', () => {
+    it('shows error when submitting without selecting members', () => {
+      const { container } = renderWithQueryClient(<AddBaseMembersModal {...defaultProps} />);
+
+      const form = container.querySelector('#add-base-members-form');
+      fireEvent.submit(form!);
+
+      expect(toastError).toHaveBeenCalledWith('Please select at least one member');
     });
   });
 

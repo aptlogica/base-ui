@@ -7,13 +7,14 @@ import Breadcrumb from '../Breadcrumb';
 
 // Mock react-router-dom hooks
 const mockNavigate = vi.fn();
+let mockPathname = '/base/base-1/table/table-1/view-1';
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
     useNavigate: () => mockNavigate,
     useLocation: () => ({
-      pathname: '/base/base-1/table/table-1/view-1',
+      pathname: mockPathname,
     }),
   };
 });
@@ -44,7 +45,7 @@ vi.mock('../../../stores/navigationStore', () => ({
 let mockComponentVisibility = true;
 
 // Mock workspace data service
-const mockWorkspaceDataService = {
+let mockWorkspaceDataService = {
   baseByIdQuery: {
     data: {
       data: {
@@ -123,6 +124,10 @@ let mockIsBaseLevelAccess = false;
 let mockCanUpdateBase = true;
 let mockCanDeleteBase = true;
 let mockCanAssignUsers = true;
+let mockCanUpdateBaseFromBase = true;
+let mockCanDeleteBaseFromBase = true;
+let mockCanManageBaseMembers = true;
+let mockBaseAccess = 'owner';
 
 vi.mock('../../../hooks/useWorkspaceAccess', () => ({
   useWorkspaceAccess: () => ({
@@ -137,10 +142,10 @@ vi.mock('../../../hooks/useWorkspaceAccess', () => ({
 // Mock base access hook
 vi.mock('../../../hooks/useBaseAccess', () => ({
   useBaseAccess: () => ({
-    canUpdateBase: () => true,
-    canDeleteBase: () => true,
-    canManageBaseMembers: () => true,
-    baseAccess: 'owner',
+    canUpdateBase: () => mockCanUpdateBaseFromBase,
+    canDeleteBase: () => mockCanDeleteBaseFromBase,
+    canManageBaseMembers: () => mockCanManageBaseMembers,
+    baseAccess: mockBaseAccess,
   }),
 }));
 
@@ -190,7 +195,9 @@ vi.mock('../../modals/AddBaseMembersModal', () => ({
 }));
 
 vi.mock('../../modals/CreateBaseModal', () => ({
-  CreateBaseModal: () => null,
+  CreateBaseModal: ({ isOpen }: { isOpen: boolean }) => (
+    <div data-testid="create-base-modal">{isOpen ? 'Open' : 'Closed'}</div>
+  ),
 }));
 
 // Mock BaseMenu
@@ -242,12 +249,45 @@ const renderBreadcrumb = (initialPath = '/base/base-1/table/table-1/view-1') => 
 describe('Breadcrumb', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPathname = '/base/base-1/table/table-1/view-1';
     mockComponentVisibility = true;
     mockCanCreateBase = true;
     mockIsBaseLevelAccess = false;
     mockCanUpdateBase = true;
     mockCanDeleteBase = true;
     mockCanAssignUsers = true;
+    mockCanUpdateBaseFromBase = true;
+    mockCanDeleteBaseFromBase = true;
+    mockCanManageBaseMembers = true;
+    mockBaseAccess = 'owner';
+    mockWorkspaceDataService = {
+      baseByIdQuery: {
+        data: {
+          data: {
+            id: 'base-1',
+            title: 'Test Base',
+            workspace_id: 'workspace-1',
+          },
+        },
+      },
+      tableByIdQuery: {
+        data: {
+          data: {
+            model: {
+              id: 'table-1',
+              title: 'Test Table',
+            },
+          },
+        },
+      },
+      viewByIdQuery: {
+        data: {
+          id: 'view-1',
+          title: 'Test View',
+          type: 'grid',
+        },
+      },
+    };
     mockWorkspaceBases = {
       data: {
         data: [
@@ -287,6 +327,26 @@ describe('Breadcrumb', () => {
       renderBreadcrumb();
       
       expect(screen.getByText('Test View')).toBeInTheDocument();
+    });
+
+    it('renders base image when available', () => {
+      mockWorkspaceDataService = {
+        ...mockWorkspaceDataService,
+        baseByIdQuery: {
+          data: {
+            data: {
+              id: 'base-1',
+              title: 'Test Base',
+              workspace_id: 'workspace-1',
+              image: 'http://example.com/base.png',
+            },
+          },
+        },
+      };
+
+      renderBreadcrumb();
+
+      expect(screen.getByAltText('Test Base')).toBeInTheDocument();
     });
   });
 
@@ -425,6 +485,21 @@ describe('Breadcrumb', () => {
         expect(screen.queryByText('Create New Base')).not.toBeInTheDocument();
       }, { timeout: 2000 });
     });
+
+    it('opens create base modal when clicking Create New Base', async () => {
+      const user = userEvent.setup();
+      Element.prototype.getBoundingClientRect = mockGetBoundingClientRect;
+      renderBreadcrumb();
+
+      const baseText = screen.getByText('Test Base');
+      const baseItem = baseText.closest('button') || baseText.parentElement;
+      await user.click(baseItem!);
+
+      const createButton = await screen.findByText('Create New Base');
+      await user.click(createButton);
+
+      expect(screen.getByTestId('create-base-modal')).toHaveTextContent('Open');
+    });
   });
 
   describe('Base Access Filtering', () => {
@@ -455,6 +530,29 @@ describe('Breadcrumb', () => {
     });
   });
 
+  describe('Base Menu Permissions', () => {
+    it('hides BaseMenu when no base actions are allowed', async () => {
+      mockCanUpdateBase = false;
+      mockCanDeleteBase = false;
+      mockCanAssignUsers = false;
+      mockCanUpdateBaseFromBase = false;
+      mockCanDeleteBaseFromBase = false;
+      mockCanManageBaseMembers = false;
+      mockBaseAccess = 'user';
+      const user = userEvent.setup();
+      Element.prototype.getBoundingClientRect = mockGetBoundingClientRect;
+      renderBreadcrumb();
+
+      const baseText = screen.getByText('Test Base');
+      const baseItem = baseText.closest('button') || baseText.parentElement;
+      await user.click(baseItem!);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('base-menu')).not.toBeInTheDocument();
+      });
+    });
+  });
+
   describe('Visibility', () => {
     it('returns null when component visibility is false', () => {
       mockComponentVisibility = false;
@@ -467,6 +565,20 @@ describe('Breadcrumb', () => {
         </MemoryRouter>
       );
       
+      expect(container.querySelector('nav')).toBeNull();
+    });
+  });
+
+  describe('Empty Route', () => {
+    it('returns null when no breadcrumb items are available', () => {
+      mockPathname = '/unknown/path';
+      mockWorkspaceDataService = {
+        baseByIdQuery: { data: undefined },
+        tableByIdQuery: { data: undefined },
+        viewByIdQuery: { data: undefined },
+      } as any;
+
+      const { container } = renderBreadcrumb('/unknown/path');
       expect(container.querySelector('nav')).toBeNull();
     });
   });

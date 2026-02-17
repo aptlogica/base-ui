@@ -199,4 +199,28 @@ describe('Attachment', () => {
       })
     );
   });
+
+  it('hides add button when readOnly is true', () => {
+    render(
+      <Attachment
+        value={[{ id: 'att-1', url: 'file-a' }]}
+        onChange={vi.fn()}
+        readOnly={true}
+      />
+    );
+
+    expect(screen.queryByTitle('Add attachment')).not.toBeInTheDocument();
+  });
+
+  it('does not render preview button when showPreview is false', () => {
+    render(
+      <Attachment
+        value={[{ id: 'att-1', url: 'file-a' }]}
+        onChange={vi.fn()}
+        showPreview={false}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: /preview attachments/i })).not.toBeInTheDocument();
+  });
 });
