@@ -135,11 +135,13 @@ describe('activityService', () => {
   });
 
   it('returns null for invalid activity payload and on profile errors', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     (client.userService as any).getProfile = vi.fn().mockResolvedValue({ data: { activity_data: 'bad' } });
     await expect(getUserActivity('user-1')).resolves.toBeNull();
 
     (client.userService as any).getProfile = vi.fn().mockRejectedValue(new Error('boom'));
     await expect(getUserActivity('user-1')).resolves.toBeNull();
+    consoleErrorSpy.mockRestore();
   });
 
   it('uses provided currentActivity and preserves login sessions', async () => {
@@ -177,6 +179,7 @@ describe('activityService', () => {
   });
 
   it('throws when update/clear activity fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     (client.userService as any).getProfile = vi.fn().mockResolvedValue({ data: { activity_data: null } });
     (client.userService as any).updateProfile = vi.fn().mockRejectedValue(new Error('fail'));
 
@@ -185,5 +188,6 @@ describe('activityService', () => {
     ).rejects.toThrow('fail');
 
     await expect(clearUserActivity('user-1')).rejects.toThrow('fail');
+    consoleErrorSpy.mockRestore();
   });
 });

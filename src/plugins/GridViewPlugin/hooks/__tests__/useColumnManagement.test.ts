@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useColumnManagement } from '../useColumnManagement';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../../../utils/fieldUsageUtils';
+import { parseApiColumnMeta } from '../../../../components/shared/table/tableUtils';
 
 // Mock dependencies
 vi.mock('../../../../utils/fieldUsageUtils', () => ({
@@ -16,6 +17,7 @@ vi.mock('../../../../components/shared/table/tableUtils', () => ({
 describe('useColumnManagement', () => {
   const mockCheckFieldUsageInViews = vi.mocked(checkFieldUsageInViews);
   const mockCheckCriticalFieldUsageInViews = vi.mocked(checkCriticalFieldUsageInViews);
+  const mockParseApiColumnMeta = vi.mocked(parseApiColumnMeta);
   
   const defaultProps = {
     tableId: 'table-1',
@@ -30,9 +32,9 @@ describe('useColumnManagement', () => {
     ],
     tableData: undefined,
     actions: {
-      createField: vi.fn(),
-      deleteColumn: vi.fn(),
-      updateField: vi.fn(),
+      createField: { mutateAsync: vi.fn() },
+      deleteColumn: { mutateAsync: vi.fn() },
+      updateField: { mutateAsync: vi.fn() },
     },
     onRefresh: vi.fn(),
     toast: {
@@ -235,6 +237,225 @@ describe('useColumnManagement', () => {
       expect(result.current).toBeDefined();
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('handleAddColumn', () => {
+    it('should show error when tableId is missing', async () => {
+      const props = { ...defaultProps, tableId: undefined };
+      const { result } = renderHook(() => useColumnManagement(props));
+
+      await act(async () => {
+        await result.current.handleAddColumn({ key: 'New', type: 'text' });
+      });
+
+      expect(props.toast.error).toHaveBeenCalledWith('Table ID not found', { title: 'Error' });
+    });
+
+    it('should create column and parse meta', async () => {
+      const createField = { mutateAsync: vi.fn().mockResolvedValue({ data: { meta: { foo: 'bar' } } }) };
+      const props = {
+        ...defaultProps,
+        actions: {
+          ...defaultProps.actions,
+          createField,
+        },
+        columns: [
+          { id: 'col-1', key: 'name', title: 'Column 1', type: 'text' as any, position: 3, isSystem: false },
+        ],
+      };
+      const { result } = renderHook(() => useColumnManagement(props));
+
+      await act(async () => {
+        await result.current.handleAddColumn({ key: 'New', type: 'text', meta: { a: 1 } });
+      });
+
+      expect(createField.mutateAsync).toHaveBeenCalledWith({
+        tableId: 'table-1',
+        baseId: 'base-1',
+        config: {
+          title: 'New',
+          uidt: 'text',
+          meta: { a: 1 },
+          order_index: 4,
+          description: '',
+        },
+      });
+      expect(mockParseApiColumnMeta).toHaveBeenCalledWith({ foo: 'bar' });
+      expect(props.toast.success).toHaveBeenCalledWith('Column created', { title: 'Success' });
+    });
+  });
+
+  describe('handleEditColumn', () => {
+    it('should block editing system fields', () => {
+      const { result } = renderHook(() => useColumnManagement(defaultProps));
+
+      act(() => {
+        result.current.handleEditColumn(defaultProps.columns[1] as any, 1);
+      });
+
+      expect(defaultProps.toast.error).toHaveBeenCalledWith('System fields cannot be edited', { title: 'Error' });
+      expect(result.current.editModalOpen).toBe(false);
+    });
+  });
+
+  describe('handleSaveEditColumn', () => {
+    it('should set confirm modal when type changes', async () => {
+      const { result } = renderHook(() => useColumnManagement(defaultProps));
+
+      act(() => {
+        result.current.handleEditColumn(defaultProps.columns[0] as any, 0);
+      });
+
+      await act(async () => {
+        await result.current.handleSaveEditColumn({ title: 'Column 1', type: 'number', meta: { a: 1 } });
+      });
+
+      expect(result.current.updateFieldConfirmModalOpen).toBe(true);
+      expect(result.current.pendingEditColumnChanges).toEqual(
+        expect.objectContaining({ uidt: 'number', meta: { a: 1 } })
+      );
+    });
+
+    it('should block type change when field is used', async () => {
+      mockCheckCriticalFieldUsageInViews.mockReturnValueOnce({
+        isUsedInViews: true,
+        usedInViews: [{ viewName: 'View 1', usageType: 'group' }],
+      });
+      const props = { ...defaultProps };
+      const { result } = renderHook(() => useColumnManagement(props));
+
+      act(() => {
+        result.current.handleEditColumn(defaultProps.columns[0] as any, 0);
+      });
+
+      await act(async () => {
+        await result.current.handleSaveEditColumn({ title: 'Column 1', type: 'number', meta: {} });
+      });
+
+      expect(props.toast.error).toHaveBeenCalled();
+      expect(result.current.updateFieldConfirmModalOpen).toBe(false);
+    });
+  });
+
+  describe('handleConfirmUpdateField', () => {
+    it('should apply pending changes and reset state', async () => {
+      const updateField = { mutateAsync: vi.fn().mockResolvedValue({}) };
+      const props = {
+        ...defaultProps,
+        actions: { ...defaultProps.actions, updateField },
+      };
+      const { result } = renderHook(() => useColumnManagement(props));
+
+      act(() => {
+        result.current.setPendingEditColumnChanges({ title: 'Updated' });
+        result.current.setEditColumn(defaultProps.columns[0] as any);
+      });
+
+      await act(async () => {
+        await result.current.handleConfirmUpdateField();
+      });
+
+      expect(updateField.mutateAsync).toHaveBeenCalledWith({
+        fieldId: 'col-1',
+        updatedValue: { title: 'Updated' },
+      });
+      expect(props.toast.success).toHaveBeenCalledWith('Column type updated', { title: 'Success' });
+      expect(result.current.pendingEditColumnChanges).toBeNull();
+    });
+  });
+
+  describe('handleDeleteColumn and confirm', () => {
+    it('should block delete for system fields', async () => {
+      const { result } = renderHook(() => useColumnManagement(defaultProps));
+
+      await act(async () => {
+        await result.current.handleDeleteColumn('col-2');
+      });
+
+      expect(defaultProps.toast.error).toHaveBeenCalledWith('System fields cannot be deleted', { title: 'Error' });
+      expect(result.current.deleteConfirmModalOpen).toBe(false);
+    });
+
+    it('should delete and update column widths', async () => {
+      const deleteColumn = { mutateAsync: vi.fn().mockResolvedValue({}) };
+      const updateViewConfigBackend = vi.fn().mockResolvedValue({});
+      const setViewConfigState = vi.fn();
+      const props = {
+        ...defaultProps,
+        actions: { ...defaultProps.actions, deleteColumn },
+        viewConfigState: { columnWidths: { 'col-1': 120, name: 200 } },
+        setViewConfigState,
+        updateViewConfigBackend,
+      };
+      const { result } = renderHook(() => useColumnManagement(props));
+
+      await act(async () => {
+        await result.current.handleDeleteColumn('col-1');
+      });
+
+      await act(async () => {
+        await result.current.handleConfirmDeleteColumn();
+      });
+
+      expect(deleteColumn.mutateAsync).toHaveBeenCalledWith({
+        tableId: 'table-1',
+        fieldId: 'col-1',
+      });
+      expect(setViewConfigState).toHaveBeenCalledWith({
+        columnWidths: {},
+      });
+      expect(updateViewConfigBackend).toHaveBeenCalled();
+      expect(props.toast.success).toHaveBeenCalled();
+    });
+  });
+
+  describe('handleDuplicateColumn', () => {
+    it('should duplicate a column successfully', async () => {
+      const createField = vi.fn().mockResolvedValue({});
+      const props = {
+        ...defaultProps,
+        actions: { ...defaultProps.actions, createField },
+        tableData: { model: { id: 't1' } },
+      };
+      const { result } = renderHook(() => useColumnManagement(props));
+
+      await act(async () => {
+        await result.current.handleDuplicateColumn({ title: 'Test', type: 'text' });
+      });
+
+      expect(createField).toHaveBeenCalledWith({
+        model_id: 't1',
+        column_name: 'Test_copy',
+        column_type: 'text',
+      });
+      expect(props.toast.success).toHaveBeenCalledWith('Column duplicated successfully', { title: 'Success' });
+    });
+  });
+
+  describe('handleColumnDragEnd', () => {
+    it('should call handleFieldOrderChange when provided', async () => {
+      const { result } = renderHook(() => useColumnManagement(defaultProps));
+      const handleFieldOrderChange = vi.fn().mockResolvedValue({});
+      const visibleColumns = [...defaultProps.columns];
+
+      act(() => {
+        result.current.handleColumnDragStart(0, visibleColumns as any);
+        result.current.handleColumnDragEnter(1);
+      });
+
+      await act(async () => {
+        await result.current.handleColumnDragEnd(
+          visibleColumns as any,
+          [],
+          undefined,
+          undefined,
+          undefined,
+          handleFieldOrderChange
+        );
+      });
+
+      expect(handleFieldOrderChange).toHaveBeenCalled();
     });
   });
 

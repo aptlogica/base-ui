@@ -194,14 +194,14 @@ const ChartTask = React.memo(({
       {/* Color accent bar */}
       {!isMilestone && (
         <div
-          className="absolute left-0 top-0 bottom-0 w-0 rounded-tl-xl rounded-bl-xl"
+          className="absolute left-0 top-0 bottom-0 w-0"
           style={{ backgroundColor: task.color }}
         />
       )}
 
       {/* Task Content */}
       {!isMilestone && (
-        <div className="relative pl-4 pr-3 py-2.5 h-full flex items-center bg-card border-l-4 rounded-tr-xl rounded-br-xl" style={{ borderColor: task.color }}>
+        <div className="relative pl-4 pr-3 py-2.5 h-full flex items-center bg-card border-l-4 rounded-xl" style={{ borderColor: task.color }}>
           <div className="flex items-center justify-between gap-2 flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <h3 className="font-semibold text-gray-900 text-sm truncate">

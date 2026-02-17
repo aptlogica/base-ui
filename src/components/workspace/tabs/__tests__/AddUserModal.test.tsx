@@ -73,6 +73,9 @@ describe('AddUserModal', () => {
     mockUseUserRolesAndAccess.mockReturnValue({ data: null });
     mockUseCurrentUser.mockReturnValue({ id: 'current-1', email: 'current@example.com' });
     mockUseUserRole.mockReturnValue({ isOwner: () => true });
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn(() => 'blob:preview'),
+    } as any);
     mockAddUser.mockImplementation(
       (_payload: unknown, opts: { onSuccess?: () => void }) => {
         opts?.onSuccess?.();
@@ -340,6 +343,14 @@ describe('AddUserModal', () => {
 
       expect(screen.getByPlaceholderText(/search workspace or base/i)).toBeInTheDocument();
     });
+
+    it('filters workspaces by search term', async () => {
+      const user = userEvent.setup();
+      render(<AddUserModal {...defaultProps} />);
+
+      await user.type(screen.getByPlaceholderText(/search workspace or base/i), 'nope');
+      expect(screen.getByText(/no workspaces found/i)).toBeInTheDocument();
+    });
   });
 
   describe('Edge cases', () => {
@@ -375,6 +386,56 @@ describe('AddUserModal', () => {
       );
 
       expect(screen.getByLabelText(/email address/i)).toBeDisabled();
+    });
+
+    it('hides co-owner toggle when editing an owner and current user is not owner', () => {
+      mockUseUserRole.mockReturnValue({ isOwner: () => false });
+      render(
+        <AddUserModal
+          {...defaultProps}
+          editUser={{
+            id: 'user-1',
+            first_name: 'John',
+            last_name: 'Doe',
+            email: 'john@example.com',
+            roles: [{ name: 'owner', scope_level: 'system' }],
+          }}
+        />
+      );
+
+      expect(screen.queryByText(/Set as Co-owner/i)).not.toBeInTheDocument();
+    });
+
+    it('shows avatar validation error for invalid file type', async () => {
+      const user = userEvent.setup();
+      render(<AddUserModal {...defaultProps} />);
+
+      const fileInput = document.getElementById('avatar-upload') as HTMLInputElement;
+      const badFile = new File(['abc'], 'bad.txt', { type: 'text/plain' });
+      fireEvent.change(fileInput, { target: { files: [badFile] } });
+
+      expect(screen.getByText(/valid image file/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Membership payload', () => {
+    it('includes workspace membership when assigned', async () => {
+      const user = userEvent.setup();
+      render(<AddUserModal {...defaultProps} />);
+
+      await user.type(screen.getByLabelText(/first name/i), 'Jane');
+      await user.type(screen.getByLabelText(/last name/i), 'Doe');
+      await user.type(screen.getByLabelText(/email address/i), 'jane@example.com');
+
+      await user.click(screen.getByTestId('role-ws-1'));
+      await user.click(screen.getByRole('button', { name: /^add$/i }));
+
+      expect(mockAddUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          membership: [{ workspace_id: 'ws-1', role: 'maintainer', bases: [] }],
+        }),
+        expect.any(Object)
+      );
     });
   });
 });

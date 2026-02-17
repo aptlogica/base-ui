@@ -197,6 +197,9 @@ const Breadcrumb: React.FC = () => {
 
     // Use a small delay to avoid immediate closure
     const timeoutId = setTimeout(() => {
+      // The opening click already happened before the listener is attached,
+      // so don't ignore the next outside click.
+      ignoreNextClickRef.current = false;
       document.addEventListener('mousedown', handleClickOutside);
     }, 100);
 

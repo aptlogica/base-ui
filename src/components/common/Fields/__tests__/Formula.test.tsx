@@ -40,6 +40,14 @@ vi.mock('../../../../utils/formulaHelper', () => ({
   convertResultToValue: (...args: any[]) => convertResultToValueMock(...args),
 }));
 
+vi.mock('react-dom', async () => {
+  const actual = await vi.importActual('react-dom');
+  return {
+    ...actual,
+    createPortal: (element: React.ReactNode) => element,
+  };
+});
+
 describe('Formula', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -135,5 +143,51 @@ describe('Formula', () => {
     fireEvent.click(screen.getByRole('button', { name: /clear formula/i }));
     expect((screen.getByPlaceholderText(/enter formula/i) as HTMLTextAreaElement).value).toBe('');
     expect(onFormulaChange).toHaveBeenCalledWith('');
+  });
+
+  it('opens field dropdown when typing "{" and inserts a column', async () => {
+    getCompatibleFieldTypesMock.mockReturnValue(null);
+    render(
+      <Formula
+        columns={[{ id: 'c1', title: 'Amount', type: 'number' }]}
+        allColumns={[{ id: 'c1', title: 'Amount', type: 'number' }]}
+      />
+    );
+
+    const textarea = screen.getByPlaceholderText(/enter formula/i);
+    fireEvent.focus(textarea);
+    fireEvent.change(textarea, { target: { value: '{' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Amount')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Amount'));
+
+    expect((textarea as HTMLTextAreaElement).value).toContain('Amount');
+  });
+
+  it('closes field dropdown on Escape', async () => {
+    getCompatibleFieldTypesMock.mockReturnValue(null);
+    render(
+      <Formula
+        columns={[{ id: 'c1', title: 'Amount', type: 'number' }]}
+        allColumns={[{ id: 'c1', title: 'Amount', type: 'number' }]}
+      />
+    );
+
+    const textarea = screen.getByPlaceholderText(/enter formula/i);
+    fireEvent.focus(textarea);
+    fireEvent.change(textarea, { target: { value: '{' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Amount')).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(textarea, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Amount')).not.toBeInTheDocument();
+    });
   });
 });

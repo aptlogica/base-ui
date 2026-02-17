@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CreateViewModal } from '../CreateViewModal';
+import { useTable } from '../../../hooks/useApi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock useApi hooks
@@ -205,6 +206,15 @@ describe('CreateViewModal', () => {
 
       expect(screen.queryByTestId('field-dropdown')).not.toBeInTheDocument();
     });
+
+    it('shows dual field dropdowns for gantt view', () => {
+      renderWithQueryClient(
+        <CreateViewModal {...defaultProps} viewType="ganttChart" fields={mockFields} />
+      );
+
+      const dropdowns = screen.getAllByTestId('field-dropdown');
+      expect(dropdowns).toHaveLength(2);
+    });
   });
 
   describe('form validation', () => {
@@ -294,6 +304,50 @@ describe('CreateViewModal', () => {
           })
         );
       });
+    });
+  });
+
+  describe('gantt validation', () => {
+    it('shows error when start and end fields are the same', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(
+        <CreateViewModal {...defaultProps} viewType="ganttChart" fields={mockFields} />
+      );
+
+      const dropdowns = screen.getAllByTestId('field-dropdown');
+      await user.selectOptions(dropdowns[0], 'col-3');
+      await user.selectOptions(dropdowns[1], 'col-3');
+
+      await waitFor(() => {
+        expect(screen.getByText(/must be different/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('field selection validation', () => {
+    it('shows error when required field is not selected for kanban view', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(
+        <CreateViewModal {...defaultProps} viewType="kanban" fields={mockFields} />
+      );
+
+      expect(screen.getByRole('button', { name: 'Create View' })).toBeDisabled();
+    });
+  });
+
+  describe('fallback fields', () => {
+    it('uses fallback fields when no date fields exist for calendar view', () => {
+      const mockUseTable = vi.mocked(useTable);
+      mockUseTable.mockReturnValueOnce({
+        data: { data: { columns: [{ id: 'col-x', title: 'Name', uidt: 'SingleLineText' }] } },
+        isLoading: false,
+      } as any);
+
+      renderWithQueryClient(
+        <CreateViewModal {...defaultProps} viewType="calendar" fields={[]} />
+      );
+
+      expect(screen.getByTestId('field-dropdown')).toBeInTheDocument();
     });
   });
 

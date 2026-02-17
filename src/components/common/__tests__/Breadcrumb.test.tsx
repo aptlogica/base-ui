@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import React from 'react';
@@ -118,13 +118,19 @@ vi.mock('../../../hooks/useNavigateToBaseFirstView', () => ({
 }));
 
 // Mock workspace access hook
+let mockCanCreateBase = true;
+let mockIsBaseLevelAccess = false;
+let mockCanUpdateBase = true;
+let mockCanDeleteBase = true;
+let mockCanAssignUsers = true;
+
 vi.mock('../../../hooks/useWorkspaceAccess', () => ({
   useWorkspaceAccess: () => ({
-    canCreateBase: () => true,
-    isBaseLevelAccess: () => false,
-    canUpdateBase: () => true,
-    canDeleteBase: () => true,
-    canAssignUsers: () => true,
+    canCreateBase: () => mockCanCreateBase,
+    isBaseLevelAccess: () => mockIsBaseLevelAccess,
+    canUpdateBase: () => mockCanUpdateBase,
+    canDeleteBase: () => mockCanDeleteBase,
+    canAssignUsers: () => mockCanAssignUsers,
   }),
 }));
 
@@ -237,11 +243,16 @@ describe('Breadcrumb', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockComponentVisibility = true;
+    mockCanCreateBase = true;
+    mockIsBaseLevelAccess = false;
+    mockCanUpdateBase = true;
+    mockCanDeleteBase = true;
+    mockCanAssignUsers = true;
     mockWorkspaceBases = {
       data: {
         data: [
-          { id: 'base-1', title: 'Test Base', workspace_id: 'workspace-1' },
-          { id: 'base-2', title: 'Another Base', workspace_id: 'workspace-1' },
+          { id: 'base-1', title: 'Test Base', workspace_id: 'workspace-1', access_level: 'owner' },
+          { id: 'base-2', title: 'Another Base', workspace_id: 'workspace-1', access_level: 'base-member' },
         ],
       },
     };
@@ -337,6 +348,33 @@ describe('Breadcrumb', () => {
 
   });
 
+  describe('Outside Click', () => {
+    it('closes dropdown when clicking outside', async () => {
+      const user = userEvent.setup();
+      Element.prototype.getBoundingClientRect = mockGetBoundingClientRect;
+      renderBreadcrumb();
+
+      const baseText = screen.getByText('Test Base');
+      const baseItem = baseText.closest('button') || baseText.parentElement;
+      await user.click(baseItem!);
+
+      await waitFor(() => {
+        expect(screen.getByText('Bases')).toBeInTheDocument();
+      }, { timeout: 2000 });
+
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      const outsideEl = document.createElement('div');
+      document.body.appendChild(outsideEl);
+      await user.click(outsideEl);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Bases')).not.toBeInTheDocument();
+      }, { timeout: 2000 });
+
+      outsideEl.remove();
+    });
+  });
+
   describe('Active Item Indicator', () => {
     it('shows active indicator on current base', async () => {
       const user = userEvent.setup();
@@ -369,6 +407,50 @@ describe('Breadcrumb', () => {
       
       await waitFor(() => {
         expect(screen.getByText('Create New Base')).toBeInTheDocument();
+      }, { timeout: 2000 });
+    });
+
+    it('hides Create New Base button when user lacks permission', async () => {
+      mockCanCreateBase = false;
+      const user = userEvent.setup();
+      Element.prototype.getBoundingClientRect = mockGetBoundingClientRect;
+      renderBreadcrumb();
+
+      const baseText = screen.getByText('Test Base');
+      const baseItem = baseText.closest('button') || baseText.parentElement;
+
+      await user.click(baseItem!);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Create New Base')).not.toBeInTheDocument();
+      }, { timeout: 2000 });
+    });
+  });
+
+  describe('Base Access Filtering', () => {
+    it('filters bases when base-level access is enabled', async () => {
+      mockIsBaseLevelAccess = true;
+      mockWorkspaceBases = {
+        data: {
+          data: [
+            { id: 'base-1', title: 'Allowed Base', workspace_id: 'workspace-1', access_level: 'base-member' },
+            { id: 'base-2', title: 'Hidden Base', workspace_id: 'workspace-1', access_level: 'no-access' },
+          ],
+        },
+      };
+
+      const user = userEvent.setup();
+      Element.prototype.getBoundingClientRect = mockGetBoundingClientRect;
+      renderBreadcrumb();
+
+      const baseText = screen.getByText('Test Base');
+      const baseItem = baseText.closest('button') || baseText.parentElement;
+
+      await user.click(baseItem!);
+
+      await waitFor(() => {
+        expect(screen.getByText('Allowed Base')).toBeInTheDocument();
+        expect(screen.queryByText('Hidden Base')).not.toBeInTheDocument();
       }, { timeout: 2000 });
     });
   });

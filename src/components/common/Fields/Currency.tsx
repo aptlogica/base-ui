@@ -150,13 +150,6 @@ const filterCurrencyInput = (input: string, precision: number = 2): string => {
     filtered = integerPart + '.' + decimalPart;
   }
   
-  // Limit total digits (maximum reasonable currency amount - 999,999,999,999.99)
-  const numValue = Number.parseFloat(filtered);
-  if (!Number.isNaN(numValue) && Math.abs(numValue) > 999999999999) {
-    // Return the previous valid value implicitly by not allowing this
-    return '';
-  }
-  
   return filtered;
 };
 

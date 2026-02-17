@@ -27,7 +27,7 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
   label,
   value,
   onChange,
-  placeholder = "Enter phone number...",
+  placeholder = "",
   required = false,
   disabled = false,
   isBorder = false,

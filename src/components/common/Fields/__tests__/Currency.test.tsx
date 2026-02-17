@@ -62,6 +62,25 @@ describe('Currency Component', () => {
 
       expect(input.value).toBe('200');
     });
+
+    it('filters invalid characters and limits decimals', async () => {
+      render(<Currency value={null} onChange={mockOnChange} config={{ precision: 2 }} />);
+      const input = await enterEditMode();
+
+      fireEvent.change(input, { target: { value: '12.3456' } });
+      expect(input.value).toBe('12.34');
+
+      fireEvent.change(input, { target: { value: '-1-2' } });
+      expect(input.value).toBe('-12');
+    });
+
+    it('allows very large amounts', async () => {
+      render(<Currency value={null} onChange={mockOnChange} />);
+      const input = await enterEditMode();
+
+      fireEvent.change(input, { target: { value: '9999999999999' } });
+      expect(input.value).toBe('9999999999999');
+    });
   });
 
   describe('Validation', () => {
@@ -161,6 +180,17 @@ describe('Currency Component', () => {
     it('should handle negative zero', () => {
       render(<Currency value={-0} onChange={mockOnChange} />);
       expect(getDisplay()).toBeInTheDocument();
+    });
+
+    it('formats currency using locale and precision', () => {
+      render(
+        <Currency
+          value={1234.5}
+          onChange={mockOnChange}
+          config={{ currencyType: 'EUR', currencyLocale: 'de-DE', precision: 1 }}
+        />
+      );
+      expect(getDisplay().textContent).toContain('€');
     });
   });
 });

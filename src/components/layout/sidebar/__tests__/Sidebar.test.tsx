@@ -559,6 +559,7 @@ describe('Sidebar', () => {
 
     it('handles create table mutation failure with error toast', async () => {
       const user = userEvent.setup();
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockCreateTableMutateAsync.mockRejectedValueOnce(new Error('fail'));
       useWorkspaceBusinessLogicMock.mockReturnValue({
         ...getDefaultWorkspaceState(),
@@ -572,6 +573,7 @@ describe('Sidebar', () => {
       await waitFor(() => {
         expect(mockToast.error).toHaveBeenCalledWith('Failed to create table. Please try again.', { title: 'Error' });
       });
+      consoleErrorSpy.mockRestore();
     });
 
     it('creates calendar view with normalized fieldId meta and closes modal', async () => {

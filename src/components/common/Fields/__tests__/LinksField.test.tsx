@@ -96,4 +96,24 @@ describe('LinksField', () => {
 
     await waitFor(() => expect(onChange).toHaveBeenCalled());
   });
+
+  it('shows error toast when link mutation fails', async () => {
+    const user = userEvent.setup();
+    mutateAsyncMock.mockRejectedValueOnce(new Error('boom'));
+
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'one-to-one' } } }}
+        value={[]}
+        onChange={vi.fn()}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    await user.click(screen.getByText('Record One'));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+  });
 });

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import CreateRecordModal from '../CreateRecordModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
+import { getFieldDefaultValue } from '../../../utils/standardFieldUtils';
 
 const addRowMutateAsyncMock = vi.fn(() => Promise.resolve({ id: 123 }));
 const insertRowDataMutateAsyncMock = vi.fn(() => Promise.resolve({}));
@@ -324,7 +325,7 @@ describe('CreateRecordModal', () => {
       expect(submitButton).not.toBeDisabled();
     });
 
-    it('enables save when initial values are provided', () => {
+    it('keeps save disabled when only initial values are provided', () => {
       vi.clearAllMocks();
       vi.mocked(useBaseAccess).mockImplementation(() => ({
         canCreateRecord: () => true,
@@ -339,6 +340,36 @@ describe('CreateRecordModal', () => {
       );
 
       const submitButton = screen.getByRole('button', { name: 'Save record' });
+      expect(submitButton).toBeDisabled();
+    });
+
+    it('keeps save disabled for default boolean/rating values until user changes a field', async () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canCreateRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+      vi.mocked(getFieldDefaultValue).mockImplementation((field: any) => {
+        if (field.id === 'field-boolean') return false;
+        if (field.id === 'field-rating') return 3;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      const fieldsWithDefaults = [
+        { id: 'field-1', name: 'title', title: 'Title', uidt: 'SingleLineText' },
+        { id: 'field-boolean', name: 'active', title: 'Active', uidt: 'Checkbox' },
+        { id: 'field-rating', name: 'rating', title: 'Rating', uidt: 'Rating' },
+      ];
+
+      renderWithQueryClient(
+        <CreateRecordModal {...defaultProps} fields={fieldsWithDefaults} />
+      );
+
+      const submitButton = screen.getByRole('button', { name: 'Save record' });
+      expect(submitButton).toBeDisabled();
+
+      await user.type(screen.getByTestId('field-input-field-1'), 'New Title');
       expect(submitButton).not.toBeDisabled();
     });
   });
@@ -366,6 +397,7 @@ describe('CreateRecordModal', () => {
         />
       );
 
+      await user.type(screen.getByTestId('field-input-field-1'), 'Linked title');
       await user.click(screen.getByRole('button', { name: 'Save record' }));
 
       await waitFor(() => {

@@ -397,6 +397,7 @@ describe('clientService', () => {
   });
 
   it('continues base update when image upload fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     sessionStorage.setItem('user_id', 'u1');
     (client.baseService as any).update = vi.fn().mockResolvedValue({ data: { id: 'b1' } });
     (client.baseService as any).uploadImage = vi.fn().mockRejectedValue(new Error('upload failed'));
@@ -405,6 +406,7 @@ describe('clientService', () => {
     expect(result).toEqual({ data: { id: 'b1' } });
     expect((client.baseService as any).update).toHaveBeenCalledWith('b1', { title: 'Base' });
     expect((client.baseService as any).uploadImage).toHaveBeenCalledTimes(1);
+    consoleErrorSpy.mockRestore();
   });
 
   it('refreshes expired token during auth check', async () => {

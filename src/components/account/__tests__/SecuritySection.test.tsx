@@ -1,7 +1,8 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { SecuritySection } from '../SecuritySection';
+import { getUserActivity } from '../../../service/activityService';
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
@@ -29,7 +30,7 @@ vi.mock('../../common/Toast', () => ({
 }));
 
 vi.mock('../../../service/activityService', () => ({
-  getUserActivity: () =>
+  getUserActivity: vi.fn(() =>
     Promise.resolve({
       login_sessions: [
         {
@@ -40,7 +41,8 @@ vi.mock('../../../service/activityService', () => ({
           timezone: 'UTC',
         },
       ],
-    }),
+    })
+  ),
 }));
 
 vi.mock('../../../utils/validation', () => ({
@@ -94,5 +96,18 @@ describe('SecuritySection', () => {
     expect(screen.getByText('Change Password')).toBeInTheDocument();
     expect(screen.getByText('Recent Login Activity')).toBeInTheDocument();
     expect(await screen.findByText(/Chrome/)).toBeInTheDocument();
+  });
+
+  it('shows empty sessions message when no sessions found', async () => {
+    vi.mocked(getUserActivity).mockResolvedValueOnce({ login_sessions: [] });
+    render(<SecuritySection />);
+    expect(await screen.findByText(/No previous login sessions found/i)).toBeInTheDocument();
+  });
+
+  it('validates current password on blur', async () => {
+    render(<SecuritySection />);
+    const input = screen.getByLabelText('Current Password');
+    fireEvent.blur(input);
+    expect(await screen.findByText(/Current password is required/i)).toBeInTheDocument();
   });
 });
