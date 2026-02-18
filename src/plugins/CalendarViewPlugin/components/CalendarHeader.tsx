@@ -362,7 +362,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                 const isSelected = date.toDateString() === currentDate.toDateString();
                 const hasEvents = hasEventsForDate(date);
                 const isSelectedClass = isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : '';
-                const isTodayClass = isToday ? 'text-[var(--color-text-primary)] border border-[var(--color-bg-brand-primary)]' : '';
+                const isTodayClass = isToday ? 'text-[var(--color-bg-brand-primary)]' : '';
                 const isCurrentMonthClass = isCurrentMonth ? 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black' : '';
                 const defaultClass = 'text-gray-400 hover:bg-gray-50';
                 const dateButtonClass = isSelectedClass || isTodayClass || isCurrentMonthClass || defaultClass;
@@ -375,11 +375,11 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                       onDateChange(date);
                       setShowDatePicker(false);
                     }}
-                    className={`relative w-8 h-8 text-sm rounded-full transition-colors flex flex-col items-center justify-center ${dateButtonClass}`}
+                    className={`relative w-8 h-8 text-sm rounded-xl transition-colors flex flex-col items-center justify-center ${dateButtonClass}`}
                   >
                     {/* Event indicator - show dot if date has events */}
                     {hasEvents && (
-                      <div className="absolute -top-2 flex justify-center">
+                      <div className="absolute top-0.5 right-0.5">
                         <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-bg-brand-primary)]" />
                       </div>
                     )}

@@ -11,11 +11,12 @@ import { buildComparator } from '../../../utils/sortUtils';
 import { buildInitialValuesForEdit } from '../../../utils/initialValues';
 import { useFrontendPagination } from '../../../hooks/useFrontendPagination';
 import { formatCompactNumber } from '../../../utils/helpers';
-import { Loader } from '../../../components/ui/Loader';
+import { LoadMoreButton } from '../../../components/shared/LoadMoreButton';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
 // Custom hooks
 import { useGalleryViewConfig } from '../hooks/useGalleryViewConfig';
 import { useGalleryModals } from '../hooks/useGalleryModals';
+import { getSearchableColumns } from '../utils/galleryColumns';
 
 interface GalleryViewProps {
   tableData: any;
@@ -49,13 +50,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
 
   // Get searchable columns (exclude system fields except Title)
   const searchableColumns = useMemo(() => {
-    return galleryData.columns.filter(col => {
-      const isSystemField = col.isSystem || col.system;
-      const title = (col.title || '').toLowerCase();
-      const columnName = (col.column_name || '').toLowerCase();
-      const isTitle = title === 'title' || columnName === 'title';
-      return !isSystemField || isTitle;
-    });
+    return getSearchableColumns(galleryData.columns);
   }, [galleryData.columns]);
 
   // View configuration hook
@@ -312,17 +307,11 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
             {/* Load More Button */}
             {hasMore && (
               <div className="flex justify-center py-6">
-                <button
+                <LoadMoreButton
                   onClick={handleLoadMore}
-                  disabled={isLoadingMore}
-                  className="px-6 py-2.5 text-sm font-medium rounded-xl btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {isLoadingMore ? (
-                    <Loader size={4} />
-                  ) : (
-                    <span>Load more ({formatCompactNumber(totalItems - paginatedItems.length)} remaining)</span>
-                  )}
-                </button>
+                  isLoading={isLoadingMore}
+                  label={`Load more (${formatCompactNumber(totalItems - paginatedItems.length)} remaining)`}
+                />
               </div>
             )}
           </>

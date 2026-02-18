@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronDown, X, Check, Search, Loader2, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
+import { DropdownTrigger } from './DropdownTrigger';
+import { DropdownSearch } from './DropdownSearch';
+import { DropdownOption } from './DropdownOption';
 
-interface DropdownOption<T = string | number> {
+interface AdvancedDropdownOption<T = string | number> {
   label: string;
   value: T;
   disabled?: boolean;
@@ -11,7 +14,7 @@ interface DropdownOption<T = string | number> {
 }
 
 interface AdvancedDropdownProps<T = string | number> {
-  readonly options: readonly DropdownOption<T>[];
+  readonly options: readonly AdvancedDropdownOption<T>[];
   readonly value?: T | T[];
   readonly onChange: (value: T | T[]) => void;
   readonly multiple?: boolean;
@@ -334,6 +337,7 @@ export function AdvancedDropdown<T extends string | number>({
               onChange={setSearchQuery}
               placeholder="Search options..."
               ref={searchRef}
+              clearAutofillOnFocus={true}
             />
           )}
 
@@ -351,7 +355,7 @@ export function AdvancedDropdown<T extends string | number>({
               </li>
             ) : (
               filteredOptions.map((option, index) => (
-                <DropdownOptionItem
+                <DropdownOption
                   key={`${option.value}-${index}`}
                   option={option}
                   isSelected={isSelected(option.value)}
@@ -381,240 +385,6 @@ export function AdvancedDropdown<T extends string | number>({
         </p>
       )}
     </div>
-  );
-}
-
-// Dropdown Trigger Component
-const DropdownTrigger = React.forwardRef<HTMLButtonElement, {
-  displayLabel: string;
-  isOpen: boolean;
-  disabled?: boolean;
-  loading?: boolean;
-  clearable?: boolean;
-  multiple?: boolean;
-  selectedCount?: number;
-  error?: string;
-  onToggle: () => void;
-  onClear?: (e: React.MouseEvent | React.KeyboardEvent) => void;
-
-}>(({
-  displayLabel,
-  isOpen,
-  disabled,
-  loading,
-  clearable,
-  multiple,
-  selectedCount = 0,
-  error,
-  onToggle,
-  onClear,
-}, ref) => {
-
-  const baseClasses = `
-    relative w-full min-w-0 max-w-full px-3 py-2.5 text-left bg-background border rounded-xl shadow-xs text-primary
-    cursor-pointer transition-all duration-200 ease-in-out
-    focus:outline-none focus:border-[--color-brand-600]
-    flex items-center justify-between
-  `;
-
-  const stateClasses = `
-    ${disabled ? 'bg-gray-50 cursor-not-allowed opacity-60' : 'hover:border'}
-    ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border'}
-    ${isOpen ? 'border-[var(--color-brand-600)] ring-1 ring-[var(--color-focus-ring)] ring-opacity-20' : ''}
-  `;
-
-  return (
-    <button
-      ref={ref}
-      type="button"
-      className={`${baseClasses} ${stateClasses}`}
-      onClick={onToggle}
-      disabled={disabled || loading}
-      aria-expanded={isOpen}
-      aria-haspopup="listbox"
-    >
-      <span className={`block min-w-0 flex-1 truncate ${displayLabel.includes('Select') ? 'var(--color-text-placeholder)' : 'var(--color-text-primary)'
-        }`}>
-        {displayLabel}
-      </span>
-
-      <div className="flex shrink-0 items-center space-x-1 ml-2">
-        {multiple && selectedCount > 0 && (
-          <span className="inline-flex items-center justify-center p-3 h-4 w-4 rounded-full text-xs font-medium bg-[var(--color-bg-brand-primary)] text-black">
-            {selectedCount}
-          </span>
-        )}
-
-        {clearable && selectedCount > 0 && !loading && onClear && (
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={onClear}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onClear(e);
-              }
-            }}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-            aria-label="Clear selection"
-          >
-            <X className="w-3 h-3 text-gray-500" />
-          </div>
-        )}
-
-        {loading ? (
-          <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
-        ) : (
-          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'transform rotate-180' : ''
-            }`} />
-        )}
-      </div>
-    </button>
-  );
-});
-
-// Dropdown Search Component
-const DropdownSearch = React.forwardRef<HTMLInputElement, {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-}>(({ value, onChange, placeholder = 'Search options...' }, ref) => {
-  const inputRef = React.useRef<HTMLInputElement>(null);
-
-  // Combine refs using useImperativeHandle
-  React.useImperativeHandle(ref, () => inputRef.current as HTMLInputElement);
-
-  // Detect and clear email autofill on focus
-  const handleFocus = React.useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    const input = e.target;
-    // If input value looks like an email but our state is empty, browser autofilled it
-    // Clear it immediately to prevent autofill issues
-    if (input.value && /@/.test(input.value) && !value) {
-      input.value = '';
-      onChange('');
-    }
-  }, [value, onChange]);
-
-  return (
-    <div className="p-3 border-b">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          ref={inputRef}
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={handleFocus}
-          placeholder={placeholder}
-          className="w-full pl-9 pr-3 py-2 text-sm border rounded-md focus:outline-none text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)] bg-[--color-alpha-white] transition-colors duration-200"
-          autoComplete="new-password"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck="false"
-          data-lpignore="true"
-          data-form-type="other"
-        />
-      </div>
-    </div>
-  );
-});
-
-// Dropdown Option Item Component
-function DropdownOptionItem<T>({
-  option,
-  isSelected,
-  isFocused,
-  multiple,
-  onClick,
-}: Readonly<{
-  option: DropdownOption<T>;
-  isSelected: boolean;
-  isFocused: boolean;
-  multiple: boolean;
-  onClick: () => void;
-}>) {
-  const baseClasses = `
-    flex items-center justify-between px-3 py-2.5 cursor-pointer
-    transition-all duration-150 ease-in-out relative
-  `;
-
-  const selectedClass = isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-[var(--color-text-primary)]';
-  const stateClasses = `
-    ${isFocused ? 'bg-[var(--color-bg-brand-primary)] border-l-4 border-l-gray-400' : ''}
-    ${selectedClass}
-    ${!isSelected && !isFocused ? 'hover:bg-[var(--color-bg-brand-primary)] hover:text-black' : ''}
-    ${option.disabled ? 'opacity-50 cursor-not-allowed' : ''}
-  `;
-
-  return (
-    <li
-      className={`${baseClasses} ${stateClasses} rounded-xl`}
-      onClick={option.disabled ? undefined : onClick}
-      onKeyDown={
-        option.disabled
-          ? undefined
-          : (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onClick();
-              }
-            }
-      }
-      role="option"
-      aria-selected={isSelected}
-      aria-disabled={option.disabled}
-    >
-      <div className="flex items-center space-x-3 flex-1 min-w-0">
-        {option.icon && (
-          <div className="flex-shrink-0 w-4 h-4 text-gray-500">
-            {option.icon}
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <div className={`font-medium truncate ${isSelected && !multiple ? 'text-black' : ''}`}>
-            {option.label}
-          </div>
-          {option.description && (
-            <div
-              className={`text-sm mt-0.5 ${isSelected && !multiple ? 'var(--color-text-secondary)' : 'var(--color-text-placeholder)'} overflow-hidden`}
-              style={{
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                lineHeight: '1.4',
-                maxHeight: '2.8em'
-              }}
-              title={option.description}
-            >
-              {option.description}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Only show rightLabel if explicitly provided (e.g., for currency fields) */}
-      {option.rightLabel && (
-        <div className="flex-shrink-0 ml-2 text-sm text-gray-500">
-          {option.rightLabel}
-        </div>
-      )}
-
-      {isSelected && (
-        <div className="flex-shrink-0 ml-2">
-          {multiple ? (
-            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${isSelected
-              ? 'bg-[var(--color-bg-brand-primary)] border-[var(--color-bg-brand-primary)]'
-              : 'border bg-black'
-              }`}>
-              <Check className="w-3 h-3 text-black" />
-            </div>
-          ) : (
-            <Check className="w-4 h-4 text-[var(--color-bg-brand-primary)]" />
-          )}
-        </div>
-      )}
-    </li>
   );
 }
 

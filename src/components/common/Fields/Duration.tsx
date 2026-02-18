@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useClickHandler } from "../../../utils/helpers";
+import { pad2 } from "../../../utils/timeFormatUtils";
 
 interface DurationConfig {
   durationFormat?: "h:mm" | "h:mm:ss" | "h:mm:ss.s" | "h:mm:ss.ss" | "h:mm:ss.sss" | "d:h:mm";
@@ -21,16 +22,12 @@ interface DurationProps {
   helperText?: string;
 }
 
-function pad(n: number) {
-  return n.toString().padStart(2, "0");
-}
-
 function pad3(n: number) {
   return n.toString().padStart(3, "0");
 }
 
 function formatDaysHoursMinutes(days: number, hours: number, mins: number): string {
-  return days > 0 ? `${days}:${pad(hours)}:${pad(mins)}` : `${pad(hours)}:${pad(mins)}`;
+  return days > 0 ? `${days}:${pad2(hours)}:${pad2(mins)}` : `${pad2(hours)}:${pad2(mins)}`;
 }
 
 function formatHoursMinutesSeconds(
@@ -45,16 +42,16 @@ function formatHoursMinutesSeconds(
   if (precision === 1000) {
     fractionalStr = pad3(fractionalPart);
   } else if (precision === 100) {
-    fractionalStr = pad(fractionalPart);
+    fractionalStr = pad2(fractionalPart);
   } else {
     fractionalStr = fractionalPart.toString();
   }
-  return `${pad(hours)}:${pad(mins)}:${pad(secs)}.${fractionalStr}`;
+  return `${pad2(hours)}:${pad2(mins)}:${pad2(secs)}.${fractionalStr}`;
 }
 
 function formatHoursMinutes(hours: number, mins: number, secs: number): string {
   const roundedMins = secs > 0 ? mins + 1 : mins;
-  return `${pad(hours)}:${pad(roundedMins)}`;
+  return `${pad2(hours)}:${pad2(roundedMins)}`;
 }
 
 function formatDuration(minutes: number | null | undefined, durationFormat: string): string {
@@ -77,7 +74,7 @@ function formatDuration(minutes: number | null | undefined, durationFormat: stri
     case "h:mm:ss.s":
       return formatHoursMinutesSeconds(hours, mins, secs, fractionalSeconds, 10);
     case "h:mm:ss":
-      return `${pad(hours)}:${pad(mins)}:${pad(secs)}`;
+      return `${pad2(hours)}:${pad2(mins)}:${pad2(secs)}`;
     case "h:mm":
     default:
       return formatHoursMinutes(hours, mins, secs);
@@ -351,3 +348,4 @@ export const Duration: React.FC<DurationProps> = ({
     </div>
   );
 };
+

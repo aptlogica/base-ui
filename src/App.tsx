@@ -485,7 +485,7 @@ const WorkspacesGuard: React.FC<{ children: React.ReactNode }> = ({ children }) 
   // If first call in flight, show a tiny centered indicator to avoid flicker
   if (isLoading) {
     return (
-      <div className="w-full h-[40vh] flex items-center justify-center">
+      <div className="w-full h-screen flex items-center justify-center">
         <div className="flex flex-col items-center space-y-3">
           <Loader size={10} />
           <div className="text-sm text-gray-600 dark:text-gray-300">Preparing your workspace…</div>

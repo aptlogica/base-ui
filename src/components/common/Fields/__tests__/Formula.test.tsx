@@ -50,6 +50,7 @@ vi.mock('react-dom', async () => {
 
 describe('Formula', () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     evaluateFormulaMock.mockReturnValue({ result: 10, error: null });
     formatResultMock.mockImplementation((value: any) => value);
@@ -129,6 +130,71 @@ describe('Formula', () => {
     });
   });
 
+  it('re-evaluates when rowData changes and formula uses TODAY()', async () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    formulaDependsOnRowDataMock.mockReturnValue(false);
+    formulaUsesTodayMock.mockReturnValue(true);
+    convertResultToValueMock.mockReturnValue(456);
+
+    try {
+      const { rerender } = render(
+        <Formula
+          value={null}
+          onChange={onChange}
+          config={{ formula: 'TODAY()' }}
+          columns={[]}
+          allColumns={[]}
+          rowData={{ a: 1 }}
+        />
+      );
+
+      rerender(
+        <Formula
+          value={null}
+          onChange={onChange}
+          config={{ formula: 'TODAY()' }}
+          columns={[]}
+          allColumns={[]}
+          rowData={{ a: 2 }}
+        />
+      );
+
+      vi.advanceTimersByTime(400);
+
+      expect(evaluateFormulaMock).toHaveBeenCalled();
+      expect(onChange).toHaveBeenCalledWith(456);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('clears value when formula evaluation returns error', () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    evaluateFormulaMock.mockReturnValue({ result: null, error: 'bad' });
+
+    try {
+      render(
+        <Formula
+          value={10}
+          onChange={onChange}
+          config={{ formula: '' }}
+          columns={[]}
+          allColumns={[]}
+        />
+      );
+
+      const textarea = screen.getByPlaceholderText(/enter formula/i);
+      fireEvent.change(textarea, { target: { value: 'BAD(' } });
+
+      vi.runOnlyPendingTimers();
+      expect(onChange).toHaveBeenCalledWith(null);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('clears formula when clear button is clicked', () => {
     const onFormulaChange = vi.fn();
     render(
@@ -189,5 +255,60 @@ describe('Formula', () => {
     await waitFor(() => {
       expect(screen.queryByText('Amount')).not.toBeInTheDocument();
     });
+  });
+
+  it('filters columns by compatible types when function at cursor', async () => {
+    getFunctionAtCursorMock.mockReturnValue('SUM');
+    getCompatibleFieldTypesMock.mockReturnValue(['number']);
+
+    render(
+      <Formula
+        columns={[
+          { id: 'c1', title: 'Amount', type: 'number' },
+          { id: 'c2', title: 'Name', type: 'text' }
+        ]}
+        allColumns={[
+          { id: 'c1', title: 'Amount', type: 'number' },
+          { id: 'c2', title: 'Name', type: 'text' }
+        ]}
+      />
+    );
+
+    const textarea = screen.getByPlaceholderText(/enter formula/i);
+    fireEvent.focus(textarea);
+    fireEvent.change(textarea, { target: { value: '{' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Amount')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Name')).not.toBeInTheDocument();
+  });
+
+  it('renders formatted result when disabled', () => {
+    formatResultMock.mockReturnValue('Formatted');
+    render(
+      <Formula
+        disabled
+        config={{ formula: 'SUM({Amount})' }}
+        columns={[{ id: 'c1', title: 'Amount', type: 'number' }]}
+        allColumns={[]}
+      />
+    );
+
+    expect(screen.getByText('Formatted')).toBeInTheDocument();
+  });
+
+  it('renders nothing in disabled mode when evaluation fails', () => {
+    evaluateFormulaMock.mockReturnValue({ result: null, error: 'bad' });
+    const { container } = render(
+      <Formula
+        disabled
+        config={{ formula: 'BAD(' }}
+        columns={[]}
+        allColumns={[]}
+      />
+    );
+
+    expect(container).toBeEmptyDOMElement();
   });
 });

@@ -190,7 +190,7 @@ describe('useFormViewConfig', () => {
       expect(mockUpdateAppearance).toHaveBeenCalled();
     });
 
-    it('should call updateAppearance even when merged appearance is unchanged', async () => {
+    it('should call updateAppearance when merged appearance is unchanged', async () => {
       mockUpdateAppearance.mockResolvedValue(undefined);
       const viewWithAppearance = {
         ...defaultView,
@@ -327,6 +327,26 @@ describe('useFormViewConfig', () => {
       );
       expect(toastSuccess).toHaveBeenCalled();
     });
+
+    it('clears pending debounce on unmount', () => {
+      const clearSpy = vi.spyOn(globalThis, 'clearTimeout');
+      const { result, unmount } = renderHook(() =>
+        useFormViewConfig({
+          view: defaultView,
+          formFields: defaultFormFields,
+          updateAppearance: mockUpdateAppearance,
+        })
+      );
+
+      act(() => {
+        result.current.handleConfigChange({ title: 'Temp Title' });
+      });
+
+      unmount();
+
+      expect(clearSpy).toHaveBeenCalled();
+      clearSpy.mockRestore();
+    });
   });
 
   describe('setFormConfig', () => {
@@ -397,6 +417,44 @@ describe('useFormViewConfig', () => {
       expect(result.current.formConfig.title).toBe('Remote Title');
       expect(result.current.formConfig.description).toBe('Remote Desc');
       expect(result.current.formConfig.appearance?.backgroundColor).toBe('#111111');
+    });
+
+    it('skips external sync while updating', async () => {
+      let resolveUpdate: (() => void) | null = null;
+      mockUpdateAppearance.mockImplementation(
+        () => new Promise<void>((resolve) => {
+          resolveUpdate = resolve;
+        })
+      );
+
+      const { result, rerender } = renderHook(
+        ({ view }) =>
+          useFormViewConfig({
+            view,
+            formFields: defaultFormFields,
+            updateAppearance: mockUpdateAppearance,
+          }),
+        { initialProps: { view: defaultView } }
+      );
+
+      act(() => {
+        result.current.handleConfigChange({ title: 'Local Title' });
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(700);
+      });
+
+      const updatedView = {
+        ...defaultView,
+        meta: { formViewAppearance: { formTitle: 'Remote Title' } },
+      };
+
+      rerender({ view: updatedView });
+
+      expect(result.current.formConfig.title).toBe('Local Title');
+
+      resolveUpdate?.();
     });
   });
 

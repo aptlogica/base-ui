@@ -373,7 +373,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
 
               {/* Right Column - People with access (only show when there are members) */}
               {!baseMembersQuery.isLoading && Array.isArray(baseMembers) && baseMembers.length > 0 && (
-                <div className="flex flex-col h-full min-h-0 bg-gray-50 p-4 lg:p-6">
+                <div className="flex flex-col h-full min-h-0 bg-gray-50 border-l p-4 lg:p-6">
                   <h3 className="text-sm font-semibold text-primary flex-shrink-0 mb-4">People with access</h3>
 
                   {/* Members List - Scrollable */}

@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Filter, Trash2, Plus, Check, Type, ChevronDown, X } from 'lucide-react';
+import { Filter, Trash2, Plus, Check, ChevronDown, X } from 'lucide-react';
 import { useSmartPopover } from '../../../hooks/useSmartPopover';
 import { ColumnConfig } from '../../../plugins/GridViewPlugin/types/grid.types';
-import { getFieldTypeIconComponent } from '../../../types/fieldTypes';
 import {
   FIELD_TYPE_OPERATORS,
   FilterCondition,
@@ -18,6 +17,7 @@ import {
 import { DateField } from '../../common/Fields/DateField';
 import { Duration, MultiSelect, Rating, SingleSelect, Time } from '../../common/Fields';
 import { fieldsToExcludeInFilter } from '../../../types/constants';
+import { FieldSelectDropdown, FieldSelectOption } from './FieldSelectDropdown';
 
 const OPERATORS = [
   { value: 'is equal', label: 'is equal' },
@@ -720,58 +720,42 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
 
                 {/* Field dropdown */}
                 <div className="relative flex-1 min-w-[200px]">
-                  <button
-                    type="button"
-                    className="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-between"
-                    onClick={() => {
-                      setFieldDropdownOpen(fieldDropdownOpen === idx ? null : idx);
-                      setOperatorDropdownOpen(null);
-                      setLogicDropdownOpen(null);
-                    }}
-                  >
-                    <span className="flex items-center gap-2">
-                      {column ? (
-                        <>
-                          {getFieldTypeIconComponent(column.uidt || 'text') || <Type className="w-4 h-4 text-gray-400" />}
-                          <span className="text-primary">{column.title}</span>
-                        </>
-                      ) : (
-                        <span className="text-gray-400">Select field</span>
-                      )}
-                    </span>
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
-                  </button>
-                  {fieldDropdownOpen === idx && (
-                    <div
-                      className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto"
-                      data-testid={`filter-field-options-${idx}`}
-                    >
-                      {columnOptions.length === 0 && (
-                        <div className="px-3 py-2 text-sm text-secondary">All fields already used</div>
-                      )}
-                      {columnOptions.map((col) => (
-                        <button
-                          key={col.column_name}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap ${filter.column === col.column_name ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'
-                            }`}
-                          onClick={() => {
-                            // Reset operator and value when field changes
-                            const selectedColumn = visibleColumns.find(c => c.column_name === col.column_name);
-                            const defaultOperator = selectedColumn
-                              ? getDefaultOperator(selectedColumn.uidt || 'text')
-                              : 'is equal';
-                            onUpdateFilter(idx, { column: col.column_name || '', operator: defaultOperator, value: '' });
-                            setFieldDropdownOpen(null);
-                          }}
-                          type="button"
-                        >
-                          {getFieldTypeIconComponent(col.uidt || 'text') || <Type className="w-4 h-4 text-gray-400" />}
-                          <span>{col.title}</span>
-                          {filter.column === col.column_name && <Check className="w-4 h-4 ml-auto text-black" />}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  {(() => {
+                    const dropdownOptions: FieldSelectOption[] = columnOptions.map((col) => ({
+                      key: getColumnKey(col),
+                      title: col.title,
+                      uidt: col.uidt,
+                      type: col.type,
+                    }));
+
+                    return (
+                      <FieldSelectDropdown
+                        options={dropdownOptions}
+                        selectedKey={(filter.column || '').trim()}
+                        isOpen={fieldDropdownOpen === idx}
+                        onToggle={() => {
+                          setFieldDropdownOpen(fieldDropdownOpen === idx ? null : idx);
+                          setOperatorDropdownOpen(null);
+                          setLogicDropdownOpen(null);
+                        }}
+                        onSelect={(key) => {
+                          const selectedColumn = visibleColumns.find(c => getColumnKey(c) === key);
+                          const defaultOperator = selectedColumn
+                            ? getDefaultOperator(selectedColumn.uidt || selectedColumn.type || 'text')
+                            : 'is equal';
+                          onUpdateFilter(idx, { column: selectedColumn?.column_name || selectedColumn?.key || key, operator: defaultOperator, value: '' });
+                          setFieldDropdownOpen(null);
+                        }}
+                        placeholder="Select field"
+                        menuTestId={`filter-field-options-${idx}`}
+                        buttonClassName="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-between"
+                        menuClassName="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto"
+                        optionClassName={(_, isSelected) =>
+                          `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap ${isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'}`
+                        }
+                      />
+                    );
+                  })()}
                 </div>
 
                 {/* Operator dropdown */}
@@ -896,67 +880,40 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                     }
                     return (usedColumnCounts.get(key) ?? 0) === 0;
                   });
+                  const dropdownOptions: FieldSelectOption[] = columnOptions.map((col) => ({
+                    key: getColumnKey(col),
+                    title: col.title,
+                    uidt: col.uidt,
+                    type: col.type,
+                  }));
+
                   return (
-                    <>
-                      <button
-                        type="button"
-                        className="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-between"
-                        onClick={() => {
-                          setFieldDropdownOpen(fieldDropdownOpen === -1 ? null : -1);
-                          setOperatorDropdownOpen(null);
-                          setLogicDropdownOpen(null);
-                        }}
-                      >
-                        <span className="flex items-center gap-2">
-                          {newFilter.column ? (
-                            (() => {
-                              const col = visibleColumns.find(c => c.column_name === newFilter.column);
-                              return col ? (
-                                <>
-                                  {getFieldTypeIconComponent(col.uidt || 'text') || <Type className="w-4 h-4 text-gray-400" />}
-                                  <span className="text-primary">{col.title}</span>
-                                </>
-                              ) : (
-                                <span className="text-gray-400">Select field</span>
-                              );
-                            })()
-                          ) : (
-                            <span className="text-gray-400">Select field</span>
-                          )}
-                        </span>
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
-                      </button>
-                      {fieldDropdownOpen === -1 && (
-                        <div
-                          className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-primary rounded-xl shadow-lg max-h-64 overflow-y-auto"
-                          data-testid="filter-new-field-options"
-                        >
-                          {columnOptions.length === 0 && (
-                            <div className="px-3 py-2 text-sm text-secondary">All fields already used</div>
-                          )}
-                          {columnOptions.map((col) => (
-                            <button
-                              key={col.column_name}
-                              className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap group ${newFilter.column === col.column_name ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'
-                                }`}
-                              onClick={() => {
-                                // Reset operator and value when field changes
-                                const defaultOperator = getDefaultOperator(col.uidt || 'text');
-                                setNewFilter({ column: col.column_name || '', operator: defaultOperator, value: '', logic: 'AND' });
-                                setInputValue('');
-                                setFieldDropdownOpen(null);
-                                setHasUserInteracted(true);
-                              }}
-                              type="button"
-                            >
-                              {getFieldTypeIconComponent(col.uidt || 'text') || <Type className="w-4 h-4 text-gray-400" />}
-                              <span className={`${newFilter.column === col.column_name ? 'text-black' : 'text-primary group-hover:text-black'}`}>{col.title}</span>
-                              {newFilter.column === col.column_name && <Check className="w-4 h-4 ml-auto text-black" />}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </>
+                    <FieldSelectDropdown
+                      options={dropdownOptions}
+                      selectedKey={currentFieldKey}
+                      isOpen={fieldDropdownOpen === -1}
+                      onToggle={() => {
+                        setFieldDropdownOpen(fieldDropdownOpen === -1 ? null : -1);
+                        setOperatorDropdownOpen(null);
+                        setLogicDropdownOpen(null);
+                      }}
+                      onSelect={(key) => {
+                        const selectedColumn = visibleColumns.find(c => getColumnKey(c) === key);
+                        const defaultOperator = getDefaultOperator(selectedColumn?.uidt || selectedColumn?.type || 'text');
+                        setNewFilter({ column: selectedColumn?.column_name || selectedColumn?.key || key, operator: defaultOperator, value: '', logic: 'AND' });
+                        setInputValue('');
+                        setFieldDropdownOpen(null);
+                        setHasUserInteracted(true);
+                      }}
+                      placeholder="Select field"
+                      menuTestId="filter-new-field-options"
+                      buttonClassName="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-between"
+                      menuClassName="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-primary rounded-xl shadow-lg max-h-64 overflow-y-auto"
+                      optionClassName={(_, isSelected) =>
+                        `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap group ${isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'}`
+                      }
+                      labelClassName={(_, isSelected) => (isSelected ? 'text-black' : 'text-primary group-hover:text-black')}
+                    />
                   );
                 })()}
               </div>

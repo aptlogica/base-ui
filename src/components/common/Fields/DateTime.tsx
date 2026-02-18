@@ -3,6 +3,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { zonedToUtcISO } from '../../../utils/dateUtils';
+import { calculateDropdownPosition } from '../../../utils/dropdownPosition';
+import { pad2, getTodayISO } from '../../../utils/timeFormatUtils';
+import { buildCalendarWeeks, MONTH_LABELS } from '../../../utils/calendarUtils';
 
 interface DateTimeProps {
   label?: string;
@@ -28,10 +31,6 @@ interface DateTimeProps {
   };
 }
 
-function pad(n: number) {
-  return n.toString().padStart(2, '0');
-}
-
 function getTimeOptions(step = 30, hourFormat: '12' | '24' = '24', timeFormat: string = 'HH:mm') {
   const options: string[] = [];
 
@@ -54,24 +53,19 @@ function getTimeOptions(step = 30, hourFormat: '12' | '24' = '24', timeFormat: s
 
         if (timeFormat === 'HH:mm:ss' || timeFormat === 'HH:mm:ss.SSS') {
           // For seconds format, show seconds as 00
-          options.push(`${displayHour}:${pad(m)}:00 ${period}`);
+          options.push(`${displayHour}:${pad2(m)}:00 ${period}`);
         } else {
-          options.push(`${displayHour}:${pad(m)} ${period}`);
+          options.push(`${displayHour}:${pad2(m)} ${period}`);
         }
       } else if (timeFormat === 'HH:mm:ss' || timeFormat === 'HH:mm:ss.SSS') {
         // For seconds format, show seconds as 00
-        options.push(`${pad(h)}:${pad(m)}:00`);
+        options.push(`${pad2(h)}:${pad2(m)}:00`);
       } else {
-        options.push(`${pad(h)}:${pad(m)}`);
+        options.push(`${pad2(h)}:${pad2(m)}`);
       }
     }
   }
   return options;
-}
-
-function getTodayISO() {
-  const now = new Date();
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
 function formatDate(date: string, format: string): string {
@@ -213,13 +207,13 @@ function toHHmm(timeStr: string, hourFormat: '12' | '24'): string {
     const m = Number.parseInt(mStr, 10);
     if (period.toUpperCase() === 'PM' && h !== 12) h += 12;
     if (period.toUpperCase() === 'AM' && h === 12) h = 0;
-    return `${pad(h)}:${pad(m)}`;
+    return `${pad2(h)}:${pad2(m)}`;
   }
   // 24h: just take HH and mm even if seconds are present
   const segs = t.split(':');
   const HH = segs[0] || '00';
   const MM = segs[1] || '00';
-  return `${pad(Number.parseInt(HH, 10))}:${pad(Number.parseInt(MM, 10))}`;
+  return `${pad2(Number.parseInt(HH, 10))}:${pad2(Number.parseInt(MM, 10))}`;
 }
 
 export const DateTime: React.FC<DateTimeProps> = ({
@@ -293,42 +287,15 @@ export const DateTime: React.FC<DateTimeProps> = ({
     if (!trigger) return null;
 
     const rect = trigger.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
     const dropdownMinHeight = 400;
     const dropdownWidth = 320; // w-80 = 320px
-
-    const spaceBelow = viewportHeight - rect.bottom;
-    const spaceAbove = rect.top;
-
-    // Determine if we should open above or below
-    let position: 'below' | 'above' = 'below';
-    if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
-      position = 'above';
-    }
-    // Calculate left position (align with button)
-    let left = rect.left;
-    if (left + dropdownWidth > viewportWidth - 10) {
-      left = viewportWidth - dropdownWidth - 10; // 10px margin from right edge
-    }
-    if (left < 10) {
-      left = 10; // 10px margin from left edge
-    }
-
-    // Calculate top/bottom position
-    if (position === 'below') {
-      return {
-        top: rect.bottom + 8,
-        left,
-        width: dropdownWidth
-      };
-    } else {
-      return {
-        bottom: viewportHeight - rect.top + 8,
-        left,
-        width: dropdownWidth
-      };
-    }
+    return calculateDropdownPosition({
+      rect,
+      dropdownMinHeight,
+      dropdownWidth,
+      offset: 8,
+      sideMargin: 10
+    });
   }, []);
 
   useEffect(() => {
@@ -408,42 +375,15 @@ export const DateTime: React.FC<DateTimeProps> = ({
     if (!trigger) return null;
 
     const rect = trigger.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
     const dropdownMinHeight = 300;
     const dropdownWidth = 144; // w-36 = 144px
-
-    const spaceBelow = viewportHeight - rect.bottom;
-    const spaceAbove = rect.top;
-
-    // Determine if we should open above or below
-    let position: 'below' | 'above' = 'below';
-    if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
-      position = 'above';
-    }
-    // Calculate left position (align with button)
-    let left = rect.left;
-    if (left + dropdownWidth > viewportWidth - 10) {
-      left = viewportWidth - dropdownWidth - 10; // 10px margin from right edge
-    }
-    if (left < 10) {
-      left = 10; // 10px margin from left edge
-    }
-
-    // Calculate top/bottom position
-    if (position === 'below') {
-      return {
-        top: rect.bottom + 8,
-        left,
-        width: dropdownWidth
-      };
-    } else {
-      return {
-        bottom: viewportHeight - rect.top + 8,
-        left,
-        width: dropdownWidth
-      };
-    }
+    return calculateDropdownPosition({
+      rect,
+      dropdownMinHeight,
+      dropdownWidth,
+      offset: 8,
+      sideMargin: 10
+    });
   }, []);
 
   useEffect(() => {
@@ -514,11 +454,11 @@ export const DateTime: React.FC<DateTimeProps> = ({
         // Adjust base UTC time by the offset to get local wall-clock in that GMT zone
         const adj = new Date(dt.getTime() + totalMinutes * 60_000);
         map.year = String(adj.getUTCFullYear());
-        map.month = pad(adj.getUTCMonth() + 1);
-        map.day = pad(adj.getUTCDate());
-        map.hour = pad(adj.getUTCHours());
-        map.minute = pad(adj.getUTCMinutes());
-        if (includeSeconds) map.second = pad(adj.getUTCSeconds());
+        map.month = pad2(adj.getUTCMonth() + 1);
+        map.day = pad2(adj.getUTCDate());
+        map.hour = pad2(adj.getUTCHours());
+        map.minute = pad2(adj.getUTCMinutes());
+        if (includeSeconds) map.second = pad2(adj.getUTCSeconds());
         // Derive AM/PM if needed
         const hNum = adj.getUTCHours();
         map.dayPeriod = hNum >= 12 ? 'PM' : 'AM';
@@ -540,8 +480,8 @@ export const DateTime: React.FC<DateTimeProps> = ({
       }
 
       const yyyy = map.year || String(dt.getUTCFullYear());
-      const mm = map.month || pad(dt.getUTCMonth() + 1);
-      const dd = map.day || pad(dt.getUTCDate());
+      const mm = map.month || pad2(dt.getUTCMonth() + 1);
+      const dd = map.day || pad2(dt.getUTCDate());
 
       // Build date string per configured format
       const isoLocalDate = `${yyyy}-${mm}-${dd}`;
@@ -627,7 +567,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
           let hour = Number.parseInt(hours, 10);
           if (period === 'PM' && hour !== 12) hour += 12;
           if (period === 'AM' && hour === 12) hour = 0;
-          timeValue = `${pad(hour)}:${minutes}`;
+          timeValue = `${pad2(hour)}:${minutes}`;
         }
 
         const newValue = toUtcIso(isoDate, timeValue);
@@ -727,9 +667,9 @@ export const DateTime: React.FC<DateTimeProps> = ({
     const now = new Date();
     const iso = now.toISOString();
     const d = iso.slice(0, 10);
-    const h = pad(now.getUTCHours());
-    const m = pad(now.getUTCMinutes());
-    const s = pad(now.getUTCSeconds());
+    const h = pad2(now.getUTCHours());
+    const m = pad2(now.getUTCMinutes());
+    const s = pad2(now.getUTCSeconds());
     let t = `${h}:${m}`;
     if (timeFormat === 'HH:mm:ss' || timeFormat === 'hh:mm:ss' || timeFormat === 'HH:mm:ss.SSS' || timeFormat === 'hh:mm:ss.SSS') {
       t = `${h}:${m}:${s}`;
@@ -751,7 +691,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
       let hour = Number.parseInt(hours, 10);
       if (period === 'PM' && hour !== 12) hour += 12;
       if (period === 'AM' && hour === 12) hour = 0;
-      timeValue = `${pad(hour)}:${minutes}`;
+      timeValue = `${pad2(hour)}:${minutes}`;
     }
     let newDate = displayOriginalDate;
     if (!newDate) {
@@ -806,10 +746,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
   const years = React.useMemo(() => Array.from({ length: 12 }, (_, i) => startYear + i), [startYear]);
 
   // Generate month options for dropdown
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ];
+  const months = MONTH_LABELS;
 
   // For year dropdown
   const goPrev = (e: React.MouseEvent) => {
@@ -834,28 +771,8 @@ export const DateTime: React.FC<DateTimeProps> = ({
   const renderCalendar = () => {
     const year = calendarMonth.getFullYear();
     const month = calendarMonth.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    // Monday as first day of week
-    let startDay = firstDay.getDay();
-    startDay = startDay === 0 ? 6 : startDay - 1;
-    if (Number.isNaN(startDay) || startDay < 0) startDay = 0;
     const todayISO = getTodayISO();
-    const weeks: (string | null)[][] = [];
-    let week: (string | null)[] = new Array(startDay).fill(null);
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dayISO = `${year}-${pad(month + 1)}-${pad(d)}`;
-      week.push(dayISO);
-      if (week.length === 7) {
-        weeks.push(week);
-        week = [];
-      }
-    }
-    if (week.length > 0) {
-      while (week.length < 7) week.push(null);
-      weeks.push(week);
-    }
+    const weeks = buildCalendarWeeks(year, month, true);
     return (
       <div className="p-2 bg-background rounded-xl">
         {/* Header with navigation and quick actions */}
@@ -1016,16 +933,16 @@ export const DateTime: React.FC<DateTimeProps> = ({
 
             if (day === date) {
               dayStateClass =
-                'bg-[var(--color-bg-brand-solid)] text-black font-bold';
+                'bg-[var(--color-bg-brand-primary)] text-black font-bold';
             } else if (day === todayISO) {
               dayStateClass =
-                'border border-[var(--color-bg-brand-primary)] text-primary';
+                'text-[var(--color-bg-brand-primary)]';
             }
 
             return (
               <button
                 key={day || `empty-${idx}`}
-                className={`w-9 h-9 rounded-full text-center text-sm font-medium hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${dayStateClass} ${day ? '' : 'opacity-0 pointer-events-none'
+                className={`w-8 h-8 rounded-xl text-center text-sm font-medium hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${dayStateClass} ${day ? '' : 'opacity-0 pointer-events-none'
                   }`}
                 onClick={() => day && !readOnly && handleDateSelect(day)}
                 disabled={!day || readOnly}
@@ -1232,3 +1149,4 @@ export const DateTime: React.FC<DateTimeProps> = ({
     </div>
   );
 }; 
+

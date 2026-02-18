@@ -1,4 +1,3 @@
-import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
 import { MultiLineText } from '../../components/common/Fields';
@@ -38,7 +37,7 @@ export function renderRelationsConfigStep(props: any) {
               <div className="flex items-center gap-2 mb-1.5">
                 <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Relation Type</span>
               </div>
-              <div className="text-xs text-gray-500 bg-gray-50 border border rounded-md p-2 mb-2">
+              <div className="text-xs text-gray-500 bg-gray-50 border rounded-md p-2 mb-2">
                 <span className="font-medium text-gray-700">What is a Link?</span> A link creates a relationship between tables to reference related records.
                 Example: link "Orders" to "Customers" to see which customer placed each order.
               </div>
@@ -52,7 +51,7 @@ export function renderRelationsConfigStep(props: any) {
                   : 'hover:bg-gray-50'
                   } ${relationType === 'one-to-one'
                     ? 'text-[var(--color-text-primary)] rounded-xl border-[var(--color-border-brand)]'
-                  : 'text-[var(--color-text-primary)] border'
+                    : 'text-[var(--color-text-primary)] border'
                   }`}
                 onClick={() => !isLinksFieldEditing && setRelationType('one-to-one')}
                 title="Each record in this table links to exactly one record in the target table, and vice versa"
@@ -79,7 +78,7 @@ export function renderRelationsConfigStep(props: any) {
                   : 'hover:bg-gray-50'
                   } ${relationType === 'has-many'
                     ? 'text-[var(--color-text-primary)] rounded-xl border-[var(--color-border-brand)]'
-                  : 'text-[var(--color-text-primary)] border'
+                    : 'text-[var(--color-text-primary)] border'
                   }`}
                 onClick={() => !isLinksFieldEditing && setRelationType('has-many')}
                 title="Each record in this table can link to multiple records in the target table"
@@ -112,7 +111,7 @@ export function renderRelationsConfigStep(props: any) {
                   : 'hover:bg-gray-50'
                   } ${relationType === 'many-to-many'
                     ? 'text-[var(--color-text-primary)] rounded-xl border-[var(--color-border-brand)]'
-                  : 'text-[var(--color-text-primary)] border'
+                    : 'text-[var(--color-text-primary)] border'
                   }`}
                 onClick={() => !isLinksFieldEditing && setRelationType('many-to-many')}
                 title="Records in both tables can link to multiple records in the other table"
@@ -149,9 +148,9 @@ export function renderRelationsConfigStep(props: any) {
               value={selectedTableId}
               onChange={(value) => {
                 if (!isLinksFieldEditing) {
-                setSelectedTableId(value as string);
-                const table = Array.isArray(tables) ? tables.find(t => t.id === value) : null;
-                setSelectedTable(table);
+                  setSelectedTableId(value as string);
+                  const table = Array.isArray(tables) ? tables.find(t => t.id === value) : null;
+                  setSelectedTable(table);
                 }
               }}
               placeholder="Select table to link"
@@ -172,7 +171,7 @@ export function renderRelationsConfigStep(props: any) {
           </div>
 
           <div className="relative">
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
+            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
               <Plus className="w-4 h-4" />
               Add description
             </button>
@@ -210,9 +209,9 @@ export function renderRelationsConfigStep(props: any) {
         <>
           <div className="flex flex-col md:flex-row gap-3">
             <div className="mb-4 w-full">
-              <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-2">
+              <div className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-2">
                 Link Field
-              </label>
+              </div>
               <AdvancedDropdown
                 options={relationOptions}
                 value={selectedRelationId}
@@ -232,9 +231,9 @@ export function renderRelationsConfigStep(props: any) {
             </div>
 
             <div className="mb-4 w-full">
-              <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-2">
+              <div className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-2">
                 Lookup Field
-              </label>
+              </div>
               <AdvancedDropdown
                 options={lookupColumnOptions}
                 value={selectedLookupColumnId}
@@ -263,14 +262,13 @@ export function renderRelationsConfigStep(props: any) {
           {selectedRelationId && selectedLookupColumnId && (
             <div className="mb-4 p-3 bg-gray-50 border rounded-xl">
               <div className="text-sm text-secondary">
-                This field will display the <span className="font-semibold">{targetTableFields.find(f => f.id === selectedLookupColumnId)?.title || selectedLookupColumnId} </span>
-                from the linked record via <span className="font-semibold">{linkFields.find(f => f.id === selectedRelationId)?.title || selectedRelationId}</span>
+                This field will display the <span className="font-semibold">{targetTableFields.find(f => f.id === selectedLookupColumnId)?.title || selectedLookupColumnId} </span>from the linked record via <span className="font-semibold">{linkFields.find(f => f.id === selectedRelationId)?.title || selectedRelationId}</span>
               </div>
             </div>
           )}
 
           <div className="relative">
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
+            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
               <Plus className="w-4 h-4" />
               Add description
             </button>

@@ -1,6 +1,4 @@
-import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-
 import { DateField, Time, Year, MultiLineText } from '../../components/common/Fields';
 import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown';
 import { convertDateFormat } from '../../utils/helpers';
@@ -43,8 +41,8 @@ export function renderDateTimeConfigStep(props: any) {
     } else if (value === null || value === '') {
       setYearDefault(null);
     } else {
-      const parsedValue = parseInt(value);
-      setYearDefault(isNaN(parsedValue) ? null : parsedValue);
+      const parsedValue = Number.parseInt(value);
+      setYearDefault(Number.isNaN(parsedValue) ? null : parsedValue);
     }
   };
 
@@ -164,9 +162,7 @@ export function renderDateTimeConfigStep(props: any) {
                     className="hidden"
                     checked={hourFormat === '12'}
                     onChange={() => setHourFormat('12')}
-                  />
-                  12 Hrs
-                </label>
+                  />12 Hrs</label>
                 <label className={`flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '24' ?
                   'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
                   <input
@@ -174,9 +170,7 @@ export function renderDateTimeConfigStep(props: any) {
                     className="hidden"
                     checked={hourFormat === '24'}
                     onChange={() => setHourFormat('24')}
-                  />
-                  24 Hrs
-                </label>
+                  />24 Hrs</label>
               </div>
             </div>
 

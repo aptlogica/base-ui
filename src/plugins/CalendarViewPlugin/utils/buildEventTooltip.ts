@@ -1,4 +1,6 @@
-import { cleanRichTextContent, isTruthyValue } from '../../shared/tooltipTextUtils';
+import { isTruthyValue } from '../../shared/tooltipTextUtils';
+import { formatTooltipValue } from '../../shared/tooltipValueUtils';
+import { toBulletLines } from '../../shared/tooltipLineUtils';
 
 type Column = {
   id?: string;
@@ -19,108 +21,13 @@ export type BuildEventTooltipOptions = {
 };
 
 function formatValue(col: Column, raw: any, formatTime: (t: string) => string): string | null {
-  // If value is null/undefined/empty, show hyphen instead of hiding the field
-  if (!isTruthyValue(raw)) return '-';
-  const t = String(col?.type || col?.uidt || '').toLowerCase();
-
-  try {
-    // Handle rich text fields (longText with richText: true)
-    if (t === 'longtext' && col?.uidt === 'longText' && typeof raw === 'string' && raw.includes('<')) {
-      const cleaned = cleanRichTextContent(raw);
-      return cleaned.length > 100 ? cleaned.substring(0, 100) + '...' : cleaned;
-    }
-
-    if (t === 'currency') {
-      const num = Number(raw);
-      if (!Number.isNaN(num)) {
-        // Calendar's Column type doesn't expose meta; use default currency formatting
-        return new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-        }).format(num);
-      }
-      return '-';
-    }
-    if (t === 'percent') {
-      const num = Number(raw);
-      if (!Number.isNaN(num)) return `${num}%`;
-      return '-';
-    }
-    if (t === 'email') {
-      return String(raw);
-    }
-    if (t === 'phone') {
-      return String(raw);
-    }
-    if (t === 'url') {
-      return String(raw);
-    }
-    if (t === 'number') {
-      const num = Number(raw);
-      if (!Number.isNaN(num)) return num.toLocaleString('en-US');
-      return '-';
-    }
-    if (t === 'decimal') {
-      const num = Number(raw);
-      if (!Number.isNaN(num)) return num.toFixed(2);
-      return '-';
-    }
-    if (t === 'date' || t === 'datetime' || t === 'createdtime' || t === 'lastmodifiedtime') {
-      const d = new Date(raw);
-      if (!Number.isNaN(d.getTime())) {
-        // Format date more nicely
-        if (t === 'date') {
-          return d.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-          });
-        } else {
-          return d.toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-          });
-        }
-      }
-    }
-    if (t === 'time') {
-      const s = String(raw);
-      if (/^\d{1,2}:\d{2}$/.test(s)) return formatTime(s);
-      return s;
-    }
-    if (t === 'multiselect') {
-      if (Array.isArray(raw)) return raw.map(v => String((v)?.label ?? v)).join(', ');
-      try { const parsed = JSON.parse(String(raw)); if (Array.isArray(parsed)) return parsed.join(', '); } catch { }
-    }
-    if (Array.isArray(raw)) {
-      // Handle links / attachments similar to Gantt
-      if (raw.length > 0 && typeof raw[0] === 'object' && raw[0].title) {
-        return raw
-          .map((v: any) => v?.title || v?.name || String(v))
-          .join(', ');
-      }
-      return raw
-        .map(v => (v?.name || v?.filename || v?.fileName || String(v)))
-        .join(', ');
-    }
-    if (typeof raw === 'object') {
-      const name = raw?.name || raw?.label || raw?.title;
-      if (name) return String(name);
-      // Unknown object shape – show hyphen instead of JSON noise
-      return '-';
-    }
-
-    // Truncate very long strings
-    const str = String(raw);
-    return str.length > 50 ? str.substring(0, 50) + '...' : str;
-  } catch {
-    // On any formatting error, show hyphen
-    return '-';
-  }
+  return formatTooltipValue(col, raw, {
+    formatTime,
+    matchUidt: false,
+    useMetaCurrency: false,
+    currencyFallback: { locale: "en-US", currency: "USD" },
+    booleanAsYesNo: false,
+  });
 }
 
 export function buildEventTooltipLines(args: {
@@ -199,18 +106,17 @@ export function buildEventTooltipLines(args: {
   });
 
   // Create horizontal bullet-separated lines (like NocoDB)
-  const sortedFields = visibleFields.toSorted((a, b) => a.priority - b.priority);
-
-  // Group fields into lines (up to 3-4 fields per line max)
-  const fieldsPerLine = 3;
-  for (let i = 0; i < sortedFields.length; i += fieldsPerLine) {
-    const lineFields = sortedFields.slice(i, i + fieldsPerLine);
-    const lineValues = lineFields.map(({ value }) => value).join(' • ');
-    if (lineValues) {
-      lines.push(`• ${lineValues}`);
-    }
-  }
+  const bulletSeparator = ' \u2022 ';
+  const bulletPrefix = '\u2022 ';
+  lines.push(
+    ...toBulletLines(
+      visibleFields.map(({ value, priority }) => ({ value, priority })),
+      { fieldsPerLine: 3, separator: bulletSeparator, prefix: bulletPrefix }
+    )
+  );
 
   return lines;
 }
+
+
 

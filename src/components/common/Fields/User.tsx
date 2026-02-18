@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Search, X } from 'lucide-react';
 import { useClickOutside } from '../../../hooks/useClickOutside';
 import { useGetTenantUsers } from '../../../hooks/useApi';
+import { calculateDropdownPosition } from '../../../utils/dropdownPosition';
 
 interface UserOption {
   id: string;
@@ -99,60 +100,31 @@ export const User: React.FC<UserProps> = ({
   const { data: tenantUsers = [], isLoading: loading, error } = useGetTenantUsers();
 
   // Calculate dropdown position for portal rendering
-  const calculateDropdownPosition = useCallback(() => {
+  const getDropdownPosition = useCallback(() => {
     const trigger = buttonRef.current;
     if (!trigger) return null;
 
     const rect = trigger.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
     const dropdownMinHeight = 200;
     const dropdownWidth = rect.width; // Use button width
-
-    const spaceBelow = viewportHeight - rect.bottom;
-    const spaceAbove = rect.top;
-
-    // Determine if we should open above or below
-    let position: 'below' | 'above' = 'below';
-    if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
-      position = 'above';
-    }
-    // Removed setDropdownPosition(position);
-
-    // Calculate left position (align to left edge of trigger)
-    let left = rect.left;
-    if (left < 10) {
-      left = 10; // 10px margin from left edge
-    }
-    if (left + dropdownWidth > viewportWidth - 10) {
-      left = viewportWidth - dropdownWidth - 10; // 10px margin from right edge
-    }
-
-    // Calculate top/bottom position
-    if (position === 'below') {
-      return {
-        top: rect.bottom + 8,
-        left,
-        width: dropdownWidth
-      };
-    } else {
-      return {
-        bottom: viewportHeight - rect.top + 8,
-        left,
-        width: dropdownWidth
-      };
-    }
+    return calculateDropdownPosition({
+      rect,
+      dropdownMinHeight,
+      dropdownWidth,
+      offset: 8,
+      sideMargin: 10
+    });
   }, []);
 
   // Update position when dropdown opens
   useEffect(() => {
     if (isOpen) {
-      const position = calculateDropdownPosition();
+      const position = getDropdownPosition();
       setCalculatedPosition(position);
     } else {
       setCalculatedPosition(null);
     }
-  }, [isOpen, calculateDropdownPosition]);
+  }, [isOpen, getDropdownPosition]);
 
   useClickOutside({
     isOpen,

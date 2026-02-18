@@ -5,9 +5,15 @@ import React from 'react';
 import { FormView } from '../FormView';
 import { ToastProvider } from '../../../../../components/common/Toast';
 import type { TableData } from '../../../../../types/api.types';
+import { checkCriticalFieldUsageInViews, checkFieldUsageInViews } from '../../../../../utils/fieldUsageUtils';
 
 vi.mock('../../../../../hooks/useApi', () => ({
   useAllViews: () => ({ data: [] }),
+}));
+
+vi.mock('../../../../../utils/fieldUsageUtils', () => ({
+  checkCriticalFieldUsageInViews: vi.fn(() => ({ isUsedInViews: false, usedInViews: [] })),
+  checkFieldUsageInViews: vi.fn(() => ({ isUsedInViews: false, usedInViews: [] })),
 }));
 
 let isReadOnlyState = false;
@@ -17,6 +23,8 @@ vi.mock('../../../../../hooks/useBaseAccess', () => ({
     canCreateColumn: () => true,
   }),
 }));
+
+let newColumnSavePayload: any = null;
 
 const formModalsState = {
   isNewColumnModalOpen: false,
@@ -133,7 +141,18 @@ vi.mock('../RightPanel', () => ({
 }));
 
 vi.mock('../../../../../components/modals/NewColumnModal', () => ({
-  NewColumnModal: () => <div data-testid="new-column-modal">NewColumnModal</div>,
+  NewColumnModal: (props: { onSave?: (payload: any) => void }) => (
+    <div data-testid="new-column-modal">
+      <button
+        data-testid="save-new-column"
+        onClick={() =>
+          props.onSave?.(newColumnSavePayload ?? { title: 'New Field', type: 'text' })
+        }
+      >
+        Save
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock('../../../../../components/modals/DeleteConfirmModal', () => ({
@@ -141,7 +160,16 @@ vi.mock('../../../../../components/modals/DeleteConfirmModal', () => ({
 }));
 
 vi.mock('../../../../../components/modals/UpdateFieldConfirmModal', () => ({
-  default: () => <div data-testid="update-field-confirm-modal">UpdateFieldConfirmModal</div>,
+  default: (props: { onConfirm?: () => void; onClose?: () => void }) => (
+    <div data-testid="update-field-confirm-modal">
+      <button data-testid="confirm-update-field" onClick={() => props.onConfirm?.()}>
+        Confirm
+      </button>
+      <button data-testid="close-update-field" onClick={() => props.onClose?.()}>
+        Close
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock('../../../../../components/ui/Loader', () => ({
@@ -196,6 +224,7 @@ describe('FormView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     isReadOnlyState = false;
+    newColumnSavePayload = null;
     formPanelState.sidebarOpen = false;
     formPanelState.selectedFieldId = null;
     formModalsState.isNewColumnModalOpen = false;
@@ -277,6 +306,31 @@ describe('FormView', () => {
       );
 
       expect(screen.getByTestId('form-preview')).toBeInTheDocument();
+    });
+
+    it('filters out audit, formula, and system fields while keeping Title', () => {
+      const tableDataFiltered = {
+        ...defaultTableData,
+        columns: [
+          { id: 'c1', title: 'Title', column_name: 'title', uidt: 'text', system: true },
+          { id: 'c2', title: 'Formula', column_name: 'formula', uidt: 'formula' },
+          { id: 'c3', title: 'Created Time', column_name: 'created_at', uidt: 'createdTime', system: true },
+          { id: 'c4', title: 'Id', column_name: 'id', uidt: 'text', system: true },
+          { id: 'c5', title: 'Notes', column_name: 'notes', uidt: 'longText' },
+        ],
+      } as TableData;
+
+      render(
+        <FormView
+          tableData={tableDataFiltered}
+          viewId="v1"
+          onRefresh={mockOnRefresh}
+          actions={mockActions}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText('2 fields')).toBeInTheDocument();
     });
   });
 
@@ -448,6 +502,31 @@ describe('FormView', () => {
   });
 
   describe('Handler execution paths', () => {
+    it('creates a new field from the modal and refreshes', async () => {
+      formModalsState.isNewColumnModalOpen = true;
+      formModalsState.modalPosition = { top: 10, left: 10 };
+      (mockActions.createNewField as Mock).mockResolvedValueOnce(undefined);
+
+      render(
+        <FormView
+          tableData={defaultTableData}
+          viewId="v1"
+          onRefresh={mockOnRefresh}
+          actions={mockActions}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      const saveButton = await screen.findByTestId('save-new-column');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockActions.createNewField).toHaveBeenCalled();
+      });
+      expect(formModalsState.handleCloseNewColumnModal).toHaveBeenCalled();
+      expect(mockOnRefresh).toHaveBeenCalled();
+    });
+
     it('submits form data on submit button click', async () => {
       (mockActions.submitForm as Mock).mockResolvedValueOnce(undefined);
 
@@ -510,6 +589,149 @@ describe('FormView', () => {
       expect(formModalsState.handleDeleteField).toHaveBeenCalledTimes(1);
       expect(formModalsState.handleDeleteField).toHaveBeenCalledWith('c2');
       expect(formModalsState.handleFieldEdit).not.toHaveBeenCalled();
+    });
+
+    it('blocks delete when field is used in other views', () => {
+      const criticalUsage = vi.mocked(checkCriticalFieldUsageInViews);
+      criticalUsage.mockReturnValueOnce({
+        isUsedInViews: true,
+        usedInViews: [{ viewName: 'Grid', usageType: 'group' }],
+      });
+
+      render(
+        <FormView
+          tableData={defaultTableData}
+          viewId="v1"
+          onRefresh={mockOnRefresh}
+          actions={mockActions}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(screen.getByTestId('delete-field-btn'));
+
+      expect(formModalsState.handleDeleteField).not.toHaveBeenCalled();
+    });
+
+    it('updates field when edit modal saves with same type', async () => {
+      formModalsState.editModalOpen = true;
+      formModalsState.editColumn = {
+        id: 'c2',
+        uidt: 'text',
+        title: 'Description',
+        description: '',
+        required: false,
+        meta: {},
+        config: {},
+      };
+
+      newColumnSavePayload = {
+        title: 'Updated Description',
+        description: 'Updated',
+        type: 'longText',
+        meta: {},
+        required: false,
+        config: {},
+        column_name: 'description',
+        order_index: 1,
+      };
+
+      (mockActions.updateField.mutateAsync as Mock).mockResolvedValueOnce(undefined);
+
+      render(
+        <FormView
+          tableData={defaultTableData}
+          viewId="v1"
+          onRefresh={mockOnRefresh}
+          actions={mockActions}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      const saveButton = await screen.findByTestId('save-new-column');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockActions.updateField.mutateAsync).toHaveBeenCalledWith({
+          fieldId: 'c2',
+          updatedValue: expect.objectContaining({ title: 'Updated Description' }),
+        });
+      });
+      expect(formModalsState.handleCloseEditModal).toHaveBeenCalled();
+      expect(mockOnRefresh).toHaveBeenCalled();
+    });
+
+    it('opens confirm modal when field type changes', async () => {
+      formModalsState.editModalOpen = true;
+      formModalsState.editColumn = {
+        id: 'c2',
+        uidt: 'text',
+        title: 'Description',
+        description: '',
+        required: false,
+        meta: {},
+        config: {},
+      };
+
+      newColumnSavePayload = {
+        title: 'Updated Description',
+        description: 'Updated',
+        type: 'number',
+        meta: { format: 'decimal' },
+        required: false,
+        config: {},
+        column_name: 'description',
+        order_index: 1,
+      };
+
+      render(
+        <FormView
+          tableData={defaultTableData}
+          viewId="v1"
+          onRefresh={mockOnRefresh}
+          actions={mockActions}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      const saveButton = await screen.findByTestId('save-new-column');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(formModalsState.setPendingEditColumnChanges).toHaveBeenCalled();
+        expect(formModalsState.setUpdateFieldConfirmModalOpen).toHaveBeenCalledWith(true);
+        expect(formModalsState.setEditModalOpen).toHaveBeenCalledWith(false);
+      });
+    });
+
+    it('confirms type change and updates field data', async () => {
+      formModalsState.updateFieldConfirmModalOpen = true;
+      formModalsState.editColumn = { id: 'c2' } as any;
+      formModalsState.pendingEditColumnChanges = { uidt: 'number' };
+      (mockActions.updateField.mutateAsync as Mock).mockResolvedValueOnce(undefined);
+
+      render(
+        <FormView
+          tableData={defaultTableData}
+          viewId="v1"
+          onRefresh={mockOnRefresh}
+          actions={mockActions}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(screen.getByTestId('confirm-update-field'));
+
+      await waitFor(() => {
+        expect(mockActions.updateField.mutateAsync).toHaveBeenCalledWith({
+          fieldId: 'c2',
+          updatedValue: { uidt: 'number' },
+        });
+      });
+      expect(formModalsState.handleCloseUpdateFieldConfirmModal).toHaveBeenCalled();
+      expect(formModalsState.setEditModalOpen).toHaveBeenCalledWith(false);
+      expect(formModalsState.setEditColumn).toHaveBeenCalledWith(null);
+      expect(mockOnRefresh).toHaveBeenCalled();
     });
 
     it('executes right panel actions when sidebar is open', async () => {

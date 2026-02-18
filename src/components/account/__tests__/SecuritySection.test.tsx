@@ -7,6 +7,13 @@ import { getUserActivity } from '../../../service/activityService';
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
 const mutateAsync = vi.fn();
+let lastFooter: React.ReactNode | null = null;
+const registerFooter = vi.fn((content: React.ReactNode) => {
+  lastFooter = content;
+});
+const clearFooter = vi.fn(() => {
+  lastFooter = null;
+});
 
 let profileState: { data?: any; isLoading: boolean; error: unknown | null } = {
   data: { data: { first_name: 'A', last_name: 'B', email: 'a@b.com' } },
@@ -60,8 +67,8 @@ vi.mock('../../../utils/validation', () => ({
 
 vi.mock('../AccountSettings', () => ({
   useFooterButtons: () => ({
-    registerFooter: vi.fn(),
-    clearFooter: vi.fn(),
+    registerFooter,
+    clearFooter,
     currentSection: 'security',
   }),
 }));
@@ -73,6 +80,10 @@ describe('SecuritySection', () => {
       isLoading: false,
       error: null,
     };
+    lastFooter = null;
+    registerFooter.mockClear();
+    clearFooter.mockClear();
+    mutateAsync.mockResolvedValue(undefined);
   });
 
   it('renders loading state', async () => {
@@ -109,5 +120,54 @@ describe('SecuritySection', () => {
     const input = screen.getByLabelText('Current Password');
     fireEvent.blur(input);
     expect(await screen.findByText(/Current password is required/i)).toBeInTheDocument();
+  });
+
+  it('shows confirm password mismatch error', async () => {
+    render(<SecuritySection />);
+    const newPassword = screen.getByLabelText('New Password');
+    const confirmPassword = screen.getByLabelText('Confirm New Password');
+
+    fireEvent.change(newPassword, { target: { value: 'ValidPass1!' } });
+    fireEvent.change(confirmPassword, { target: { value: 'Different1!' } });
+    fireEvent.blur(confirmPassword);
+
+    expect(await screen.findByText(/Passwords do not match/i)).toBeInTheDocument();
+  });
+
+  it('submits password update when valid', async () => {
+    render(<SecuritySection />);
+
+    fireEvent.change(screen.getByLabelText('Current Password'), { target: { value: 'OldPass1!' } });
+    fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'NewPass1!' } });
+    fireEvent.change(screen.getByLabelText('Confirm New Password'), { target: { value: 'NewPass1!' } });
+
+    expect(registerFooter).toHaveBeenCalled();
+    expect(lastFooter).not.toBeNull();
+
+    const footerRender = render(<>{lastFooter}</>);
+    const updateButton = footerRender.getByRole('button', { name: /update password/i });
+    fireEvent.click(updateButton);
+
+    await waitFor(() => {
+      expect(mutateAsync).toHaveBeenCalledWith({ old_password: 'OldPass1!', new_password: 'NewPass1!' });
+      expect(toastSuccess).toHaveBeenCalled();
+    });
+  });
+
+  it('shows error toast when password update fails', async () => {
+    mutateAsync.mockRejectedValueOnce(new Error('failed'));
+    render(<SecuritySection />);
+
+    fireEvent.change(screen.getByLabelText('Current Password'), { target: { value: 'OldPass1!' } });
+    fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'NewPass1!' } });
+    fireEvent.change(screen.getByLabelText('Confirm New Password'), { target: { value: 'NewPass1!' } });
+
+    const footerRender = render(<>{lastFooter}</>);
+    const updateButton = footerRender.getByRole('button', { name: /update password/i });
+    fireEvent.click(updateButton);
+
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalled();
+    });
   });
 });

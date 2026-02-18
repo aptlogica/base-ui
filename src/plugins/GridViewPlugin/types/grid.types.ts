@@ -1,5 +1,6 @@
 
 import { BaseColumn } from '../../../types/column.types';
+import type { FieldType } from '../../../types/fieldTypes';
 
 export interface GridTable {
   id: string;
@@ -79,33 +80,13 @@ export interface AttachmentFile {
 }
 
 export type GridFieldType =
-  | 'text'
-  | 'longText'
-  | 'number'
-  | 'decimal'
-  | 'currency'
-  | 'percent'
-  | 'date'
-  | 'datetime'
-  | 'time'
-  | 'duration'
+  | FieldType
   | 'checkbox'
-  | 'select'
-  | 'multiSelect'
-  | 'email'
-  | 'url'
-  | 'phoneNumber'
-  | 'rating'
-  | 'attachment'
-  | 'user'
-  | 'json'
-  | 'button'
-  | 'year'
-  | 'password'
   | 'createdTime'
   | 'lastModifiedTime'
   | 'createdBy'
-  | 'lastModifiedBy';
+  | 'lastModifiedBy'
+  | 'password';
 
 export interface GridData {
   table: GridTable;
