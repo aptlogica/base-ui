@@ -291,12 +291,12 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
   };
 
   return (
-    <div
+    <div // NOSONAR
       className="bg-modal-backdrop"
       onClick={onClose}
       onKeyDown={handleKeyDown}
     >
-      <div
+      <div // NOSONAR
         className="bg-modal !max-w-7xl !p-0 flex flex-col h-[90vh] max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}

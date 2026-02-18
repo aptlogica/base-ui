@@ -29,7 +29,7 @@ export const updateUserActivity = async (
   try {
     // Get current activity_data to preserve login_sessions if not provided
     const existingActivity =
-      currentActivity !== undefined ? currentActivity : await getUserActivity(userId);
+      currentActivity === undefined ? await getUserActivity(userId) : currentActivity;
     const mergedActivity: UserActivityData = {
       ...activityData,
       login_sessions: activityData.login_sessions ?? existingActivity?.login_sessions

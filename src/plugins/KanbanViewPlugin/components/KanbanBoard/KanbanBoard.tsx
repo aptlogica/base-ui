@@ -730,54 +730,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     setShowStackNameInput(prev => !prev);
   }, []);
 
-  const handleCreateStackClickSave = useCallback(async () => {
-    const trimmed = uiState.newOption.trim();
-    if (!trimmed || !groupCol?.id) return;
-
-    try {
-      // Get existing option names to check for duplicates
-      const existingOptionNames = localOptions.map((opt: any) => {
-        if (typeof opt === 'string') return opt;
-        return opt?.option || opt?.value || opt?.label || String(opt);
-      });
-
-      // Add new option if it doesn't exist
-      if (existingOptionNames.includes(trimmed)) {
-        // Show toast for duplicate stack name
-        toast.error(`Stack "${trimmed}" already exists`);
-        setUiState(prev => ({ ...prev, newOption: '' }));
-      } else {
-        // Preserve existing options structure (with colors)
-        const preservedOptions = localOptions.map((opt: any) => {
-          if (typeof opt === 'string') {
-            return { option: opt, color: '' };
-          }
-          return {
-            option: opt?.option || opt?.value || opt?.label || String(opt),
-            color: opt?.color || ''
-          };
-        });
-
-        // Default colors for new options (cycle through)
-        const defaultColors = [
-          '#93c5fd', '#6ee7b7', '#fcd34d', '#fca5a5', '#c4b5fd', '#a78bfa', '#60a5fa', '#34d399'
-        ];
-        const newOptionIndex = preservedOptions.length;
-        const newOptionColor = defaultColors[newOptionIndex % defaultColors.length];
-
-        // Add new option with default color
-        const next = [...preservedOptions, { option: trimmed, color: newOptionColor }];
-        await onUpdateFieldOptions(groupCol.id, next);
-        // Refresh to update the UI immediately
-        onRefresh();
-        setUiState(prev => ({ ...prev, newOption: '', isCreateStack: false }));
-        setShowStackNameInput(false);
-      }
-    } catch (error) {
-      console.error('Failed to create stack:', error);
-    }
-  }, [uiState.newOption, localOptions, groupCol?.id, onUpdateFieldOptions, onRefresh, setUiState, toast]);
-
   // Enhanced stack drop handler with persistence
   const handleStackDropWithPersistence = useCallback(async (targetStackId: string, e: React.DragEvent) => {
     e.preventDefault();
@@ -878,18 +830,18 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       const trimmedNewName = newName.trim();
 
       // Convert options to strings for comparison (use 'option' property as the key field)
-      const stringOptions = localOptions.map((opt: any) =>
+      const stringOptions = new Set(localOptions.map((opt: any) =>
         typeof opt === 'string' ? opt : (opt?.option || opt?.value || opt?.label || String(opt))
-      );
+      ));
 
       // Prevent duplicate stack names on edit
-      if (trimmedNewName !== oldName && stringOptions.includes(trimmedNewName)) {
+      if (trimmedNewName !== oldName && stringOptions.has(trimmedNewName)) {
         toast.error(`Stack "${trimmedNewName}" already exists`);
         return;
       }
 
       // Only edit if the old name exists in field options (proper Kanban behavior)
-      if (stringOptions.includes(oldName)) {
+      if (stringOptions.has(oldName)) {
         // 1. Update field options (preserve structure with colors)
         const preservedOptions = localOptions.map((opt: any) => {
           const optionName = typeof opt === 'string'

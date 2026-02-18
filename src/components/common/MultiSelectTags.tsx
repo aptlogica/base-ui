@@ -226,7 +226,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       {/* Input Field */}
-      <div
+      <div // NOSONAR
         id={id}
         className={`
           min-h-[40px] px-4 py-2 border rounded-xl

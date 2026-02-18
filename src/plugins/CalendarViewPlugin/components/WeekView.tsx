@@ -147,7 +147,7 @@ const WeekView: React.FC<WeekViewProps> = ({
                     const hasEvents = slotEvents.length > 0;
 
                     return (
-                      <div
+                      <div //NOSONAR
                         key={`${date.toDateString()}-${slot.hour}`}
                         className="h-12 border-b relative group overflow-visible"
                         onClick={() => {
@@ -190,7 +190,8 @@ const WeekView: React.FC<WeekViewProps> = ({
 
                               {/* Show "+n more" dropdown on the right if there are additional events */}
                               {slotEvents.length > 1 && (
-                                <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}
+                                <div //NOSONAR
+                                  className="flex-shrink-0" onClick={(e) => e.stopPropagation()}
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter' || e.key === ' ') {
                                       e.preventDefault();

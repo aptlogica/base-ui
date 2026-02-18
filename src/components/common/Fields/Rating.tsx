@@ -111,6 +111,12 @@ export const Rating: React.FC<RatingProps> = ({
     setHoverValue(null);
   };
 
+  const handleGroupBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+      handleMouseLeave();
+    }
+  };
+
   const getStarFill = (starIndex: number) => {
     const currentValue = hoverValue ?? displayValue;
     if (currentValue >= starIndex) {
@@ -143,8 +149,18 @@ export const Rating: React.FC<RatingProps> = ({
   return (
     <div className="w-full">
       <div
+        role="radiogroup"
+        aria-label="Rating"
+        tabIndex={disabled || readOnly ? -1 : 0}
         className="w-full flex items-center justify-center gap-1 py-1"
         onMouseLeave={handleMouseLeave}
+        onTouchEnd={handleMouseLeave}
+        onBlur={handleGroupBlur}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            handleMouseLeave();
+          }
+        }}
       >
         {Array.from({ length: ratingMax }, (_, index) => renderStar(index + 1))}
       </div>

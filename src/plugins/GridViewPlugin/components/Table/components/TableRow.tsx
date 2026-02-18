@@ -187,6 +187,11 @@ export const TableRow: React.FC<TableRowProps> = ({
           borderClass = 'border-b border-border/30';
         }
 
+        let zIndex: number | undefined;
+        if (props.isPinned) {
+          zIndex = props.isActive ? 20 : 18;
+        }
+
         return (
           // eslint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role
           <div
@@ -200,7 +205,7 @@ export const TableRow: React.FC<TableRowProps> = ({
               boxSizing: 'border-box',
               position: props.isPinned ? 'sticky' : 'relative',
               left: props.isPinned ? `${props.pinnedLeft}px` : undefined,
-              zIndex: props.isPinned ? (props.isActive ? 20 : 18) : undefined,
+              zIndex,
               boxShadow: props.isLastPinned ? '2px 0 4px -3px rgba(15,23,42,0.12)' : undefined,
             }}
             onClick={(e) => handleCellClick(e, column.key)}
