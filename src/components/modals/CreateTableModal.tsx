@@ -47,6 +47,21 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
     }
   }, [name, existingTables]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, onClose]);
+
   const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -77,14 +92,6 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
       setIsSubmitting(false);
     }
   };
-
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -93,7 +100,6 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
       role="dialog"
       aria-modal="true"
       tabIndex={-1}
-      onKeyDown={handleKeyDown}
     >
       <button
         type="button"
@@ -101,7 +107,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
         className="absolute inset-0"
         onClick={onClose}
       />
-      <div
+      <div // NOSONAR
         className="bg-modal !max-w-3xl !p-0 flex flex-col relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >

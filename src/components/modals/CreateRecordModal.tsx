@@ -87,7 +87,10 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     useEffect(() => {
         if (!isOpen) return;
         const data: Record<string, any> = {};
+        const defaultData: Record<string, any> = {};
         (fields || []).forEach(field => {
+            const fieldDefault = getDefaultValueFromConfig(field);
+            defaultData[field.id] = fieldDefault;
             const byId = initialValues[field.id as string];
             const byName = initialValues[field.name as string];
             let initial: any;
@@ -97,10 +100,10 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                 initial = byName;
             }
             // initial remains undefined if both byId and byName are undefined
-            data[field.id] = initial === undefined ? getDefaultValueFromConfig(field) : initial;
+            data[field.id] = initial === undefined ? fieldDefault : initial;
         });
         setRowData(data);
-        setInitialRowData(data);
+        setInitialRowData(defaultData);
         setShowHidden(false);
         setFormError(null);
         setSubmitting(false);

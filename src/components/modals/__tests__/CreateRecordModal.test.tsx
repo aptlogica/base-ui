@@ -325,12 +325,34 @@ describe('CreateRecordModal', () => {
       expect(submitButton).not.toBeDisabled();
     });
 
-    it('keeps save disabled when only initial values are provided', () => {
+    it('enables save when initial values differ from field defaults', () => {
       vi.clearAllMocks();
       vi.mocked(useBaseAccess).mockImplementation(() => ({
         canCreateRecord: () => true,
         isBaseReadOnly: () => false,
       } as any));
+
+      renderWithQueryClient(
+        <CreateRecordModal
+          {...defaultProps}
+          initialValues={{ 'field-2': 'Initial Description' }}
+        />
+      );
+
+      const submitButton = screen.getByRole('button', { name: 'Save record' });
+      expect(submitButton).not.toBeDisabled();
+    });
+
+    it('keeps save disabled when initial values equal field defaults', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canCreateRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+      vi.mocked(getFieldDefaultValue).mockImplementation((field: any) => {
+        if (field.id === 'field-2') return 'Initial Description';
+        return null;
+      });
 
       renderWithQueryClient(
         <CreateRecordModal

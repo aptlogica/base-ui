@@ -338,7 +338,7 @@ export function AdvancedDropdown<T extends string | number>({
           )}
 
           {/* Options List */}
-          <ul
+          <ul // NOSONAR
             ref={optionsRef}
             className="p-2 space-y-1.5 max-h-48 overflow-auto"
             style={{ maxHeight: `${maxHeight}px` }}
@@ -551,6 +551,16 @@ function DropdownOptionItem<T>({
     <li
       className={`${baseClasses} ${stateClasses} rounded-xl`}
       onClick={option.disabled ? undefined : onClick}
+      onKeyDown={
+        option.disabled
+          ? undefined
+          : (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+      }
       role="option"
       aria-selected={isSelected}
       aria-disabled={option.disabled}

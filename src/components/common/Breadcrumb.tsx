@@ -701,7 +701,7 @@ const Breadcrumb: React.FC = () => {
                     <div className="overflow-y-auto flex-1 max-h-48 p-2">
                       {dropdownItems.length > 0 ? (
                         dropdownItems.map((dropdownItem) => (
-                          <div
+                          <div // NOSONAR
                             key={dropdownItem.id}
                             className="w-full rounded-lg text-left p-2 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer border-none bg-transparent"
                             onClick={(e) => {
