@@ -4,6 +4,7 @@ export interface DropdownOption<T = string | number> {
   disabled?: boolean;
   icon?: React.ReactNode;
   description?: string;
+  rightLabel?: string;
 }
 
 export interface DropdownProps<T = string | number> {

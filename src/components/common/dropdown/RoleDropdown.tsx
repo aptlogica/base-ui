@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
+import { calculateDropdownPosition } from '../../../utils/dropdownPosition';
 
 interface RoleDropdownOption {
   label: string;
@@ -27,12 +28,11 @@ export const RoleDropdown: React.FC<RoleDropdownProps> = ({
   'aria-labelledby': ariaLabelledBy,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<{ 
-    top?: number; 
-    bottom?: number; 
-    left: number; 
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
     width: number;
-    position: 'above' | 'below';
   } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -45,36 +45,17 @@ export const RoleDropdown: React.FC<RoleDropdownProps> = ({
     if (!triggerRef.current) return null;
 
     const rect = triggerRef.current.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
     const dropdownMinHeight = 200; // Minimum height estimate for dropdown
     const dropdownWidth = Math.max(rect.width, 220); // Use trigger width or minimum 220px
 
-    const spaceBelow = viewportHeight - rect.bottom;
-    const spaceAbove = rect.top;
-
-    // Determine if we should open above or below
-    let position: 'above' | 'below' = 'below';
-    if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
-      position = 'above';
-    }
-
-    // Calculate left position (align to right edge of trigger for right-aligned dropdowns)
-    let left = rect.right - dropdownWidth;
-    if (left < 10) {
-      left = 10; // 10px margin from left edge
-    }
-    if (left + dropdownWidth > viewportWidth - 10) {
-      left = viewportWidth - dropdownWidth - 10; // 10px margin from right edge
-    }
-
-    return {
-      top: position === 'below' ? rect.bottom + 4 : undefined,
-      bottom: position === 'above' ? viewportHeight - rect.top + 4 : undefined,
-      left,
-      width: dropdownWidth,
-      position
-    };
+    return calculateDropdownPosition({
+      rect,
+      dropdownMinHeight,
+      dropdownWidth,
+      align: 'right',
+      offset: 4,
+      sideMargin: 10
+    });
   }, []);
 
   // Update position when dropdown opens

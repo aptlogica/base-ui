@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, ChevronUp, X, Loader2 } from 'lucide-react';
+import { ChevronDown, X, Loader2 } from 'lucide-react';
 
 interface DropdownTriggerProps {
   displayLabel: string;
@@ -11,12 +11,10 @@ interface DropdownTriggerProps {
   selectedCount?: number;
   error?: string;
   onToggle: () => void;
-  onClear?: () => void;
-  className?: string;
-  dropdownPosition?: 'above' | 'below';
+  onClear?: (e: React.MouseEvent | React.KeyboardEvent) => void;
 }
 
-export function DropdownTrigger({
+export const DropdownTrigger = React.forwardRef<HTMLButtonElement, DropdownTriggerProps>(({
   displayLabel,
   isOpen,
   disabled,
@@ -27,13 +25,12 @@ export function DropdownTrigger({
   error,
   onToggle,
   onClear,
-  className = '',
-  dropdownPosition = 'below',
-}: Readonly<DropdownTriggerProps>) {
+}, ref) => {
   const baseClasses = `
-    relative w-full px-3 py-2.5 text-left bg-card border rounded-xl shadow-sm
+    relative w-full min-w-0 max-w-full px-3 py-2.5 text-left bg-background border rounded-xl shadow-xs text-primary
     cursor-pointer transition-all duration-200 ease-in-out
-    focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] focus:border-[var(--color-brand-600)]
+    focus:outline-none focus:border-[--color-brand-600]
+    flex items-center justify-between
   `;
 
   const stateClasses = `
@@ -42,66 +39,57 @@ export function DropdownTrigger({
     ${isOpen ? 'border-[var(--color-brand-600)] ring-1 ring-[var(--color-focus-ring)] ring-opacity-20' : ''}
   `;
 
-  const handleClear = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onClear?.();
-  };
-
   return (
-    <div className="relative">
-      <button
-        type="button"
-        className={`${baseClasses} ${stateClasses} ${className}`}
-        onClick={onToggle}
-        disabled={disabled || loading}
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
-      >
-        <div className="flex items-center justify-between">
-          <span className={`block truncate ${displayLabel.includes('Select') ? 'text-gray-500' : 'text-gray-900'
-            }`}>
-            {displayLabel}
+    <button
+      ref={ref}
+      type="button"
+      className={`${baseClasses} ${stateClasses}`}
+      onClick={onToggle}
+      disabled={disabled || loading}
+      aria-expanded={isOpen}
+      aria-haspopup="listbox"
+    >
+      <span className={`block min-w-0 flex-1 truncate ${displayLabel.includes('Select') ? 'var(--color-text-placeholder)' : 'var(--color-text-primary)'
+        }`}>
+        {displayLabel}
+      </span>
+
+      <div className="flex shrink-0 items-center space-x-1 ml-2">
+        {multiple && selectedCount > 0 && (
+          <span className="inline-flex items-center justify-center p-3 h-4 w-4 rounded-full text-xs font-medium bg-[var(--color-bg-brand-primary)] text-black">
+            {selectedCount}
           </span>
+        )}
 
-          <div className="flex items-center space-x-1">
-            {multiple && selectedCount > 0 && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                {selectedCount}
-              </span>
-            )}
-
-            {loading ? (
-              <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
-            ) : (
-              <>
-                {dropdownPosition === 'above' && isOpen ? (
-                  <ChevronUp className="w-4 h-4 text-gray-400" />
-                ) : (
-                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen && dropdownPosition === 'below' ? 'transform rotate-180' : ''
-                    }`} />
-                )}
-              </>
-            )}
+        {clearable && selectedCount > 0 && !loading && onClear && (
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClear(e);
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                onClear(e);
+              }
+            }}
+            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            aria-label="Clear selection"
+          >
+            <X className="w-3 h-3 text-gray-500" />
           </div>
-        </div>
-      </button>
+        )}
 
-      {clearable && selectedCount > 0 && !loading && (
-        <div
-          onClick={handleClear}
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer z-10"
-          role="button" 
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              handleClear(e as any);
-            }
-          }}
-          aria-label="Clear selection"
-        >
-          <X className="w-3 h-3 text-gray-500" />
-        </div>
-      )}
-    </div>
+        {loading ? (
+          <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+        ) : (
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'transform rotate-180' : ''
+            }`} />
+        )}
+      </div>
+    </button>
   );
-}
+});

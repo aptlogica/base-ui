@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { useClickOutside } from "../../../hooks/useClickOutside";
+import { useDropdownPosition } from "../../../hooks/useDropdownPosition";
 
 interface YearProps {
   label?: string;
@@ -70,7 +71,6 @@ export const Year: React.FC<YearProps> = ({
       setIsOpen(false);
     }
   }, [readOnly]);
-  const [calculatedPosition, setCalculatedPosition] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const [selectedYear, setSelectedYear] = useState<number>(
     getInitialYear(defaultValue, currentYear)
   );
@@ -88,60 +88,11 @@ export const Year: React.FC<YearProps> = ({
   // Track last committed value to avoid redundant calls
   const prevValueRef = useRef<number | null>(value);
 
-  // Calculate dropdown position for portal rendering
-  const calculateDropdownPosition = useCallback(() => {
-    const trigger = buttonRef.current;
-    if (!trigger) return null;
-
-    const rect = trigger.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
-    const dropdownMinHeight = 300;
-    const dropdownWidth = rect.width; // Use button width
-
-    const spaceBelow = viewportHeight - rect.bottom;
-    const spaceAbove = rect.top;
-
-    // Determine if we should open above or below
-    let position: 'below' | 'above' = 'below';
-    if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
-      position = 'above';
-    }
-
-    // Calculate left position (align to left edge of trigger)
-    let left = rect.left;
-    if (left < 10) {
-      left = 10; // 10px margin from left edge
-    }
-    if (left + dropdownWidth > viewportWidth - 10) {
-      left = viewportWidth - dropdownWidth - 10; // 10px margin from right edge
-    }
-
-    // Calculate top/bottom position
-    if (position === 'below') {
-      return {
-        top: rect.bottom + 8,
-        left,
-        width: dropdownWidth
-      };
-    } else {
-      return {
-        bottom: viewportHeight - rect.top + 8,
-        left,
-        width: dropdownWidth
-      };
-    }
-  }, []);
-
-  // Update position when dropdown opens
-  useEffect(() => {
-    if (isOpen) {
-      const position = calculateDropdownPosition();
-      setCalculatedPosition(position);
-    } else {
-      setCalculatedPosition(null);
-    }
-  }, [isOpen, calculateDropdownPosition]);
+  const calculatedPosition = useDropdownPosition(
+    buttonRef as React.RefObject<HTMLElement>,
+    isOpen,
+    { dropdownMinHeight: 300, offset: 8, sideMargin: 10 }
+  );
 
   useClickOutside({
     isOpen,
@@ -155,14 +106,6 @@ export const Year: React.FC<YearProps> = ({
       inputRef.current.select();
     }
   }, [isEditing]);
-
-  // Exit edit mode and close dropdown if readOnly becomes true
-  useEffect(() => {
-    if (readOnly) {
-      setIsEditing(false);
-      setIsOpen(false);
-    }
-  }, [readOnly]);
 
   useEffect(() => {
     prevValueRef.current = value;

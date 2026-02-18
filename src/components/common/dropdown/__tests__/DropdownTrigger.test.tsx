@@ -67,13 +67,12 @@ describe('DropdownTrigger', () => {
     expect(document.querySelector('.animate-spin')).toBeTruthy();
   });
 
-  it('shows rotated chevron when open below, chevron up when open above', () => {
+  it('rotates chevron when open', () => {
     const { rerender } = render(
       <DropdownTrigger
         displayLabel="Alpha"
         isOpen
         onToggle={vi.fn()}
-        dropdownPosition="below"
       />
     );
     expect(document.querySelector('svg.rotate-180')).toBeTruthy();
@@ -81,12 +80,10 @@ describe('DropdownTrigger', () => {
     rerender(
       <DropdownTrigger
         displayLabel="Alpha"
-        isOpen
+        isOpen={false}
         onToggle={vi.fn()}
-        dropdownPosition="above"
       />
     );
-    // When above, chevron up should render (no rotate-180 on chevron down)
     expect(document.querySelector('svg.rotate-180')).toBeFalsy();
   });
 
@@ -110,6 +107,6 @@ describe('DropdownTrigger', () => {
         onToggle={vi.fn()}
       />
     );
-    expect(screen.getByText('Select an option...').className).toMatch(/text-gray-500/);
+    expect(screen.getByText('Select an option...').className).toMatch(/var\(--color-text-placeholder\)/);
   });
 });

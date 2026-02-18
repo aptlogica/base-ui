@@ -17,7 +17,7 @@ describe('DropdownOption', () => {
   it('renders label and description and handles click', () => {
     const onClick = vi.fn();
     const { getByText, getByRole } = render(
-      <select>
+      <ul role="listbox">
         <DropdownOption
           option={{ label: 'Option A', value: 'a', description: 'desc' }}
           isSelected={false}
@@ -25,7 +25,7 @@ describe('DropdownOption', () => {
           multiple={false}
           onClick={onClick}
         />
-      </select>
+      </ul>
     );
 
     expect(getByText('Option A')).toBeInTheDocument();
@@ -37,7 +37,7 @@ describe('DropdownOption', () => {
   it('supports keyboard activation when enabled', () => {
     const onClick = vi.fn();
     const { getByRole } = render(
-      <select>
+      <ul role="listbox">
         <DropdownOption
           option={{ label: 'Option B', value: 'b' }}
           isSelected={true}
@@ -45,7 +45,7 @@ describe('DropdownOption', () => {
           multiple={true}
           onClick={onClick}
         />
-      </select>
+      </ul>
     );
 
     const option = getByRole('option');
@@ -57,7 +57,7 @@ describe('DropdownOption', () => {
   it('disables interaction when option is disabled', () => {
     const onClick = vi.fn();
     const { getByRole } = render(
-      <select>
+      <ul role="listbox">
         <DropdownOption
           option={{ label: 'Option C', value: 'c', disabled: true }}
           isSelected={false}
@@ -65,7 +65,7 @@ describe('DropdownOption', () => {
           multiple={false}
           onClick={onClick}
         />
-      </select>
+      </ul>
     );
 
     const option = getByRole('option');

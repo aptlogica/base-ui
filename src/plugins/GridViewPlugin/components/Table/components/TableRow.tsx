@@ -140,8 +140,18 @@ export const TableRow: React.FC<TableRowProps> = ({
   return (
     // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
     <div
-      className={`group grid transition-colors min-w-full ${isRowActive ? 'border-y border-r border-[var(--color-brand-600)]' : 'border-transparent'}`}
-      style={{ gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`, height: '40px', minHeight: '40px', maxHeight: '40px', boxSizing: 'border-box', overflow: 'visible' }}
+      className={`group grid transition-colors min-w-full ${isRowActive ? 'relative z-[2] border-[var(--color-brand-600)]' : ''}`}
+      style={{
+        gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`,
+        height: '40px',
+        minHeight: '40px',
+        maxHeight: '40px',
+        boxSizing: 'border-box',
+        overflow: 'visible',
+        boxShadow: isRowActive
+          ? 'inset 0 1px 0 var(--color-brand-600), inset 0 -1px 0 var(--color-brand-600), inset -1px 0 0 var(--color-brand-600)'
+          : undefined,
+      }}
       onContextMenu={onContextMenu}
       onClick={handleRowClick}
       onKeyDown={handleRowKeyDown}
@@ -149,7 +159,7 @@ export const TableRow: React.FC<TableRowProps> = ({
       tabIndex={0}
     >
       <div
-        className={`flex-shrink-0 w-13 bg-background border-r hover:bg-gray-50 ${isRowActive ? 'border-b border-[var(--color-brand-600)]' : 'border-b border-border/30'} flex items-center justify-center relative select-none gap-2`}
+        className={`flex-shrink-0 w-13 bg-background border-r hover:bg-gray-50 ${isRowActive ? 'border-b border-t border-[var(--color-brand-600)]' : 'border-b border-border/30'} flex items-center justify-center relative select-none gap-2`}
         style={{
           height: '40px',
           position: 'sticky',
@@ -181,8 +191,10 @@ export const TableRow: React.FC<TableRowProps> = ({
         if (props.isActive) {
           borderClass = 'border border-[var(--color-brand-600)]';
         } else if (isRowActive) {
-          // Keep row-level top/bottom border, but force right border on the visible last data cell
-          borderClass = props.isLast ? 'border-r border-[var(--color-brand-600)]' : '';
+          // Keep row-level top/bottom border visible on each cell
+          borderClass = props.isLast
+            ? 'border-t border-b border-r border-[var(--color-brand-600)]'
+            : 'border-t border-b border-[var(--color-brand-600)]';
         } else {
           borderClass = 'border-b border-border/30';
         }

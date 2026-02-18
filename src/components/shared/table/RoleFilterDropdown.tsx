@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Filter } from 'lucide-react';
+import { calculateDropdownPosition } from '../../../utils/dropdownPosition';
 
 interface RoleFilterDropdownProps {
   label: string;
@@ -27,9 +28,8 @@ export const RoleFilterDropdown: React.FC<RoleFilterDropdownProps> = ({
   const [position, setPosition] = useState<{
     top?: number;
     bottom?: number;
-    right?: number;
+    left: number;
     width: number;
-    position: 'above' | 'below';
   } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -38,33 +38,15 @@ export const RoleFilterDropdown: React.FC<RoleFilterDropdownProps> = ({
     if (!buttonRef.current) return null;
 
     const rect = buttonRef.current.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
     const dropdownMinHeight = 200;
-
-    const spaceBelow = viewportHeight - rect.bottom;
-    const spaceAbove = rect.top;
-
-    let placement: 'above' | 'below' = 'below';
-    if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
-      placement = 'above';
-    }
-
-    let right = viewportWidth - rect.right;
-    if (right < 10) {
-      right = 10;
-    }
-    if (right + dropdownWidth > viewportWidth - 10) {
-      right = viewportWidth - dropdownWidth - 10;
-    }
-
-    return {
-      top: placement === 'below' ? rect.bottom + 8 : undefined,
-      bottom: placement === 'above' ? viewportHeight - rect.top + 8 : undefined,
-      right,
-      width: dropdownWidth,
-      position: placement
-    };
+    return calculateDropdownPosition({
+      rect,
+      dropdownMinHeight,
+      dropdownWidth,
+      align: 'right',
+      offset: 8,
+      sideMargin: 10
+    });
   }, [dropdownWidth]);
 
   useEffect(() => {
@@ -145,7 +127,7 @@ export const RoleFilterDropdown: React.FC<RoleFilterDropdownProps> = ({
           style={{
             ...(position.top !== undefined && { top: `${position.top}px` }),
             ...(position.bottom !== undefined && { bottom: `${position.bottom}px` }),
-            ...(position.right !== undefined && { right: `${position.right}px` }),
+            left: `${position.left}px`,
             width: `${position.width}px`
           }}
           onClick={(e) => e.stopPropagation()}

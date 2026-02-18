@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Search, Check, ChevronDown } from 'lucide-react';
+import { calculateDropdownPosition } from '../../utils/dropdownPosition';
 
 export interface MultiSelectTagsOption {
   label: string;
@@ -41,7 +42,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(-1);
-  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -70,40 +71,25 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
   }, [options, searchQuery, getOptionLabel]);
 
   // Calculate dropdown position
-  const calculateDropdownPosition = useCallback(() => {
+  const getDropdownPosition = useCallback(() => {
     if (!containerRef.current) return null;
 
     const rect = containerRef.current.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
     const dropdownMinHeight = 200;
     const dropdownWidth = Math.min(400, rect.width);
-
-    const spaceBelow = viewportHeight - rect.bottom;
-    const spaceAbove = rect.top;
-
-    // Always open below for now, but could be enhanced to open above if needed
-    let top = rect.bottom + 4;
-    if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
-      top = rect.top - dropdownMinHeight - 4;
-    }
-
-    // Calculate left position (align to left edge of container)
-    let left = rect.left;
-    if (left < 10) {
-      left = 10;
-    }
-    if (left + dropdownWidth > viewportWidth - 10) {
-      left = viewportWidth - dropdownWidth - 10;
-    }
-
-    return { top, left, width: dropdownWidth };
+    return calculateDropdownPosition({
+      rect,
+      dropdownMinHeight,
+      dropdownWidth,
+      offset: 4,
+      sideMargin: 10
+    });
   }, []);
 
   // Update dropdown position when it opens
   useEffect(() => {
     if (isOpen) {
-      const position = calculateDropdownPosition();
+      const position = getDropdownPosition();
       setDropdownPosition(position);
 
       // Focus search input when dropdown opens
@@ -115,7 +101,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
       setSearchQuery('');
       setFocusedIndex(-1);
     }
-  }, [isOpen, calculateDropdownPosition]);
+  }, [isOpen, getDropdownPosition]);
 
   // Handle click outside
   useEffect(() => {
@@ -296,7 +282,8 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
           role="listbox"
           className="fixed z-[9999] bg-card border rounded-xl shadow-lg overflow-hidden"
           style={{
-            top: `${dropdownPosition.top}px`,
+            ...(dropdownPosition.top !== undefined && { top: `${dropdownPosition.top}px` }),
+            ...(dropdownPosition.bottom !== undefined && { bottom: `${dropdownPosition.bottom}px` }),
             left: `${dropdownPosition.left}px`,
             width: `${dropdownPosition.width}px`,
             maxHeight: '300px',

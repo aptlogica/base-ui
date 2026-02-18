@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useClickOutside } from '../../../hooks/useClickOutside';
+import { useDropdownPosition } from '../../../hooks/useDropdownPosition';
+import { getTodayISO } from '../../../utils/timeFormatUtils';
+import { buildCalendarWeeks, MONTH_LABELS } from '../../../utils/calendarUtils';
 
 interface DateProps {
   label?: string;
@@ -25,15 +28,6 @@ interface DateProps {
     hideTodayButton?: boolean;
     [key: string]: any;
   };
-}
-
-function pad(n: number) {
-  return n.toString().padStart(2, '0');
-}
-
-function getTodayISO() {
-  const now = new Date();
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
 // Convert from various formats to ISO (YYYY-MM-DD)
@@ -241,11 +235,15 @@ export const DateField: React.FC<DateProps> = ({
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showQuickSelect, setShowQuickSelect] = useState(false);
-  const [calculatedPosition, setCalculatedPosition] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const calculatedPosition = useDropdownPosition(
+    buttonRef as React.RefObject<HTMLElement>,
+    isOpen,
+    { dropdownMinHeight: 400, dropdownWidthMax: 320, offset: 8, sideMargin: 10 }
+  );
   const [calendarMonth, setCalendarMonth] = useState<Date>(() => {
     if (value) {
       const currentFormat = detectDateFormat(value);
@@ -325,51 +323,6 @@ export const DateField: React.FC<DateProps> = ({
     }
   }, [value, dateFormat, format, onChange, defaultValue]);
 
-  // Calculate dropdown position for portal rendering
-  const calculateDropdownPosition = useCallback(() => {
-    const trigger = buttonRef.current || inputRef.current;
-    if (!trigger) return null;
-
-    const rect = trigger.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
-    const dropdownMinHeight = 400;
-    const dropdownWidth = 320;
-
-    const spaceBelow = viewportHeight - rect.bottom;
-    const spaceAbove = rect.top;
-
-    // Determine if we should open above or below
-    let position: 'below' | 'above' = 'below';
-    if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
-      position = 'above';
-    }
-
-    // Calculate left position (align with button)
-    let left = rect.left;
-    if (left + dropdownWidth > viewportWidth - 10) {
-      left = viewportWidth - dropdownWidth - 10;
-    }
-    if (left < 10) {
-      left = 10;
-    }
-
-    // Calculate top/bottom position
-    if (position === 'below') {
-      return {
-        top: rect.bottom + 8,
-        left,
-        width: dropdownWidth
-      };
-    } else {
-      return {
-        bottom: viewportHeight - rect.top + 8,
-        left,
-        width: dropdownWidth
-      };
-    }
-  }, []);
-
   // Update position when dropdown opens
   useEffect(() => {
     if (isOpen) {
@@ -383,12 +336,8 @@ export const DateField: React.FC<DateProps> = ({
       const [y, m] = isoDate.split('-');
       setCalendarMonth(new Date(Number(y), Number(m) - 1, 1));
 
-      const position = calculateDropdownPosition();
-      setCalculatedPosition(position);
-    } else {
-      setCalculatedPosition(null);
     }
-  }, [isOpen, date, calculateDropdownPosition]);
+  }, [isOpen, date]);
 
   const closeAllDropdowns = () => {
     setIsOpen(false);
@@ -539,51 +488,17 @@ export const DateField: React.FC<DateProps> = ({
     return Number.isNaN(month.getTime()) ? new Date() : month;
   };
 
-  const calculateStartDay = (firstDay: Date): number => {
-    let startDay = firstDay.getDay();
-    startDay = startDay === 0 ? 6 : startDay - 1;
-    return (Number.isNaN(startDay) || startDay < 0) ? 0 : startDay;
-  };
-
-  const generateCalendarWeeks = (year: number, month: number, startDay: number): (string | null)[][] => {
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const weeks: (string | null)[][] = [];
-    let week: (string | null)[] = new Array(startDay).fill(null);
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dayISO = `${year}-${pad(month + 1)}-${pad(d)}`;
-      week.push(dayISO);
-      if (week.length === 7) {
-        weeks.push(week);
-        week = [];
-      }
-    }
-
-    if (week.length > 0) {
-      while (week.length < 7) week.push(null);
-      weeks.push(week);
-    }
-
-    return weeks;
-  };
-
   const safeCalendarMonth = getSafeCalendarMonth(calendarMonth);
   const year = safeCalendarMonth.getFullYear();
   const month = safeCalendarMonth.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const startDay = calculateStartDay(firstDay);
   const todayISO = getTodayISO();
-  const weeks = generateCalendarWeeks(year, month, startDay);
+  const weeks = buildCalendarWeeks(year, month, true);
 
   const currentYear = new Date().getFullYear();
   const [startYear, setStartYear] = React.useState(currentYear); // page starts at selected/current year
   const years = React.useMemo(() => Array.from({ length: 12 }, (_, i) => startYear + i), [startYear]);
   // Generate month options for dropdown
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ];
+  const months = MONTH_LABELS;
 
   // For year dropdown
   const goPrev = (e: React.MouseEvent) => {
@@ -764,9 +679,9 @@ export const DateField: React.FC<DateProps> = ({
         {weeks.flat().map((day, idx) => {
           let dayClasses = '';
           if (day === convertDateFormat(date, dateFormat, 'YYYY-MM-DD')) {
-            dayClasses = 'bg-[var(--color-bg-brand-solid)] text-black font-bold';
+            dayClasses = 'bg-[var(--color-bg-brand-primary)] text-black font-bold';
           } else if (day === todayISO) {
-            dayClasses = 'border border-[var(--color-bg-brand-primary)] text-primary';
+            dayClasses = 'text-[var(--color-bg-brand-primary)]';
           } else {
             dayClasses = 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)]';
           }
@@ -775,7 +690,7 @@ export const DateField: React.FC<DateProps> = ({
             <button
               type="button"
               key={day || `empty-${idx}`}
-              className={`w-9 h-9 rounded-full text-center text-sm font-medium hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${dayClasses} ${day ? '' : 'opacity-0 pointer-events-none'}`}
+              className={`w-8 h-8 rounded-xl text-center text-sm font-medium hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${dayClasses} ${day ? '' : 'opacity-0 pointer-events-none'}`}
               onClick={() => day && !readOnly && handleDateSelect(day)}
               disabled={!!(!day || readOnly || (min && day < convertDateFormat(min, dateFormat, 'YYYY-MM-DD')) || (max && day > convertDateFormat(max, dateFormat, 'YYYY-MM-DD')))}
             >

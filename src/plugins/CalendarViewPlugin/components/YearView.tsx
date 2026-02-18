@@ -120,7 +120,7 @@ const YearView: React.FC<YearViewProps> = ({
                   return (
                     <div
                       key={date.toDateString()}
-                      className={`relative aspect-square flex flex-col items-center justify-center text-xs cursor-pointer rounded-full transition-colors ${dayCellClass}`}
+                      className={`relative aspect-square flex flex-col items-center justify-center text-xs cursor-pointer rounded-xl transition-colors ${dayCellClass}`}
                       onClick={() => onDateSelect(date)}
                       onDoubleClick={() => {
                         onDateSelect(date);
@@ -129,7 +129,7 @@ const YearView: React.FC<YearViewProps> = ({
                     >
                       {/* Event indicators - show dot if date has events */}
                       {dayEvents.length > 0 && (
-                        <div className="absolute -top-2 flex justify-center mb-0.5">
+                        <div className="absolute top-1.5 right-2 flex justify-center mb-0.5">
                           <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-bg-brand-primary)]" title={`${dayEvents.length} event${dayEvents.length > 1 ? 's' : ''}`} />
                         </div>
                       )}

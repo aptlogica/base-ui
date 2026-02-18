@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useFrontendPagination } from '../../../hooks/useFrontendPagination';
 import { Loader } from '../../ui/Loader';
 import { formatCompactNumber } from '../../../utils/helpers';
+import { calculateDropdownPosition } from '../../../utils/dropdownPosition';
 
 interface LinksFieldProps {
     value?: any;
@@ -82,51 +83,37 @@ export const LinksField: React.FC<LinksFieldProps> = ({
     });
 
     // Calculate dropdown position with smart positioning (above/below)
-    const calculateDropdownPosition = useCallback(() => {
+    const getDropdownPosition = useCallback(() => {
         if (!triggerRef.current) return null;
 
         const rect = triggerRef.current.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        const viewportWidth = window.innerWidth;
         const dropdownMinHeight = 200; // Minimum height estimate for dropdown content
         const dropdownWidth = 384; // w-96 = 384px
+        const position = calculateDropdownPosition({
+            rect,
+            dropdownMinHeight,
+            dropdownWidth,
+            align: 'right',
+            offset: 4,
+            sideMargin: 10
+        });
 
-        const spaceBelow = viewportHeight - rect.bottom;
-        const spaceAbove = rect.top;
-
-        // Determine if we should open above or below
-        let position: 'above' | 'below' = 'below';
-        if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
-            position = 'above';
-        }
-
-        // Calculate left position (align to right edge of trigger)
-        let left = rect.right - dropdownWidth;
-        if (left < 10) {
-            left = 10; // 10px margin from left edge
-        }
-        if (left + dropdownWidth > viewportWidth - 10) {
-            left = viewportWidth - dropdownWidth - 10; // 10px margin from right edge
-        }
-
+        if (!position) return null;
         return {
-            top: position === 'below' ? rect.bottom + 4 : undefined,
-            bottom: position === 'above' ? window.innerHeight - rect.top : undefined,
-            left,
-            width: dropdownWidth,
-            position
+            ...position,
+            position: position.top !== undefined ? 'below' : 'above'
         };
     }, []);
 
     // Calculate dropdown position when opening
     useEffect(() => {
         if (isOpen && triggerRef.current) {
-            const position = calculateDropdownPosition();
+            const position = getDropdownPosition();
             setDropdownPosition(position);
         } else {
             setDropdownPosition(null);
         }
-    }, [isOpen, calculateDropdownPosition]);
+    }, [isOpen, getDropdownPosition]);
 
     // Get relation info from field meta
     const targetTableId = field?.meta?.relation?.with;

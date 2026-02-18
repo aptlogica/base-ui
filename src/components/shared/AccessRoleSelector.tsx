@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import { Search, ChevronDown } from 'lucide-react';
 import { useClickOutside } from '../../hooks/useClickOutside';
+import { calculateDropdownPosition } from '../../utils/dropdownPosition';
 
 export type AccessRole = 'owner' | 'editor' | 'viewer' | 'no-access' | 'creator' | 'commenter';
 
@@ -37,51 +38,31 @@ export const AccessRoleSelector: React.FC<AccessRoleSelectorProps> = ({
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Calculate dropdown position with smart positioning (above/below)
-  const calculateDropdownPosition = useCallback(() => {
+  const getDropdownPosition = useCallback(() => {
     if (!buttonRef.current) return null;
 
     const rect = buttonRef.current.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
     const dropdownMinHeight = 200; // Min height estimate
-
-    const spaceBelow = viewportHeight - rect.bottom;
-    const spaceAbove = rect.top;
-
-    // Determine if we should open above or below
-    let position: 'above' | 'below' = 'below';
-    if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
-      position = 'above';
-    }
-
-    // Calculate left position (ensure it doesn't go off screen)
-    let left = rect.left;
     const dropdownWidth = rect.width;
-    if (left + dropdownWidth > viewportWidth) {
-      left = viewportWidth - dropdownWidth - 10; // 10px margin from edge
-    }
-    if (left < 10) {
-      left = 10; // 10px margin from left edge
-    }
 
-    return {
-      top: position === 'below' ? rect.bottom + 4 : undefined,
-      bottom: position === 'above' ? window.innerHeight - rect.top : undefined,
-      left,
-      width: rect.width,
-      position
-    };
+    return calculateDropdownPosition({
+      rect,
+      dropdownMinHeight,
+      dropdownWidth,
+      offset: 4,
+      sideMargin: 10
+    });
   }, []);
 
   // Calculate dropdown position when opening
   useEffect(() => {
     if (isOpen && buttonRef.current) {
-      const position = calculateDropdownPosition();
+      const position = getDropdownPosition();
       setDropdownPosition(position);
     } else {
       setDropdownPosition(null);
     }
-  }, [isOpen, calculateDropdownPosition]);
+  }, [isOpen, getDropdownPosition]);
 
   useClickOutside({
     isOpen,

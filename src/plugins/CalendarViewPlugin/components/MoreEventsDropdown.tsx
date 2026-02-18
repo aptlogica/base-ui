@@ -23,7 +23,7 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
   fieldConfig,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const [position, setPosition] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -76,39 +76,37 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         const dropdownWidth = 288; // w-72 = 288px
-        // Estimate height based on paginated events (initial load) + header + load more button
-        const estimatedItemHeight = 80;
-        const initialItems = Math.min(paginatedEvents.length, 30);
-        const estimatedHeight = Math.min(initialItems * estimatedItemHeight + 120, 400); // Header + padding + load more button
+        const maxDropdownHeight = 400;
+        const minDropdownHeight = 160;
 
-        // Try to position below the trigger, aligned to its right edge (since "+N" is on the right)
-        let top = rect.bottom + 8;
-        let left = rect.right - dropdownWidth; // Align to right edge of trigger
+        // Prefer positioning below the trigger. Only place above if there's significantly more space.
+        const spaceBelow = viewportHeight - rect.bottom - 8;
+        const spaceAbove = rect.top - 8;
+        const placeBelow = spaceBelow >= minDropdownHeight || spaceBelow >= spaceAbove;
 
-        // If dropdown would go off left edge, align to trigger's left edge instead
-        if (left < 10) {
-          left = rect.left;
-        }
+        let top = placeBelow ? rect.bottom + 8 : rect.top - maxDropdownHeight - 8;
+
+        // Align to left edge of trigger (more predictable for month grid)
+        let left = rect.left;
 
         // If dropdown would go off right edge, adjust
         if (left + dropdownWidth > viewportWidth - 10) {
           left = viewportWidth - dropdownWidth - 10;
         }
+        if (left < 10) left = 10;
 
-        // If there's not enough space below, show above
-        if (top + estimatedHeight > viewportHeight - 10) {
-          top = rect.top - estimatedHeight - 8;
-          // Ensure it doesn't go off top edge
-          if (top < 10) {
-            top = 10;
-          }
+        // Compute max height based on available space in chosen direction
+        const availableHeight = placeBelow ? Math.max(120, spaceBelow - 10) : Math.max(120, spaceAbove - 10);
+        const maxHeight = Math.min(maxDropdownHeight, availableHeight);
+
+        // Clamp top within viewport
+        if (placeBelow) {
+          top = Math.min(top, viewportHeight - maxHeight - 10);
+        } else {
+          top = Math.max(10, rect.top - maxHeight - 8);
         }
 
-        // Final bounds check
-        const finalTop = Math.max(10, Math.min(top, viewportHeight - estimatedHeight - 10));
-        const finalLeft = Math.max(10, Math.min(left, viewportWidth - dropdownWidth - 10));
-
-        setPosition({ top: finalTop, left: finalLeft });
+        setPosition({ top, left, maxHeight });
       });
     } else {
       setPosition(null);
@@ -167,7 +165,7 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
           style={{
             top: `${position.top}px`,
             left: `${position.left}px`,
-            maxHeight: '400px',
+            maxHeight: `${position.maxHeight}px`,
           }}
         >
           <div className="p-3 border-b bg-card rounded-t-xl rounded-tr-xl flex-shrink-0">
@@ -182,7 +180,7 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
           </div>
           <div
             ref={scrollContainerRef}
-            className="flex-1 overflow-y-auto p-3"
+            className="bg-card rounded-xl flex-1 overflow-y-auto p-3"
           >
             <div className="space-y-2">
               {paginatedEvents.map((event, index) => (
@@ -198,7 +196,7 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
 
             {/* Load More Button */}
             {hasMore && (
-              <div className="flex justify-center py-3 mt-2">
+              <div className="bg-card flex justify-center py-3 mt-2">
                 <button
                   onClick={handleLoadMore}
                   disabled={isLoadingMore}

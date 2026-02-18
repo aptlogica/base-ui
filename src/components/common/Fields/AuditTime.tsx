@@ -1,7 +1,7 @@
 import React from 'react';
 import { DateTime } from './DateTime';
 
-interface AuditTimeProps {
+export interface AuditTimeProps {
   label?: string;
   value: string;
   onChange: (value: string) => void;
