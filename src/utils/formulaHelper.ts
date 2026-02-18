@@ -65,15 +65,24 @@ const isNumericLiteral = (value: string): boolean => {
 };
 
 const containsFunctionCallToken = (value: string): boolean => {
-  for (let i = 0; i < value.length; i++) {
-    const ch = value[i];
-    if (!isIdentStart(ch)) continue;
-    let j = i + 1;
-    while (j < value.length && isIdentChar(value[j])) j++;
-    while (j < value.length && isWhitespaceChar(value[j])) j++;
-    if (j < value.length && value[j] === '(') return true;
-    i = j;
+  let cursor = 0;
+
+  while (cursor < value.length) {
+    const ch = value[cursor];
+    if (!isIdentStart(ch)) {
+      cursor++;
+      continue;
+    }
+
+    let lookahead = cursor + 1;
+    while (lookahead < value.length && isIdentChar(value[lookahead])) lookahead++;
+    while (lookahead < value.length && isWhitespaceChar(value[lookahead])) lookahead++;
+
+    if (lookahead < value.length && value[lookahead] === '(') return true;
+
+    cursor = lookahead;
   }
+
   return false;
 };
 
@@ -107,39 +116,56 @@ const collectNumericLiterals = (input: string): string[] => {
 
 const extractFieldReferences = (input: string): string[] => {
   const refs: string[] = [];
-  for (let i = 0; i < input.length; i++) {
-    if (input[i] !== '{') continue;
-    const end = input.indexOf('}', i + 1);
+  let cursor = 0;
+
+  while (cursor < input.length) {
+    if (input[cursor] !== '{') {
+      cursor++;
+      continue;
+    }
+
+    const end = input.indexOf('}', cursor + 1);
     if (end === -1) break;
-    refs.push(input.slice(i, end + 1));
-    i = end;
+
+    refs.push(input.slice(cursor, end + 1));
+    cursor = end + 1;
   }
+
   return refs;
 };
 
 const removeFieldRefsAndQuoted = (input: string): string => {
   let out = '';
-  for (let i = 0; i < input.length; i++) {
-    const ch = input[i];
+  let cursor = 0;
+
+  while (cursor < input.length) {
+    const ch = input[cursor];
+
     if (ch === '{') {
-      const end = input.indexOf('}', i + 1);
+      const end = input.indexOf('}', cursor + 1);
       if (end === -1) break;
-      i = end;
+      cursor = end + 1;
       continue;
     }
+
     if (ch === '"' || ch === "'") {
       const quote = ch;
-      let j = i + 1;
-      while (j < input.length) {
-        if (input[j] === quote && input[j - 1] !== '\\') break;
-        j++;
+      let lookahead = cursor + 1;
+
+      while (lookahead < input.length) {
+        if (input[lookahead] === quote && input[lookahead - 1] !== '\\') break;
+        lookahead++;
       }
-      if (j >= input.length) break;
-      i = j;
+
+      if (lookahead >= input.length) break;
+      cursor = lookahead + 1;
       continue;
     }
+
     out += ch;
+    cursor++;
   }
+
   return out;
 };
 
@@ -167,30 +193,40 @@ const findFunctionCalls = (
   const nameSet = new Set(names.map(n => n.toUpperCase()));
   const matches: Array<{ name: string; index: number; args: string; openParenIndex: number; closeParenIndex: number }> = [];
 
-  for (let i = 0; i < upperFormula.length; i++) {
-    const ch = upperFormula[i];
-    if (!isIdentStart(ch)) continue;
-    let j = i + 1;
-    while (j < upperFormula.length && isIdentChar(upperFormula[j])) j++;
-    const name = upperFormula.slice(i, j);
+  let cursor = 0;
+
+  while (cursor < upperFormula.length) {
+    const ch = upperFormula[cursor];
+    if (!isIdentStart(ch)) {
+      cursor++;
+      continue;
+    }
+
+    let nameEnd = cursor + 1;
+    while (nameEnd < upperFormula.length && isIdentChar(upperFormula[nameEnd])) nameEnd++;
+    const name = upperFormula.slice(cursor, nameEnd);
+
     if (!nameSet.has(name)) {
-      i = j - 1;
+      cursor = nameEnd;
       continue;
     }
-    let k = j;
-    while (k < upperFormula.length && isWhitespaceChar(upperFormula[k])) k++;
-    if (k >= upperFormula.length || upperFormula[k] !== '(') {
-      i = j - 1;
+
+    let openParenIndex = nameEnd;
+    while (openParenIndex < upperFormula.length && isWhitespaceChar(upperFormula[openParenIndex])) openParenIndex++;
+    if (openParenIndex >= upperFormula.length || upperFormula[openParenIndex] !== '(') {
+      cursor = openParenIndex;
       continue;
     }
-    const close = formula.indexOf(')', k + 1);
-    if (close === -1) {
-      i = j - 1;
+
+    const closeParenIndex = formula.indexOf(')', openParenIndex + 1);
+    if (closeParenIndex === -1) {
+      cursor = openParenIndex + 1;
       continue;
     }
-    const args = formula.slice(k + 1, close);
-    matches.push({ name, index: i, args, openParenIndex: k, closeParenIndex: close });
-    i = close;
+
+    const args = formula.slice(openParenIndex + 1, closeParenIndex);
+    matches.push({ name, index: cursor, args, openParenIndex, closeParenIndex });
+    cursor = closeParenIndex + 1;
   }
 
   return matches;
@@ -202,18 +238,25 @@ const findOperatorMatches = (
 ): Array<{ op: string; index: number }> => {
   const matches: Array<{ op: string; index: number }> = [];
   const ops = [...operators].sort((a, b) => b.length - a.length);
-  for (let i = 0; i < formula.length; i++) {
+  let cursor = 0;
+
+  while (cursor < formula.length) {
     let matched = false;
+
     for (const op of ops) {
-      if (formula.startsWith(op, i)) {
-        matches.push({ op, index: i });
-        i += op.length - 1;
+      if (formula.startsWith(op, cursor)) {
+        matches.push({ op, index: cursor });
+        cursor += op.length;
         matched = true;
         break;
       }
     }
-    if (matched) continue;
+
+    if (!matched) {
+      cursor++;
+    }
   }
+
   return matches;
 };
 

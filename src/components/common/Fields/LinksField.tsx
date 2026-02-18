@@ -557,11 +557,23 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                         <div
                                             className="flex items-center px-2 py-1 bg-blue-100 text-xs rounded-full border flex-shrink-0 cursor-pointer hover:opacity-80"
                                             title={selectedRecords.slice(2).map(r => getRecordDisplayText(r)).join(', ')}
+                                            role="button"
+                                            tabIndex={disabled ? -1 : 0}
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 // Open dropdown to show remaining items
                                                 if (!isOpen) {
                                                     setIsOpen(true);
+                                                }
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (disabled) return;
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    if (!isOpen) {
+                                                        setIsOpen(true);
+                                                    }
                                                 }
                                             }}
                                         >
@@ -676,6 +688,10 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                 const isSelected = selectedRecords.some(r => r.id === record.id);
                                 const isFocused = index === focusedRecordIndex;
                                 const isRecordLoading = loadingRecordId === record.id;
+                                const buttonVariantClass = isSelected ? 'bg-red-500 hover:bg-red-600 shadow-sm' : 'bg-blue-500 hover:bg-blue-600 shadow-sm';
+                                const actionButtonClass = disabled
+                                    ? 'opacity-50 cursor-not-allowed bg-gray-400'
+                                    : buttonVariantClass;
 
                                 return (
                                     <div
@@ -689,6 +705,13 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                         onClick={() => {
                                             setFocusedRecordIndex(index);
                                             handleSelectRecord(record);
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                setFocusedRecordIndex(index);
+                                                handleSelectRecord(record);
+                                            }
                                         }}
                                         onMouseEnter={() => setFocusedRecordIndex(index)}
                                     >
@@ -729,7 +752,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                         }}
                                                         disabled={disabled}
                                                         aria-label={isSelected ? `Unlink ${getRecordDisplayText(record)}` : `Link ${getRecordDisplayText(record)}`}
-                                                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-400' : (isSelected ? 'bg-red-500 hover:bg-red-600 shadow-sm' : 'bg-blue-500 hover:bg-blue-600 shadow-sm')}`}
+                                                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${actionButtonClass}`}
                                                     >
                                                         {isSelected ? (
                                                             <X className="w-4 h-4 text-white" />

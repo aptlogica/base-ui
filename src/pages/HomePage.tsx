@@ -49,7 +49,8 @@ const BaseMenuWrapper: React.FC<{
   }
 
   return (
-    <div onClick={(e) => e.stopPropagation()}
+    <div // NOSONAR
+      onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => e.stopPropagation()}>
       <BaseMenu
         base={base}
@@ -602,7 +603,7 @@ const HomePage: React.FC = () => {
             const baseName = base.title || base.name || 'Base';
 
             return (
-              <div
+              <div // NOSONAR
                 key={base.id}
                 onClick={() => handleBaseClick(base)}
                 onKeyDown={(e) => {

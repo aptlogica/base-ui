@@ -285,6 +285,34 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
   if (!isOpen) return null;
 
+  let fileUploadStateClass = 'border-gray-300 hover:border-gray-400 bg-gray-50/50';
+  if (isDragOver) {
+    fileUploadStateClass = 'border-[var(--color-bg-brand-primary)] bg-[var(--color-bg-brand-primary)]/10';
+  } else if (fileError) {
+    fileUploadStateClass = 'border-red-400 hover:border-red-500 bg-red-50/30';
+  } else if (selectedFile) {
+    fileUploadStateClass = 'border-green-400 hover:border-green-500';
+  }
+
+  const trimmedTitle = title.trim();
+  const hasTitle = trimmedTitle.length > 0;
+  const isTitleValidLength = trimmedTitle.length >= 3;
+  const isUniqueTitle = hasTitle && isTitleUnique(title);
+
+  let titleHelpIconClass = 'text-gray-400';
+  if (titleError) {
+    titleHelpIconClass = 'text-red-500';
+  } else if (isTitleValidLength && isUniqueTitle) {
+    titleHelpIconClass = 'text-green-600';
+  }
+
+  let uniqueRequirementClass = 'text-gray-500';
+  if (hasTitle && isUniqueTitle) {
+    uniqueRequirementClass = 'text-green-600';
+  } else if (hasTitle && !isUniqueTitle) {
+    uniqueRequirementClass = 'text-red-600';
+  }
+
   return (
     <div // NOSONAR
       className="bg-modal-backdrop relative"
@@ -331,9 +359,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               </label>
               <div
                 id="file-upload-input"
-                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${isDragOver
-                  ? 'border-[var(--color-bg-brand-primary)] bg-[var(--color-bg-brand-primary)]/10'
-                  : fileError ? 'border-red-400 hover:border-red-500 bg-red-50/30' : selectedFile ? 'border-green-400 hover:border-green-500' : 'border-gray-300 hover:border-gray-400 bg-gray-50/50'}`}
+                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${fileUploadStateClass}`}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -429,7 +455,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
                   <span className="relative inline-block group">
                     <HelpCircle
-                      className={`w-4 h-4 ${titleError ? 'text-red-500' : title.trim().length >= 3 && isTitleUnique(title) ? 'text-green-600' : 'text-gray-400'} cursor-help`}
+                      className={`w-4 h-4 ${titleHelpIconClass} cursor-help`}
                     />
                     <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                       <h4 className="font-medium text-primary mb-2">Table title requirements:</h4>
@@ -437,7 +463,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                         <li className={`flex items-center ${title.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
                           • Minimum 3 characters
                         </li>
-                        <li className={`flex items-center ${title.trim() && isTitleUnique(title) ? 'text-green-600' : title.trim() && !isTitleUnique(title) ? 'text-red-600' : 'text-gray-500'}`}>
+                        <li className={`flex items-center ${uniqueRequirementClass}`}>
                           • Must be unique
                         </li>
                       </ul>
