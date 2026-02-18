@@ -75,7 +75,7 @@ describe('AttachmentModal', () => {
     fireEvent.change(input, { target: { files: [file] } });
 
     expect(screen.getByText('sample.txt')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /upload files/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /upload files/i }).at(-1)!);
 
     await waitFor(() => {
       expect(addAttachmentMutateAsync).toHaveBeenCalled();
@@ -89,7 +89,7 @@ describe('AttachmentModal', () => {
     const file = new File(['ok'], 'x.txt', { type: 'text/plain' });
     fireEvent.change(input, { target: { files: [file] } });
 
-    expect(screen.getByRole('button', { name: /upload files/i })).toBeDisabled();
+    expect(screen.getAllByRole('button', { name: /upload files/i }).at(-1)!).toBeDisabled();
   });
 
   it('supports deferred upload mode (persistImmediately=false)', async () => {
@@ -109,7 +109,7 @@ describe('AttachmentModal', () => {
     const file = new File(['ok'], 'new.txt', { type: 'text/plain' });
     fireEvent.change(input, { target: { files: [file] } });
 
-    fireEvent.click(screen.getByRole('button', { name: /upload files/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /upload files/i }).at(-1)!);
 
     await waitFor(() => {
       expect(onChange).toHaveBeenCalled();
@@ -147,7 +147,7 @@ describe('AttachmentModal', () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(['ok'], 'error.txt', { type: 'text/plain' });
     fireEvent.change(input, { target: { files: [file] } });
-    fireEvent.click(screen.getByRole('button', { name: /upload files/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /upload files/i }).at(-1)!);
 
     await waitFor(() => {
       expect(screen.getByText(/upload failed/i)).toBeInTheDocument();

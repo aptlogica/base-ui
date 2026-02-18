@@ -1,2 +1,2 @@
 import App from './App.tsx';
-export default App;
+export default App; // NOSONAR

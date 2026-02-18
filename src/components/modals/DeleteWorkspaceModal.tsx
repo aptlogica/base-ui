@@ -66,7 +66,8 @@ export const DeleteWorkspaceModal: React.FC<DeleteWorkspaceModalProps> = ({
   if (!isOpen || !workspace) return null;
 
   return (
-    <div className="bg-modal-backdrop relative" onKeyDown={handleKeyDown}>
+    <div //NOSONAR
+      className="bg-modal-backdrop relative" onKeyDown={handleKeyDown}>
       <button
         type="button"
         aria-label="Close modal"

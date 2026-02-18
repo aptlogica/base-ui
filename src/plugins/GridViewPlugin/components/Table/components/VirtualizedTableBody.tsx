@@ -280,6 +280,15 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
           const columnIdentity = String(visibleColumn.id || visibleColumn.key || '');
           const isPinned = pinnedColumnIds.includes(columnIdentity);
           const isGroupedColumn = index === groupColumnIndex;
+          const rowCount = group.rows.length;
+          const itemTypeLabel = isNestedGroup ? 'group' : 'row';
+          const itemCountLabel = rowCount > 1 ? `${itemTypeLabel}s` : itemTypeLabel;
+          let groupToggleBackgroundColor = 'var(--color-bg-card)';
+          if (level === 0) {
+            groupToggleBackgroundColor = isExpanded ? 'var(--color-gray-200)' : 'var(--color-gray-100)';
+          } else if (isExpanded) {
+            groupToggleBackgroundColor = 'var(--color-gray-100)';
+          }
 
           return (
             <div
@@ -297,9 +306,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
                   <div
                     className="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-md transition-all duration-200"
                     style={{
-                      backgroundColor: level === 0
-                        ? (isExpanded ? 'var(--color-gray-200)' : 'var(--color-gray-100)')
-                        : (isExpanded ? 'var(--color-gray-100)' : 'var(--color-bg-card)')
+                      backgroundColor: groupToggleBackgroundColor
                     }}
                   >
                     {isExpanded ? (
@@ -323,7 +330,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
                       {group.groupValue}
                     </span>
                     <span className="text-xs text-gray-500 whitespace-nowrap px-1.5 py-0.5 rounded bg-gray-100">
-                      {isNestedGroup ? `${group.rows.length} group${group.rows.length > 1 ? 's' : ''}` : `${group.rows.length} row${group.rows.length > 1 ? 's' : ''}`}
+                      {`${rowCount} ${itemCountLabel}`}
                     </span>
                   </div>
                 </div>

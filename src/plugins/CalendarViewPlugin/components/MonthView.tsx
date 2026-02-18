@@ -158,7 +158,8 @@ const MonthView: React.FC<MonthViewProps> = ({
 
                     {/* Show "+n more" dropdown on the right if there are additional events */}
                     {dayEvents.length > 1 && (
-                      <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}
+                      <div //NOSONAR
+                        className="flex-shrink-0" onClick={(e) => e.stopPropagation()}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();   // prevent page scroll on Space

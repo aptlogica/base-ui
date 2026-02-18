@@ -166,7 +166,26 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
           />
         ) : (
           <div
-            onClick={readOnly ? undefined : handleClick}
+            role="button"
+            tabIndex={readOnly || disabled ? -1 : 0}
+            onMouseDown={
+              readOnly || disabled
+                ? undefined
+                : (e) => {
+                  e.preventDefault();
+                  handleClick();
+                }
+            }
+            onKeyDown={
+              readOnly || disabled
+                ? undefined
+                : (e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleClick();
+                  }
+                }
+            }
             className={`field-component ${localValue ? "text-gray-800" : "!text-gray-500"}
               } ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""} max-w-full overflow-hidden`}
             style={{ textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}

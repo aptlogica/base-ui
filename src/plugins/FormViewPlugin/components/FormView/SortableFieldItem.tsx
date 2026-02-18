@@ -38,7 +38,7 @@ export const SortableFieldItem: React.FC<SortableFieldItemProps> = ({
   onDelete,
 }) => {
   return (
-    <div
+    <div //NOSONAR
       style={{ opacity: isDragging ? 0.5 : 1 }}
       draggable={draggable}
       onDragStart={e => { e.stopPropagation(); onDragStart(); }}

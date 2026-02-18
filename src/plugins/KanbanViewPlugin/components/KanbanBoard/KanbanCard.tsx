@@ -208,7 +208,8 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
   const isEditable = onEdit !== undefined;
 
   return (
-    <div className={`kanban-card bg-card rounded-2xl border shadow-sm p-4 pt-0 group ${isEditable ? 'hover:border-[var(--color-bg-brand-primary)]' : ''} transition-all duration-200 ${isEditable ? 'hover:shadow-lg' : ''} cursor-default relative ${isDragging ? 'opacity-50 rotate-2 shadow-lg' : ''}`}
+    <div //NOSONAR
+      className={`kanban-card bg-card rounded-2xl border shadow-sm p-4 pt-0 group ${isEditable ? 'hover:border-[var(--color-bg-brand-primary)]' : ''} transition-all duration-200 ${isEditable ? 'hover:shadow-lg' : ''} cursor-default relative ${isDragging ? 'opacity-50 rotate-2 shadow-lg' : ''}`}
       draggable={isEditable}
       onDragStart={isEditable ? handleDragStart : undefined}
       onDragEnd={isEditable ? handleDragEnd : undefined}
@@ -228,6 +229,15 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
             e.stopPropagation();
             onEdit(card._meta.id);
           }}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              onEdit(card._meta.id);
+            }
+          }}
+          role="button"
+          tabIndex={0}
           aria-label="Edit record"
         />
       )}

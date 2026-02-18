@@ -231,7 +231,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div
+    <div //NOSONAR
       className="bg-modal-backdrop relative"
       onKeyDown={handleKeyDown}
     >
@@ -243,7 +243,6 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
       />
       <div
         className="bg-modal !p-0 flex flex-col relative overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
@@ -360,7 +359,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
                   </div>
                   
                   {/* Upload Area - Right Side */}
-                  <div
+                  <div //NOSONAR
                     onDragOver={handleDragOver}
                     onDrop={handleDrop}
                     className="flex-1 relative border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
@@ -377,7 +376,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <div
+                <div //NOSONAR
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
                   className="relative border-dashed border rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"

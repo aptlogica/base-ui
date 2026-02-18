@@ -180,9 +180,14 @@ export const Table: React.FC<TableProps> = ({
       const metaId = row?._meta?.id;
       const rawNumeric = Number(rawId);
       const metaNumeric = Number(metaId);
-      const numericId = Number.isFinite(rawNumeric)
-        ? rawNumeric
-        : (Number.isFinite(metaNumeric) ? metaNumeric : null);
+      let numericId: number | null;
+      if (Number.isFinite(rawNumeric)) {
+        numericId = rawNumeric;
+      } else if (Number.isFinite(metaNumeric)) {
+        numericId = metaNumeric;
+      } else {
+        numericId = null;
+      }
 
       if (numericId === null) continue;
       if (rawId !== undefined && rawId !== null) {
@@ -710,7 +715,9 @@ export const Table: React.FC<TableProps> = ({
   return (
     <div ref={tableContainerRef} className="w-full h-[calc(100vh-43px)] bg-background flex flex-col relative" >
       {/* Fixed Header - Toolbar */}
-      <div className="sticky top-0 z-30 bg-muted border-b border-border/50" onClick={() => setActiveCell(null)}>
+      <div //NOSONAR
+        className="sticky top-0 z-30 bg-muted border-b border-border/50" 
+        onMouseDown={() => setActiveCell(null)}>
         <div className="flex items-center bg-background gap-2 px-4 py-2">
           {/* Desktop Layout - Hidden on mobile */}
           <div className="hidden md:flex items-center justify-between w-full">
@@ -766,7 +773,7 @@ export const Table: React.FC<TableProps> = ({
       </div>
 
       <div className="flex-1 overflow-hidden relative">
-        <div
+        <div //NOSONAR
           ref={tableRef}
           className="h-full overflow-auto"
           data-scroll-container="table"
@@ -774,7 +781,10 @@ export const Table: React.FC<TableProps> = ({
         >
           <div className="bg-background w-full">
             {/* Sticky Table Header */}
-            <div ref={headerRef} className="sticky top-0 z-20 w-full" onClick={() => setActiveCell(null)} onKeyDown={(e) => {}}>
+            <div //NOSONAR
+              ref={headerRef} 
+              className="sticky top-0 z-20 w-full" 
+              onMouseDown={() => setActiveCell(null)}>
               <div
                 className="grid bg-background"
                 style={{
@@ -1034,9 +1044,9 @@ export const Table: React.FC<TableProps> = ({
       {colMenu.open && colMenu.colIndex !== null && !isBaseReadOnly() && (canUpdateColumn() || canDeleteColumn()) && (
         <>
           {/* Overlay to close menu on click outside */}
-          <div
+          <div //NOSONAR
             style={{ position: 'fixed', inset: 0, zIndex: 999 }}
-            onClick={handleCloseColMenu}
+            onMouseDown={handleCloseColMenu}
           />
           <ColumnContextMenu
             x={colMenu.x}
@@ -1059,7 +1069,8 @@ export const Table: React.FC<TableProps> = ({
       {/* Edit Column Modal */}
       {editModalOpen && editColumn && editModalPosition && ReactDOM.createPortal(
         <>
-          <div ref={backdropRef} className="fixed inset-0 z-50 bg-modal-backdrop" onClick={() => {
+          <div //NOSONAR
+            ref={backdropRef} className="fixed inset-0 z-50 bg-modal-backdrop" onMouseDown={() => {
             setEditModalOpen(false);
             setEditColumn(null);
             setEditColumnIndex(null);

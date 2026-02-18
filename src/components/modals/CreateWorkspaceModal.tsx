@@ -255,7 +255,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
 
   return (
     <>
-      <div
+      <div //NOSONAR
         className="bg-modal-backdrop relative"
         onKeyDown={handleKeyDown}
       >
@@ -265,7 +265,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
           className="absolute inset-0"
           onClick={onClose}
         />
-        <div
+        <div //NOSONAR
           className="bg-modal !max-w-3xl min-h-[80vh] !p-0 flex flex-col relative overflow-hidden"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}

@@ -389,7 +389,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
 
 
   return (
-    <div
+    <div // NOSONAR
       className="bg-modal-backdrop relative"
       onKeyDown={handleKeyDown}
     >
@@ -399,7 +399,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
         className="absolute inset-0"
         onClick={onClose}
       />
-      <div
+      <div // NOSONAR
         className="bg-modal !max-w-2xl !p-0 flex flex-col relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}

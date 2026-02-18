@@ -341,20 +341,26 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       );
       break;
     case 'datetime':
-      renderedComponent = commonProps.value === '-' ? (
-        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-muted-foreground">-</div>
-      ) : isSystemField ? (
-        <div className="w-full px-3 py-2 text-sm text-muted-foreground cursor-not-allowed">
-          {value ? new Date(value).toLocaleString() : getDisplayValue(fieldType, value)}
-        </div>
-      ) : (
-        <DateTime
-          {...commonProps}
-          config={parsedConfig}
-          allowEdit={false}
-          isBorder={false}
-        />
-      );
+      if (commonProps.value === '-') {
+        renderedComponent = (
+          <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-muted-foreground">-</div>
+        );
+      } else if (isSystemField) {
+        renderedComponent = (
+          <div className="w-full px-3 py-2 text-sm text-muted-foreground cursor-not-allowed">
+            {value ? new Date(value).toLocaleString() : getDisplayValue(fieldType, value)}
+          </div>
+        );
+      } else {
+        renderedComponent = (
+          <DateTime
+            {...commonProps}
+            config={parsedConfig}
+            allowEdit={false}
+            isBorder={false}
+          />
+        );
+      }
       break;
     case 'time':
       renderedComponent = (

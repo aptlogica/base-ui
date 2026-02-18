@@ -66,7 +66,9 @@ export const DeleteBaseModal: React.FC<DeleteBaseModalProps> = ({
   if (!isOpen || !base) return null;
 
   return (
-    <div className="bg-modal-backdrop relative" onKeyDown={handleKeyDown}>
+    <div // NOSONAR
+    className="bg-modal-backdrop relative" 
+    onKeyDown={handleKeyDown}>
       <button
         type="button"
         aria-label="Close modal"

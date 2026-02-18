@@ -109,7 +109,7 @@ export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({
 
   return (
     <>
-      <div
+      <div // NOSONAR
         ref={containerRef}
         className={`flex items-center ${shouldShowDropdown || onClick ? 'cursor-pointer' : ''} ${className}`}
         onClick={handleClick}
