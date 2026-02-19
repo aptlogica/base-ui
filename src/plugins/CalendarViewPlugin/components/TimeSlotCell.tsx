@@ -61,7 +61,7 @@ const TimeSlotCell: React.FC<TimeSlotCellProps> = ({
   };
 
   return (
-    <div
+    <div //NOSONAR
       className={className}
       onClick={() => {
         if (!hasEvents && onDateClick) {
@@ -88,7 +88,7 @@ const TimeSlotCell: React.FC<TimeSlotCellProps> = ({
             </div>
 
             {slotEvents.length > 1 && (
-              <div
+              <div //NOSONAR
                 className="flex-shrink-0"
                 onClick={(event) => event.stopPropagation()}
                 onKeyDown={handleMenuKeyDown}

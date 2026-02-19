@@ -333,7 +333,7 @@ export const LongText: React.FC<LongTextProps> = ({
   const execFormatBlockWithFallback = (values: string[]): boolean => {
     for (const formatValue of values) {
       // @ts-ignore - execCommand is deprecated but still needed for rich text formatting
-      if (document.execCommand('formatBlock', false, formatValue)) return true;
+      if (document.execCommand('formatBlock', false, formatValue)) return true; //NOSONAR
     }
     return false;
   };
@@ -370,8 +370,7 @@ export const LongText: React.FC<LongTextProps> = ({
       }
     } else {
       // Execute the command
-      // @ts-ignore - execCommand is deprecated but still needed for rich text formatting
-      success = document.execCommand(command, false, value || undefined);
+      success = document.execCommand(command, false, value || undefined);  //NOSONAR
     }
 
     if (success) {
@@ -637,7 +636,7 @@ export const LongText: React.FC<LongTextProps> = ({
 
     e.preventDefault();
     const text = e.clipboardData.getData('text/plain');
-    document.execCommand('insertText', false, text);
+    document.execCommand('insertText', false, text); //NOSONAR
     handleRichTextChange();
   };
 

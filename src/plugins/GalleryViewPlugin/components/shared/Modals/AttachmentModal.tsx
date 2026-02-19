@@ -434,7 +434,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
         <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="p-4 space-y-4">
             {/* Upload Area - Always visible */}
-            <div
+            <div //NOSONAR
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}

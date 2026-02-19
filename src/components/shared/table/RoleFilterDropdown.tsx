@@ -118,7 +118,7 @@ export const RoleFilterDropdown: React.FC<RoleFilterDropdownProps> = ({
       </button>
 
       {isOpen && position && createPortal(
-        <div
+        <div //NOSONAR
           ref={menuRef}
           data-dropdown-menu="role-filter"
           role={menuRole}

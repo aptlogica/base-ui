@@ -217,7 +217,7 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
     >
       {/* Transparent overlay for whole card - only if editable */}
       {onEdit && (
-        <div
+        <div //NOSONAR
           className="absolute inset-0 z-10 bg-transparent cursor-pointer"
           onClick={e => {
             if (

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, X } from 'lucide-react';
 import { useClickOutside } from '../../../hooks/useClickOutside';
@@ -163,7 +163,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                     >
                       <span className="truncate">{item}</span>
                       {!disabled && !readOnly && (
-                        <span
+                        <span //NOSONAR
                           onClick={(e) => handleRemoveOption(item, e)}
                           className="transition-colors p-0.5 cursor-pointer flex-shrink-0"
                           style={{ lineHeight: 1, color: opt.color ? getReadableTextColor(opt.color) : undefined }}

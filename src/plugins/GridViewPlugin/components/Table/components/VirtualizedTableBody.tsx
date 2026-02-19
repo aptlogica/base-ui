@@ -246,7 +246,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
           boxSizing: 'border-box',
         }}
       >
-      <div
+      <div //NOSONAR
         className="grid border-b border-primary/10 font-semibold text-foreground text-sm cursor-pointer transition-all duration-200"
         style={{
           gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`,

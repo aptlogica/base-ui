@@ -1,5 +1,5 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { BarChart2, Check, ChevronDown, ChevronUp, CircleCheckBig, CircleOff, Plus, Trash2, Type } from 'lucide-react';
+import { BarChart2, Check, ChevronDown, ChevronUp, CircleCheckBig, CircleOff, Plus, Trash2 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useSmartPopover } from '../../../hooks/useSmartPopover';
 import { BaseColumn } from '../../../types/column.types';
