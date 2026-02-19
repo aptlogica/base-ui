@@ -29,15 +29,25 @@ export const toLocalDateKey = (date: Date): string => {
 
 export const getEventsForDateKey = (events: CalendarEvent[], date: Date): CalendarEvent[] => {
   const dateStr = toLocalDateKey(date);
-  return events.filter(event => event.date === dateStr);
+  return events.filter(event => {
+    const eventDateTime = event.dateTime instanceof Date ? event.dateTime : new Date(event.dateTime as any);
+    if (!Number.isNaN(eventDateTime.getTime())) {
+      return toLocalDateKey(eventDateTime) === dateStr;
+    }
+    return event.date === dateStr;
+  });
 };
 
 export const getEventsForTimeSlot = (events: CalendarEvent[], date: Date, hour: number): CalendarEvent[] => {
   const dateStr = toLocalDateKey(date);
   return events.filter(event => {
+    const eventDateTime = event.dateTime instanceof Date ? event.dateTime : new Date(event.dateTime as any);
+    if (!Number.isNaN(eventDateTime.getTime())) {
+      if (toLocalDateKey(eventDateTime) !== dateStr) return false;
+      return eventDateTime.getHours() === hour;
+    }
     if (event.date !== dateStr) return false;
     const eventHour = new Date(event.dateTime).getHours();
     return eventHour === hour;
   });
 };
-

@@ -948,7 +948,7 @@ describe('DateField Component', () => {
       fireEvent.click(getTriggerButton());
 
       await waitFor(() => {
-        const dayButtons = document.querySelectorAll('button[class*="rounded-full"]');
+        const dayButtons = document.querySelectorAll('button.w-8');
         const disabledButtons = Array.from(dayButtons).filter((btn) => btn.disabled);
         expect(disabledButtons.length).toBeGreaterThan(0);
       });
@@ -966,7 +966,7 @@ describe('DateField Component', () => {
       fireEvent.click(getTriggerButton());
 
       await waitFor(() => {
-        const dayButtons = document.querySelectorAll('button[class*="rounded-full"]');
+        const dayButtons = document.querySelectorAll('button.w-8');
         const disabledButtons = Array.from(dayButtons).filter((btn) => btn.disabled);
         expect(disabledButtons.length).toBeGreaterThan(0);
       });
@@ -985,7 +985,7 @@ describe('DateField Component', () => {
       fireEvent.click(getTriggerButton());
 
       await waitFor(() => {
-        const dayButtons = document.querySelectorAll('button[class*="rounded-full"]');
+        const dayButtons = document.querySelectorAll('button.w-8');
         const disabledButton = Array.from(dayButtons).find((btn) => btn.disabled);
         if (disabledButton) {
           const initialCallCount = mockOnChange.mock.calls.length;

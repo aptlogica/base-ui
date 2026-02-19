@@ -12,7 +12,7 @@ import { CalendarEvent } from "../hooks/useCalendarData";
 import { GridColumn } from "../../GridViewPlugin/types/grid.types";
 import { applyFilters } from "../../../utils/filterUtils";
 import { buildInitialValuesForEdit } from "../../../utils/initialValues";
-import { utcISOToZoned } from '../../../utils/dateUtils';
+import { utcISOToZoned, zonedToUtcISO } from '../../../utils/dateUtils';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
 // Custom hooks
 import { useCalendarViewConfig } from "../hooks/useCalendarViewConfig";
@@ -201,21 +201,33 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           eventDateTime = new Date(year, month - 1, day, 0, 0);
         }
       } else {
-        // Local time format - extract date part and parse as local
-        const [datePart, timePart = ''] = dateStr.split('T');
-        eventDate = datePart;
+        // Naive datetime (no timezone suffix). Treat as UTC (grid stores UTC without Z) and convert for display.
+        const [datePart, timePart = '00:00'] = dateStr.split('T');
 
-        // Parse as local datetime
-        const date = new Date(dateStr);
-        if (Number.isNaN(date.getTime())) return null;
-
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        const day = date.getDate();
-        const hours = timePart ? Number.parseInt(timePart.split(':')[0]) : 0;
-        const minutes = timePart ? Number.parseInt(timePart.split(':')[1]) : 0;
-
-        eventDateTime = new Date(year, month, day, hours, minutes);
+        if (isDateTimeField) {
+          try {
+            const fieldMeta = currentDateField.meta || {};
+            const tz = fieldMeta.timeZoneLabel || fieldMeta.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const utcIso = `${datePart}T${timePart}Z`;
+            const zonedDateTime = utcISOToZoned(utcIso, tz);
+            const [zonedDate, zonedTime = '00:00'] = zonedDateTime.split(' ');
+            eventDate = zonedDate;
+            const [year, month, day] = zonedDate.split('-').map(Number);
+            const [hours = 0, minutes = 0] = zonedTime.split(':').map(Number);
+            eventDateTime = new Date(year, month - 1, day, hours, minutes);
+          } catch (error) {
+            console.warn(error);
+            eventDate = datePart;
+            const [year, month, day] = datePart.split('-').map(Number);
+            const [hours = 0, minutes = 0] = timePart.split(':').map(Number);
+            eventDateTime = new Date(year, month - 1, day, hours, minutes);
+          }
+        } else {
+          eventDate = datePart;
+          const [year, month, day] = datePart.split('-').map(Number);
+          const [hours = 0, minutes = 0] = timePart.split(':').map(Number);
+          eventDateTime = new Date(year, month - 1, day, hours, minutes);
+        }
       }
 
       if (Number.isNaN(eventDateTime.getTime())) return null;
@@ -399,20 +411,25 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     });
 
     if (modalState.create.selectedDate && dateField) {
-      // Fix timezone issue by creating a local date string
       const date = modalState.create.selectedDate;
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const isoDate = `${year}-${month}-${day}`;
 
-      // For date fields, use YYYY-MM-DD format
-      // For datetime fields, send without timezone to store as local time in database
-      // The backend will handle timezone conversion
-      const dateValue = (dateField.type === 'date' || dateField.uidt === 'Date')
-        ? `${year}-${month}-${day}`
-        : `${year}-${month}-${day}T${hours}:${minutes}:00`;
+      const fieldType = String(dateField.type || '').toLowerCase();
+      const fieldUidt = String(dateField.uidt || '').toLowerCase();
+      const isDateField = fieldType === 'date' || fieldUidt === 'date';
+      const isMonthOrYearView = currentView === 'month' || currentView === 'year';
+
+      const tz = dateField.meta?.timeZoneLabel || dateField.meta?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const timeValue = isMonthOrYearView
+        ? '00:00'
+        : `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+      const dateValue = isDateField
+        ? isoDate
+        : zonedToUtcISO(isoDate, timeValue, tz);
 
       // Set initial value using both field.id and field.name for compatibility
       if (dateField.id) {

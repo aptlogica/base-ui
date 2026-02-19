@@ -16,37 +16,6 @@ const LinksSvgIcon: React.FC<{ className?: string }> = ({ className }) =>
     className: `${className} invert-[0.5]`, //w-4 h-4 text-gray-400
   });
 
-export const FIELD_TYPES = [
-  { key: 'links', label: 'Links', icon: LinksSvgIcon },
-  { key: 'lookup', label: 'Lookup', icon: TextSearch },
-  { key: 'text', label: 'Single line text', icon: Type },
-  { key: 'longText', label: 'Long text', icon: FileText },
-  { key: 'number', label: 'Number', icon: Hash },
-  { key: 'decimal', label: 'Decimal', icon: DecimalsArrowRight },
-  { key: 'formula', label: 'Formula', icon: Calculator },
-  { key: 'attachment', label: 'Attachment', icon: Paperclip },
-  { key: 'boolean', label: 'Checkbox', icon: CheckSquare },
-  { key: 'currency', label: 'Currency', icon: DollarSign },
-  { key: 'percent', label: 'Percent', icon: Percent },
-  { key: 'duration', label: 'Duration', icon: Timer },
-  { key: 'year', label: 'Year', icon: Calendar1 },
-  { key: 'date', label: 'Date', icon: Calendar },
-  { key: 'datetime', label: 'DateTime', icon: CalendarClock },
-  { key: 'time', label: 'Time', icon: Clock },
-  { key: 'email', label: 'Email', icon: Mail },
-  { key: 'phoneNumber', label: 'Phone number', icon: Phone },
-  { key: 'url', label: 'URL', icon: Link2 },
-  { key: 'select', label: 'Single select', icon: List },
-  { key: 'multiSelect', label: 'Multi select', icon: LayoutList },
-  { key: 'rating', label: 'Rating', icon: Star },
-  { key: 'user', label: 'User', icon: User },
-  { key: 'json', label: 'JSON', icon: Braces },
-  // { key: 'createdTime', label: 'Created Time', icon: ClockArrowUpIcon },
-  // { key: 'lastModifiedTime', label: 'Last Modified Time', icon: ClockArrowDownIcon },
-  // { key: 'createdBy', label: 'Created By', icon: UserRound },
-  // { key: 'lastModifiedBy', label: 'Last Modified By', icon: UserRoundPen },
-];
-
 // Field type enum for type safety
 export enum FieldType {
   Text = 'text',
@@ -79,6 +48,37 @@ export enum FieldType {
   // LastModifiedBy = 'lastModifiedBy',
   Formula = 'formula',
 }
+
+export const FIELD_TYPES = [
+  { key: FieldType.Links, label: 'Links', icon: LinksSvgIcon },
+  { key: FieldType.Lookup, label: 'Lookup', icon: TextSearch },
+  { key: FieldType.Text, label: 'Single line text', icon: Type },
+  { key: FieldType.LongText, label: 'Long text', icon: FileText },
+  { key: FieldType.Number, label: 'Number', icon: Hash },
+  { key: FieldType.Decimal, label: 'Decimal', icon: DecimalsArrowRight },
+  { key: FieldType.Formula, label: 'Formula', icon: Calculator },
+  { key: FieldType.Attachment, label: 'Attachment', icon: Paperclip },
+  { key: FieldType.Boolean, label: 'Checkbox', icon: CheckSquare },
+  { key: FieldType.Currency, label: 'Currency', icon: DollarSign },
+  { key: FieldType.Percent, label: 'Percent', icon: Percent },
+  { key: FieldType.Duration, label: 'Duration', icon: Timer },
+  { key: FieldType.Year, label: 'Year', icon: Calendar1 },
+  { key: FieldType.Date, label: 'Date', icon: Calendar },
+  { key: FieldType.DateTime, label: 'DateTime', icon: CalendarClock },
+  { key: FieldType.Time, label: 'Time', icon: Clock },
+  { key: FieldType.Email, label: 'Email', icon: Mail },
+  { key: FieldType.PhoneNumber, label: 'Phone number', icon: Phone },
+  { key: FieldType.URL, label: 'URL', icon: Link2 },
+  { key: FieldType.Select, label: 'Single select', icon: List },
+  { key: FieldType.MultiSelect, label: 'Multi select', icon: LayoutList },
+  { key: FieldType.Rating, label: 'Rating', icon: Star },
+  { key: FieldType.User, label: 'User', icon: User },
+  { key: FieldType.JSON, label: 'JSON', icon: Braces },
+  // { key: 'createdTime', label: 'Created Time', icon: ClockArrowUpIcon },
+  // { key: 'lastModifiedTime', label: 'Last Modified Time', icon: ClockArrowDownIcon },
+  // { key: 'createdBy', label: 'Created By', icon: UserRound },
+  // { key: 'lastModifiedBy', label: 'Last Modified By', icon: UserRoundPen },
+];
 
 
 // Helper function to get field type info

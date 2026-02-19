@@ -432,7 +432,6 @@ export default {
         'brand-alt': 'var(--ring-color-brand_alt)',
         'brand-solid': 'var(--ring-color-brand-solid)',
         'brand-solid-hover': 'var(--ring-color-brand-solid_hover)',
-        'bg-brand-solid': 'var(--ring-color-bg-brand-solid)',
         error: 'var(--ring-color-error)',
         'error-subtle': 'var(--ring-color-error_subtle)',
       },

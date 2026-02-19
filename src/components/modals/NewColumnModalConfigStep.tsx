@@ -912,7 +912,6 @@ export function renderNewColumnConfigStep(props: any) {
                   }
                 }}
               />
-
               <button
                 type="button"
                 className="px-3 py-1 btn-add-option"
@@ -950,7 +949,7 @@ export function renderNewColumnConfigStep(props: any) {
                         type="radio"
                         className="flex-shrink-0 checkbox-primary-brand"
                         checked={singleDefault === opt.option}
-                        onChange={() => {}}
+                        onChange={() => { }}
                         onClick={() => {
                           // Toggle on click - if already selected, deselect; otherwise select
                           if (singleDefault === opt.option) {
@@ -1067,6 +1066,7 @@ export function renderNewColumnConfigStep(props: any) {
               <label className="relative inline-flex gap-3 items-center cursor-pointer">
                 <input
                   type="checkbox"
+                  id="display-as-progress"
                   checked={displayAsProgress}
                   onChange={e => setDisplayAsProgress(e.target.checked)}
                   className="sr-only peer"
@@ -1620,6 +1620,7 @@ export function renderNewColumnConfigStep(props: any) {
               <label className="relative inline-flex gap-3 items-center cursor-pointer">
                 <input
                   type="checkbox"
+                  id="multi-user-select"
                   checked={allowMultipleUsers}
                   onChange={e => setAllowMultipleUsers(e.target.checked)}
                   className="sr-only peer"

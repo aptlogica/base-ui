@@ -1,6 +1,5 @@
 import { Plus } from 'lucide-react';
 import { renderDescriptionToggle } from './NewColumnModalConfigStep';
-
 import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown';
 import {
   SingleLineText,

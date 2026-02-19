@@ -1,11 +1,15 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import ReactDOM, { createPortal } from 'react-dom';
-import { MoreVertical, ChevronsUpDown, Search, Edit, Trash2, Filter, Loader2 } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
+import { MoreVertical, ChevronsUpDown, Search, Edit, Trash2 } from 'lucide-react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { AccessRole } from './AccessRoleSelector';
 import { useUserRolesAndAccess } from '../../hooks/useApi';
 import { getInitials } from '../../utils/helpers';
 import { formatCreatedDate, formatRelativeLastActive, getAvatarColor, getRolePillStyle } from './userTableUtils';
+import { AccessDetailsRow } from './table/AccessDetailsRow';
+import { TablePagination } from './table/TablePagination';
+import { RoleFilterDropdown } from './table/RoleFilterDropdown';
+import { getAccessRoleDisplayName, roleFilterOptions } from './table/roleDisplay';
 
 export interface Member {
   id: string;
@@ -189,6 +193,9 @@ const MemberRoleCell: React.FC<{
   // Pass workspaceId as scopeId to filter workspace-related roles
   const { data: rolesAndAccessData } = useUserRolesAndAccess(member.userId, workspaceId);
   const roles = getOverallRoles(member, rolesAndAccessData);
+  const isOwnerOrCoOwner = roles.some(role =>
+    role.toLowerCase().includes('owner') || role.toLowerCase().includes('co-owner')
+  );
 
   return (
     <div className="flex flex-col gap-1.5 min-w-48">
@@ -202,18 +209,20 @@ const MemberRoleCell: React.FC<{
           </span>
         ))}
       </div>
-      <button
-        onClick={onExpand}
-        className="text-xs text-primary hover:underline self-start"
-      >
-        {isExpanded ? 'Collapse ↑' : 'View in detail ↓'}
-      </button>
+      {!isOwnerOrCoOwner && (
+        <button
+          onClick={onExpand}
+          className="text-xs text-primary hover:underline self-start"
+        >
+          {isExpanded ? 'Collapse ↑' : 'View in detail ↓'}
+        </button>
+      )}
     </div>
   );
 };
 
 // Expandable Row Component for Access Details
-const AccessDetailsRow: React.FC<{
+const AccessDetailsRowWrapper: React.FC<{
   userId: string;
   colSpan: number;
   workspaceId?: string;
@@ -221,118 +230,19 @@ const AccessDetailsRow: React.FC<{
   // Pass workspaceId as scopeId to filter workspace-related roles
   const { data: rolesAndAccess, isLoading, error } = useUserRolesAndAccess(userId, workspaceId);
 
-  if (isLoading) {
-    return (
-      <tr>
-        <td colSpan={colSpan} className="px-6 py-8 bg-gray-50">
-          <div className="flex items-center justify-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-            <span className="text-sm text-gray-500">Loading access details...</span>
-          </div>
-        </td>
-      </tr>
-    );
-  }
-
-  if (error) {
-    return (
-      <tr>
-        <td colSpan={colSpan} className="px-6 py-8 bg-gray-50">
-          <div className="text-center">
-            <p className="text-sm text-red-600">Failed to load access details</p>
-          </div>
-        </td>
-      </tr>
-    );
-  }
-
   // Response structure: [{ workspace_name, access, bases: [] }]
   const workspaces = Array.isArray(rolesAndAccess) ? rolesAndAccess : [];
 
-  if (!workspaces || workspaces.length === 0) {
-    return (
-      <tr>
-        <td colSpan={colSpan} className="px-6 py-8 bg-gray-50">
-          <div className="text-center">
-            <p className="text-sm text-gray-500">No workspace access</p>
-          </div>
-        </td>
-      </tr>
-    );
-  }
-
-  // Helper function to format role display name
-  const getRoleDisplayName = (access: string): string => {
-    switch (access) {
-      case 'maintainer':
-        return 'Workspace Maintainer';
-      case 'workspace-read':
-        return 'Workspace Read Only';
-      case 'base-member':
-        return 'Base Member';
-      case 'base-read':
-        return 'Base Read Only';
-      default:
-        return access || 'User';
-    }
-  };
-
   return (
-    <tr>
-      <td colSpan={colSpan} className="px-6 py-4 bg-gray-50">
-        <div className="border rounded-lg overflow-hidden bg-background">
-          <table className="w-full">
-            <thead className="bg-gray-100 border-b">
-              <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700">Workspace(s) Access</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700">Base(s) Access</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700">Role</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {workspaces.map((ws: { workspace_id?: string; workspace_name: string; access: string; bases?: Array<{ base_id?: string; base_name?: string; access?: string }> }, wsIndex: number) => {
-                const baseCount = ws.bases?.length || 0;
-                const workspaceRole = ws?.access || '';
-                const id = ws?.workspace_id || wsIndex + 1;
-
-                if (baseCount === 0) {
-                  return (
-                    <tr key={id} className="bg-background">
-                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">{ws.workspace_name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">-</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getRolePillStyle(getRoleDisplayName(workspaceRole))}`}>
-                          {getRoleDisplayName(workspaceRole)}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                }
-                return ws.bases?.map((base: { base_id?: string; base_name?: string; access?: string }, baseIndex: number) => {
-                  const baseRole = base.access || '';
-                  const baseName = base.base_name || `Base ${base.base_id || baseIndex + 1}`;
-                  return (
-                    <tr key={`${wsIndex}-${baseIndex}`} className="bg-background">
-                      {baseIndex === 0 && (
-                        <td rowSpan={baseCount} className="px-4 py-3 text-sm text-gray-900 font-medium align-top border-r">
-                          {ws.workspace_name}
-                        </td>
-                      )}
-                      <td className="px-4 py-3 text-sm text-gray-700">{baseName}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getRolePillStyle(getRoleDisplayName(baseRole))}`}>
-                          {getRoleDisplayName(baseRole)}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                });
-              })}
-            </tbody>
-          </table>
-        </div>
-      </td>
-    </tr>
+    <AccessDetailsRow
+      colSpan={colSpan}
+      isLoading={isLoading}
+      error={error}
+      workspaces={workspaces}
+      errorText="Failed to load access details"
+      emptyText="No workspace access"
+      getRoleDisplayName={getAccessRoleDisplayName}
+    />
   );
 };
 
@@ -353,21 +263,9 @@ export const MembersTable: React.FC<MembersTableProps> = ({
   const [expandedMembers, setExpandedMembers] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string | null>(null);
-  const [isRoleFilterOpen, setIsRoleFilterOpen] = useState(false);
-  const [roleFilterPosition, setRoleFilterPosition] = useState<{
-    top?: number;
-    bottom?: number;
-    right?: number;
-    left?: number;
-    width: number;
-    position: 'above' | 'below';
-  } | null>(null);
   const itemsPerPage = 10;
   const actionsMenuRef = useRef<HTMLDivElement>(null);
   const actionButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
-  const roleFilterRef = useRef<HTMLDivElement>(null);
-  const roleFilterButtonRef = useRef<HTMLButtonElement>(null);
-  const roleFilterMenuRef = useRef<HTMLDivElement>(null);
 
   // Filter members based on search
   const filteredMembers = useMemo(() => {
@@ -513,100 +411,8 @@ export const MembersTable: React.FC<MembersTableProps> = ({
     excludeRefs: [actionsMenuRef]
   });
 
-  // Calculate role filter dropdown position
-  const calculateRoleFilterPosition = useCallback(() => {
-    if (!roleFilterButtonRef.current) return null;
-
-    const rect = roleFilterButtonRef.current.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
-    const dropdownMinHeight = 200;
-    const dropdownWidth = 256; // w-64 = 256px
-
-    const spaceBelow = viewportHeight - rect.bottom;
-    const spaceAbove = rect.top;
-
-    // Determine if we should open above or below
-    let position: 'above' | 'below' = 'below';
-    if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
-      position = 'above';
-    }
-
-    // Calculate right position (align to right edge of trigger)
-    let right = viewportWidth - rect.right;
-    if (right < 10) {
-      right = 10;
-    }
-    if (right + dropdownWidth > viewportWidth - 10) {
-      right = viewportWidth - dropdownWidth - 10;
-    }
-
-    return {
-      top: position === 'below' ? rect.bottom + 8 : undefined,
-      bottom: position === 'above' ? viewportHeight - rect.top + 8 : undefined,
-      right,
-      width: dropdownWidth,
-      position
-    };
-  }, []);
-
-  // Update position when dropdown opens
-  useEffect(() => {
-    if (isRoleFilterOpen) {
-      const position = calculateRoleFilterPosition();
-      setRoleFilterPosition(position);
-    } else {
-      setRoleFilterPosition(null);
-    }
-  }, [isRoleFilterOpen, calculateRoleFilterPosition]);
-
-  // Close role filter dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      const clickedElement = event.target as HTMLElement;
-
-      // Don't close if clicking inside this dropdown's trigger or menu
-      if (
-        (roleFilterButtonRef.current?.contains(target)) ||
-        (roleFilterMenuRef.current?.contains(target))
-      ) {
-        return;
-      }
-
-      // Don't close if clicking on another dropdown trigger or menu
-      if (clickedElement) {
-        const clickedTrigger = clickedElement.closest('[data-dropdown-trigger="role-filter"]');
-        if (clickedTrigger && clickedTrigger !== roleFilterButtonRef.current) {
-          return;
-        }
-
-        const clickedMenu = clickedElement.closest('[data-dropdown-menu="role-filter"]');
-        if (clickedMenu && clickedMenu !== roleFilterMenuRef.current) {
-          return;
-        }
-      }
-
-      // Close this dropdown if clicking outside
-      if (isRoleFilterOpen) {
-        setIsRoleFilterOpen(false);
-      }
-    };
-
-    if (isRoleFilterOpen) {
-      const timeoutId = setTimeout(() => {
-        document.addEventListener('mousedown', handleClickOutside);
-      }, 0);
-
-      return () => {
-        clearTimeout(timeoutId);
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }
-  }, [isRoleFilterOpen]);
-
   // Available roles for filtering
-  const availableRoles = ['Owner', 'Co-owner', 'Workspace Maintainer', 'Workspace Read Only', 'Base Member', 'Base Read Only'];
+  const availableRoles = roleFilterOptions;
 
   // Reset to page 1 when filter changes
   useEffect(() => {
@@ -632,74 +438,13 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                     className="w-full text-xs pl-9 pr-4 py-2 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-background outline-none transition-all"
                   />
                 </div>
-                <div className="relative" ref={roleFilterRef}>
-                  <button
-                    ref={roleFilterButtonRef}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsRoleFilterOpen(!isRoleFilterOpen);
-                    }}
-                    className={`px-4 py-2 text-sm border rounded-xl flex items-center gap-2 transition-colors ${selectedRoleFilter
-                      ? 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100'
-                      : 'border text-gray-700 hover:bg-gray-50'
-                      }`}
-                    data-dropdown-trigger="role-filter"
-                  >
-                    <Filter className="w-4 h-4" />
-                    Filter
-                    {selectedRoleFilter && (
-                      <span className="ml-1 px-1.5 py-0.5 bg-blue-200 text-blue-800 rounded text-xs">
-                        {selectedRoleFilter}
-                      </span>
-                    )}
-                  </button>
-
-                  {/* Role Filter Dropdown - Portal to prevent cropping */}
-                  {isRoleFilterOpen && roleFilterPosition && createPortal(
-                    <div
-                      ref={roleFilterMenuRef}
-                      data-dropdown-menu="role-filter"
-                      className="fixed z-[9999] bg-card border rounded-xl shadow-lg max-h-64 overflow-y-auto"
-                      style={{
-                        ...(roleFilterPosition.top !== undefined && { top: `${roleFilterPosition.top}px` }),
-                        ...(roleFilterPosition.bottom !== undefined && { bottom: `${roleFilterPosition.bottom}px` }),
-                        ...(roleFilterPosition.right !== undefined && { right: `${roleFilterPosition.right}px` }),
-                        width: `${roleFilterPosition.width}px`
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => e.stopPropagation()}
-                    >
-                      <div className="p-2 space-y-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedRoleFilter(null);
-                            setIsRoleFilterOpen(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 text-sm text-primary rounded-xl hover:bg-gray-100 transition-colors ${selectedRoleFilter ? '' : 'bg-gray-100 font-medium'
-                            }`}
-                        >
-                          All Roles
-                        </button>
-                        {availableRoles.map((role) => (
-                          <button
-                            key={role}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedRoleFilter(role);
-                              setIsRoleFilterOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 text-sm text-primary rounded-lg hover:bg-gray-100 transition-colors ${selectedRoleFilter === role ? 'bg-gray-100 font-medium' : ''
-                              }`}
-                          >
-                            {role}
-                          </button>
-                        ))}
-                      </div>
-                    </div>,
-                    document.body
-                  )}
-                </div>
+                <RoleFilterDropdown
+                  label="Filter"
+                  selectedRole={selectedRoleFilter}
+                  roles={availableRoles}
+                  dropdownWidth={256}
+                  onChange={setSelectedRoleFilter}
+                />
               </>
             )}
             {headerActions}
@@ -847,7 +592,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
 
                       {/* Expanded Access Details Row */}
                       {isExpanded && (
-                        <AccessDetailsRow
+                        <AccessDetailsRowWrapper
                           userId={member.userId}
                           colSpan={4 + (onRemoveMember || onEditMember ? 1 : 0)}
                           workspaceId={workspaceId}
@@ -863,50 +608,11 @@ export const MembersTable: React.FC<MembersTableProps> = ({
       </div>
 
       {/* Footer with Pagination */}
-      {totalPages > 1 && (
-        <div className="px-6 py-4 bg-gray-50 border-t flex items-center justify-between">
-          {/* Previous Button - Left */}
-          <button
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-1 text-sm border rounded-lg text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-          >
-            ← Previous
-          </button>
-
-          {/* Page Numbers - Center */}
-          <div className="flex items-center gap-2">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
-              if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
-                return (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 text-sm rounded-lg ${currentPage === page
-                      ? 'bg-gray-200 text-gray-900'
-                      : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                  >
-                    {page}
-                  </button>
-                );
-              } else if (page === currentPage - 2 || page === currentPage + 2) {
-                return <span key={page} className="px-2 text-sm text-gray-500">...</span>;
-              }
-              return null;
-            })}
-          </div>
-
-          {/* Next Button - Right */}
-          <button
-            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 text-sm border rounded-lg text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-          >
-            Next →
-          </button>
-        </div>
-      )}
+      <TablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
 
       {/* Actions Menu Portal */}
       {openActionsMenu && menuPosition && ReactDOM.createPortal(

@@ -10,6 +10,7 @@ import { GalleryFieldConfiguration } from './GalleryFieldSelector';
 import { formatCompactNumber } from '../../../utils/helpers';
 import { ColumnConfig } from '../../../plugins/GridViewPlugin/types/grid.types';
 import { normalizeFieldType } from '../../../utils/fieldType';
+import { getSearchableColumns } from '../utils/galleryColumns';
 
 interface GalleryHeaderProps {
   itemCount: number;
@@ -54,13 +55,7 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
 
   // Get searchable columns (exclude system fields except Title)
   const searchableColumns = useMemo(() => {
-    return columns.filter(col => {
-      const isSystemField = col.isSystem || col.system;
-      const title = (col.title || '').toLowerCase();
-      const columnName = (col.column_name || '').toLowerCase();
-      const isTitle = title === 'title' || columnName === 'title';
-      return !isSystemField || isTitle;
-    });
+    return getSearchableColumns(columns);
   }, [columns]);
 
   // Convert BaseColumn[] to ColumnConfig[] for FieldsPopover and FilterPopover

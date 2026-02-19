@@ -1,30 +1,59 @@
+import React from 'react';
 import { Search } from 'lucide-react';
 
 interface DropdownSearchProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  autoFocus?: boolean;
+  inputClassName?: string;
+  containerClassName?: string;
+  clearAutofillOnFocus?: boolean;
 }
 
-export function DropdownSearch({
+export const DropdownSearch = React.forwardRef<HTMLInputElement, DropdownSearchProps>(({
   value,
   onChange,
   placeholder = 'Search options...',
-}: Readonly<DropdownSearchProps>) {
+  autoFocus = true,
+  inputClassName,
+  containerClassName = 'p-3 border-b',
+  clearAutofillOnFocus = false
+}, ref) => {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useImperativeHandle(ref, () => inputRef.current as HTMLInputElement);
+
+  const handleFocus = React.useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    if (!clearAutofillOnFocus) return;
+    const input = e.target;
+    if (input.value && /@/.test(input.value) && !value) {
+      input.value = '';
+      onChange('');
+    }
+  }, [clearAutofillOnFocus, value, onChange]);
+
   return (
-    <div className="p-2 border-b border">
+    <div className={containerClassName}>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
+          ref={inputRef}
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onFocus={handleFocus}
           placeholder={placeholder}
-          className="w-full pl-9 pr-3 py-2 text-sm border rounded-md 
-                     focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] focus:border-[var(--color-brand-600)]"
-          autoFocus
+          className={inputClassName ?? "w-full pl-9 pr-3 py-2 text-sm border rounded-md focus:outline-none text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)] bg-[--color-alpha-white] transition-colors duration-200"}
+          autoFocus={autoFocus}
+          autoComplete="new-password"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          data-lpignore="true"
+          data-form-type="other"
         />
       </div>
     </div>
   );
-}
+});

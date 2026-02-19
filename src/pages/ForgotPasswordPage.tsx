@@ -62,7 +62,7 @@ const ForgotPasswordPage: React.FC = () => {
     
     // Check TLD (last part) has at least 2 characters
     const tld = domainParts.at(-1);
-    if (tld?.length < 2) {
+    if (tld!.length < 2) {
       return false;
     }
     

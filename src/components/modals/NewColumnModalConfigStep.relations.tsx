@@ -1,4 +1,3 @@
-
 import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown';
 import { renderDescriptionToggle } from './NewColumnModalConfigStep';
 
@@ -36,7 +35,7 @@ export function renderRelationsConfigStep(props: any) {
               <div className="flex items-center gap-2 mb-1.5">
                 <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Relation Type</span>
               </div>
-              <div className="text-xs text-gray-500 bg-gray-50 border border rounded-md p-2 mb-2">
+              <div className="text-xs text-gray-500 bg-gray-50 border rounded-md p-2 mb-2">
                 <span className="font-medium text-gray-700">What is a Link?</span> A link creates a relationship between tables to reference related records.
                 Example: link "Orders" to "Customers" to see which customer placed each order.
               </div>
@@ -251,16 +250,18 @@ export function renderRelationsConfigStep(props: any) {
               <div className="text-sm text-secondary">This field will display the <span className="font-semibold">{targetTableFields.find((f: Record<string, any>) => f.id === selectedLookupColumnId)?.title || selectedLookupColumnId} </span> from the linked record via <span className="font-semibold">{linkFields.find((f: Record<string, any>) => f.id === selectedRelationId)?.title || selectedRelationId}</span>
               </div>
             </div>
-          )}
-
-          {renderDescriptionToggle({
-            showDescription,
-            setShowDescription,
-            description,
-            setDescription,
-            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
-            wrapperClassName: 'relative',
-          })}
+          )
+          }
+          {
+            renderDescriptionToggle({
+              showDescription,
+              setShowDescription,
+              description,
+              setDescription,
+              buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+              wrapperClassName: 'relative',
+            })
+          }
         </>
       );
     }

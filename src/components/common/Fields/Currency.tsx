@@ -125,9 +125,26 @@ const getDisplayValue = (localValue: string, placeholder: string, locale: string
   return formatCurrency(numValue, locale, currency, precision);
 };
 
-const filterCurrencyInput = (input: string, precision: number = 2): string => {
+const getLocaleSeparators = (locale: string) => {
+  const parts = new Intl.NumberFormat(locale).formatToParts(12345.6);
+  const group = parts.find((part) => part.type === "group")?.value ?? ",";
+  const decimal = parts.find((part) => part.type === "decimal")?.value ?? ".";
+  return { group, decimal };
+};
+
+const filterCurrencyInput = (input: string, precision: number = 2, locale: string = "en-US"): string => {
+  const { group, decimal } = getLocaleSeparators(locale);
+  let normalized = input;
+
+  if (group) {
+    normalized = normalized.replaceAll(group, "");
+  }
+  if (decimal && decimal !== ".") {
+    normalized = normalized.replaceAll(decimal, ".");
+  }
+
   // Remove non-numeric characters except for one minus sign at start and one decimal point
-  let filtered = input.replaceAll(/[^0-9.-]/g, "");
+  let filtered = normalized.replaceAll(/[^0-9.-]/g, "");
   
   // Handle minus sign - only allow at the start
   const hasMinus = filtered.startsWith('-');
@@ -198,7 +215,7 @@ export const Currency: React.FC<CurrencyProps> = ({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalValue(filterCurrencyInput(e.target.value, precision));
+    setLocalValue(filterCurrencyInput(e.target.value, precision, currencyLocale));
   };
 
   const displayValue = getDisplayValue(localValue, placeholder, currencyLocale, currencyType, precision);

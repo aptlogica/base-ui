@@ -47,7 +47,7 @@ vi.mock('../EventsSidebar', () => ({
 
 vi.mock('../MonthView', () => ({
   default: ({ onEventClick, onDateClick, events }: any) => (
-    <div data-testid="month-view">
+    <div data-testid="month-view" data-events={JSON.stringify(events)}>
       <div>{events.length} events in month</div>
       {onEventClick && <button onClick={() => onEventClick?.(events[0])}>Month Event Click</button>}
       {onDateClick && <button onClick={() => onDateClick?.(new Date())}>Month Date Click</button>}
@@ -182,7 +182,8 @@ vi.mock('../../../../utils/initialValues', () => ({
 }));
 
 vi.mock('../../../../utils/dateUtils', () => ({
-  utcISOToZoned: vi.fn((dateStr) => dateStr.replace('Z', '').replace('T', ' '))
+  utcISOToZoned: vi.fn((dateStr) => dateStr.replace('Z', '').replace('T', ' ')),
+  zonedToUtcISO: vi.fn((date, time) => `${date}T${time}:00Z`)
 }));
 
 describe('CalendarView', () => {
@@ -633,6 +634,46 @@ describe('CalendarView', () => {
       render(<CalendarView {...defaultProps} tableData={dateOnlyData} />);
       expect(screen.getByTestId('month-view')).toHaveTextContent('1');
       expect(screen.getByTestId('month-view')).toHaveTextContent('events in month');
+    });
+
+    it('should interpret naive datetime as UTC and convert to field timezone', () => {
+      const naiveDateTimeData = {
+        ...mockTableData,
+        columns: [
+          {
+            id: '1',
+            column_name: 'start_date',
+            title: 'Start Date',
+            uidt: 'datetime',
+            order_index: 0,
+            meta: { timeZoneLabel: 'Asia/Kolkata' }
+          }
+        ],
+        records: [
+          {
+            id: '1',
+            data: {
+              start_date: '2026-02-17T20:00:00',
+              title: 'Naive Event'
+            }
+          }
+        ],
+        views: [
+          {
+            id: 'view-1',
+            meta: {
+              date_field_id: '1'
+            }
+          }
+        ]
+      };
+
+      render(<CalendarView {...defaultProps} tableData={naiveDateTimeData} />);
+      const monthView = screen.getByTestId('month-view');
+      const events = JSON.parse(monthView.getAttribute('data-events') || '[]');
+      expect(events.length).toBe(1);
+      expect(events[0].date).toBe('2026-02-17');
+      expect(new Date(events[0].dateTime).getHours()).toBe(20);
     });
   });
 

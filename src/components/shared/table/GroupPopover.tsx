@@ -2,8 +2,8 @@ import React, { useRef, useState, useMemo } from 'react';
 import { Group, Check, Plus, ChevronDown as ChevronDownIcon, ChevronUp, Trash2 } from 'lucide-react';
 import { useSmartPopover } from '../../../hooks/useSmartPopover';
 import { ColumnConfig } from '../../../plugins/GridViewPlugin/types/grid.types';
-import { getFieldTypeIconComponent } from '../../../types/fieldTypes';
 import { fieldsToExcludeInFilter } from '../../../types/constants';
+import { FieldSelectDropdown, FieldSelectOption } from './FieldSelectDropdown';
 
 const GROUPABLE_TYPES = new Set<string>([
   'text',
@@ -309,63 +309,34 @@ export const GroupPopover: React.FC<{
                 }
                 return (usedColumnCounts.get(key) ?? 0) === 0;
               });
+              const dropdownOptions: FieldSelectOption[] = columnOptions.map(col => ({
+                key: getColumnKey(col),
+                title: col.title,
+                uidt: col.uidt,
+                type: col.type,
+              }));
 
               return (
                 <div key={group.id} className="flex items-center gap-3">
                   {/* Field Selector */}
                   <div className="relative flex-1">
-                    <button
-                      className="w-full px-3 py-2 text-left bg-background border rounded-xl shadow-xs
-                         cursor-pointer transition-all duration-200 ease-in-out
-                         focus:outline-none focus:border-[--color-brand-600]
-                         flex items-center justify-between"
-                      onClick={() => handleFieldDropdownToggle(group.id)}
-                      aria-haspopup="listbox"
-                      aria-expanded={fieldDropdownOpen === group.id}
-                    >
-                      <span className="flex-1 text-left">
-                        {column ? (
-                          <span className="flex-1 text-left flex items-center text-primary">
-                            <span className="mr-2 align-middle">{getFieldTypeIconComponent(column.type, "w-4 h-4")}</span>
-                            <span>{column.title}</span>
-                          </span>
-                        ) : (
-                          <span className="text-secondary">Select field</span>
-                        )}
-                      </span>
-                      {fieldDropdownOpen === group.id ? (
-                        <ChevronUp className="w-4 h-4 text-gray-400" />
-                      ) : (
-                        <ChevronDownIcon className="w-4 h-4 text-gray-400" />
-                      )}
-                    </button>
-
-                    {fieldDropdownOpen === group.id && (
-                      <div
-                        className="absolute z-50 top-full mt-1 p-2 space-y-1 w-full bg-background border text-primary rounded-xl shadow-lg max-h-64 overflow-y-auto"
-                        data-testid={`group-field-options-${group.id}`}
-                      >
-                        {columnOptions.length === 0 && (
-                          <div className="px-3 py-2 text-sm text-secondary">All fields already used</div>
-                        )}
-                        {columnOptions.map((col) => (
-                          <button
-                            key={col.key}
-                            className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl transition-colors ${group.column === col.key
-                              ? 'bg-[var(--color-bg-brand-primary)] text-black'
-                              : 'hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
-                              }`}
-                            onClick={() => updateGroupingField(group.id, col.key)}
-                          >
-                            <span className="text-gray-500">
-                              {getFieldTypeIconComponent(col.type, "w-4 h-4")}
-                            </span>
-                            <span>{col.title}</span>
-                            {group.column === col.key && <Check className="w-4 h-4 ml-auto text-black" />}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    <FieldSelectDropdown
+                      options={dropdownOptions}
+                      selectedKey={currentColumnKey}
+                      isOpen={fieldDropdownOpen === group.id}
+                      onToggle={() => handleFieldDropdownToggle(group.id)}
+                      onSelect={(key) => updateGroupingField(group.id, key)}
+                      placeholder="Select field"
+                      menuTestId={`group-field-options-${group.id}`}
+                      buttonClassName="w-full px-3 py-2 text-left bg-background border rounded-xl shadow-xs cursor-pointer transition-all duration-200 ease-in-out focus:outline-none focus:border-[--color-brand-600] flex items-center justify-between"
+                      menuClassName="absolute z-50 top-full mt-1 p-2 space-y-1 w-full bg-background border text-primary rounded-xl shadow-lg max-h-64 overflow-y-auto"
+                      optionClassName={(_, isSelected) =>
+                        `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl transition-colors ${isSelected
+                          ? 'bg-[var(--color-bg-brand-primary)] text-black'
+                          : 'hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
+                        }`
+                      }
+                    />
                   </div>
 
                   {/* Sort Direction Selector - only show if field is selected */}

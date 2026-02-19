@@ -99,6 +99,62 @@ describe('DateTime', () => {
     expect(screen.queryByRole('button', { name: /now/i })).not.toBeInTheDocument();
   });
 
+  it('enters manual edit mode on double click when allowEdit is false', () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <DateTime
+        value=""
+        onChange={onChange}
+        allowEdit={false}
+        config={{ dateFormat: 'YYYY-MM-DD', timeFormat: 'HH:mm', hourFormat: '24' }}
+      />
+    );
+
+    fireEvent.doubleClick(container.firstChild as HTMLElement);
+    expect(screen.getByPlaceholderText('YYYY-MM-DD HH:mm')).toBeInTheDocument();
+  });
+
+  it('accepts manual date-time input and calls onChange on blur', () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <DateTime
+        value=""
+        onChange={onChange}
+        allowEdit={false}
+        config={{ dateFormat: 'YYYY-MM-DD', timeFormat: 'HH:mm', hourFormat: '24' }}
+      />
+    );
+
+    fireEvent.doubleClick(container.firstChild as HTMLElement);
+    const input = screen.getByPlaceholderText('YYYY-MM-DD HH:mm');
+    fireEvent.change(input, { target: { value: '2026-02-13 10:30' } });
+    fireEvent.blur(input);
+
+    expect(onChange).toHaveBeenCalled();
+    const value = onChange.mock.calls[0][0] as string;
+    expect(value).toMatch(/^2026-02-13T/);
+    expect(value.endsWith('Z')).toBe(true);
+  });
+
+  it('accepts date-only input and calls onChange', () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <DateTime
+        value=""
+        onChange={onChange}
+        allowEdit={false}
+        config={{ dateFormat: 'YYYY-MM-DD', timeFormat: 'HH:mm', hourFormat: '24' }}
+      />
+    );
+
+    fireEvent.doubleClick(container.firstChild as HTMLElement);
+    const input = screen.getByPlaceholderText('YYYY-MM-DD HH:mm');
+    fireEvent.change(input, { target: { value: '2026-02-13' } });
+    fireEvent.blur(input);
+
+    expect(onChange).toHaveBeenCalled();
+  });
+
   it('renders value in configured display formats', () => {
     const onChange = vi.fn();
     render(
@@ -111,5 +167,19 @@ describe('DateTime', () => {
 
     expect(screen.getByRole('button', { name: /13\/02\/2026/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /6:45 PM/i })).toBeInTheDocument();
+  });
+
+  it('renders GMT offset time zone conversion', () => {
+    const onChange = vi.fn();
+    render(
+      <DateTime
+        value="2026-02-13T00:00:00Z"
+        onChange={onChange}
+        config={{ dateFormat: 'YYYY-MM-DD', timeFormat: 'HH:mm', hourFormat: '24', timeZone: 'GMT+2' }}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /2026-02-13/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /02:00/i })).toBeInTheDocument();
   });
 });

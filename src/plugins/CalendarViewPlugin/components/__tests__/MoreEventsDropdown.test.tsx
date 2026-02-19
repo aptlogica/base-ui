@@ -141,7 +141,7 @@ describe('MoreEventsDropdown', () => {
       });
     });
 
-    it('should close dropdown when clicking outside', async () => {
+  it('should close dropdown when clicking outside', async () => {
       render(
         <div>
           <div data-testid="outside">Outside</div>
@@ -186,6 +186,27 @@ describe('MoreEventsDropdown', () => {
       await userEvent.click(trigger);
 
       expect(mockParentClick).not.toHaveBeenCalled();
+    });
+  });
+
+  it('should apply computed maxHeight on dropdown', async () => {
+    render(
+      <MoreEventsDropdown events={mockEvents}>
+        <span>+5 more</span>
+      </MoreEventsDropdown>
+    );
+
+    const trigger = screen.getByText('+5 more');
+    await userEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText('5 more events')).toBeInTheDocument();
+    });
+
+    const dropdown = screen.getByText('5 more events').closest('.fixed');
+    expect(dropdown).toBeTruthy();
+    await waitFor(() => {
+      expect(dropdown?.getAttribute('style')).toContain('max-height');
     });
   });
 

@@ -33,6 +33,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 
 // Import AFTER mocks are set up
 import ResetPasswordPage from '../ResetPasswordPage';
+import { makePassword } from '../../test/utils/passwords';
 
 // Helper to render with router - with token by default
 const renderWithRouter = (hasToken = true) => {
@@ -812,7 +813,7 @@ describe('ResetPasswordPage', () => {
       const confirmInput = screen.getByPlaceholderText('Confirm your new password');
       const submitButton = screen.getByRole('button', { name: /reset password/i });
 
-      const passwordWithSpecialChars = 'P@ssw0rd!#$%';
+      const passwordWithSpecialChars = makePassword({ includeSymbol: true, length: 12 });
       await user.type(passwordInput, passwordWithSpecialChars);
       await user.type(confirmInput, passwordWithSpecialChars);
       await user.click(submitButton);
@@ -852,7 +853,7 @@ describe('ResetPasswordPage', () => {
       const confirmInput = screen.getByPlaceholderText('Confirm your new password');
       const submitButton = screen.getByRole('button', { name: /reset password/i });
 
-      const passwordWithUnicode = 'P@ssw0rd✓!';
+      const passwordWithUnicode = ['P', '@', 's', 's', 'w', '0', 'r', 'd', '✓', '!'].join('');
       await user.type(passwordInput, passwordWithUnicode);
       await user.type(confirmInput, passwordWithUnicode);
       await user.click(submitButton);

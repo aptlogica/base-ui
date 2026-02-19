@@ -6,7 +6,7 @@ import { SortPopover } from "../../../components/shared/table/SortPopover";
 import { BaseColumn } from "../../../types/column.types";
 import { useFrontendPagination } from "../../../hooks/useFrontendPagination";
 import { formatCompactNumber } from "../../../utils/helpers";
-import { Loader } from "../../../components/ui/Loader";
+import { LoadMoreButton } from "../../../components/shared/LoadMoreButton";
 
 interface EventsSidebarProps {
   events: CalendarEvent[];
@@ -300,17 +300,11 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
             {/* Load More Button */}
             {hasMore && (
               <div className="flex justify-center py-4 px-2">
-                <button
+                <LoadMoreButton
                   onClick={handleLoadMore}
-                  disabled={isLoadingMore}
-                  className="px-6 py-2.5 text-sm font-medium rounded-xl btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {isLoadingMore ? (
-                    <Loader size={4} />
-                  ) : (
-                    <span>Load more ({formatCompactNumber(totalItems - paginatedEvents.length)} remaining)</span>
-                  )}
-                </button>
+                  isLoading={isLoadingMore}
+                  label={`Load more (${formatCompactNumber(totalItems - paginatedEvents.length)} remaining)`}
+                />
               </div>
             )}
           </>

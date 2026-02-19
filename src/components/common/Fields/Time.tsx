@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useClickOutside } from '../../../hooks/useClickOutside';
+import { pad2 } from '../../../utils/timeFormatUtils';
+import { useDropdownPosition } from '../../../hooks/useDropdownPosition';
 
 interface TimeProps {
   label?: string;
@@ -22,10 +24,6 @@ interface TimeProps {
   };
 }
 
-function pad(n: number) {
-  return n.toString().padStart(2, '0');
-}
-
 const getPeriod = (hour: number): string => {
   if (hour >= 12) return 'PM';
   return 'AM';
@@ -40,11 +38,11 @@ const getDisplayHour12 = (hour: number): number => {
 const formatTime12Hour = (hour: number, minute: number): string => {
   const period = getPeriod(hour);
   const displayHour = getDisplayHour12(hour);
-  return `${displayHour}:${pad(minute)} ${period}`;
+  return `${displayHour}:${pad2(minute)} ${period}`;
 };
 
 const formatTime24Hour = (hour: number, minute: number): string => {
-  return `${pad(hour)}:${pad(minute)}`;
+  return `${pad2(hour)}:${pad2(minute)}`;
 };
 
 const generateTimeOptionsForHour = (hour: number, step: number, hourFormat: '12' | '24'): string[] => {
@@ -89,11 +87,14 @@ export const Time: React.FC<TimeProps> = ({
   const [localValue, setLocalValue] = useState(value || '');
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Removed unused dropdownPosition state
-  const [calculatedPosition, setCalculatedPosition] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const calculatedPosition = useDropdownPosition(
+    buttonRef as React.RefObject<HTMLElement>,
+    isOpen,
+    { dropdownMinHeight: 200, offset: 8, sideMargin: 10 }
+  );
 
   useEffect(() => {
     setLocalValue(value || '');
@@ -105,61 +106,6 @@ export const Time: React.FC<TimeProps> = ({
       setIsOpen(false);
     }
   }, [readOnly]);
-
-  // Calculate dropdown position for portal rendering
-  const calculateDropdownPosition = useCallback(() => {
-    const trigger = buttonRef.current;
-    if (!trigger) return null;
-
-    const rect = trigger.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
-    const dropdownMinHeight = 200;
-    const dropdownWidth = rect.width; // Use button width
-
-        const spaceBelow = viewportHeight - rect.bottom;
-        const spaceAbove = rect.top;
-        
-    // Determine if we should open above or below
-    let position: 'below' | 'above' = 'below';
-    if (spaceBelow < dropdownMinHeight && spaceAbove > spaceBelow) {
-      position = 'above';
-    }
- 
-    // Calculate left position (align to left edge of trigger)
-    let left = rect.left;
-    if (left < 10) {
-      left = 10; // 10px margin from left edge
-    }
-    if (left + dropdownWidth > viewportWidth - 10) {
-      left = viewportWidth - dropdownWidth - 10; // 10px margin from right edge
-    }
-
-    // Calculate top/bottom position
-    if (position === 'below') {
-      return {
-        top: rect.bottom + 8,
-        left,
-        width: dropdownWidth
-      };
-    } else {
-      return {
-        bottom: viewportHeight - rect.top + 8,
-        left,
-        width: dropdownWidth
-      };
-    }
-  }, []);
-
-  // Update position when dropdown opens
-  useEffect(() => {
-    if (isOpen) {
-      const position = calculateDropdownPosition();
-      setCalculatedPosition(position);
-    } else {
-      setCalculatedPosition(null);
-    }
-  }, [isOpen, calculateDropdownPosition]);
 
   useClickOutside({
     isOpen,
@@ -185,7 +131,7 @@ export const Time: React.FC<TimeProps> = ({
       let hour = Number.parseInt(hours);
       if (period === 'PM' && hour !== 12) hour += 12;
       if (period === 'AM' && hour === 12) hour = 0;
-      timeValue = `${pad(hour)}:${minutes}`;
+      timeValue = `${pad2(hour)}:${minutes}`;
     }
 
     setLocalValue(timeValue);
@@ -197,7 +143,7 @@ export const Time: React.FC<TimeProps> = ({
   const handleNow = () => {
     if (readOnly) return;
     const now = new Date();
-    const option = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const option = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
     handleSelect(option);
   };
 
@@ -299,3 +245,4 @@ export const Time: React.FC<TimeProps> = ({
     </div>
   );
 }; 
+

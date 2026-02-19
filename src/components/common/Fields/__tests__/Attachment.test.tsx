@@ -120,6 +120,29 @@ describe('Attachment', () => {
     expect(removeAttachmentsMock).not.toHaveBeenCalled();
   });
 
+  it('logs warning when no File objects are found for upload', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const user = userEvent.setup();
+    render(
+      <Attachment
+        value={[]}
+        onChange={vi.fn()}
+        persistImmediately={true}
+        model_id="m1"
+        column_id="c1"
+        row_id={1}
+      />
+    );
+
+    await user.click(screen.getByTitle('Add attachment'));
+    await user.click(screen.getByText('Apply Files'));
+
+    await waitFor(() => {
+      expect(warnSpy).toHaveBeenCalled();
+    });
+    warnSpy.mockRestore();
+  });
+
   it('calls addAttachmentMutation when persistImmediately is true and file objects exist', async () => {
     const user = userEvent.setup();
     render(
@@ -198,5 +221,57 @@ describe('Attachment', () => {
         attachments: ['att-1'],
       })
     );
+  });
+
+  it('shows "+N more" badge when more than 4 attachments', () => {
+    render(
+      <Attachment
+        value={[
+          { id: '1', url: 'a' },
+          { id: '2', url: 'b' },
+          { id: '3', url: 'c' },
+          { id: '4', url: 'd' },
+          { id: '5', url: 'e' },
+        ]}
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('+1')).toBeInTheDocument();
+  });
+
+  it('renders non-image file icon for PDFs', () => {
+    render(
+      <Attachment
+        value={[{ id: 'att-1', url: 'file.pdf', mime_type: 'application/pdf', title: 'PDF' }]}
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByAltText('PDF')).toBeInTheDocument();
+  });
+
+  it('hides add button when readOnly is true', () => {
+    render(
+      <Attachment
+        value={[{ id: 'att-1', url: 'file-a' }]}
+        onChange={vi.fn()}
+        readOnly={true}
+      />
+    );
+
+    expect(screen.queryByTitle('Add attachment')).not.toBeInTheDocument();
+  });
+
+  it('does not render preview button when showPreview is false', () => {
+    render(
+      <Attachment
+        value={[{ id: 'att-1', url: 'file-a' }]}
+        onChange={vi.fn()}
+        showPreview={false}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: /preview attachments/i })).not.toBeInTheDocument();
   });
 });

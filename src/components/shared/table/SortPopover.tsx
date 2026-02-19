@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { useSmartPopover } from '../../../hooks/useSmartPopover';
 import { BaseColumn } from '../../../types/column.types';
 import { SortItem, filterValidSorts } from '../../../utils/sortUtils';
-import { getFieldTypeIconComponent } from '../../../types/fieldTypes';
+import { FieldSelectDropdown, FieldSelectOption } from './FieldSelectDropdown';
 
 
 interface SortPopoverProps {
@@ -196,83 +196,51 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
                 if (key === currentKey) return true;
                 return (usedColumnCounts.get(key) ?? 0) === 0;
               });
+              const dropdownOptions: FieldSelectOption[] = columnOptions.map(c => ({
+                key: getColumnKey(c),
+                title: c.title,
+                uidt: c.uidt,
+                type: c.type,
+              }));
               const rowKey = currentKey || `sort-row-${idx}`;
               return (
                 <div key={rowKey} className="flex items-center gap-2 mb-2">
                   {/* Field dropdown */}
                   <div className="relative flex-1">
-                    <button
-                      type="button"
-                      className="w-full px-3 py-2 text-left bg-background border rounded-xl shadow-xs
-                      cursor-pointer transition-all duration-200 ease-in-out
-                      focus:outline-none focus:border-[--color-brand-600]
-                      flex items-center justify-between"
-                      onClick={() => handleFieldDropdownToggle(idx)}
-                      aria-haspopup="listbox"
-                      aria-expanded={fieldDropdownOpen === idx}
-                      data-testid={`sort-field-trigger-${idx}`}
-                    >
-                      <span className="flex-1 text-left">
-                        {col ? (
-                          <span className="flex-1 text-left flex items-center text-primary">
-                            <span className="mr-2 align-middle">{getFieldTypeIconComponent(col.uidt || col.type) || <Type className="w-4 h-4 text-gray-400" />}</span>
-                            <span>{col.title}</span>
-                          </span>
-                        ) : (
-                          <span className="text-secondary">Select field</span>
-                        )}
-                      </span>
-                      {fieldDropdownOpen === idx ? (
-                        <ChevronUp className="h-4 w-4 ml-auto text-primary" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 ml-auto text-primary" />
-                      )}
-                    </button>
-                    {fieldDropdownOpen === idx && (
-                      <div
-                        className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full bg-background border text-primary rounded-xl shadow-lg max-h-64 overflow-y-auto"
-                        data-testid={`sort-field-options-${idx}`}
-                      >
-                        {columnOptions.length === 0 && (
-                          <div className="px-3 py-2 text-sm text-secondary">All fields already used</div>
-                        )}
-                        {columnOptions.map((c) => (
-                          <button
-                            key={c.column_name || c.key}
-                            className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl  hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${sort.column === (c.column_name || c.key) ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''}`}
-                            onClick={() => {
-                              const isPendingSort = idx >= sorts.length;
+                    <FieldSelectDropdown
+                      options={dropdownOptions}
+                      selectedKey={currentKey}
+                      isOpen={fieldDropdownOpen === idx}
+                      onToggle={() => handleFieldDropdownToggle(idx)}
+                      onSelect={(key) => {
+                        const isPendingSort = idx >= sorts.length;
 
-                              if (isPendingSort) {
-                                // This is a pending sort - move it to saved sorts
-                                const pendingIdx = idx - sorts.length;
-                                const newSort: SortItem = {
-                                  column: c.column_name || c.key,
-                                  direction: 'asc'
-                                };
-                                // Remove from pending, add to saved
-                                const newPendingSorts = pendingSorts.filter((_, i) => i !== pendingIdx);
-                                const newSavedSorts = [...sorts, newSort];
+                        if (isPendingSort) {
+                          const pendingIdx = idx - sorts.length;
+                          const newSort: SortItem = {
+                            column: key,
+                            direction: 'asc'
+                          };
+                          const newPendingSorts = pendingSorts.filter((_, i) => i !== pendingIdx);
+                          const newSavedSorts = [...sorts, newSort];
 
-                                setPendingSorts(newPendingSorts);
-                                onChange(filterValidSorts(newSavedSorts));
-                              } else {
-                                // This is an existing saved sort - update it
-                                const newSorts = [...sorts];
-                                newSorts[idx].column = c.column_name || c.key;
-                                onChange(filterValidSorts(newSorts));
-                              }
-                              setFieldDropdownOpen(null);
-                            }}
-                            type="button"
-                          >
-                            <span className="mr-2 align-middle">{getFieldTypeIconComponent(c.uidt || c.type) || <Type className="w-4 h-4 text-gray-400" />}</span>
-                            <span>{c.title}</span>
-                            {sort.column === (c.column_name || c.key) && <Check className="w-4 h-4 ml-auto text-black" />}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                          setPendingSorts(newPendingSorts);
+                          onChange(filterValidSorts(newSavedSorts));
+                        } else {
+                          const newSorts = [...sorts];
+                          newSorts[idx].column = key;
+                          onChange(filterValidSorts(newSorts));
+                        }
+                        setFieldDropdownOpen(null);
+                      }}
+                      placeholder="Select field"
+                      menuTestId={`sort-field-options-${idx}`}
+                      buttonClassName="w-full px-3 py-2 text-left bg-background border rounded-xl shadow-xs cursor-pointer transition-all duration-200 ease-in-out focus:outline-none focus:border-[--color-brand-600] flex items-center justify-between"
+                      menuClassName="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full bg-background border text-primary rounded-xl shadow-lg max-h-64 overflow-y-auto"
+                      optionClassName={(_, isSelected) =>
+                        `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl  hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''}`
+                      }
+                    />
                   </div>
 
                   {/* Direction dropdown - only show if field is selected */}
