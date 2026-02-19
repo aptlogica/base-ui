@@ -1,5 +1,5 @@
-import React from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { renderDescriptionToggle } from './NewColumnModalConfigStep';
 
 import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown';
 import {
@@ -7,7 +7,6 @@ import {
   LongText,
   Number,
   Decimal,
-  MultiLineText,
 } from '../../components/common/Fields';
 import { precisionOptions } from '../../types/constants';
 
@@ -43,7 +42,7 @@ export function renderBasicConfigStep(props: any) {
         <>
           <div className="mb-3 space-y-2 " >
             <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]"
-              onClick={() => setShowTextDefault(v => !v)}>
+              onClick={() => setShowTextDefault((v: boolean) => !v)}>
               <Plus className="w-4 h-4" />
               Set default value
             </button>
@@ -56,28 +55,14 @@ export function renderBasicConfigStep(props: any) {
               />
             )}
           </div>
-          <div className="relative">
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Add description
-            </button>
-            {showDescription && (
-              <>
-                <MultiLineText
-                  placeholder="Enter field description..."
-                  value={description}
-                  onChange={value => setDescription(value)}
-                  rows={4}
-                  isBorder={true}
-                />
-                {description &&
-                  <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                }
-              </>
-            )}
-          </div>
+          {renderDescriptionToggle({
+            showDescription,
+            setShowDescription,
+            description,
+            setDescription,
+            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
+            wrapperClassName: 'relative',
+          })}
         </>
       );
     case 'longText':
@@ -87,7 +72,7 @@ export function renderBasicConfigStep(props: any) {
             <input type="checkbox" className="checkbox-primary-brand" id="richText" checked={richText} onChange={e => setRichText(e.target.checked)} />
             <label htmlFor="richText" className="text-sm text-[var(--text-color-secondary)]">Enable rich text</label>
           </div>
-          <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowTextDefault(v => !v)}>
+          <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowTextDefault((v: boolean) => !v)}>
             <Plus className="w-4 h-4" />
             Set default value
           </button>
@@ -101,28 +86,14 @@ export function renderBasicConfigStep(props: any) {
               onModalClose={handleLongtextModalClose}
             />
           )}
-          <div className="relative">
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Add description
-            </button>
-            {showDescription && (
-              <>
-                <MultiLineText
-                  placeholder="Enter field description..."
-                  value={description}
-                  onChange={value => setDescription(value)}
-                  rows={4}
-                  isBorder={true}
-                />
-                {description &&
-                  <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                }
-              </>
-            )}
-          </div>
+          {renderDescriptionToggle({
+            showDescription,
+            setShowDescription,
+            description,
+            setDescription,
+            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            wrapperClassName: 'relative',
+          })}
         </>
       );
     case 'number':
@@ -132,7 +103,7 @@ export function renderBasicConfigStep(props: any) {
             <input type="checkbox" className="checkbox-primary-brand" id="showThousands" checked={showThousands} onChange={e => setShowThousands(e.target.checked)} />
             <label htmlFor="showThousands" className="text-sm text-[var(--text-color-secondary)]" >Show thousands separator</label>
           </div>
-          <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowTextDefault(v => !v)}>
+          <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowTextDefault((v: boolean) => !v)}>
             <Plus className="w-4 h-4" />
             Set default value
           </button>
@@ -146,28 +117,14 @@ export function renderBasicConfigStep(props: any) {
               isBorder={true}
             />
           )}
-          <div className="relative">
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Add description
-            </button>
-            {showDescription && (
-              <>
-                <MultiLineText
-                  placeholder="Enter field description..."
-                  value={description}
-                  onChange={value => setDescription(value)}
-                  rows={4}
-                  isBorder={true}
-                />
-                {description &&
-                  <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                }
-              </>
-            )}
-          </div>
+          {renderDescriptionToggle({
+            showDescription,
+            setShowDescription,
+            description,
+            setDescription,
+            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            wrapperClassName: 'relative',
+          })}
         </>
       );
     case 'decimal':
@@ -184,7 +141,7 @@ export function renderBasicConfigStep(props: any) {
             <input type="checkbox" className="checkbox-primary-brand" id="showThousands" checked={showThousands} onChange={e => setShowThousands(e.target.checked)} />
             <label htmlFor="showThousands" className="text-sm text-[var(--text-color-secondary)]">Show thousands separator</label>
           </div>
-          <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowTextDefault(v => !v)}>
+          <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowTextDefault((v: boolean) => !v)}>
             <Plus className="w-4 h-4" />
             Set default value
           </button>
@@ -200,28 +157,14 @@ export function renderBasicConfigStep(props: any) {
               isBorder={true}
             />
           )}
-          <div className="relative">
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Add description
-            </button>
-            {showDescription && (
-              <>
-                <MultiLineText
-                  placeholder="Enter field description..."
-                  value={description}
-                  onChange={value => setDescription(value)}
-                  rows={4}
-                  isBorder={true}
-                />
-                {description &&
-                  <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                }
-              </>
-            )}
-          </div>
+          {renderDescriptionToggle({
+            showDescription,
+            setShowDescription,
+            description,
+            setDescription,
+            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            wrapperClassName: 'relative',
+          })}
         </>
       );
     default:

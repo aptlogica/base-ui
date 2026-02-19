@@ -1,6 +1,4 @@
-import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-
 import { Email, URLField, MultiLineText } from '../../components/common/Fields';
 
 export function renderContactConfigStep(props: any) {
@@ -39,8 +37,8 @@ export function renderContactConfigStep(props: any) {
       return (
         <>
           <div className="mb-3 space-y-2">
-            <div className="flex items-center gap-2 mb-4">
-              <label className="relative inline-flex items-center cursor-pointer">
+            <div className="flex items-center gap-3 mb-4">
+              <label className="relative inline-flex gap-2 items-center cursor-pointer">
                 <input
                   type="checkbox"
                   checked={phoneValid}
@@ -48,14 +46,14 @@ export function renderContactConfigStep(props: any) {
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+                <div className="absolute left-0.5 top-1 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+                <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Accept only valid phone numbers</span>
               </label>
-              <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Accept only valid phone numbers</span>
             </div>
             <div>
               <button
                 className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2"
-                onClick={() => setShowPhoneDefault(v => !v)}
+                onClick={() => setShowPhoneDefault((v: boolean) => !v)}
               >
                 <Plus className="w-4 h-4" />
                 Set default value
@@ -77,7 +75,7 @@ export function renderContactConfigStep(props: any) {
           </div>
 
           <div className="relative">
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
+            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
               <Plus className="w-4 h-4" />
               Add description
             </button>
@@ -107,7 +105,7 @@ export function renderContactConfigStep(props: any) {
       return (
         <>
           <div className="flex items-center gap-2 mb-3">
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex gap-3 items-center cursor-pointer">
               <input
                 type="checkbox"
                 checked={emailValid}
@@ -115,16 +113,16 @@ export function renderContactConfigStep(props: any) {
                 className="sr-only peer"
               />
               <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-              <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+              <div className="absolute left-0.5 top-1 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+              <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Email validation</span>
             </label>
-            <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Email validation</span>
           </div>
 
           <div className="mb-0">
             <button
               type="button"
               className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2"
-              onClick={() => setShowEmailDefault(v => !v)}
+              onClick={() => setShowEmailDefault((v: boolean) => !v)}
             >
               <Plus className="w-4 h-4" />
               Set default value
@@ -146,7 +144,7 @@ export function renderContactConfigStep(props: any) {
             <button
               type="button"
               className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2"
-              onClick={() => setShowDescription(v => !v)}
+              onClick={() => setShowDescription((v: boolean) => !v)}
             >
               <Plus className="w-4 h-4" />
               Add description
@@ -176,7 +174,7 @@ export function renderContactConfigStep(props: any) {
       return (
         <>
           <div className="flex items-center gap-2 mb-3">
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex gap-3 items-center cursor-pointer">
               <input
                 type="checkbox"
                 checked={urlValid}
@@ -184,16 +182,16 @@ export function renderContactConfigStep(props: any) {
                 className="sr-only peer"
               />
               <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-              <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+              <div className="absolute left-0.5 top-1 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+              <span className="text-sm font-medium text-[var(--color-text-tertiary)]">URL validation</span>
             </label>
-            <span className="text-sm font-medium text-[var(--color-text-tertiary)]">URL validation</span>
           </div>
 
           <div className="mb-4">
             <button
               type="button"
               className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]"
-              onClick={() => setShowUrlDefault(v => !v)}
+              onClick={() => setShowUrlDefault((v: boolean) => !v)}
             >
               <Plus className="w-4 h-4" />
               Set default value
@@ -217,7 +215,7 @@ export function renderContactConfigStep(props: any) {
             <button
               type="button"
               className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2"
-              onClick={() => setShowDescription(v => !v)}
+              onClick={() => setShowDescription((v: boolean) => !v)}
             >
               <Plus className="w-4 h-4" />
               Add description

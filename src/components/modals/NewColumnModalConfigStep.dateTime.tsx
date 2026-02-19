@@ -1,10 +1,9 @@
-import React from 'react';
-import { Plus, Trash2 } from 'lucide-react';
-
-import { DateField, Time, Year, MultiLineText } from '../../components/common/Fields';
+import { Plus } from 'lucide-react';
+import { DateField, Time, Year } from '../../components/common/Fields';
 import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown';
 import { convertDateFormat } from '../../utils/helpers';
 import { dateFormatOptions } from '../../types/constants';
+import { renderDescriptionToggle } from './NewColumnModalConfigStep';
 
 export function renderDateTimeConfigStep(props: any) {
   const {
@@ -43,8 +42,8 @@ export function renderDateTimeConfigStep(props: any) {
     } else if (value === null || value === '') {
       setYearDefault(null);
     } else {
-      const parsedValue = parseInt(value);
-      setYearDefault(isNaN(parsedValue) ? null : parsedValue);
+      const parsedValue = Number.parseInt(value);
+      setYearDefault(Number.isNaN(parsedValue) ? null : parsedValue);
     }
   };
 
@@ -72,7 +71,7 @@ export function renderDateTimeConfigStep(props: any) {
             <div>
               <button
                 className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-2 space-y-2"
-                onClick={() => setShowDateDefault(v => !v)}
+                onClick={() => setShowDateDefault((v: boolean) => !v)}
               >
                 <Plus className="w-4 h-4" />
                 Set default value
@@ -88,34 +87,20 @@ export function renderDateTimeConfigStep(props: any) {
             </div>
           </div>
 
-          <div className="relative">
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Add description
-            </button>
-            {showDescription && (
-              <>
-                <MultiLineText
-                  placeholder="Enter field description..."
-                  value={description}
-                  onChange={value => setDescription(value)}
-                  rows={4}
-                  isBorder={true}
-                />
-                {description &&
-                  <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                }
-              </>
-            )}
-          </div>
+          {renderDescriptionToggle({
+            showDescription,
+            setShowDescription,
+            description,
+            setDescription,
+            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            wrapperClassName: 'relative',
+          })}
         </>
       );
     case 'year':
       return (
         <>
-          <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowYearDefault(v => !v)}>
+          <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowYearDefault((v: boolean) => !v)}>
             <Plus className="w-4 h-4" />
             Set default value
           </button>
@@ -126,28 +111,14 @@ export function renderDateTimeConfigStep(props: any) {
               isBorder={true}
             />
           )}
-          <div className="relative">
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Add description
-            </button>
-            {showDescription && (
-              <>
-                <MultiLineText
-                  placeholder="Enter field description..."
-                  value={description}
-                  onChange={value => setDescription(value)}
-                  rows={4}
-                  isBorder={true}
-                />
-                {description && (
-                  <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+          {renderDescriptionToggle({
+            showDescription,
+            setShowDescription,
+            description,
+            setDescription,
+            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            wrapperClassName: 'relative',
+          })}
         </>
       );
     case 'time':
@@ -164,9 +135,7 @@ export function renderDateTimeConfigStep(props: any) {
                     className="hidden"
                     checked={hourFormat === '12'}
                     onChange={() => setHourFormat('12')}
-                  />
-                  12 Hrs
-                </label>
+                  />12 Hrs</label>
                 <label className={`flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '24' ?
                   'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
                   <input
@@ -174,16 +143,14 @@ export function renderDateTimeConfigStep(props: any) {
                     className="hidden"
                     checked={hourFormat === '24'}
                     onChange={() => setHourFormat('24')}
-                  />
-                  24 Hrs
-                </label>
+                  />24 Hrs</label>
               </div>
             </div>
 
             <div>
               <button
                 className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2"
-                onClick={() => setShowTimeDefault(v => !v)}
+                onClick={() => setShowTimeDefault((v: boolean) => !v)}
               >
                 <Plus className="w-4 h-4" />
                 Set default value
@@ -203,31 +170,15 @@ export function renderDateTimeConfigStep(props: any) {
             </div>
           </div>
 
-          <div className="relative">
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Add description
-            </button>
-            {showDescription && (
-              <>
-                <MultiLineText
-                  placeholder="Enter field description..."
-                  value={description}
-                  onChange={value => setDescription(value)}
-                  rows={4}
-                  isBorder={true}
-                />
-                {description && (
-                  <button
-                    className="absolute right-2 top-0 text-gray-400 hover:text-gray-600 text-sm"
-                    onClick={() => setDescription('')}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+          {renderDescriptionToggle({
+            showDescription,
+            setShowDescription,
+            description,
+            setDescription,
+            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            wrapperClassName: 'relative',
+            clearButtonClassName: 'absolute right-2 top-0 text-gray-400 hover:text-gray-600 text-sm',
+          })}
         </>
       );
     default:

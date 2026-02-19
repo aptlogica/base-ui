@@ -28,7 +28,8 @@ export default defineConfig({
         '**/sdk/**',
         'src/coverage-vitest/**',
         'src/types/**',
-        'src/**/types/**'
+        'src/**/types/**',
+        '**/*.tgz'
       ],
       thresholds: {
         lines: 40,

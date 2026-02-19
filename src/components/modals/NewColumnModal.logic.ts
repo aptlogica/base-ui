@@ -89,12 +89,12 @@ export const isDuplicateFieldName = (params: {
 };
 
 export const toTitleCase = (str: string) =>
-  str.replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/[_-]/g, ' ')
-    .replace(/\s+/g, ' ')
+  str.replaceAll(/([a-z])([A-Z])/g, '$1 $2')
+    .replaceAll(/[_-]/g, ' ')
+    .replaceAll(/\s+/g, ' ')
     .trim()
     .toLowerCase()
-    .replace(/\b\w/g, c => c.toUpperCase());
+    .replaceAll(/\b\w/g, c => c.toUpperCase());
 
 export const getUniqueColumnNameByUidt = (uidt: string, fields: any[]) => {
   // Map certain uidt values to more user-friendly display names
@@ -109,14 +109,14 @@ export const getUniqueColumnNameByUidt = (uidt: string, fields: any[]) => {
 
   const displayName = uidtDisplayMap[uidt] || uidt;
   const baseName = toTitleCase(displayName);
-  const existingNames = fields.map(f => (f.name || f.title || f.key || '').toLowerCase());
+  const existingNames = new Set(fields.map(f => (f.name || f.title || f.key || '').toLowerCase()));
   let name = baseName;
   let counter = 1;
-  while (existingNames.includes(name.toLowerCase())) {
-    const match = name.match(/^(.*?)(\s(\d+))?$/);
+  while (existingNames.has(name.toLowerCase())) {
+    const match = /^(.*?)(\s(\d+))?$/.exec(name);
     if (match) {
       const prefix = match[1];
-      const num = match[3] ? parseInt(match[3], 10) : 0;
+      const num = match[3] ? Number.parseInt(match[3], 10) : 0;
       counter = num + 1;
       name = `${prefix} ${counter}`;
     } else {
@@ -173,20 +173,20 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
       case 'currency':
       case 'percent': {
         const parsed = typeof params.defaultValue === 'string'
-          ? parseFloat(params.defaultValue)
+          ? Number.parseFloat(params.defaultValue)
           : params.defaultValue;
-        config.defaultValue = isNaN(parsed) ? params.defaultValue : parsed;
+        config.defaultValue = Number.isNaN(parsed) ? params.defaultValue : parsed;
         break;
       }
       case 'boolean':
         config.defaultValue = params.defaultValue === 'true' || params.defaultValue === '1';
         break;
       case 'rating':
-        config.defaultValue = parseInt(params.defaultValue, 10) || 0;
+        config.defaultValue = Number.parseInt(params.defaultValue, 10) || 0;
         break;
       case 'year':
         config.defaultValue = typeof params.defaultValue === 'string'
-          ? (parseInt(params.defaultValue, 10) || params.defaultValue)
+          ? (Number.parseInt(params.defaultValue, 10) || params.defaultValue)
           : params.defaultValue;
         break;
       case 'json':
@@ -222,7 +222,7 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
   }
   if (params.selectedTypeKey === 'select') {
     config.options = params.selectOptions;
-    if (params.singleDefault && params.singleDefault.trim()) {
+    if (params.singleDefault?.trim()) {
       config.defaultValue = params.singleDefault;
     }
   }
@@ -241,7 +241,7 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
   }
   if (params.selectedTypeKey === 'datetime') {
     applyDateTimeConfig(config, params);
-    if (params.dateTimeDefault && params.dateTimeDefault.trim()) {
+    if (params.dateTimeDefault?.trim()) {
       let formattedDateTime = params.dateTimeDefault;
       if (!formattedDateTime.includes('T')) {
         const today = new Date().toISOString().split('T')[0];
@@ -284,19 +284,19 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
   }
   if (params.selectedTypeKey === 'date') {
     config.dateFormat = params.dateFormat;
-    if (params.dateDefault && params.dateDefault.trim()) {
+    if (params.dateDefault?.trim()) {
       config.defaultValue = params.dateDefault;
     }
   }
   if (params.selectedTypeKey === 'time') {
     config.hourFormat = params.hourFormat;
     config.timeFormat = params.timeFormat;
-    if (params.timeDefault && params.timeDefault.trim()) {
+    if (params.timeDefault?.trim()) {
       let formattedTime = params.timeDefault;
       if (params.hourFormat === '12' && params.timeDefault.includes(' ')) {
         const [time, period] = params.timeDefault.split(' ');
         const [hours, minutes] = time.split(':');
-        let hour = parseInt(hours, 10);
+        let hour = Number.parseInt(hours, 10);
         if (period === 'PM' && hour !== 12) hour += 12;
         if (period === 'AM' && hour === 12) hour = 0;
         formattedTime = `${hour.toString().padStart(2, '0')}:${minutes}`;
