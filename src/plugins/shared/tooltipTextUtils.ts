@@ -46,59 +46,67 @@ function removeCssDeclarations(input: string): string {
   return kept.join(';');
 }
 
+const isHexChar = (ch: string) =>
+  (ch >= '0' && ch <= '9') ||
+  (ch >= 'a' && ch <= 'f') ||
+  (ch >= 'A' && ch <= 'F');
+
+const isDigit = (ch: string) => ch >= '0' && ch <= '9';
+
+const skipHexColor = (input: string, start: number): number | null => {
+  if (input[start] !== '#' || start + 3 >= input.length) return null;
+  let j = start + 1;
+  while (j < input.length && j - (start + 1) < 6) {
+    const c = input[j];
+    if (!isHexChar(c)) break;
+    j++;
+  }
+  const hexLen = j - (start + 1);
+  return hexLen >= 3 ? j : null;
+};
+
+const skipRgbFunction = (input: string, start: number): number | null => {
+  if (input[start] !== 'r' || input.slice(start, start + 4) !== 'rgb(') return null;
+  const close = input.indexOf(')', start + 4);
+  return close === -1 ? null : close + 1;
+};
+
+const skipNumberWithUnit = (input: string, start: number): number | null => {
+  if (!isDigit(input[start])) return null;
+  let j = start;
+  while (j < input.length && isDigit(input[j])) j++;
+  const unit2 = input.slice(j, j + 2);
+  const unit3 = input.slice(j, j + 3);
+  if (unit2 === 'px' || unit2 === 'em') return j + 2;
+  if (unit3 === 'rem') return j + 3;
+  if (input[j] === '%') return j + 1;
+  return null;
+};
+
 function removeRgbAndColorsAndUnits(input: string): string {
   let out = '';
   let i = 0;
   while (i < input.length) {
-    const ch = input[i];
-
-    if (ch === '#' && i + 3 < input.length) {
-      let j = i + 1;
-      while (j < input.length && j - (i + 1) < 6) {
-        const c = input[j];
-        const isHex =
-          (c >= '0' && c <= '9') ||
-          (c >= 'a' && c <= 'f') ||
-          (c >= 'A' && c <= 'F');
-        if (!isHex) break;
-        j++;
-      }
-      const hexLen = j - (i + 1);
-      if (hexLen >= 3) {
-        i = j;
-        continue;
-      }
+    const nextHex = skipHexColor(input, i);
+    if (nextHex !== null) {
+      i = nextHex;
+      continue;
     }
 
-    if (ch === 'r' && input.slice(i, i + 4) === 'rgb(') {
-      const close = input.indexOf(')', i + 4);
-      if (close !== -1) {
-        i = close + 1;
-        continue;
-      }
+    const nextRgb = skipRgbFunction(input, i);
+    if (nextRgb !== null) {
+      i = nextRgb;
+      continue;
     }
 
-    if (ch >= '0' && ch <= '9') {
-      let j = i;
-      while (j < input.length && input[j] >= '0' && input[j] <= '9') j++;
-      const unit2 = input.slice(j, j + 2);
-      const unit3 = input.slice(j, j + 3);
-      if (unit2 === 'px' || unit2 === 'em') {
-        i = j + 2;
-        continue;
-      }
-      if (unit3 === 'rem') {
-        i = j + 3;
-        continue;
-      }
-      if (input[j] === '%') {
-        i = j + 1;
-        continue;
-      }
+    const nextUnit = skipNumberWithUnit(input, i);
+    if (nextUnit !== null) {
+      i = nextUnit;
+      continue;
     }
 
-    out += ch;
-    i++;
+    out += input[i];
+    i += 1;
   }
   return out;
 }
@@ -124,4 +132,3 @@ export function cleanRichTextContent(content: string): string {
 
 export const isTruthyValue = (value: unknown): boolean =>
   value !== null && value !== undefined && value !== '';
-

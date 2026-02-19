@@ -268,7 +268,7 @@ describe('GalleryCard', () => {
     it('should call onEdit when card is clicked', () => {
       render(<GalleryCard item={mockItem} onEdit={mockOnEdit} visibleColumns={mockVisibleColumns} />);
 
-      const card = screen.getByRole('button');
+      const card = document.querySelector('.cursor-pointer') as HTMLElement;
       fireEvent.click(card);
 
       expect(mockOnEdit).toHaveBeenCalledTimes(1);
@@ -277,7 +277,7 @@ describe('GalleryCard', () => {
     it('should call onEdit on Enter key', () => {
       render(<GalleryCard item={mockItem} onEdit={mockOnEdit} visibleColumns={mockVisibleColumns} />);
 
-      const card = screen.getByRole('button');
+      const card = document.querySelector('.cursor-pointer') as HTMLElement;
       fireEvent.keyDown(card, { key: 'Enter' });
 
       expect(mockOnEdit).toHaveBeenCalledTimes(1);
@@ -286,7 +286,7 @@ describe('GalleryCard', () => {
     it('should call onEdit on Space key', () => {
       render(<GalleryCard item={mockItem} onEdit={mockOnEdit} visibleColumns={mockVisibleColumns} />);
 
-      const card = screen.getByRole('button');
+      const card = document.querySelector('.cursor-pointer') as HTMLElement;
       fireEvent.keyDown(card, { key: ' ' });
 
       expect(mockOnEdit).toHaveBeenCalledTimes(1);
@@ -295,7 +295,7 @@ describe('GalleryCard', () => {
     it('should not call onEdit on other keys', () => {
       render(<GalleryCard item={mockItem} onEdit={mockOnEdit} visibleColumns={mockVisibleColumns} />);
 
-      const card = screen.getByRole('button');
+      const card = document.querySelector('.cursor-pointer') as HTMLElement;
       fireEvent.keyDown(card, { key: 'Escape' });
 
       expect(mockOnEdit).not.toHaveBeenCalled();

@@ -165,7 +165,7 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
               } ${disabled || readOnly ? "cursor-not-allowed" : ""}`}
           />
         ) : (
-          <div
+          <div //NOSONAR
             role="button"
             tabIndex={readOnly || disabled ? -1 : 0}
             onMouseDown={

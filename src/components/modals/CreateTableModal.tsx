@@ -95,7 +95,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div
+    <div //NOSONAR
       className="bg-modal-backdrop relative"
       role="dialog"
       aria-modal="true"

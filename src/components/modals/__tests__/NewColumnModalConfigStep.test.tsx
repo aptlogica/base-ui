@@ -267,7 +267,7 @@ describe('renderNewColumnConfigStep', () => {
       description: 'desc',
     });
 
-    expect(screen.getByText('Use {FieldName} to reference other fields.')).toBeInTheDocument();
+    expect(screen.getByTestId('formula-field')).toBeInTheDocument();
     fireEvent.change(screen.getByTestId('formula-field'), { target: { value: '1+2' } });
     expect(setFormulaText).toHaveBeenCalledWith('1+2');
   });

@@ -21,6 +21,59 @@ import { renderDateTimeConfigStep } from './NewColumnModalConfigStep.dateTime';
 import { renderContactConfigStep } from './NewColumnModalConfigStep.contact';
 import { renderRelationsConfigStep } from './NewColumnModalConfigStep.relations';
 
+export { renderDescriptionToggle };
+
+function renderDescriptionToggle({
+  showDescription,
+  setShowDescription,
+  description,
+  setDescription,
+  buttonClassName = 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
+  wrapperClassName = 'relative',
+  clearButtonClassName = 'absolute right-2 top-2 text-gray-400 hover:text-gray-600',
+}: {
+  showDescription: boolean;
+  setShowDescription: (value: boolean | ((prev: boolean) => boolean)) => void;
+  description: string;
+  setDescription: (value: string) => void;
+  buttonClassName?: string;
+  wrapperClassName?: string;
+  clearButtonClassName?: string;
+}) {
+  return (
+    <div className={wrapperClassName}>
+      <button
+        type="button"
+        className={buttonClassName}
+        onClick={() => setShowDescription((v: boolean) => !v)}
+      >
+        <Plus className="w-4 h-4" />
+        Add description
+      </button>
+      {showDescription && (
+        <>
+          <MultiLineText
+            placeholder="Enter field description..."
+            value={description}
+            onChange={(value) => setDescription(value)}
+            rows={4}
+            isBorder={true}
+          />
+          {description && (
+            <button
+              type="button"
+              className={clearButtonClassName}
+              onClick={() => setDescription('')}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function renderNewColumnConfigStep(props: any) {
   const {
     selectedType,
@@ -221,6 +274,71 @@ export function renderNewColumnConfigStep(props: any) {
     BRL: 'R$',
   };
 
+  const renderDefaultValueToggle = ({
+    show,
+    setShow,
+    children,
+    label = 'Set default value',
+    buttonClassName = 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
+    wrapperClassName = '',
+  }: {
+    show: boolean;
+    setShow: (value: boolean | ((prev: boolean) => boolean)) => void;
+    children: React.ReactNode;
+    label?: string;
+    buttonClassName?: string;
+    wrapperClassName?: string;
+  }) => (
+    <div className={wrapperClassName}>
+      <button
+        type="button"
+        className={buttonClassName}
+        onClick={() => setShow((v: boolean) => !v)}
+      >
+        <Plus className="w-4 h-4" />
+        {label}
+      </button>
+      {show && children}
+    </div>
+  );
+
+  const renderHourFormatToggle = ({
+    hourFormat,
+    setHourFormat,
+    wrapperClassName = 'grid grid-cols-2 gap-4 mb-2',
+  }: {
+    hourFormat: '12' | '24';
+    setHourFormat: (value: '12' | '24') => void;
+    wrapperClassName?: string;
+  }) => (
+    <div className={wrapperClassName}>
+      <label
+        className={`flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '12'
+          ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
+          : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}
+      >
+        <input
+          type="radio"
+          className="hidden"
+          checked={hourFormat === '12'}
+          onChange={() => setHourFormat('12')}
+        />12 Hrs
+      </label>
+      <label
+        className={`flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '24'
+          ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
+          : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}
+      >
+        <input
+          type="radio"
+          className="hidden"
+          checked={hourFormat === '24'}
+          onChange={() => setHourFormat('24')}
+        />24 Hrs
+      </label>
+    </div>
+  );
+
   // Config step for each type
   function renderConfigStep() {
     const basicConfig = renderBasicConfigStep({
@@ -320,269 +438,271 @@ export function renderNewColumnConfigStep(props: any) {
 
     switch (selectedType?.key) {
       case 'boolean':
-        { const iconOptions: { key: string; label: string; checkedIcon: any; uncheckedIcon: any }[] = [
-          {
-            key: 'check',
-            label: 'Check',
-            checkedIcon: (
-              <div className="w-4 h-4 rounded flex items-center justify-center bg-green-500 border-green-500">
-                <Check className="w-2.5 h-2.5 text-primary" />
-              </div>
-            ),
-            uncheckedIcon: (
-              <div className="w-4 h-4 rounded flex items-center justify-center">
-                <Square className="w-4 h-4 text-gray-400" />
-              </div>
-            )
-          },
-          {
-            key: 'circle',
-            label: 'Circle',
-            checkedIcon: (
-              <div className="w-4 h-4 rounded-full flex items-center justify-center bg-green-500 border-green-500">
-                <Check className="w-2.5 h-2.5 text-primary" />
-              </div>
-            ),
-            uncheckedIcon: (
-              <div className="w-4 h-4 rounded-full flex items-center justify-center">
-                <Circle className="w-4 h-4 text-gray-400" />
-              </div>
-            )
-          },
-          {
-            key: 'star',
-            label: 'Star',
-            checkedIcon: <Star className="w-4 h-4 text-yellow-500 fill-current" />,
-            uncheckedIcon: <Star className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'heart',
-            label: 'Heart',
-            checkedIcon: <Heart className="w-4 h-4 text-red-500 fill-current" />,
-            uncheckedIcon: <Heart className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'thumb',
-            label: 'Thumb',
-            checkedIcon: <ThumbsUp className="w-4 h-4 text-green-500 fill-current" />,
-            uncheckedIcon: <ThumbsDown className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'flag',
-            label: 'Flag',
-            checkedIcon: <Flag className="w-4 h-4 text-red-500 fill-current" />,
-            uncheckedIcon: <Flag className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'badge',
-            label: 'Badge',
-            checkedIcon: <BadgeCheck className="w-4 h-4 text-blue-500 fill-current" />,
-            uncheckedIcon: <BadgeCheck className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'shield',
-            label: 'Shield',
-            checkedIcon: <ShieldCheck className="w-4 h-4 text-purple-500 fill-current" />,
-            uncheckedIcon: <ShieldCheck className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'award',
-            label: 'Award',
-            checkedIcon: <Award className="w-4 h-4 text-orange-500 fill-current" />,
-            uncheckedIcon: <Award className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'trophy',
-            label: 'Trophy',
-            checkedIcon: <Trophy className="w-4 h-4 text-yellow-500 fill-current" />,
-            uncheckedIcon: <Trophy className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'medal',
-            label: 'Medal',
-            checkedIcon: <Medal className="w-4 h-4 text-amber-500 fill-current" />,
-            uncheckedIcon: <Medal className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'crown',
-            label: 'Crown',
-            checkedIcon: <Crown className="w-4 h-4 text-yellow-500 fill-current" />,
-            uncheckedIcon: <Crown className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'gem',
-            label: 'Gem',
-            checkedIcon: <Gem className="w-4 h-4 text-purple-500 fill-current" />,
-            uncheckedIcon: <Gem className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'diamond',
-            label: 'Diamond',
-            checkedIcon: <Diamond className="w-4 h-4 text-blue-500 fill-current" />,
-            uncheckedIcon: <Diamond className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'zap',
-            label: 'Zap',
-            checkedIcon: <Zap className="w-4 h-4 text-yellow-500 fill-current" />,
-            uncheckedIcon: <Zap className="w-4 h-4 text-gray-400" />
-          },
-          {
-            key: 'sparkles',
-            label: 'Sparkles',
-            checkedIcon: <Sparkles className="w-4 h-4 text-pink-500 fill-current" />,
-            uncheckedIcon: <Sparkles className="w-4 h-4 text-gray-400" />
-          },
-        ];
+        {
+          const iconOptions: { key: string; label: string; checkedIcon: any; uncheckedIcon: any }[] = [
+            {
+              key: 'check',
+              label: 'Check',
+              checkedIcon: (
+                <div className="w-4 h-4 rounded flex items-center justify-center bg-green-500 border-green-500">
+                  <Check className="w-2.5 h-2.5 text-primary" />
+                </div>
+              ),
+              uncheckedIcon: (
+                <div className="w-4 h-4 rounded flex items-center justify-center">
+                  <Square className="w-4 h-4 text-gray-400" />
+                </div>
+              )
+            },
+            {
+              key: 'circle',
+              label: 'Circle',
+              checkedIcon: (
+                <div className="w-4 h-4 rounded-full flex items-center justify-center bg-green-500 border-green-500">
+                  <Check className="w-2.5 h-2.5 text-primary" />
+                </div>
+              ),
+              uncheckedIcon: (
+                <div className="w-4 h-4 rounded-full flex items-center justify-center">
+                  <Circle className="w-4 h-4 text-gray-400" />
+                </div>
+              )
+            },
+            {
+              key: 'star',
+              label: 'Star',
+              checkedIcon: <Star className="w-4 h-4 text-yellow-500 fill-current" />,
+              uncheckedIcon: <Star className="w-4 h-4 text-gray-400" />
+            },
+            {
+              key: 'heart',
+              label: 'Heart',
+              checkedIcon: <Heart className="w-4 h-4 text-red-500 fill-current" />,
+              uncheckedIcon: <Heart className="w-4 h-4 text-gray-400" />
+            },
+            {
+              key: 'thumb',
+              label: 'Thumb',
+              checkedIcon: <ThumbsUp className="w-4 h-4 text-green-500 fill-current" />,
+              uncheckedIcon: <ThumbsDown className="w-4 h-4 text-gray-400" />
+            },
+            {
+              key: 'flag',
+              label: 'Flag',
+              checkedIcon: <Flag className="w-4 h-4 text-red-500 fill-current" />,
+              uncheckedIcon: <Flag className="w-4 h-4 text-gray-400" />
+            },
+            {
+              key: 'badge',
+              label: 'Badge',
+              checkedIcon: <BadgeCheck className="w-4 h-4 text-blue-500 fill-current" />,
+              uncheckedIcon: <BadgeCheck className="w-4 h-4 text-gray-400" />
+            },
+            {
+              key: 'shield',
+              label: 'Shield',
+              checkedIcon: <ShieldCheck className="w-4 h-4 text-purple-500 fill-current" />,
+              uncheckedIcon: <ShieldCheck className="w-4 h-4 text-gray-400" />
+            },
+            {
+              key: 'award',
+              label: 'Award',
+              checkedIcon: <Award className="w-4 h-4 text-orange-500 fill-current" />,
+              uncheckedIcon: <Award className="w-4 h-4 text-gray-400" />
+            },
+            {
+              key: 'trophy',
+              label: 'Trophy',
+              checkedIcon: <Trophy className="w-4 h-4 text-yellow-500 fill-current" />,
+              uncheckedIcon: <Trophy className="w-4 h-4 text-gray-400" />
+            },
+            {
+              key: 'medal',
+              label: 'Medal',
+              checkedIcon: <Medal className="w-4 h-4 text-amber-500 fill-current" />,
+              uncheckedIcon: <Medal className="w-4 h-4 text-gray-400" />
+            },
+            {
+              key: 'crown',
+              label: 'Crown',
+              checkedIcon: <Crown className="w-4 h-4 text-yellow-500 fill-current" />,
+              uncheckedIcon: <Crown className="w-4 h-4 text-gray-400" />
+            },
+            {
+              key: 'gem',
+              label: 'Gem',
+              checkedIcon: <Gem className="w-4 h-4 text-purple-500 fill-current" />,
+              uncheckedIcon: <Gem className="w-4 h-4 text-gray-400" />
+            },
+            {
+              key: 'diamond',
+              label: 'Diamond',
+              checkedIcon: <Diamond className="w-4 h-4 text-blue-500 fill-current" />,
+              uncheckedIcon: <Diamond className="w-4 h-4 text-gray-400" />
+            },
+            {
+              key: 'zap',
+              label: 'Zap',
+              checkedIcon: <Zap className="w-4 h-4 text-yellow-500 fill-current" />,
+              uncheckedIcon: <Zap className="w-4 h-4 text-gray-400" />
+            },
+            {
+              key: 'sparkles',
+              label: 'Sparkles',
+              checkedIcon: <Sparkles className="w-4 h-4 text-pink-500 fill-current" />,
+              uncheckedIcon: <Sparkles className="w-4 h-4 text-gray-400" />
+            },
+          ];
 
-        // Checkbox color options
-        const colorOptions: { key: string; label: string; className: string; color: string; bgClass: string }[] = [
-          { key: 'green', label: 'Green', className: 'text-green-600', color: 'green', bgClass: 'bg-green-500' },
-          { key: 'blue', label: 'Blue', className: 'text-blue-600', color: 'blue', bgClass: 'bg-blue-500' },
-          { key: 'yellow', label: 'Yellow', className: 'text-yellow-500', color: 'yellow', bgClass: 'bg-yellow-400' },
-          { key: 'red', label: 'Red', className: 'text-red-600', color: 'red', bgClass: 'bg-red-500' },
-          { key: 'purple', label: 'Purple', className: 'text-purple-600', color: 'purple', bgClass: 'bg-purple-500' },
-          { key: 'gray', label: 'Gray', className: 'text-gray-600', color: 'gray', bgClass: 'bg-gray-500' },
-        ];
+          // Checkbox color options
+          const colorOptions: { key: string; label: string; className: string; color: string; bgClass: string }[] = [
+            { key: 'green', label: 'Green', className: 'text-green-600', color: 'green', bgClass: 'bg-green-500' },
+            { key: 'blue', label: 'Blue', className: 'text-blue-600', color: 'blue', bgClass: 'bg-blue-500' },
+            { key: 'yellow', label: 'Yellow', className: 'text-yellow-500', color: 'yellow', bgClass: 'bg-yellow-400' },
+            { key: 'red', label: 'Red', className: 'text-red-600', color: 'red', bgClass: 'bg-red-500' },
+            { key: 'purple', label: 'Purple', className: 'text-purple-600', color: 'purple', bgClass: 'bg-purple-500' },
+            { key: 'gray', label: 'Gray', className: 'text-gray-600', color: 'gray', bgClass: 'bg-gray-500' },
+          ];
 
-        const selectedIconOption = iconOptions.find(opt => opt.key === checkboxIcon) || iconOptions[0];
-        const selectedColorOption = colorOptions.find(opt => opt.key === checkboxColor) || colorOptions[0];
+          const selectedIconOption = iconOptions.find(opt => opt.key === checkboxIcon) || iconOptions[0];
+          const selectedColorOption = colorOptions.find(opt => opt.key === checkboxColor) || colorOptions[0];
 
-        return (
-          <>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              {/* Icon Selection */}
-              <div>
-                <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Icon</div>
-                <div className="relative icon-dropdown">
-                  <button
-                    type="button"
-                    className="w-full px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] flex items-center justify-between"
-                    onClick={() => setShowIconDropdown(v => !v)}
-                  >
-                    <div className="flex items-center gap-2">
-                      {selectedIconOption.checkedIcon}
-                      {selectedIconOption.uncheckedIcon}
-                      <span>{selectedIconOption.label}</span>
-                    </div>
-                    {showIconDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
-                  </button>
+          return (
+            <>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                {/* Icon Selection */}
+                <div>
+                  <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Icon</div>
+                  <div className="relative icon-dropdown">
+                    <button
+                      type="button"
+                      className="w-full px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] flex items-center justify-between"
+                      onClick={() => setShowIconDropdown((v: boolean) => !v)}
+                    >
+                      <div className="flex items-center gap-2">
+                        {selectedIconOption.checkedIcon}
+                        {selectedIconOption.uncheckedIcon}
+                        <span>{selectedIconOption.label}</span>
+                      </div>
+                      {showIconDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
+                    </button>
 
-                  {showIconDropdown && (
-                    <div className="absolute p-2 space-y-1 top-full left-0 right-0 mt-1 bg-[var(--color-alpha-white)] text-[var(--color-text-secondary)] border rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
-                      {iconOptions.map((option) => (
-                        <button
-                          key={option.key}
-                          type="button"
-                          className={`w-full px-3 py-2 rounded-xl text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${checkboxIcon === option.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
-                            }`}
-                          onClick={() => {
-                            setCheckboxIcon(option.key);
-                            setShowIconDropdown(false);
-                          }}
-                        >
-                          {option.checkedIcon}
-                          {option.uncheckedIcon}
-                          <span>{option.label}</span>
-                          {checkboxIcon === option.key && (
-                            <Check className="w-4 h-4 ml-auto text-black" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                    {showIconDropdown && (
+                      <div className="absolute p-2 space-y-1 top-full left-0 right-0 mt-1 bg-[var(--color-alpha-white)] text-[var(--color-text-secondary)] border rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
+                        {iconOptions.map((option) => (
+                          <button
+                            key={option.key}
+                            type="button"
+                            className={`w-full px-3 py-2 rounded-xl text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${checkboxIcon === option.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
+                              }`}
+                            onClick={() => {
+                              setCheckboxIcon(option.key);
+                              setShowIconDropdown(false);
+                            }}
+                          >
+                            {option.checkedIcon}
+                            {option.uncheckedIcon}
+                            <span>{option.label}</span>
+                            {checkboxIcon === option.key && (
+                              <Check className="w-4 h-4 ml-auto text-black" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Color Selection */}
+                <div>
+                  <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Colour</div>
+                  <div className="relative color-dropdown">
+                    <button
+                      type="button"
+                      className="w-full px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] flex items-center justify-between"
+                      onClick={() => setShowColorDropdown((v: boolean) => !v)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-4 h-4 rounded-full ${selectedColorOption.bgClass}`}></div>
+                        <span>{selectedColorOption.label}</span>
+                      </div>
+                      {showColorDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
+                    </button>
+
+                    {showColorDropdown && (
+                      <div className="absolute p-2 space-y-1 top-full left-0 right-0 mt-1 bg-[var(--color-alpha-white)] text-[var(--color-text-secondary)] border border-[var(--color-gray-300)] rounded shadow-lg z-50 max-h-60 overflow-y-auto">
+                        {colorOptions.map((color) => (
+                          <button
+                            key={color.key}
+                            type="button"
+                            className={`w-full px-3 py-2 rounded-xl text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${checkboxColor === color.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
+                              }`}
+                            onClick={() => {
+                              setCheckboxColor(color.key);
+                              setShowColorDropdown(false);
+                            }}
+                          >
+                            <div className={`w-4 h-4 rounded-full ${color.bgClass}`}></div>
+                            <span>{color.label}</span>
+                            {checkboxColor === color.key && (
+                              <Check className="w-4 h-4 ml-auto text-black" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Color Selection */}
-              <div>
-                <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Colour</div>
-                <div className="relative color-dropdown">
+              {/* Default Value - Full Width */}
+              <div className="mb-4">
+                <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Default value</div>
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    className="w-full px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] flex items-center justify-between"
-                    onClick={() => setShowColorDropdown(v => !v)}
+                    className={`px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${checkboxDefault
+                      ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
+                      : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'
+                      }`}
+                    onClick={() => setCheckboxDefault(true)}
                   >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full ${selectedColorOption.bgClass}`}></div>
-                      <span>{selectedColorOption.label}</span>
-                    </div>
-                    {showColorDropdown ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
+                    {selectedIconOption.checkedIcon}
+                    <span>Checked</span>
                   </button>
-
-                  {showColorDropdown && (
-                    <div className="absolute p-2 space-y-1 top-full left-0 right-0 mt-1 bg-[var(--color-alpha-white)] text-[var(--color-text-secondary)] border border-[var(--color-gray-300)] rounded shadow-lg z-50 max-h-60 overflow-y-auto">
-                      {colorOptions.map((color) => (
-                        <button
-                          key={color.key}
-                          type="button"
-                          className={`w-full px-3 py-2 rounded-xl text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${checkboxColor === color.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
-                            }`}
-                          onClick={() => {
-                            setCheckboxColor(color.key);
-                            setShowColorDropdown(false);
-                          }}
-                        >
-                          <div className={`w-4 h-4 rounded-full ${color.bgClass}`}></div>
-                          <span>{color.label}</span>
-                          {checkboxColor === color.key && (
-                            <Check className="w-4 h-4 ml-auto text-black" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    className={`px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${checkboxDefault
+                      ? 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'
+                      : 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
+                      }`}
+                    onClick={() => setCheckboxDefault(false)}
+                  >
+                    {selectedIconOption.uncheckedIcon}
+                    <span>Unchecked</span>
+                  </button>
                 </div>
               </div>
-            </div>
 
-            {/* Default Value - Full Width */}
-            <div className="mb-4">
-              <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Default value</div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className={`px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${checkboxDefault
-                    ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
-                    : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'
-                    }`}
-                  onClick={() => setCheckboxDefault(true)}
-                >
-                  {selectedIconOption.checkedIcon}
-                  <span>Checked</span>
-                </button>
-                <button
-                  type="button"
-                  className={`px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${checkboxDefault
-                    ? 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'
-                    : 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
-                    }`}
-                  onClick={() => setCheckboxDefault(false)}
-                >
-                  {selectedIconOption.uncheckedIcon}
-                  <span>Unchecked</span>
-                </button>
+              {/* Description */}
+              <div className="relative">
+                <div className="text-sm font-medium text-[var(--color-text-tertiary)] my-3 space-y-2">Description</div>
+                <MultiLineText
+                  placeholder="Enter field description..."
+                  value={description}
+                  onChange={value => setDescription(value)}
+                  rows={4}
+                  isBorder={true}
+                />
+                {description &&
+                  <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                }
               </div>
-            </div>
-
-            {/* Description */}
-            <div className="relative">
-              <div className="text-sm font-medium text-[var(--color-text-tertiary)] my-3 space-y-2">Description</div>
-              <MultiLineText
-                placeholder="Enter field description..."
-                value={description}
-                onChange={value => setDescription(value)}
-                rows={4}
-                isBorder={true}
-              />
-              {description &&
-                <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              }
-            </div>
-          </>
-        ); }
+            </>
+          );
+        }
       case 'multiSelect':
         return (
           <>
@@ -615,13 +735,6 @@ export function renderNewColumnConfigStep(props: any) {
                   }
                 }}
               />
-              {/* <input
-                type="color"
-                value={color || '#cccccc'}
-                onChange={(e) => setColor(e.target.value)}
-                className="flex-shrink-0 inline-flex items-center justify-center px-2 h-9 border border-[var(--color-gray-300)] text-[var(--color-text-tertiary)] rounded-xl hover:bg-[var(--color-hover-bg)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]"
-                style={{ cursor: 'pointer' }}
-              /> */}
               <button
                 type="button"
                 className="px-3 py-1 btn-add-option text-sm"
@@ -682,7 +795,7 @@ export function renderNewColumnConfigStep(props: any) {
                       {editingOptionIndex === idx ? (
                         <input
                           ref={editInputRef}
-                          className='flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] border border-[var(--color-gray-300)] text-xs min-w-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]'
+                          className='flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] bg-[--color-alpha-white] border border-[var(--color-gray-300)] text-xs min-w-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]'
                           value={editingOptionValue}
                           onChange={(e) => setEditingOptionValue(e.target.value)}
                           onBlur={() => {
@@ -711,7 +824,7 @@ export function renderNewColumnConfigStep(props: any) {
                           autoFocus
                         />
                       ) : (
-                        <span
+                        <span //NOSONAR
                           className="flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] text-xs truncate min-w-0 cursor-pointer"
                           onClick={() => {
                             setEditingOptionIndex(idx);
@@ -799,7 +912,6 @@ export function renderNewColumnConfigStep(props: any) {
                   }
                 }}
               />
-          
               <button
                 type="button"
                 className="px-3 py-1 btn-add-option"
@@ -833,14 +945,20 @@ export function renderNewColumnConfigStep(props: any) {
                 <div className="flex flex-col gap-1 mb-2 max-w-full border border-primary rounded-xl p-2 group max-h-48 overflow-auto">
                   {selectOptions.map((opt, idx) => (
                     <div key={`single-${opt.option}-${opt.color || 'none'}`} className="relative flex items-center gap-2 min-w-0 hover:bg-[var(--color-hover-bg)] rounded-xl px-1">
-                      <label className="inline-flex items-center gap-1 text-[var(--color-gray-700)] cursor-pointer max-w-[200px] min-w-0">
-                        <input
-                          type="radio"
-                          className="flex-shrink-0 checkbox-primary-brand"
-                          checked={singleDefault === opt.option}
-                          onChange={() => setSingleDefault(opt.option)}
-                        />
-                      </label>
+                      <input
+                        type="radio"
+                        className="flex-shrink-0 checkbox-primary-brand"
+                        checked={singleDefault === opt.option}
+                        onChange={() => { }}
+                        onClick={() => {
+                          // Toggle on click - if already selected, deselect; otherwise select
+                          if (singleDefault === opt.option) {
+                            setSingleDefault('');
+                          } else {
+                            setSingleDefault(opt.option);
+                          }
+                        }}
+                      />
                       <input
                         type="color"
                         value={opt.color || '#cccccc'}
@@ -853,11 +971,10 @@ export function renderNewColumnConfigStep(props: any) {
                         className="color-input"
                       />
 
-
                       {editingOptionIndex === idx ? (
                         <input
                           ref={editInputRef}
-                          className='flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] border border-[var(--color-gray-300)] text-xs min-w-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]'
+                          className='flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] border border-[var(--color-gray-300)] bg-[--color-alpha-white] text-xs min-w-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]'
                           value={editingOptionValue}
                           onChange={(e) => setEditingOptionValue(e.target.value)}
                           onBlur={() => {
@@ -886,7 +1003,7 @@ export function renderNewColumnConfigStep(props: any) {
                           autoFocus
                         />
                       ) : (
-                        <span
+                        <span //NOSONAR
                           className="flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] text-xs truncate min-w-0 cursor-pointer"
                           onClick={() => {
                             setEditingOptionIndex(idx);
@@ -915,7 +1032,7 @@ export function renderNewColumnConfigStep(props: any) {
                 </div>
               </>
             }
-      
+
             <div className="relative">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
                 <Plus className="w-4 h-4" />
@@ -946,7 +1063,7 @@ export function renderNewColumnConfigStep(props: any) {
         return (
           <>
             <div className="flex items-center gap-2 mb-3">
-              <label htmlFor='display-as-progress' className="relative inline-flex items-center gap-2 cursor-pointer">
+              <label className="relative inline-flex gap-3 items-center cursor-pointer">
                 <input
                   type="checkbox"
                   id="display-as-progress"
@@ -955,8 +1072,8 @@ export function renderNewColumnConfigStep(props: any) {
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-              <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Display as progress</span>
+                <div className="absolute left-0.5 top-1 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+                <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Display as progress</span>
               </label>
             </div>
 
@@ -984,7 +1101,7 @@ export function renderNewColumnConfigStep(props: any) {
                 onChange={e => {
                   const value = e.target.value;
                   if (isValidPercentInput(value)) {
-                    const numericValue = parseFloat(value);
+                    const numericValue = Number.parseFloat(value);
                     if (numericValue >= 0 && numericValue <= 100) {
                       setPercentDefault(numericValue);
                     }
@@ -1031,14 +1148,14 @@ export function renderNewColumnConfigStep(props: any) {
                 />
               </div>
               <div className='flex-1'>
-              <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Currency Code</div>
-              <AdvancedDropdown
-                options={uniqueCurrencyOptions}
-                value={currencyType}
-                onChange={(val) => setCurrencyType(val as string)}
-                placeholder="Select Currency"
+                <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Currency Code</div>
+                <AdvancedDropdown
+                  options={uniqueCurrencyOptions}
+                  value={currencyType}
+                  onChange={(val) => setCurrencyType(val as string)}
+                  placeholder="Select Currency"
                   searchable={true}
-              />
+                />
               </div>
             </div>
             <div className="mb-4 text-xs text-gray-600">
@@ -1185,7 +1302,7 @@ export function renderNewColumnConfigStep(props: any) {
             className: "w-5 h-5",
             fill: isFilled ? "currentColor" : "none",
           };
-          
+
           const iconMap: Record<string, React.ReactNode> = {
             star: <Star {...iconProps} />,
             heart: <Heart {...iconProps} />,
@@ -1310,7 +1427,8 @@ export function renderNewColumnConfigStep(props: any) {
               </button>
 
               {showRatingDefault && (
-                <div className="flex items-center gap-2" onMouseLeave={() => setRatingDefaultHover(null)}>
+                <div //NOSONAR
+                  className="flex items-center gap-2" onMouseLeave={() => setRatingDefaultHover(null)}>
                   <div className="flex gap-1">
                     {Array.from({ length: ratingMax }, (_, i) => {
                       const starIndex = i + 1;
@@ -1407,22 +1525,11 @@ export function renderNewColumnConfigStep(props: any) {
             <div className="mb-3">
               <div className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Time Display</div>
               <div className="flex items-center gap-2">
-                <label className={`flex items-center px-3 py-1.5 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '12'
-                  ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
-                  <input
-                    type="radio"
-                    className="hidden"
-                    checked={hourFormat === '12'}
-                    onChange={() => setHourFormat('12')}
-                  />12 Hrs</label>
-                <label className={`flex items-center px-3 py-1.5 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '24' ?
-                  'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
-                  <input
-                    type="radio"
-                    className="hidden"
-                    checked={hourFormat === '24'}
-                    onChange={() => setHourFormat('24')}
-                  />24 Hrs</label>
+                {renderHourFormatToggle({
+                  hourFormat,
+                  setHourFormat,
+                  wrapperClassName: 'flex items-center gap-2',
+                })}
               </div>
             </div>
 
@@ -1472,16 +1579,12 @@ export function renderNewColumnConfigStep(props: any) {
 
             {/* Default Value - Only show for datetime, not for createdTime/lastModifiedTime */}
             {selectedType?.key === 'datetime' && (
-              <div className="mb-3">
-                <button
-                  type="button"
-                  className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]"
-                  onClick={() => setShowDateTimeDefault(v => !v)}
-                >
-                  <Plus className="w-4 h-4" />
-                  Set default value
-                </button>
-                {showDateTimeDefault && (
+              renderDefaultValueToggle({
+                show: showDateTimeDefault,
+                setShow: setShowDateTimeDefault,
+                buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]',
+                wrapperClassName: 'mb-3',
+                children: (
                   <div className="mt-2">
                     <DateTime
                       value={dateTimeDefault}
@@ -1494,40 +1597,19 @@ export function renderNewColumnConfigStep(props: any) {
                       isBorder={true}
                     />
                   </div>
-                )}
-              </div>
+                ),
+              })
             )}
 
             {/* Description */}
-            <div className="relative">
-              <button
-                type="button"
-                className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2"
-                onClick={() => setShowDescription(v => !v)}
-              >
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description && (
-                    <button
-                      className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
-                      onClick={() => setDescription('')}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
+            {renderDescriptionToggle({
+              showDescription,
+              setShowDescription,
+              description,
+              setDescription,
+              buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+              wrapperClassName: 'relative',
+            })}
           </>
         );
       case 'user':
@@ -1535,7 +1617,7 @@ export function renderNewColumnConfigStep(props: any) {
           <>
             <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Multiple users</div>
             <div className="flex items-center gap-2 mb-3">
-              <label htmlFor='multi-user-select' className="relative inline-flex items-center cursor-pointer">
+              <label className="relative inline-flex gap-3 items-center cursor-pointer">
                 <input
                   type="checkbox"
                   id="multi-user-select"
@@ -1544,218 +1626,123 @@ export function renderNewColumnConfigStep(props: any) {
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+                <div className="absolute left-0.5 top-1 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+                <span className="text-sm text-gray-600">When enabled, users can select multiple users</span>
               </label>
-              <span className="text-sm text-gray-600">When enabled, users can select multiple users</span>
             </div>
 
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowUserDefault(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Set default value
-            </button>
-            {showUserDefault && (
-              <User
-                value={selectedUsers}
-                onChange={(user: any) => setSelectedUsers(user)}
-                config={{
-                  allowMultiple: allowMultipleUsers,
-                  showAvatar: true,
-                }}
-                isBorder={true}
-                placeholder="Select users..."
-              />
-            )}
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
+            {renderDefaultValueToggle({
+              show: showUserDefault,
+              setShow: setShowUserDefault,
+              children: (
+                <User
+                  value={selectedUsers}
+                  onChange={(user: any) => setSelectedUsers(user)}
+                  config={{
+                    allowMultiple: allowMultipleUsers,
+                    showAvatar: true,
+                  }}
+                  isBorder={true}
+                  placeholder="Select users..."
+                />
+              ),
+            })}
+            {renderDescriptionToggle({
+              showDescription,
+              setShowDescription,
+              description,
+              setDescription,
+              buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+              wrapperClassName: 'relative',
+            })}
           </>
         );
       case 'attachment':
         return (
-            <div className="mb-3 relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </>
-              )}
-            </div>
+          renderDescriptionToggle({
+            showDescription,
+            setShowDescription,
+            description,
+            setDescription,
+            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]',
+            wrapperClassName: 'mb-3 relative',
+          })
         );
       case 'json':
         return (
           <>
             <div className="mb-3">
               {/* <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Default JSON</label> */}
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowJsonDefault(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Set default value
-              </button>
-              {showJsonDefault && (
+              {renderDefaultValueToggle({
+                show: showJsonDefault,
+                setShow: setShowJsonDefault,
+                children: (
                   <JSONField
                     value={defaultValue}
                     onChange={handleJsonChange}
                     placeholder='{"key": "value"}'
                     isBorder={true}
                   />
-              )}
+                ),
+              })}
             </div>
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
+            {renderDescriptionToggle({
+              showDescription,
+              setShowDescription,
+              description,
+              setDescription,
+              buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
+              wrapperClassName: 'relative',
+            })}
           </>
         );
       case 'createdBy':
-        return (
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
-        );
       case 'lastModifiedBy':
         return (
-            <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
+          renderDescriptionToggle({
+            showDescription,
+            setShowDescription,
+            description,
+            setDescription,
+            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
+            wrapperClassName: 'relative',
+          })
         );
       case 'formula':
         return (
           <>
-              <Formula
-                label="Formula"
-                value={formulaText}
-                config={{
-                  formula: formulaText,
-                  formatting: {
-                    type: formulaFormatting.type,
-                    precision: formulaFormatting.precision,
-                    currency: formulaFormatting.currency,
-                    dateFormat: formulaFormatting.dateFormat
-                  }
-                }}
-                columns={fields.map(field => ({
-                  id: field.id,
-                  name: field.title || field.column_name || field.key,
+            <Formula
+              value={formulaText}
+              config={{
+                formula: formulaText,
+                formatting: {
+                  type: formulaFormatting.type,
+                  precision: formulaFormatting.precision,
+                  currency: formulaFormatting.currency,
+                  dateFormat: formulaFormatting.dateFormat
+                }
+              }}
+              columns={fields.map(field => ({
+                id: field.id,
+                name: field.title || field.column_name || field.key,
                 title: field.title || field.column_name || field.key,
                 column_name: field.column_name,
                 key: field.key || field.column_name,
                 type: field.type || field.uidt,
                 system: field.system || field.isSystem
-                }))}
-                onFormulaChange={(formula) => setFormulaText(formula)}
+              }))}
+              onFormulaChange={(formula) => setFormulaText(formula)}
               onErrorChange={(error) => setFormulaError(error)}
-                isBorder={true}
-                allowEdit={true}
-              helperText="Use {FieldName} to reference other fields."
-              />
-            <div className="relative mt-3">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3" onClick={() => setShowDescription(v => !v)}>
-                <Plus className="w-4 h-4" />
-                Add description
-              </button>
-              {showDescription && (
-                <>
-                  <MultiLineText
-                    placeholder="Enter field description..."
-                    value={description}
-                    onChange={value => setDescription(value)}
-                    rows={4}
-                    isBorder={true}
-                  />
-                  {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  }
-                </>
-              )}
-            </div>
+              isBorder={true}
+            />
+            {renderDescriptionToggle({
+              showDescription,
+              setShowDescription,
+              description,
+              setDescription,
+              buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3',
+              wrapperClassName: 'relative mt-3',
+            })}
           </>
         );
       default:

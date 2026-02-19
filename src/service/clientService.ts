@@ -1,5 +1,5 @@
 // @ts-ignore - SDK module does not have type declarations
-import { SereniBaseClient } from '../../sdk/index.esm.js';
+import { SereniBaseClient } from 'gopostgrest-sdk';
 import { WorkspaceBaseInput } from "../types/interfaces/workspace.interface.js";
 import { decodeJwt } from 'jose';
 import { LoginParams, VerifyOtpParams, ResendOtpParams } from '../types/interfaces/auth.js';

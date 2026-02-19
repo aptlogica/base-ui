@@ -1,8 +1,9 @@
-import { Plus, Trash2 } from 'lucide-react';
-import { DateField, Time, Year, MultiLineText } from '../../components/common/Fields';
+import { Plus } from 'lucide-react';
+import { DateField, Time, Year } from '../../components/common/Fields';
 import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown';
 import { convertDateFormat } from '../../utils/helpers';
 import { dateFormatOptions } from '../../types/constants';
+import { renderDescriptionToggle } from './NewColumnModalConfigStep';
 
 export function renderDateTimeConfigStep(props: any) {
   const {
@@ -70,7 +71,7 @@ export function renderDateTimeConfigStep(props: any) {
             <div>
               <button
                 className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-2 space-y-2"
-                onClick={() => setShowDateDefault(v => !v)}
+                onClick={() => setShowDateDefault((v: boolean) => !v)}
               >
                 <Plus className="w-4 h-4" />
                 Set default value
@@ -86,34 +87,20 @@ export function renderDateTimeConfigStep(props: any) {
             </div>
           </div>
 
-          <div className="relative">
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Add description
-            </button>
-            {showDescription && (
-              <>
-                <MultiLineText
-                  placeholder="Enter field description..."
-                  value={description}
-                  onChange={value => setDescription(value)}
-                  rows={4}
-                  isBorder={true}
-                />
-                {description &&
-                  <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                }
-              </>
-            )}
-          </div>
+          {renderDescriptionToggle({
+            showDescription,
+            setShowDescription,
+            description,
+            setDescription,
+            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            wrapperClassName: 'relative',
+          })}
         </>
       );
     case 'year':
       return (
         <>
-          <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowYearDefault(v => !v)}>
+          <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowYearDefault((v: boolean) => !v)}>
             <Plus className="w-4 h-4" />
             Set default value
           </button>
@@ -124,28 +111,14 @@ export function renderDateTimeConfigStep(props: any) {
               isBorder={true}
             />
           )}
-          <div className="relative">
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Add description
-            </button>
-            {showDescription && (
-              <>
-                <MultiLineText
-                  placeholder="Enter field description..."
-                  value={description}
-                  onChange={value => setDescription(value)}
-                  rows={4}
-                  isBorder={true}
-                />
-                {description && (
-                  <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+          {renderDescriptionToggle({
+            showDescription,
+            setShowDescription,
+            description,
+            setDescription,
+            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            wrapperClassName: 'relative',
+          })}
         </>
       );
     case 'time':
@@ -177,7 +150,7 @@ export function renderDateTimeConfigStep(props: any) {
             <div>
               <button
                 className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2"
-                onClick={() => setShowTimeDefault(v => !v)}
+                onClick={() => setShowTimeDefault((v: boolean) => !v)}
               >
                 <Plus className="w-4 h-4" />
                 Set default value
@@ -197,31 +170,15 @@ export function renderDateTimeConfigStep(props: any) {
             </div>
           </div>
 
-          <div className="relative">
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription(v => !v)}>
-              <Plus className="w-4 h-4" />
-              Add description
-            </button>
-            {showDescription && (
-              <>
-                <MultiLineText
-                  placeholder="Enter field description..."
-                  value={description}
-                  onChange={value => setDescription(value)}
-                  rows={4}
-                  isBorder={true}
-                />
-                {description && (
-                  <button
-                    className="absolute right-2 top-0 text-gray-400 hover:text-gray-600 text-sm"
-                    onClick={() => setDescription('')}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+          {renderDescriptionToggle({
+            showDescription,
+            setShowDescription,
+            description,
+            setDescription,
+            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            wrapperClassName: 'relative',
+            clearButtonClassName: 'absolute right-2 top-0 text-gray-400 hover:text-gray-600 text-sm',
+          })}
         </>
       );
     default:

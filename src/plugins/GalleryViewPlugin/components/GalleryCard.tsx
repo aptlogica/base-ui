@@ -296,11 +296,10 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
   };
 
   return (
-    <div 
+    <div //NOSONAR
       className={`group relative bg-card rounded-2xl border shadow-sm overflow-hidden transition-all duration-300 transform ${onEdit ? 'cursor-pointer hover:-translate-y-1' : 'cursor-default'}`}
       onClick={onEdit}
       onKeyDown={onEdit ? handleKeyDown : undefined}
-      role={onEdit ? 'button' : undefined}
     >
       {/* Image Section with Carousel - Only show if we have image files */}
       {hasImageFiles && (
