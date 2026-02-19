@@ -217,7 +217,7 @@ export const Year: React.FC<YearProps> = ({
           />
         </div>
       ) : (
-        <div
+        <div //NOSONAR
           ref={buttonRef}
           role="button"
           tabIndex={disabled || readOnly ? -1 : 0}

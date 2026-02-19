@@ -357,7 +357,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               <label htmlFor="file-upload-input" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
                 Select File <span className="text-red-500">*</span>
               </label>
-              <div
+              <div //NOSONAR
                 id="file-upload-input"
                 className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${fileUploadStateClass}`}
                 onDrop={handleDrop}

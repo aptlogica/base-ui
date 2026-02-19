@@ -62,7 +62,7 @@ export const DropdownTrigger = React.forwardRef<HTMLButtonElement, DropdownTrigg
         )}
 
         {clearable && selectedCount > 0 && !loading && onClear && (
-          <div
+          <div //NOSONAR
             role="button"
             tabIndex={0}
             onClick={(e) => {

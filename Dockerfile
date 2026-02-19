@@ -9,6 +9,7 @@ WORKDIR /app
 
 # Install dependencies using lockfile for reproducibility
 COPY package*.json ./
+COPY gopostgrest-sdk-1.0.0.tgz ./
 RUN npm install --no-audit --no-fund
 
 # Copy source

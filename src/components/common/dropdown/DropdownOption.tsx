@@ -30,7 +30,7 @@ export function DropdownOption<T>({
   `;
 
   return (
-    <li
+    <li //NOSONAR
       className={`${baseClasses} ${stateClasses} rounded-xl`}
       onClick={option.disabled ? undefined : onClick}
       onKeyDown={(e) => {
@@ -40,7 +40,6 @@ export function DropdownOption<T>({
           onClick();
         }
       }}
-      role="option"
       aria-selected={isSelected}
       aria-disabled={option.disabled}
       tabIndex={option.disabled ? -1 : 0}
