@@ -26,7 +26,6 @@ coverage-vitest/
 *.njsproj
 *.sln
 *.sw?
-*.tgz
 
 # Environment variables
 .env
