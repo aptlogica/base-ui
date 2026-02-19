@@ -176,7 +176,7 @@ const LogIn: React.FC = () => {
         <div className="w-full max-w-md space-y-6">
           {/* Logo and Brand Name */}
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 flex items-center justify-center flex-shrink-0 border rounded-lg shadow-xs">
+            <div className="w-10 h-10 flex items-center justify-center flex-shrink-0 border rounded-xl shadow-xs">
               <img
                 src="/assets/logo.svg"
                 alt="Sereni Base Logo"

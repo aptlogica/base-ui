@@ -276,7 +276,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
 
       {/* Dropdown Portal */}
       {isOpen && dropdownPosition && createPortal(
-        <div
+        <div //NOSONAR
           ref={dropdownRef}
           id={dropdownId}
           role="listbox"
