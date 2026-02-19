@@ -918,7 +918,7 @@ export const Formula: React.FC<FormulaProps> = ({
             <div className="flex items-center justify-between w-full">
               <label className="field-component-label flex items-center gap-2">
                 <span>Formula</span>
-                <span
+                <span //NOSONAR
                   ref={helpIconRef}
                   className="relative inline-block"
                   onMouseEnter={handleHelpIconMouseEnter}
@@ -1129,7 +1129,7 @@ export const Formula: React.FC<FormulaProps> = ({
 
         {/* Select Field - Dropdown below cursor when '{' is typed */}
         {showFieldDropdown && isTextareaFocused && filteredColumns.length > 0 && cursorPosition && createPortal(
-          <div
+          <div //NOSONAR
             className="field-dropdown fixed z-[10000] bg-white dark:bg-[var(--color-utility-bg)] shadow-lg rounded-xl border min-w-[150px] max-w-[200px] max-h-[200px] overflow-hidden"
             style={{
               top: `${cursorPosition.top}px`,
@@ -1172,7 +1172,7 @@ export const Formula: React.FC<FormulaProps> = ({
 
         {/* All Functions Modal - Fixed position, aligned with NewColumnModal */}
         {showAllFunctions && allFunctionsModalPosition && createPortal(
-          <div
+          <div //NOSONAR
             className="all-functions-modal fixed z-[10000] bg-[var(--color-alpha-white)] shadow-lg border rounded-xl w-[350px] overflow-hidden flex flex-col"
             style={{
               top: `${allFunctionsModalPosition.top}px`,

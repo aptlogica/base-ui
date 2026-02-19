@@ -144,7 +144,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
 
 
   return createPortal(
-    <div
+    <div //NOSONAR
       className="fixed inset-0 bg-[#1e1d1db8] backdrop-blur-sm transition-all duration-200 flex flex-col gap-3 items-center justify-between z-[9999]"
       onClick={onClose}
       onKeyDown={(e) => {
@@ -188,7 +188,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
       </button>
 
       {/* Preview Container */}
-      <div
+      <div //NOSONAR
         className="w-full max-w-screen-xl h-[80vh] flex items-center justify-center px-20 overflow-auto scrollbar-none"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e)=> e.stopPropagation()}

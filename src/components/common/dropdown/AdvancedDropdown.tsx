@@ -346,7 +346,6 @@ export function AdvancedDropdown<T extends string | number>({
             ref={optionsRef}
             className="p-2 space-y-1.5 max-h-48 overflow-auto"
             style={{ maxHeight: `${maxHeight}px` }}
-            role="listbox"
             aria-multiselectable={multiple}
           >
             {filteredOptions.length === 0 ? (

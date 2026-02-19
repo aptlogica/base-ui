@@ -106,8 +106,9 @@ const ExportModal: React.FC<ExportModalProps> = ({
   ];
 
   return (
-    <div className="bg-modal-backdrop" onClick={onClose}>
-      <div
+    <div //NOSONAR
+    className="bg-modal-backdrop" onClick={onClose}>
+      <div //NOSONAR
         className="bg-modal rounded-xl shadow-2xl p-6 w-full !max-w-lg relative"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {

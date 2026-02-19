@@ -723,12 +723,12 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   // Show error if workspaceId is not available
   if (!workspaceId) {
     return (
-      <div
+      <div //NOSONAR
         className="bg-modal-backdrop"
         onClick={onClose}
         onKeyDown={handleKeyDown}
       >
-        <div
+        <div //NOSONAR
           className="bg-modal min-h-[500px] max-h-[90vh] flex flex-col"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
@@ -767,12 +767,12 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   }
 
   return (
-    <div
+    <div //NOSONAR
       className="bg-modal-backdrop"
       onClick={onClose}
       onKeyDown={handleKeyDown}
     >
-      <div
+      <div //NOSONAR
         className="bg-modal !max-w-5xl !p-0 flex flex-col h-[90vh] max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {

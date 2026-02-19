@@ -1,5 +1,5 @@
 export { SingleLineText } from './SingleLineText';
-export { Number } from './Number';
+export { NumberField as Number } from './Number';
 export { DateField } from './DateField';
 export { Checkbox } from './Checkbox';
 export { Email } from './Email';

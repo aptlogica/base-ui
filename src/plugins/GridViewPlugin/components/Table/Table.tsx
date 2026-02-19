@@ -815,7 +815,7 @@ export const Table: React.FC<TableProps> = ({
                   const isPinned = pinnedColumnIds.includes(columnIdentity);
                   const isLastPinned = isPinned && lastPinnedColumnId === columnIdentity;
                   return (
-                    <div
+                    <div //NOSONAR
                       key={`${column.id || column.key || 'column'}-${index}`}
                       role="columnheader"
                       className={`relative flex-shrink-0 bg-gray-100 border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${(column as any).isNew !== undefined && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}

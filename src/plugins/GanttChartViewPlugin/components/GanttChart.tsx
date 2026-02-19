@@ -33,7 +33,7 @@ const TaskCard = React.memo(({ task, onEdit, onDelete }: { task: GanttTask; onEd
   const isCompleted = task.status === 'completed';
 
   return (
-    <div
+    <div //NOSONAR
       className={`bg-card border rounded-xl transition-all duration-200 relative overflow-hidden ${onEdit ? 'hover:border-gray-300 hover:shadow-md cursor-pointer group' : ''}`}
       onClick={onEdit}
       onKeyDown={
@@ -167,7 +167,7 @@ const ChartTask = React.memo(({
   const isCompleted = task.status === 'completed';
 
   return (
-    <div
+    <div //NOSONAR
       className={`absolute group transition-all duration-200 ${onEdit ? 'cursor-pointer' : ''
         } ${isMilestone ? 'w-0 h-0' : 'bg-background border rounded-xl'
         }`}

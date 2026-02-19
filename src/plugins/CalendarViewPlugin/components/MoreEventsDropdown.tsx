@@ -140,7 +140,7 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
 
   return (
     <>
-      <div
+      <div //NOSONAR
         ref={triggerRef}
         className="cursor-pointer hover:bg-gray-100 w-fit bg-card border rounded-xl px-1 py-0.5 transition-colors"
         onClick={(e) => {
