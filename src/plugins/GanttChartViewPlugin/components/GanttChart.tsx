@@ -277,6 +277,7 @@ ChartTask.displayName = 'ChartTask';
 
 interface GanttChartProps {
   tableData?: TableResponse;
+  viewId?: string;
   onRefresh?: () => void;
   actions?: {
     addRow: any;
@@ -292,7 +293,7 @@ interface GanttChartProps {
   };
 }
 
-export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, actions }) => {
+export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRefresh, actions }) => {
   // Extract base ID for permission checks
   const baseId = useMemo(() => String(tableData?.data?.model?.base_id ?? ''), [tableData?.data?.model?.base_id]);
 
@@ -308,7 +309,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
   const isReadOnly = isBaseReadOnly();
 
   // Process data into Gantt-ready format
-  const processedData = useGanttTaskProcessing({ tableData });
+  const processedData = useGanttTaskProcessing({ tableData, viewId });
 
   // View configuration hook (includes filtering and sorting)
   const {

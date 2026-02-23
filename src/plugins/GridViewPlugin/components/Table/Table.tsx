@@ -105,8 +105,8 @@ export const Table: React.FC<TableProps> = ({
     return currentView?.id ? String(currentView.id) : undefined;
   }, [currentView]);
 
-  // Effective view meta used to seed/sync local UI state
-  const baseMeta = useMemo(() => (viewConfig ?? (currentView?.meta ?? {})), [viewConfig, currentView]);
+  // Effective view meta used to seed/sync local UI state (per-view only)
+  const baseMeta = useMemo(() => (currentView?.meta ?? {}), [currentView]);
 
   // Transform API columns to UI-ready format
   const columns = useMemo(() => {
@@ -712,6 +712,162 @@ export const Table: React.FC<TableProps> = ({
     handleEditColumnFromHook(col, index, event);
   }, [handleEditColumnFromHook]);
 
+  const isAllRowsSelected = selectedRows.size === filteredAndSortedData.length && filteredAndSortedData.length > 0;
+
+  const getColumnHeaderClassName = useCallback((column: ColumnConfig, index: number) => {
+    const isEditing = editModalOpen && editColumnIndex === index;
+    const isNew = (column as any).isNew !== undefined && (column as any).isNew;
+    const isDragging = dragColumnIndex === index;
+    const isHovering = hoverColumnIndex === index;
+    return [
+      'relative flex-shrink-0 bg-gray-100 border-b group border-r',
+      isEditing ? 'overflow-visible' : 'overflow-hidden',
+      isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : '',
+      isDragging ? 'opacity-50' : '',
+      isHovering ? 'bg-blue-50' : ''
+    ].filter(Boolean).join(' ');
+  }, [editModalOpen, editColumnIndex, dragColumnIndex, hoverColumnIndex]);
+
+  const canShowColumnDropdown = useCallback((column: ColumnConfig) => (
+    !column.isSystem && !isBaseReadOnly() && (canUpdateColumn() || canDeleteColumn())
+  ), [isBaseReadOnly, canUpdateColumn, canDeleteColumn]);
+
+  const renderColumnHeader = useCallback((column: ColumnConfig, index: number) => {
+    const isColumnDraggable = !column.isSystem && canReorderColumns;
+    const columnIdentity = String(column.id || column.key);
+    const isPinned = pinnedColumnIds.includes(columnIdentity);
+    const isLastPinned = isPinned && lastPinnedColumnId === columnIdentity;
+    const isEditing = editModalOpen && editColumnIndex === index;
+
+    const handleColumnContextMenu = (e: React.MouseEvent) => {
+      e.preventDefault();
+      setOpenColumnDropdownIndex(null);
+      handleColContextMenu(e, index);
+    };
+
+    const handleDragStart = () => {
+      if (isColumnDraggable && index !== undefined) {
+        handleColumnDragStart(index);
+      }
+    };
+
+    const handleDragEnter = () => {
+      if (isColumnDraggable && index !== undefined) {
+        handleColumnDragEnter(index);
+      }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+      if (isColumnDraggable) {
+        e.preventDefault();
+      }
+    };
+
+    const handleDropdownOpenChange = (open: boolean) => {
+      if (open) {
+        handleCloseColMenu();
+      }
+      setOpenColumnDropdownIndex(prev => {
+        if (open) {
+          return index;
+        }
+        return prev === index ? null : prev;
+      });
+    };
+
+    return (
+      <div //NOSONAR
+        key={`${column.id || column.key || 'column'}-${index}`}
+        role="columnheader"
+        className={getColumnHeaderClassName(column, index)}
+        style={{
+          width: `${columnWidths[index]}px`,
+          minWidth: '80px',
+          whiteSpace: 'nowrap',
+          height: '35px',
+          maxHeight: '35px',
+          position: isPinned ? 'sticky' : 'relative',
+          left: isPinned ? `${pinnedColumnOffsets[columnIdentity] ?? 48}px` : undefined,
+          zIndex: isPinned ? 35 : undefined,
+          boxShadow: isLastPinned ? '2px 0 4px -3px rgba(15,23,42,0.14)' : undefined,
+        }}
+        onContextMenu={handleColumnContextMenu}
+        draggable={isColumnDraggable}
+        onDragStart={handleDragStart}
+        onDragEnter={handleDragEnter}
+        onDragEnd={handleColumnDragEnd}
+        onDragOver={handleDragOver}
+      >
+        <div className={`h-full flex items-center justify-between px-4 relative ${isEditing ? 'overflow-visible' : 'overflow-hidden'}`} style={{ height: '35px' }}>
+          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+            {/* Column type icon */}
+            <span className="field-header-icon">{getFieldTypeIconComponent(column.type)}</span>
+            {/* Column title */}
+            <span
+              className="text-[12px] cursor-default font-medium text-tertiary truncate block max-w-full"
+              style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+            >
+              {column.title}
+              {column.isSystem && (
+                <Lock className="w-3 h-3 ml-1 inline text-tertiary" />
+              )}
+            </span>
+          </div>
+          {/* Column dropdown - hide for readonly users */}
+          {canShowColumnDropdown(column) && (
+            <ColumnDropdown
+              onEdit={() => {
+                handleEditColumn(column, index, { target: document.createElement('div') });
+              }}
+              onDelete={() => handleDeleteColumn(column.id!)}
+              isOpen={openColumnDropdownIndex === index}
+              onOpenChange={handleDropdownOpenChange}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }, [
+    canReorderColumns,
+    pinnedColumnIds,
+    lastPinnedColumnId,
+    editModalOpen,
+    editColumnIndex,
+    columnWidths,
+    pinnedColumnOffsets,
+    handleColumnDragEnd,
+    handleColumnDragEnter,
+    handleColumnDragStart,
+    handleColContextMenu,
+    handleCloseColMenu,
+    handleDeleteColumn,
+    handleEditColumn,
+    openColumnDropdownIndex,
+    canShowColumnDropdown,
+    getColumnHeaderClassName,
+    setOpenColumnDropdownIndex
+  ]);
+
+  const getEstimatedItemCount = useCallback(() => {
+    if (!groupedData) {
+      return paginatedData.length;
+    }
+    return groupedData.reduce((sum, group) => {
+      const isExpanded = expandedGroups.has(`${group.groupColumn}-${group.groupValue}-0`);
+      return sum + 1 + (isExpanded ? group.rows.length : 0);
+    }, 0);
+  }, [groupedData, expandedGroups, paginatedData.length]);
+
+  const handleVirtualScroll = useCallback((scrollTop: number) => {
+    const estimatedItemCount = getEstimatedItemCount();
+    const totalContentHeight = estimatedItemCount * 40;
+    const scrollThreshold = totalContentHeight - tableBodyHeight - 100;
+
+    if (scrollTop >= scrollThreshold && hasMore) {
+      loadNextPage();
+    }
+  }, [getEstimatedItemCount, hasMore, loadNextPage, tableBodyHeight]);
+
   return (
     <div ref={tableContainerRef} className="w-full h-[calc(100vh-43px)] bg-background flex flex-col relative" >
       {/* Fixed Header - Toolbar */}
@@ -795,104 +951,30 @@ export const Table: React.FC<TableProps> = ({
                 }}
               >
                 {/* Row selector header */}
+                {(() => {
+                  const hideHeaderNumberClass = (canUpdateRecord() && !isBaseReadOnly())
+                    ? 'group-hover:hidden'
+                    : '';
+                  return (
                 <div
                   className="group flex-shrink-0 bg-gray-100 border-r border-b border-border/30 flex items-center justify-center"
                   style={{ position: 'sticky', left: 0, zIndex: 25, width: '48px', minWidth: '48px', maxWidth: '48px', height: '35px', boxShadow: 'inset 1px 0 0 var(--color-border), 2px 0 4px -2px rgba(0,0,0,0.06)' }}
                 >
-                  <input
-                    type="checkbox"
-                    className={`checkbox-primary-brand w-4 h-4 text-primary rounded-xl focus:ring-primary ${selectedRows.size === filteredAndSortedData.length && filteredAndSortedData.length > 0 ? '!grid' : '!hidden group-hover:!grid'}`}
-                    checked={selectedRows.size === filteredAndSortedData.length && filteredAndSortedData.length > 0}
-                    onChange={(e) => handleSelectAll(e.target.checked)}
-                  />
-                  <span className={`text-xs font-medium text-tertiary ml-2 inline-block ${selectedRows.size === filteredAndSortedData.length && filteredAndSortedData.length > 0 ? 'hidden' : 'group-hover:hidden'}`}>#</span>
+                  {!isBaseReadOnly() && canUpdateRecord() && (
+                    <input
+                      type="checkbox"
+                      className={`checkbox-primary-brand w-4 h-4 text-primary rounded-xl focus:ring-primary ${isAllRowsSelected ? '!grid' : '!hidden group-hover:!grid'}`}
+                      checked={isAllRowsSelected}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                    />
+                  )}
+                  <span className={`text-xs font-medium text-tertiary ml-2 inline-block ${isAllRowsSelected ? 'hidden' : hideHeaderNumberClass}`}>#</span>
                 </div>
+                  );
+                })()}
 
                 {/* Column headers */}
-                {visibleColumns.map((column, index) => {
-                  const isColumnDraggable = !column.isSystem && canReorderColumns;
-                  const columnIdentity = String(column.id || column.key);
-                  const isPinned = pinnedColumnIds.includes(columnIdentity);
-                  const isLastPinned = isPinned && lastPinnedColumnId === columnIdentity;
-                  return (
-                    <div //NOSONAR
-                      key={`${column.id || column.key || 'column'}-${index}`}
-                      role="columnheader"
-                      className={`relative flex-shrink-0 bg-gray-100 border-b group border-r ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'} ${(column as any).isNew !== undefined && (column as any).isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : ''} ${dragColumnIndex === index ? 'opacity-50' : ''} ${hoverColumnIndex === index ? 'bg-blue-50' : ''}`}
-                      style={{
-                        width: `${columnWidths[index]}px`,
-                        minWidth: '80px',
-                        whiteSpace: 'nowrap',
-                        height: '35px',
-                        maxHeight: '35px',
-                        position: isPinned ? 'sticky' : 'relative',
-                        left: isPinned ? `${pinnedColumnOffsets[columnIdentity] ?? 48}px` : undefined,
-                        zIndex: isPinned ? 35 : undefined,
-                        boxShadow: isLastPinned ? '2px 0 4px -3px rgba(15,23,42,0.14)' : undefined,
-                      }}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        setOpenColumnDropdownIndex(null);
-                        handleColContextMenu(e, index);
-                      }}
-                      draggable={isColumnDraggable}
-                      onDragStart={() => {
-                        if (isColumnDraggable && index !== undefined) {
-                          handleColumnDragStart(index);
-                        }
-                      }}
-                      onDragEnter={() => {
-                        if (isColumnDraggable && index !== undefined) {
-                          handleColumnDragEnter(index);
-                        }
-                      }}
-                      onDragEnd={handleColumnDragEnd}
-                      onDragOver={(e) => {
-                        if (isColumnDraggable) {
-                          e.preventDefault();
-                        }
-                      }}
-                    >
-                      <div className={`h-full flex items-center justify-between px-4 relative ${editModalOpen && editColumnIndex === index ? 'overflow-visible' : 'overflow-hidden'}`} style={{ height: '35px' }}>
-                        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                          {/* Column type icon */}
-                          <span className="field-header-icon">{getFieldTypeIconComponent(column.type)}</span>
-                          {/* Column title */}
-                          <span
-                            className="text-[12px] font-medium text-tertiary truncate block max-w-full"
-                            style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                          >
-                            {column.title}
-                            {column.isSystem && (
-                              <Lock className="w-3 h-3 ml-1 inline text-tertiary" />
-                            )}
-                          </span>
-                        </div>
-                        {/* Column dropdown - hide for readonly users */}
-                        {!column.isSystem && !isBaseReadOnly() && (canUpdateColumn() || canDeleteColumn()) && (
-                          <ColumnDropdown
-                            onEdit={() => {
-                              handleEditColumn(column, index, { target: document.createElement('div') });
-                            }}
-                            onDelete={() => handleDeleteColumn(column.id!)}
-                            isOpen={openColumnDropdownIndex === index}
-                            onOpenChange={(open) => {
-                              if (open) {
-                                handleCloseColMenu();
-                              }
-                              setOpenColumnDropdownIndex(prev => {
-                                if (open) {
-                                  return index;
-                                }
-                                return prev === index ? null : prev;
-                              });
-                            }}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                {visibleColumns.map(renderColumnHeader)}
 
                 {/* Add column button - only show if user can create columns and not read-only */}
                 {canCreateColumn() && !isBaseReadOnly() && (
@@ -922,45 +1004,31 @@ export const Table: React.FC<TableProps> = ({
             </div>
 
             <div ref={tableBodyRef}>
-              {(() => {
-                return (
-                  <VirtualizedTableBody
-                    data={paginatedData}
-                    columns={visibleColumns}
-                    columnWidths={columnWidths}
-                    pinnedColumnIds={pinnedColumnIds}
-                    pinnedColumnOffsets={pinnedColumnOffsets}
-                    selectedRows={selectedRows}
-                    onRowSelect={handleRowSelect}
-                    onCellChange={handleCellChange}
-                    onContextMenu={handleContextMenu}
-                    activeCell={activeCell}
-                    setActiveCell={setActiveCell}
-                    tableId={tableId}
-                    height={tableBodyHeight}
-                    width={totalTableWidth}
-                    groupedData={groupedData}
-                    expandedGroups={expandedGroups}
-                    setExpandedGroups={setExpandedGroups}
-                    visibleColumns={visibleColumns}
-                    outerRef={tableRef}
-                    canEdit={canUpdateRecord() && !isBaseReadOnly()}
-                    allColumns={columns}
-                    onScroll={(scrollTop) => {
-                      const estimatedItemCount = groupedData
-                        ? groupedData.reduce((sum, g) => sum + 1 + (expandedGroups.has(`${g.groupColumn}-${g.groupValue}-0`) ? g.rows.length : 0), 0)
-                        : paginatedData.length;
-                      const totalContentHeight = estimatedItemCount * 40;
-                      const scrollThreshold = totalContentHeight - tableBodyHeight - 100;
-
-                      // Load next page when near bottom and more pages available
-                      if (scrollTop >= scrollThreshold && hasMore) {
-                        loadNextPage();
-                      }
-                    }}
-                  />
-                );
-              })()}
+              <VirtualizedTableBody
+                data={paginatedData}
+                columns={visibleColumns}
+                columnWidths={columnWidths}
+                pinnedColumnIds={pinnedColumnIds}
+                pinnedColumnOffsets={pinnedColumnOffsets}
+                selectedRows={selectedRows}
+                onRowSelect={handleRowSelect}
+                onCellChange={handleCellChange}
+                onContextMenu={handleContextMenu}
+                activeCell={activeCell}
+                setActiveCell={setActiveCell}
+                tableId={tableId}
+                height={tableBodyHeight}
+                width={totalTableWidth}
+                groupedData={groupedData}
+                expandedGroups={expandedGroups}
+                setExpandedGroups={setExpandedGroups}
+                visibleColumns={visibleColumns}
+                outerRef={tableRef}
+                canEdit={canUpdateRecord() && !isBaseReadOnly()}
+                canSelectRows={canUpdateRecord() && !isBaseReadOnly()}
+                allColumns={columns}
+                onScroll={handleVirtualScroll}
+              />
 
               {/* FRONTEND PAGINATION: Add row button with optional loading indicator */}
               {!isBaseReadOnly() && canCreateRecord() && (
@@ -1053,7 +1121,7 @@ export const Table: React.FC<TableProps> = ({
             y={colMenu.y}
             onClose={handleCloseColMenu}
             onEdit={() => {
-              handleEditColumn(visibleColumns[colMenu.colIndex!], colMenu.colIndex!, { target: null });
+              handleEditColumn(visibleColumns[colMenu.colIndex!], colMenu.colIndex!, { target: document.createElement('div') });
               handleCloseColMenu();
             }}
             onDelete={() => {

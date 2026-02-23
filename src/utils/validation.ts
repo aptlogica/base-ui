@@ -63,12 +63,46 @@ export const validatePasswordStrength = (
   containsCommon: boolean; // true when password does NOT contain common words
   errorMessage?: string;
 } => {
+  const normalizeLower = (value: string) => (value || '').trim().toLowerCase();
+  const getNameEmailFlags = (lcPassword: string, lcFirstName: string, lcLastName: string, lcEmailValue: string) => {
+    const emailLocalPart = lcEmailValue.split('@')[0] || '';
+    const hasNonEmptyPassword = lcPassword.length > 0;
+    const hasAnyIdentity = Boolean(lcFirstName || lcLastName || lcEmailValue);
+    const containsFirstName = Boolean(lcFirstName && lcPassword.includes(lcFirstName));
+    const containsLastName = Boolean(lcLastName && lcPassword.includes(lcLastName));
+    const containsEmailLocalPart = Boolean(emailLocalPart && lcPassword.includes(emailLocalPart));
+    const containsFullEmail = Boolean(lcEmailValue && lcPassword.includes(lcEmailValue));
+    const containsNameOrEmail =
+      containsFirstName || containsLastName || containsEmailLocalPart || containsFullEmail;
+
+    return {
+      hasNonEmptyPassword,
+      hasAnyIdentity,
+      containsNameOrEmail,
+    };
+  };
+  const buildRequirementError = (requirements: {
+    hasLength: boolean;
+    hasUpper: boolean;
+    hasLower: boolean;
+    hasNumber: boolean;
+    hasSymbol: boolean;
+  }) => {
+    const missingRequirements: string[] = [];
+    if (!requirements.hasLength) missingRequirements.push('at least 8 characters');
+    if (!requirements.hasUpper) missingRequirements.push('an uppercase letter');
+    if (!requirements.hasLower) missingRequirements.push('a lowercase letter');
+    if (!requirements.hasNumber) missingRequirements.push('a number');
+    if (!requirements.hasSymbol) missingRequirements.push('a symbol');
+    if (!missingRequirements.length) return undefined;
+    return `Password must include ${missingRequirements.join(', ')}`;
+  };
+
   const pwd = (password || '').trim();
-  const lcPwd = pwd.toLowerCase();
-  const lcFirst = (firstName || '').trim().toLowerCase();
-  const lcLast = (lastName || '').trim().toLowerCase();
-  const lcEmail = (email || '').trim().toLowerCase();
-  const emailLocal = lcEmail.split('@')[0] || '';
+  const lcPwd = normalizeLower(password);
+  const lcFirst = normalizeLower(firstName);
+  const lcLast = normalizeLower(lastName);
+  const lcEmail = normalizeLower(email);
 
   // Basic requirements
   const hasLength = pwd.length >= 8;
@@ -78,15 +112,15 @@ export const validatePasswordStrength = (
   const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(pwd);
 
   // Check if password contains name or email (should NOT contain these)
-  const hasNonEmpty = lcPwd.length > 0;
-  const containsFirst = !!(lcFirst && lcFirst.length > 0 && lcPwd.includes(lcFirst));
-  const containsLast = !!(lcLast && lcLast.length > 0 && lcPwd.includes(lcLast));
-  const containsEmailLocal = !!(emailLocal && emailLocal.length > 0 && lcPwd.includes(emailLocal));
-  const containsEmail = !!(lcEmail && lcEmail.length > 0 && lcPwd.includes(lcEmail));
-  const anyNameOrEmailProvided = Boolean(lcFirst || lcLast || lcEmail);
+  const { hasNonEmptyPassword, hasAnyIdentity, containsNameOrEmail } = getNameEmailFlags(
+    lcPwd,
+    lcFirst,
+    lcLast,
+    lcEmail
+  );
   // TRUE when requirement is satisfied (i.e., password does NOT contain name/email)
   // If no name/email provided, this requirement is automatically satisfied
-  const containsNameAndEmail = !anyNameOrEmailProvided || (hasNonEmpty && !(containsFirst || containsLast || containsEmailLocal || containsEmail));
+  const containsNameAndEmail = !hasAnyIdentity || (hasNonEmptyPassword && !containsNameOrEmail);
 
   // Common words to avoid
   const commonWords = [
@@ -110,7 +144,7 @@ export const validatePasswordStrength = (
     'asdfghjkl'
   ];
   // TRUE when requirement is satisfied (i.e., password does NOT contain common words)
-  const containsCommon = hasNonEmpty && !commonWords.some(w => lcPwd.includes(w));
+  const containsCommon = hasNonEmptyPassword && !commonWords.some(w => lcPwd.includes(w));
 
   // Calculate strength (0-7)
   const strength = [
@@ -125,18 +159,11 @@ export const validatePasswordStrength = (
 
   // Generate error message if invalid
   let errorMessage: string | undefined;
-  if (!hasLength || !hasUpper || !hasLower || !hasNumber || !hasSymbol) {
-    const missingRequirements: string[] = [];
-    if (!hasLength) missingRequirements.push('at least 8 characters');
-    if (!hasUpper) missingRequirements.push('an uppercase letter');
-    if (!hasLower) missingRequirements.push('a lowercase letter');
-    if (!hasNumber) missingRequirements.push('a number');
-    if (!hasSymbol) missingRequirements.push('a symbol');
-    
-    errorMessage = `Password must include ${missingRequirements.join(', ')}`;
-  } else if (!containsNameAndEmail) {
-    errorMessage = "Password must not contain your first name, last name, or email";
-  } else if (!containsCommon) {
+  errorMessage = buildRequirementError({ hasLength, hasUpper, hasLower, hasNumber, hasSymbol });
+  if (!errorMessage && !containsNameAndEmail) {
+    errorMessage = 'Password must not contain your first name, last name, or email';
+  }
+  if (!errorMessage && !containsCommon) {
     errorMessage = "Password must not contain common words like 'password', '1234', or 'qwerty'";
   }
 

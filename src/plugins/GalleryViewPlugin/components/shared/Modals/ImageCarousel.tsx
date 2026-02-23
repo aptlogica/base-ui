@@ -154,7 +154,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
       }}
     >
       {/* Filename Header */}
-      <div className=" text-[16px] text-primary font-medium mt-3">
+      <div className="text-[16px] text-primary font-medium mt-3">
         {currentImage?.name || "image.jpg"}
       </div>
 
@@ -215,23 +215,23 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
       <div className="flex flex-col gap-2 px-2 justify-center items-center py-2 bg-transparent">
 
         {/* Zoom Controls */}
-        <div className=" flex items-center justify-center border w-fit gap-4 bg-white/70 backdrop-blur-sm rounded-full px-4 py-2">
+        <div className=" flex items-center justify-center w-fit gap-4 bg-white/70 backdrop-blur-sm rounded-full px-4 py-2">
           <button
             onClick={(e) => {
               e.stopPropagation();
               setZoom((z) => Math.max(z - 25, 50));
             }}
-            className="text-secondary hover:text-gray-500"
+            className="text-gray-500"
           >
             <ZoomOut size={18} />
           </button>
-          <span className="text-secondary text-sm">{zoom}%</span>
+          <span className="text-gray-500">{zoom}%</span>
           <button
             onClick={(e) => {
               e.stopPropagation();
               setZoom((z) => Math.min(z + 25, 300));
             }}
-            className="text-secondary hover:text-gray-500"
+            className="text-gray-500"
           >
             <ZoomIn size={18} />
           </button>
@@ -245,8 +245,8 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
                 e.stopPropagation();
                 setCurrentIndex(images.findIndex(i => i.url === img.url));
               }}
-              className={`w-14 h-14 rounded overflow-hidden border ${img.url === currentImage?.url
-                  ? "border-black shadow-sm"
+              className={`w-14 h-14 rounded-xl overflow-hidden border ${img.url === currentImage?.url
+                  ? "border-[var(--color-bg-brand-primary)] shadow-sm"
                   : "border-gray-300 opacity-70 hover:opacity-100"
                 } transition`}
             >

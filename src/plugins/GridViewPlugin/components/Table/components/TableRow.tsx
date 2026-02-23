@@ -17,6 +17,7 @@ interface TableRowProps {
   displayRowNumber?: number; // Optional: override the displayed row number (for grouped rows)
   allColumns?: ColumnConfig[]; // All columns for formula field name mapping
   canEdit?: boolean; // Permission to edit cells
+  canSelectRows?: boolean;
   pinnedColumnIds?: string[];
   pinnedColumnOffsets?: Record<string, number>;
 }
@@ -50,6 +51,7 @@ export const TableRow: React.FC<TableRowProps> = ({
   displayRowNumber,
   allColumns,
   canEdit = true,
+  canSelectRows = true,
   pinnedColumnIds = [],
   pinnedColumnOffsets = {},
 }) => {
@@ -170,20 +172,28 @@ export const TableRow: React.FC<TableRowProps> = ({
             : 'inset 1px 0 0 var(--color-border), inset 0 -1px 0 var(--color-border)'
         }}
       >
-        <span className={`text-xs text-muted-foreground font-normal absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none transition-opacity duration-150 ${isSelected ? 'opacity-0' : 'group-hover:opacity-0'}`} style={{ zIndex: 1 }}>{displayRowNumber ?? rowIndex + 1}</span>
-        <input
-          type="checkbox"
-          className={`checkbox-primary-brand ${isSelected
-            ? 'opacity-100 pointer-events-auto'
-            : 'opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto'
-            }`}
-          checked={isSelected}
-          onChange={(e) => {
-            const currentRowId = getRowId(row);
-            if (currentRowId) onSelect(currentRowId, e.target.checked);
-          }}
-          style={{ zIndex: 2 }}
-        />
+        {(() => {
+          const hoverHideClass = canSelectRows ? 'group-hover:opacity-0' : '';
+          const rowNumberClassName = `text-xs text-muted-foreground font-normal absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none transition-opacity duration-150 ${isSelected ? 'opacity-0' : hoverHideClass}`;
+          return (
+            <span className={rowNumberClassName} style={{ zIndex: 1 }}>{displayRowNumber ?? rowIndex + 1}</span>
+          );
+        })()}
+        {canSelectRows && (
+          <input
+            type="checkbox"
+            className={`checkbox-primary-brand ${isSelected
+              ? 'opacity-100 pointer-events-auto'
+              : 'opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto'
+              }`}
+            checked={isSelected}
+            onChange={(e) => {
+              const currentRowId = getRowId(row);
+              if (currentRowId) onSelect(currentRowId, e.target.checked);
+            }}
+            style={{ zIndex: 2 }}
+          />
+        )}
       </div>
       {memoizedColumnProps.map((props, index) => {
         const column = columns[index];

@@ -76,10 +76,10 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
 
   const show = useCallback((opts: ToastOptions) => {
     const id = opts.id || `#${crypto.getRandomValues(new Uint32Array(1))[0]
-                              .toString(16)
-                              .slice(-6)
-                              .padStart(6, '0')
-                            }`;
+      .toString(16)
+      .slice(-6)
+      .padStart(6, '0')
+      }`;
     const t: InternalToast = {
       id,
       title: opts.title,
@@ -139,7 +139,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
     return (
       <output
         key={toast.id}
-        className={`shadow-md rounded-md px-4 py-3 mb-2 w-80 ${baseColor} transition-all duration-200`}
+        className={`shadow-md rounded-md px-4 py-3 mb-2 w-80 z-50 ${baseColor} transition-all duration-200`}
       >
         <div className="flex items-start gap-3">
           <div className="flex-1">

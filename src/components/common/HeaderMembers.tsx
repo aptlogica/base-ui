@@ -54,7 +54,7 @@ const HeaderMembers: React.FC = () => {
     <>
       <div className="flex items-center gap-3">
         {(isWorkspaceReadOnly() || isBaseReadOnly()) ? (
-          <span className="inline-block px-2 py-0.5 rounded-xl text-xs font-medium bg-gray-100 text-gray-700 border">Read only</span>
+          <span className="inline-block px-2 py-0.5 rounded-xl text-xs font-medium bg-gray-100 text-gray-700 border cursor-default">Read only</span>
         ) : (
           canAssignUsers() && (
             <button
@@ -62,7 +62,7 @@ const HeaderMembers: React.FC = () => {
               className="p-2.5 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <UserPlus className="w-4 h-4" />
-              {/* Add Member */}
+              {/* <span className="text-sm font-medium min-xl:hidden">Add Member</span> */}
             </button>
           )
         )}

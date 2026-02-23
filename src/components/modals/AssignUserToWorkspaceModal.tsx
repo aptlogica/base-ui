@@ -17,6 +17,100 @@ interface AssignUserToWorkspaceModalProps {
   memberToEdit?: string; // User ID of the member being edited
 }
 
+const ensureArray = <T,>(value: T[] | null | undefined): T[] => (Array.isArray(value) ? value : []);
+
+const getIsMaintainerOnly = (hasAdminRole: boolean, accessData: any, workspaceId: string) => {
+  if (hasAdminRole) return false;
+  if (!workspaceId || !Array.isArray(accessData)) return false;
+  const workspace = accessData.find((ws: any) => ws.workspace_id === workspaceId);
+  return workspace?.access === 'maintainer';
+};
+
+const getRoleOptions = (isMaintainerOnly: boolean, editMode: boolean) => {
+  if (isMaintainerOnly) {
+    return [
+      { label: 'Base Member', value: 'base-member' },
+      { label: 'Base Read Only', value: 'base-read' },
+    ];
+  }
+  if (editMode) {
+    return [
+      { label: 'Workspace Maintainer', value: 'maintainer' },
+      { label: 'Workspace Read Only', value: 'workspace-read' },
+    ];
+  }
+  return [
+    { label: 'Workspace Maintainer', value: 'maintainer' },
+    { label: 'Workspace Read Only', value: 'workspace-read' },
+    { label: 'Base Member', value: 'base-member' },
+    { label: 'Base Read Only', value: 'base-read' },
+  ];
+};
+
+const getDefaultRole = (isMaintainerOnly: boolean) => (isMaintainerOnly ? 'base-member' : 'maintainer');
+
+const getMissingWorkspaceCopy = (editMode: boolean) => ({
+  title: editMode ? 'Edit Member Access' : 'Assign User to Workspace',
+  subtitle: editMode
+    ? 'Update member access level and base permissions'
+    : 'Grant users access to this workspace',
+});
+
+const getMainHeaderCopy = (editMode: boolean) => ({
+  title: editMode ? 'Manage Role' : 'Add Member',
+  subtitle: editMode
+    ? 'Manage what members can access on this project'
+    : 'Add member to collaborate on this project',
+});
+
+const getFooterLabel = (pending: boolean, editMode: boolean) => {
+  if (pending) {
+    return editMode ? 'Updating...' : 'Adding...';
+  }
+  return editMode ? 'Update' : 'Add';
+};
+
+const getExistingMemberUserIds = (baseId: string | undefined, baseMembersData: any, workspaceMembersData: any) => {
+  if (baseId) {
+    const baseData = baseMembersData;
+    const membersData = Array.isArray(baseData?.data) ? baseData.data : [];
+    return membersData.map((member: any) => member.user_id || member.id).filter(Boolean);
+  }
+
+  const workspaceData = workspaceMembersData;
+  const membersData = Array.isArray(workspaceData?.data) ? workspaceData.data : [];
+  return membersData.map((member: any) => member.user_id || member.id).filter(Boolean);
+};
+
+const getUserDropdownOptions = (
+  tenantUsers: any[],
+  currentUserId: string | null,
+  existingMemberUserIds: string[]
+): MultiSelectTagsOption[] => {
+  return tenantUsers
+    .filter((user: any) => {
+      const isActive = user.status?.toLowerCase() === 'active' && user.email_verified === true;
+      if (!isActive) return false;
+      if (user.id === currentUserId) return false;
+      if (user.roles === 'owner') return false;
+      if (existingMemberUserIds.includes(user.id)) return false;
+      return true;
+    })
+    .map((user: any) => ({
+      label: user.display_name || user.email || 'Unknown User',
+      value: user.id,
+      description: user.email,
+    }));
+};
+
+const getMainHeaderIcon = (editMode: boolean) => (
+  editMode ? <Edit className="w-5 h-5 text-green-600" /> : <UserPlus className="w-5 h-5 text-green-600" />
+);
+
+const roleAllowsBaseSelection = (role: string): boolean => (
+  role === 'base-member' || role === 'base-read'
+);
+
 // Component for base role management - extracted to reduce nesting
 const BaseRoleManagement: React.FC<{
   userBases: any[];
@@ -181,7 +275,7 @@ const EditModeUI: React.FC<{
   isPending,
   isLoadingUserAccess
 }) => {
-  const workspaces = Array.isArray(userRolesAndAccessData) ? userRolesAndAccessData : [];
+  const workspaces: any[] = ensureArray(userRolesAndAccessData as any[]);
   const currentWorkspace = workspaces.find((ws: any) => ws.workspace_id === workspaceId);
 
   if (!currentWorkspace) {
@@ -192,35 +286,36 @@ const EditModeUI: React.FC<{
     );
   }
 
-  const workspaceInitials = (currentWorkspace.workspace_name || 'W').charAt(0).toUpperCase();
-  const workspaceName = currentWorkspace.workspace_name || 'Workspace';
-  const workspaceAccess = currentWorkspace.access || '';
-  const userBases = currentWorkspace.bases || [];
+  const workspaceInitials = (currentWorkspace?.workspace_name || 'W').charAt(0).toUpperCase();
+  const workspaceName = currentWorkspace?.workspace_name || 'Workspace';
+  const workspaceAccess = currentWorkspace?.access || '';
+  const userBases = currentWorkspace?.bases || [];
   const isWorkspaceLevel = workspaceAccess !== '';
+  const roleManagement = isWorkspaceLevel ? (
+    <WorkspaceRoleManagement
+      workspaceName={workspaceName}
+      workspaceInitials={workspaceInitials}
+      selectedRole={selectedRole}
+      roleOptions={roleOptions}
+      onRoleChange={onRoleChange}
+      onRemoveAccess={onRemoveWorkspaceAccess(workspaceName)}
+      isPending={isPending}
+      isLoadingUserAccess={isLoadingUserAccess}
+    />
+  ) : (
+    <BaseRoleManagement
+      userBases={userBases}
+      baseRoles={baseRoles}
+      baseRoleOptions={baseRoleOptions}
+      onRoleChange={onBaseRoleChange}
+      onRemoveAccess={onRemoveBaseAccess}
+      isPending={isPending}
+    />
+  );
 
   return (
     <div className="space-y-4">
-      {isWorkspaceLevel ? (
-        <WorkspaceRoleManagement
-          workspaceName={workspaceName}
-          workspaceInitials={workspaceInitials}
-          selectedRole={selectedRole}
-          roleOptions={roleOptions}
-          onRoleChange={onRoleChange}
-          onRemoveAccess={onRemoveWorkspaceAccess(workspaceName)}
-          isPending={isPending}
-          isLoadingUserAccess={isLoadingUserAccess}
-        />
-      ) : (
-        <BaseRoleManagement
-          userBases={userBases}
-          baseRoles={baseRoles}
-          baseRoleOptions={baseRoleOptions}
-          onRoleChange={onBaseRoleChange}
-          onRemoveAccess={onRemoveBaseAccess}
-          isPending={isPending}
-        />
-      )}
+      {roleManagement}
     </div>
   );
 });
@@ -239,27 +334,20 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   const userRole = useUserRole();
   const { user: currentUser } = useAuth();
   const currentUserId = currentUser?.id || sessionStorage.getItem('user_id') || localStorage.getItem('user_id');
+  const hasAdminRole = userRole.hasAdminRole();
+  const userIdForAccess = editMode && memberToEdit ? memberToEdit : null;
   
   // Fetch current user's workspace access to determine their role in THIS workspace
   const { data: currentUserWorkspaceAccess } = useUserRolesAndAccess(currentUserId || null);
   
   // Check if current user is maintainer in this workspace (not owner/coowner at system level)
-  const isMaintainerOnly = React.useMemo(() => {
-    // If system owner or co-owner, they can assign any role
-    if (userRole.hasAdminRole()) return false;
-    
-    // Check workspace-specific role
-    if (currentUserWorkspaceAccess && Array.isArray(currentUserWorkspaceAccess) && workspaceId) {
-      const workspace = currentUserWorkspaceAccess.find((ws: any) => ws.workspace_id === workspaceId);
-      if (workspace?.access === 'maintainer') {
-        return true; // User is maintainer in this workspace
-      }
-    }
-    return false;
-  }, [userRole, currentUserWorkspaceAccess, workspaceId]);
+  const isMaintainerOnly = React.useMemo(
+    () => getIsMaintainerOnly(hasAdminRole, currentUserWorkspaceAccess, workspaceId),
+    [hasAdminRole, currentUserWorkspaceAccess, workspaceId]
+  );
   
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const defaultRole = isMaintainerOnly ? 'base-member' : 'maintainer';
+  const defaultRole = getDefaultRole(isMaintainerOnly);
   const [selectedRole, setSelectedRole] = useState<string>(defaultRole);
   const [selectedBases, setSelectedBases] = useState<string[]>([]);
   const [baseSelectionType, setBaseSelectionType] = useState<'all_bases' | 'specific_base'>('all_bases');
@@ -272,7 +360,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   const tenantUsersQuery = useGetUsersForAssign();
   const workspaceBasesQuery = useWorkspaceBases(workspaceId);
   // Fetch user roles and access when in edit mode - using same API as UserTable
-  const { data: userRolesAndAccessData, isLoading: isLoadingUserAccess } = useUserRolesAndAccess(editMode && memberToEdit ? memberToEdit : null);
+  const { data: userRolesAndAccessData, isLoading: isLoadingUserAccess } = useUserRolesAndAccess(userIdForAccess);
 
   // Conditionally fetch members based on context
   // If baseId is provided, fetch base members; otherwise fetch workspace members
@@ -280,80 +368,33 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   const baseMembersQuery = useBaseMembers(baseId || '');
 
   const toast = useToast();
+  const isBulkPending = bulkAddMembersMutation.isPending;
+  const isRemoveWorkspacePending = removeUserFromWorkspaceMutation.isPending;
+  const isRemoveBasePending = removeUserFromBaseMutation.isPending;
+  const isBusy = isBulkPending || isRemoveWorkspacePending || isRemoveBasePending;
 
   const tenantUsers = tenantUsersQuery.data || [];
   const basesData = (workspaceBasesQuery.data as any)?.data || (workspaceBasesQuery.data as any) || [];
-  const bases = Array.isArray(basesData) ? basesData : [];
+  const bases = ensureArray(basesData);
 
   // Get existing member user IDs to filter them out
   // If baseId is provided, filter base members; otherwise filter workspace members
-  const existingMemberUserIds = React.useMemo(() => {
-    if (baseId) {
-      // Filter base members when called from base level
-      const baseData = baseMembersQuery.data as any;
-      if (!baseData?.data) return [];
-      const membersData = Array.isArray(baseData.data)
-        ? baseData.data
-        : [];
-      return membersData.map((member: any) => member.user_id || member.id).filter(Boolean);
-    } else {
-      // Filter workspace members when called from workspace level
-      const workspaceData = workspaceMembersQuery.data as any;
-      if (!workspaceData?.data) return [];
-      const membersData = Array.isArray(workspaceData.data)
-        ? workspaceData.data
-        : [];
-      return membersData.map((member: any) => member.user_id || member.id).filter(Boolean);
-    }
-  }, [baseId, baseMembersQuery.data, workspaceMembersQuery.data]);
+  const existingMemberUserIds = React.useMemo(
+    () => getExistingMemberUserIds(baseId, baseMembersQuery.data, workspaceMembersQuery.data),
+    [baseId, baseMembersQuery.data, workspaceMembersQuery.data]
+  );
 
   // Create dropdown options from users, showing only active users and excluding current user, admin users, and existing members
-  const userDropdownOptions: MultiSelectTagsOption[] = useMemo(() => {
-    return tenantUsers
-      .filter((user: any) => {
-        // Only show active users (status === 'active' && email_verified === true)
-        const isActive = user.status?.toLowerCase() === 'active' && user.email_verified === true;
-        if (!isActive) return false;
-
-        // Exclude current user
-        if (user.id === currentUserId) return false;
-        // Exclude owner users
-        if (user.roles === 'owner') return false;
-        // Exclude users who are already members (workspace or base, depending on context)
-        if (existingMemberUserIds.includes(user.id)) return false;
-        return true;
-      })
-      .map((user: any) => ({
-        label: user.display_name || user.email || 'Unknown User',
-        value: user.id,
-        description: user.email,
-      }));
-  }, [tenantUsers, currentUserId, existingMemberUserIds]);
+  const userDropdownOptions: MultiSelectTagsOption[] = useMemo(
+    () => getUserDropdownOptions(tenantUsers, currentUserId, existingMemberUserIds),
+    [tenantUsers, currentUserId, existingMemberUserIds]
+  );
 
   // Role options - workspace-related only for workspace context
-  const roleOptions = React.useMemo(() => {
-    // If current user is maintainer only, they can only assign base-level roles
-    if (isMaintainerOnly) {
-      return [
-        { label: 'Base Member', value: 'base-member' },
-        { label: 'Base Read Only', value: 'base-read' },
-      ];
-    }
-    // In edit mode for admin, show only workspace-level roles
-    if (editMode) {
-      return [
-        { label: 'Workspace Maintainer', value: 'maintainer' },
-        { label: 'Workspace Read Only', value: 'workspace-read' },
-      ];
-    }
-    // In add mode for admin, show all roles - workspace roles first, then base roles
-    return [
-      { label: 'Workspace Maintainer', value: 'maintainer' },
-      { label: 'Workspace Read Only', value: 'workspace-read' },
-      { label: 'Base Member', value: 'base-member' },
-      { label: 'Base Read Only', value: 'base-read' },
-    ];
-  }, [editMode, isMaintainerOnly]);
+  const roleOptions = React.useMemo(
+    () => getRoleOptions(isMaintainerOnly, editMode),
+    [editMode, isMaintainerOnly]
+  );
 
   // Base role options - constant to avoid recreating
   const baseRoleOptions = React.useMemo(() => [
@@ -369,9 +410,34 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
     ];
   }, []);
 
-  // Check if role allows base selection
-  const roleAllowsBaseSelection = (role: string): boolean => {
-    return role === 'base-member' || role === 'base-read';
+  const showRoleSection = !editMode && selectedUserIds.length > 0;
+  const showBaseSelection = !editMode && selectedUserIds.length > 0 && roleAllowsBaseSelection(selectedRole);
+  const showBasesList = showBaseSelection && baseSelectionType === 'specific_base';
+  const isFooterDisabled = isBusy
+    || (!editMode && selectedUserIds.length === 0)
+    || (!editMode && baseSelectionType === 'specific_base' && selectedBases.length === 0)
+    || (editMode && isLoadingUserAccess);
+  const footerLabel = getFooterLabel(isBusy, editMode);
+  const missingWorkspaceCopy = getMissingWorkspaceCopy(editMode);
+  const mainHeaderCopy = getMainHeaderCopy(editMode);
+  const mainHeaderIcon = getMainHeaderIcon(editMode);
+
+  const handleRoleChange = (value: string | string[]) => {
+    const role = Array.isArray(value) ? value[0] : value;
+    if (typeof role !== 'string') return;
+    setSelectedRole(role);
+    if (!roleAllowsBaseSelection(role)) {
+      setBaseSelectionType('all_bases');
+      setSelectedBases([]);
+    }
+  };
+
+  const handleBaseSelectionChange = (value: string | string[]) => {
+    const selectionType = (Array.isArray(value) ? value[0] : value) as 'all_bases' | 'specific_base';
+    setBaseSelectionType(selectionType);
+    if (selectionType === 'all_bases') {
+      setSelectedBases([]);
+    }
   };
 
   // Helper function to extract role from workspace access
@@ -422,7 +488,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   // Helper function to initialize add mode data
   const initializeAddModeData = React.useCallback(() => {
     setSelectedUserIds([]);
-    const defaultRole = isMaintainerOnly ? 'base-member' : 'maintainer';
+    const defaultRole = getDefaultRole(isMaintainerOnly);
     setSelectedRole(defaultRole);
     setSelectedBases([]);
     setBaseSelectionType('all_bases');
@@ -646,9 +712,15 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  function handleModalKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Escape') {
       onClose();
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleModalKeyDown(e);
     }
   };
 
@@ -692,31 +764,175 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   }, [memberToEdit, removeUserFromBaseMutation, toast, onSuccess]);
 
   // Handler for removing workspace access - extracted to reduce complexity
-  const handleRemoveWorkspaceAccess = React.useCallback((workspaceName: string) => {
-    return async () => {
-      if (!globalThis.confirm(`Are you sure you want to remove access to "${workspaceName}"?`)) {
+  const removeWorkspaceAccess = React.useCallback(async (workspaceName: string) => {
+    if (!globalThis.confirm(`Are you sure you want to remove access to "${workspaceName}"?`)) {
+      return;
+    }
+
+    try {
+      if (!memberToEdit) {
+        toast.error('User ID not found');
         return;
       }
 
-      try {
-        if (!memberToEdit) {
-          toast.error('User ID not found');
-          return;
-        }
+      await removeUserFromWorkspaceMutation.mutateAsync({
+        workspaceId,
+        user_id: memberToEdit
+      });
 
-        await removeUserFromWorkspaceMutation.mutateAsync({
-          workspaceId,
-          user_id: memberToEdit
-        });
-
-        toast.success('Workspace access removed successfully');
-        onClose();
-        onSuccess?.();
-      } catch (error: any) {
-        toast.error(error?.message || 'Failed to remove workspace access');
-      }
-    };
+      toast.success('Workspace access removed successfully');
+      onClose();
+      onSuccess?.();
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to remove workspace access');
+    }
   }, [memberToEdit, workspaceId, removeUserFromWorkspaceMutation, toast, onClose, onSuccess]);
+
+  const handleRemoveWorkspaceAccess = React.useCallback(
+    (workspaceName: string) => async () => {
+      await removeWorkspaceAccess(workspaceName);
+    },
+    [removeWorkspaceAccess]
+  );
+
+  const handleToggleBaseSelection = (baseId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedBases([...selectedBases, baseId]);
+      return;
+    }
+    setSelectedBases(selectedBases.filter(id => id !== baseId));
+  };
+
+  const renderBasesListContent = () => {
+    if (bases.length === 0) {
+      return (
+        <div className="text-center py-4 text-sm text-gray-500">
+          No bases available in this workspace
+        </div>
+      );
+    }
+
+    return bases.map((base: any) => (
+      <label
+        key={base.id}
+        className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-xl cursor-pointer"
+      >
+        <input
+          type="checkbox"
+          checked={selectedBases.includes(base.id)}
+          onChange={(e) => handleToggleBaseSelection(base.id, e.target.checked)}
+          className="checkbox-primary-brand"
+        />
+        <span className="text-sm text-gray-700 flex-1">
+          {base.title || base.name || 'Untitled Base'}
+        </span>
+        {selectedBases.includes(base.id) && (
+          <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+        )}
+      </label>
+    ));
+  };
+
+  const renderEditModeSection = () => (
+    <EditModeUI
+      userRolesAndAccessData={userRolesAndAccessData}
+      workspaceId={workspaceId}
+      selectedRole={selectedRole}
+      baseRoles={baseRoles}
+      roleOptions={roleOptions}
+      baseRoleOptions={baseRoleOptions}
+      onRoleChange={setSelectedRole}
+      onRemoveWorkspaceAccess={handleRemoveWorkspaceAccess}
+      onBaseRoleChange={handleBaseRoleChange}
+      onRemoveBaseAccess={handleRemoveBaseAccess}
+      isPending={isBusy}
+      isLoadingUserAccess={isLoadingUserAccess}
+    />
+  );
+
+  const renderAddModeSections = () => (
+    <>
+      {/* Select Member Section */}
+      <div>
+        <label 
+          htmlFor="assign-workspace-select-member"
+          id="assign-workspace-select-member-label"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
+          Select Member
+        </label>
+        <MultiSelectTags
+          id="assign-workspace-select-member"
+          aria-labelledby="assign-workspace-select-member-label"
+          options={userDropdownOptions}
+          value={selectedUserIds}
+          onChange={(newValue) => setSelectedUserIds(newValue as string[])}
+          placeholder="Select users to assign"
+          searchPlaceholder="Search users..."
+          disabled={isBulkPending}
+        />
+      </div>
+
+      {/* Select Role Section */}
+      {showRoleSection && (
+        <div>
+          <AdvancedDropdown
+            label="Select Role"
+            options={roleOptions}
+            value={selectedRole}
+            onChange={handleRoleChange}
+            placeholder="Select a role"
+            disabled={isBulkPending}
+          />
+        </div>
+      )}
+
+      {/* Select Base Section - Only show for base-specific roles in add mode */}
+      {showBaseSelection && (
+        <div>
+          <AdvancedDropdown
+            label="Select Base"
+            options={baseSelectionOptions}
+            value={baseSelectionType}
+            onChange={handleBaseSelectionChange}
+            placeholder="Select base selection type"
+            disabled={isBulkPending || (editMode && isLoadingUserAccess)}
+          />
+        </div>
+      )}
+
+      {/* Bases List (when Specific Base is selected) - Only in add mode */}
+      {showBasesList && (
+        <div>
+          <div className="block text-sm font-medium text-gray-700 mb-2">Bases</div>
+          <div className="space-y-2 max-h-48 overflow-y-auto border rounded-xl p-3">
+            {renderBasesListContent()}
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const renderModalBody = () => {
+    if (editMode && isLoadingUserAccess) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
+            <p className="text-primary font-medium">Loading member details...</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        {editMode ? renderEditModeSection() : renderAddModeSections()}
+      </div>
+    );
+  };
+
+  const primaryAction = editMode ? handleUpdateRoles : handleAssignUser;
 
   if (!isOpen) return null;
 
@@ -740,10 +956,10 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-primary">
-                  {editMode ? 'Edit Member Access' : 'Assign User to Workspace'}
+                  {missingWorkspaceCopy.title}
                 </h2>
                 <p className="text-sm text-secondary">
-                  {editMode ? 'Update member access level and base permissions' : 'Grant users access to this workspace'}
+                  {missingWorkspaceCopy.subtitle}
                 </p>
               </div>
             </div>
@@ -775,24 +991,20 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
       <div //NOSONAR
         className="bg-modal !max-w-5xl !p-0 flex flex-col h-[90vh] max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            onClose();
-          }
-        }}
+        onKeyDown={handleModalKeyDown}
       >
         {/* Fixed Header */}
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-              {editMode ? <Edit className="w-5 h-5 text-green-600" /> : <UserPlus className="w-5 h-5 text-green-600" />}
+              {mainHeaderIcon}
             </div>
             <div>
               <h2 className="text-xl font-semibold text-primary">
-                {editMode ? 'Manage Role' : 'Add Member'}
+                {mainHeaderCopy.title}
               </h2>
               <p className="text-sm text-secondary">
-                {editMode ? 'Manage what members can access on this project' : 'Add member to collaborate on this project'}
+                {mainHeaderCopy.subtitle}
               </p>
             </div>
           </div>
@@ -808,139 +1020,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto min-h-0">
           <div className="p-4 lg:p-6">
-            {editMode && isLoadingUserAccess ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
-                  <p className="text-primary font-medium">Loading member details...</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {editMode ? (
-                  <EditModeUI
-                    userRolesAndAccessData={userRolesAndAccessData}
-                    workspaceId={workspaceId}
-                    selectedRole={selectedRole}
-                    baseRoles={baseRoles}
-                    roleOptions={roleOptions}
-                    baseRoleOptions={baseRoleOptions}
-                    onRoleChange={setSelectedRole}
-                    onRemoveWorkspaceAccess={handleRemoveWorkspaceAccess}
-                    onBaseRoleChange={handleBaseRoleChange}
-                    onRemoveBaseAccess={handleRemoveBaseAccess}
-                    isPending={bulkAddMembersMutation.isPending || removeUserFromWorkspaceMutation.isPending || removeUserFromBaseMutation.isPending}
-                    isLoadingUserAccess={isLoadingUserAccess}
-                  />
-                ) : (
-                  // Add Mode: Original UI
-                  <>
-                    {/* Select Member Section */}
-                    <div>
-                      <label 
-                        htmlFor="assign-workspace-select-member"
-                        id="assign-workspace-select-member-label"
-                        className="block text-sm font-medium text-gray-700 mb-2"
-                      >
-                        Select Member
-                      </label>
-                      <MultiSelectTags
-                        id="assign-workspace-select-member"
-                        aria-labelledby="assign-workspace-select-member-label"
-                        options={userDropdownOptions}
-                        value={selectedUserIds}
-                        onChange={(newValue) => setSelectedUserIds(newValue as string[])}
-                        placeholder="Select users to assign"
-                        searchPlaceholder="Search users..."
-                        disabled={bulkAddMembersMutation.isPending}
-                      />
-                    </div>
-
-                    {/* Select Role Section */}
-                    {selectedUserIds.length > 0 && (
-                      <div>
-                        <AdvancedDropdown
-                          label="Select Role"
-                          options={roleOptions}
-                          value={selectedRole}
-                          onChange={(value) => {
-                            const role = value as string;
-                            setSelectedRole(role);
-                            // If role is not base-specific, reset base selection
-                            if (!roleAllowsBaseSelection(role)) {
-                              setBaseSelectionType('all_bases');
-                              setSelectedBases([]);
-                            }
-                          }}
-                          placeholder="Select a role"
-                          disabled={bulkAddMembersMutation.isPending}
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {/* Select Base Section - Only show for base-specific roles in add mode, or in edit mode if role allows */}
-                {(!editMode && selectedUserIds.length > 0 && roleAllowsBaseSelection(selectedRole)) && (
-                  <div>
-                    <AdvancedDropdown
-                      label="Select Base"
-                      options={baseSelectionOptions}
-                      value={baseSelectionType}
-                      onChange={(value) => {
-                        const selectionType = value as 'all_bases' | 'specific_base';
-                        setBaseSelectionType(selectionType);
-                        if (selectionType === 'all_bases') {
-                          setSelectedBases([]);
-                        }
-                      }}
-                      placeholder="Select base selection type"
-                      disabled={bulkAddMembersMutation.isPending || (editMode && isLoadingUserAccess)}
-                    />
-                  </div>
-                )}
-
-                {/* Bases List (when Specific Base is selected) - Only in add mode */}
-                {!editMode && selectedUserIds.length > 0 && roleAllowsBaseSelection(selectedRole) && baseSelectionType === 'specific_base' && (
-                  <div>
-                    <div className="block text-sm font-medium text-gray-700 mb-2">Bases</div>
-                    <div className="space-y-2 max-h-48 overflow-y-auto border rounded-xl p-3">
-                      {bases.length > 0 ? (
-                        bases.map((base: any) => (
-                          <label
-                            key={base.id}
-                            className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-xl cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedBases.includes(base.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedBases([...selectedBases, base.id]);
-                                } else {
-                                  setSelectedBases(selectedBases.filter(id => id !== base.id));
-                                }
-                              }}
-                              className="checkbox-primary-brand"
-                            />
-                            <span className="text-sm text-gray-700 flex-1">
-                              {base.title || base.name || 'Untitled Base'}
-                            </span>
-                            {selectedBases.includes(base.id) && (
-                              <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                            )}
-                          </label>
-                        ))
-                      ) : (
-                        <div className="text-center py-4 text-sm text-gray-500">
-                          No bases available in this workspace
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {renderModalBody()}
           </div>
         </div>
 
@@ -949,36 +1029,18 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
           <button
             type="button"
             onClick={onClose}
-            disabled={bulkAddMembersMutation.isPending}
+            disabled={isBulkPending}
             className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
           >
             Cancel
           </button>
           <button
-            onClick={editMode ? handleUpdateRoles : handleAssignUser}
-            disabled={
-              bulkAddMembersMutation.isPending ||
-              removeUserFromWorkspaceMutation.isPending ||
-              (!editMode && selectedUserIds.length === 0) ||
-              (!editMode && baseSelectionType === 'specific_base' && selectedBases.length === 0) ||
-              (editMode && isLoadingUserAccess)
-            }
+            onClick={primaryAction}
+            disabled={isFooterDisabled}
             className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
-            {(bulkAddMembersMutation.isPending || removeUserFromWorkspaceMutation.isPending) && <Loader2 size={16} className="animate-spin" />}
-            {(() => {
-              const isPending = bulkAddMembersMutation.isPending || removeUserFromWorkspaceMutation.isPending;
-              if (isPending) {
-                if (editMode) {
-                  return 'Updating...';
-                }
-                return 'Adding...';
-              }
-              if (editMode) {
-                return 'Update';
-              }
-              return 'Add';
-            })()}
+            {isBusy && <Loader2 size={16} className="animate-spin" />}
+            {footerLabel}
           </button>
         </div>
       </div>

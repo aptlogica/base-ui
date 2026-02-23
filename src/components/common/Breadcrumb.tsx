@@ -659,7 +659,7 @@ const Breadcrumb: React.FC = () => {
             )}
             <div className="relative" ref={currentRef}>
               <button
-                className="flex items-center gap-1.5 cursor-pointer rounded px-2 py-1 transition-colors hover:bg-gray-100 group border-none bg-transparent"
+                className="flex items-center gap-1.5 cursor-pointer rounded-lg px-2 py-1 transition-colors hover:bg-gray-100 group border-none bg-transparent"
                 onClick={(e) => handleSegmentClick(e, item.type)}
               >
                 {item.icon}

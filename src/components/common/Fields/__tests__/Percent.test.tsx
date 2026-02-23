@@ -26,7 +26,7 @@ describe('Percent Component', () => {
 
         it('should display current value', () => {
             render(<Percent value={75.5} onChange={mockOnChange} />);
-            expect(screen.getByText('75.5')).toBeInTheDocument();
+            expect(screen.getByText('75.5%')).toBeInTheDocument();
         });
 
         it('should display placeholder when value is null', () => {
@@ -65,7 +65,7 @@ describe('Percent Component', () => {
         it('should enter edit mode on single click by default (allowEdit=true)', async () => {
             render(<Percent value={50} onChange={mockOnChange} allowEdit={true} />);
 
-            const displayValue = screen.getByText('50');
+            const displayValue = screen.getByText('50%');
             fireEvent.click(displayValue);
 
             const input = await screen.findByRole('textbox');
@@ -76,7 +76,7 @@ describe('Percent Component', () => {
         it('should enter edit mode on double click when allowEdit is false', async () => {
             render(<Percent value={50} onChange={mockOnChange} allowEdit={false} />);
 
-            const displayValue = screen.getByText('50');
+            const displayValue = screen.getByText('50%');
 
             // Simulate double click using fireEvent since useClickHandler uses a timer
             fireEvent.click(displayValue);
@@ -89,7 +89,7 @@ describe('Percent Component', () => {
         it('should not enter edit mode when disabled', () => {
             render(<Percent value={50} onChange={mockOnChange} disabled={true} />);
 
-            const displayValue = screen.getByText('50');
+            const displayValue = screen.getByText('50%');
             fireEvent.click(displayValue);
 
             expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
@@ -98,7 +98,7 @@ describe('Percent Component', () => {
         it('should not enter edit mode when readOnly', () => {
             render(<Percent value={50} onChange={mockOnChange} readOnly={true} />);
 
-            const displayValue = screen.getByText('50');
+            const displayValue = screen.getByText('50%');
             fireEvent.click(displayValue);
 
             expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
@@ -122,7 +122,7 @@ describe('Percent Component', () => {
         it('should focus and select text when entering edit mode', async () => {
             render(<Percent value={12.3} onChange={mockOnChange} />);
 
-            const display = screen.getByText('12.3');
+            const display = screen.getByText('12.3%');
             fireEvent.click(display);
 
             const input = await screen.findByRole('textbox');
@@ -137,7 +137,7 @@ describe('Percent Component', () => {
         it('should trigger onChange with rounded value (1 decimal) on blur', async () => {
             render(<Percent value={10} onChange={mockOnChange} />);
 
-            fireEvent.click(screen.getByText('10'));
+            fireEvent.click(screen.getByText('10%'));
             const input = await screen.findByRole('textbox');
 
             await userEvent.clear(input);
@@ -152,7 +152,7 @@ describe('Percent Component', () => {
         it('should set value to null when input is empty on blur', async () => {
             render(<Percent value={10} onChange={mockOnChange} />);
 
-            fireEvent.click(screen.getByText('10'));
+            fireEvent.click(screen.getByText('10%'));
             const input = await screen.findByRole('textbox');
 
             await userEvent.clear(input);
@@ -188,7 +188,7 @@ describe('Percent Component', () => {
                 if (inputAfter) {
                     expect(inputAfter).toHaveValue('50');
                 } else {
-                    expect(screen.getByText('50')).toBeInTheDocument();
+                    expect(screen.getByText('50%')).toBeInTheDocument();
                 }
             });
         });
@@ -196,7 +196,7 @@ describe('Percent Component', () => {
         it('should reset to previous valid value if input is < 0', async () => {
             render(<Percent value={50} onChange={mockOnChange} />);
 
-            fireEvent.click(screen.getByText('50'));
+            fireEvent.click(screen.getByText('50%'));
             const input = await screen.findByRole('textbox');
 
             await userEvent.clear(input);
@@ -227,7 +227,7 @@ describe('Percent Component', () => {
         it('should not trigger onChange if value did not change', async () => {
             render(<Percent value={50} onChange={mockOnChange} />);
 
-            fireEvent.click(screen.getByText('50'));
+            fireEvent.click(screen.getByText('50%'));
             const input = await screen.findByRole('textbox');
 
             fireEvent.blur(input);
@@ -288,11 +288,11 @@ describe('Percent Component', () => {
     describe('External Props Synchronization', () => {
         it('should update local value when external value changes', async () => {
             const { rerender } = render(<Percent value={10} onChange={mockOnChange} />);
-            expect(screen.getByText('10')).toBeInTheDocument();
+            expect(screen.getByText('10%')).toBeInTheDocument();
 
             rerender(<Percent value={20} onChange={mockOnChange} />);
             await waitFor(() => {
-                expect(screen.getByText('20')).toBeInTheDocument();
+                expect(screen.getByText('20%')).toBeInTheDocument();
             });
         });
 
@@ -304,7 +304,7 @@ describe('Percent Component', () => {
                     config={{ defaultValue: 42 }}
                 />
             );
-            expect(screen.getByText('42')).toBeInTheDocument();
+            expect(screen.getByText('42%')).toBeInTheDocument();
         });
     });
 
@@ -319,7 +319,7 @@ describe('Percent Component', () => {
         it('should show error red border on validation error (during editing)', async () => {
             render(<Percent value={50} onChange={mockOnChange} required={true} />);
 
-            fireEvent.click(screen.getByText('50'));
+            fireEvent.click(screen.getByText('50%'));
             const input = await screen.findByRole('textbox');
 
             await userEvent.clear(input);

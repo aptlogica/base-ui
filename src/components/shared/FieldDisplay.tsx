@@ -1,7 +1,7 @@
+/* eslint-disable sonarjs/cognitive-complexity */
 import React from 'react';
 import {
   SingleLineText,
-  Number,
   DateField,
   Checkbox,
   Email,
@@ -28,13 +28,11 @@ import {
   Formula,
   Lookup,
   Attachment,
+  NumberField,
 } from '../common/Fields';
 import { normalizeFieldType } from '../../utils/fieldType';
 
 interface FieldDisplayProps {
-  /**
-   * Field/column configuration object
-   */
   field: {
     id?: string;
     title?: string;
@@ -46,36 +44,14 @@ interface FieldDisplayProps {
     config?: any;
     model_id?: string; // For links field
   };
-  /**
-   * Value to display
-   */
   value: any;
-  /**
-   * Optional current row ID (for links field)
-   */
   currentRowId?: number;
-  /**
-   * Optional className for wrapper
-   */
   className?: string;
-  /**
-   * Optional row data for formula evaluation
-   */
   rowData?: Record<string, any>;
-  /**
-   * Optional all columns for formula field name mapping
-   */
   allColumns?: any[];
-  /**
-   * Optional flag to hide action buttons in fields
-   */
   hideActionButtons?: boolean;
 }
 
-/**
- * Reusable component to display field values using the same field components as Grid view
- * This ensures consistent formatting across all views (Gallery, Kanban, Calendar, Gantt, etc.)
- */
 export const FieldDisplay: React.FC<FieldDisplayProps> = ({
   field,
   value,
@@ -211,7 +187,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       break;
     case 'number':
       renderedComponent = (
-        <Number
+        <NumberField
           {...commonProps}
           config={parsedConfig}
           allowEdit={false}

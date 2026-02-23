@@ -8,6 +8,56 @@ import { useNavigationActions } from '../../hooks/useNavigationActions';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
 import { DeleteWorkspaceModal } from './DeleteWorkspaceModal';
 
+const getControlState = (
+  controlledName: string | undefined,
+  setControlledName: ((v: string) => void) | undefined,
+  controlledDescription: string | undefined,
+  name: string,
+  description: string
+) => {
+  const isControlled = controlledName !== undefined
+    && setControlledName !== undefined
+    && typeof setControlledName === 'function';
+
+  return {
+    isControlled,
+    effectiveName: isControlled ? (controlledName || '') : name,
+    effectiveDescription: isControlled ? (controlledDescription || '') : description,
+  };
+};
+
+const getNameState = (
+  effectiveName: string,
+  validationError: string,
+  error: string,
+  controlledError: string | undefined,
+  isControlled: boolean,
+  submitting: boolean
+) => {
+  const trimmedName = effectiveName.trim();
+  const nameLength = trimmedName.length;
+  const hasNameError = !!(validationError || (!isControlled && error) || (isControlled && controlledError));
+  const nameErrorText = validationError || (isControlled ? controlledError : error) || '';
+  const isSubmitDisabled = submitting || !!validationError || nameLength < 3;
+
+  return {
+    nameLength,
+    hasNameError,
+    nameErrorText,
+    isSubmitDisabled,
+  };
+};
+
+const getHeaderSubtitle = (title: string) => (
+  title === 'Create Workspace'
+    ? 'Start organizing your workspace'
+    : 'Update workspace details'
+);
+
+const getShowInformationTab = (isEditMode: boolean, activeTab: 'information' | 'dangerzone') => (
+  !isEditMode || activeTab === 'information'
+);
+
 interface CreateWorkspaceModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -44,6 +94,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   const toast = useToast();
   const { handleWorkspaceDeletion } = useNavigationActions();
   const { canDeleteWorkspace } = useWorkspaceAccess(currentWorkspaceId || '');
+  const submitting = internalMutation.isPending;
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -53,8 +104,25 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const isEditMode = !!currentWorkspaceId;
-  const isControlled = controlledName !== undefined && setControlledName !== undefined && typeof setControlledName === 'function';
-  
+  const canDelete = canDeleteWorkspace();
+  const { isControlled, effectiveName, effectiveDescription } = getControlState(
+    controlledName,
+    setControlledName,
+    controlledDescription,
+    name,
+    description
+  );
+  const { nameLength, hasNameError, nameErrorText, isSubmitDisabled } = getNameState(
+    effectiveName,
+    validationError,
+    error,
+    controlledError,
+    isControlled,
+    submitting
+  );
+  const headerSubtitle = getHeaderSubtitle(title);
+  const showInformationTab = getShowInformationTab(isEditMode, activeTab);
+
   // Get existing workspaces for validation
   const existingWorkspaces = Array.isArray(workspacesData) ? workspacesData : [];
   const currentWorkspace = existingWorkspaces.find((ws: any) => ws.id === currentWorkspaceId);
@@ -84,7 +152,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
       setDescription(controlledDescription || '');
     }
   }, [controlledName, controlledDescription, isControlled]);
-  
+
   // Validate name on change
   useEffect(() => {
     if (name.trim()) {
@@ -95,13 +163,12 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
     }
   }, [name, existingWorkspaces, currentWorkspaceId]);
 
-  const submitting = internalMutation.isPending;
 
   // Get form values - extracted to reduce complexity
   const getFormValues = () => {
     return {
-      title: isControlled ? (controlledName || '') : name,
-      description: isControlled ? (controlledDescription || '') : description,
+      title: effectiveName,
+      description: effectiveDescription,
     };
   };
 
@@ -144,7 +211,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   };
 
   // Submit workspace - extracted to reduce complexity
-  const submitWorkspace = async (e:React.SyntheticEvent<HTMLFormElement> | undefined, title: string, desc: string) => {
+  const submitWorkspace = async (e: React.SyntheticEvent<HTMLFormElement> | undefined, title: string, desc: string) => {
     if (controlledSubmit) {
       await controlledSubmit(e);
     } else {
@@ -197,10 +264,10 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   const handleConfirmDelete = async (wsId: string) => {
     try {
       await deleteWorkspaceMutation.mutateAsync(wsId);
-      
+
       // Use the navigation handler to properly clean up localStorage and navigate
       handleWorkspaceDeletion(wsId);
-      
+
       toast.success('Workspace deleted successfully');
       setShowDeleteConfirm(false);
       onClose();
@@ -231,11 +298,9 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
 
   // Get help icon color class based on validation state - extracted to avoid nested ternary
   const getHelpIconColorClass = (): string => {
-    const hasError = validationError || ((!isControlled && error) || (isControlled && controlledError));
-    if (hasError) {
+    if (hasNameError) {
       return 'text-red-500';
     }
-    const nameLength = isControlled ? (controlledName || '').trim().length : name.trim().length;
     if (nameLength >= 3) {
       return 'text-green-600';
     }
@@ -243,12 +308,35 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   };
 
   // Get list item color class based on name length - extracted to avoid nested ternary
-  const getListItemColorClass = (): string => {
-    const nameLength = isControlled ? (controlledName || '').trim().length : name.trim().length;
-    if (nameLength >= 3) {
-      return 'text-green-600';
+  const getListItemColorClass = (): string => (nameLength >= 3 ? 'text-green-600' : 'text-gray-500');
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue = e.target.value;
+    if (isControlled) {
+      setControlledName?.(nextValue);
+    } else {
+      setName(nextValue);
     }
-    return 'text-gray-500';
+  };
+
+  const handleDescriptionChange = (value: string) => {
+    if (isControlled) {
+      setControlledDescription?.(value);
+    } else {
+      setDescription(value);
+    }
+  };
+
+  const getTabButtonClassName = (tab: 'information' | 'dangerzone') => {
+    if (tab === 'information') {
+      return activeTab === 'information'
+        ? 'border-[var(--color-brand-600)] text-[var(--color-brand-600)]'
+        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
+    }
+
+    return activeTab === 'dangerzone'
+      ? 'border-red-500 text-red-500'
+      : 'border-transparent text-gray-500 hover:text-red-500 hover:border-red-500';
   };
 
   if (!isOpen) return null;
@@ -278,7 +366,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
               </div>
               <div className="min-w-0">
                 <h2 className="text-xl font-semibold text-primary truncate">{title}</h2>
-                <p className="text-sm text-secondary truncate">{title === 'Create Workspace' ? 'Start organizing your workspace' : 'Update workspace details'}</p>
+                <p className="text-sm text-secondary truncate">{headerSubtitle}</p>
               </div>
             </div>
             <button
@@ -299,24 +387,18 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
                   onClick={() => setActiveTab('information')}
                   className={`
                     py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 relative
-                    ${activeTab === 'information'
-                      ? 'border-[var(--color-brand-600)] text-[var(--color-brand-600)]'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }
+                    ${getTabButtonClassName('information')}
                   `}
                 >
                   Information
                 </button>
-                {canDeleteWorkspace() && (
+                {canDelete && (
                   <button
                     type="button"
                     onClick={() => setActiveTab('dangerzone')}
                     className={`
                       py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 relative
-                      ${activeTab === 'dangerzone'
-                        ? 'border-red-500 text-red-500'
-                        : 'border-transparent text-gray-500 hover:text-red-500 hover:border-red-500'
-                      }
+                      ${getTabButtonClassName('dangerzone')}
                     `}
                   >
                     Danger Zone
@@ -327,123 +409,123 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
           )}
 
           {/* Scrollable Content Area */}
-          {activeTab === 'information' || !isEditMode ? (
+          {showInformationTab ? (
             <form id="create-workspace-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
-          <div className="p-4 space-y-4">
-          <div className="space-y-1">
-            <label htmlFor="workspaceName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
-              Workspace Name <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <input
-                id="workspaceName"
-                type="text"
-                value={isControlled ? (controlledName || '') : name}
-                onChange={(e) => (isControlled ? setControlledName?.(e.target.value) : setName(e.target.value))}
-                placeholder="Enter workspace name"
-                className={`field-component field-component-border field-component-focus ${validationError || (!isControlled && error) || (isControlled && controlledError) ? 'border-red-500' : 'border'}`}
-                required
-                minLength={3}
-                maxLength={50}
-                autoFocus
-              />
-              <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
-                <span className="relative inline-block group">
-                  <HelpCircle className={`w-4 h-4 ${getHelpIconColorClass()} cursor-help`} />
-                  <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
-                    <h4 className="font-medium text-primary mb-2">Workspace name requirements:</h4>
-                    <ul className="space-y-1">
-                      <li className={`flex items-center ${getListItemColorClass()}`}>
-                        • Minimum 3 characters
-                      </li>
-                      <li className="flex items-center text-gray-500">
-                        • Must be unique
-                      </li>
-                    </ul>
+              <div className="p-4 space-y-4">
+                <div className="space-y-1">
+                  <label htmlFor="workspaceName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
+                    Workspace Name <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="workspaceName"
+                      type="text"
+                      value={effectiveName}
+                      onChange={handleNameChange}
+                      placeholder="Enter workspace name"
+                      className={`field-component field-component-border field-component-focus ${hasNameError ? 'border-red-500' : 'border'}`}
+                      required
+                      minLength={3}
+                      maxLength={50}
+                      autoFocus
+                    />
+                    <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
+                      <span className="relative inline-block group">
+                        <HelpCircle className={`w-4 h-4 ${getHelpIconColorClass()} cursor-help`} />
+                        <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
+                          <h4 className="font-medium text-primary mb-2">Workspace name requirements:</h4>
+                          <ul className="space-y-1">
+                            <li className={`flex items-center ${getListItemColorClass()}`}>
+                              * Minimum 3 characters
+                            </li>
+                            <li className="flex items-center text-gray-500">
+                              * Must be unique
+                            </li>
+                          </ul>
+                        </div>
+                      </span>
+                    </div>
                   </div>
-                </span>
+
+                  {hasNameError && (
+                    <div className="mt-1 text-sm text-red-600">
+                      <span>{nameErrorText}</span>
+                    </div>
+                  )}
+
+                  <p className="mt-1 text-xs text-gray-500">
+                    {effectiveName.length}/50 characters
+                  </p>
+                </div>
+
+                <MultiLineText
+                  label="Description"
+                  value={effectiveDescription}
+                  onChange={handleDescriptionChange}
+                  placeholder="Enter workspace description"
+                  rows={5}
+                  isBorder={true}
+                />
+
               </div>
-            </div>
-
-            {(validationError || (!isControlled && error) || (isControlled && controlledError)) && (
-              <div className="mt-1 text-sm text-red-600">
-                <span>{validationError || (isControlled ? controlledError : error)}</span>
-              </div>
-            )}
-
-            <p className="mt-1 text-xs text-gray-500">
-              {(isControlled ? (controlledName || '') : name).length}/50 characters
-            </p>
-          </div>
-          
-          <MultiLineText
-            label="Description"
-            value={isControlled ? (controlledDescription || '') : description}
-            onChange={(value) => (isControlled ? setControlledDescription?.(value) : setDescription(value))}
-            placeholder="Enter workspace description"
-            rows={5}
-            isBorder={true}
-          />
-
-          </div>
-        </form>
+            </form>
           ) : (
             /* Danger Tab Content */
             <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
               <div className="p-6 space-y-6">
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">Danger Zone</h2>
-                  {canDeleteWorkspace() && (
-                    <div className="flex items-center justify-between p-4 rounded-xl border border-red-400">
-                      <div className="flex-1">
-                        <h3 className="text-sm font-medium text-gray-900">Delete this workspace and all it's contents.</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          This will permanently remove the workspace and all its contents. This action cannot be undone.
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setShowDeleteConfirm(true)}
-                        className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-2"
-                      >
-                        Delete Workspace
-                      </button>
+                <h2 className="text-lg font-medium text-gray-900 mb-4">Danger Zone</h2>
+                {canDelete && (
+                  <div className="flex items-center justify-between p-4 rounded-xl border border-red-400">
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-gray-900">Delete this workspace and all it's contents.</h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        This will permanently remove the workspace and all its contents. This action cannot be undone.
+                      </p>
                     </div>
-                  )}
+                    <button
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-2"
+                    >
+                      Delete Workspace
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-        {/* Footer - Fixed at Bottom */}
-        {activeTab === 'information' || !isEditMode ? (
-          <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={submitting}
-              className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              form="create-workspace-form"
-              disabled={submitting || !!validationError || !(isControlled ? (controlledName || '').trim().length >= 3 : name.trim().length >= 3)}
-              className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
-            >
-              {submitting && <Loader2 size={16} className="animate-spin" />}
-              {buttonText}
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all text-gray-700"
-            >
-              Close
-            </button>
-          </div>
-        )}
+          {/* Footer - Fixed at Bottom */}
+          {showInformationTab ? (
+            <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={submitting}
+                className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="create-workspace-form"
+                disabled={isSubmitDisabled}
+                className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+              >
+                {submitting && <Loader2 size={16} className="animate-spin" />}
+                {buttonText}
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all text-gray-700"
+              >
+                Close
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

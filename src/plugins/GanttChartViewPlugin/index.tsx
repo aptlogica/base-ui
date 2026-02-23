@@ -72,6 +72,7 @@ const GanttChartViewPlugin: Plugin = {
       return (
         <GanttChart
           tableData={tableData}
+          viewId={viewId}
           onRefresh={() => refresh()}
           actions={{
             addRow,

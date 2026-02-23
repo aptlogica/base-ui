@@ -1,8 +1,4 @@
 /**
- * Date validation utilities for DOB
- */
-
-/**
  * Get yesterday's date in YYYY-MM-DD format
  */
 export function getYesterdayISO(): string {
@@ -39,16 +35,16 @@ export function convertDateToFormat(dateISO: string, targetFormat: string): stri
  * Validate Date of Birth - ensures date is not today or in the future
  */
 export function validateDOB(dob: string, format: string = 'DD-MM-YYYY'): string | null {
-  if (!dob || !dob.trim()) return null;
+  if (!dob?.trim()) return null;
   
   try {
     let dobDate: Date;
     if (format === 'DD-MM-YYYY') {
       const parts = dob.split('-');
       if (parts.length === 3) {
-        const day = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1;
-        const year = parseInt(parts[2], 10);
+        const day = Number.parseInt(parts[0], 10);
+        const month = Number.parseInt(parts[1], 10) - 1;
+        const year = Number.parseInt(parts[2], 10);
         dobDate = new Date(year, month, day);
       } else {
         return 'Please enter a valid date';
@@ -57,7 +53,7 @@ export function validateDOB(dob: string, format: string = 'DD-MM-YYYY'): string 
       dobDate = new Date(dob);
     }
     
-    if (isNaN(dobDate.getTime())) {
+    if (Number.isNaN(dobDate.getTime())) {
       return 'Please enter a valid date';
     }
     
@@ -71,7 +67,7 @@ export function validateDOB(dob: string, format: string = 'DD-MM-YYYY'): string 
     
     return null;
   } catch (error) {
-    return 'Please enter a valid date';
+    return 'Please enter a valid date' + error;
   }
 }
 

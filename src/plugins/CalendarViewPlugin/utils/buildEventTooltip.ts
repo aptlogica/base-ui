@@ -20,6 +20,37 @@ export type BuildEventTooltipOptions = {
   fieldConfig?: FieldConfig[];
 };
 
+const getColumnKey = (col: Column) =>
+  String(col?.columnName ?? col?.name ?? col?.key ?? col?.title ?? '');
+
+const isHiddenField = (col: Column, options: BuildEventTooltipOptions) => {
+  if (!options.fieldConfig || !col.id) return false;
+  const fc = options.fieldConfig.find(fc => String(fc.id) === String(col.id));
+  return !!fc?.isHidden;
+};
+
+const isSystemOrTitleField = (key: string, col: Column) =>
+  key.toLowerCase() === 'title' || !!col?.system;
+
+const isCategoryLikeField = (key: string) => {
+  const lower = key.toLowerCase();
+  return lower.includes('category') || lower.includes('tag') || lower.includes('type');
+};
+
+const getFieldPriority = (col: Column) => {
+  const colType = String(col?.type || col?.uidt || '').toLowerCase();
+  if (colType === 'currency') return 1;
+  if (colType === 'percent') return 2;
+  if (colType === 'email') return 3;
+  if (colType === 'phone') return 4;
+  if (colType === 'url') return 5;
+  if (colType === 'number') return 6;
+  if (colType === 'decimal') return 7;
+  if (colType === 'rating') return 8;
+  if (colType === 'boolean') return 9;
+  return 20;
+};
+
 function formatValue(col: Column, raw: any, formatTime: (t: string) => string): string | null {
   return formatTooltipValue(col, raw, {
     formatTime,
@@ -66,41 +97,24 @@ export function buildEventTooltipLines(args: {
   const visibleFields: Array<{ col: Column; value: string; priority: number }> = [];
 
   (columns || []).forEach(col => {
-    const key = String(col?.columnName ?? col?.name ?? col?.key ?? col?.title ?? '');
+    const key = getColumnKey(col);
     if (!key) return;
 
     // Respect fieldConfig visibility if provided
-    if (options.fieldConfig && col.id) {
-      const fc = options.fieldConfig.find(fc => String(fc.id) === String(col.id));
-      if (fc?.isHidden) return;
-    }
+    if (isHiddenField(col, options)) return;
 
     // Skip title, system fields, and category/tag/type fields (already reflected in title)
-    if (key.toLowerCase() === 'title' || col?.system) return;
-    if (key.toLowerCase().includes('category') || key.toLowerCase().includes('tag') || key.toLowerCase().includes('type')) return;
+    if (isSystemOrTitleField(key, col)) return;
+    if (isCategoryLikeField(key)) return;
 
     const raw = event?.data?.[key] ?? event?.[key];
     const formatted = formatValue(col, raw, options.formatTime);
 
     if (formatted) {
-      const colType = String(col?.type || col?.uidt || '').toLowerCase();
-      let priority = 20; // Default medium/low priority
-
-      // Essential types first (lower number = earlier)
-      if (colType === 'currency') priority = 1;
-      else if (colType === 'percent') priority = 2;
-      else if (colType === 'email') priority = 3;
-      else if (colType === 'phone') priority = 4;
-      else if (colType === 'url') priority = 5;
-      else if (colType === 'number') priority = 6;
-      else if (colType === 'decimal') priority = 7;
-      else if (colType === 'rating') priority = 8;
-      else if (colType === 'boolean') priority = 9;
-
       visibleFields.push({
         col,
         value: formatted,
-        priority,
+        priority: getFieldPriority(col),
       });
     }
   });

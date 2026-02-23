@@ -39,6 +39,30 @@ interface NewColumnModalProps {
   currentTableId?: string; // Add current table ID to exclude from target selection
 }
 
+const getBrowserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+const resolveCheckboxDefault = (config: any) => {
+  if (config.checkboxDefault !== undefined) {
+    return !!config.checkboxDefault;
+  }
+  if (config.defaultValue !== undefined) {
+    return !!config.defaultValue;
+  }
+  return false;
+};
+
+const resolveTimeZoneLabel = (config: any) => {
+  if (config.timeZoneLabel) return config.timeZoneLabel;
+  if (!config.timeZone) return '';
+  return timeZoneOptions.find((o: any) => o.value === config.timeZone)?.label || '';
+};
+
+const getRawTables = (tablesData: any) => {
+  if (Array.isArray(tablesData)) return tablesData;
+  if (Array.isArray(tablesData?.data)) return tablesData.data;
+  return [];
+};
+
 export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields = [], isAddNewColumn = false, isAddNewField = false, excludeRefs = [], currentTableId }: Readonly<NewColumnModalProps>) {
   const [step, setStep] = useState<number | null>(initialValues ? 2 : 1);
   const [fieldName, setFieldName] = useState(initialValues?.title || '');
@@ -102,9 +126,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     // Handle both shapes:
     // 1) direct array
     // 2) StandardResponse => { data: [...] }
-    const rawTables = Array.isArray(tablesData)
-      ? tablesData
-      : (Array.isArray(tablesData?.data) ? tablesData.data : []);
+    const rawTables = getRawTables(tablesData);
 
     // Extract model objects when present, otherwise use table item directly.
     return rawTables
@@ -211,52 +233,69 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   // Add state for json field config
   const [showJsonDefault, setShowJsonDefault] = useState(false);
 
+  const applyNumberConfig = (config: any) => {
+    setShowThousands(config.showThousands || false);
+    setPrecision(config.precision || '1.0');
+  };
+
+  const applyTextConfig = (config: any) => {
+    setRichText(config.richText || false);
+  };
+
+  const applySelectConfig = (config: any, isSingle: boolean) => {
+    setSelectOptions(config.options || []);
+    if (isSingle) {
+      setSingleDefault(config.defaultValue || '');
+    } else {
+      setMultiDefault(config.defaultValue || []);
+    }
+  };
+
+  const applyBooleanConfig = (config: any) => {
+    setCheckboxIcon(config.checkboxIcon || config.icon || 'check');
+    setCheckboxColor(config.checkboxColor || config.color || 'green');
+    setCheckboxDefault(resolveCheckboxDefault(config));
+  };
+
+  const applyFormulaConfig = (config: any) => {
+    setFormulaText(config.formula || '');
+    setFormulaFormatting(config.formatting || {
+      type: 'text' as 'number' | 'currency' | 'percent' | 'duration' | 'date' | 'text',
+      precision: 2,
+      currency: 'USD',
+      dateFormat: 'YYYY-MM-DD'
+    });
+  };
+
+  const applyUserConfig = (config: any) => {
+    setAllowMultipleUsers(config.allowMultiple || false);
+  };
+
+  const applyInitialConfig = (values: any) => {
+    if (!values) return;
+    setDescription(values.description || '');
+    const config = values.config;
+    if (!config) return;
+
+    const fieldType = values.type;
+    const handlers: Record<string, () => void> = {
+      number: () => applyNumberConfig(config),
+      decimal: () => applyNumberConfig(config),
+      text: () => applyTextConfig(config),
+      select: () => applySelectConfig(config, true),
+      multiSelect: () => applySelectConfig(config, false),
+      boolean: () => applyBooleanConfig(config),
+      formula: () => applyFormulaConfig(config),
+      user: () => applyUserConfig(config),
+    };
+
+    handlers[fieldType]?.();
+  };
+
   // Add click outside handlers for dropdowns
   useEffect(() => {
     // Initialize configuration values when in edit mode
-    if (initialValues) {
-      setDescription(initialValues.description || '');
-      if (initialValues.config) {
-        switch (initialValues.type) {
-          case 'number':
-          case 'decimal':
-            setShowThousands(initialValues.config.showThousands || false);
-            setPrecision(initialValues.config.precision || '1.0');
-            break;
-          case 'text':
-            setRichText(initialValues.config.richText || false);
-            break;
-          case 'select':
-          case 'multiSelect':
-            setSelectOptions(initialValues.config.options || []);
-            if (initialValues.type === 'select') {
-              setSingleDefault(initialValues.config.defaultValue || '');
-            } else {
-              setMultiDefault(initialValues.config.defaultValue || []);
-            }
-            break;
-          case 'boolean':
-            // Boolean/checkbox fields: check both saved format (icon/color/defaultValue) and state format (checkboxIcon/checkboxColor/checkboxDefault)
-            setCheckboxIcon(initialValues.config.checkboxIcon || initialValues.config.icon || 'check');
-            setCheckboxColor(initialValues.config.checkboxColor || initialValues.config.color || 'green');
-            setCheckboxDefault(initialValues.config.checkboxDefault === undefined ? (initialValues.config.defaultValue === undefined ? false : !!initialValues.config.defaultValue) : !!initialValues.config.checkboxDefault);
-            break;
-          case 'formula':
-            setFormulaText(initialValues.config.formula || '');
-            setFormulaFormatting(initialValues.config.formatting || {
-              type: 'text' as 'number' | 'currency' | 'percent' | 'duration' | 'date' | 'text',
-              precision: 2,
-              currency: 'USD',
-              dateFormat: 'YYYY-MM-DD'
-            });
-            break;
-          case 'user':
-              setAllowMultipleUsers(initialValues.config.allowMultiple || false);
-            break;
-          // Add more cases for other field types as needed
-        }
-      }
-    }
+    applyInitialConfig(initialValues);
   }, [initialValues]);
 
   useEffect(() => {
@@ -531,7 +570,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         // Boolean/checkbox fields: check both saved format (icon/color/defaultValue) and state format (checkboxIcon/checkboxColor/checkboxDefault)
         setCheckboxIcon(config.checkboxIcon || config.icon || 'check');
         setCheckboxColor(config.checkboxColor || config.color || 'green');
-        setCheckboxDefault(config.checkboxDefault === undefined ? (config.defaultValue === undefined ? false : !!config.defaultValue) : !!config.checkboxDefault);
+        setCheckboxDefault(resolveCheckboxDefault(config));
         setSelectOptions(
           (config.options || config.selectOptions || []).map((o: any) =>
             typeof o === 'string' ? { option: o, color: '' } : { option: o.option, color: o.color || '' }
@@ -557,10 +596,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         setHourFormat(config.hourFormat || '24');
         setDisplayTimeZone(!!config.displayTimeZone);
         setSameTimezone(!!config.sameTimezone);
-        setTimeZone(
-          config.timeZoneLabel ||
-          (config.timeZone ? (timeZoneOptions.find((o: any) => o.value === config.timeZone)?.label || '') : '')
-        );
+        setTimeZone(resolveTimeZoneLabel(config));
         // For datetime: check defaultValue first (where it's saved), then fallback to dateTimeDefault
         if (fieldType === 'datetime') {
           setDateTimeDefault(config.defaultValue || config.dateTimeDefault || '');
@@ -853,10 +889,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     return randomColor;
   };
 
-  function getBrowserTimeZone() {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
-  }
-
   const handleTypeSelect = (type: FieldType) => {
     if (nameError) return;
 
@@ -995,6 +1027,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       dateTimeDefault,
       currencyType,
       currencyLocale,
+      currencyDefault,
       displayAsProgress,
       progressColor,
       percentDefault,
@@ -1215,15 +1248,21 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     isValidPercentInput,
     isLinksFieldEditing,
   });
+  const isCompactAnchor = !isAddNewColumn || fields.length === 0 || fields.length <= 1;
+  const positionClass = isCompactAnchor ? "left-0" : "right-0 translate-x-0";
+  const modalAnchorClass = isAddNewField
+    ? 'bg-modal-backdrop flex items-center justify-center'
+    : `absolute top-full ${positionClass}`;
+
+  const modalWidthClass = selectedType?.key === 'formula' ? 'w-[500px]' : 'w-[416px]';
+
   return (
     <div
       ref={modalRef}
-      className={`${isAddNewField ? 'bg-modal-backdrop flex items-center justify-center'
-        : `absolute top-full ${!isAddNewColumn || fields.length === 0 || fields.length <= 1 ? "left-0" : "right-0 translate-x-0"}`
-        } z-50 transition-all duration-300 ease-in-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
+      className={`${modalAnchorClass} z-50 transition-all duration-300 ease-in-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
         }`}
     >
-      <div className={`relative bg-[var(--color-alpha-white)] min-h-[400px] max-h-[max(70vh,400px)] ${selectedType?.key === 'formula' ? 'w-[500px]' : 'w-[416px]'}  shadow-lg shadow-gray-300 border rounded-xl p-3.5 flex flex-col overflow-hidden`} >
+      <div className={`relative bg-[var(--color-alpha-white)] min-h-[400px] max-h-[max(70vh,400px)] ${modalWidthClass}  shadow-lg shadow-gray-300 border rounded-xl p-3.5 flex flex-col overflow-hidden`} >
         <div className="flex items-center mb-4">
           <span className="text-lg font-semibold text-gray-900 flex-1">
             {initialValues ? 'Edit Field' : 'New Field'}

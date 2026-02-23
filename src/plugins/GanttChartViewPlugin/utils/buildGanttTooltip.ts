@@ -21,6 +21,36 @@ export type BuildGanttTooltipOptions = {
   fieldsToExclude?: string[];
 };
 
+const getColumnKey = (col: Column) => String(col?.column_name || col?.name || col?.key || col?.title || '');
+
+const isSystemOrReservedField = (key: string, col: Column) => {
+  const loweredKey = key.toLowerCase();
+  return loweredKey === 'title' || loweredKey === 'id' || !!col?.system;
+};
+
+const isExcludedField = (col: Column, options: BuildGanttTooltipOptions) =>
+  options.fieldsToExclude?.includes(col?.uidt || '') ?? false;
+
+const isHiddenField = (col: Column, options: BuildGanttTooltipOptions) => {
+  if (!options.fieldConfig) return false;
+  const fieldConfig = options.fieldConfig.find(fc => String(fc.id) === String(col.id));
+  return !!fieldConfig?.isHidden;
+};
+
+const getFieldPriority = (col: Column) => {
+  const colType = String(col?.type || col?.uidt || '').toLowerCase();
+  if (colType === 'currency' || col?.uidt === 'Currency') return 1;
+  if (colType === 'percent' || col?.uidt === 'Percent') return 2;
+  if (colType === 'email' || col?.uidt === 'Email') return 3;
+  if (colType === 'phone' || col?.uidt === 'PhoneNumber') return 4;
+  if (colType === 'url' || col?.uidt === 'URL') return 5;
+  if (colType === 'number' || col?.uidt === 'Number') return 6;
+  if (colType === 'decimal' || col?.uidt === 'Decimal') return 7;
+  if (colType === 'rating' || col?.uidt === 'Rating') return 8;
+  if (colType === 'boolean' || col?.uidt === 'Checkbox') return 9;
+  return 20;
+};
+
 function formatValue(col: Column, raw: any, formatTime: (t: string) => string): string | null {
   return formatTooltipValue(col, raw, {
     formatTime,
@@ -61,44 +91,26 @@ export function buildGanttTooltipLines(args: {
   
   if (task.rawData && typeof task.rawData === 'object') {
     (columns || []).forEach(col => {
-      const key = String(col?.column_name || col?.name || col?.key || col?.title || '');
+      const key = getColumnKey(col);
       if (!key) return;
       
       // Skip if field is in exclude list
-      if (options.fieldsToExclude?.includes(col?.uidt || '')) return;
+      if (isExcludedField(col, options)) return;
       
       // Check if field is visible via fieldConfig
-      if (options.fieldConfig) {
-        const fieldConfig = options.fieldConfig.find(fc => String(fc.id) === String(col.id));
-        if (fieldConfig?.isHidden) return;
-      }
+      if (isHiddenField(col, options)) return;
       
       // Skip title, id, and system fields
-      if (key.toLowerCase() === 'title' || key.toLowerCase() === 'id' || col?.system) return;
+      if (isSystemOrReservedField(key, col)) return;
       
       // Get value from rawData (use rawData[key] only – same mapping as filtering)
       const raw = task.rawData[key];
       const formatted = formatValue(col, raw, options.formatTime);
       
       if (formatted) {
-        const colType = String(col?.type || col?.uidt || '').toLowerCase();
-        let priority = 20; // Default medium/low priority
-        
-        // Essential types get higher priority (lower number = earlier)
-        if (colType === 'currency' || col?.uidt === 'Currency') priority = 1;
-        else if (colType === 'percent' || col?.uidt === 'Percent') priority = 2;
-        else if (colType === 'email' || col?.uidt === 'Email') priority = 3;
-        else if (colType === 'phone' || col?.uidt === 'PhoneNumber') priority = 4;
-        else if (colType === 'url' || col?.uidt === 'URL') priority = 5;
-        else if (colType === 'number' || col?.uidt === 'Number') priority = 6;
-        else if (colType === 'decimal' || col?.uidt === 'Decimal') priority = 7;
-        else if (colType === 'rating' || col?.uidt === 'Rating') priority = 8;
-        else if (colType === 'boolean' || col?.uidt === 'Checkbox') priority = 9;
-        // Other types (dates, short text, etc.) keep default priority
-
         visibleFields.push({
           value: formatted,
-          priority,
+          priority: getFieldPriority(col),
         });
       }
     });

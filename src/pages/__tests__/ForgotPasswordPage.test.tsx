@@ -116,7 +116,7 @@ describe('ForgotPasswordPage', () => {
       await user.click(emailInput);
       await user.tab();
 
-      expect(screen.getByText('This field is required')).toBeInTheDocument();
+      expect(screen.getByText('Email field is required')).toBeInTheDocument();
     });
 
     it('should show invalid email error for malformed email', async () => {
@@ -140,11 +140,11 @@ describe('ForgotPasswordPage', () => {
       await user.click(emailInput);
       await user.tab();
       
-      expect(screen.getByText('This field is required')).toBeInTheDocument();
+      expect(screen.getByText('Email field is required')).toBeInTheDocument();
 
       await user.type(emailInput, 'test@example.com');
 
-      expect(screen.queryByText('This field is required')).not.toBeInTheDocument();
+      expect(screen.queryByText('Email field is required')).not.toBeInTheDocument();
     });
 
     it('should validate email on blur with valid email', async () => {
@@ -264,7 +264,7 @@ describe('ForgotPasswordPage', () => {
       await user.click(submitButton);
 
       expect(mockForgotPassword).not.toHaveBeenCalled();
-      expect(screen.getByText('This field is required')).toBeInTheDocument();
+      expect(screen.getByText('Email field is required')).toBeInTheDocument();
     });
 
     it('should not submit form when email is invalid', async () => {
@@ -621,7 +621,7 @@ describe('ForgotPasswordPage', () => {
       await user.click(submitButton);
 
       expect(mockForgotPassword).not.toHaveBeenCalled();
-      expect(screen.getByText('This field is required')).toBeInTheDocument();
+      expect(screen.getByText('Email field is required')).toBeInTheDocument();
     });
 
     it('should handle email with leading and trailing spaces', async () => {

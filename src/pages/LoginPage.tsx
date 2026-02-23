@@ -36,6 +36,16 @@ const LogIn: React.FC = () => {
     };
     const checkExistingSession = async () => {
       try {
+        const isLoggingOut = (() => {
+          try {
+            return sessionStorage.getItem('sb_logout_in_progress') === '1';
+          } catch {
+            return false;
+          }
+        })();
+        if (isLoggingOut) {
+          return;
+        }
         const alreadyAuthed = await isAuthenticated();
         if (!isActive || hasRedirectedRef.current) return;
         if (alreadyAuthed) {
@@ -64,6 +74,14 @@ const LogIn: React.FC = () => {
     checkExistingSession();
     const onStorage = (e: StorageEvent) => {
       if (e.key === 'sb_auth') {
+        const isLoggingOut = (() => {
+          try {
+            return sessionStorage.getItem('sb_logout_in_progress') === '1';
+          } catch {
+            return false;
+          }
+        })();
+        if (isLoggingOut) return;
         if (e.newValue) {
           setHasOtherSession(true);
           if (!hasNotifiedOtherSessionRef.current) {
@@ -113,14 +131,14 @@ const LogIn: React.FC = () => {
     // Password format/strength validation is handled by server during authentication
     let hasErrors = false;
     if (!email.trim()) {
-      setEmailError("This field is required");
+      setEmailError("Email field is required");
       hasErrors = true;
     } else if (!validateEmail(email.trim())) {
       setEmailError("Please enter a valid email address");
       hasErrors = true;
     }
     if (!password.trim()) {
-      setPasswordError("This field is required");
+      setPasswordError("Password field is required");
       hasErrors = true;
     }
     if (hasErrors) return;
@@ -215,7 +233,7 @@ const LogIn: React.FC = () => {
                       setEmailError("Please enter a valid email address");
                     }
                   } else {
-                    setEmailError("This field is required");
+                    setEmailError("Email field is required");
                   }
                 }}
                 placeholder="Email"
@@ -242,7 +260,7 @@ const LogIn: React.FC = () => {
                     if (formData.password.trim()) {
                       setPasswordError(null);
                     } else {
-                      setPasswordError("This field is required");
+                      setPasswordError("Password field is required");
                     }
                   }}
                   placeholder="Password"

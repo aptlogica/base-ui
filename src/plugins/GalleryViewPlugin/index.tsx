@@ -23,6 +23,7 @@ const GalleryViewPlugin: Plugin = {
   initialize: async (api: PluginAPI) => {
     // Single component: fetch and render GalleryView directly
     const GalleryViewComponent: React.FC<{ tableId: string; viewId?: string }> = ({ tableId, viewId }) => {
+      const galleryData = useGalleryData({ tableId, viewId });
       const { 
         tableData, 
         isLoading, 
@@ -30,7 +31,7 @@ const GalleryViewPlugin: Plugin = {
         refresh, 
         deleteRecord, 
         updateViewConfig 
-      } = useGalleryData({ tableId, viewId });
+      } = galleryData;
 
       if (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -57,6 +58,7 @@ const GalleryViewPlugin: Plugin = {
       return (
         <GalleryView
           tableData={tableData}
+          galleryData={galleryData}
           onRefresh={() => refresh()}
           actions={{ 
             deleteRecord, 

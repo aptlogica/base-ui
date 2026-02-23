@@ -178,11 +178,13 @@ describe('KanbanStack Component', () => {
 
     it('should handle stack drop', () => {
       const mockOnDrop = vi.fn();
+      const mockOnCardMove = vi.fn();
       render(
         <KanbanStack
           stack={mockStack}
           columns={mockColumns}
           onStackDrop={mockOnDrop}
+          onCardMove={mockOnCardMove}
         />
       );
 

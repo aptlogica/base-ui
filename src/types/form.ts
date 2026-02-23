@@ -1,5 +1,4 @@
 // Centralized form types for FormView and its children
-
 export interface FormField {
   id: string;
   name: string;

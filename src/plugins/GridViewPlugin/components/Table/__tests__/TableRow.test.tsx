@@ -86,11 +86,17 @@ describe('TableRow', () => {
       expect(screen.getByText('10')).toBeInTheDocument();
     });
 
-    it('should render checkbox', () => {
-      render(<TableRow {...defaultProps} />);
+  it('should render checkbox', () => {
+    render(<TableRow {...defaultProps} />);
 
-      expect(screen.getByRole('checkbox')).toBeInTheDocument();
-    });
+    expect(screen.getByRole('checkbox')).toBeInTheDocument();
+  });
+
+  it('should hide checkbox when selection is disabled', () => {
+    render(<TableRow {...defaultProps} canSelectRows={false} />);
+
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  });
 
     it('should show checkbox checked when row is selected', () => {
       render(<TableRow {...defaultProps} isSelected={true} />);

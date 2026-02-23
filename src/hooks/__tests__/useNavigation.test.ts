@@ -1079,7 +1079,7 @@ describe('useNavigation Hook', () => {
 
       const storeState: any = { ...mockStoreState };
       const mockUseNavigationStore = vi.mocked(navigationStore.useNavigationStore);
-      mockUseNavigationStore.mockReturnValue(storeState  as any);
+      mockUseNavigationStore.mockReturnValue(storeState);
 
       // Act 1: Navigate to workspace
       useLocationMock.mockReturnValue({

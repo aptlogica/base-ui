@@ -340,9 +340,10 @@ export const Percent: React.FC<PercentProps> = ({
       </div>
     );
 
+    const standardDisplayValue = localValue ? `${localValue}%` : placeholder;
     const standardDisplay = (
       <div className={displayClassName}>
-        {localValue || placeholder}
+        {standardDisplayValue}
       </div>
     );
 

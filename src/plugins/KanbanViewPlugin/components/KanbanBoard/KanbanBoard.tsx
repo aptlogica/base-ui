@@ -56,6 +56,159 @@ interface KanbanBoardProps {
   actions?: KanbanActions;
 }
 
+const getOptionDisplayName = (opt: any) => {
+  if (typeof opt === 'string') return opt;
+  return opt?.option || opt?.value || opt?.label || String(opt);
+};
+
+const buildPreservedOptions = (options: any[]) =>
+  options.map((opt: any) => {
+    if (typeof opt === 'string') {
+      return { option: opt, color: '' };
+    }
+    return {
+      option: getOptionDisplayName(opt),
+      color: opt?.color || '',
+    };
+  });
+
+const defaultOptionColors = [
+  '#93c5fd', '#6ee7b7', '#fcd34d', '#fca5a5', '#c4b5fd', '#a78bfa', '#60a5fa', '#34d399'
+];
+
+const getDefaultOptionColor = (index: number) =>
+  defaultOptionColors[index % defaultOptionColors.length];
+
+const buildBaseColumns = (apiColumns: any[]): BaseColumn[] =>
+  apiColumns
+    .slice()
+    .sort((a: any, b: any) => (a?.order_index ?? 0) - (b?.order_index ?? 0))
+    .map((apiColumn: any): BaseColumn => {
+      const meta = parseApiColumnMeta(apiColumn.meta);
+      return {
+        id: String(apiColumn.id ?? ''),
+        key: String(apiColumn.column_name ?? apiColumn.title ?? apiColumn.id ?? ''),
+        column_name: apiColumn.column_name,
+        title: String(apiColumn.title ?? apiColumn.column_name ?? ''),
+        type: normalizeFieldType(String(apiColumn.uidt ?? 'text')),
+        uidt: apiColumn.uidt,
+        width: 175,
+        position: apiColumn.order_index ?? 0,
+        order_index: apiColumn.order_index ?? 0,
+        isSystem: Boolean(apiColumn.system),
+        system: Boolean(apiColumn.system),
+        hidden: Boolean(apiColumn.hidden),
+        is_hidden: Boolean(apiColumn.is_hidden),
+        config: meta,
+        options: meta.options || [],
+      };
+    });
+
+const getSelectColumns = (columns: BaseColumn[]) =>
+  columns.filter(col =>
+    col.type === 'select' || col.type === 'singleSelect' ||
+    col.uidt === 'select' || col.uidt === 'singleSelect'
+  );
+
+const getSearchableColumns = (columns: BaseColumn[]) =>
+  columns.filter(col => {
+    const isSystemField = col.isSystem || col.system;
+    const isTitle = col.title.toLowerCase() === 'title' || col.column_name?.toLowerCase() === 'title';
+    return !isSystemField || isTitle;
+  });
+
+const getCardId = (card: Record<string, unknown>) =>
+  String((card as any)?._meta?.id || (card as any)?.id || '');
+
+const applyCardOrderToCards = (cards: Record<string, unknown>[], customOrder?: string[]) => {
+  if (!customOrder || customOrder.length === 0) return cards;
+
+  const cardMap = new Map<string, Record<string, unknown>>();
+  for (const card of cards) {
+    cardMap.set(getCardId(card), card);
+  }
+
+  const ordered: Record<string, unknown>[] = [];
+  const seen = new Set<string>();
+  for (const cardId of customOrder) {
+    const cardIdStr = String(cardId);
+    const card = cardMap.get(cardIdStr);
+    if (card) {
+      ordered.push(card);
+      seen.add(cardIdStr);
+    }
+  }
+
+  for (const card of cards) {
+    const cardId = getCardId(card);
+    if (!seen.has(cardId)) {
+      ordered.push(card);
+    }
+  }
+
+  return ordered;
+};
+
+const buildAllFilters = (filters: any[], draftFilter: any, hasDraftFilter: boolean) =>
+  hasDraftFilter ? [...filters, draftFilter] : filters;
+
+const applyFiltersToCards = (
+  cards: Record<string, unknown>[],
+  allFilters: Parameters<typeof applyCardFilters>[1],
+  columns: Parameters<typeof applyCardFilters>[2]
+) => applyCardFilters(cards, allFilters, columns);
+
+const sortCardsByConfig = (
+  cards: Record<string, unknown>[],
+  sorts: any[],
+  sortColumnsForSorting: Array<{ key: string; type: string }>
+) => {
+  if (!Array.isArray(sorts) || sorts.length === 0 || cards.length === 0) return cards;
+
+  const byKey = (key: string) => sortColumnsForSorting.find(c => c.key === key);
+  const getValue = (row: Record<string, unknown>, key: string) => {
+    if (!row || !key) return undefined;
+    return row[key];
+  };
+
+  const cmp = (ra: Record<string, unknown>, rb: Record<string, unknown>) => {
+    if (!ra || !rb) return 0;
+
+    for (const s of sorts) {
+      if (!s.column) continue;
+      const col = byKey(s.column);
+      if (!col) continue;
+      const va = getValue(ra, col.key);
+      const vb = getValue(rb, col.key);
+      const res = compareValues(va, vb, String(col.type));
+      if (res !== 0) return s.direction === 'asc' ? res : -res;
+    }
+    return 0;
+  };
+
+  return [...cards].sort(cmp);
+};
+
+const orderStackCards = (
+  cards: Record<string, unknown>[],
+  stackId: string,
+  opts: {
+    hasSorts: boolean;
+    hasCardOrder: boolean;
+    sorts: any[];
+    sortColumnsForSorting: Array<{ key: string; type: string }>;
+    cardOrderConfig: Record<string, string[]>;
+  }
+) => {
+  if (opts.hasSorts) {
+    return sortCardsByConfig(cards, opts.sorts, opts.sortColumnsForSorting);
+  }
+  if (opts.hasCardOrder) {
+    return applyCardOrderToCards(cards, opts.cardOrderConfig[stackId]);
+  }
+  return cards;
+};
+
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   tableData,
   viewId,
@@ -76,45 +229,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   // Transform API data to UI-ready format (similar to Table and FormView components)
   const columns = useMemo(() => {
     if (!tableData?.columns || !Array.isArray(tableData.columns)) return [];
-
-    return tableData.columns
-      .slice()
-      .sort((a: any, b: any) => (a?.order_index ?? 0) - (b?.order_index ?? 0))
-      .map((apiColumn: any): BaseColumn => ({
-        id: String(apiColumn.id ?? ''),
-        key: String(apiColumn.column_name ?? apiColumn.title ?? apiColumn.id ?? ''),
-        column_name: apiColumn.column_name,
-        title: String(apiColumn.title ?? apiColumn.column_name ?? ''),
-        type: normalizeFieldType(String(apiColumn.uidt ?? 'text')),
-        uidt: apiColumn.uidt,
-        width: 175,
-        position: apiColumn.order_index ?? 0,
-        order_index: apiColumn.order_index ?? 0,
-        isSystem: Boolean(apiColumn.system),
-        system: Boolean(apiColumn.system),
-        hidden: Boolean(apiColumn.hidden),
-        is_hidden: Boolean(apiColumn.is_hidden),
-        config: parseApiColumnMeta(apiColumn.meta),
-        options: parseApiColumnMeta(apiColumn.meta).options || [],
-      }));
+    return buildBaseColumns(tableData.columns);
   }, [tableData?.columns]);
 
   // Get select columns for grouping
-  const selectColumns = useMemo(() => {
-    return columns.filter(col =>
-      col.type === 'select' || col.type === 'singleSelect' ||
-      col.uidt === 'select' || col.uidt === 'singleSelect'
-    );
-  }, [columns]);
+  const selectColumns = useMemo(() => getSelectColumns(columns), [columns]);
 
   // Get searchable columns (exclude system fields except Title)
-  const searchableColumns = useMemo(() => {
-    return columns.filter(col => {
-      const isSystemField = col.isSystem || col.system;
-      const isTitle = col.title.toLowerCase() === 'title' || col.column_name?.toLowerCase() === 'title';
-      return !isSystemField || isTitle;
-    });
-  }, [columns]);
+  const searchableColumns = useMemo(() => getSearchableColumns(columns), [columns]);
 
   // Convert BaseColumn[] to ColumnConfig[] for FieldsPopover
   const columnConfigs = useMemo((): ColumnConfig[] => {
@@ -139,7 +261,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   // Get current view
   const view = useMemo(() => {
     if (viewId) {
-      return tableData.views?.find((v: any) => v.id === viewId);
+      return tableData.views?.find((v: any) => String(v?.id) === String(viewId));
     }
     return tableData.views?.find((v: any) => v.type === 'kanban') || tableData.views?.[0];
   }, [tableData.views, viewId]);
@@ -471,8 +593,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }, [columns, hasSorts]);
 
   const filteredStacks = useMemo(() => {
-    // PERFORMANCE: Early return if no filters, sorts, or card order changes
-    // Just apply collapsed state
     if (!hasFilters && !hasDraftFilter && !hasSorts && !hasCardOrder) {
       return stacks.map((stack) => ({
         ...stack,
@@ -480,95 +600,25 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       }));
     }
 
-    // PERFORMANCE: Optimized applyCardOrder - single pass with Map
-    const applyCardOrder = (stackId: string, cards: Record<string, unknown>[]): Record<string, unknown>[] => {
-      const customOrder = cardOrderConfig[stackId];
-      if (!customOrder || customOrder.length === 0) return cards;
-
-      // Single pass: Create map and build ordered array efficiently
-      const cardMap = new Map<string, Record<string, unknown>>();
-
-      // Build map
-      for (const card of cards) {
-        const cardId = String((card as any)?._meta?.id || (card as any)?.id || '');
-        cardMap.set(cardId, card);
-      }
-
-      // Build ordered array: custom order first, then remaining cards
-      const ordered: Record<string, unknown>[] = [];
-      const seen = new Set<string>();
-
-      // Add cards in custom order (single iteration)
-      for (const cardId of customOrder) {
-        const cardIdStr = String(cardId);
-        const card = cardMap.get(cardIdStr);
-        if (card) {
-          ordered.push(card);
-          seen.add(cardIdStr);
-        }
-      }
-
-      // Add remaining cards not in custom order (single iteration)
-      for (const card of cards) {
-        const cardId = String((card as any)?._meta?.id || (card as any)?.id || '');
-        if (!seen.has(cardId)) {
-          ordered.push(card);
-        }
-      }
-
-      return ordered;
-    };
-
-    // Combine saved filters with draft filter (if any) for real-time preview
-    const allFilters = hasDraftFilter
-      ? [...filters, draftFilter]
-      : filters;
-
-    const applyFilters = (cards: Record<string, unknown>[]) => {
+    const allFilters = buildAllFilters(filters, draftFilter, hasDraftFilter);
+    const filterCards = (cards: Record<string, unknown>[]) => {
       if (!hasFilters && !hasDraftFilter) return cards;
-      return applyCardFilters(cards, allFilters as Parameters<typeof applyCardFilters>[1], columns as Parameters<typeof applyCardFilters>[2]);
-    };
-
-    const sortCards = (cards: Record<string, unknown>[]) => {
-      if (!hasSorts || cards.length === 0) return cards;
-
-      // PERFORMANCE: Use pre-computed sortColumnsForSorting
-      const byKey = (key: string) => sortColumnsForSorting.find(c => c.key === key);
-      const getValue = (row: Record<string, unknown>, key: string) => {
-        if (!row || !key) return undefined;
-        return row[key];
-      };
-
-      const cmp = (ra: Record<string, unknown>, rb: Record<string, unknown>) => {
-        if (!ra || !rb) return 0;
-
-        for (const s of sorts) {
-          if (!s.column) continue;
-          const col = byKey(s.column);
-          if (!col) continue;
-          const va = getValue(ra, col.key);
-          const vb = getValue(rb, col.key);
-          const res = compareValues(va, vb, String(col.type));
-          if (res !== 0) return s.direction === 'asc' ? res : -res;
-        }
-        return 0;
-      };
-
-      return [...cards].sort(cmp);
+      return applyFiltersToCards(
+        cards,
+        allFilters,
+        columns as Parameters<typeof applyCardFilters>[2]
+      );
     };
 
     return stacks.map((stack) => {
-      // Apply filters first
-      const filtered = applyFilters(stack.cards);
-      // Then apply custom card order (if no sorts, preserve custom order; if sorts exist, sorts take precedence)
-      let ordered: Record<string, unknown>[];
-      if (hasSorts) {
-        ordered = sortCards(filtered); // If sorts exist, apply them (they override custom order)
-      } else if (hasCardOrder) {
-        ordered = applyCardOrder(stack.id, filtered); // If no sorts, use custom order if available
-      } else {
-        ordered = filtered;
-      }
+      const filtered = filterCards(stack.cards);
+      const ordered = orderStackCards(filtered, stack.id, {
+        hasSorts,
+        hasCardOrder,
+        sorts,
+        sortColumnsForSorting,
+        cardOrderConfig,
+      });
       return { ...stack, cards: ordered, isCollapsed: collapsedStacks.has(stack.id) };
     });
   }, [stacks, filters, draftFilter, columns, sorts, collapsedStacks, cardOrderConfig, hasFilters, hasDraftFilter, hasSorts, hasCardOrder, sortColumnsForSorting]);
@@ -675,11 +725,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     if (!trimmed || !groupCol?.id) return;
 
     try {
-      // Get existing option names to check for duplicates
-      const existingOptionNames = localOptions.map((opt: any) => {
-        if (typeof opt === 'string') return opt;
-        return opt?.option || opt?.value || opt?.label || String(opt);
-      });
+      const existingOptionNames = localOptions.map(getOptionDisplayName);
 
       // Add new option if it doesn't exist
       if (existingOptionNames.includes(trimmed)) {
@@ -687,23 +733,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         toast.error(`Stack "${trimmed}" already exists`);
         setUiState(prev => ({ ...prev, newOption: '' }));
       } else {
-        // Preserve existing options structure (with colors)
-        const preservedOptions = localOptions.map((opt: any) => {
-          if (typeof opt === 'string') {
-            return { option: opt, color: '' };
-          }
-          return {
-            option: opt?.option || opt?.value || opt?.label || String(opt),
-            color: opt?.color || ''
-          };
-        });
+        const preservedOptions = buildPreservedOptions(localOptions);
 
-        // Default colors for new options (cycle through)
-        const defaultColors = [
-          '#93c5fd', '#6ee7b7', '#fcd34d', '#fca5a5', '#c4b5fd', '#a78bfa', '#60a5fa', '#34d399'
-        ];
         const newOptionIndex = preservedOptions.length;
-        const newOptionColor = defaultColors[newOptionIndex % defaultColors.length];
+        const newOptionColor = getDefaultOptionColor(newOptionIndex);
 
         // Add new option with default color
         const next = [...preservedOptions, { option: trimmed, color: newOptionColor }];
@@ -772,11 +805,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const handleStackDelete = useCallback(async (stackId: string) => {
     if (!groupCol?.id || stackId === 'Uncategorized') return;
     try {
-      // Get existing option names to check if stack exists
-      const existingOptionNames = localOptions.map((opt: any) => {
-        if (typeof opt === 'string') return opt;
-        return opt?.option || opt?.value || opt?.label || String(opt);
-      });
+    const existingOptionNames = localOptions.map(getOptionDisplayName);
 
       // Only delete if it's a field option (proper Kanban behavior)
       if (existingOptionNames.includes(stackId)) {

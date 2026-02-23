@@ -282,7 +282,7 @@ export const Attachment: React.FC<AttachmentProps> = ({
             const isImage = mimeType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'].includes(ext);
             return (
               <div
-                className="w-8 h-8 rounded-lg bg-card flex items-center justify-center overflow-hidden cursor-pointer transition-all hover:border-[var(--color-brand-600)] focus:outline-none flex-shrink-0 shadow-md"
+                className="w-8 h-8 rounded-lg bg-card border flex items-center justify-center overflow-hidden cursor-pointer transition-all hover:border-[var(--color-brand-600)] focus:outline-none flex-shrink-0"
                 key={`${file.url}-${file.title}-${idx}`}
                 title={file.title || file.name}
                 aria-label={`Preview ${file.title || file.name}`}
@@ -314,7 +314,7 @@ export const Attachment: React.FC<AttachmentProps> = ({
         </div>
         {/* Floating action buttons */}
         <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1 z-10">
-         {attachmentArray.length > 4 && (
+          {attachmentArray.length > 4 && (
             <div
               className="w-7 h-7 text-gray-400 flex items-center justify-center rounded-lg border transition-all disabled:opacity-50 text-xs"
               title={`+${attachmentArray.length - 4} more`}
