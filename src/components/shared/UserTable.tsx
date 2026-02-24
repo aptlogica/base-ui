@@ -8,6 +8,7 @@ import { AccessDetailsRow } from './table/AccessDetailsRow';
 import { TablePagination } from './table/TablePagination';
 import { RoleFilterDropdown } from './table/RoleFilterDropdown';
 import { getAccessRoleDisplayName, roleFilterOptions } from './table/roleDisplay';
+import { timeZoneOptions } from '../../types/constants';
 
 export interface TenantUser {
   id: string;
@@ -79,7 +80,6 @@ const getStatusBadge = (status: string, emailVerified: boolean) => {
   }
 };
 
-import { timeZoneOptions } from '../../types/constants';
 
 const formatTimeZoneLabel = (tz: { label: string; country: string }, includeCountry: boolean) => {
   if (!includeCountry) return tz.label;

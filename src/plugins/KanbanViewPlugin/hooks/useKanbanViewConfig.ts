@@ -3,8 +3,9 @@ import { useDebounce } from '../../../utils/helpers';
 import { SortItem, filterValidSorts } from '../../../utils/sortUtils';
 import { extractFieldConfigFromMeta, generateDefaultFieldConfig, mergeFieldConfigWithColumns } from '../../../utils/viewFieldConfigUtils';
 import { isFormulaField } from '../../../utils/fieldUtils';
+import { useViewFilterSortHandlers, type ViewFilterType } from '../../../hooks/useViewFilterSortHandlers';
 
-export type FilterType = { column: string; operator: string; value: string };
+export type FilterType = ViewFilterType;
 
 interface UseKanbanViewConfigOptions {
   view?: any;
@@ -137,66 +138,33 @@ export function useKanbanViewConfig({
     setSelectedSearchField(field);
   }, []);
 
-  // Handle real-time filtering while typing
-  const handleRealTimeFilter = useCallback((filter: FilterType | null) => {
-    setDraftFilter(filter);
-  }, []);
+  const {
+    handleRealTimeFilter,
+    handleAddFilter,
+    handleRemoveFilter,
+    handleUpdateFilter,
+    handleSortChange,
+  } = useViewFilterSortHandlers<SortItem>({
+    filters,
+    setFilters,
+    setDraftFilter,
+    isReadOnly,
+    persistFilters: async (next) => {
+      if (!updateViewConfig || !view?.id) return;
+      await updateViewConfig(view.id, { filters: next });
+    },
+    persistSorts: async (next) => {
+      if (!updateViewConfig || !view?.id) return;
+      await updateViewConfig(view.id, { sorts: next });
+    },
+    sanitizeSorts: (next) => filterValidSorts(next),
+  });
 
-  // Add a filter and persist view config (only if not read-only)
-  const handleAddFilter = useCallback(async (filter: FilterType) => {
-    const newFilters = [...filters, filter];
-    setFilters(newFilters); // Always update local state
-    setDraftFilter(null);
-
-    // Only persist to backend if NOT read-only
-    if (!isReadOnly && updateViewConfig && view?.id) {
-      await updateViewConfig(view.id, {
-        filters: newFilters
-      });
-    }
-  }, [filters, updateViewConfig, view, isReadOnly]);
-
-  // Remove a filter and persist view config (only if not read-only)
-  const handleRemoveFilter = useCallback(async (index: number) => {
-    const newFilters = filters.filter((_, i) => i !== index);
-    setFilters(newFilters); // Always update local state
-
-    // Only persist to backend if NOT read-only
-    if (!isReadOnly && updateViewConfig && view?.id) {
-      await updateViewConfig(view.id, {
-        filters: newFilters
-      });
-    }
-  }, [filters, updateViewConfig, view, isReadOnly]);
-
-  // Update a filter at given index and persist view config (only if not read-only)
-  const handleUpdateFilter = useCallback(async (index: number, updates: Partial<FilterType>) => {
-    const newFilters = [...filters];
-    if (newFilters[index]) {
-      newFilters[index] = { ...newFilters[index], ...updates };
-      setFilters(newFilters); // Always update local state
-
-      // Only persist to backend if NOT read-only
-      if (!isReadOnly && updateViewConfig && view?.id) {
-        await updateViewConfig(view.id, {
-          filters: newFilters
-        });
-      }
-    }
-  }, [filters, updateViewConfig, view, isReadOnly]);
-
-  // Handle sort change and persist view config (only if not read-only)
-  const handleSortChange = useCallback(async (newSorts: SortItem[]) => {
+  const handleSortChangeWithState = useCallback(async (newSorts: SortItem[]) => {
     const validSorts = filterValidSorts(newSorts);
-    setSorts(validSorts); // Always update local state
-
-    // Only persist to backend if NOT read-only
-    if (!isReadOnly && updateViewConfig && view?.id) {
-      await updateViewConfig(view.id, {
-        sorts: validSorts
-      });
-    }
-  }, [updateViewConfig, view, isReadOnly]);
+    setSorts(validSorts);
+    await handleSortChange(validSorts);
+  }, [handleSortChange]);
 
   // Handle field toggle with debounced persistence
   const handleFieldToggle = useCallback(async (fieldId: string) => {
@@ -335,7 +303,7 @@ export function useKanbanViewConfig({
     handleAddFilter,
     handleRemoveFilter,
     handleUpdateFilter,
-    handleSortChange,
+    handleSortChange: handleSortChangeWithState,
     handleFieldToggle,
     handleFieldOrderChange,
   };

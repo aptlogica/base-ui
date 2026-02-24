@@ -5,8 +5,9 @@ import { GridColumn } from '../../GridViewPlugin/types/grid.types';
 import { extractFieldConfigFromMeta, generateDefaultFieldConfig, mergeFieldConfigWithColumns } from '../../../utils/viewFieldConfigUtils';
 import { isFormulaField } from '../../../utils/fieldUtils';
 import { buildPositionSignature, buildReorderedFieldConfig } from '../../../utils/viewConfigShared';
+import { useViewFilterSortHandlers, type ViewFilterType } from '../../../hooks/useViewFilterSortHandlers';
 
-export type FilterType = { column: string; operator: string; value: string };
+export type FilterType = ViewFilterType;
 
 interface UseCalendarViewConfigOptions {
   view?: any;
@@ -177,93 +178,36 @@ export function useCalendarViewConfig({
     }).toSorted((a, b) => (a.position ?? 0) - (b.position ?? 0));
   }, [columns, localFieldConfig]);
 
-  // Handle real-time filtering while typing
-  const handleRealTimeFilter = useCallback((filter: FilterType | null) => {
-    setDraftFilter(filter);
-  }, []);
+  const {
+    handleRealTimeFilter,
+    handleAddFilter,
+    handleRemoveFilter,
+    handleUpdateFilter,
+    handleSortChange,
+  } = useViewFilterSortHandlers<SortItem>({
+    filters,
+    setFilters,
+    setDraftFilter,
+    isReadOnly,
+    persistFilters: async (next) => {
+      if (!updateViewConfig || !view?.id) return;
+      await updateViewConfig(String(view.id), { filters: next });
+      lastBackendFiltersRef.current = JSON.stringify(next);
+    },
+    persistSorts: async (next) => {
+      if (!updateViewConfig || !view?.id) return;
+      await updateViewConfig(String(view.id), { sorts: next });
+      lastBackendSortsRef.current = JSON.stringify(next);
+    },
+    sanitizeSorts: (next) => filterValidSorts(next),
+  });
 
-  // Add a filter and persist view config (only if not read-only)
-  const handleAddFilter = useCallback(async (filter: FilterType) => {
-    const newFilters = [...filters, filter];
-    // Update local state immediately for optimistic UI
-    setFilters(newFilters);
-    // Clear draft filter when filter is saved
-    setDraftFilter(null);
-
-    // Only persist to backend if NOT read-only
-    if (!isReadOnly && updateViewConfig && view?.id) {
-      await updateViewConfig(String(view.id), {
-        filters: newFilters
-      });
-      // Update ref after successful save
-      lastBackendFiltersRef.current = JSON.stringify(newFilters);
-    }
-  }, [filters, updateViewConfig, view, isReadOnly]);
-
-  // Remove a filter at given index and persist view config (only if not read-only)
-  const handleRemoveFilter = useCallback(async (index: number) => {
-    const newFilters = filters.filter((_, i) => i !== index);
-    // Update local state immediately for optimistic UI
-    setFilters(newFilters);
-
-    // Only persist to backend if NOT read-only
-    if (!isReadOnly && updateViewConfig && view?.id) {
-      await updateViewConfig(String(view.id), {
-        filters: newFilters
-      });
-      // Update ref after successful save
-      lastBackendFiltersRef.current = JSON.stringify(newFilters);
-    }
-  }, [filters, updateViewConfig, view, isReadOnly]);
-
-  // Update a filter at given index and persist view config (only if not read-only)
-  const handleUpdateFilter = useCallback(async (index: number, updates: Partial<FilterType>) => {
-    if (index < 0 || index >= filters.length) return;
-
-    // Create the updated filter
-    const updatedFilter = { ...filters[index], ...updates };
-
-    // If the value is being cleared (empty string), remove the filter entirely
-    if (updates.value === '' && !updatedFilter.value) {
-      await handleRemoveFilter(index);
-      return;
-    }
-
-    // Update the filter in place
-    const newFilters = filters.map((filter, i) => 
-      i === index ? updatedFilter : filter
-    );
-    
-    // Update local state immediately for optimistic UI
-    setFilters(newFilters);
-
-    // Only persist to backend if NOT read-only
-    if (!isReadOnly && updateViewConfig && view?.id) {
-      await updateViewConfig(String(view.id), {
-        filters: newFilters
-      });
-      // Update ref after successful save
-      lastBackendFiltersRef.current = JSON.stringify(newFilters);
-    }
-  }, [filters, updateViewConfig, view, handleRemoveFilter, isReadOnly]);
-
-  // Change sorts and persist view config (only if not read-only)
-  const handleSortChange = useCallback(async (newSorts: SortItem[]) => {
-    // Filter out empty sorts (with empty column) before saving
+  // Keep local sorts in sync for optimistic UI
+  const handleSortChangeWithState = useCallback(async (newSorts: SortItem[]) => {
     const validSorts = filterValidSorts(newSorts);
-    
-    // Update local state immediately for optimistic UI
     setSorts(validSorts);
-
-    // Only persist to backend if NOT read-only
-    if (!isReadOnly && updateViewConfig && view?.id) {
-      await updateViewConfig(String(view.id), {
-        sorts: validSorts
-      });
-      // Update ref after successful save
-      lastBackendSortsRef.current = JSON.stringify(validSorts);
-    }
-  }, [updateViewConfig, view, isReadOnly]);
+    await handleSortChange(validSorts);
+  }, [handleSortChange]);
 
   // Field toggle handler for FieldsPopover
   const handleFieldToggle = useCallback(async (fieldId: string) => {
@@ -322,7 +266,7 @@ export function useCalendarViewConfig({
     handleAddFilter,
     handleRemoveFilter,
     handleUpdateFilter,
-    handleSortChange,
+    handleSortChange: handleSortChangeWithState,
     handleFieldToggle,
     handleFieldOrderChange,
   };
