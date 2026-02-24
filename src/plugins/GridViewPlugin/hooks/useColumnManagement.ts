@@ -197,8 +197,9 @@ export function useColumnManagement({
     // Calculate position for the modal
     if (event?.target) {
       const rect = event.target.getBoundingClientRect();
-      const top = rect.bottom + window.scrollY + 8;
-      const left = rect.left + window.scrollX - 420; // modal width offset
+      // Position against viewport because the modal is fixed.
+      const top = rect.bottom + 8;
+      const left = rect.left - 420; // modal width offset
       setEditModalPosition({ top, left: Math.max(8, left) });
     } else {
       // Fallback to center positioning

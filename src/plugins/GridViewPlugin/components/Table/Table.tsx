@@ -816,8 +816,8 @@ export const Table: React.FC<TableProps> = ({
           {/* Column dropdown - hide for readonly users */}
           {canShowColumnDropdown(column) && (
             <ColumnDropdown
-              onEdit={() => {
-                handleEditColumn(column, index, { target: document.createElement('div') });
+              onEdit={(anchorEl) => {
+                handleEditColumn(column, index, anchorEl ? { target: anchorEl } : undefined);
               }}
               onDelete={() => handleDeleteColumn(column.id!)}
               isOpen={openColumnDropdownIndex === index}
@@ -1120,8 +1120,8 @@ export const Table: React.FC<TableProps> = ({
             x={colMenu.x}
             y={colMenu.y}
             onClose={handleCloseColMenu}
-            onEdit={() => {
-              handleEditColumn(visibleColumns[colMenu.colIndex!], colMenu.colIndex!, { target: document.createElement('div') });
+            onEdit={(anchorEl) => {
+              handleEditColumn(visibleColumns[colMenu.colIndex!], colMenu.colIndex!, anchorEl ? { target: anchorEl } : undefined);
               handleCloseColMenu();
             }}
             onDelete={() => {
@@ -1138,7 +1138,7 @@ export const Table: React.FC<TableProps> = ({
       {editModalOpen && editColumn && editModalPosition && ReactDOM.createPortal(
         <>
           <div //NOSONAR
-            ref={backdropRef} className="fixed inset-0 z-50 bg-modal-backdrop" onMouseDown={() => {
+            ref={backdropRef} className="fixed inset-0 z-50" onMouseDown={() => {
             setEditModalOpen(false);
             setEditColumn(null);
             setEditColumnIndex(null);
@@ -1157,6 +1157,7 @@ export const Table: React.FC<TableProps> = ({
                 fields={columns}
                 isAddNewColumn={false}
                 isAddNewField={true}
+                useBackdrop={false}
                 currentTableId={tableId}
               />
             </Suspense>

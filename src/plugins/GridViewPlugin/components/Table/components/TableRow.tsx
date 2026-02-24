@@ -161,7 +161,7 @@ export const TableRow: React.FC<TableRowProps> = ({
       tabIndex={0}
     >
       <div
-        className={`flex-shrink-0 w-13 bg-background border-r hover:bg-gray-50 ${isRowActive ? 'border-b border-t border-[var(--color-brand-600)]' : 'border-b border-border/30'} flex items-center justify-center relative select-none gap-2`}
+        className={`flex-shrink-0 w-13 bg-background border-r hover:bg-gray-50 ${isRowActive ? 'border-t border-[var(--color-brand-600)]' : 'border-b border-border/30'} flex items-center justify-center relative select-none gap-2`}
         style={{
           height: '40px',
           position: 'sticky',

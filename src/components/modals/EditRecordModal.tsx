@@ -326,22 +326,22 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
         (fields || [])
           .filter(f => f.type === 'links' || f.uidt === 'links')
           .map(async (field) => {
-            const originalIds = new Set(
+            const originalIds = new Set<number>(
               (Array.isArray(originalData[field.id]) ? originalData[field.id] : [])
                 .map((item: any) => item?.id ?? item)
                 .map((id: any) => Number.parseInt(String(id), 10))
                 .filter((id: number) => Number.isFinite(id))
             );
 
-            const currentIds = new Set(
+            const currentIds = new Set<number>(
               (Array.isArray(rowData[field.id]) ? rowData[field.id] : [])
                 .map((item: any) => item?.id ?? item)
                 .map((id: any) => Number.parseInt(String(id), 10))
                 .filter((id: number) => Number.isFinite(id))
             );
 
-            const toLink = Array.from(currentIds).filter(id => !originalIds.has(id));
-            const toUnlink = Array.from(originalIds).filter(id => !currentIds.has(id));
+            const toLink: number[] = Array.from(currentIds).filter((id) => !originalIds.has(id));
+            const toUnlink: number[] = Array.from(originalIds).filter((id) => !currentIds.has(id));
 
             const operations: Promise<any>[] = [];
             for (const targetRowId of toLink) {
@@ -501,7 +501,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                 >
                   {canDeleteRecord() && onDelete && (
                     <button
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black transition-colors"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();

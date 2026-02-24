@@ -35,6 +35,7 @@ interface NewColumnModalProps {
   fields?: any[];
   isAddNewColumn?: boolean;
   isAddNewField?: boolean;
+  useBackdrop?: boolean;
   excludeRefs?: React.RefObject<HTMLElement | null>[];
   currentTableId?: string; // Add current table ID to exclude from target selection
 }
@@ -63,7 +64,7 @@ const getRawTables = (tablesData: any) => {
   return [];
 };
 
-export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields = [], isAddNewColumn = false, isAddNewField = false, excludeRefs = [], currentTableId }: Readonly<NewColumnModalProps>) {
+export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields = [], isAddNewColumn = false, isAddNewField = false, useBackdrop, excludeRefs = [], currentTableId }: Readonly<NewColumnModalProps>) {
   const [step, setStep] = useState<number | null>(initialValues ? 2 : 1);
   const [fieldName, setFieldName] = useState(initialValues?.title || '');
   const [search, setSearch] = useState('');
@@ -530,6 +531,284 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     excludeRefs: longtextModalRef ? [...excludeRefs, longtextModalRef] : excludeRefs
   });
 
+  const resolveStringDefault = (
+    fieldType: string,
+    targetType: string,
+    defaultValue: string | undefined,
+    fallbackValue: string | undefined,
+    emptyFallback: string
+  ) => {
+    if (fieldType === targetType) {
+      return defaultValue || fallbackValue || emptyFallback;
+    }
+    return fallbackValue || emptyFallback;
+  };
+
+  const resolveNullableDefault = <T,>(
+    fieldType: string,
+    targetType: string,
+    defaultValue: T | undefined,
+    fallbackValue: T | undefined,
+    emptyFallback: T
+  ) => {
+    if (fieldType === targetType) {
+      return defaultValue ?? fallbackValue ?? emptyFallback;
+    }
+    return fallbackValue ?? emptyFallback;
+  };
+
+  const initializeEditState = (values: any) => {
+    setStep(2);
+    setFieldName(values.title || '');
+    // Try both type (normalized) and uidt (original from API) for field type matching
+    setSelectedType(FIELD_TYPES.find(t => t.key === values.type || t.key === values.uidt) || null);
+
+    // Get config from meta or config property
+    // API response structure: column.meta.defaultValue -> becomes config.defaultValue here
+    const config = values.meta || values.config || {};
+    // Use both type (normalized) and uidt (original from API) for field type
+    const fieldType = values.type || values.uidt;
+
+    // defaultValue is always in config.defaultValue (from meta.defaultValue in API response)
+    // initialValues.defaultValue doesn't exist at top level - it's nested in meta/config
+    setDefaultValue(config.defaultValue || '');
+    setDescription(values.description || '');
+    setRichText(!!config.richText);
+    setShowThousands(!!config.showThousands);
+    setPrecision(config.precision || '1.0');
+    // Boolean/checkbox fields: check both saved format (icon/color/defaultValue) and state format (checkboxIcon/checkboxColor/checkboxDefault)
+    setCheckboxIcon(config.checkboxIcon || config.icon || 'check');
+    setCheckboxColor(config.checkboxColor || config.color || 'green');
+    setCheckboxDefault(resolveCheckboxDefault(config));
+    setSelectOptions(
+      (config.options || config.selectOptions || []).map((o: any) =>
+        typeof o === 'string' ? { option: o, color: '' } : { option: o.option, color: o.color || '' }
+      )
+    );
+    // Load default values based on field type - check defaultValue first (where it's saved), then fallback to type-specific keys
+    let resolvedMultiDefault = config.multiDefault || [];
+    if (fieldType === 'multiSelect') {
+      resolvedMultiDefault = Array.isArray(config.defaultValue)
+        ? config.defaultValue
+        : (config.multiDefault || []);
+    }
+    setMultiDefault(resolvedMultiDefault);
+
+    let resolvedSingleDefault = config.singleDefault || '';
+    if (fieldType === 'select') {
+      resolvedSingleDefault = typeof config.defaultValue === 'string' && config.defaultValue
+        ? config.defaultValue
+        : (config.singleDefault || '');
+    }
+    setSingleDefault(resolvedSingleDefault);
+    setRatingIcon(config.ratingIcon || 'star');
+    setRatingColor(config.ratingColor || 'yellow');
+    setRatingMax(config.ratingMax || 5);
+    setRatingDefault(config.ratingDefault || 0);
+    setDateFormat(config.dateFormat || 'YYYY-MM-DD');
+    setTimeFormat(config.timeFormat || 'hh:mm');
+    setHourFormat(config.hourFormat || '24');
+    setDisplayTimeZone(!!config.displayTimeZone);
+    setSameTimezone(!!config.sameTimezone);
+    setTimeZone(resolveTimeZoneLabel(config));
+    // For datetime: check defaultValue first (where it's saved), then fallback to dateTimeDefault
+    setDateTimeDefault(resolveStringDefault(fieldType, 'datetime', config.defaultValue, config.dateTimeDefault, ''));
+    setShowDateTimeDefault(false);
+    // For year: check defaultValue first (where it's saved), then fallback to yearDefault
+    setYearDefault(resolveNullableDefault(fieldType, 'year', config.defaultValue, config.yearDefault, null));
+    // For date: check defaultValue first (where it's saved), then fallback to dateDefault
+    setDateDefault(resolveStringDefault(fieldType, 'date', config.defaultValue, config.dateDefault, ''));
+    setShowDateDefault(false);
+    // For time: check defaultValue first (where it's saved), then fallback to timeDefault
+    setTimeDefault(resolveStringDefault(fieldType, 'time', config.defaultValue, config.timeDefault, ''));
+    setShowTimeDefault(false);
+    setPhoneValid(!!config.phoneValid);
+    // For phone: check defaultValue first (where it's saved), then fallback to phoneDefault
+    setPhoneDefault(resolveStringDefault(fieldType, 'phoneNumber', config.defaultValue, config.phoneDefault, ''));
+    setShowPhoneDefault(false);
+    setEmailValid(!!config.emailValid);
+    // For email: check defaultValue first (where it's saved), then fallback to emailDefault
+    setEmailDefault(resolveStringDefault(fieldType, 'email', config.defaultValue, config.emailDefault, ''));
+    setShowEmailDefault(false);
+    setUrlValid(!!config.urlValid);
+    // For url: check defaultValue first (where it's saved), then fallback to urlDefault
+    setUrlDefault(resolveStringDefault(fieldType, 'url', config.defaultValue, config.urlDefault, ''));
+    setShowUrlDefault(false);
+
+    // Note: Lookup field initialization is handled in a separate useEffect
+    // that runs when linkFields become available (see above)
+    setDisplayAsProgress(!!config.displayAsProgress);
+    setShowPercentDefault(false);
+    // For percent: check defaultValue first (where it's saved), then fallback to percentDefault
+    setPercentDefault(resolveNullableDefault(fieldType, 'percent', config.defaultValue, config.percentDefault, null));
+    setDurationFormat(config.durationFormat || 'h:mm');
+    // For duration: check defaultValue first (where it's saved), then fallback to durationDefault
+    setDurationDefault(resolveNullableDefault(fieldType, 'duration', config.defaultValue, config.durationDefault, 0));
+    setCurrencyType(config.currencyType || 'USD');
+    setCurrencyLocale(config.currencyLocale || 'en-US');
+    // For currency: check defaultValue first (where it's saved), then fallback to currencyDefault
+    setCurrencyDefault(resolveNullableDefault(fieldType, 'currency', config.defaultValue, config.currencyDefault, null));
+    setShowCurrencyDefault(false);
+    // Initialize Links field configuration
+    if (fieldType === 'links') {
+      const relation = config.relation || config.meta?.relation || {};
+      setRelationType(relation.type || 'one-to-one');
+      const targetTableId = relation.with || '';
+      setSelectedTableId(targetTableId);
+    }
+    setShowTextDefault(false);
+    setShowDescription(false);
+    setSearch('');
+  };
+
+  const initializeCreateState = () => {
+    setStep(1);
+    setFieldName('');
+    setSearch('');
+    setSelectedType(null);
+    setDefaultValue('');
+    setDescription('');
+    setRichText(false);
+    setShowThousands(false);
+    setPrecision('1.0');
+    setCheckboxIcon('check');
+    setCheckboxColor('green');
+    setCheckboxDefault(false);
+    setSelectOptions([]);
+    setColor('');
+    setNewOption('');
+    setMultiDefault([]);
+    setSingleDefault('');
+    setRatingIcon('star');
+    setRatingColor('yellow');
+    setRatingMax(5);
+    setRatingDefault(0);
+    setDateFormat('YYYY-MM-DD');
+    setTimeFormat('hh:mm');
+    setHourFormat('24');
+    setDisplayTimeZone(false);
+    setSameTimezone(false);
+    setTimeZone('');
+    setDateTimeDefault('');
+    setShowDateTimeDefault(false);
+    setYearDefault(null);
+    setDateDefault('');
+    setShowDateDefault(false);
+    setTimeDefault('');
+    setShowTimeDefault(false);
+    setPhoneValid(false);
+    setPhoneDefault('');
+    setShowPhoneDefault(false);
+    setEmailValid(false);
+    setEmailDefault('');
+    setShowEmailDefault(false);
+    setUrlValid(false);
+    setUrlDefault('');
+    setShowUrlDefault(false);
+    setDisplayAsProgress(false);
+    setShowPercentDefault(false);
+    setPercentDefault(null);
+    setDurationFormat('h:mm');
+    setDurationDefault(0);
+    setCurrencyType('USD');
+    setCurrencyLocale('en-US');
+    setCurrencyDefault(null);
+    setShowCurrencyDefault(false);
+    setShowTextDefault(false);
+    setShowDescription(false);
+    // Reset user field config state
+    setAllowMultipleUsers(false);
+    // Reset links field config state
+    setRelationType('one-to-one');
+    setSelectedTableId('');
+    setSelectedTable(null);
+    // Reset lookup field config state
+    setSelectedRelationId('');
+    setSelectedLookupColumnId('');
+    setHasUserModifiedLookupColumn(false);
+    setTargetTableFields([]);
+    // Reset button field config state
+    setButtonStyle('primary');
+    setButtonAction('url');
+    setOpenButtonInNewTab(true);
+    // Reset json field config state
+    // Reset createdBy/lastModifiedBy field config state
+  };
+
+  const resetStateOnClose = () => {
+    // Reset all state when modal closes
+    setStep(null);
+    setFieldName('');
+    setSearch('');
+    setSelectedType(null);
+    setDefaultValue('');
+    setDescription('');
+    setRichText(false);
+    setShowThousands(false);
+    setPrecision('1.0');
+    setCheckboxIcon('check');
+    setCheckboxColor('green');
+    setCheckboxDefault(false);
+    setSelectOptions([]);
+    setColor('');
+    setNewOption('');
+    setMultiDefault([]);
+    setSingleDefault('');
+    setRatingIcon('star');
+    setRatingColor('yellow');
+    setRatingMax(5);
+    setRatingDefault(0);
+    setDateFormat('YYYY-MM-DD');
+    setTimeFormat('hh:mm');
+    setHourFormat('24');
+    setDisplayTimeZone(false);
+    setSameTimezone(false);
+    setTimeZone('');
+    setDateTimeDefault('');
+    setShowDateTimeDefault(false);
+    setYearDefault(null);
+    setDateDefault('');
+    setShowDateDefault(false);
+    setTimeDefault('');
+    setShowTimeDefault(false);
+    setPhoneValid(false);
+    setPhoneDefault('');
+    setShowPhoneDefault(false);
+    setEmailValid(false);
+    setEmailDefault('');
+    setShowEmailDefault(false);
+    setUrlValid(false);
+    setUrlDefault('');
+    setShowUrlDefault(false);
+    setDisplayAsProgress(false);
+    setShowPercentDefault(false);
+    setPercentDefault(null);
+    setDurationFormat('h:mm');
+    setDurationDefault(0);
+    setCurrencyType('USD');
+    setCurrencyDefault(null);
+    setShowCurrencyDefault(false);
+    setShowTextDefault(false);
+    setShowDescription(false);
+    setAllowMultipleUsers(false);
+    setRelationType('one-to-one');
+    setSelectedTableId('');
+    setSelectedTable(null);
+    setSelectedRelationId('');
+    setSelectedLookupColumnId('');
+    setHasUserModifiedLookupColumn(false);
+    setTargetTableFields([]);
+    setButtonStyle('primary');
+    setButtonAction('url');
+    setOpenButtonInNewTab(true);
+    setNameError(null);
+    setFormulaError(null);
+    setShowYearDefault(false);
+    setShowPercentDefault(false);
+    setShowJsonDefault(false);
+    setIsSaving(false);
+  };
+
   //select, multi-select input state - track which option is being edited
   const [editingOptionIndex, setEditingOptionIndex] = useState<number | null>(null);
   const [editingOptionValue, setEditingOptionValue] = useState<string>('');
@@ -549,288 +828,14 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     if (isOpen) {
       setHasUserModifiedLookupColumn(false);
       if (initialValues) {
-        setStep(2);
-        setFieldName(initialValues.title || '');
-        // Try both type (normalized) and uidt (original from API) for field type matching
-        setSelectedType(FIELD_TYPES.find(t => t.key === initialValues.type || t.key === initialValues.uidt) || null);
-
-        // Get config from meta or config property
-        // API response structure: column.meta.defaultValue -> becomes config.defaultValue here
-        const config = initialValues.meta || initialValues.config || {};
-        // Use both type (normalized) and uidt (original from API) for field type
-        const fieldType = initialValues.type || initialValues.uidt;
-
-        // defaultValue is always in config.defaultValue (from meta.defaultValue in API response)
-        // initialValues.defaultValue doesn't exist at top level - it's nested in meta/config
-        setDefaultValue(config.defaultValue || '');
-        setDescription(initialValues.description || '');
-        setRichText(!!config.richText);
-        setShowThousands(!!config.showThousands);
-        setPrecision(config.precision || '1.0');
-        // Boolean/checkbox fields: check both saved format (icon/color/defaultValue) and state format (checkboxIcon/checkboxColor/checkboxDefault)
-        setCheckboxIcon(config.checkboxIcon || config.icon || 'check');
-        setCheckboxColor(config.checkboxColor || config.color || 'green');
-        setCheckboxDefault(resolveCheckboxDefault(config));
-        setSelectOptions(
-          (config.options || config.selectOptions || []).map((o: any) =>
-            typeof o === 'string' ? { option: o, color: '' } : { option: o.option, color: o.color || '' }
-          )
-        );
-        // Load default values based on field type - check defaultValue first (where it's saved), then fallback to type-specific keys
-        if (fieldType === 'multiSelect') {
-          setMultiDefault(Array.isArray(config.defaultValue) ? config.defaultValue : (config.multiDefault || []));
-        } else {
-          setMultiDefault(config.multiDefault || []);
-        }
-        if (fieldType === 'select') {
-          setSingleDefault(typeof config.defaultValue === 'string' && config.defaultValue ? config.defaultValue : (config.singleDefault || ''));
-        } else {
-          setSingleDefault(config.singleDefault || '');
-        }
-        setRatingIcon(config.ratingIcon || 'star');
-        setRatingColor(config.ratingColor || 'yellow');
-        setRatingMax(config.ratingMax || 5);
-        setRatingDefault(config.ratingDefault || 0);
-        setDateFormat(config.dateFormat || 'YYYY-MM-DD');
-        setTimeFormat(config.timeFormat || 'hh:mm');
-        setHourFormat(config.hourFormat || '24');
-        setDisplayTimeZone(!!config.displayTimeZone);
-        setSameTimezone(!!config.sameTimezone);
-        setTimeZone(resolveTimeZoneLabel(config));
-        // For datetime: check defaultValue first (where it's saved), then fallback to dateTimeDefault
-        if (fieldType === 'datetime') {
-          setDateTimeDefault(config.defaultValue || config.dateTimeDefault || '');
-        } else {
-          setDateTimeDefault(config.dateTimeDefault || '');
-        }
-        setShowDateTimeDefault(false);
-        // For year: check defaultValue first (where it's saved), then fallback to yearDefault
-        if (fieldType === 'year') {
-          setYearDefault(config.defaultValue ?? (config.yearDefault || null));
-        } else {
-          setYearDefault(config.yearDefault || null);
-        }
-        // For date: check defaultValue first (where it's saved), then fallback to dateDefault
-        if (fieldType === 'date') {
-          setDateDefault(config.defaultValue || config.dateDefault || '');
-        } else {
-          setDateDefault(config.dateDefault || '');
-        }
-        // For time: check defaultValue first (where it's saved), then fallback to timeDefault
-        if (fieldType === 'time') {
-          setTimeDefault(config.defaultValue || config.timeDefault || '');
-        } else {
-          setTimeDefault(config.timeDefault || '');
-        }
-        setShowTimeDefault(false);
-        setPhoneValid(!!config.phoneValid);
-        // For phone: check defaultValue first (where it's saved), then fallback to phoneDefault
-        if (fieldType === 'phoneNumber') {
-          setPhoneDefault(config.defaultValue || config.phoneDefault || '');
-        } else {
-          setPhoneDefault(config.phoneDefault || '');
-        }
-        setShowPhoneDefault(false);
-        setEmailValid(!!config.emailValid);
-        // For email: check defaultValue first (where it's saved), then fallback to emailDefault
-        if (fieldType === 'email') {
-          setEmailDefault(config.defaultValue || config.emailDefault || '');
-        } else {
-          setEmailDefault(config.emailDefault || '');
-        }
-        setShowEmailDefault(false);
-        setUrlValid(!!config.urlValid);
-        // For url: check defaultValue first (where it's saved), then fallback to urlDefault
-        if (fieldType === 'url') {
-          setUrlDefault(config.defaultValue || config.urlDefault || '');
-        } else {
-          setUrlDefault(config.urlDefault || '');
-        }
-        setShowUrlDefault(false);
-
-        // Note: Lookup field initialization is handled in a separate useEffect
-        // that runs when linkFields become available (see above)
-        setDisplayAsProgress(!!config.displayAsProgress);
-        setShowPercentDefault(false);
-        // For percent: check defaultValue first (where it's saved), then fallback to percentDefault
-        if (fieldType === 'percent') {
-          setPercentDefault(config.defaultValue ?? (config.percentDefault || null));
-        } else {
-          setPercentDefault(config.percentDefault || null);
-        }
-        setDurationFormat(config.durationFormat || 'h:mm');
-        // For duration: check defaultValue first (where it's saved), then fallback to durationDefault
-        if (fieldType === 'duration') {
-          setDurationDefault(config.defaultValue ?? (config.durationDefault || 0));
-        } else {
-          setDurationDefault(config.durationDefault || 0);
-        }
-        setCurrencyType(config.currencyType || 'USD');
-        setCurrencyLocale(config.currencyLocale || 'en-US');
-        // For currency: check defaultValue first (where it's saved), then fallback to currencyDefault
-        if (fieldType === 'currency') {
-          setCurrencyDefault(config.defaultValue ?? (config.currencyDefault || null));
-        } else {
-          setCurrencyDefault(config.currencyDefault || null);
-        }
-        setShowCurrencyDefault(false);
-        // Initialize Links field configuration
-        if (fieldType === 'links') {
-          const relation = config.relation || config.meta?.relation || {};
-          setRelationType(relation.type || 'one-to-one');
-          const targetTableId = relation.with || '';
-          setSelectedTableId(targetTableId);
-        }
-        setShowTextDefault(false);
-        setShowDescription(false);
-        setSearch('');
+        initializeEditState(initialValues);
       } else {
-        setStep(1);
-        setFieldName('');
-        setSearch('');
-        setSelectedType(null);
-        setDefaultValue('');
-        setDescription('');
-        setRichText(false);
-        setShowThousands(false);
-        setPrecision('1.0');
-        setCheckboxIcon('check');
-        setCheckboxColor('green');
-        setCheckboxDefault(false);
-        setSelectOptions([]);
-        setColor('');
-        setNewOption('');
-        setMultiDefault([]);
-        setSingleDefault('');
-        setRatingIcon('star');
-        setRatingColor('yellow');
-        setRatingMax(5);
-        setRatingDefault(0);
-        setDateFormat('YYYY-MM-DD');
-        setTimeFormat('hh:mm');
-        setHourFormat('24');
-        setDisplayTimeZone(false);
-        setSameTimezone(false);
-        setTimeZone('');
-        setDateTimeDefault('');
-        setShowDateTimeDefault(false);
-        setYearDefault(null);
-        setDateDefault('');
-        setShowDateDefault(false);
-        setTimeDefault('');
-        setShowTimeDefault(false);
-        setPhoneValid(false);
-        setPhoneDefault('');
-        setShowPhoneDefault(false);
-        setEmailValid(false);
-        setEmailDefault('');
-        setShowEmailDefault(false);
-        setUrlValid(false);
-        setUrlDefault('');
-        setShowUrlDefault(false);
-        setDisplayAsProgress(false);
-        setShowPercentDefault(false);
-        setPercentDefault(null);
-        setDurationFormat('h:mm');
-        setDurationDefault(0);
-        setCurrencyType('USD');
-        setCurrencyLocale('en-US');
-        setCurrencyDefault(null);
-        setShowCurrencyDefault(false);
-        setShowTextDefault(false);
-        setShowDescription(false);
-        // Reset user field config state
-        setAllowMultipleUsers(false);
-        // Reset links field config state
-        setRelationType('one-to-one');
-        setSelectedTableId('');
-        setSelectedTable(null);
-        // Reset lookup field config state
-        setSelectedRelationId('');
-        setSelectedLookupColumnId('');
-        setHasUserModifiedLookupColumn(false);
-        setTargetTableFields([]);
-        // Reset button field config state
-        setButtonStyle('primary');
-        setButtonAction('url');
-        setOpenButtonInNewTab(true);
-        // Reset json field config state
-        // Reset createdBy/lastModifiedBy field config state
+        initializeCreateState();
       }
       setNameError(null);
       setFormulaError(null);
     } else {
-      // Reset all state when modal closes
-      setStep(null);
-      setFieldName('');
-      setSearch('');
-      setSelectedType(null);
-      setDefaultValue('');
-      setDescription('');
-      setRichText(false);
-      setShowThousands(false);
-      setPrecision('1.0');
-      setCheckboxIcon('check');
-      setCheckboxColor('green');
-      setCheckboxDefault(false);
-      setSelectOptions([]);
-      setColor('');
-      setNewOption('');
-      setMultiDefault([]);
-      setSingleDefault('');
-      setRatingIcon('star');
-      setRatingColor('yellow');
-      setRatingMax(5);
-      setRatingDefault(0);
-      setDateFormat('YYYY-MM-DD');
-      setTimeFormat('hh:mm');
-      setHourFormat('24');
-      setDisplayTimeZone(false);
-      setSameTimezone(false);
-      setTimeZone('');
-      setDateTimeDefault('');
-      setShowDateTimeDefault(false);
-      setYearDefault(null);
-      setDateDefault('');
-      setShowDateDefault(false);
-      setTimeDefault('');
-      setShowTimeDefault(false);
-      setPhoneValid(false);
-      setPhoneDefault('');
-      setShowPhoneDefault(false);
-      setEmailValid(false);
-      setEmailDefault('');
-      setShowEmailDefault(false);
-      setUrlValid(false);
-      setUrlDefault('');
-      setShowUrlDefault(false);
-      setDisplayAsProgress(false);
-      setShowPercentDefault(false);
-      setPercentDefault(null);
-      setDurationFormat('h:mm');
-      setDurationDefault(0);
-      setCurrencyType('USD');
-      setCurrencyDefault(null);
-      setShowCurrencyDefault(false);
-      setShowTextDefault(false);
-      setShowDescription(false);
-      setAllowMultipleUsers(false);
-      setRelationType('one-to-one');
-      setSelectedTableId('');
-      setSelectedTable(null);
-      setSelectedRelationId('');
-      setSelectedLookupColumnId('');
-      setHasUserModifiedLookupColumn(false);
-      setTargetTableFields([]);
-      setButtonStyle('primary');
-      setButtonAction('url');
-      setOpenButtonInNewTab(true);
-      setNameError(null);
-      setFormulaError(null);
-      setShowYearDefault(false);
-      setShowPercentDefault(false);
-      setShowJsonDefault(false);
-      setIsSaving(false);
+      resetStateOnClose();
     }
   }, [isOpen, initialValues]);
 
@@ -1250,7 +1255,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   });
   const isCompactAnchor = !isAddNewColumn || fields.length === 0 || fields.length <= 1;
   const positionClass = isCompactAnchor ? "left-0" : "right-0 translate-x-0";
-  const modalAnchorClass = isAddNewField
+  const shouldUseBackdrop = useBackdrop ?? isAddNewField;
+  const modalAnchorClass = shouldUseBackdrop
     ? 'bg-modal-backdrop flex items-center justify-center'
     : `absolute top-full ${positionClass}`;
 

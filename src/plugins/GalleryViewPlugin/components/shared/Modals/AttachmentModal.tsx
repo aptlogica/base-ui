@@ -256,6 +256,16 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
     setSelectedFiles(prev => prev.filter(f => f.url !== fileUrl));
   };
 
+  const updateUploadProgressForSelectedFiles = (percent: number) => {
+    setUploadProgress(prev => {
+      const next = { ...prev };
+      selectedFiles.forEach(file => {
+        next[file.url] = percent;
+      });
+      return next;
+    });
+  };
+
   const handleUploadFiles = async () => {
     if (selectedFiles.length === 0) {
       setError('No files selected');
@@ -298,9 +308,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
             (progressEvent.loaded * 100) / progressEvent.total
           );
           // Update progress for all files
-          selectedFiles.forEach(file => {
-            setUploadProgress(prev => ({ ...prev, [file.url]: percent }));
-          });
+          updateUploadProgressForSelectedFiles(percent);
         }
       });
 

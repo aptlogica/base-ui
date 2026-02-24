@@ -143,6 +143,21 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
     return counts;
   }, [usedColumnsByFilters, newFilter.column, showNewFilterRow]);
 
+  const newFilterSelectedColumn = useMemo(
+    () => visibleColumns.find(col => col.column_name === newFilter.column),
+    [visibleColumns, newFilter.column]
+  );
+
+  const newFilterOperatorOptions = useMemo(
+    () =>
+      newFilterSelectedColumn
+        ? (FIELD_TYPE_OPERATORS[newFilterSelectedColumn.uidt || 'text'] || FIELD_TYPE_OPERATORS.default)
+        : OPERATORS,
+    [newFilterSelectedColumn]
+  );
+
+  const isNewFilterComplete = isFilterComplete(newFilter, inputValue);
+
   const canAddFilter = useMemo(() => {
     return visibleColumns.some((col) => {
       const key = getColumnKey(col);
@@ -222,7 +237,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
         });
         const displayValue = typeof option === 'string' ? option : (option?.title || option?.option || option?.value || filter.value);
         return (
-          <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm whitespace-nowrap">
+          <div className="flex items-center justify-between gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm whitespace-nowrap">
             <span className="truncate max-w-[200px]">{displayValue}</span>
             <button
               type="button"
@@ -674,6 +689,12 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
               }
               return (usedColumnCounts.get(key) ?? 0) === 0;
             });
+            const dropdownOptions: FieldSelectOption[] = columnOptions.map((col) => ({
+              key: getColumnKey(col),
+              title: col.title,
+              uidt: col.uidt,
+              type: col.type,
+            }));
 
             return (
               <div key={uniqueKey} className="flex items-center gap-2 mb-3">
@@ -727,42 +748,31 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
 
                 {/* Field dropdown */}
                 <div className="relative flex-1 min-w-[200px]">
-                  {(() => {
-                    const dropdownOptions: FieldSelectOption[] = columnOptions.map((col) => ({
-                      key: getColumnKey(col),
-                      title: col.title,
-                      uidt: col.uidt,
-                      type: col.type,
-                    }));
-
-                    return (
-                      <FieldSelectDropdown
-                        options={dropdownOptions}
-                        selectedKey={(filter.column || '').trim()}
-                        isOpen={fieldDropdownOpen === idx}
-                        onToggle={() => {
-                          setFieldDropdownOpen(fieldDropdownOpen === idx ? null : idx);
-                          setOperatorDropdownOpen(null);
-                          setLogicDropdownOpen(null);
-                        }}
-                        onSelect={(key) => {
-                          const selectedColumn = visibleColumns.find(c => getColumnKey(c) === key);
-                          const defaultOperator = selectedColumn
-                            ? getDefaultOperator(selectedColumn.uidt || selectedColumn.type || 'text')
-                            : 'is equal';
-                          onUpdateFilter(idx, { column: selectedColumn?.column_name || selectedColumn?.key || key, operator: defaultOperator, value: '' });
-                          setFieldDropdownOpen(null);
-                        }}
-                        placeholder="Select field"
-                        menuTestId={`filter-field-options-${idx}`}
-                        buttonClassName="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-between"
-                        menuClassName="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto"
-                        optionClassName={(_, isSelected) =>
-                          `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap ${isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'}`
-                        }
-                      />
-                    );
-                  })()}
+                  <FieldSelectDropdown
+                    options={dropdownOptions}
+                    selectedKey={(filter.column || '').trim()}
+                    isOpen={fieldDropdownOpen === idx}
+                    onToggle={() => {
+                      setFieldDropdownOpen(fieldDropdownOpen === idx ? null : idx);
+                      setOperatorDropdownOpen(null);
+                      setLogicDropdownOpen(null);
+                    }}
+                    onSelect={(key) => {
+                      const selectedColumn = visibleColumns.find(c => getColumnKey(c) === key);
+                      const defaultOperator = selectedColumn
+                        ? getDefaultOperator(selectedColumn.uidt || selectedColumn.type || 'text')
+                        : 'is equal';
+                      onUpdateFilter(idx, { column: selectedColumn?.column_name || selectedColumn?.key || key, operator: defaultOperator, value: '' });
+                      setFieldDropdownOpen(null);
+                    }}
+                    placeholder="Select field"
+                    menuTestId={`filter-field-options-${idx}`}
+                    buttonClassName="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-between"
+                    menuClassName="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto"
+                    optionClassName={(_, isSelected) =>
+                      `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap ${isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'}`
+                    }
+                  />
                 </div>
 
                 {/* Operator dropdown */}
@@ -927,46 +937,38 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
 
               {/* Operator dropdown for new filter */}
               <div className="relative">
-                {(() => {
-                  const selectedColumn = visibleColumns.find(col => col.column_name === newFilter.column);
-                  const operatorOptions = selectedColumn ? (FIELD_TYPE_OPERATORS[selectedColumn.uidt || 'text'] || FIELD_TYPE_OPERATORS.default) : OPERATORS;
-                  return (
-                    <>
+                <button
+                  type="button"
+                  className="px-3 py-1.5 text-sm text-primary bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-1"
+                  onClick={() => {
+                    setOperatorDropdownOpen(operatorDropdownOpen === -1 ? null : -1);
+                    setFieldDropdownOpen(null);
+                    setLogicDropdownOpen(null);
+                  }}
+                >
+                  {newFilterOperatorOptions.find(op => op.value === newFilter.operator)?.label || 'is'}
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+                {operatorDropdownOpen === -1 && (
+                  <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-max bg-background border border-primary rounded-xl shadow-lg max-h-72 overflow-y-auto">
+                    {newFilterOperatorOptions.map((op) => (
                       <button
-                        type="button"
-                        className="px-3 py-1.5 text-sm text-primary bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-1"
+                        key={op.value}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors group ${newFilter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'
+                          }`}
                         onClick={() => {
-                          setOperatorDropdownOpen(operatorDropdownOpen === -1 ? null : -1);
-                          setFieldDropdownOpen(null);
-                          setLogicDropdownOpen(null);
+                          setNewFilter(f => ({ ...f, operator: op.value }));
+                          setOperatorDropdownOpen(null);
+                          setHasUserInteracted(true);
                         }}
+                        type="button"
                       >
-                        {operatorOptions.find(op => op.value === newFilter.operator)?.label || 'is'}
-                        <ChevronDown className="h-3 w-3" />
+                        <span className={`${newFilter.operator === op.value ? 'text-black' : 'text-primary group-hover:text-black'}`}>{op.label}</span>
+                        {newFilter.operator === op.value && <Check className="w-4 h-4 ml-auto text-black" />}
                       </button>
-                      {operatorDropdownOpen === -1 && (
-                        <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-max bg-background border border-primary rounded-xl shadow-lg max-h-72 overflow-y-auto">
-                          {operatorOptions.map((op) => (
-                            <button
-                              key={op.value}
-                              className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors group ${newFilter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'
-                                }`}
-                              onClick={() => {
-                                setNewFilter(f => ({ ...f, operator: op.value }));
-                                setOperatorDropdownOpen(null);
-                                setHasUserInteracted(true);
-                              }}
-                              type="button"
-                            >
-                              <span className={`${newFilter.operator === op.value ? 'text-black' : 'text-primary group-hover:text-black'}`}>{op.label}</span>
-                              {newFilter.operator === op.value && <Check className="w-4 h-4 ml-auto text-black" />}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Value input for new filter */}
@@ -975,22 +977,19 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
               </div>
 
               {/* Save/Apply button */}
-              {(() => {
-                const isComplete = isFilterComplete(newFilter, inputValue);
-                return isComplete ? (
-                  <button
-                    type="button"
-                    className="p-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-xl transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAdd();
-                    }}
-                    title="Apply filter"
-                  >
-                    <Check className="w-5 h-5" />
-                  </button>
-                ) : null;
-              })()}
+              {isNewFilterComplete ? (
+                <button
+                  type="button"
+                  className="p-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-xl transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAdd();
+                  }}
+                  title="Apply filter"
+                >
+                  <Check className="w-5 h-5" />
+                </button>
+              ) : null}
             </div>
           )}
 

@@ -531,7 +531,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
         className="select-none border p-2 space-y-1 animate-fade-in"
       >
         <button
-          className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors text-sm"
+          className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors text-sm"
           onClick={handleCollapseClick}
         >
           {stack.isCollapsed ? (
@@ -544,7 +544,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
           <>
             {onStackEdit && (
               <button
-                className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors text-sm"
+                className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors text-sm"
                 onClick={handleStackEditClick}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -556,7 +556,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
             {onStackEdit && onStackDelete && <div className="border-t my-1" />}
             {onStackDelete && (
               <button
-                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black transition-colors"
                 onClick={handleDeleteStackClick}
               >
                 <Trash2 className="w-4 h-4" /> Delete stack

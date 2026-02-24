@@ -54,6 +54,53 @@ const IMPORT_CONFIG = {
   },
 };
 
+const getFileUploadStateClass = (isDragOver: boolean, fileError: string | null, selectedFile: File | null) => {
+  if (isDragOver) {
+    return 'border-[var(--color-bg-brand-primary)] bg-[var(--color-bg-brand-primary)]/10';
+  }
+  if (fileError) {
+    return 'border-red-400 hover:border-red-500 bg-red-50/30';
+  }
+  if (selectedFile) {
+    return 'border-green-400 hover:border-green-500';
+  }
+  return 'border-gray-300 hover:border-gray-400 bg-gray-50/50';
+};
+
+const getTitleStatus = (
+  title: string,
+  titleError: string | null,
+  isTitleUnique: (value: string) => boolean
+) => {
+  const trimmedTitle = title.trim();
+  const hasTitle = trimmedTitle.length > 0;
+  const isTitleValidLength = trimmedTitle.length >= 3;
+  const isUniqueTitle = hasTitle && isTitleUnique(title);
+
+  let titleHelpIconClass = 'text-gray-400';
+  if (titleError) {
+    titleHelpIconClass = 'text-red-500';
+  } else if (isTitleValidLength && isUniqueTitle) {
+    titleHelpIconClass = 'text-green-600';
+  }
+
+  let uniqueRequirementClass = 'text-gray-500';
+  if (hasTitle && isUniqueTitle) {
+    uniqueRequirementClass = 'text-green-600';
+  } else if (hasTitle && !isUniqueTitle) {
+    uniqueRequirementClass = 'text-red-600';
+  }
+
+  return {
+    trimmedTitle,
+    hasTitle,
+    isTitleValidLength,
+    isUniqueTitle,
+    titleHelpIconClass,
+    uniqueRequirementClass,
+  };
+};
+
 export const ImportModal: React.FC<ImportModalProps> = ({
   isOpen,
   onClose,
@@ -285,33 +332,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
   if (!isOpen) return null;
 
-  let fileUploadStateClass = 'border-gray-300 hover:border-gray-400 bg-gray-50/50';
-  if (isDragOver) {
-    fileUploadStateClass = 'border-[var(--color-bg-brand-primary)] bg-[var(--color-bg-brand-primary)]/10';
-  } else if (fileError) {
-    fileUploadStateClass = 'border-red-400 hover:border-red-500 bg-red-50/30';
-  } else if (selectedFile) {
-    fileUploadStateClass = 'border-green-400 hover:border-green-500';
-  }
-
-  const trimmedTitle = title.trim();
-  const hasTitle = trimmedTitle.length > 0;
-  const isTitleValidLength = trimmedTitle.length >= 3;
-  const isUniqueTitle = hasTitle && isTitleUnique(title);
-
-  let titleHelpIconClass = 'text-gray-400';
-  if (titleError) {
-    titleHelpIconClass = 'text-red-500';
-  } else if (isTitleValidLength && isUniqueTitle) {
-    titleHelpIconClass = 'text-green-600';
-  }
-
-  let uniqueRequirementClass = 'text-gray-500';
-  if (hasTitle && isUniqueTitle) {
-    uniqueRequirementClass = 'text-green-600';
-  } else if (hasTitle && !isUniqueTitle) {
-    uniqueRequirementClass = 'text-red-600';
-  }
+  const fileUploadStateClass = getFileUploadStateClass(isDragOver, fileError, selectedFile);
+  const {
+    titleHelpIconClass,
+    uniqueRequirementClass,
+  } = getTitleStatus(title, titleError, isTitleUnique);
 
   return (
     <div // NOSONAR
@@ -415,8 +440,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                       </div>
                       <span className="text-primary text-xl hover:underline font-semibold">Browse files</span>
                       <div className="text-xs text-secondary">
-                      {config.label} file (max {formatFileSize(config.maxSize)})
-                    </div>
+                        {config.label} file (max {formatFileSize(config.maxSize)})
+                      </div>
                     </div>
                   </div>
                 )}

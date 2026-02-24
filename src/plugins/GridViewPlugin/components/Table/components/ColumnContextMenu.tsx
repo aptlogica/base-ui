@@ -6,7 +6,7 @@ interface ColumnContextMenuProps {
   x: number;
   y: number;
   onClose: () => void;
-  onEdit: () => void;
+  onEdit: (anchorEl?: HTMLElement) => void;
   onDelete: () => void;
   canUpdate?: boolean;
   canDelete?: boolean;
@@ -49,8 +49,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
       {/* Edit column */}
       {canUpdate && (
         <button
-          onClick={onEdit}
-          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+          onClick={(event) => onEdit((event.currentTarget as HTMLElement) ?? menuRef.current ?? undefined)}
+          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors"
           title="Edit column"
         >
           <Pencil className="w-4 h-4" />
@@ -63,7 +63,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
           <div className="border-t border-gray-100" />
           <button
             onClick={onDelete}
-            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black transition-colors"
             title="Delete column"
           >
             <Trash2 className="w-4 h-4" />

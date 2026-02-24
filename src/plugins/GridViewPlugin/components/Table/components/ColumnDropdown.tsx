@@ -4,7 +4,7 @@ import { ChevronDown, Pencil, Trash2, ChevronUp } from 'lucide-react';
 import { useClickOutside } from '../../../../../hooks/useClickOutside';
 
 interface ColumnDropdownProps {
-  onEdit: () => void;
+  onEdit: (anchorEl?: HTMLElement) => void;
   onDelete: () => void;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -82,7 +82,7 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
   }, [isOpen]);
 
   const handleEdit = () => {
-    onEdit();
+    onEdit(buttonRef.current ?? undefined);
     setIsOpen(false);
   };
 
@@ -123,7 +123,7 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
           {/* Edit field */}
           <button
             onClick={handleEdit}
-            className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors"
             title="Edit field"
           >
             <Pencil className="w-4 h-4" />
@@ -136,7 +136,7 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
           {/* Delete field */}
           <button
             onClick={handleDelete}
-            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black transition-colors"
             title="Delete field"
           >
             <Trash2 className="w-4 h-4" />

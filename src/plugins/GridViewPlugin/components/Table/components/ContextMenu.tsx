@@ -51,7 +51,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       {canEditRecord && (
         <>
           <button
-            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 rounded-xl hover:bg-gray-100 focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 rounded-xl hover:bg-gray-100 transition-colors"
             onClick={() => {
               if (onEdit) onEdit();
               onClose();
@@ -65,7 +65,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
       {/* Delete record - only show if user can delete */}
       {canDeleteRecord && (
-        <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors" onClick={onDelete}>
+        <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black transition-colors" onClick={onDelete}>
           <Trash2 className="w-4 h-4" /> Delete record
         </button>
       )}

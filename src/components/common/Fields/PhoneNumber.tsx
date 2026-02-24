@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/cognitive-complexity */
 import React, { useState, useEffect, useRef } from "react";
 import { useClickHandler } from "../../../utils/helpers";
 
@@ -10,7 +11,7 @@ interface PhoneNumberProps {
   disabled?: boolean;
   isBorder?: boolean;
   className?: string;
-  allowEdit?: boolean; // true = single click, false = double click
+  allowEdit?: boolean;
   readOnly?: boolean; // true = completely prevent editing
   helperText?: string;
   icon?: string;

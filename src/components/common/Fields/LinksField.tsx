@@ -290,8 +290,9 @@ export const LinksField: React.FC<LinksFieldProps> = ({
     const rowVirtualizer = useVirtualizer({
         count: paginatedRecords.length,
         getScrollElement: () => scrollContainerRef.current,
-        estimateSize: () => 88,
+        estimateSize: () => 72,
         overscan: 6,
+        measureElement: (element) => element.getBoundingClientRect().height,
     });
 
     useEffect(() => {
@@ -731,6 +732,8 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                 role="option"
                                                 aria-selected={isSelected}
                                                 tabIndex={-1}
+                                                data-index={virtualRow.index}
+                                                ref={rowVirtualizer.measureElement}
                                                 className={`p-4 border-b hover:bg-gray-50 cursor-pointer bg-card transition-colors ${isSelected ? 'bg-blue-500' : ''
                                                     } ${isFocused ? 'bg-[var(--color-bg-brand-secondary)] text-black' : ''
                                                     }`}
