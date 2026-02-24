@@ -168,6 +168,155 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
     });
   }, [visibleColumns, usedColumnsByFilters]);
 
+  const getColumnOptions = (currentFieldKey: string) => {
+    return visibleColumns.filter((col) => {
+      const key = getColumnKey(col);
+      if (!key) {
+        return false;
+      }
+      if (currentFieldKey === key) {
+        return true;
+      }
+      return (usedColumnCounts.get(key) ?? 0) === 0;
+    });
+  };
+
+  const buildDropdownOptions = (currentFieldKey: string): FieldSelectOption[] => {
+    return getColumnOptions(currentFieldKey).map((col) => ({
+      key: getColumnKey(col),
+      title: col.title,
+      uidt: col.uidt,
+      type: col.type,
+    }));
+  };
+
+  const renderLogicDropdown = (
+    rowKey: number,
+    isFirstRow: boolean,
+    currentLogic: string | undefined,
+    onLogicChange: (logic: 'AND' | 'OR') => void,
+    onLogicToggle: () => void
+  ) => {
+    if (isFirstRow) {
+      return (
+        <button
+          type="button"
+          className="px-3 py-1.5 text-sm text-gray-600 bg-gray-100 border rounded-xl hover:bg-gray-200"
+        >
+          Where
+        </button>
+      );
+    }
+    return (
+      <>
+        <button
+          type="button"
+          className="px-3 py-1.5 text-sm text-primary bg-background border rounded-xl hover:bg-gray-50 flex items-center gap-1"
+          onClick={onLogicToggle}
+        >
+          {currentLogic}
+          <ChevronDown className="h-3 w-3" />
+        </button>
+        {logicDropdownOpen === rowKey && (
+          <div //NOSONAR
+            className="absolute z-50 mt-1 p-1 left-0 w-20 bg-background border rounded-xl shadow-lg"
+            onMouseLeave={() => setLogicDropdownOpen(null)}
+          >
+            {['AND', 'OR'].map((logic) => (
+              <button
+                key={logic}
+                className={`w-full text-left px-3 py-1.5 text-sm rounded hover:bg-[var(--color-bg-brand-primary)] hover:text-black ${currentLogic === logic ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
+                  }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onLogicChange(logic as 'AND' | 'OR');
+                  setLogicDropdownOpen(null);
+                }}
+              >
+                {logic}
+              </button>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  };
+
+  const renderFieldDropdown = (
+    rowKey: number,
+    currentFieldKey: string,
+    onSelectField: (key: string) => void,
+    menuTestId: string,
+    menuClassName: string,
+    optionClassName: (option: FieldSelectOption, isSelected: boolean) => string,
+    labelClassName?: (option: FieldSelectOption, isSelected: boolean) => string
+  ) => {
+    return (
+      <FieldSelectDropdown
+        options={buildDropdownOptions(currentFieldKey)}
+        selectedKey={currentFieldKey}
+        isOpen={fieldDropdownOpen === rowKey}
+        onToggle={() => {
+          setFieldDropdownOpen(fieldDropdownOpen === rowKey ? null : rowKey);
+          setOperatorDropdownOpen(null);
+          setLogicDropdownOpen(null);
+        }}
+        onSelect={onSelectField}
+        placeholder="Select field"
+        menuTestId={menuTestId}
+        buttonClassName="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-between"
+        menuClassName={menuClassName}
+        optionClassName={optionClassName}
+        labelClassName={labelClassName}
+      />
+    );
+  };
+
+  const renderOperatorDropdown = (
+    rowKey: number,
+    operatorOptions: Array<{ value: string; label: string }>,
+    operatorValue: string,
+    onOperatorSelect: (value: string) => void,
+    menuClassName: string,
+    optionClassName: (op: { value: string; label: string }) => string,
+    labelClassName?: (op: { value: string; label: string }) => string
+  ) => {
+    return (
+      <>
+        <button
+          type="button"
+          className="px-3 py-1.5 text-sm text-primary bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-1"
+          onClick={() => {
+            setOperatorDropdownOpen(operatorDropdownOpen === rowKey ? null : rowKey);
+            setFieldDropdownOpen(null);
+            setLogicDropdownOpen(null);
+          }}
+        >
+          {operatorOptions.find(op => op.value === operatorValue)?.label || 'is'}
+          <ChevronDown className="h-3 w-3" />
+        </button>
+        {operatorDropdownOpen === rowKey && (
+          <div className={menuClassName}>
+            {operatorOptions.map((op) => (
+              <button
+                key={op.value}
+                className={optionClassName(op)}
+                onClick={() => {
+                  onOperatorSelect(op.value);
+                  setOperatorDropdownOpen(null);
+                }}
+                type="button"
+              >
+                <span className={labelClassName ? labelClassName(op) : undefined}>{op.label}</span>
+                {operatorValue === op.value && <Check className="w-4 h-4 ml-auto text-black" />}
+              </button>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  };
+
   // Helper function to render value input/display for a filter
   const renderFilterValue = (filter: FilterCondition, filterIndex: number, isNewFilter: boolean = false) => {
     const column = visibleColumns.find(col => col.column_name === filter.column);
@@ -679,134 +828,55 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
             const currentLogic = filter.logic || (idx === 0 ? undefined : 'AND');
             const uniqueKey = `${filter.column}-${filter.operator}-${filter.value}-${idx}`;
             const currentFieldKey = (filter.column || '').trim();
-            const columnOptions = visibleColumns.filter((col) => {
-              const key = getColumnKey(col);
-              if (!key) {
-                return false;
-              }
-              if (currentFieldKey === key) {
-                return true;
-              }
-              return (usedColumnCounts.get(key) ?? 0) === 0;
-            });
-            const dropdownOptions: FieldSelectOption[] = columnOptions.map((col) => ({
-              key: getColumnKey(col),
-              title: col.title,
-              uidt: col.uidt,
-              type: col.type,
-            }));
 
             return (
               <div key={uniqueKey} className="flex items-center gap-2 mb-3">
                 {/* Logic dropdown (Where/And/Or) */}
                 <div className="relative">
-                  {idx === 0 ? (
-                    <button
-                      type="button"
-                      className="px-3 py-1.5 text-sm text-gray-600 bg-gray-100 border rounded-xl hover:bg-gray-200"
-                    >
-                      Where
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        className="px-3 py-1.5 text-sm text-primary bg-background border rounded-xl hover:bg-gray-50 flex items-center gap-1"
-                        onClick={() => {
-                          setLogicDropdownOpen(logicDropdownOpen === idx ? null : idx);
-                          setFieldDropdownOpen(null);
-                          setOperatorDropdownOpen(null);
-                        }}
-                      >
-                        {currentLogic}
-                        <ChevronDown className="h-3 w-3" />
-                      </button>
-                      {logicDropdownOpen === idx && (
-                        <div //NOSONAR
-                          className="absolute z-50 mt-1 p-1 left-0 w-20 bg-background border rounded-xl shadow-lg"
-                          onMouseLeave={() => setLogicDropdownOpen(null)}
-                        >
-                          {['AND', 'OR'].map((logic) => (
-                            <button
-                              key={logic}
-                              className={`w-full text-left px-3 py-1.5 text-sm rounded hover:bg-[var(--color-bg-brand-primary)] hover:text-black ${currentLogic === logic ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
-                                }`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onUpdateFilter(idx, { logic: logic as 'AND' | 'OR' });
-                                setLogicDropdownOpen(null);
-                              }}
-                            >
-                              {logic}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </>
+                  {renderLogicDropdown(
+                    idx,
+                    idx === 0,
+                    currentLogic,
+                    (logic) => onUpdateFilter(idx, { logic }),
+                    () => {
+                      setLogicDropdownOpen(logicDropdownOpen === idx ? null : idx);
+                      setFieldDropdownOpen(null);
+                      setOperatorDropdownOpen(null);
+                    }
                   )}
                 </div>
 
                 {/* Field dropdown */}
                 <div className="relative flex-1 min-w-[200px]">
-                  <FieldSelectDropdown
-                    options={dropdownOptions}
-                    selectedKey={(filter.column || '').trim()}
-                    isOpen={fieldDropdownOpen === idx}
-                    onToggle={() => {
-                      setFieldDropdownOpen(fieldDropdownOpen === idx ? null : idx);
-                      setOperatorDropdownOpen(null);
-                      setLogicDropdownOpen(null);
-                    }}
-                    onSelect={(key) => {
+                  {renderFieldDropdown(
+                    idx,
+                    currentFieldKey,
+                    (key) => {
                       const selectedColumn = visibleColumns.find(c => getColumnKey(c) === key);
                       const defaultOperator = selectedColumn
                         ? getDefaultOperator(selectedColumn.uidt || selectedColumn.type || 'text')
                         : 'is equal';
                       onUpdateFilter(idx, { column: selectedColumn?.column_name || selectedColumn?.key || key, operator: defaultOperator, value: '' });
                       setFieldDropdownOpen(null);
-                    }}
-                    placeholder="Select field"
-                    menuTestId={`filter-field-options-${idx}`}
-                    buttonClassName="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-between"
-                    menuClassName="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto"
-                    optionClassName={(_, isSelected) =>
+                    },
+                    `filter-field-options-${idx}`,
+                    "absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto",
+                    (_, isSelected) =>
                       `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap ${isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'}`
-                    }
-                  />
+                  )}
                 </div>
 
                 {/* Operator dropdown */}
                 <div className="relative">
-                  <button
-                    type="button"
-                    className="px-3 py-1.5 text-sm text-primary bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-1"
-                    onClick={() => {
-                      setOperatorDropdownOpen(operatorDropdownOpen === idx ? null : idx);
-                      setFieldDropdownOpen(null);
-                      setLogicDropdownOpen(null);
-                    }}
-                  >
-                    {filterOperatorOptions.find(op => op.value === filter.operator)?.label || 'is'}
-                    <ChevronDown className="h-3 w-3" />
-                  </button>
-                  {operatorDropdownOpen === idx && (
-                    <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-max bg-background border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
-                      {filterOperatorOptions.map((op) => (
-                        <button
-                          key={op.value}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${filter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'
-                            }`}
-                          onClick={() => {
-                            onUpdateFilter(idx, { operator: op.value });
-                            setOperatorDropdownOpen(null);
-                          }}
-                          type="button"
-                        >
-                          <span>{op.label}</span>
-                          {filter.operator === op.value && <Check className="w-4 h-4 ml-auto text-black" />}
-                        </button>
-                      ))}
-                    </div>
+                  {renderOperatorDropdown(
+                    idx,
+                    filterOperatorOptions,
+                    filter.operator,
+                    (value) => onUpdateFilter(idx, { operator: value }),
+                    "absolute z-50 mt-1 p-2 space-y-1 left-0 w-max bg-background border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-y-auto",
+                    (op) =>
+                      `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${filter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'
+                      }`
                   )}
                 </div>
 
@@ -837,137 +907,55 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
             <div className="flex items-center gap-2 mb-3">
               {/* Logic dropdown for new filter */}
               <div className="relative">
-                {filters.length === 0 ? (
-                  <button
-                    type="button"
-                    className="px-3 py-1.5 text-sm text-gray-600 bg-gray-100 border border-gray-200 rounded-xl"
-                  >
-                    Where
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      className="px-3 py-1.5 text-sm text-primary bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-1"
-                      onClick={() => {
-                        setLogicDropdownOpen(logicDropdownOpen === -1 ? null : -1);
-                        setFieldDropdownOpen(null);
-                        setOperatorDropdownOpen(null);
-                      }}
-                    >
-                      {newFilter.logic || 'AND'}
-                      <ChevronDown className="h-3 w-3" />
-                    </button>
-                    {logicDropdownOpen === -1 && (
-                      <div //NOSONAR
-                        className="absolute z-50 mt-1 p-1 left-0 w-20 bg-background border border-gray-200 rounded-xl shadow-lg"
-                        onMouseLeave={() => setLogicDropdownOpen(null)}
-                      >
-                        {['AND', 'OR'].map((logic) => (
-                          <button
-                            key={logic}
-                            className={`w-full text-left px-3 py-1.5 text-sm rounded hover:bg-[var(--color-bg-brand-primary)] hover:text-black ${newFilter.logic === logic ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
-                              }`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setNewFilter(f => ({ ...f, logic: logic as 'AND' | 'OR' }));
-                              setLogicDropdownOpen(null);
-                            }}
-                          >
-                            {logic}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </>
+                {renderLogicDropdown(
+                  -1,
+                  filters.length === 0,
+                  newFilter.logic || 'AND',
+                  (logic) => setNewFilter(f => ({ ...f, logic })),
+                  () => {
+                    setLogicDropdownOpen(logicDropdownOpen === -1 ? null : -1);
+                    setFieldDropdownOpen(null);
+                    setOperatorDropdownOpen(null);
+                  }
                 )}
               </div>
 
               {/* Field dropdown for new filter */}
               <div className="relative flex-1 min-w-[200px]">
-                {(() => {
-                  const currentFieldKey = (newFilter.column || '').trim();
-                  const columnOptions = visibleColumns.filter((col) => {
-                    const key = getColumnKey(col);
-                    if (!key) {
-                      return false;
-                    }
-                    if (currentFieldKey === key) {
-                      return true;
-                    }
-                    return (usedColumnCounts.get(key) ?? 0) === 0;
-                  });
-                  const dropdownOptions: FieldSelectOption[] = columnOptions.map((col) => ({
-                    key: getColumnKey(col),
-                    title: col.title,
-                    uidt: col.uidt,
-                    type: col.type,
-                  }));
-
-                  return (
-                    <FieldSelectDropdown
-                      options={dropdownOptions}
-                      selectedKey={currentFieldKey}
-                      isOpen={fieldDropdownOpen === -1}
-                      onToggle={() => {
-                        setFieldDropdownOpen(fieldDropdownOpen === -1 ? null : -1);
-                        setOperatorDropdownOpen(null);
-                        setLogicDropdownOpen(null);
-                      }}
-                      onSelect={(key) => {
-                        const selectedColumn = visibleColumns.find(c => getColumnKey(c) === key);
-                        const defaultOperator = getDefaultOperator(selectedColumn?.uidt || selectedColumn?.type || 'text');
-                        setNewFilter({ column: selectedColumn?.column_name || selectedColumn?.key || key, operator: defaultOperator, value: '', logic: 'AND' });
-                        setInputValue('');
-                        setFieldDropdownOpen(null);
-                        setHasUserInteracted(true);
-                      }}
-                      placeholder="Select field"
-                      menuTestId="filter-new-field-options"
-                      buttonClassName="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-between"
-                      menuClassName="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-primary rounded-xl shadow-lg max-h-64 overflow-y-auto"
-                      optionClassName={(_, isSelected) =>
-                        `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap group ${isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'}`
-                      }
-                      labelClassName={(_, isSelected) => (isSelected ? 'text-black' : 'text-primary group-hover:text-black')}
-                    />
-                  );
-                })()}
+                {renderFieldDropdown(
+                  -1,
+                  (newFilter.column || '').trim(),
+                  (key) => {
+                    const selectedColumn = visibleColumns.find(c => getColumnKey(c) === key);
+                    const defaultOperator = getDefaultOperator(selectedColumn?.uidt || selectedColumn?.type || 'text');
+                    setNewFilter({ column: selectedColumn?.column_name || selectedColumn?.key || key, operator: defaultOperator, value: '', logic: 'AND' });
+                    setInputValue('');
+                    setFieldDropdownOpen(null);
+                    setHasUserInteracted(true);
+                  },
+                  "filter-new-field-options",
+                  "absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-primary rounded-xl shadow-lg max-h-64 overflow-y-auto",
+                  (_, isSelected) =>
+                    `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap group ${isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'}`,
+                  (_, isSelected) => (isSelected ? 'text-black' : 'text-primary group-hover:text-black')
+                )}
               </div>
 
               {/* Operator dropdown for new filter */}
               <div className="relative">
-                <button
-                  type="button"
-                  className="px-3 py-1.5 text-sm text-primary bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-1"
-                  onClick={() => {
-                    setOperatorDropdownOpen(operatorDropdownOpen === -1 ? null : -1);
-                    setFieldDropdownOpen(null);
-                    setLogicDropdownOpen(null);
-                  }}
-                >
-                  {newFilterOperatorOptions.find(op => op.value === newFilter.operator)?.label || 'is'}
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-                {operatorDropdownOpen === -1 && (
-                  <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-max bg-background border border-primary rounded-xl shadow-lg max-h-72 overflow-y-auto">
-                    {newFilterOperatorOptions.map((op) => (
-                      <button
-                        key={op.value}
-                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors group ${newFilter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'
-                          }`}
-                        onClick={() => {
-                          setNewFilter(f => ({ ...f, operator: op.value }));
-                          setOperatorDropdownOpen(null);
-                          setHasUserInteracted(true);
-                        }}
-                        type="button"
-                      >
-                        <span className={`${newFilter.operator === op.value ? 'text-black' : 'text-primary group-hover:text-black'}`}>{op.label}</span>
-                        {newFilter.operator === op.value && <Check className="w-4 h-4 ml-auto text-black" />}
-                      </button>
-                    ))}
-                  </div>
+                {renderOperatorDropdown(
+                  -1,
+                  newFilterOperatorOptions,
+                  newFilter.operator,
+                  (value) => {
+                    setNewFilter(f => ({ ...f, operator: value }));
+                    setHasUserInteracted(true);
+                  },
+                  "absolute z-50 mt-1 p-2 space-y-1 left-0 w-max bg-background border border-primary rounded-xl shadow-lg max-h-72 overflow-y-auto",
+                  (op) =>
+                    `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors group ${newFilter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'
+                    }`,
+                  (op) => (newFilter.operator === op.value ? 'text-black' : 'text-primary group-hover:text-black')
                 )}
               </div>
 

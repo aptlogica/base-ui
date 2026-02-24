@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
 import React, { useMemo, useState } from "react";
-import { getDisplayValue, isSelected as isSelectedValue, normalizeSelection, toggleSelection } from "../../../../common/dropdown/dropdownSelection";
+import { getDisplayValue, isSelected as isSelectedValue, normalizeSelection, toggleSelection } from "../../../../../components/common/dropdown/dropdownSelection";
 
 interface Option {
   label: string;
@@ -24,7 +24,10 @@ const Dropdown: React.FC<DropdownProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
 
-  const currentValues = useMemo(() => normalizeSelection(value), [value]);
+  const currentValues = useMemo(
+    () => normalizeSelection(value, (v) => v === ""),
+    [value]
+  );
 
   const handleSelect = (optionValue: string) => {
     if (multiple) {
