@@ -59,7 +59,7 @@ describe('formulaConstants', () => {
     expect(MATH_OPERATORS).toEqual(expect.arrayContaining(['+', '-', '*', '/', '^', '%']));
 
     const ops = COMPARISON_OPERATORS.map((item) => item.op);
-    expect(ops).toEqual(['>=', '<=', '!=', '=', '>', '<']);
+    expect(ops).toEqual(['>=', '<=', '!=', '==', '>', '<']);
     COMPARISON_OPERATORS.forEach((item) => {
       expect(item.regex).toBeInstanceOf(RegExp);
     });

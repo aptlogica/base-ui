@@ -44,7 +44,7 @@ describe('formulaHelper validateFormula branch paths', () => {
   });
 
   it('validates comparison and logical function argument rules', () => {
-    expect(validateFormula('abc = 1', context))
+    expect(validateFormula('abc == 1', context))
       .toBe('Invalid left side in comparison: "abc"');
 
     expect(validateFormula('IF(abc, "Y", "N")', context))
@@ -66,10 +66,10 @@ describe('formulaHelper validateFormula branch paths', () => {
   });
 
   it('validates comparison with unknown fields on either side', () => {
-    expect(validateFormula('{Price} = {MissingField}', context))
+    expect(validateFormula('{Price} == {MissingField}', context))
       .toBe('Unknown field: MissingField');
 
-    expect(validateFormula('{MissingField} = {Price}', context))
+    expect(validateFormula('{MissingField} == {Price}', context))
       .toBe('Unknown field: MissingField');
   });
 

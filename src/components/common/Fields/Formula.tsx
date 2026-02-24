@@ -1273,7 +1273,7 @@ export const Formula: React.FC<FormulaProps> = ({
                                       setSelectedFunction(functionKey);
                                       insertFunction(func.name);
                                     }}
-                                    className={`w-full px-3 text-primary py-2 text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] rounded-xl flex items-center gap-2 ${selectedFunction === functionKey ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''} truncate`}
+                                    className={`w-full px-3 py-2 text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-xl flex items-center gap-2 ${selectedFunction === functionKey ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : 'text-primary'} truncate`}
                                     title={func.description || func.name}
                                   >
                                     {func.name.replaceAll(/[()]/g, '')}
