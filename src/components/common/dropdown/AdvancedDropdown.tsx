@@ -3,6 +3,7 @@ import { Info } from 'lucide-react';
 import { DropdownTrigger } from './DropdownTrigger';
 import { DropdownSearch } from './DropdownSearch';
 import { DropdownOption } from './DropdownOption';
+import { normalizeSelection, toggleSelection, isSelected as isSelectedValue, getDisplayValue } from './dropdownSelection';
 
 interface AdvancedDropdownOption<T = string | number> {
   label: string;
@@ -74,14 +75,10 @@ export function AdvancedDropdown<T extends string | number>({
   const optionsRef = useRef<HTMLUListElement>(null);
 
   // Normalize value to always be an array for consistent handling
-  const normalizeValue = useCallback((val: T | T[] | undefined): T[] => {
-    if (val === undefined || val === null) return [];
-    const rawValues = Array.isArray(val) ? val : [val];
-    return rawValues.filter(item => !isEmptySelectionValue(item));
-  }, []);
-
-  // Get current values as array
-  const currentValues = normalizeValue(value);
+  const currentValues = useMemo(
+    () => normalizeSelection(value, isEmptySelectionValue),
+    [value]
+  );
 
   // Filter and sort options based on search query
   const filteredOptions = Array.from(
@@ -114,31 +111,17 @@ export function AdvancedDropdown<T extends string | number>({
 
   // Get display label (rename to avoid clashing with helper below)
   const computeDisplayLabel = useCallback((): string => {
-    if (currentValues.length === 0) return placeholder;
-
     const labels = currentValues
       .map(val => options.find(opt => opt.value === val)?.label)
       .filter(Boolean) as string[];
-
-    if (labels.length === 0) return placeholder;
-
-    if (multiple) {
-      if (labels.length > 2) {
-        return `${labels.length} items selected`;
-      }
-      return labels.join(', ');
-    }
-
-    return labels[0] || placeholder;
+    return getDisplayValue(labels, placeholder, multiple);
   }, [currentValues, options, placeholder, multiple]);
 
   // Handle option selection
   const handleSelect = useCallback((optionValue: T) => {
     try {
       if (multiple) {
-        const newValues = currentValues.includes(optionValue)
-          ? currentValues.filter(v => v !== optionValue)
-          : [...currentValues, optionValue];
+        const newValues = toggleSelection(currentValues, optionValue);
         onChange(newValues);
       } else {
         onChange(optionValue);
@@ -153,7 +136,7 @@ export function AdvancedDropdown<T extends string | number>({
 
   // Check if option is selected
   const isSelected = useCallback((optionValue: T): boolean => {
-    return currentValues.includes(optionValue);
+    return isSelectedValue(currentValues, optionValue);
   }, [currentValues]);
 
   // Handle clear

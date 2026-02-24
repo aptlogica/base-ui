@@ -5,8 +5,8 @@ import TimeSlotCell from "./TimeSlotCell";
 import { CalendarEvent } from "../hooks/useCalendarData";
 import {
   getEventsForDateKey,
-  getHourLabel,
-  isDateTimeFieldType
+  isDateTimeFieldType,
+  createTimeSlots
 } from "../utils/calendarViewUtils";
 
 interface WeekViewProps {
@@ -54,18 +54,7 @@ const WeekView: React.FC<WeekViewProps> = ({
   // Generate time slots for datetime fields
   const timeSlots = useMemo(() => {
     if (!isDateTimeField) return [];
-
-    const slots: Array<{ hour: number; label: string; time: string }> = [];
-
-    for (let hour = 0; hour < 24; hour++) {
-      slots.push({
-        hour,
-        label: getHourLabel(hour),
-        time: `${hour.toString().padStart(2, '0')}:00`
-      });
-    }
-
-    return slots;
+    return createTimeSlots();
   }, [isDateTimeField]);
 
   // Get events for a specific date
@@ -82,41 +71,46 @@ const WeekView: React.FC<WeekViewProps> = ({
     return day === 0 || day === 6; // 0 = Sunday, 6 = Saturday
   };
 
+  const WeekDayHeaders = ({ showTimeColumn }: { showTimeColumn: boolean }) => (
+    <div className={`grid ${showTimeColumn ? 'grid-cols-8' : 'grid-cols-7'} border-b ${showTimeColumn ? '' : 'border-gray-200'} flex-shrink-0`}>
+      {showTimeColumn && (
+        <div className="p-2 text-center text-sm font-medium text-gray-500 bg-gray-50 border-r">
+          Time
+        </div>
+      )}
+      {weekDaysData.map((date) => {
+        const isWeekendDay = isWeekend(date);
+        const isTodayDate = isToday(date);
+
+        let dayHeaderClass = 'bg-gray-50 text-gray-500';
+
+        if (isTodayDate) {
+          dayHeaderClass = 'bg-[var(--color-bg-brand-primary)] text-black';
+        } else if (isWeekendDay) {
+          dayHeaderClass = 'bg-gray-100 text-gray-600';
+        }
+
+        return (
+          <div
+            key={date.toDateString()}
+            className={`p-2 text-center text-sm font-medium border-r flex items-center justify-center gap-2 flex-row-reverse ${dayHeaderClass}`}
+          >
+            <div className="font-semibold">{weekDays[date.getDay()]}</div>
+            <div className="flex items-center justify-center gap-1">
+              <span className="text-xs">{date.getDate()}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   if (isDateTimeField) {
     // DateTime field - show time slots
     return (
       <div className="flex-1 flex flex-col overflow-hidden bg-background">
         {/* Week day headers */}
-        <div className="grid grid-cols-8 border-b flex-shrink-0">
-          <div className="p-2 text-center text-sm font-medium text-gray-500 bg-gray-50 border-r">
-            Time
-          </div>
-          {weekDaysData.map((date) => {
-            const isWeekendDay = isWeekend(date);
-            const isTodayDate = isToday(date);
-
-            let dayHeaderClass = 'bg-gray-50 text-gray-500';
-
-            if (isTodayDate) {
-              dayHeaderClass = 'bg-[var(--color-bg-brand-primary)] text-black';
-            } else if (isWeekendDay) {
-              dayHeaderClass = 'bg-gray-100 text-gray-600';
-            }
-
-            return (
-              <div
-                key={date.toDateString()}
-                className={`p-2 text-center text-sm font-medium border-r flex items-center justify-center gap-2 flex-row-reverse ${dayHeaderClass}`}
-              >
-                <div className="font-semibold">{weekDays[date.getDay()]}</div>
-                <div className="flex items-center justify-center gap-1">
-                  <span className="text-xs">{date.getDate()}</span>
-                </div>
-              </div>
-            );
-          })}
-
-        </div>
+        <WeekDayHeaders showTimeColumn={true} />
 
         {/* Time slots and events */}
         <div className="flex-1 overflow-y-auto min-h-0">
@@ -169,32 +163,7 @@ const WeekView: React.FC<WeekViewProps> = ({
     return (
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Week day headers */}
-        <div className="grid grid-cols-7 border-b border-gray-200 flex-shrink-0">
-          {weekDaysData.map((date) => {
-            const isWeekendDay = isWeekend(date);
-            const isTodayDate = isToday(date);
-
-            let dayHeaderClass = 'bg-gray-50 text-gray-500';
-
-            if (isTodayDate) {
-              dayHeaderClass = 'bg-[var(--color-bg-brand-primary)] text-black';
-            } else if (isWeekendDay) {
-              dayHeaderClass = 'bg-gray-100 text-gray-600';
-            }
-
-            return (
-              <div
-                key={date.toDateString()}
-                className={`p-2 text-center text-sm font-medium border-r flex items-center justify-center flex-row-reverse gap-2 ${dayHeaderClass}`}
-              >
-                <div className="font-semibold">{weekDays[date.getDay()]}</div>
-                <div className="flex items-center justify-center gap-1">
-                  <span className="text-xs">{date.getDate()}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <WeekDayHeaders showTimeColumn={false} />
 
         {/* Events grid */}
         <div className="flex-1 overflow-y-auto min-h-0">

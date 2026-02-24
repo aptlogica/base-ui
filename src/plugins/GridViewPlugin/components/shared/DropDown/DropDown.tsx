@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import { getDisplayValue, isSelected as isSelectedValue, normalizeSelection, toggleSelection } from "../../../../common/dropdown/dropdownSelection";
 
 interface Option {
   label: string;
@@ -23,44 +24,20 @@ const Dropdown: React.FC<DropdownProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
 
-  const isMultipleValue = (input: string | string[]): input is string[] => Array.isArray(input);
+  const currentValues = useMemo(() => normalizeSelection(value), [value]);
 
-  const handleSelectMultiple = (optionValue: string) => {
-    const selectedValues = isMultipleValue(value) ? [...value] : [];
-    if (selectedValues.includes(optionValue)) {
-      onChange(selectedValues.filter((v) => v !== optionValue));
-    } else {
-      onChange([...selectedValues, optionValue]);
+  const handleSelect = (optionValue: string) => {
+    if (multiple) {
+      onChange(toggleSelection(currentValues, optionValue));
+      return;
     }
-  };
-
-  const handleSelectSingle = (optionValue: string) => {
     onChange(optionValue);
     setOpen(false);
   };
 
-  const handleSelect = (optionValue: string) => {
-    if (multiple) {
-      handleSelectMultiple(optionValue);
-      return;
-    }
-    handleSelectSingle(optionValue);
-  };
+  const isSelected = (optionValue: string) => isSelectedValue(currentValues, optionValue);
 
-  const isSelectedMultiple = (optionValue: string) =>
-    isMultipleValue(value) && value.includes(optionValue);
-
-  const isSelectedSingle = (optionValue: string) => value === optionValue;
-
-  const isSelected = (optionValue: string) =>
-    multiple ? isSelectedMultiple(optionValue) : isSelectedSingle(optionValue);
-
-  const getDisplayValueMultiple = () =>
-    isMultipleValue(value) && value.length > 0 ? value.join(", ") : placeholder;
-
-  const getDisplayValueSingle = () => (value as string) || placeholder;
-
-  const getDisplayValue = () => (multiple ? getDisplayValueMultiple() : getDisplayValueSingle());
+  const displayValue = getDisplayValue(currentValues, placeholder, multiple);
 
   return (
     <div className="relative w-full mb-3">
@@ -73,7 +50,7 @@ const Dropdown: React.FC<DropdownProps> = ({
         onClick={() => setOpen(!open)}
       >
         <span>
-          {getDisplayValue()}
+          {displayValue}
         </span>
         {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </div>

@@ -5,8 +5,8 @@ import TimeSlotCell from "./TimeSlotCell";
 import { CalendarEvent } from "../hooks/useCalendarData";
 import {
   getEventsForDateKey,
-  getHourLabel,
   isDateTimeFieldType,
+  createTimeSlots,
 } from "../utils/calendarViewUtils";
 
 interface DayViewProps {
@@ -36,18 +36,7 @@ const DayView: React.FC<DayViewProps> = ({
   // Generate time slots for datetime fields
   const timeSlots = useMemo(() => {
     if (!isDateTimeField) return [];
-
-    const slots: Array<{ hour: number; label: string; time: string }> = [];
-
-    for (let hour = 0; hour < 24; hour++) {
-      slots.push({
-        hour,
-        label: getHourLabel(hour),
-        time: `${hour.toString().padStart(2, '0')}:00`
-      });
-    }
-
-    return slots;
+    return createTimeSlots();
   }, [isDateTimeField]);
 
   // Get events for the current date

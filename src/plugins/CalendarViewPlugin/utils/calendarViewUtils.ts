@@ -20,6 +20,20 @@ export const getHourLabel = (hour: number): string => {
   return `${hour - 12} pm`;
 };
 
+export const createTimeSlots = (): Array<{ hour: number; label: string; time: string }> => {
+  const slots: Array<{ hour: number; label: string; time: string }> = [];
+
+  for (let hour = 0; hour < 24; hour++) {
+    slots.push({
+      hour,
+      label: getHourLabel(hour),
+      time: `${hour.toString().padStart(2, '0')}:00`
+    });
+  }
+
+  return slots;
+};
+
 export const toLocalDateKey = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
