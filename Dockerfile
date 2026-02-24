@@ -15,9 +15,6 @@ RUN npm install --no-audit --no-fund
 # Copy source
 COPY . .
 
-# Install SDK dependencies inside sdk (in root)
-RUN npm install --no-audit --no-fund --prefix ./sdk
-
 # Build app
 RUN npm run build
 
