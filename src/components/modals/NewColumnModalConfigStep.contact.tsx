@@ -1,6 +1,60 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { Email, URLField, MultiLineText } from '../../components/common/Fields';
 
+const renderValidationToggle = (checked: boolean, onChange: (checked: boolean) => void, label: string) => (
+  <div className="flex items-center gap-2 mb-3">
+    <label className="relative inline-flex gap-3 items-center cursor-pointer">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={e => onChange(e.target.checked)}
+        className="sr-only peer"
+      />
+      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
+      <div className="absolute left-0.5 top-1 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+      <span className="text-sm font-medium text-[var(--color-text-tertiary)]">{label}</span>
+    </label>
+  </div>
+);
+
+const renderDescriptionSection = (
+  showDescription: boolean,
+  setShowDescription: (next: (v: boolean) => boolean) => void,
+  description: string,
+  setDescription: (value: string) => void,
+  buttonClassName: string,
+  trashButtonClassName: string
+) => (
+  <div className="relative">
+    <button
+      className={buttonClassName}
+      onClick={() => setShowDescription((v: boolean) => !v)}
+    >
+      <Plus className="w-4 h-4" />
+      Add description
+    </button>
+    {showDescription && (
+      <>
+        <MultiLineText
+          placeholder="Enter field description..."
+          value={description}
+          onChange={value => setDescription(value)}
+          rows={4}
+          isBorder={true}
+        />
+        {description && (
+          <button
+            className={trashButtonClassName}
+            onClick={() => setDescription('')}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </>
+    )}
+  </div>
+);
+
 export function renderContactConfigStep(props: any) {
   const {
     selectedType,
@@ -37,18 +91,12 @@ export function renderContactConfigStep(props: any) {
       return (
         <>
           <div className="mb-3 space-y-2">
-            <div className="flex items-center gap-3 mb-4">
-              <label className="relative inline-flex gap-2 items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={phoneValid}
-                  onChange={e => setPhoneValid(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                <div className="absolute left-0.5 top-1 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-                <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Accept only valid phone numbers</span>
-              </label>
+            <div className="mb-4">
+              {renderValidationToggle(
+                phoneValid,
+                (checked) => setPhoneValid(checked),
+                'Accept only valid phone numbers'
+              )}
             </div>
             <div>
               <button
@@ -74,49 +122,24 @@ export function renderContactConfigStep(props: any) {
             </div>
           </div>
 
-          <div className="relative">
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
-              <Plus className="w-4 h-4" />
-              Add description
-            </button>
-            {showDescription && (
-              <>
-                <MultiLineText
-                  placeholder="Enter field description..."
-                  value={description}
-                  onChange={value => setDescription(value)}
-                  rows={4}
-                  isBorder={true}
-                />
-                {description && (
-                  <button
-                    className="absolute right-2 top-0.5 text-gray-400 hover:text-gray-600 text-sm"
-                    onClick={() => setDescription('')}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+          {renderDescriptionSection(
+            showDescription,
+            setShowDescription,
+            description,
+            setDescription,
+            'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
+            'absolute right-2 top-0.5 text-gray-400 hover:text-gray-600 text-sm'
+          )}
         </>
       );
     case 'email':
       return (
         <>
-          <div className="flex items-center gap-2 mb-3">
-            <label className="relative inline-flex gap-3 items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={emailValid}
-                onChange={e => setEmailValid(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-              <div className="absolute left-0.5 top-1 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-              <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Email validation</span>
-            </label>
-          </div>
+          {renderValidationToggle(
+            emailValid,
+            (checked) => setEmailValid(checked),
+            'Email validation'
+          )}
 
           <div className="mb-0">
             <button
@@ -140,53 +163,24 @@ export function renderContactConfigStep(props: any) {
             )}
           </div>
 
-          <div className="relative">
-            <button
-              type="button"
-              className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2"
-              onClick={() => setShowDescription((v: boolean) => !v)}
-            >
-              <Plus className="w-4 h-4" />
-              Add description
-            </button>
-            {showDescription && (
-              <>
-                <MultiLineText
-                  placeholder="Enter field description..."
-                  value={description}
-                  onChange={value => setDescription(value)}
-                  rows={4}
-                  isBorder={true}
-                />
-                {description && (
-                  <button
-                    className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
-                    onClick={() => setDescription('')}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+          {renderDescriptionSection(
+            showDescription,
+            setShowDescription,
+            description,
+            setDescription,
+            'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            'absolute right-2 top-2 text-gray-400 hover:text-gray-600'
+          )}
         </>
       );
     case 'url':
       return (
         <>
-          <div className="flex items-center gap-2 mb-3">
-            <label className="relative inline-flex gap-3 items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={urlValid}
-                onChange={e => setUrlValid(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-              <div className="absolute left-0.5 top-1 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-              <span className="text-sm font-medium text-[var(--color-text-tertiary)]">URL validation</span>
-            </label>
-          </div>
+          {renderValidationToggle(
+            urlValid,
+            (checked) => setUrlValid(checked),
+            'URL validation'
+          )}
 
           <div className="mb-4">
             <button
@@ -212,35 +206,14 @@ export function renderContactConfigStep(props: any) {
             )}
           </div>
 
-          <div className="relative">
-            <button
-              type="button"
-              className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2"
-              onClick={() => setShowDescription((v: boolean) => !v)}
-            >
-              <Plus className="w-4 h-4" />
-              Add description
-            </button>
-            {showDescription && (
-              <>
-                <MultiLineText
-                  placeholder="Enter field description..."
-                  value={description}
-                  onChange={value => setDescription(value)}
-                  rows={4}
-                  isBorder={true}
-                />
-                {description && (
-                  <button
-                    className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
-                    onClick={() => setDescription('')}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+          {renderDescriptionSection(
+            showDescription,
+            setShowDescription,
+            description,
+            setDescription,
+            'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
+            'absolute right-2 top-2 text-gray-400 hover:text-gray-600'
+          )}
         </>
       );
     default:

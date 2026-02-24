@@ -7,7 +7,7 @@ import { calculateDropdownPosition } from '../../../utils/dropdownPosition';
 import { pad2, getTodayISO } from '../../../utils/timeFormatUtils';
 import { buildCalendarWeeks, MONTH_LABELS } from '../../../utils/calendarUtils';
 
-interface DateTimeProps {
+export interface DateTimeProps {
   label?: string;
   value: string;
   onChange: (value: string) => void;

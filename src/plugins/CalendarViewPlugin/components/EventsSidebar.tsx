@@ -19,6 +19,64 @@ interface EventsSidebarProps {
   onCreateRecord?: () => void; // Optional - only provided if user has permission
 }
 
+const buildDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getDateRangeForView = (view: string, currentDate: Date) => {
+  switch (view) {
+    case 'week': {
+      const weekStart = new Date(currentDate);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Monday
+      weekStart.setHours(0, 0, 0, 0);
+
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+      return { start: weekStart, end: weekEnd };
+    }
+
+    case 'month': {
+      const monthStart = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth(),
+        1
+      );
+
+      const monthEnd = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+        999
+      );
+      return { start: monthStart, end: monthEnd };
+    }
+
+    case 'year': {
+      const yearStart = new Date(currentDate.getFullYear(), 0, 1);
+      const yearEnd = new Date(
+        currentDate.getFullYear(),
+        11,
+        31,
+        23,
+        59,
+        59,
+        999
+      );
+      return { start: yearStart, end: yearEnd };
+    }
+
+    default:
+      return null;
+  }
+};
+
 const EventsSidebar: React.FC<EventsSidebarProps> = ({
   events,
   onEventClick,
@@ -34,76 +92,19 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
     switch (currentView) {
       case 'day': {
         // Show events for the current day
-        const year = currentDate.getFullYear();
-        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-        const day = String(currentDate.getDate()).padStart(2, '0');
-        const dateStr = `${year}-${month}-${day}`;
-
+        const dateStr = buildDateKey(currentDate);
         return events.filter(event => event.date === dateStr);
       }
 
-      case 'week': {
-        // Show events for the current week
-        const weekStart = new Date(currentDate);
-        weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Monday
-        weekStart.setHours(0, 0, 0, 0);
-
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-        weekEnd.setHours(23, 59, 59, 999);
-
-        return events.filter(event => {
-          const eventDate = new Date(event.dateTime);
-          return eventDate >= weekStart && eventDate <= weekEnd;
-        });
-      }
-
-      case 'month': {
-        // Show events for the current month
-        const monthStart = new Date(
-          currentDate.getFullYear(),
-          currentDate.getMonth(),
-          1
-        );
-
-        const monthEnd = new Date(
-          currentDate.getFullYear(),
-          currentDate.getMonth() + 1,
-          0,
-          23,
-          59,
-          59,
-          999
-        );
-
-        return events.filter(event => {
-          const eventDate = new Date(event.dateTime);
-          return eventDate >= monthStart && eventDate <= monthEnd;
-        });
-      }
-
-      case 'year': {
-        // Show events for the current year
-        const yearStart = new Date(currentDate.getFullYear(), 0, 1);
-        const yearEnd = new Date(
-          currentDate.getFullYear(),
-          11,
-          31,
-          23,
-          59,
-          59,
-          999
-        );
-
-        return events.filter(event => {
-          const eventDate = new Date(event.dateTime);
-          return eventDate >= yearStart && eventDate <= yearEnd;
-        });
-      }
-
       default:
-        return events;
+        break;
     }
+    const range = getDateRangeForView(currentView, currentDate);
+    if (!range) return events;
+    return events.filter(event => {
+      const eventDate = new Date(event.dateTime);
+      return eventDate >= range.start && eventDate <= range.end;
+    });
   }, [events, currentView, currentDate]);
 
   // Apply sorting to filtered events
