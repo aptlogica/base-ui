@@ -11,7 +11,7 @@ import { buildComparator, SortItem } from '../../../utils/sortUtils';
 import { buildInitialValuesForEdit } from '../../../utils/initialValues';
 import { useFrontendPagination } from '../../../hooks/useFrontendPagination';
 import { formatCompactNumber } from '../../../utils/helpers';
-import { LoadMoreButton } from '../../../components/shared/LoadMoreButton';
+import { LoadMoreSection } from '../../../components/shared/LoadMoreSection';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
 // Custom hooks
 import { useGalleryViewConfig } from '../hooks/useGalleryViewConfig';
@@ -299,15 +299,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
             </div>
             
             {/* Load More Button */}
-            {hasMore && (
-              <div className="flex justify-center py-6">
-                <LoadMoreButton
-                  onClick={handleLoadMore}
-                  isLoading={isLoadingMore}
-                  label={`Load more (${formatCompactNumber(totalItems - paginatedItems.length)} remaining)`}
-                />
-              </div>
-            )}
+            <LoadMoreSection
+              isVisible={hasMore}
+              isLoading={isLoadingMore}
+              onLoadMore={handleLoadMore}
+              className="py-6"
+              label={`Load more (${formatCompactNumber(totalItems - paginatedItems.length)} remaining)`}
+            />
           </>
         )}
       </div>

@@ -6,7 +6,8 @@ import { SortPopover } from "../../../components/shared/table/SortPopover";
 import { BaseColumn } from "../../../types/column.types";
 import { useFrontendPagination } from "../../../hooks/useFrontendPagination";
 import { formatCompactNumber } from "../../../utils/helpers";
-import { LoadMoreButton } from "../../../components/shared/LoadMoreButton";
+import { LoadMoreSection } from "../../../components/shared/LoadMoreSection";
+import { getDateRangeForView, toLocalDateKey } from "../utils/calendarViewUtils";
 
 interface EventsSidebarProps {
   events: CalendarEvent[];
@@ -18,64 +19,6 @@ interface EventsSidebarProps {
   onSortChange?: (newSorts: SortItem[]) => void;
   onCreateRecord?: () => void; // Optional - only provided if user has permission
 }
-
-const buildDateKey = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-const getDateRangeForView = (view: string, currentDate: Date) => {
-  switch (view) {
-    case 'week': {
-      const weekStart = new Date(currentDate);
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Monday
-      weekStart.setHours(0, 0, 0, 0);
-
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 6);
-      weekEnd.setHours(23, 59, 59, 999);
-      return { start: weekStart, end: weekEnd };
-    }
-
-    case 'month': {
-      const monthStart = new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth(),
-        1
-      );
-
-      const monthEnd = new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth() + 1,
-        0,
-        23,
-        59,
-        59,
-        999
-      );
-      return { start: monthStart, end: monthEnd };
-    }
-
-    case 'year': {
-      const yearStart = new Date(currentDate.getFullYear(), 0, 1);
-      const yearEnd = new Date(
-        currentDate.getFullYear(),
-        11,
-        31,
-        23,
-        59,
-        59,
-        999
-      );
-      return { start: yearStart, end: yearEnd };
-    }
-
-    default:
-      return null;
-  }
-};
 
 const EventsSidebar: React.FC<EventsSidebarProps> = ({
   events,
@@ -89,15 +32,10 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
 }) => {
   // Filter events based on current view
   const filteredEvents = useMemo(() => {
-    switch (currentView) {
-      case 'day': {
-        // Show events for the current day
-        const dateStr = buildDateKey(currentDate);
-        return events.filter(event => event.date === dateStr);
-      }
-
-      default:
-        break;
+    if (currentView === 'day') {
+      // Show events for the current day
+      const dateStr = toLocalDateKey(currentDate);
+      return events.filter(event => event.date === dateStr);
     }
     const range = getDateRangeForView(currentView, currentDate);
     if (!range) return events;
@@ -299,15 +237,13 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
             </div>
 
             {/* Load More Button */}
-            {hasMore && (
-              <div className="flex justify-center py-4 px-2">
-                <LoadMoreButton
-                  onClick={handleLoadMore}
-                  isLoading={isLoadingMore}
-                  label={`Load more (${formatCompactNumber(totalItems - paginatedEvents.length)} remaining)`}
-                />
-              </div>
-            )}
+            <LoadMoreSection
+              isVisible={hasMore}
+              isLoading={isLoadingMore}
+              onLoadMore={handleLoadMore}
+              className="py-4 px-2"
+              label={`Load more (${formatCompactNumber(totalItems - paginatedEvents.length)} remaining)`}
+            />
           </>
         )}
       </div>
