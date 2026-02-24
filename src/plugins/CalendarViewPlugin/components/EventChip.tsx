@@ -206,7 +206,7 @@ const EventChip: React.FC<EventChipProps> = ({
 
   return (
     <div className="relative" ref={chipRef}>
-      <div
+      <div //NOSONAR
         onClick={onClick ? handleClick : undefined}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}

@@ -52,6 +52,18 @@ vi.mock('../../../../hooks/useClickOutside', () => ({
   useClickOutside: () => undefined,
 }));
 
+vi.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: ({ count }: { count: number }) => ({
+    getTotalSize: () => count * 88,
+    getVirtualItems: () =>
+      Array.from({ length: count }, (_, index) => ({
+        index,
+        start: index * 88,
+      })),
+    scrollToIndex: () => undefined,
+  }),
+}));
+
 describe('LinksField', () => {
   beforeEach(() => {
     mutateAsyncMock.mockReset();

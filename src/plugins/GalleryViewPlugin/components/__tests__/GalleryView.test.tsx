@@ -1,13 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { GalleryView } from '../GalleryView';
-import * as useGalleryDataHook from '../../hooks/useGalleryData';
 import * as useGalleryViewConfigHook from '../../hooks/useGalleryViewConfig';
 import * as useGalleryModalsHook from '../../hooks/useGalleryModals';
 import * as useBaseAccessHook from '../../../../hooks/useBaseAccess';
 import * as useFrontendPaginationHook from '../../../../hooks/useFrontendPagination';
 
-vi.mock('../../hooks/useGalleryData');
 vi.mock('../../hooks/useGalleryViewConfig');
 vi.mock('../../hooks/useGalleryModals');
 vi.mock('../../../../hooks/useBaseAccess');
@@ -149,7 +147,6 @@ describe('GalleryView', () => {
     reset: vi.fn(),
   };
 
-  const mockUseGalleryData = vi.spyOn(useGalleryDataHook, 'useGalleryData');
   const mockUseGalleryViewConfig = vi.spyOn(useGalleryViewConfigHook, 'useGalleryViewConfig');
   const mockUseGalleryModals = vi.spyOn(useGalleryModalsHook, 'useGalleryModals');
   const mockUseBaseAccess = vi.spyOn(useBaseAccessHook, 'useBaseAccess');
@@ -157,8 +154,6 @@ describe('GalleryView', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    mockUseGalleryData.mockReturnValue(baseGalleryDataReturn as any);
 
     mockUseGalleryViewConfig.mockReturnValue(baseGalleryViewConfigReturn as any);
 
@@ -179,6 +174,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -192,6 +188,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -201,20 +198,21 @@ describe('GalleryView', () => {
     });
 
     it('should render empty state when no items', () => {
-      mockUseGalleryData.mockReturnValue({
-        ...baseGalleryDataReturn,
-        galleryItems: [],
-      } as any);
-
       mockUseFrontendPagination.mockReturnValue({
         ...baseFrontendPaginationReturn,
         allLoadedData: [],
         totalItems: 0,
       } as any);
 
+      const galleryData = {
+        ...baseGalleryDataReturn,
+        galleryItems: [],
+      };
+
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={galleryData as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -224,11 +222,6 @@ describe('GalleryView', () => {
     });
 
     it('should render add button in empty state when not read-only', () => {
-      mockUseGalleryData.mockReturnValue({
-        ...baseGalleryDataReturn,
-        galleryItems: [],
-      } as any);
-
       mockUseFrontendPagination.mockReturnValue({
         allLoadedData: [],
         loadNextPage: vi.fn(),
@@ -237,9 +230,15 @@ describe('GalleryView', () => {
         reset: vi.fn(),
       } as any);
 
+      const galleryData = {
+        ...baseGalleryDataReturn,
+        galleryItems: [],
+      };
+
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={galleryData as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -257,11 +256,6 @@ describe('GalleryView', () => {
         canDeleteRecord: () => false,
       } as any);
 
-      mockUseGalleryData.mockReturnValue({
-        ...baseGalleryDataReturn,
-        galleryItems: [],
-      } as any);
-
       mockUseFrontendPagination.mockReturnValue({
         allLoadedData: [],
         loadNextPage: vi.fn(),
@@ -270,9 +264,15 @@ describe('GalleryView', () => {
         reset: vi.fn(),
       } as any);
 
+      const galleryData = {
+        ...baseGalleryDataReturn,
+        galleryItems: [],
+      };
+
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={galleryData as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -294,6 +294,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -315,6 +316,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -333,6 +335,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -351,6 +354,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -370,6 +374,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -390,6 +395,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -411,6 +417,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -437,6 +444,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -457,6 +465,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -479,6 +488,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -500,6 +510,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -525,6 +536,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -552,6 +564,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -577,6 +590,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -594,6 +608,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -612,6 +627,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -629,6 +645,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -651,6 +668,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -671,6 +689,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -692,6 +711,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={tableDataWithoutBaseId}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -709,6 +729,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -727,6 +748,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -749,6 +771,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -775,6 +798,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -795,6 +819,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -809,6 +834,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -830,6 +856,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -848,6 +875,7 @@ describe('GalleryView', () => {
       render(
         <GalleryView
           tableData={mockTableData}
+          galleryData={baseGalleryDataReturn as any}
           onRefresh={mockOnRefresh}
           actions={{ deleteRecord: mockDeleteRecord, updateViewConfig: mockUpdateViewConfig }}
         />
@@ -857,3 +885,5 @@ describe('GalleryView', () => {
     });
   });
 });
+
+

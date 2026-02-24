@@ -65,7 +65,8 @@ export function useTableViewConfig({
     return parseFieldConfig(config);
   }, []);
 
-  // Sync local view state from external viewConfig/meta when it changes
+  // Sync local view state from external view meta when it changes
+  // Reset transient filter state on view switch to avoid bleed across views
   useEffect(() => {
     const configObj = getConfigObj(baseMeta);
     setViewConfigState({
@@ -74,7 +75,8 @@ export function useTableViewConfig({
       sorts: Array.isArray(configObj.sorts) ? configObj.sorts as SortType[] : [],
       columnWidths: configObj.columnWidths || {},
     });
-  }, [baseMeta, getConfigObj]);
+    setRealTimeFilter(null);
+  }, [baseMeta, getConfigObj, effectiveViewId]);
 
   // Initialize local field config from view meta or generate from columns
   useEffect(() => {

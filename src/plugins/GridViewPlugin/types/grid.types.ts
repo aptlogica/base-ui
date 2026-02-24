@@ -1,6 +1,7 @@
 
 import { BaseColumn } from '../../../types/column.types';
 import type { FieldType } from '../../../types/fieldTypes';
+import type { FieldRendererType } from '../../../utils/fieldType';
 
 export interface GridTable {
   id: string;
@@ -81,11 +82,8 @@ export interface AttachmentFile {
 
 export type GridFieldType =
   | FieldType
+  | FieldRendererType
   | 'checkbox'
-  | 'createdTime'
-  | 'lastModifiedTime'
-  | 'createdBy'
-  | 'lastModifiedBy'
   | 'password';
 
 export interface GridData {

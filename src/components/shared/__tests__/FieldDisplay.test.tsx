@@ -21,7 +21,7 @@ vi.mock('../../../utils/fieldType', () => ({
 vi.mock('../../common/Fields', () => ({
   SingleLineText: (props: { value: unknown }) => <MockField value={props.value} data-testid="single-line-text" />,
   LongText: (props: { value: unknown }) => <MockField value={props.value} data-testid="long-text" />,
-  Number: (props: { value: unknown }) => <MockField value={props.value} data-testid="number" />,
+  NumberField: (props: { value: unknown }) => <MockField value={props.value} data-testid="number-field" />,
   Decimal: (props: { value: unknown }) => <MockField value={props.value} data-testid="decimal" />,
   DateField: (props: { value: unknown }) => <MockField value={props.value} data-testid="date-field" />,
   Checkbox: (props: { value: unknown }) => <MockField value={props.value} data-testid="checkbox" />,
@@ -73,7 +73,7 @@ describe('FieldDisplay', () => {
           value={42}
         />
       );
-      expect(screen.getByTestId('number')).toBeInTheDocument();
+      expect(screen.getByTestId('number-field')).toBeInTheDocument();
     });
 
     it('should render Checkbox for boolean field type', () => {
@@ -103,7 +103,7 @@ describe('FieldDisplay', () => {
           value={10}
         />
       );
-      expect(screen.getByTestId('number')).toBeInTheDocument();
+      expect(screen.getByTestId('number-field')).toBeInTheDocument();
     });
 
     it('should default to text when uidt and type are missing', () => {

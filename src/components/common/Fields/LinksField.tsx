@@ -6,6 +6,7 @@ import { useTable, useInsertRelationData } from '../../../hooks/useApi';
 import { useClickOutside } from '../../../hooks/useClickOutside';
 import { useToast } from '../../common/Toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useFrontendPagination } from '../../../hooks/useFrontendPagination';
 import { Loader } from '../../ui/Loader';
 import { formatCompactNumber } from '../../../utils/helpers';
@@ -101,7 +102,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
         if (!position) return null;
         return {
             ...position,
-            position: position.top === undefined ? 'above' : 'below'
+            position: (position.top === undefined ? 'above' : 'below') as 'above' | 'below' //NOSONAR
         };
     }, []);
 
@@ -133,6 +134,24 @@ export const LinksField: React.FC<LinksFieldProps> = ({
         }));
     }, [tableData]);
 
+    const recordsById = useMemo(() => {
+        const map = new Map<string, RelatedRecord>();
+        for (const record of records) {
+            map.set(record.id.toString(), record);
+        }
+        return map;
+    }, [records]);
+
+    const recordsSearchIndex = useMemo(() => {
+        const searchableFields = ['title', 'name', 'first_name', 'last_name', 'description'];
+        return records.map((record: RelatedRecord) => {
+            const searchText = searchableFields
+                .map(fieldName => record[fieldName]?.toString().toLowerCase() || '')
+                .filter(Boolean)
+                .join(' ');
+            return { record, searchText };
+        });
+    }, [records]);
 
     const selectedRecords = useMemo(() => {
         // Handle empty objects, null, undefined, or empty arrays
@@ -157,23 +176,18 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             const matchedRecords: RelatedRecord[] = [];
 
             for (const id of valueIds) {
-                const foundRecord = records.find((r: RelatedRecord) => r.id === id);
+                const foundRecord = recordsById.get(id.toString());
                 if (foundRecord) {
                     matchedRecords.push(foundRecord);
-                } else {
-                    // Try to find by string comparison as well
-                    const foundByString = records.find((r: RelatedRecord) => r.id.toString() === id.toString());
-                    if (foundByString) {
-                        matchedRecords.push(foundByString);
-                    } else {
-                        // Create a placeholder with the ID
-                        matchedRecords.push({
-                            id,
-                            title: `Record ${id}`,
-                            _isPlaceholder: true
-                        });
-                    }
+                    continue;
                 }
+
+                // Create a placeholder with the ID
+                matchedRecords.push({
+                    id,
+                    title: `Record ${id}`,
+                    _isPlaceholder: true
+                });
             }
 
             return matchedRecords;
@@ -185,20 +199,17 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             title: 'Loading...',
             _isPlaceholder: true
         }));
-    }, [value, records, isTableLoading]);
+    }, [value, records, recordsById, isTableLoading]);
 
     // Filter records based on debounced search term
     const filteredRecords = useMemo(() => {
         if (!debouncedSearchTerm.trim()) return records;
 
-        return records.filter((record: RelatedRecord) => {
-            const searchableFields = ['title', 'name', 'first_name', 'last_name', 'description'];
-            return searchableFields.some(fieldName => {
-                const fieldValue = record[fieldName];
-                return fieldValue?.toString().toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-            });
-        });
-    }, [records, debouncedSearchTerm]);
+        const normalizedSearchTerm = debouncedSearchTerm.toLowerCase();
+        return recordsSearchIndex
+            .filter(({ searchText }) => searchText.includes(normalizedSearchTerm))
+            .map(({ record }) => record);
+    }, [records, recordsSearchIndex, debouncedSearchTerm]);
 
     // FRONTEND PAGINATION: Paginate filtered records for better performance
     const {
@@ -216,10 +227,38 @@ export const LinksField: React.FC<LinksFieldProps> = ({
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const loadingResetRef = useRef<NodeJS.Timeout | null>(null);
+
+    const resetLoadingMore = useCallback(() => {
+        setIsLoadingMore(false);
+    }, []);
+
+    const scheduleLoadingReset = useCallback(() => {
+        if (loadingResetRef.current) {
+            clearTimeout(loadingResetRef.current);
+        }
+        loadingResetRef.current = setTimeout(resetLoadingMore, 100);
+    }, [resetLoadingMore]);
+
+    const triggerLoadMore = useCallback(() => {
+        if (!hasMore || isLoadingMore) return;
+        setIsLoadingMore(true);
+        loadNextPage();
+        scheduleLoadingReset();
+    }, [hasMore, isLoadingMore, loadNextPage, scheduleLoadingReset]);
 
     useEffect(() => {
         const container = scrollContainerRef.current;
         if (!container || !hasMore || isLoadingMore) return;
+
+        const runScrollCheck = () => {
+            const currentContainer = scrollContainerRef.current;
+            if (!currentContainer) return;
+            const { scrollTop, scrollHeight, clientHeight } = currentContainer;
+            if (scrollHeight - scrollTop <= clientHeight + 100 && !isLoadingMore) {
+                triggerLoadMore();
+            }
+        };
 
         const handleScroll = () => {
             // Clear any pending scroll handler
@@ -228,16 +267,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             }
 
             // Debounce scroll handler to prevent multiple rapid calls
-            scrollTimeoutRef.current = setTimeout(() => {
-                const { scrollTop, scrollHeight, clientHeight } = container;
-                // Load more when user is within 100px of bottom
-                if (scrollHeight - scrollTop <= clientHeight + 100 && !isLoadingMore) {
-                    setIsLoadingMore(true);
-                    loadNextPage();
-                    // loadNextPage is synchronous, so reset loading state after a brief delay
-                    setTimeout(() => setIsLoadingMore(false), 100);
-                }
-            }, 150); // Debounce scroll events
+            scrollTimeoutRef.current = setTimeout(runScrollCheck, 150); // Debounce scroll events
         };
 
         container.addEventListener('scroll', handleScroll, { passive: true });
@@ -246,17 +276,30 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             if (scrollTimeoutRef.current) {
                 clearTimeout(scrollTimeoutRef.current);
             }
+            if (loadingResetRef.current) {
+                clearTimeout(loadingResetRef.current);
+            }
         };
-    }, [hasMore, loadNextPage, isLoadingMore]);
+    }, [hasMore, isLoadingMore, triggerLoadMore]);
 
     // Handle manual "Load more" button click
     const handleLoadMore = useCallback(() => {
-        if (isLoadingMore || !hasMore) return;
-        setIsLoadingMore(true);
-        loadNextPage();
-        // loadNextPage is synchronous, so reset loading state after a brief delay
-        setTimeout(() => setIsLoadingMore(false), 100);
-    }, [isLoadingMore, hasMore, loadNextPage]);
+        triggerLoadMore();
+    }, [triggerLoadMore]);
+
+    const rowVirtualizer = useVirtualizer({
+        count: paginatedRecords.length,
+        getScrollElement: () => scrollContainerRef.current,
+        estimateSize: () => 72,
+        overscan: 6,
+        measureElement: (element) => element.getBoundingClientRect().height,
+    });
+
+    useEffect(() => {
+        if (focusedRecordIndex < 0 || focusedRecordIndex >= paginatedRecords.length) return;
+        rowVirtualizer.scrollToIndex(focusedRecordIndex, { align: 'auto' });
+        return undefined;
+    }, [focusedRecordIndex, paginatedRecords.length, rowVirtualizer]);
 
     // Common persist logic
     const persistRelation = useCallback(async (recordId: string, action: 'link' | 'unlink') => {
@@ -407,9 +450,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                 setFocusedRecordIndex(prev => {
                     // If we're at the end of visible records and there are more, load them
                     if (prev >= paginatedRecords.length - 1 && hasMore && !isLoadingMore) {
-                        setIsLoadingMore(true);
-                        loadNextPage();
-                        setTimeout(() => setIsLoadingMore(false), 100);
+                        triggerLoadMore();
                         return prev; // Keep current index
                     }
                     return prev < paginatedRecords.length - 1 ? prev + 1 : prev;
@@ -422,17 +463,9 @@ export const LinksField: React.FC<LinksFieldProps> = ({
 
         globalThis.addEventListener('keydown', handleKeyDown);
         return () => globalThis.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, focusedRecordIndex, paginatedRecords, handleSelectRecord, hasMore, isLoadingMore, loadNextPage]);
+    }, [isOpen, focusedRecordIndex, paginatedRecords, handleSelectRecord, hasMore, isLoadingMore, triggerLoadMore]);
 
-    // Scroll focused record into view - only works with paginated records
-    useEffect(() => {
-        if (focusedRecordIndex >= 0 && focusedRecordIndex < paginatedRecords.length && recordsListRef.current) {
-            const recordElement = recordsListRef.current.children[focusedRecordIndex] as HTMLElement;
-            if (recordElement) {
-                recordElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-            }
-        }
-    }, [focusedRecordIndex, paginatedRecords.length]);
+    // Scroll focused record into view handled by virtualizer
 
     const getRelationTypeDisplay = () => {
         switch (relationType) {
@@ -673,88 +706,110 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                 );
                             }
 
-                            return paginatedRecords.map((record, index) => {
-                                const isSelected = selectedRecords.some(r => r.id === record.id);
-                                const isFocused = index === focusedRecordIndex;
-                                const isRecordLoading = loadingRecordId === record.id;
-                                const buttonVariantClass = isSelected ? 'bg-red-500 hover:bg-red-600 shadow-sm' : 'bg-blue-500 hover:bg-blue-600 shadow-sm';
-                                const actionButtonClass = disabled
-                                    ? 'opacity-50 cursor-not-allowed bg-gray-400'
-                                    : buttonVariantClass;
+                            const virtualItems = rowVirtualizer.getVirtualItems();
+                            return (
+                                <div
+                                    style={{
+                                        height: `${rowVirtualizer.getTotalSize()}px`,
+                                        width: '100%',
+                                        position: 'relative',
+                                    }}
+                                >
+                                    {virtualItems.map((virtualRow) => {
+                                        const record = paginatedRecords[virtualRow.index];
+                                        if (!record) return null;
+                                        const isSelected = selectedRecords.some(r => r.id === record.id);
+                                        const isFocused = virtualRow.index === focusedRecordIndex;
+                                        const isRecordLoading = loadingRecordId === record.id;
+                                        const buttonVariantClass = isSelected ? 'bg-red-500 hover:bg-red-600 shadow-sm' : 'bg-blue-500 hover:bg-blue-600 shadow-sm';
+                                        const actionButtonClass = disabled
+                                            ? 'opacity-50 cursor-not-allowed bg-gray-400'
+                                            : buttonVariantClass;
 
-                                return (
-                                    <div //NOSONAR
-                                        key={record.id}
-                                        role="option"
-                                        aria-selected={isSelected}
-                                        tabIndex={-1}
-                                        className={`p-4 border-b hover:bg-gray-50 cursor-pointer bg-card transition-colors ${isSelected ? 'bg-blue-500' : ''
-                                            } ${isFocused ? 'bg-[var(--color-bg-brand-secondary)] text-black' : ''
-                                            }`}
-                                        onClick={() => {
-                                            setFocusedRecordIndex(index);
-                                            handleSelectRecord(record);
-                                        }}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                e.preventDefault();
-                                                setFocusedRecordIndex(index);
-                                                handleSelectRecord(record);
-                                            }
-                                        }}
-                                        onMouseEnter={() => setFocusedRecordIndex(index)}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex-1 min-w-0">
-                                                {/* Mini-form display with better layout */}
-                                                <div className="space-y-2">
-                                                    {/* Main title */}
-                                                    <div className="flex items-center space-x-2">
-                                                        <h4 className="font-medium text-gray-900 truncate">
-                                                            {record.title || `Record ${record.id}`}
-                                                        </h4>
+                                        return (
+                                            <div //NOSONAR
+                                                key={record.id}
+                                                role="option"
+                                                aria-selected={isSelected}
+                                                tabIndex={-1}
+                                                data-index={virtualRow.index}
+                                                ref={rowVirtualizer.measureElement}
+                                                className={`p-4 border-b hover:bg-gray-50 cursor-pointer bg-card transition-colors ${isSelected ? 'bg-blue-500' : ''
+                                                    } ${isFocused ? 'bg-[var(--color-bg-brand-secondary)] text-black' : ''
+                                                    }`}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    width: '100%',
+                                                    transform: `translateY(${virtualRow.start}px)`,
+                                                }}
+                                                onClick={() => {
+                                                    setFocusedRecordIndex(virtualRow.index);
+                                                    handleSelectRecord(record);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                        e.preventDefault();
+                                                        setFocusedRecordIndex(virtualRow.index);
+                                                        handleSelectRecord(record);
+                                                    }
+                                                }}
+                                                onMouseEnter={() => setFocusedRecordIndex(virtualRow.index)}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex-1 min-w-0">
+                                                        {/* Mini-form display with better layout */}
+                                                        <div className="space-y-2">
+                                                            {/* Main title */}
+                                                            <div className="flex items-center space-x-2">
+                                                                <h4 className="font-medium text-gray-900 truncate">
+                                                                    {record.title || `Record ${record.id}`}
+                                                                </h4>
+                                                            </div>
+
+                                                            {/* Status indicator */}
+                                                            {isSelected && (
+                                                                <div className="flex items-center space-x-1 mt-2">
+                                                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                                                    <span className="text-xs text-blue-500 font-medium">Linked</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
 
-                                                    {/* Status indicator */}
-                                                    {isSelected && (
-                                                        <div className="flex items-center space-x-1 mt-2">
-                                                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                                            <span className="text-xs text-blue-500 font-medium">Linked</span>
-                                                        </div>
-                                                    )}
+                                                    <div className="flex items-center space-x-2 ml-3 flex-shrink-0">
+                                                        {isRecordLoading ? (
+                                                            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex items-center justify-center" aria-label="Loading" />
+                                                        ) : (
+                                                            <button
+                                                                type='button'
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (isSelected) {
+                                                                        handleRemoveRecord(record.id);
+                                                                    } else {
+                                                                        handleSelectRecord(record);
+                                                                    }
+                                                                }}
+                                                                disabled={disabled}
+                                                                aria-label={isSelected ? `Unlink ${getRecordDisplayText(record)}` : `Link ${getRecordDisplayText(record)}`}
+                                                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${actionButtonClass}`}
+                                                            >
+                                                                {isSelected ? (
+                                                                    <X className="w-4 h-4 text-white" />
+                                                                ) : (
+                                                                    <Plus className="w-4 h-4 text-white" />
+                                                                )}
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-
-                                            <div className="flex items-center space-x-2 ml-3 flex-shrink-0">
-                                                {isRecordLoading ? (
-                                                    <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex items-center justify-center" aria-label="Loading" />
-                                                ) : (
-                                                    <button
-                                                        type='button'
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (isSelected) {
-                                                                handleRemoveRecord(record.id);
-                                                            } else {
-                                                                handleSelectRecord(record);
-                                                            }
-                                                        }}
-                                                        disabled={disabled}
-                                                        aria-label={isSelected ? `Unlink ${getRecordDisplayText(record)}` : `Link ${getRecordDisplayText(record)}`}
-                                                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${actionButtonClass}`}
-                                                    >
-                                                        {isSelected ? (
-                                                            <X className="w-4 h-4 text-white" />
-                                                        ) : (
-                                                            <Plus className="w-4 h-4 text-white" />
-                                                        )}
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            });
+                                        );
+                                    })}
+                                </div>
+                            );
                         })()}
 
                         {/* Loading more indicator */}

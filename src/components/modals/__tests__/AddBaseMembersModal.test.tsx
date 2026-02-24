@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import { AddBaseMembersModal } from '../AddBaseMembersModal';
@@ -8,6 +8,8 @@ const removeUserMutateAsync = vi.fn();
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
 const baseMembersRefetch = vi.fn();
+const originalConsoleError = console.error;
+let consoleErrorSpy: ReturnType<typeof vi.spyOn> | null = null;
 
 let tenantUsersData: Array<{ id: string; display_name?: string; email?: string }> = [];
 let baseMembersData: unknown = null;
@@ -74,6 +76,18 @@ describe('AddBaseMembersModal', () => {
       ],
     };
     baseMembersLoading = false;
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation((...args) => {
+      const message = args[0];
+      if (typeof message === 'string' && message.includes('Each child in a list')) {
+        return;
+      }
+      originalConsoleError(...args);
+    });
+  });
+
+  afterEach(() => {
+    consoleErrorSpy?.mockRestore();
+    consoleErrorSpy = null;
   });
 
   it('renders when open and shows member list', () => {

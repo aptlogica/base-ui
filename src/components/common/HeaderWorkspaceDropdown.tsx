@@ -314,7 +314,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                           </span>
 
                           {/* Right side: Badge and Status Indicator */}
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-2 flex-shrink-0 pr-2">
                             {/* Access Level Badge - Don't show for owner/co-owner */}
                             {workspace.access_level && workspace.access_level !== 'owner' && workspace.access_level !== 'co-owner' && (
                               <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getAccessLevelBadgeClasses(workspace.access_level)}`}>
@@ -324,7 +324,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
 
                             {/* Status Indicator - only for selected */}
                             {isSelected && (
-                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-200"></div>
                             )}
                           </div>
                         </div>
@@ -359,7 +359,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                   }}
                 >
                   <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
-                    <Plus className="w-4 h-4 text-primary" />
+                    <Plus className="w-5 h-5 text-primary" />
                   </div>
                   <span>Create Workspace</span>
                 </button>
@@ -377,9 +377,9 @@ const HeaderWorkspaceDropdown: React.FC = () => {
           description={newWorkspaceDescription}
           setDescription={setNewWorkspaceDescription}
           error={workspaceError}
-          onSubmit={async (e:React.SyntheticEvent<HTMLFormElement>) => {
-            e.preventDefault();
-            await handleFormSubmit(e);
+          onSubmit={async (e?: React.SyntheticEvent<HTMLFormElement>) => {
+            e?.preventDefault();
+            await handleFormSubmit(e as React.SyntheticEvent<HTMLFormElement>);
           }}
         />
       </div>

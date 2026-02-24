@@ -98,23 +98,35 @@ export const parseFieldConfig = (config: any): any => {
 export const parseFieldConfigs = (data: any): any => {
   if (!data) return data;
 
+  const parseFields = (fields: any[] | undefined) =>
+    fields?.map((field: any) => ({
+      ...field,
+      config: parseFieldConfig(field.config),
+    }));
+
+  const parseTables = (tables: any[] | undefined) =>
+    tables?.map((table: any) => ({
+      ...table,
+      fields: parseFields(table.fields),
+    }));
+
+  const parseBases = (bases: any[] | undefined) =>
+    bases?.map((base: any) => ({
+      ...base,
+      tables: parseTables(base.tables),
+    }));
+
+  const parseWorkspaces = (workspaces: any[] | undefined) =>
+    workspaces?.map((workspace: any) => ({
+      ...workspace,
+      bases: parseBases(workspace.bases),
+    }));
+
   // Handle workspace data structure
   if (data.workspaces) {
     return {
       ...data,
-      workspaces: data.workspaces.map((workspace: any) => ({
-        ...workspace,
-        bases: workspace.bases?.map((base: any) => ({
-          ...base,
-          tables: base.tables?.map((table: any) => ({
-            ...table,
-            fields: table.fields?.map((field: any) => ({
-              ...field,
-              config: parseFieldConfig(field.config)
-            }))
-          }))
-        }))
-      }))
+      workspaces: parseWorkspaces(data.workspaces),
     };
   }
 
@@ -122,10 +134,7 @@ export const parseFieldConfigs = (data: any): any => {
   if (data.fields) {
     return {
       ...data,
-      fields: data.fields.map((field: any) => ({
-        ...field,
-        config: parseFieldConfig(field.config)
-      }))
+      fields: parseFields(data.fields),
     };
   }
 

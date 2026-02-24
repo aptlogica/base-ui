@@ -8,8 +8,8 @@ vi.mock('../../../../../components/common/Fields/SingleLineText', () => ({
   ),
 }));
 
-vi.mock('../../../../../components/common/Fields/Number', () => ({
-  Number: (props: { value?: number }) => (
+vi.mock('../../../../../components/common/Fields/NumberField', () => ({
+  NumberField: (props: { value?: number }) => (
     <input data-testid="number-field" type="number" value={props.value ?? 0} readOnly />
   ),
 }));

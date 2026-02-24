@@ -82,7 +82,7 @@ const ForgotPasswordPage: React.FC = () => {
     setEmailError(null);
     
     if (!email.trim()) {
-      setEmailError("This field is required");
+      setEmailError("Email field is required");
       return;
     }
     
@@ -167,7 +167,7 @@ const ForgotPasswordPage: React.FC = () => {
                 if (error) setError("");
               }}
               onBlur={() => {
-                if (!email.trim()) setEmailError("This field is required");
+                if (!email.trim()) setEmailError("Email field is required");
                 else if (validateEmail(email.trim())) {setEmailError(null);}
                 else {setEmailError("Please enter a valid email address");}
               }}

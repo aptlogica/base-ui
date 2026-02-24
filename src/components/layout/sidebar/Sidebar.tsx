@@ -202,156 +202,163 @@ const Sidebar: React.FC<SidebarProps> = ({
   );
   if (error) return <div className="p-8 text-red-600 flyout-error">{error}</div>;
 
+  const renderEmptyState = (message: string) => (
+    <div className="text-gray-500 text-sm px-4 py-2 text-center">
+      {message}
+    </div>
+  );
+
+  const handleTableNavigate = (table: { workspace_id: string; base_id: string; id: string; title: string }) => {
+    try {
+      navigateToTable(table.workspace_id, table.base_id, table.id);
+    } catch (err) {
+      console.warn('Navigation to table failed', err);
+    }
+    if (!isLayoutMode) {
+      onClose?.();
+    }
+  };
+
+  const handleTableExpand = (e: React.MouseEvent, tableId: string) => {
+    e.stopPropagation();
+    toggleTableExpansion(tableId);
+  };
+
+  const renderTableItem = (item: { model: { id: string; title: string; base_id: string; workspace_id: string } }, index: number) => {
+    const table = item.model;
+    const isExpanded = expandedTables.includes(table.id);
+    const isActive = isTableActive(table.base_id, table.id);
+    const isPinned = pinnedTables[table.id] || false;
+    const shouldShowSeparator = index < sortedTables.length - 1;
+
+    return (
+      <div key={table.id}>
+        <div
+          className={`flex items-center gap-3 py-1.5 px-3 mb-1 hover:bg-[var(--color-gray-100)] rounded-xl ${isActive ? 'bg-[var(--color-gray-100)]' : ''
+            } relative hover:shadow-xs transition-all ease-in duration-200`}
+        >
+          {/* Expand/collapse chevron */}
+          <button
+            type="button"
+            className="cursor-pointer bg-transparent border-0 p-0"
+            onClick={(e) => handleTableExpand(e, table.id)}
+            aria-label={isExpanded ? 'Collapse table' : 'Expand table'}
+          >
+            <ChevronDown
+              size={12}
+              className={`text-[var(--color-gray-500)] ${isExpanded ? '' : 'rotate-[-90deg]'}`}
+            />
+          </button>
+          {/* Table icon */}
+          <button
+            type="button"
+            className="cursor-pointer h-5 w-5 bg-transparent border-0 p-0"
+            onClick={(e) => handleTableExpand(e, table.id)}
+            aria-label={isExpanded ? 'Collapse table' : 'Expand table'}
+          >
+            <Sheet size={15} color="#2563eb" />
+          </button>
+
+          {/* Table name - navigate only */}
+          <button
+            type="button"
+            className="flex items-center gap-2 flex-1 cursor-pointer bg-transparent border-0 p-0 text-left"
+            onClick={() => handleTableNavigate(table)}
+            aria-label={`Navigate to ${table.title}`}
+          >
+            <span
+              title={table.title}
+              className="font-medium text-[var(--color-text-tertiary)] truncate max-w-[160px]"
+            >
+              {table.title}
+            </span>
+            {/* Pin indicator - always visible when pinned, tilted */}
+            {isPinned && (
+              <Pin className="w-3 h-3 text-primary-brand fill-current rotate-45" />
+            )}
+          </button>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2">
+            <TableOptionsMenu
+              table={table}
+              baseId={selectedBase?.id}
+              isPinned={isPinned}
+              onPinToggle={handlePinToggle}
+              onRename={async (newName) => {
+                await handleEditTable(table.id, { title: newName });
+              }}
+              onEditDescription={async (description) => {
+                await handleEditTable(table.id, { description });
+              }}
+              onDelete={async () => {
+                try {
+                  await handleDeleteTable(table);
+                } catch (err) {
+                  console.error('Failed to delete table:', err);
+                }
+              }}
+              portaled={true}
+            />
+          </div>
+        </div>
+
+        {/* Table views - fetched on-demand when table is expanded */}
+        {isExpanded && (
+          <TableViewsWithData
+            table={table}
+            navigateToView={navigateToView}
+            isViewActive={isViewActive}
+            handleViewDeletion={handleDeleteView}
+            setShowCreateViewModal={setShowCreateViewModal}
+            setEditingViewId={() => { }}
+            setPopoverRef={setPopoverRef}
+          />
+        )}
+
+        {/* Separator between tables */}
+        {shouldShowSeparator && (
+          <div className="mx-2 my-2 border-t" />
+        )}
+      </div>
+    );
+  };
+
+  const renderTablesList = () => {
+    if (!currentWorkspace) {
+      return renderEmptyState('Please select a workspace');
+    }
+
+    if (!selectedBase) {
+      return renderEmptyState('Please select a base to view tables');
+    }
+
+    if (loading) {
+      return (
+        <Loader
+          text="Loading tables..."
+          textPosition="bottom"
+        />
+      );
+    }
+
+    if (sortedTables.length === 0) {
+      return (
+        <div className="var(--color-text-primary) text-sm px-4 py-2 text-center">
+          No tables in this base. Create your first table to get started.
+        </div>
+      );
+    }
+
+    return sortedTables.map(renderTableItem);
+  };
+
   const renderFlyoutContent = () => (
     <>
       {/* Scrollable Content */}
       <div className="flyout-content sb-flyout-inner p-3 flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         {/* Tables Section */}
-        {(() => {
-          // Check if we have a current workspace
-          if (!currentWorkspace) {
-            return (
-              <div className="text-gray-500 text-sm px-4 py-2 text-center">
-                Please select a workspace
-              </div>
-            );
-          }
-
-          // Check if we have a selected base
-          if (!selectedBase) {
-            return (
-              <div className="text-gray-500 text-sm px-4 py-2 text-center">
-                Please select a base to view tables
-              </div>
-            );
-          }
-
-          if (loading) { // Use global loading from business logic
-            return (
-              <Loader
-                text="Loading tables..."
-                textPosition="bottom"
-              />
-            );
-          }
-          if (sortedTables.length === 0) {
-            return (
-              <div className="var(--color-text-primary) text-sm px-4 py-2 text-center">
-                No tables in this base. Create your first table to get started.
-              </div>
-            );
-          }
-          return sortedTables.map((item, index: number) => {
-            const table = item.model;
-            return (
-              <div key={table.id}>
-                <div
-                  className={`flex items-center gap-3 py-1.5 px-3 mb-1 hover:bg-[var(--color-gray-100)] rounded-xl ${isTableActive(table.base_id, table.id) ? 'bg-background' : ''
-                    } relative hover:shadow-xs transition-all ease-in duration-200`}
-                >
-                  {/* Expand/collapse chevron */}
-                  <button
-                    type="button"
-                    className="cursor-pointer bg-transparent border-0 p-0"
-                    onClick={e => {
-                      e.stopPropagation();
-                      toggleTableExpansion(table.id);
-                    }}
-                    aria-label={expandedTables.includes(table.id) ? 'Collapse table' : 'Expand table'}
-                  >
-                    <ChevronDown
-                      size={12}
-                      className={`text-[var(--color-gray-500)] ${expandedTables.includes(table.id) ? '' : 'rotate-[-90deg]'}`}
-                    />
-                  </button>
-                  {/* Table icon */}
-                  <button
-                    type="button"
-                    className="cursor-pointer h-5 w-5 bg-transparent border-0 p-0"
-                    onClick={e => {
-                      e.stopPropagation();
-                      toggleTableExpansion(table.id);
-                    }}
-                    aria-label={expandedTables.includes(table.id) ? 'Collapse table' : 'Expand table'}
-                  >
-                    <Sheet size={15} color="#2563eb" />
-                  </button>
-
-                  {/* Table name - navigate only */}
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 flex-1 cursor-pointer bg-transparent border-0 p-0 text-left"
-                    onClick={() => {
-                      // Navigate to the table's default view (grid) and close the floating flyout if open
-                      try {
-                        navigateToTable(table.workspace_id, table.base_id, table.id);
-                      } catch (err) {
-                        console.warn('Navigation to table failed', err);
-                      }
-                      if (!isLayoutMode) {
-                        onClose?.();
-                      }
-                    }}
-                    aria-label={`Navigate to ${table.title}`}
-                  >
-                    <span
-                      title={table.title}
-                      className="font-medium text-[var(--color-text-tertiary)] truncate max-w-[160px]"
-                    >
-                      {table.title}
-                    </span>
-                    {/* Pin indicator - always visible when pinned, tilted */}
-                    {pinnedTables[table.id] && (
-                      <Pin className="w-3 h-3 text-primary-brand fill-current rotate-45" />
-                    )}
-                  </button>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2">
-                    <TableOptionsMenu
-                      table={table}
-                      baseId={selectedBase?.id}
-                      isPinned={pinnedTables[table.id] || false}
-                      onPinToggle={handlePinToggle}
-                      onRename={async (newName) => {
-                        await handleEditTable(table.id, { title: newName });
-                      }}
-                      onEditDescription={async (description) => {
-                        await handleEditTable(table.id, { description });
-                      }}
-                      onDelete={async () => {
-                        try {
-                          await handleDeleteTable(table);
-                        } catch (err) {
-                          console.error('Failed to delete table:', err);
-                        }
-                      }}
-                      portaled={true}
-                    />
-                  </div>
-                </div>
-
-                {/* Table views - fetched on-demand when table is expanded */}
-                {expandedTables.includes(table.id) && (
-                  <TableViewsWithData
-                    table={table}
-                    navigateToView={navigateToView}
-                    isViewActive={isViewActive}
-                    handleViewDeletion={handleDeleteView}
-                    setShowCreateViewModal={setShowCreateViewModal}
-                    setEditingViewId={() => { }}
-                    setPopoverRef={setPopoverRef}
-                  />
-                )}
-
-                {/* Separator between tables */}
-                {index < sortedTables.length - 1 && (
-                  <div className="mx-2 my-2 border-t" />
-                )}
-              </div>
-            );
-          });
-        })()}
+        {renderTablesList()}
       </div>
 
       {/* Fixed Footer - Non-scrollable */}

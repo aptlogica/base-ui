@@ -30,6 +30,169 @@ interface KanbanStackProps {
   index?: number;
 }
 
+type StackHeaderProps = {
+  className: string;
+  dragProps: Record<string, unknown>;
+  showGrip: boolean;
+  titleNode: React.ReactNode;
+  countNode: React.ReactNode;
+  onMenuMouseDown: (e: React.MouseEvent) => void;
+  onMenuClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  menuNode: React.ReactNode;
+};
+
+const StackHeader = memo<StackHeaderProps>((props) => {
+  const {
+    className,
+    dragProps,
+    showGrip,
+    titleNode,
+    countNode,
+    onMenuMouseDown,
+    onMenuClick,
+    menuNode,
+  } = props;
+
+  return (
+    <div className={className} {...dragProps}>
+      <div className="flex items-center gap-2">
+        {showGrip ? <GripVertical className='w-5 h-5 text-gray-500' /> : null}
+        <div className="flex items-center gap-2 flex-1">
+          {titleNode}
+        </div>
+      </div>
+
+      <div className="relative flex items-center gap-2">
+        {countNode}
+
+        <button
+          onMouseDown={onMenuMouseDown}
+          onClick={onMenuClick}
+          className="p-1 hover:bg-gray-200 rounded transition-colors"
+        >
+          <MoreHorizontal className="w-3 h-3" />
+        </button>
+
+        {menuNode}
+      </div>
+    </div>
+  );
+});
+
+StackHeader.displayName = 'StackHeader';
+
+const getHeaderConfig = (
+  stackName: string,
+  isUncategorized: boolean,
+  onStackDragStart?: (stackId: string, index: number, e: React.DragEvent) => void,
+  handlers?: {
+    onDragStart: (e: React.DragEvent) => void;
+    onDragEnter: (e: React.DragEvent) => void;
+    onDragOver: (e: React.DragEvent) => void;
+    onDragLeave: (e: React.DragEvent) => void;
+    onDrop: (e: React.DragEvent) => void;
+    onKeyDown: (e: React.KeyboardEvent) => void;
+  }
+) => {
+  const canDragHeader = !isUncategorized && onStackDragStart !== undefined;
+  const className = `flex items-center justify-between border-b p-3 ${canDragHeader ? 'cursor-grab' : 'cursor-default'}`;
+
+  if (!canDragHeader || !handlers) {
+    return {
+      canDragHeader,
+      className,
+      dragProps: {
+        role: undefined,
+        'aria-label': undefined,
+        tabIndex: undefined,
+        draggable: false,
+      } as Record<string, unknown>,
+    };
+  }
+
+  return {
+    canDragHeader,
+    className,
+    dragProps: {
+      role: 'button',
+      'aria-label': `Drag ${stackName} stack to reorder`,
+      tabIndex: 0,
+      draggable: true,
+      onDragStart: handlers.onDragStart,
+      onDragEnter: handlers.onDragEnter,
+      onDragOver: handlers.onDragOver,
+      onDragLeave: handlers.onDragLeave,
+      onDrop: handlers.onDrop,
+      onKeyDown: handlers.onKeyDown,
+    } as Record<string, unknown>,
+  };
+};
+
+const dropIndicatorStyle = {
+  boxShadow: '0 0 12px rgba(59, 130, 246, 0.8)',
+  marginLeft: '-8px',
+  marginRight: '-8px'
+};
+
+const buildDeleteMessage = (stack: Stack, fieldTitle = 'Status') => {
+  const hasCards = stack.cards && stack.cards.length > 0;
+  const cardCount = stack.cards?.length || 0;
+  const cardWord = cardCount === 1 ? 'card' : 'cards';
+
+  return hasCards
+    ? `This stack contains ${cardCount} ${cardWord}. Deleting this stack will:\n\n• Remove the "${stack.name}" option from the "${fieldTitle}" field\n• Move all ${cardCount} ${cardWord} to the Uncategorized stack\n\nThis action cannot be undone.`
+    : `This action will remove the "${stack.name}" option from the "${fieldTitle}" field. This cannot be undone.`;
+};
+
+const getDragData = (e: React.DragEvent) => {
+  const cardId = e.dataTransfer.getData('cardId') || e.dataTransfer.getData('text/plain');
+  const sourceStackId = e.dataTransfer.getData('sourceStackId') || '';
+  const sourceIndex = Number.parseInt(e.dataTransfer.getData('sourceIndex') || '0', 10);
+  return { cardId, sourceStackId, sourceIndex };
+};
+
+const filterCardElements = (
+  cardsContainer: HTMLDivElement,
+  sourceStackId: string,
+  stackId: string,
+  cardId: string
+) => {
+  const cardElements = Array.from(cardsContainer.querySelectorAll('.kanban-card'))
+    .filter((el): el is HTMLElement => el instanceof HTMLElement);
+  if (sourceStackId !== stackId) return cardElements;
+  return cardElements.filter((el) => {
+    const cardData = el.querySelector('[data-card-id]') as HTMLElement | null; //NOSONAR
+    return cardData?.dataset.cardId !== cardId;
+  });
+};
+
+const getDropPositionFromElements = (cardElements: HTMLElement[], mouseY: number) => {
+  if (cardElements.length === 0) return null;
+
+  for (let i = 0; i < cardElements.length; i++) {
+    const card = cardElements[i];
+    const rect = card.getBoundingClientRect();
+    const cardTop = rect.top;
+    const cardBottom = rect.bottom;
+    const cardMiddle = cardTop + (rect.height / 2);
+
+    if (mouseY >= cardTop && mouseY < cardMiddle) {
+      return i;
+    }
+    if (mouseY >= cardMiddle && mouseY <= cardBottom) {
+      return i + 1;
+    }
+  }
+
+  const lastCard = cardElements.at(-1);
+  const lastRect = lastCard?.getBoundingClientRect();
+  if (lastRect && mouseY > lastRect.bottom) {
+    return cardElements.length;
+  }
+
+  return null;
+};
+
 const KanbanStack = memo<KanbanStackProps>((props) => {
   const {
     stack,
@@ -111,10 +274,8 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
 
   // Calculate drop position for visual indicator
   const calculateDropPosition = useCallback((e: React.DragEvent): number | null => {
-    const cardId = e.dataTransfer.getData('cardId') || e.dataTransfer.getData('text/plain');
-    const sourceStackId = e.dataTransfer.getData('sourceStackId') || '';
+    const { cardId, sourceStackId } = getDragData(e);
 
-    // Store dragged card ID for filtering in render
     if (cardId) {
       setDraggedCardId(cardId);
     }
@@ -122,49 +283,9 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     if (!cardId || !cardsContainerRef.current) return null;
 
     const cardsContainer = cardsContainerRef.current;
-    const mouseY = e.clientY;
+    const cardElements = filterCardElements(cardsContainer, sourceStackId, stack.id, cardId);
 
-    const cardElements = Array.from(cardsContainer.querySelectorAll('.kanban-card')).filter((el: any) => {
-      // Filter out the dragged card if it's being dragged from this stack
-      if (sourceStackId === stack.id) {
-        const cardData = el.querySelector('[data-card-id]');
-        return cardData?.dataset.cardId !== cardId;
-      }
-      return true;
-    }) as HTMLElement[];
-
-    if (cardElements.length === 0) {
-      return null; // Will show at bottom
-    }
-
-    // Find which card the mouse is over or between
-    for (let i = 0; i < cardElements.length; i++) {
-      const card = cardElements[i];
-      const rect = card.getBoundingClientRect();
-      const cardTop = rect.top;
-      const cardBottom = rect.bottom;
-      const cardMiddle = cardTop + (rect.height / 2);
-
-      // If mouse is above the middle of this card, insert before it
-      if (mouseY >= cardTop && mouseY < cardMiddle) {
-        return i;
-      }
-      // If mouse is in the bottom half of this card, insert after it
-      if (mouseY >= cardMiddle && mouseY <= cardBottom) {
-        return i + 1;
-      }
-    }
-
-    // If mouse is below all cards, append to end
-    if (cardElements.length > 0) {
-      const lastCard = cardElements.at(-1);
-      const lastRect = lastCard?.getBoundingClientRect();
-      if (mouseY > lastRect!.bottom) {
-        return cardElements.length;
-      }
-    }
-
-    return null;
+    return getDropPositionFromElements(cardElements, e.clientY);
   }, [stack.id]);
 
   // Memoize drag handlers
@@ -234,15 +355,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
       dragCounter.current = 0;
       removeHighlight();
 
-      const cardId =
-        e.dataTransfer.getData('cardId') ||
-        e.dataTransfer.getData('text/plain');
-
-      const sourceStackId = e.dataTransfer.getData('sourceStackId') || '';
-      const sourceIndex = Number.parseInt(
-        e.dataTransfer.getData('sourceIndex') || '0',
-        10
-      );
+      const { cardId, sourceStackId, sourceIndex } = getDragData(e);
 
       // Original guard: only proceed if cardId && onCardMove
       if (!cardId || !onCardMove) {
@@ -389,6 +502,215 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     setDraggedCardId(c._meta.id);
   };
 
+  const handleCardsScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const scrollBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    if (scrollBottom < 200 && hasMore && !stack.isCollapsed) {
+      loadNextPage();
+    }
+  }, [hasMore, loadNextPage, stack.isCollapsed]);
+
+  const renderMenu = () => {
+    if (!showMenu) return null;
+
+    return (
+      <div
+        ref={menuRef}
+        style={{
+          position: 'fixed',
+          top: menuPos.y,
+          left: menuPos.x,
+          zIndex: 10000,
+          minWidth: 180,
+          background: 'var(--color-alpha-white)',
+          borderRadius: 8,
+          boxShadow: '0 4px 24px 0 rgba(0,0,0,0.12)',
+          padding: 5,
+          overflow: 'hidden'
+        }}
+        className="select-none border p-2 space-y-1 animate-fade-in"
+      >
+        <button
+          className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors text-sm"
+          onClick={handleCollapseClick}
+        >
+          {stack.isCollapsed ? (
+            <><ChevronDown className="w-4 h-4" /> Expand stack</>
+          ) : (
+            <><ChevronUp className="w-4 h-4" /> Collapse stack</>
+          )}
+        </button>
+        {!isUncategorized && (
+          <>
+            {onStackEdit && (
+              <button
+                className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors text-sm"
+                onClick={handleStackEditClick}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit stack
+              </button>
+            )}
+            {onStackEdit && onStackDelete && <div className="border-t my-1" />}
+            {onStackDelete && (
+              <button
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black transition-colors"
+                onClick={handleDeleteStackClick}
+              >
+                <Trash2 className="w-4 h-4" /> Delete stack
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const headerConfig = getHeaderConfig(
+    stack.name,
+    isUncategorized,
+    onStackDragStart,
+    {
+      onDragStart: handleHeaderDragStart,
+      onDragEnter: handleDragEnter,
+      onDragOver: handleHeaderDragOver,
+      onDragLeave: handleDragLeave,
+      onDrop: handleHeaderDrop,
+      onKeyDown: handleHeaderKeyDown,
+    }
+  );
+
+  const renderStackTitle = () => {
+    if (isEditing) {
+      return (
+        <input
+          ref={inputRef}
+          type="text"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleEditSave}
+          onKeyDown={handleEditKeyDown}
+          className="px-2 py-1 text-xs font-semibold border border-primary rounded bg-background text-primary outline-none focus:ring-1 focus:ring-blue-500 min-w-20"
+        />
+      );
+    }
+
+    return (
+      <span
+        style={{
+          backgroundColor: stack.color?.trim() ? stack.color : '#d1d5db',
+          color: stack.name === 'Uncategorized' ? '#666' : '#000'
+        }}
+        className="font-semibold px-2 py-0.5 rounded-lg text-xs border truncate max-w-32"
+        title={stack.name}
+      >
+        {stack.name}
+      </span>
+    );
+  };
+
+  const renderRecordCount = () => {
+    if (isEditing) return null;
+    return (
+      <span className="text-xs text-gray-500 font-medium">
+        {formatCompactNumber(visibleCards.length)} card{visibleCards.length === 1 ? '' : 's'}
+        {!stack.isCollapsed && hasMore && ` (${formatCompactNumber(paginatedCards.length)} loaded)`}
+      </span>
+    );
+  };
+
+  const headerTitleNode = renderStackTitle();
+  const headerCountNode = renderRecordCount();
+  const headerMenuNode = renderMenu();
+
+  const renderCards = () => (
+    <>
+      <div ref={cardsContainerRef} className="space-y-2 min-h-[80px] mb-2">
+        {cardsToRender.map((card, index) => {
+          const isDraggedCard = draggedCardId === card._meta.id;
+
+          return (
+            <React.Fragment key={card._meta.id}>
+              {dropIndicatorPosition === index && !isDraggedCard && (
+                <div className="h-1 bg-[var(--color-brand-600)] rounded-full -my-1 z-50 opacity-80"
+                  style={dropIndicatorStyle}
+                />
+              )}
+              {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/interactive-supports-focus, jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-tabindex */}
+              <div
+                role={onCardMove === undefined ? undefined : 'button'}
+                aria-label={onCardMove === undefined ? undefined : 'Drag card to move'}
+                draggable={onCardMove !== undefined}
+                onDragStart={onCardMove === undefined ? undefined : getCardDragStartHandler(card)}
+                onKeyDown={onCardMove === undefined ? undefined : handleCardKeyDown}
+              >
+                <div data-card-id={card._meta.id}>
+                  <KanbanCard
+                    card={card}
+                    columns={gridColumns}
+                    fieldConfig={fieldConfig}
+                    groupCol={gridGroupCol}
+                    onEdit={onCardEdit}
+                  />
+                </div>
+              </div>
+            </React.Fragment>
+          );
+        })}
+        {dropIndicatorPosition === cardsToRender.length && (
+          <div className="h-1 bg-[var(--color-brand-600)] rounded-full -my-1 z-50 opacity-80"
+            style={dropIndicatorStyle}
+          />
+        )}
+      </div>
+
+      {hasMore && (
+        <div className="flex justify-center mt-2 mb-2">
+          <button
+            onClick={loadNextPage}
+            className="px-4 py-2 text-xs font-medium text-primary-brand hover:text-hover-primary-dark bg-[var(--color-bg-secondary-subtle)] hover:bg-[var(--color-bg-brand-primary)] rounded-xl transition-colors"
+          >
+            Load more ({formatCompactNumber(visibleCards.length - paginatedCards.length)} remaining)
+          </button>
+        </div>
+      )}
+    </>
+  );
+
+  const renderEmptyState = () => (
+    <div className="text-center py-6 text-gray-500">
+      <p className="text-xs font-medium mb-1">Empty stack</p>
+      <p className="text-xs mb-3 text-gray-400">Looks like this stack does not have any records</p>
+    </div>
+  );
+
+  const renderFooter = () => {
+    if (!onCardCreate) return null;
+    return (
+      <div className={`${stack.isCollapsed ? '' : 'absolute bottom-0 left-0'} w-full border-t border-primary`}>
+        <button
+          onClick={handleNewRecordClick}
+          className="w-full inline-flex items-center justify-center gap-1 text-primary-brand hover:text-hover-primary-dark text-xs font-medium p-3"
+        >
+          <Plus className="w-5 h-5" />
+          New record
+        </button>
+      </div>
+    );
+  };
+
+  const renderDeleteModal = () => (
+    <DeleteConfirmModal
+      isOpen={confirmOpen}
+      title="Delete Stack"
+      message={buildDeleteMessage(stack, groupFieldTitle)}
+      onClose={closeConfirm}
+      onConfirm={confirmDelete}
+    />
+  );
+
   // Close menu on outside click / ESC
   useEffect(() => {
     if (!showMenu) return;
@@ -441,239 +763,31 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     >
       {/* Stack Header */}
       {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/interactive-supports-focus */}
-      <div className={`flex items-center justify-between border-b p-3 ${!isUncategorized && onStackDragStart ? 'cursor-grab' : 'cursor-default'}`}
-        role={!isUncategorized && onStackDragStart !== undefined ? 'button' : undefined}
-        aria-label={!isUncategorized && onStackDragStart !== undefined ? `Drag ${stack.name} stack to reorder` : undefined}
-        tabIndex={!isUncategorized && onStackDragStart !== undefined ? 0 : undefined}
-        draggable={!isUncategorized && onStackDragStart !== undefined}
-        onDragStart={handleHeaderDragStart}
-        onDragEnter={handleDragEnter}
-        onDragOver={handleHeaderDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleHeaderDrop}
-        onKeyDown={!isUncategorized && onStackDragStart !== undefined ? handleHeaderKeyDown : undefined}
-      >
-        <div className="flex items-center gap-2">
-          {!isUncategorized && onStackDragStart ? <GripVertical className='w-5 h-5 text-gray-500' /> : null}
-          <div className="flex items-center gap-2 flex-1">
-            {isEditing ? (
-              <input
-                ref={inputRef}
-                type="text"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={handleEditSave}
-                onKeyDown={handleEditKeyDown}
-                className="px-2 py-1 text-xs font-semibold border border-primary rounded bg-background text-primary outline-none focus:ring-1 focus:ring-blue-500 min-w-20"
-              />
-            ) : (
-              <span
-                style={{ 
-                  backgroundColor: stack.color?.trim() ? stack.color : '#d1d5db',
-                  color: stack.name === 'Uncategorized' ? '#666' : '#000'
-                }}
-                className="font-semibold px-2 py-0.5 rounded-lg text-xs border truncate max-w-32"
-                title={stack.name}
-              >
-                {stack.name}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="relative flex items-center gap-2">
-          {/* Record count - hide when editing to avoid overlap with input */}
-          {!isEditing && (
-            <span className="text-xs text-gray-500 font-medium">
-              {formatCompactNumber(visibleCards.length)} card{visibleCards.length === 1 ? '' : 's'}
-              {!stack.isCollapsed && hasMore && ` (${formatCompactNumber(paginatedCards.length)} loaded)`}
-            </span>
-          )}
-
-          <button
-            onMouseDown={handleMenuMouseDown}
-            onClick={handleMenuButtonClick}
-            className="p-1 hover:bg-gray-200 rounded transition-colors"
-          >
-            <MoreHorizontal className="w-3 h-3" />
-          </button>
-
-          {showMenu && (
-            <div
-              ref={menuRef}
-              style={{
-                position: 'fixed',
-                top: menuPos.y,
-                left: menuPos.x,
-                zIndex: 10000,
-                minWidth: 180,
-                background: 'var(--color-alpha-white)',
-                borderRadius: 8,
-                boxShadow: '0 4px 24px 0 rgba(0,0,0,0.12)',
-                padding: 5,
-                overflow: 'hidden'
-              }}
-              className="select-none border p-2 space-y-1 animate-fade-in"
-            >
-              <button
-                className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors text-sm"
-                onClick={handleCollapseClick}
-              >
-                {stack.isCollapsed ? (
-                  <><ChevronDown className="w-4 h-4" /> Expand stack</>
-                ) : (
-                  <><ChevronUp className="w-4 h-4" /> Collapse stack</>
-                )}
-              </button>
-              {!isUncategorized && (
-                <>
-                  {onStackEdit && (
-                    <button
-                      className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors text-sm"
-                      onClick={handleStackEditClick}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      Edit stack
-                    </button>
-                  )}
-                  {onStackEdit && onStackDelete && <div className="border-t my-1" />}
-                  {onStackDelete && (
-                    <button
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors"
-                      onClick={handleDeleteStackClick}
-                    >
-                      <Trash2 className="w-4 h-4" /> Delete stack
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+      <StackHeader
+        className={headerConfig.className}
+        dragProps={headerConfig.dragProps}
+        showGrip={headerConfig.canDragHeader}
+        titleNode={headerTitleNode}
+        countNode={headerCountNode}
+        onMenuMouseDown={handleMenuMouseDown}
+        onMenuClick={handleMenuButtonClick}
+        menuNode={headerMenuNode}
+      />
 
       {/* Stack Content */}
       {!stack.isCollapsed && (
         <div
           className='p-4 max-h-[90%] overflow-y-auto'
-          onScroll={(e) => {
-            // FRONTEND PAGINATION: Infinite scroll - load more when near bottom
-            const target = e.currentTarget;
-            const scrollBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
-            if (scrollBottom < 200 && hasMore && !stack.isCollapsed) {
-              loadNextPage();
-            }
-          }}
+          onScroll={handleCardsScroll}
         >
-          {/* Empty State */}
-          {stack.cards.length === 0 ? (
-            <div className="text-center py-6 text-gray-500">
-              <p className="text-xs font-medium mb-1">Empty stack</p>
-              <p className="text-xs mb-3 text-gray-400">Looks like this stack does not have any records</p>
-            </div>
-          ) : (
-            <>
-              {/* Cards */}
-              <div ref={cardsContainerRef} className="space-y-2 min-h-[80px] mb-2">
-                {cardsToRender.map((card, index) => {
-                  const isDraggedCard = draggedCardId === card._meta.id;
-
-                  return (
-                    <React.Fragment key={card._meta.id}>
-                      {/* Drop indicator line before this card */}
-                      {dropIndicatorPosition === index && !isDraggedCard && (
-                        <div className="h-1 bg-[var(--color-brand-600)] rounded-full -my-1 z-50 opacity-80"
-                          style={{
-                            boxShadow: '0 0 12px rgba(59, 130, 246, 0.8)',
-                            marginLeft: '-8px',
-                            marginRight: '-8px'
-                          }}
-                        />
-                      )}
-                      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/interactive-supports-focus, jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-tabindex */}
-                      <div
-                        role={onCardMove === undefined ? undefined : 'button'}
-                        aria-label={onCardMove === undefined ? undefined : 'Drag card to move'}
-                        draggable={onCardMove !== undefined}
-                        onDragStart={onCardMove === undefined ? undefined : getCardDragStartHandler(card)}
-                        onKeyDown={onCardMove === undefined ? undefined : handleCardKeyDown}
-                      >
-                        <div data-card-id={card._meta.id}>
-                          <KanbanCard
-                            card={card}
-                            columns={gridColumns}
-                            fieldConfig={fieldConfig}
-                            groupCol={gridGroupCol}
-                            onEdit={onCardEdit}
-                          />
-                        </div>
-                      </div>
-                    </React.Fragment>
-                  );
-                })}
-                {/* Drop indicator at the end */}
-                {dropIndicatorPosition === cardsToRender.length && (
-                  <div className="h-1 bg-[var(--color-brand-600)] rounded-full -my-1 z-50 opacity-80"
-                    style={{
-                      boxShadow: '0 0 12px rgba(59, 130, 246, 0.8)',
-                      marginLeft: '-8px',
-                      marginRight: '-8px'
-                    }}
-                  />
-                )}
-              </div>
-
-              {/* FRONTEND PAGINATION: Load more button (alternative to infinite scroll) */}
-              {hasMore && (
-                <div className="flex justify-center mt-2 mb-2">
-                  <button
-                    onClick={loadNextPage}
-                    className="px-4 py-2 text-xs font-medium text-primary-brand hover:text-hover-primary-dark bg-[var(--color-bg-secondary-subtle)] hover:bg-[var(--color-bg-brand-primary)] rounded-xl transition-colors"
-                  >
-                    Load more ({formatCompactNumber(visibleCards.length - paginatedCards.length)} remaining)
-                  </button>
-                </div>
-              )}
-            </>
-          )}
+          {stack.cards.length === 0 ? renderEmptyState() : renderCards()}
         </div>
       )}
       {/* New record button - only show if onCardCreate is provided (user has permission) */}
-      {onCardCreate && (
-        <div className={`${stack.isCollapsed ? '' : 'absolute bottom-0 left-0'} w-full border-t border-primary`}>
-          <button
-            onClick={handleNewRecordClick}
-            className="w-full inline-flex items-center justify-center gap-1 text-primary-brand hover:text-hover-primary-dark text-xs font-medium p-3"
-          >
-            <Plus className="w-5 h-5" />
-            New record
-          </button>
-        </div>
-      )}
+      {renderFooter()}
 
       {/* Delete confirmation modal */}
-      {(() => {
-        const hasCards = stack.cards && stack.cards.length > 0;
-        const cardCount = stack.cards?.length || 0;
-        const cardWord = cardCount === 1 ? 'card' : 'cards';
-        const fieldTitle = groupFieldTitle || 'Status';
-
-        const deleteMessage = hasCards
-          ? `This stack contains ${cardCount} ${cardWord}. Deleting this stack will:\n\n• Remove the "${stack.name}" option from the "${fieldTitle}" field\n• Move all ${cardCount} ${cardWord} to the Uncategorized stack\n\nThis action cannot be undone.`
-          : `This action will remove the "${stack.name}" option from the "${fieldTitle}" field. This cannot be undone.`;
-
-        return (
-          <DeleteConfirmModal
-            isOpen={confirmOpen}
-            title="Delete Stack"
-            message={deleteMessage}
-            onClose={closeConfirm}
-            onConfirm={confirmDelete}
-          />
-        );
-      })()}
+      {renderDeleteModal()}
     </ContainerTag>
   );
 });

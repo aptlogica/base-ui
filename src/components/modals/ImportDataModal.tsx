@@ -84,12 +84,12 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div
+    <div //NOSONAR
       className="bg-modal-backdrop"
       onClick={onClose}
       onKeyDown={handleKeyDown}
     >
-      <div
+      <div //NOSONAR
         className="bg-modal"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}

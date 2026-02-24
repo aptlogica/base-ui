@@ -634,9 +634,7 @@ const HomePage: React.FC = () => {
                   {/* Title and Description on right of icon */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <h3
-                        className="font-semibold text-base text-gray-900 leading-tight truncate flex-1 min-w-0"
-                      >
+                      <h3 className="font-semibold text-base text-gray-900 leading-tight truncate flex-1 min-w-0" title={base.title || base.name}>
                         {base.title || base.name || 'Untitled Base'}
                       </h3>
                       {/* Show badge in place of menu for read-only access, otherwise show menu */}
@@ -653,9 +651,7 @@ const HomePage: React.FC = () => {
                         />
                       )}
                     </div>
-                    <p
-                      className="text-sm text-gray-600 line-clamp-1 leading-relaxed"
-                    >
+                    <p className="text-sm text-gray-600 line-clamp-1 leading-relaxed" title={base.description}>
                       {base.description || 'Base for general purpose work.'}
                     </p>
                   </div>

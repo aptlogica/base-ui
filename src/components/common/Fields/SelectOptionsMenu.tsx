@@ -33,12 +33,11 @@ export const SelectOptionsMenu: React.FC<SelectOptionsMenuProps> = ({
       {options.map((opt, index) => {
         const selected = isSelected(opt);
         const disabled = readOnly || (isDisabled ? isDisabled(opt) : false);
+        const disabledClass = disabled ? 'text-gray-400 cursor-not-allowed' : 'cursor-pointer';
+        const selectedClass = selected ? 'text-black font-bold' : '';
         const classes = optionClassName
           ? optionClassName(opt, selected, disabled)
-          : `w-full text-left text-sm rounded-xl flex items-center justify-between ${disabled
-            ? 'text-gray-400 cursor-not-allowed'
-            : 'cursor-pointer'
-          } ${selected ? 'text-black font-bold' : ''}`;
+          : `w-full text-left text-sm rounded-xl flex items-center justify-between ${disabledClass} ${selectedClass}`;
 
         return (
           <button

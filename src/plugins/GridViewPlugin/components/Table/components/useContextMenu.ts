@@ -7,7 +7,7 @@ interface UseContextMenuPositionOptions {
 }
 
 export const useContextMenuDismiss = (
-  menuRef: React.RefObject<HTMLDivElement>,
+  menuRef: React.RefObject<HTMLDivElement | null>,
   onClose: () => void
 ) => {
   useEffect(() => {
@@ -31,7 +31,7 @@ export const useContextMenuDismiss = (
 export const useContextMenuPosition = (
   x: number,
   y: number,
-  menuRef: React.RefObject<HTMLDivElement>,
+  menuRef: React.RefObject<HTMLDivElement | null>,
   options: UseContextMenuPositionOptions = {}
 ) => {
   const { menuHeightFallback = 200, menuWidthFallback = 180, margin = 10 } = options;

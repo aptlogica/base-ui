@@ -21,12 +21,12 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div
+    <div //NOSONAR
       className="bg-modal-backdrop"
       onClick={onClose}
       onKeyDown={handleKeyDown}
     >
-      <div
+      <div //NOSONAR
         className="bg-card rounded-xl border shadow-xl w-full max-w-5xl h-[90vh] max-h-[900px] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}

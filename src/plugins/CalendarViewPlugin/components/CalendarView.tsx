@@ -1,3 +1,5 @@
+
+/* eslint-disable sonarjs/cognitive-complexity */
 import React, { useMemo, useCallback } from "react";
 import CreateRecordModal from "../../../components/modals/CreateRecordModal";
 import EditRecordModal from "../../../components/modals/EditRecordModal";
@@ -447,25 +449,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   }, [modalState.create.selectedDate, dateField, visibleColumns]);
 
 
-  const onCreateRecordHandler =
-    !isReadOnly && canCreateRecord()
-      ? () => handleOpenCreateModal(currentDate)
-      : undefined;
-
-  const onEventClickHandler =
-    !isReadOnly && canUpdateRecord()
-      ? handleOpenEditModal
-      : undefined;
-
-  const onDateClickHandler =
-    !isReadOnly && canCreateRecord()
-      ? handleOpenCreateModal
-      : undefined;
-
-  const onDeleteHandler =
-    !isReadOnly && canDeleteRecord()
-      ? handleDeleteFromModal
-      : undefined;
+  const onCreateRecordHandler = !isReadOnly && canCreateRecord() ? () => handleOpenCreateModal(currentDate) : undefined;
+  const onEventClickHandler = !isReadOnly && canUpdateRecord() ? handleOpenEditModal : undefined;
+  const onDateClickHandler = !isReadOnly && canCreateRecord() ? handleOpenCreateModal : undefined;
+  const onDeleteHandler = !isReadOnly && canDeleteRecord() ? handleDeleteFromModal : undefined;
 
 
   return (
@@ -474,7 +461,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       <CalendarHeader
         currentDate={currentDate}
         onDateChange={setCurrentDate}
-        currentView={currentView}
+     currentView={currentView}
         onViewChange={handleViewChange}
         dateField={dateField}
         onExport={handleOpenExportModal}
@@ -521,7 +508,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               currentDate={currentDate}
               events={sortedEvents}
               onEventClick={onEventClickHandler}
-              onDateClick={onDateClickHandler }
+              onDateClick={onDateClickHandler}
               dateField={dateField}
               columns={visibleColumns}
               fieldConfig={localFieldConfig}

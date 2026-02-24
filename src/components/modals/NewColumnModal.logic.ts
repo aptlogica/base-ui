@@ -32,6 +32,7 @@ export interface BuildFieldMetaParams {
   dateTimeDefault: string;
   currencyType: string;
   currencyLocale: string;
+  currencyDefault?: number | string | null;
   displayAsProgress: boolean;
   progressColor: string;
   percentDefault: number | null;
@@ -166,7 +167,12 @@ const applyDateTimeConfig = (
 export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResult => {
   const config: any = {};
 
-  if (params.defaultValue && (typeof params.defaultValue === 'string' ? params.defaultValue.trim() : true)) {
+  const hasDefaultValue =
+    params.defaultValue &&
+    (typeof params.defaultValue === 'string' ? params.defaultValue.trim() : true);
+
+  const applyDefaultValueForType = () => {
+    if (!hasDefaultValue) return;
     switch (params.selectedTypeKey) {
       case 'number':
       case 'decimal':
@@ -176,164 +182,86 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
           ? Number.parseFloat(params.defaultValue)
           : params.defaultValue;
         config.defaultValue = Number.isNaN(parsed) ? params.defaultValue : parsed;
-        break;
+        return;
       }
       case 'boolean':
         config.defaultValue = params.defaultValue === 'true' || params.defaultValue === '1';
-        break;
+        return;
       case 'rating':
         config.defaultValue = Number.parseInt(params.defaultValue, 10) || 0;
-        break;
+        return;
       case 'year':
         config.defaultValue = typeof params.defaultValue === 'string'
           ? (Number.parseInt(params.defaultValue, 10) || params.defaultValue)
           : params.defaultValue;
-        break;
+        return;
       case 'json':
         if (typeof params.defaultValue === 'object') {
           config.defaultValue = params.defaultValue;
-        } else {
-          try {
-            config.defaultValue = JSON.parse(params.defaultValue);
-          } catch {
-            config.defaultValue = params.defaultValue;
-          }
+          return;
         }
-        break;
+        try {
+          config.defaultValue = JSON.parse(params.defaultValue);
+        } catch {
+          config.defaultValue = params.defaultValue;
+        }
+        return;
       default:
         config.defaultValue = params.defaultValue;
     }
-  }
+  };
 
-  if (params.selectedTypeKey === 'longText') {
-    config.richText = params.richText;
-  }
-  if (params.selectedTypeKey === 'number') {
-    config.showThousands = params.showThousands;
-  }
-  if (params.selectedTypeKey === 'decimal') {
-    config.precision = params.precision;
-    config.showThousands = params.showThousands;
-  }
-  if (params.selectedTypeKey === 'boolean') {
-    config.icon = params.checkboxIcon;
-    config.color = params.checkboxColor;
-    config.defaultValue = params.checkboxDefault;
-  }
-  if (params.selectedTypeKey === 'select') {
+  const applySelectDefaults = (isMulti: boolean) => {
     config.options = params.selectOptions;
+    if (isMulti) {
+      if (params.multiDefault && params.multiDefault.length > 0) {
+        config.defaultValue = params.multiDefault;
+      }
+      return;
+    }
     if (params.singleDefault?.trim()) {
       config.defaultValue = params.singleDefault;
     }
-  }
-  if (params.selectedTypeKey === 'multiSelect') {
-    config.options = params.selectOptions;
-    if (params.multiDefault && params.multiDefault.length > 0) {
-      config.defaultValue = params.multiDefault;
+  };
+
+  const applyDateTimeDefault = () => {
+    if (!params.dateTimeDefault?.trim()) return;
+    let formattedDateTime = params.dateTimeDefault;
+    if (!formattedDateTime.includes('T')) {
+      const today = new Date().toISOString().split('T')[0];
+      formattedDateTime = `${today}T${formattedDateTime}`;
     }
-  }
-  if (params.selectedTypeKey === 'rating') {
-    config.ratingIcon = params.ratingIcon;
-    config.ratingColor = params.ratingColor;
-    config.ratingMax = params.ratingMax;
-    config.ratingDefault = params.ratingDefault;
-    config.ratingDescription = params.description;
-  }
-  if (params.selectedTypeKey === 'datetime') {
-    applyDateTimeConfig(config, params);
-    if (params.dateTimeDefault?.trim()) {
-      let formattedDateTime = params.dateTimeDefault;
-      if (!formattedDateTime.includes('T')) {
-        const today = new Date().toISOString().split('T')[0];
-        formattedDateTime = `${today}T${formattedDateTime}`;
-      }
-      config.defaultValue = formattedDateTime;
+    config.defaultValue = formattedDateTime;
+  };
+
+  const applyTimeDefault = () => {
+    if (!params.timeDefault?.trim()) return;
+    let formattedTime = params.timeDefault;
+    if (params.hourFormat === '12' && params.timeDefault.includes(' ')) {
+      const [time, period] = params.timeDefault.split(' ');
+      const [hours, minutes] = time.split(':');
+      let hour = Number.parseInt(hours, 10);
+      if (period === 'PM' && hour !== 12) hour += 12;
+      if (period === 'AM' && hour === 12) hour = 0;
+      formattedTime = `${hour.toString().padStart(2, '0')}:${minutes}`;
     }
-  }
-  if (params.selectedTypeKey === 'createdTime') {
-    applyDateTimeConfig(config, params);
-  }
-  if (params.selectedTypeKey === 'lastModifiedTime') {
-    applyDateTimeConfig(config, params);
-  }
-  if (params.selectedTypeKey === 'currency') {
-    config.currencyType = params.currencyType;
-    config.currencyLocale = params.currencyLocale;
-    config.precision = params.precision;
-    if (params.currencyDefault) {
-      config.defaultValue = params.currencyDefault;
-    }
-  }
-  if (params.selectedTypeKey === 'percent') {
-    config.displayAsProgress = params.displayAsProgress;
-    config.progressColor = params.progressColor;
-    if (params.percentDefault !== null) {
-      config.defaultValue = params.percentDefault;
-    }
-  }
-  if (params.selectedTypeKey === 'duration') {
-    config.durationFormat = params.durationFormat;
-    if (params.durationDefault) {
-      config.defaultValue = params.durationDefault;
-    }
-  }
-  if (params.selectedTypeKey === 'year') {
-    if (params.yearDefault !== null) {
-      config.defaultValue = params.yearDefault;
-    }
-  }
-  if (params.selectedTypeKey === 'date') {
-    config.dateFormat = params.dateFormat;
-    if (params.dateDefault?.trim()) {
-      config.defaultValue = params.dateDefault;
-    }
-  }
-  if (params.selectedTypeKey === 'time') {
-    config.hourFormat = params.hourFormat;
-    config.timeFormat = params.timeFormat;
-    if (params.timeDefault?.trim()) {
-      let formattedTime = params.timeDefault;
-      if (params.hourFormat === '12' && params.timeDefault.includes(' ')) {
-        const [time, period] = params.timeDefault.split(' ');
-        const [hours, minutes] = time.split(':');
-        let hour = Number.parseInt(hours, 10);
-        if (period === 'PM' && hour !== 12) hour += 12;
-        if (period === 'AM' && hour === 12) hour = 0;
-        formattedTime = `${hour.toString().padStart(2, '0')}:${minutes}`;
-      }
-      config.defaultValue = formattedTime;
-    }
-  }
-  if (params.selectedTypeKey === 'text') {
-    if (params.defaultValue && (typeof params.defaultValue === 'string' ? params.defaultValue.trim() : true)) {
+    config.defaultValue = formattedTime;
+  };
+
+  const applyTextDefault = () => {
+    if (hasDefaultValue) {
       config.defaultValue = params.defaultValue;
     }
-  }
-  if (params.selectedTypeKey === 'phoneNumber') {
-    config.phoneValid = params.phoneValid;
-    if (params.phoneDefault?.trim()) {
-      config.defaultValue = params.phoneDefault;
+  };
+
+  const applyContactDefault = (value: string, flagKey: 'phoneValid' | 'emailValid' | 'urlValid') => {
+    config[flagKey] = params[flagKey];
+    if (value.trim()) {
+      config.defaultValue = value;
     }
-  }
-  if (params.selectedTypeKey === 'email') {
-    config.emailValid = params.emailValid;
-    if (params.emailDefault?.trim()) {
-      config.defaultValue = params.emailDefault;
-    }
-  }
-  if (params.selectedTypeKey === 'url') {
-    config.urlValid = params.urlValid;
-    if (params.urlDefault?.trim()) {
-      config.defaultValue = params.urlDefault;
-    }
-  }
-  if (params.selectedTypeKey === 'user') {
-    config.allowMultiple = params.allowMultipleUsers;
-    if (params.selectedUsers) {
-      config.defaultValue = params.selectedUsers;
-    }
-  }
-  if (params.selectedTypeKey === 'links') {
+  };
+
+  const handleLinks = (): BuildFieldMetaResult | void => {
     if (!params.selectedTableId || !params.selectedTable) {
       return { error: 'Target table is required for relation fields' };
     }
@@ -341,8 +269,9 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
       with: params.selectedTableId,
       type: params.relationType
     };
-  }
-  if (params.selectedTypeKey === 'lookup') {
+  };
+
+  const handleLookup = (): BuildFieldMetaResult | void => {
     if (!params.selectedRelationId) {
       return { error: 'Please select a Link Field' };
     }
@@ -361,28 +290,118 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
     }
     config.relation_id = relationIdFromMeta;
     config.lookup_column_id = params.selectedLookupColumnId;
-  }
-  if (params.selectedTypeKey === 'button') {
-    if (params.defaultValue && (typeof params.defaultValue === 'string' ? params.defaultValue.trim() : true)) {
-      config.buttonText = String(params.defaultValue);
+  };
+
+  const typeHandlers: Record<string, () => BuildFieldMetaResult | void> = {
+    longText: () => {
+      config.richText = params.richText;
+    },
+    number: () => {
+      config.showThousands = params.showThousands;
+    },
+    decimal: () => {
+      config.precision = params.precision;
+      config.showThousands = params.showThousands;
+    },
+    boolean: () => {
+      config.icon = params.checkboxIcon;
+      config.color = params.checkboxColor;
+      config.defaultValue = params.checkboxDefault;
+    },
+    select: () => applySelectDefaults(false),
+    multiSelect: () => applySelectDefaults(true),
+    rating: () => {
+      config.ratingIcon = params.ratingIcon;
+      config.ratingColor = params.ratingColor;
+      config.ratingMax = params.ratingMax;
+      config.ratingDefault = params.ratingDefault;
+      config.ratingDescription = params.description;
+    },
+    datetime: () => {
+      applyDateTimeConfig(config, params);
+      applyDateTimeDefault();
+    },
+    createdTime: () => {
+      applyDateTimeConfig(config, params);
+    },
+    lastModifiedTime: () => {
+      applyDateTimeConfig(config, params);
+    },
+    currency: () => {
+      config.currencyType = params.currencyType;
+      config.currencyLocale = params.currencyLocale;
+      config.precision = params.precision;
+      if (params.currencyDefault) {
+        config.defaultValue = params.currencyDefault;
+      }
+    },
+    percent: () => {
+      config.displayAsProgress = params.displayAsProgress;
+      config.progressColor = params.progressColor;
+      if (params.percentDefault !== null) {
+        config.defaultValue = params.percentDefault;
+      }
+    },
+    duration: () => {
+      config.durationFormat = params.durationFormat;
+      if (params.durationDefault) {
+        config.defaultValue = params.durationDefault;
+      }
+    },
+    year: () => {
+      if (params.yearDefault !== null) {
+        config.defaultValue = params.yearDefault;
+      }
+    },
+    date: () => {
+      config.dateFormat = params.dateFormat;
+      if (params.dateDefault?.trim()) {
+        config.defaultValue = params.dateDefault;
+      }
+    },
+    time: () => {
+      config.hourFormat = params.hourFormat;
+      config.timeFormat = params.timeFormat;
+      applyTimeDefault();
+    },
+    text: applyTextDefault,
+    phoneNumber: () => applyContactDefault(params.phoneDefault, 'phoneValid'),
+    email: () => applyContactDefault(params.emailDefault, 'emailValid'),
+    url: () => applyContactDefault(params.urlDefault, 'urlValid'),
+    user: () => {
+      config.allowMultiple = params.allowMultipleUsers;
+      if (params.selectedUsers) {
+        config.defaultValue = params.selectedUsers;
+      }
+    },
+    links: handleLinks,
+    lookup: handleLookup,
+    button: () => {
+      if (hasDefaultValue) {
+        config.buttonText = String(params.defaultValue);
+      }
+      config.buttonStyle = params.buttonStyle;
+      config.action = params.buttonAction;
+      config.openInNewTab = params.openButtonInNewTab;
+    },
+    json: applyTextDefault,
+    formula: () => {
+      config.formula = params.formulaText;
+      config.formatting = {
+        type: params.formulaFormatting.type,
+        precision: params.formulaFormatting.precision,
+        currency: params.formulaFormatting.currency,
+        dateFormat: params.formulaFormatting.dateFormat
+      };
     }
-    config.buttonStyle = params.buttonStyle;
-    config.action = params.buttonAction;
-    config.openInNewTab = params.openButtonInNewTab;
-  }
-  if (params.selectedTypeKey === 'json') {
-    if (params.defaultValue && (typeof params.defaultValue === 'string' ? params.defaultValue.trim() : true)) {
-      config.defaultValue = params.defaultValue;
-    }
-  }
-  if (params.selectedTypeKey === 'formula') {
-    config.formula = params.formulaText;
-    config.formatting = {
-      type: params.formulaFormatting.type,
-      precision: params.formulaFormatting.precision,
-      currency: params.formulaFormatting.currency,
-      dateFormat: params.formulaFormatting.dateFormat
-    };
+  };
+
+  applyDefaultValueForType();
+
+  const handler = typeHandlers[params.selectedTypeKey];
+  if (handler) {
+    const result = handler();
+    if (result?.error) return result;
   }
 
   return { meta: config };

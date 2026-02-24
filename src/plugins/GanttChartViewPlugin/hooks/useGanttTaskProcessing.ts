@@ -14,7 +14,13 @@ interface UseGanttTaskProcessingReturn {
   completionField?: Column;
 }
 
-export function useGanttTaskProcessing({ tableData }: { tableData?: TableResponse }): UseGanttTaskProcessingReturn {
+export function useGanttTaskProcessing({
+  tableData,
+  viewId,
+}: {
+  tableData?: TableResponse;
+  viewId?: string;
+}): UseGanttTaskProcessingReturn {
   return useMemo(() => {
     if (!tableData?.data) {
       return {
@@ -37,7 +43,9 @@ export function useGanttTaskProcessing({ tableData }: { tableData?: TableRespons
     );
 
     // Find current view
-    const currentView = views?.find((v: any) => v.type === 'ganttChart') || views?.[0];
+    const currentView = viewId
+      ? (views?.find((v: any) => String(v?.id) === String(viewId)) || null)
+      : (views?.find((v: any) => v.type === 'ganttChart') || views?.[0]);
     const viewMeta = currentView?.meta || {};
 
     // Create a Map for O(1) column lookups instead of O(n) find() calls
@@ -66,7 +74,7 @@ export function useGanttTaskProcessing({ tableData }: { tableData?: TableRespons
     const tasks: GanttTask[] = records.map((record: any, idx: number) => {
       const startDateValue = record?.[startDateField?.column_name || ''];
       const endDateValue = record?.[endDateField?.column_name || ''];
-      const titleValue = record?.[titleField?.column_name || ''] || record?.title || `Task ${idx + 1}`;
+      const titleValue = record?.[titleField?.column_name || ''] || record?.title;
       const progressValue = record?.[progressField?.column_name || ''] || 0;
 
       // Parse dates
@@ -86,7 +94,7 @@ export function useGanttTaskProcessing({ tableData }: { tableData?: TableRespons
 
       return {
         id: record?.id || idx,
-        name: String(titleValue),
+        name: titleValue === undefined || titleValue === null || String(titleValue).trim() === '' ? '-' : String(titleValue),
         startDate,
         endDate,
         color: `hsl(${(idx * 137.5) % 360}, 70%, 50%)`,
@@ -106,6 +114,6 @@ export function useGanttTaskProcessing({ tableData }: { tableData?: TableRespons
       progressField,
       completionField,
     };
-  }, [tableData]);
+  }, [tableData, viewId]);
 }
 

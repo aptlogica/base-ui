@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import { Plus, Image as ImageIcon } from 'lucide-react';
-import { useGalleryData } from '../hooks/useGalleryData';
+import type { UseGalleryDataReturn } from '../hooks/useGalleryData';
 import { GalleryHeader } from './GalleryHeader';
 import { MemoizedGalleryCard } from './GalleryCard';
 import CreateRecordModal from '../../../components/modals/CreateRecordModal';
@@ -20,6 +20,7 @@ import { getSearchableColumns } from '../utils/galleryColumns';
 
 interface GalleryViewProps {
   tableData: any;
+  galleryData: UseGalleryDataReturn;
   onRefresh: () => void;
   actions: {
     deleteRecord: (recordId: string) => Promise<void>;
@@ -29,25 +30,17 @@ interface GalleryViewProps {
 
 export const GalleryView: React.FC<GalleryViewProps> = ({
   tableData,
+  galleryData,
   onRefresh,
   actions
 }) => {
   // Extract actions
   const { deleteRecord, updateViewConfig } = actions;
-  
   // Extract base ID for permission checks
   const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
-  
   // Check permissions for read-only access
   const { isBaseReadOnly, canCreateRecord } = useBaseAccess(baseId || undefined);
   const isReadOnly = isBaseReadOnly();
-
-  // Use the useGalleryData hook for consistent data processing
-  const galleryData = useGalleryData({ 
-    tableId: tableData?.model?.id || '', 
-    viewId: tableData?.views?.find((v: any) => v.type === 'gallery')?.id 
-  });
-
   // Get searchable columns (exclude system fields except Title)
   const searchableColumns = useMemo(() => {
     return getSearchableColumns(galleryData.columns);

@@ -45,7 +45,7 @@ vi.mock('../../common/Fields', () => ({
   LongText: ({ value, onChange }: any) => (
     <textarea data-testid="long-text" value={value || ''} onChange={(e) => onChange(e.target.value)} />
   ),
-  Number: ({ value, onChange }: any) => (
+  NumberField: ({ value, onChange }: any) => (
     <input data-testid="number-field" value={value || ''} onChange={(e) => onChange(e.target.value)} />
   ),
   Decimal: ({ value, onChange }: any) => (

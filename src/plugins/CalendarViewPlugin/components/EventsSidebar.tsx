@@ -264,7 +264,7 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
           <>
             <div className="p-2.5 space-y-2">
               {paginatedEvents.map((event) => (
-                <div
+                <div //NOSONAR
                   key={event.id}
                   className={`bg-background border rounded-xl transition-colors group ${onEventClick ? 'hover:bg-gray-50 cursor-pointer' : ''}`}
                   onClick={onEventClick ? () => onEventClick(event) : undefined}

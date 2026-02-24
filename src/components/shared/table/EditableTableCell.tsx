@@ -1,7 +1,6 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, JSX } from 'react';
 import {
   SingleLineText,
-  Number,
   DateField,
   Checkbox,
   Email,
@@ -27,7 +26,8 @@ import {
   AuditLastModifiedTime,
   LinksField,
   Formula,
-  Lookup
+  Lookup,
+  NumberField
 } from '../../../components/common/Fields';
 import { normalizeFieldType } from '../../../utils/fieldType';
 import { utcISOToZoned } from '../../../utils/dateUtils';
@@ -279,147 +279,170 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
     return defaultValue ?? null;
   }, []);
 
-  function renderField() {
+  const renderField = () => {
     const commonProps = {
       value: value ?? getDefaultValueFromConfig(parsedConfig, fieldType),
       onChange: isSystemField ? () => { } : onChange,
       disabled: isSystemField,
     };
-    switch (fieldType) {
-      case 'text': return <SingleLineText {...commonProps} maxLength={255} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      case 'longText': return <LongText {...commonProps} maxLength={1000} maxRows={4} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      case 'number': {
-        // Normalize value to numeric string - handle old text values when field type was changed
-        const normalizedValue = normalizeNumericValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
-        return <Number value={normalizedValue} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+
+    const getPrecision = () => {
+      if (parsedConfig?.precision && typeof parsedConfig.precision === 'string' && parsedConfig.precision.includes('.')) {
+        const parts = parsedConfig.precision.split('.');
+        return parts[1] ? parts[1].length : 2;
       }
-      case 'decimal': {
-        // Normalize value to numeric - handle old text values when field type was changed
-        const normalizedValue = normalizeNumericValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
-        // Convert to number for Decimal component (it expects number | null)
-        const numValue = normalizedValue ? globalThis.Number.parseFloat(normalizedValue) : null;
-        let precision = 2;
-        if (parsedConfig?.precision && typeof parsedConfig.precision === 'string' && parsedConfig.precision.includes('.')) {
-          const parts = parsedConfig.precision.split('.');
-          precision = parts[1] ? parts[1].length : 2;
-        }
-        return <Decimal 
-          value={numValue} 
-          onChange={isSystemField ? () => { } : onChange}
-          disabled={isSystemField}
-          decimals={precision} 
-          showThousands={parsedConfig?.showThousands} 
-          config={{ ...parsedConfig, precision }} 
-          allowEdit={true}
-          readOnly={!allowEdit}
-          isBorder={isBorder} 
-        />;
-      }
-      case 'boolean': {
-        // Normalize value to boolean - handle old text values when field type was changed
-        let normalizedValue: boolean;
-        if (value === null || value === undefined || value === '') {
+      return 2;
+    };
+
+    const renderText = () => (
+      <SingleLineText {...commonProps} maxLength={255} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />
+    );
+
+    const renderLongText = () => (
+      <LongText {...commonProps} maxLength={1000} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />
+    );
+
+    const renderNumber = () => {
+      const normalizedValue = normalizeNumericValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
+      return <NumberField value={normalizedValue} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+    };
+
+    const renderDecimal = () => {
+      const normalizedValue = normalizeNumericValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
+      const numValue = normalizedValue ? globalThis.Number.parseFloat(normalizedValue) : null;
+      const precision = getPrecision();
+      return <Decimal
+        value={numValue}
+        onChange={isSystemField ? () => { } : onChange}
+        disabled={isSystemField}
+        decimals={precision}
+        showThousands={parsedConfig?.showThousands}
+        config={{ ...parsedConfig, precision }}
+        allowEdit={true}
+        readOnly={!allowEdit}
+        isBorder={isBorder}
+      />;
+    };
+
+    const renderBoolean = () => {
+      let normalizedValue: boolean;
+      if (value === null || value === undefined || value === '') {
+        normalizedValue = getDefaultValueFromConfig(parsedConfig, fieldType);
+      } else if (typeof value === 'boolean') {
+        normalizedValue = value;
+      } else if (typeof value === 'string') {
+        const trimmed = value.trim().toLowerCase();
+        if (trimmed === 'true' || trimmed === '1') {
+          normalizedValue = true;
+        } else if (trimmed === 'false' || trimmed === '0' || trimmed === 'null') {
           normalizedValue = getDefaultValueFromConfig(parsedConfig, fieldType);
-        } else if (typeof value === 'boolean') {
-          normalizedValue = value;
-        } else if (typeof value === 'string') {
-          // Only accept explicit boolean strings, treat everything else as invalid (use default)
-          const trimmed = value.trim().toLowerCase();
-          if (trimmed === 'true' || trimmed === '1') {
-            normalizedValue = true;
-          } else if (trimmed === 'false' || trimmed === '0' || trimmed === 'null') {
-            normalizedValue = getDefaultValueFromConfig(parsedConfig, fieldType);
-          } else {
-            // For any other string (like old text values "xyz"), treat as invalid and use default
-            normalizedValue = getDefaultValueFromConfig(parsedConfig, fieldType);
-          }
         } else {
-          normalizedValue = Boolean(value);
+          normalizedValue = getDefaultValueFromConfig(parsedConfig, fieldType);
         }
-        return <Checkbox value={normalizedValue} onChange={onChange} icon={parsedConfig?.checkboxIcon} color={parsedConfig?.checkboxColor} readOnly={!allowEdit} config={{ ...parsedConfig, defaultValue: getDefaultValueFromConfig(parsedConfig, fieldType) }} />;
+      } else {
+        normalizedValue = Boolean(value);
       }
-      case 'currency': {
-        // Normalize value to numeric - handle old text values when field type was changed
-        const normalizedValue = normalizeNumericValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
-        // Convert to number for Currency component (it expects number | null)
-        const numValue = normalizedValue ? globalThis.Number.parseFloat(normalizedValue) : null;
-        let precision = 2;
-        if (parsedConfig?.precision && typeof parsedConfig.precision === 'string' && parsedConfig.precision.includes('.')) {
-          const parts = parsedConfig.precision.split('.');
-          precision = parts[1] ? parts[1].length : 2;
-        }
-        return <Currency value={numValue} onChange={onChange} config={{ ...parsedConfig, precision }} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+      return <Checkbox value={normalizedValue} onChange={onChange} icon={parsedConfig?.checkboxIcon} color={parsedConfig?.checkboxColor} readOnly={!allowEdit} config={{ ...parsedConfig, defaultValue: getDefaultValueFromConfig(parsedConfig, fieldType) }} />;
+    };
+
+    const renderCurrency = () => {
+      const normalizedValue = normalizeNumericValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
+      const numValue = normalizedValue ? globalThis.Number.parseFloat(normalizedValue) : null;
+      const precision = getPrecision();
+      return <Currency value={numValue} onChange={onChange} config={{ ...parsedConfig, precision }} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+    };
+
+    const renderPercent = () => {
+      const normalizedValue = normalizeNumericValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
+      const numValue = normalizedValue ? globalThis.Number.parseFloat(normalizedValue) : null;
+      return <Percent value={numValue} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+    };
+
+    const renderDuration = () => {
+      let valueWithDefault = value;
+      if (value === null || value === undefined || value === '') {
+        const defaultValue = getDefaultValueFromConfig(parsedConfig, fieldType);
+        valueWithDefault = defaultValue && defaultValue !== '' ? defaultValue : null;
       }
-      case 'percent': {
-        // Normalize value to numeric - handle old text values when field type was changed
-        const normalizedValue = normalizeNumericValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
-        // Convert to number for Percent component (it expects number | null)
-        const numValue = normalizedValue ? globalThis.Number.parseFloat(normalizedValue) : null;
-        return <Percent value={numValue} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      }
-      case 'duration': {
-        // Use default value fallback, but preserve null/undefined for format placeholder
-        let valueWithDefault = value;
-        if (value === null || value === undefined || value === '') {
-          const defaultValue = getDefaultValueFromConfig(parsedConfig, fieldType);
-          // Only use default if it's not an empty string, otherwise keep null for format placeholder
-          valueWithDefault = defaultValue && defaultValue !== '' ? defaultValue : null;
-        }
-        return <Duration value={valueWithDefault} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      }
-      case 'year': {
-        // Normalize value to year number - handle old text values when field type was changed
-        const normalizedValue = normalizeYearValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
-        return <Year value={normalizedValue} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      }
-      case 'date': {
-        // Normalize value to date string - handle old text values when field type was changed
-        const normalizedValue = normalizeDateValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
-        return <DateField value={normalizedValue} onChange={onChange} format={parsedConfig?.dateFormat || 'YYYY-MM-DD'} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      }
-      case 'datetime': {
-        if (isSystemField) {
-          const tz = getSelectedTimeZone();
-          return <div className="w-full px-3 py-2 text-sm text-muted-foreground cursor-not-allowed">{formatInZone(value, tz)}</div>;
-        }
-        // Normalize value to date string - handle old text values when field type was changed
-        const normalizedValue = normalizeDateValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
-        return <DateTime {...commonProps} value={normalizedValue} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      }
-      case 'time': {
-        // Normalize value to time string - handle old text values when field type was changed
-        const normalizedValue = normalizeTimeValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
-        return <Time {...commonProps} value={normalizedValue} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      }
-      case 'email': return <Email {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      case 'phoneNumber': return <PhoneNumber {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      case 'url': return <URLField {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      case 'select': return <SingleSelect {...commonProps} options={parsedConfig?.options || []} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-      case 'multiSelect': {
-        let multiSelectValue = [];
-        if (Array.isArray(value)) {
-          multiSelectValue = value;
-        } else if (typeof value === 'string') {
-          multiSelectValue = JSON.parse(value || '[]');
-        }
-        return <MultiSelect value={multiSelectValue} onChange={(newValue) => onChange(newValue)} options={parsedConfig?.options || []} maxSelections={10} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} useInternalState />;
-      }
-      case 'rating': return <Rating {...commonProps} value={value} max={parsedConfig?.ratingMax || 5} readOnly={!allowEdit} config={parsedConfig} />;
-      case 'user': return <User {...commonProps} readOnly={!allowEdit} config={parsedConfig} />;
-      case 'json': return <JSONField {...commonProps} value={value} config={parsedConfig} readOnly={!allowEdit} />;
-      case 'createdTime': {
+      return <Duration value={valueWithDefault} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+    };
+
+    const renderYear = () => {
+      const normalizedValue = normalizeYearValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
+      return <Year value={normalizedValue} onChange={onChange} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+    };
+
+    const renderDate = () => {
+      const normalizedValue = normalizeDateValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
+      return <DateField value={normalizedValue} onChange={onChange} format={parsedConfig?.dateFormat || 'YYYY-MM-DD'} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+    };
+
+    const renderDateTime = () => {
+      if (isSystemField) {
         const tz = getSelectedTimeZone();
-        return <AuditCreatedTime {...commonProps} config={{ ...parsedConfig, timeZone: tz }} allowEdit={allowEdit} isBorder={isBorder} />;
+        return <div className="w-full px-3 py-2 text-sm text-muted-foreground cursor-not-allowed">{formatInZone(value, tz)}</div>;
       }
-      case 'lastModifiedTime': {
-        const tz = getSelectedTimeZone();
-        return <AuditLastModifiedTime {...commonProps} config={{ ...parsedConfig, timeZone: tz }} allowEdit={allowEdit} isBorder={isBorder} />;
+      const normalizedValue = normalizeDateValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
+      return <DateTime {...commonProps} value={normalizedValue} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+    };
+
+    const renderTime = () => {
+      const normalizedValue = normalizeTimeValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
+      return <Time {...commonProps} value={normalizedValue} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+    };
+
+    const renderEmail = () => (
+      <Email {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />
+    );
+
+    const renderPhone = () => (
+      <PhoneNumber {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />
+    );
+
+    const renderUrl = () => (
+      <URLField {...commonProps} value={value} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />
+    );
+
+    const renderSelect = () => (
+      <SingleSelect {...commonProps} options={parsedConfig?.options || []} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />
+    );
+
+    const renderMultiSelect = () => {
+      let multiSelectValue = [];
+      if (Array.isArray(value)) {
+        multiSelectValue = value;
+      } else if (typeof value === 'string') {
+        multiSelectValue = JSON.parse(value || '[]');
       }
-      case 'createdBy': return <AuditCreatedBy {...commonProps} />;
-      case 'lastModifiedBy': return <AuditLastModifiedBy {...commonProps} />;
-      case 'links': return <LinksField 
-        value={value} 
-        onChange={onChange} 
+      return <MultiSelect value={multiSelectValue} onChange={(newValue) => onChange(newValue)} options={parsedConfig?.options || []} maxSelections={10} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
+    };
+
+    const renderRating = () => (
+      <Rating {...commonProps} value={value} max={parsedConfig?.ratingMax || 5} readOnly={!allowEdit} config={parsedConfig} />
+    );
+
+    const renderUser = () => <User {...commonProps} readOnly={!allowEdit} config={parsedConfig} />;
+
+    const renderJson = () => <JSONField {...commonProps} value={value} config={parsedConfig} readOnly={!allowEdit} />;
+
+    const renderCreatedTime = () => {
+      const tz = getSelectedTimeZone();
+      return <AuditCreatedTime {...commonProps} config={{ ...parsedConfig, timeZone: tz }} allowEdit={allowEdit} isBorder={isBorder} />;
+    };
+
+    const renderLastModifiedTime = () => {
+      const tz = getSelectedTimeZone();
+      return <AuditLastModifiedTime {...commonProps} config={{ ...parsedConfig, timeZone: tz }} allowEdit={allowEdit} isBorder={isBorder} />;
+    };
+
+    const renderCreatedBy = () => <AuditCreatedBy />;
+
+    const renderLastModifiedBy = () => <AuditLastModifiedBy />;
+
+    const renderLinks = () => (
+      <LinksField
+        value={value}
+        onChange={onChange}
         field={{
           id: column.id,
           title: column.title,
@@ -428,9 +451,12 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
         disabled={!allowEdit}
         currentRowId={currentRowId}
         currentTableId={column.model_id}
-      />;
-      case 'attachment': return <Attachment 
-        {...commonProps} 
+      />
+    );
+
+    const renderAttachment = () => (
+      <Attachment
+        {...commonProps}
         config={parsedConfig}
         model_id={column.model_id}
         column_id={column.id}
@@ -438,21 +464,60 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
         isBorder={isBorder}
         allowEdit={allowEdit}
         readOnly={!allowEdit}
-      />;
-      case 'lookup': return <Lookup value={value} isBorder={isBorder} field={column} />;
-      case 'formula': return <Formula 
-        {...commonProps} 
+      />
+    );
+
+    const renderLookup = () => <Lookup value={value} isBorder={isBorder} field={column} />;
+
+    const renderFormula = () => (
+      <Formula
+        {...commonProps}
         config={parsedConfig}
         columns={allColumns || []} // All columns for field name mapping
-        allowEdit={false} // Formula fields are always read-only
         isBorder={isBorder}
         disabled={true} // Disable editing
         rowData={rowData} // Pass row data for formula evaluation
         allColumns={allColumns} // Pass all columns for field name mapping
-      />;
-      default: return <SingleLineText {...commonProps} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;
-    }
-    }
+      />
+    );
+
+    const renderDefault = () => (
+      <SingleLineText {...commonProps} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />
+    );
+
+    const renderers: Record<string, () => JSX.Element> = {
+      text: renderText,
+      longText: renderLongText,
+      number: renderNumber,
+      decimal: renderDecimal,
+      boolean: renderBoolean,
+      currency: renderCurrency,
+      percent: renderPercent,
+      duration: renderDuration,
+      year: renderYear,
+      date: renderDate,
+      datetime: renderDateTime,
+      time: renderTime,
+      email: renderEmail,
+      phoneNumber: renderPhone,
+      url: renderUrl,
+      select: renderSelect,
+      multiSelect: renderMultiSelect,
+      rating: renderRating,
+      user: renderUser,
+      json: renderJson,
+      createdTime: renderCreatedTime,
+      lastModifiedTime: renderLastModifiedTime,
+      createdBy: renderCreatedBy,
+      lastModifiedBy: renderLastModifiedBy,
+      links: renderLinks,
+      attachment: renderAttachment,
+      lookup: renderLookup,
+      formula: renderFormula,
+    };
+
+    return (renderers[fieldType] || renderDefault)();
+  };
 
   return (
     <div
@@ -464,6 +529,73 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
       </div>
     </div>
   );
+};
+
+const shallowEqualObject = (a: Record<string, any>, b: Record<string, any>): boolean => {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    if (a[key] !== b[key]) return false;
+  }
+  return true;
+};
+
+const isPlainObject = (value: unknown): value is Record<string, any> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const areColumnsEqual = (prevCol: EditableTableCellProps['column'], nextCol: EditableTableCellProps['column']) => {
+  return (
+    prevCol.id === nextCol.id &&
+    prevCol.title === nextCol.title &&
+    prevCol.column_name === nextCol.column_name &&
+    prevCol.uidt === nextCol.uidt &&
+    prevCol.system === nextCol.system &&
+    prevCol.width === nextCol.width &&
+    prevCol.order_index === nextCol.order_index &&
+    prevCol.model_id === nextCol.model_id
+  );
+};
+
+const areConfigsEqual = (prevConfig: unknown, nextConfig: unknown) => {
+  if (prevConfig === nextConfig) return true;
+  if (isPlainObject(prevConfig) && isPlainObject(nextConfig)) {
+    return shallowEqualObject(prevConfig, nextConfig);
+  }
+  return false;
+};
+
+const areMetaEqual = (prevMeta: unknown, nextMeta: unknown) => {
+  if (prevMeta === nextMeta) return true;
+  if (isPlainObject(prevMeta) && isPlainObject(nextMeta)) {
+    return shallowEqualObject(prevMeta, nextMeta);
+  }
+  return false;
+};
+
+const arePropsEqual = (prevProps: EditableTableCellProps, nextProps: EditableTableCellProps, valueChanged: boolean) => {
+  if (valueChanged) return false;
+  if (
+    prevProps.width !== nextProps.width ||
+    prevProps.isLast !== nextProps.isLast ||
+    prevProps.allowEdit !== nextProps.allowEdit ||
+    prevProps.isBorder !== nextProps.isBorder ||
+    prevProps.isSystemField !== nextProps.isSystemField ||
+    prevProps.currentRowId !== nextProps.currentRowId
+  ) {
+    return false;
+  }
+  if (!areColumnsEqual(prevProps.column, nextProps.column)) return false;
+
+  const prevConfig = (prevProps.column as any).config;
+  const nextConfig = (nextProps.column as any).config;
+  if (!areConfigsEqual(prevConfig, nextConfig)) return false;
+
+  if (!areMetaEqual(prevProps.column.meta, nextProps.column.meta)) return false;
+
+  if (prevProps.onChange !== nextProps.onChange) return false;
+
+  return true;
 };
 
 export const EditableTableCell = React.memo(EditableTableCellComponent, (prevProps, nextProps) => {
@@ -507,89 +639,5 @@ export const EditableTableCell = React.memo(EditableTableCellComponent, (prevPro
     // Only do expensive comparison if key counts match
     return prevKeys.length > 0 && JSON.stringify(prevVal) !== JSON.stringify(nextVal);
   })();
-  
-  if (
-    valueChanged ||
-    prevProps.width !== nextProps.width ||
-    prevProps.isLast !== nextProps.isLast ||
-    prevProps.allowEdit !== nextProps.allowEdit ||
-    prevProps.isBorder !== nextProps.isBorder ||
-    prevProps.isSystemField !== nextProps.isSystemField ||
-    prevProps.currentRowId !== nextProps.currentRowId
-  ) {
-    return false; // Props changed, should re-render
-  }
-
-  // Deep compare column object (most important for preventing re-renders)
-  const prevCol = prevProps.column;
-  const nextCol = nextProps.column;
-  
-  if (
-    prevCol.id !== nextCol.id ||
-    prevCol.title !== nextCol.title ||
-    prevCol.column_name !== nextCol.column_name ||
-    prevCol.uidt !== nextCol.uidt ||
-    prevCol.system !== nextCol.system ||
-    prevCol.width !== nextCol.width ||
-    prevCol.order_index !== nextCol.order_index ||
-    prevCol.model_id !== nextCol.model_id
-  ) {
-    return false; // Column changed, should re-render
-  }
-
-  // CRITICAL: Compare config (parsed from meta) - this is what the component actually uses
-  // The component uses column.config for rendering icons, colors, etc.
-  const prevConfig = (prevCol as any).config;
-  const nextConfig = (nextCol as any).config;
-  
-  if (prevConfig !== nextConfig) {
-    // If both are objects, do deep comparison
-    if (typeof prevConfig === 'object' && typeof nextConfig === 'object' && prevConfig !== null && nextConfig !== null) {
-      const prevKeys = Object.keys(prevConfig);
-      const nextKeys = Object.keys(nextConfig);
-      if (prevKeys.length !== nextKeys.length) {
-        return false; // Different number of keys, changed
-      }
-      for (const key of prevKeys) {
-        if (prevConfig[key] !== nextConfig[key]) {
-          return false; // Config value changed (icon, color, etc.)
-        }
-      }
-    } else if (prevConfig !== nextConfig) {
-      // Different types or one is null/undefined
-      return false;
-    }
-  }
-
-  // Also compare meta - handle both object and string formats
-  const prevMeta = prevCol.meta;
-  const nextMeta = nextCol.meta;
-  
-  if (prevMeta !== nextMeta) {
-    // If both are objects, compare them
-    if (typeof prevMeta === 'object' && typeof nextMeta === 'object' && prevMeta !== null && nextMeta !== null) {
-      // Shallow comparison of meta object keys
-      const prevKeys = Object.keys(prevMeta);
-      const nextKeys = Object.keys(nextMeta);
-      if (prevKeys.length !== nextKeys.length) {
-        return false;
-      }
-      for (const key of prevKeys) {
-        if (prevMeta[key] !== nextMeta[key]) {
-          return false;
-        }
-      }
-    } else {
-      // Different types or one is null
-      return false;
-    }
-  }
-
-  // Compare onChange function reference
-  // Note: This will cause re-render if parent creates new function each time
-  if (prevProps.onChange !== nextProps.onChange) {
-    return false;
-  }
-
-  return true; // Props are equal, skip re-render
+  return arePropsEqual(prevProps, nextProps, valueChanged);
 });

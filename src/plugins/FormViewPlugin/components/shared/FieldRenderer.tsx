@@ -20,8 +20,8 @@ const typeComponentMap: Record<
     }))
   ),
   number: React.lazy(() =>
-    import('../../../../components/common/Fields/Number').then(m => ({
-      default: m.Number,
+    import('../../../../components/common/Fields/NumberField').then(m => ({
+      default: m.NumberField,
     }))
   ),
   decimal: React.lazy(() =>

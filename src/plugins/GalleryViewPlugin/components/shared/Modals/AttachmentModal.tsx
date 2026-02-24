@@ -256,6 +256,16 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
     setSelectedFiles(prev => prev.filter(f => f.url !== fileUrl));
   };
 
+  const updateUploadProgressForSelectedFiles = (percent: number) => {
+    setUploadProgress(prev => {
+      const next = { ...prev };
+      selectedFiles.forEach(file => {
+        next[file.url] = percent;
+      });
+      return next;
+    });
+  };
+
   const handleUploadFiles = async () => {
     if (selectedFiles.length === 0) {
       setError('No files selected');
@@ -298,9 +308,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
             (progressEvent.loaded * 100) / progressEvent.total
           );
           // Update progress for all files
-          selectedFiles.forEach(file => {
-            setUploadProgress(prev => ({ ...prev, [file.url]: percent }));
-          });
+          updateUploadProgressForSelectedFiles(percent);
         }
       });
 
@@ -489,7 +497,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
                         className="flex gap-3 p-3 rounded-xl border transition-all"
                       >
                         {/* Image Preview or File Icon */}
-                        <div className="flex-shrink-0 relative">
+                        <div className="flex-shrink-0 relative rounded-xl">
                           {file.type?.startsWith('image/') ? (
                             <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-200 flex items-center justify-center">
                               <img
@@ -577,13 +585,13 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
                             type="button"
                             onClick={() => window.open(file.url, '_blank')}
                             disabled={isUploading}
-                            className={`p-2 transition-colors rounded ${isUploading
+                            className={`p-2 transition-colors rounded-lg hover:bg-gray-100 ${isUploading
                               ? 'text-gray-300 cursor-not-allowed'
                               : 'text-gray-400 hover:text-blue-600'
                               }`}
                             title={isUploading ? "Preview unavailable during upload" : "Preview"}
                           >
-                            <Eye className="w-4 h-4 text-gray-700" />
+                            <Eye className="w-5 h-5 text-gray-700" />
                           </button>
                           <button
                             type="button"
@@ -594,26 +602,26 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
                               a.click();
                             }}
                             disabled={isUploading}
-                            className={`p-2 transition-colors rounded ${isUploading
+                            className={`p-2 transition-colors rounded-lg hover:bg-gray-100 ${isUploading
                               ? 'text-gray-300 cursor-not-allowed'
                               : 'text-gray-400 hover:text-green-600'
                               }`}
                             title={isUploading ? "Download unavailable during upload" : "Download"}
                           >
-                            <Download className="w-4 h-4 text-gray-700" />
+                            <Download className="w-5 h-5 text-gray-700" />
                           </button>
                           {/* Edit button disabled for selected files - they don't have IDs yet */}
                           <button
                             type="button"
                             onClick={() => handleRemoveSelectedFile(file.url)}
                             disabled={isUploading}
-                            className={`p-2 transition-colors rounded ${isUploading
+                            className={`p-2 transition-colors rounded-lg hover:bg-gray-100 ${isUploading
                               ? 'text-gray-300 cursor-not-allowed'
                               : 'text-gray-400 hover:text-red-600'
                               }`}
                             title={isUploading ? "Remove unavailable during upload" : "Remove"}
                           >
-                            <Trash2 className="w-4 h-4 text-gray-700" />
+                            <Trash2 className="w-5 h-5 text-red-500" />
                           </button>
                         </div>
                       </div>
@@ -653,12 +661,12 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
               >
                 {isUploading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                     Uploading...
                   </>
                 ) : (
                   <>
-                    <Upload className="w-4 h-4" />
+                    <Upload className="w-5 h-5" />
                     Upload Files
                   </>
                 )}

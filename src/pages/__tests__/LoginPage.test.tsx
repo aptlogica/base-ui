@@ -145,6 +145,34 @@ describe('LoginPage', () => {
       });
     });
 
+    it('should suppress redirect toast during logout', async () => {
+      mockIsAuthenticated.mockResolvedValue(true);
+      sessionStorage.setItem('sb_logout_in_progress', '1');
+
+      renderWithRouter();
+
+      await waitFor(() => {
+        expect(mockToastInfo).not.toHaveBeenCalledWith('You are already signed in. Redirecting...');
+      });
+      expect(mockNavigate).not.toHaveBeenCalled();
+
+      sessionStorage.removeItem('sb_logout_in_progress');
+    });
+
+    it('should suppress cross-tab toast during logout', async () => {
+      localStorage.setItem('sb_auth', JSON.stringify({ user_id: 'user-1', ts: Date.now() }));
+      sessionStorage.setItem('sb_logout_in_progress', '1');
+
+      renderWithRouter();
+
+      await waitFor(() => {
+        expect(mockToastInfo).not.toHaveBeenCalledWith('You are already signed in in another tab.');
+      });
+      expect(screen.queryByText('You are already signed in in another tab. You can continue there or sign in again.')).not.toBeInTheDocument();
+
+      sessionStorage.removeItem('sb_logout_in_progress');
+    });
+
     it('should show cross-tab session info when another tab is signed in', async () => {
       localStorage.setItem('sb_auth', JSON.stringify({ user_id: 'user-1', ts: Date.now() }));
 
@@ -209,7 +237,7 @@ describe('LoginPage', () => {
       await user.click(emailInput);
       await user.tab();
 
-      expect(screen.getByText('This field is required')).toBeInTheDocument();
+      expect(screen.getByText('Email field is required')).toBeInTheDocument();
     });
 
     it('should show error when email format is invalid', async () => {
@@ -371,7 +399,7 @@ describe('LoginPage', () => {
       await user.click(passwordInput);
       await user.tab();
 
-      expect(screen.getByText('This field is required')).toBeInTheDocument();
+      expect(screen.getByText('Password field is required')).toBeInTheDocument();
     });
 
     it('should clear error when password entered', async () => {
@@ -382,11 +410,11 @@ describe('LoginPage', () => {
       await user.click(passwordInput);
       await user.tab();
 
-      expect(screen.getByText('This field is required')).toBeInTheDocument();
+      expect(screen.getByText('Password field is required')).toBeInTheDocument();
 
       await user.type(passwordInput, 'password123');
 
-      expect(screen.queryByText('This field is required')).not.toBeInTheDocument();
+      expect(screen.queryByText('Password field is required')).not.toBeInTheDocument();
     });
 
     it('should clear error on input change', async () => {
@@ -397,11 +425,11 @@ describe('LoginPage', () => {
       await user.click(passwordInput);
       await user.tab();
 
-      expect(screen.getByText('This field is required')).toBeInTheDocument();
+      expect(screen.getByText('Password field is required')).toBeInTheDocument();
 
       await user.type(passwordInput, 'a');
 
-      expect(screen.queryByText('This field is required')).not.toBeInTheDocument();
+      expect(screen.queryByText('Password field is required')).not.toBeInTheDocument();
     });
 
     it('should handle password with only spaces', async () => {
@@ -416,7 +444,7 @@ describe('LoginPage', () => {
       await user.type(passwordInput, '   ');
       await user.click(submitButton);
 
-      expect(screen.getByText('This field is required')).toBeInTheDocument();
+      expect(screen.getByText('Password field is required')).toBeInTheDocument();
       expect(mockApiLogin).not.toHaveBeenCalled();
     });
   });
@@ -432,7 +460,7 @@ describe('LoginPage', () => {
       await user.type(passwordInput, 'password123');
       await user.click(submitButton);
 
-      expect(screen.getByText('This field is required')).toBeInTheDocument();
+      expect(screen.getByText('Email field is required')).toBeInTheDocument();
       expect(mockApiLogin).not.toHaveBeenCalled();
     });
 
@@ -446,7 +474,7 @@ describe('LoginPage', () => {
       await user.type(emailInput, 'user@example.com');
       await user.click(submitButton);
 
-      expect(screen.getByText('This field is required')).toBeInTheDocument();
+      expect(screen.getByText('Password field is required')).toBeInTheDocument();
       expect(mockApiLogin).not.toHaveBeenCalled();
     });
 
@@ -473,8 +501,8 @@ describe('LoginPage', () => {
       const submitButton = screen.getByRole('button', { name: /sign in/i });
       await user.click(submitButton);
 
-      const errors = screen.getAllByText('This field is required');
-      expect(errors.length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Email field is required')).toBeInTheDocument();
+      expect(screen.getByText('Password field is required')).toBeInTheDocument();
       expect(mockApiLogin).not.toHaveBeenCalled();
     });
   });
@@ -580,7 +608,7 @@ describe('LoginPage', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.queryByText('This field is required')).not.toBeInTheDocument();
+        expect(screen.queryByText('Email field is required')).not.toBeInTheDocument();
       });
     });
   });

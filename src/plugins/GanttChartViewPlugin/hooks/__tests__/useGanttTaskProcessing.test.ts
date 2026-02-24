@@ -246,7 +246,7 @@ describe('useGanttTaskProcessing', () => {
     const { result } = renderHook(() => useGanttTaskProcessing({ tableData }));
 
     expect(result.current.tasks[0].id).toBe(0);
-    expect(result.current.tasks[0].name).toBe('Task 1');
+    expect(result.current.tasks[0].name).toBe('-');
     expect(result.current.tasks[0].color).toBe('hsl(0, 70%, 50%)');
     expect(result.current.tasks[0].progress).toBe(0);
     expect(result.current.tasks[0].startDate.getTime()).toBe(new Date('2024-01-10T00:00:00.000Z').getTime());

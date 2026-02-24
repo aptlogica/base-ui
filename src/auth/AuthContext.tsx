@@ -313,6 +313,9 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
 
 
   const logout = async () => {
+    // Flag logout to suppress login guard redirects/toasts during navigation
+    try { sessionStorage.setItem('sb_logout_in_progress', '1'); } catch { }
+
     // STEP 1: Save current navigation state to activity data before logout
     try {
       const uid = sessionStorage.getItem('user_id') || localStorage.getItem('user_id') || undefined;
@@ -377,6 +380,8 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
     } catch (err) {
       debug('Failed to broadcast sign-out to other tabs', err);
     }
+
+    try { sessionStorage.removeItem('sb_logout_in_progress'); } catch { }
   };
 
   // Use useMemo to memoize the value object

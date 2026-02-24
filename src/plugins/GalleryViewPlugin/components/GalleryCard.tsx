@@ -304,9 +304,10 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
       {/* Image Section with Carousel - Only show if we have image files */}
       {hasImageFiles && (
         <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden">
-          {currentImage && isImage(currentImage) && currentImage.thumbnail_url && !imageError ? (
+          {currentImage && isImage(currentImage) && (currentImage.thumbnail_url || currentImage.url) && !imageError ? (
             <img
-              src={currentImage.thumbnail_url}
+              src={currentImage.thumbnail_url || currentImage.url}
+              srcSet={currentImage.url ? `${currentImage.url} 2x` : undefined}
               alt={currentImage.title || currentImage.name || `${item.title} - Image ${currentImageIndex + 1}`}
               className="w-full h-full object-cover"
               onError={handleImageError}

@@ -7,7 +7,7 @@ interface NumberConfig {
   [key: string]: any;
 }
 
-interface NumberProps {
+interface NumberFieldProps {
   label?: string;
   value: string | null;
   onChange: (value: string | null) => void;
@@ -22,7 +22,7 @@ interface NumberProps {
   helperText?: string;
 }
 
-export const Number: React.FC<NumberProps> = ({
+export const NumberField: React.FC<NumberFieldProps> = ({
   label,
   value,
   onChange,

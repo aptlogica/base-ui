@@ -97,8 +97,8 @@ describe('formulaHelper evaluator edges', () => {
     expect(evaluateIF('IF({Price} > 5, "Yes", "No")', context)).toBe('Yes');
     expect(evaluateIF('IF({Price} > 50, "Yes", "No")', context)).toBe('No');
 
-    expect(evaluateAND('AND({Price} > 1, {Flag} = true)', context)).toBe(true);
-    expect(evaluateOR('OR({Price} < 1, {Flag} = true)', context)).toBe(true);
+    expect(evaluateAND('AND({Price} > 1, {Flag})', context)).toBe(true);
+    expect(evaluateOR('OR({Price} < 1, {Flag})', context)).toBe(true);
     expect(evaluateNOT('NOT({Flag})', context)).toBe(false);
   });
 

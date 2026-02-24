@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/cognitive-complexity */
 import { useEffect} from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useNavigationStore } from '../stores/navigationStore';
@@ -32,7 +33,7 @@ export const useNavigation = () => {
   // Sync URL params with store on mount and route changes
   useEffect(() => {
     const parseCurrentRoute = () => {
-      const path = location.pathname;
+    const path = location.pathname;
       
       // Parse different route patterns
       const patterns = [

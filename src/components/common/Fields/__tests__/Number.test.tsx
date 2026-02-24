@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Number } from '../Number';
+import { NumberField } from '../NumberField';
 
 describe('Number Component', () => {
   const mockOnChange = vi.fn();
@@ -13,20 +13,20 @@ describe('Number Component', () => {
   describe('Rendering', () => {
     it('should render with default props', () => {
       const { container } = render(
-        <Number value={null} onChange={mockOnChange} />
+        <NumberField value={null} onChange={mockOnChange} />
       );
       const field = container.querySelector('.field-component');
       expect(field).toBeInTheDocument();
     });
 
     it('should render label when provided', () => {
-      render(<Number label="Age" value={null} onChange={mockOnChange} />);
+      render(<NumberField label="Age" value={null} onChange={mockOnChange} />);
       expect(screen.getByText('Age')).toBeInTheDocument();
     });
 
     it('should display current value', () => {
       const { container } = render(
-        <Number value="42" onChange={mockOnChange} />
+        <NumberField value="42" onChange={mockOnChange} />
       );
       const field = container.querySelector('.field-component');
       expect(field).toHaveTextContent('42');
@@ -34,20 +34,20 @@ describe('Number Component', () => {
 
     it('should render placeholder when provided', () => {
       const { container } = render(
-        <Number value={null} onChange={mockOnChange} placeholder="Enter a number" />
+        <NumberField value={null} onChange={mockOnChange} placeholder="Enter a number" />
       );
       const field = container.querySelector('.field-component');
       expect(field).toHaveTextContent('Enter a number');
     });
 
     it('should render required asterisk', () => {
-      render(<Number label="Count" value={null} onChange={mockOnChange} required />);
+      render(<NumberField label="Count" value={null} onChange={mockOnChange} required />);
       expect(screen.getByText('*')).toBeInTheDocument();
     });
 
     it('should render helper text', () => {
       render(
-        <Number 
+        <NumberField 
           value={null} 
           onChange={mockOnChange} 
           allowEdit={true}
@@ -61,7 +61,7 @@ describe('Number Component', () => {
   describe('Input Interaction', () => {
     it('should enter edit mode on click when allowEdit is true', async () => {
       const { container } = render(
-        <Number value="50" onChange={mockOnChange} allowEdit={true} />
+        <NumberField value="50" onChange={mockOnChange} allowEdit={true} />
       );
 
       const field = container.querySelector('.field-component');
@@ -74,7 +74,7 @@ describe('Number Component', () => {
 
     it('should enter edit mode on double click when allowEdit is false', async () => {
       const { container } = render(
-        <Number value="50" onChange={mockOnChange} allowEdit={false} />
+        <NumberField value="50" onChange={mockOnChange} allowEdit={false} />
       );
 
       const field = container.querySelector('.field-component');
@@ -93,7 +93,7 @@ describe('Number Component', () => {
     it('should accept numeric input', async () => {
       const user = userEvent.setup({ delay: 0 });
       const { container } = render(
-        <Number value={null} onChange={mockOnChange} allowEdit={true} />
+        <NumberField value={null} onChange={mockOnChange} allowEdit={true} />
       );
 
       const field = container.querySelector('.field-component');
@@ -111,7 +111,7 @@ describe('Number Component', () => {
     it('should accept negative numbers', async () => {
       const user = userEvent.setup({ delay: 0 });
       const { container } = render(
-        <Number value={null} onChange={mockOnChange} allowEdit={true} />
+        <NumberField value={null} onChange={mockOnChange} allowEdit={true} />
       );
 
       const field = container.querySelector('.field-component');
@@ -129,7 +129,7 @@ describe('Number Component', () => {
     it('should reject non-numeric characters', async () => {
       const user = userEvent.setup({ delay: 0 });
       const { container } = render(
-        <Number value={null} onChange={mockOnChange} allowEdit={true} />
+        <NumberField value={null} onChange={mockOnChange} allowEdit={true} />
       );
 
       const field = container.querySelector('.field-component');
@@ -147,7 +147,7 @@ describe('Number Component', () => {
   describe('Validation', () => {
     it('should validate required field', async () => {
       const { container } = render(
-        <Number value={null} onChange={mockOnChange} required allowEdit={true} />
+        <NumberField value={null} onChange={mockOnChange} required allowEdit={true} />
       );
 
       const field = container.querySelector('.field-component');
@@ -162,7 +162,7 @@ describe('Number Component', () => {
     it('should enforce maximum digit limit (10 digits)', async () => {
       const user = userEvent.setup({ delay: 0 });
       const { container } = render(
-        <Number value={null} onChange={mockOnChange} allowEdit={true} />
+        <NumberField value={null} onChange={mockOnChange} allowEdit={true} />
       );
 
       const field = container.querySelector('.field-component');
@@ -182,7 +182,7 @@ describe('Number Component', () => {
   describe('Disabled and ReadOnly States', () => {
     it('should disable input when disabled', () => {
       const { container } = render(
-        <Number value="100" onChange={mockOnChange} disabled />
+        <NumberField value="100" onChange={mockOnChange} disabled />
       );
       const field = container.querySelector('.field-component');
       fireEvent.click(field!);
@@ -193,7 +193,7 @@ describe('Number Component', () => {
 
     it('should prevent editing when readOnly', () => {
       const { container } = render(
-        <Number value="100" onChange={mockOnChange} readOnly />
+        <NumberField value="100" onChange={mockOnChange} readOnly />
       );
       const field = container.querySelector('.field-component');
       fireEvent.click(field!);
@@ -206,7 +206,7 @@ describe('Number Component', () => {
   describe('Edge Cases', () => {
     it('should handle empty value', () => {
       const { container } = render(
-        <Number value={null} onChange={mockOnChange} />
+        <NumberField value={null} onChange={mockOnChange} />
       );
       const field = container.querySelector('.field-component');
       expect(field).toHaveTextContent('');
@@ -214,7 +214,7 @@ describe('Number Component', () => {
 
     it('should handle very large numbers', async () => {
       const { container } = render(
-        <Number value={null} onChange={mockOnChange} allowEdit={true} />
+        <NumberField value={null} onChange={mockOnChange} allowEdit={true} />
       );
 
       const field = container.querySelector('.field-component');
@@ -232,7 +232,7 @@ describe('Number Component', () => {
     it('should handle decimal numbers', async () => {
       const user = userEvent.setup({ delay: 0 });
       const { container } = render(
-        <Number value={null} onChange={mockOnChange} allowEdit={true} />
+        <NumberField value={null} onChange={mockOnChange} allowEdit={true} />
       );
 
       const field = container.querySelector('.field-component');
@@ -248,7 +248,7 @@ describe('Number Component', () => {
     it('should handle Escape key to revert changes', async () => {
       const user = userEvent.setup({ delay: 0 });
       const { container } = render(
-        <Number value="50" onChange={mockOnChange} allowEdit={true} />
+        <NumberField value="50" onChange={mockOnChange} allowEdit={true} />
       );
 
       const field = container.querySelector('.field-component');
@@ -269,14 +269,14 @@ describe('Number Component', () => {
   describe('Value Synchronization', () => {
     it('should sync external value changes', () => {
       const { rerender, container } = render(
-        <Number value="50" onChange={mockOnChange} />
+        <NumberField value="50" onChange={mockOnChange} />
       );
 
       let field = container.querySelector('.field-component');
       expect(field).toHaveTextContent('50');
 
       rerender(
-        <Number value="100" onChange={mockOnChange} />
+        <NumberField value="100" onChange={mockOnChange} />
       );
 
       field = container.querySelector('.field-component');
@@ -287,14 +287,14 @@ describe('Number Component', () => {
   describe('Accessibility', () => {
     it('should have accessible label', () => {
       render(
-        <Number label="Amount" value={null} onChange={mockOnChange} />
+        <NumberField label="Amount" value={null} onChange={mockOnChange} />
       );
       expect(screen.getByText('Amount')).toBeInTheDocument();
     });
 
     it('should have aria-required when required', async () => {
       const { container } = render(
-        <Number label="Amount" value={null} onChange={mockOnChange} required />
+        <NumberField label="Amount" value={null} onChange={mockOnChange} required />
       );
       const asterisk = screen.queryByText('*');
       if (asterisk) {

@@ -54,7 +54,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   } : {};
 
   return (
-    <div
+    <div //NOSONAR
       className={`${baseClasses} ${variantClasses[variant]} ${animationClasses[animation]} ${className}`}
       style={{ width, height, ...waveStyle }}
       role="status" 

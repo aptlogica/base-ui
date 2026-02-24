@@ -398,7 +398,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       const years = Array.from({ length: 12 }, (_, i) => startYear + i);
 
       return (
-        <div  //NOSONAR
+        <div //NOSONAR
           className="absolute top-full left-0 mt-1 w-64 bg-card border rounded-xl shadow-lg z-50"
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}

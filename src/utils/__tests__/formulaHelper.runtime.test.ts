@@ -1,15 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import {
   parseFunctionArguments,
+  parseFieldReference,
+  getColumnIdentifier,
+  getFieldType,
+  isNumericType,
+  isTextType,
+  isDateType,
+  isBooleanType,
   evaluateArgument,
   evaluateTextArgument,
   evaluateDateArgument,
   getFieldValue,
   getTextFieldValue,
   getBooleanValue,
+  getDateValue,
   getFieldValueByType,
   normalizeForComparison,
   convertResultToValue,
+  validateFormula,
   type FormulaContext
 } from '../formulaHelper';
 
@@ -42,6 +51,26 @@ describe('formulaHelper runtime helpers', () => {
     expect(args).toEqual(['{Price}', '"A,B"', "'C'", 'NOW()']);
   });
 
+  it('parses field references and resolves identifiers/types', () => {
+    const contextWithAllColumns: FormulaContext = {
+      ...context,
+      allColumns: [{ id: 'ac1', title: 'Total', column_name: 'total', uidt: 'number', key: 'total' }],
+    };
+
+    expect(parseFieldReference('{Price}')).toBe('Price');
+    expect(parseFieldReference('Price')).toBe('');
+    expect(getColumnIdentifier('Total', contextWithAllColumns)).toBe('total');
+    expect(getFieldType('Name', context)).toBe('text');
+  });
+
+  it('classifies field types correctly', () => {
+    expect(isNumericType('number')).toBe(true);
+    expect(isTextType('text')).toBe(true);
+    expect(isDateType('date')).toBe(true);
+    expect(isBooleanType('boolean')).toBe(true);
+    expect(isNumericType(null)).toBe(false);
+  });
+
   it('evaluates numeric arguments and field references', () => {
     expect(evaluateArgument('12.5', context)).toBe(12.5);
     expect(evaluateArgument('{Price}', context)).toBe(12.5);
@@ -64,6 +93,13 @@ describe('formulaHelper runtime helpers', () => {
   it('resolves numeric and text field values with rowData', () => {
     expect(getFieldValue('Price', context)).toBe(12.5);
     expect(getTextFieldValue('Name', context)).toBe('Alpha');
+  });
+
+  it('resolves date values with rowData fallback and defaults', () => {
+    const dateFromRow = getDateValue('Start', context);
+    expect(dateFromRow).toBeInstanceOf(Date);
+    const dateFromMissing = getDateValue('Missing', context);
+    expect(dateFromMissing).toBeInstanceOf(Date);
   });
 
   it('resolves boolean values and handles unknowns', () => {
@@ -94,5 +130,15 @@ describe('formulaHelper runtime helpers', () => {
     expect(convertResultToValue(date, 'date')).toBe('2026-02-13');
     expect(convertResultToValue(date, 'datetime')).toBe(date.toISOString());
     expect(convertResultToValue('abc', 'text')).toBe('abc');
+  });
+
+  it('validates formulas for unknown fields and operator issues', () => {
+    expect(validateFormula('{Missing} + 1', context)).toBe('Unknown field: Missing');
+    expect(validateFormula('{Price} ++ 1', context)).toBe('Invalid operator usage: operators cannot be consecutive');
+  });
+
+  it('validates logical functions with bad arguments', () => {
+    expect(validateFormula('IF(,1,2)', context)).toBe('IF() first argument must be a condition (comparison, field reference, or boolean)');
+    expect(validateFormula('NOT(1,2)', context)).toBe('NOT() accepts only 1 argument, but 2 provided');
   });
 });

@@ -152,6 +152,126 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         return missing;
     };
 
+    const isAttachmentField = (field: any) => field.type === 'attachment' || field.uidt === 'attachment';
+    const isLinksField = (field: any) => field.type === 'links' || field.uidt === 'links';
+
+    const isEmptyFieldValue = (value: any) => {
+        if (value === undefined || value === null || value === '') return true;
+        if (Array.isArray(value) && value.length === 0) return true;
+        return false;
+    };
+
+    const processFieldValue = (field: any, value: any) => {
+        let processedValue = value;
+        if (field.type === 'json' && typeof value === 'object' && value !== null) {
+            processedValue = JSON.stringify(value);
+        } else if (field.type === 'user') {
+            const userConfig = (field.meta) || {};
+            if (userConfig.allowMultiple && Array.isArray(value)) {
+                processedValue = value.filter(id => id?.toString().trim()).join(',');
+            }
+        } else if ((field.type === 'date' || field.uidt === 'date') && value instanceof Date) {
+            processedValue = value.toISOString().split('T')[0];
+        } else if ((field.type === 'datetime' || field.uidt === 'datetime') && value instanceof Date) {
+            processedValue = value.toISOString();
+        }
+
+        return processedValue;
+    };
+
+    const insertFieldValues = async (recordId: string) => {
+        await Promise.all((fields || []).map(async (field) => {
+            if (isAttachmentField(field) || isLinksField(field)) return;
+
+            const value = rowData[field.id];
+            if (isEmptyFieldValue(value)) return;
+
+            const processedValue = processFieldValue(field, value);
+
+            try {
+                await insertValueMutation.mutateAsync({
+                    model_id: String(table.id),
+                    column_id: String(field.id),
+                    row_id: Number(recordId),
+                    value: processedValue,
+                });
+            } catch (e) {
+                console.warn('Failed to set initial field value:', field.id, e);
+            }
+        }));
+    };
+
+    const uploadAttachments = async (recordId: string) => {
+        const attachmentPromises: Promise<any>[] = [];
+        for (const field of (fields || [])) {
+            if (!isAttachmentField(field)) continue;
+
+            const attachmentValue = rowData[field.id];
+            if (!attachmentValue || !Array.isArray(attachmentValue) || attachmentValue.length === 0) {
+                continue;
+            }
+
+            const filesToUpload = attachmentValue
+                .filter((file: any) => file.file instanceof File)
+                .map((file: any) => file.file);
+
+            if (filesToUpload.length > 0) {
+                const uploadPromise = addAttachmentMutation.mutateAsync({
+                    model_id: String(table.id),
+                    column_id: field.id,
+                    row_id: Number(recordId),
+                    files: filesToUpload
+                }).catch(err => {
+                    console.error(`Failed to upload attachments for field ${field.title} (${field.id}):`, err);
+                });
+
+                attachmentPromises.push(uploadPromise);
+            }
+        }
+
+        if (attachmentPromises.length > 0) {
+            try {
+                await Promise.all(attachmentPromises);
+            } catch (error) {
+                console.error('Some attachment uploads failed:', error);
+                setFormError('Record created, but some attachments may not have uploaded. Please check and retry.');
+            }
+        }
+    };
+
+    const insertRelations = async (recordId: string) => {
+        const relationPromises: Promise<any>[] = [];
+        for (const field of (fields || [])) {
+            if (!isLinksField(field)) {
+                continue;
+            }
+
+            const linksValue = rowData[field.id];
+            const relatedIds = (Array.isArray(linksValue) ? linksValue : [])
+                .map((item: any) => item?.id ?? item)
+                .map((id: any) => Number.parseInt(String(id), 10))
+                .filter((id: number) => Number.isFinite(id));
+
+            for (const targetRowId of relatedIds) {
+                relationPromises.push(
+                    insertRelationMutation.mutateAsync({
+                        model_id: String(table.id),
+                        column_id: String(field.id),
+                        source_row_id: Number(recordId),
+                        target_row_id: targetRowId,
+                        action: 'link',
+                        target_table_id: field?.meta?.relation?.with
+                    }).catch((error) => {
+                        console.error(`Failed to link relation for field ${field.title} (${field.id})`, error);
+                    })
+                );
+            }
+        }
+
+        if (relationPromises.length > 0) {
+            await Promise.all(relationPromises);
+        }
+    };
 
     const handleSave = async () => {
         // Check permission before saving
@@ -172,120 +292,10 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             const created = await addRowMutation.mutateAsync({ model_id: String(table.id) });
             const recordId = created?.data?.record?.id || created?.id || String(Date.now());
             setCreatedRecordId(recordId);
-            await Promise.all((fields || []).map(async (f) => {
-                // Skip attachment fields - they handle their own API calls
-                if (f.type === 'attachment' || f.uidt === 'attachment' || f.type === 'links' || f.uidt === 'links') {
-                    return;
-                }
 
-                const value = rowData[f.id];
-
-                // Skip empty values (except audit fields which are handled by backend)
-                if (value === undefined || value === null || value === '') return;
-                if (Array.isArray(value) && value.length === 0) return;
-
-                let processedValue = value;
-                if (f.type === 'json' && typeof value === 'object' && value !== null) {
-                    processedValue = JSON.stringify(value);
-                } else if (f.type === 'user') {
-                    // For user fields with allowMultiple, convert array to comma-separated string
-                    const userConfig = (f.meta) || {};
-                    if (userConfig.allowMultiple && Array.isArray(value)) {
-                        processedValue = value.filter(id => id?.toString().trim()).join(',');
-                    }
-                } else if ((f.type === 'date' || f.uidt === 'date') && value instanceof Date) {
-                    // Convert Date objects to ISO date string (YYYY-MM-DD)
-                    processedValue = value.toISOString().split('T')[0];
-                } else if ((f.type === 'datetime' || f.uidt === 'datetime') && value instanceof Date) {
-                    // Convert Date objects to ISO datetime string
-                    processedValue = value.toISOString();
-                }
-
-                try {
-                    await insertValueMutation.mutateAsync({
-                        model_id: String(table.id),
-                        column_id: String(f.id),
-                        row_id: Number(recordId),
-                        value: processedValue,
-                    });
-                } catch (e) {
-                    console.warn('Failed to set initial field value:', f.id, e);
-                }
-            }));
-
-            // Handle attachment fields - upload files after record is created
-            const attachmentPromises: Promise<any>[] = [];
-            for (const field of (fields || [])) {
-                if (field.type === 'attachment' || field.uidt === 'attachment') {
-                    const attachmentValue = rowData[field.id];
-
-                    if (!attachmentValue || !Array.isArray(attachmentValue) || attachmentValue.length === 0) {
-                        continue;
-                    }
-
-                    // Upload each file that hasn't been uploaded yet (has a .file property)
-                    const filesToUpload = attachmentValue
-                        .filter((file: any) => file.file instanceof File)
-                        .map((file: any) => file.file);
-
-                    if (filesToUpload.length > 0) {
-                        const uploadPromise = addAttachmentMutation.mutateAsync({
-                            model_id: String(table.id),
-                            column_id: field.id,
-                            row_id: Number(recordId),
-                            files: filesToUpload
-                        }).catch(err => {
-                            console.error(`Failed to upload attachments for field ${field.title} (${field.id}):`, err);
-                        });
-
-                        attachmentPromises.push(uploadPromise);
-                    }
-                }
-            }
-
-            // Execute all attachment uploads in parallel
-            if (attachmentPromises.length > 0) {
-                try {
-                    await Promise.all(attachmentPromises);
-                } catch (error) {
-                    console.error('Some attachment uploads failed:', error);
-                    // Don't block form submission if attachment uploads fail
-                    setFormError('Record created, but some attachments may not have uploaded. Please check and retry.');
-                }
-            }
-
-            // Handle links fields - persist relations after record is created
-            const relationPromises: Promise<any>[] = [];
-            for (const field of (fields || [])) {
-                if (field.type !== 'links' && field.uidt !== 'links') {
-                    continue;
-                }
-
-                const linksValue = rowData[field.id];
-                const relatedIds = (Array.isArray(linksValue) ? linksValue : [])
-                    .map((item: any) => item?.id ?? item)
-                    .map((id: any) => Number.parseInt(String(id), 10))
-                    .filter((id: number) => Number.isFinite(id));
-
-                for (const targetRowId of relatedIds) {
-                    relationPromises.push(
-                        insertRelationMutation.mutateAsync({
-                            model_id: String(table.id),
-                            column_id: String(field.id),
-                            source_row_id: Number(recordId),
-                            target_row_id: targetRowId,
-                            action: 'link',
-                            target_table_id: field?.meta?.relation?.with
-                        }).catch((error) => {
-                            console.error(`Failed to link relation for field ${field.title} (${field.id})`, error);
-                        })
-                    );
-                }
-            }
-
-            if (relationPromises.length > 0) {
-                await Promise.all(relationPromises);
-            }
+            await insertFieldValues(recordId);
+            await uploadAttachments(recordId);
+            await insertRelations(recordId);
 
             setSubmitting(false);
             toast.success('Record created successfully');

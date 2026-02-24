@@ -45,8 +45,8 @@ vi.mock('../../../../components/common/Fields', () => ({
   LongText: (props: { value: unknown; onChange: (v: unknown) => void }) => (
     <MockField value={props.value} onChange={props.onChange} data-testid="long-text" />
   ),
-  Number: (props: { value: unknown; onChange: (v: unknown) => void }) => (
-    <MockField value={props.value} onChange={props.onChange} data-testid="number" />
+  NumberField: (props: { value: unknown; onChange: (v: unknown) => void }) => (
+    <MockField value={props.value} onChange={props.onChange} data-testid="number-field" />
   ),
   Decimal: (props: { value: unknown; onChange: (v: unknown) => void }) => (
     <MockField value={props.value} onChange={props.onChange} data-testid="decimal" />
@@ -160,7 +160,7 @@ describe('EditableTableCell', () => {
           width={200}
         />
       );
-      expect(screen.getByTestId('number')).toBeInTheDocument();
+      expect(screen.getByTestId('number-field')).toBeInTheDocument();
     });
 
     it('should render Checkbox for boolean column', () => {
@@ -209,7 +209,7 @@ describe('EditableTableCell', () => {
           width={200}
         />
       );
-      expect(screen.getByTestId('number')).toBeInTheDocument();
+      expect(screen.getByTestId('number-field')).toBeInTheDocument();
     });
 
     it('should default to SingleLineText for unknown type', () => {
@@ -403,7 +403,7 @@ describe('EditableTableCell', () => {
           width={200}
         />
       );
-      expect(screen.getByTestId('number')).toHaveTextContent('1234');
+      expect(screen.getByTestId('number-field')).toHaveTextContent('1234');
     });
 
     it('should use default numeric value when number input is invalid', () => {
@@ -415,7 +415,7 @@ describe('EditableTableCell', () => {
           width={200}
         />
       );
-      expect(screen.getByTestId('number')).toHaveTextContent('5');
+      expect(screen.getByTestId('number-field')).toHaveTextContent('5');
     });
 
     it('should normalize date values and fall back to dateDefault', () => {

@@ -151,11 +151,12 @@ export function renderContactConfigStep(props: any) {
             </button>
             {showDescription && (
               <>
-                <textarea
-                  className="w-full px-3 py-2 description text-sm focus:outline-none min-h-[60px]"
+                <MultiLineText
                   placeholder="Enter field description..."
                   value={description}
-                  onChange={e => setDescription(e.target.value)}
+                  onChange={value => setDescription(value)}
+                  rows={4}
+                  isBorder={true}
                 />
                 {description && (
                   <button

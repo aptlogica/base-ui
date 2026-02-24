@@ -33,7 +33,7 @@ const TaskCard = React.memo(({ task, onEdit, onDelete }: { task: GanttTask; onEd
   const isCompleted = task.status === 'completed';
 
   return (
-    <div
+    <div //NOSONAR
       className={`bg-card border rounded-xl transition-all duration-200 relative overflow-hidden ${onEdit ? 'hover:border-gray-300 hover:shadow-md cursor-pointer group' : ''}`}
       onClick={onEdit}
       onKeyDown={
@@ -167,7 +167,7 @@ const ChartTask = React.memo(({
   const isCompleted = task.status === 'completed';
 
   return (
-    <div
+    <div //NOSONAR
       className={`absolute group transition-all duration-200 ${onEdit ? 'cursor-pointer' : ''
         } ${isMilestone ? 'w-0 h-0' : 'bg-background border rounded-xl'
         }`}
@@ -277,6 +277,7 @@ ChartTask.displayName = 'ChartTask';
 
 interface GanttChartProps {
   tableData?: TableResponse;
+  viewId?: string;
   onRefresh?: () => void;
   actions?: {
     addRow: any;
@@ -292,7 +293,7 @@ interface GanttChartProps {
   };
 }
 
-export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, actions }) => {
+export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRefresh, actions }) => {
   // Extract base ID for permission checks
   const baseId = useMemo(() => String(tableData?.data?.model?.base_id ?? ''), [tableData?.data?.model?.base_id]);
 
@@ -308,7 +309,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, onRefresh, ac
   const isReadOnly = isBaseReadOnly();
 
   // Process data into Gantt-ready format
-  const processedData = useGanttTaskProcessing({ tableData });
+  const processedData = useGanttTaskProcessing({ tableData, viewId });
 
   // View configuration hook (includes filtering and sorting)
   const {

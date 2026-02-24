@@ -4,7 +4,7 @@ import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown'
 import {
   SingleLineText,
   LongText,
-  Number,
+  NumberField,
   Decimal,
 } from '../../components/common/Fields';
 import { precisionOptions } from '../../types/constants';
@@ -107,7 +107,7 @@ export function renderBasicConfigStep(props: any) {
             Set default value
           </button>
           {showTextDefault && (
-            <Number
+            <NumberField
               value={defaultValue}
               onChange={value => setDefaultValue(value?.toString() || '')}
               config={{
@@ -144,18 +144,31 @@ export function renderBasicConfigStep(props: any) {
             <Plus className="w-4 h-4" />
             Set default value
           </button>
-          {showTextDefault && (
-            <Decimal
-              value={defaultValue ? parseFloat(defaultValue) : null}
-              onChange={(value: any) => setDefaultValue(value?.toString() || '')}
-              showThousands={showThousands}
-              config={{
-                precision: typeof precision === 'string' ? (precision.split('.')[1]?.length || 0) : precision,
-                defaultValue: defaultValue ? (isNaN(parseFloat(defaultValue)) ? defaultValue : parseFloat(defaultValue)) : undefined
-              }}
-              isBorder={true}
-            />
-          )}
+          {showTextDefault && (() => {
+            const parsedPrecision = typeof precision === 'string'
+              ? (precision.split('.')[1]?.length || 0)
+              : precision;
+            const parsedDefaultValue = defaultValue ? Number.parseFloat(defaultValue) : null;
+            let resolvedDefaultValue: string | number | undefined = undefined;
+            if (defaultValue) {
+              resolvedDefaultValue = Number.isNaN(parsedDefaultValue)
+                ? defaultValue
+                : parsedDefaultValue;
+            }
+
+            return (
+              <Decimal
+                value={parsedDefaultValue}
+                onChange={(value: any) => setDefaultValue(value?.toString() || '')}
+                showThousands={showThousands}
+                config={{
+                  precision: parsedPrecision,
+                  defaultValue: resolvedDefaultValue
+                }}
+                isBorder={true}
+              />
+            );
+          })()}
           {renderDescriptionToggle({
             showDescription,
             setShowDescription,

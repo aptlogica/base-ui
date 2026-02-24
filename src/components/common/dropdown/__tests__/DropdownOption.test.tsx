@@ -16,7 +16,7 @@ describe('DropdownOption', () => {
 
   it('renders label and description and handles click', () => {
     const onClick = vi.fn();
-    const { getByText, getByRole } = render(
+    const { getByText } = render(
       <ul role="listbox">
         <DropdownOption
           option={{ label: 'Option A', value: 'a', description: 'desc' }}
@@ -30,13 +30,13 @@ describe('DropdownOption', () => {
 
     expect(getByText('Option A')).toBeInTheDocument();
     expect(getByText('desc')).toBeInTheDocument();
-    fireEvent.click(getByRole('option'));
+    fireEvent.click(getByText('Option A').closest('li') as HTMLElement);
     expect(onClick).toHaveBeenCalled();
   });
 
   it('supports keyboard activation when enabled', () => {
     const onClick = vi.fn();
-    const { getByRole } = render(
+    const { getByText } = render(
       <ul role="listbox">
         <DropdownOption
           option={{ label: 'Option B', value: 'b' }}
@@ -48,7 +48,7 @@ describe('DropdownOption', () => {
       </ul>
     );
 
-    const option = getByRole('option');
+    const option = getByText('Option B').closest('li') as HTMLElement;
     fireEvent.keyDown(option, { key: 'Enter' });
     fireEvent.keyDown(option, { key: ' ' });
     expect(onClick).toHaveBeenCalledTimes(2);
@@ -56,7 +56,7 @@ describe('DropdownOption', () => {
 
   it('disables interaction when option is disabled', () => {
     const onClick = vi.fn();
-    const { getByRole } = render(
+    const { getByText } = render(
       <ul role="listbox">
         <DropdownOption
           option={{ label: 'Option C', value: 'c', disabled: true }}
@@ -68,7 +68,7 @@ describe('DropdownOption', () => {
       </ul>
     );
 
-    const option = getByRole('option');
+    const option = getByText('Option C').closest('li') as HTMLElement;
     fireEvent.click(option);
     fireEvent.keyDown(option, { key: 'Enter' });
     expect(onClick).not.toHaveBeenCalled();

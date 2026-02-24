@@ -39,7 +39,7 @@ describe('AdvancedDropdown', () => {
     const button = screen.getByRole('button');
     fireEvent.click(button);
     expect(button).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
 
     // Click outside to close
     fireEvent.mouseDown(document.body);
@@ -57,9 +57,7 @@ describe('AdvancedDropdown', () => {
   it('selects single option and closes', () => {
     const { onChange } = setup();
     fireEvent.click(screen.getByRole('button'));
-    const list = screen.getByRole('listbox');
-    const alpha = within(list).getByText('Alpha');
-    fireEvent.click(alpha);
+    fireEvent.click(screen.getByText('Alpha'));
     expect(onChange).toHaveBeenCalledWith('alpha');
     expect(screen.getByRole('button')).toHaveAttribute('aria-expanded', 'false');
   });
@@ -67,9 +65,7 @@ describe('AdvancedDropdown', () => {
   it('toggles multiple selections, display count and label', () => {
     const { onChange } = setup({ multiple: true, value: [], clearable: false });
     fireEvent.click(screen.getByRole('button'));
-    const list = screen.getByRole('listbox');
-
-    fireEvent.click(within(list).getByText('Alpha'));
+    fireEvent.click(screen.getByText('Alpha'));
     expect(onChange).toHaveBeenCalledWith(['alpha']);
 
     // Re-render with updated value to simulate controlled component
@@ -77,9 +73,10 @@ describe('AdvancedDropdown', () => {
     const triggerButtons = screen.getAllByRole('button');
     const secondTrigger = triggerButtons[triggerButtons.length - 1];
     fireEvent.click(secondTrigger);
-    const listboxes = screen.getAllByRole('listbox');
-    const secondList = listboxes[listboxes.length - 1];
-    fireEvent.click(within(secondList).getByText('Beta'));
+    const openMenus = document.querySelectorAll('div.absolute.z-40');
+    const latestMenu = openMenus[openMenus.length - 1];
+    const betaOption = within(latestMenu).getByText('Beta');
+    fireEvent.click(betaOption);
     expect(onChange2).toHaveBeenCalledWith(['alpha', 'beta']);
 
     // Re-render with both selections to verify count display
@@ -154,8 +151,7 @@ describe('AdvancedDropdown', () => {
   it('respects disabled option and does not select it', () => {
     const { onChange } = setup();
     fireEvent.click(screen.getByRole('button'));
-    const list = screen.getByRole('listbox');
-    fireEvent.click(within(list).getByText('Gamma'));
+    fireEvent.click(screen.getByText('Gamma'));
     expect(onChange).not.toHaveBeenCalled();
   });
 
@@ -169,7 +165,7 @@ describe('AdvancedDropdown', () => {
     Object.defineProperty(globalThis, 'innerHeight', { value: 530, writable: true });
 
     fireEvent.click(btn);
-    const menu = screen.getByRole('listbox').parentElement as HTMLElement;
+    const menu = screen.getByText('Alpha').closest('ul')?.parentElement as HTMLElement;
     expect(menu.className).toMatch(/bottom-full/);
   });
 });

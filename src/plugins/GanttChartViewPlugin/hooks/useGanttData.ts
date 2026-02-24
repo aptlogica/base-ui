@@ -170,7 +170,9 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
     );
     
     // Find current view
-    const currentView = views?.find((v: View) => v.id === viewId) || views?.find((v: View) => v.type === 'ganttChart') || views?.[0];
+    const currentView = viewId
+      ? (views?.find((v: View) => String(v.id) === String(viewId)) || null)
+      : (views?.find((v: View) => v.type === 'ganttChart') || views?.[0]);
     const viewMeta = currentView?.meta ?? ({} as Record<string, unknown>);
 
     // Extract view configuration
@@ -192,22 +194,20 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
       return defaultValue;
     };
 
-    const getTaskName = (titleValue: unknown, idx: number): string => {
+    const getTaskName = (titleValue: unknown): string => {
       if (typeof titleValue === 'string') {
-        return titleValue;
+        return titleValue.trim() === '' ? '-' : titleValue;
       }
       if (titleValue === null || titleValue === undefined) {
-        return `Task ${idx + 1}`;
+        return '-';
       }
-      // Handle objects and other types safely - avoid stringifying objects
       if (typeof titleValue === 'object') {
-        return `Task ${idx + 1}`;
+        return '-';
       }
-      // Only stringify primitive types (number, boolean, symbol, bigint)
       if (typeof titleValue === 'number' || typeof titleValue === 'boolean' || typeof titleValue === 'symbol' || typeof titleValue === 'bigint') {
         return String(titleValue);
       }
-      return `Task ${idx + 1}`;
+      return '-';
     };
 
     const getTaskId = (recordId: unknown, idx: number): string | number => {
@@ -258,7 +258,7 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
       
       const startDateValue = startDateFieldName ? record[startDateFieldName] : undefined;
       const endDateValue = endDateFieldName ? record[endDateFieldName] : undefined;
-      const titleValue = titleFieldName ? record[titleFieldName] : record.title || `Task ${idx + 1}`;
+      const titleValue = titleFieldName ? record[titleFieldName] : record.title;
       const progressValue = progressFieldName ? record[progressFieldName] : 0;
 
       // Parse dates with proper type checking
@@ -269,7 +269,7 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
       const status = determineStatus(endDate, progressValue, startDateValue, endDateValue);
 
       // Ensure title is a string
-      const taskName = getTaskName(titleValue, idx);
+      const taskName = getTaskName(titleValue);
 
       // Ensure id is string or number
       const taskId = getTaskId(record.id, idx);

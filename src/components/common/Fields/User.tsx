@@ -306,7 +306,7 @@ export const User: React.FC<UserProps> = ({
   return (
     <div className={`w-full relative ${isBorder ? "field-component-border" : ""}`} ref={userDropdownRef}>
       {selectedUsers.length > 0 ? (
-        <div
+        <div //NOSONAR
           ref={buttonRef as unknown as React.RefObject<HTMLDivElement>}
           role="button"
           tabIndex={disabled || readOnly || loading ? -1 : 0}

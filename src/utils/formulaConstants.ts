@@ -49,7 +49,7 @@ export const FORMULA_FUNCTIONS = {
     { name: 'ISDATE()', description: 'Checks if a field contains a date.', example: 'ISDATE({Field})' }
   ],
   'Comparison Operators': [
-    { name: '=', description: 'Equals comparison.', example: '{A} = {B}' },
+    { name: '==', description: 'Equals comparison.', example: '{A} == {B}' },
     { name: '!=', description: 'Not equals comparison.', example: '{A} != {B}' },
     { name: '>', description: 'Greater than comparison.', example: '{A} > {B}' },
     { name: '<', description: 'Less than comparison.', example: '{A} < {B}' },
@@ -172,7 +172,7 @@ export const COMPARISON_OPERATORS = [
   { op: '>=', regex: />=/g },
   { op: '<=', regex: /<=/g },
   { op: '!=', regex: /!=/g },
-  { op: '=', regex: /=/g },
+  { op: '==', regex: /==/g },
   { op: '>', regex: />/g },
   { op: '<', regex: /</g }
 ];
