@@ -172,7 +172,7 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
                 onSelect={(opt) => handleSelect(opt.option)}
                 emptyMessage="No options available"
                 optionClassName={(_, __, isDisabled) =>
-                  `w-full text-left text-sm rounded-xl focus:bg-[var(--color-bg-brand-secondary)] transition-colors flex items-center justify-between ${isDisabled
+                  `w-full text-left text-sm rounded-xl transition-colors flex items-center justify-between ${isDisabled
                     ? 'text-gray-400 cursor-not-allowed'
                     : 'cursor-pointer'}`
                 }

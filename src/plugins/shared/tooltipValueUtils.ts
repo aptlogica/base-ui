@@ -1,4 +1,5 @@
 import { cleanRichTextContent, isTruthyValue } from './tooltipTextUtils';
+import { utcISOToZoned } from '../../utils/dateUtils';
 
 type TooltipColumn = {
   type?: string;
@@ -67,24 +68,110 @@ const formatDecimalValue = (raw: any) => {
   return num.toFixed(2);
 };
 
-const formatDateLike = (type: string, raw: any) => {
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return undefined;
-  if (type === 'date') {
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+const convertFromISO = (isoDate: string, toFormat: string): string => {
+  const [year, month, day] = isoDate.split('-');
+  switch (toFormat) {
+    case 'YYYY/MM/DD':
+      return `${year}/${month}/${day}`;
+    case 'DD-MM-YYYY':
+      return `${day}-${month}-${year}`;
+    case 'MM-DD-YYYY':
+      return `${month}-${day}-${year}`;
+    case 'DD/MM/YYYY':
+      return `${day}/${month}/${year}`;
+    case 'MM/DD/YYYY':
+      return `${month}/${day}/${year}`;
+    case 'DD MM YYYY':
+      return `${day} ${month} ${year}`;
+    case 'YYYY-MM-DD':
+    default:
+      return isoDate;
   }
-  return date.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  });
+};
+
+const formatTimeWithFormat = (time: string, timeFormat: string | undefined) => {
+  if (!time) return '';
+  const parts = time.split(':');
+  const hour = Number(parts[0]);
+  const minute = parts.length > 1 ? Number(parts[1]) : 0;
+  const second = parts.length > 2 ? Number(parts[2]) : undefined;
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return time;
+
+  const includeSeconds = timeFormat?.includes('ss') ?? false;
+  const use12Hour = timeFormat?.includes('hh') ?? false;
+
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+  let baseHour = hour;
+  if (use12Hour) {
+    baseHour = (hour % 12) || 12;
+  }
+  let suffix = '';
+  if (use12Hour) {
+    suffix = hour >= 12 ? ' PM' : ' AM';
+  }
+  const secPart = includeSeconds ? `:${pad2(second ?? 0)}` : '';
+  return `${pad2(baseHour)}:${pad2(minute)}${secPart}${suffix}`.trim();
+};
+
+const getTimeZone = (col: TooltipColumn): string =>
+  col?.meta?.timeZoneLabel ||
+  col?.meta?.timeZone ||
+  Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+const getDateTimeParts = (rawStr: string, timeZone: string | undefined) => {
+  let datePart: string | undefined;
+  let timePart: string | undefined;
+
+  if (timeZone && rawStr.includes('T')) {
+    try {
+      const utcIso = rawStr.endsWith('Z') ? rawStr : `${rawStr}Z`;
+      const zonedDateTime = utcISOToZoned(utcIso, timeZone);
+      const [zonedDate, zonedTime = '00:00'] = zonedDateTime.split(' ');
+      datePart = zonedDate;
+      timePart = zonedTime;
+    } catch {
+      // fall through to raw parsing
+    }
+  }
+
+  if (!datePart) {
+    const [rawDate, timePartRaw] = rawStr.split('T');
+    datePart = rawDate;
+    timePart = timePartRaw ? timePartRaw.replace('Z', '').split('.')[0] : '';
+  }
+
+  return { datePart, timePart };
+};
+
+const formatDateOnly = (rawStr: string, dateFormat: string) => {
+  const isoDate = rawStr.includes('T') ? rawStr.split('T')[0] : rawStr;
+  return convertFromISO(isoDate, dateFormat);
+};
+
+const formatDateTime = (rawStr: string, col: TooltipColumn, dateFormat: string, timeFormat: string) => {
+  const timeZone = getTimeZone(col);
+  const { datePart, timePart } = getDateTimeParts(rawStr, timeZone);
+  if (!datePart) return undefined;
+  const formattedDate = convertFromISO(datePart, dateFormat);
+  if (!timePart) return formattedDate;
+  return `${formattedDate} ${formatTimeWithFormat(timePart, timeFormat)}`;
+};
+
+const formatDateLike = (type: string, raw: any, col: TooltipColumn) => {
+  if (!raw) return undefined;
+  const rawStr = String(raw);
+  const dateFormat = col?.meta?.dateFormat || 'YYYY-MM-DD';
+  const timeFormat = col?.meta?.timeFormat || 'HH:mm';
+
+  if (type === 'date') {
+    return formatDateOnly(rawStr, dateFormat);
+  }
+
+  if (type === 'datetime' || type === 'createdtime' || type === 'lastmodifiedtime') {
+    return formatDateTime(rawStr, col, dateFormat, timeFormat);
+  }
+
+  return undefined;
 };
 
 const formatTimeValue = (raw: any, formatTime: (t: string) => string) => {
@@ -152,7 +239,7 @@ export function formatTooltipValue(
       { when: () => typeMatches(['boolean', 'checkbox']) && !!booleanAsYesNo, format: () => (raw ? 'Yes' : 'No') },
       {
         when: () => isDateLike(),
-        format: () => formatDateLike(type, raw),
+        format: () => formatDateLike(type, raw, col),
       },
       { when: () => type === 'time', format: () => formatTimeValue(raw, formatTime) },
       { when: () => type === 'multiselect', format: () => formatMultiSelectValue(raw) },

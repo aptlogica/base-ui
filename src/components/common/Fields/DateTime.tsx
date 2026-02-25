@@ -1,4 +1,4 @@
- /* eslint-disable sonarjs/cognitive-complexity */
+/* eslint-disable sonarjs/cognitive-complexity */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -826,7 +826,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                     <div className="grid grid-cols-3 gap-2 p-2">
                       {months.map((monthName, index) => (
                         <button
-                          key={monthName+index}
+                          key={monthName + index}
                           className={[
                             "w-full py-2 rounded-xl text-sm text-center transition-colors",
                             "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black",
@@ -973,14 +973,14 @@ export const DateTime: React.FC<DateTimeProps> = ({
 
   // Format display values
   const displayDate = date ? formatDate(date, dateFormat) : '';
-  
+
   let displayTime = '';
   if (time) {
     if (hourFormat === '12') {
       const [hours, minutes, seconds] = time.split(':');
       const hour = Number.parseInt(hours);
       const period = hour >= 12 ? 'PM' : 'AM';
-      
+
       let displayHour: number;
       if (hour === 0) {
         displayHour = 12;
@@ -1148,5 +1148,5 @@ export const DateTime: React.FC<DateTimeProps> = ({
       )}
     </div>
   );
-}; 
+};
 

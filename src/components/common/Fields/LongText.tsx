@@ -813,7 +813,7 @@ export const LongText: React.FC<LongTextProps> = ({
                 className="ml-auto text-gray-400 hover:text-gray-600 transition-colors text-xl font-bold"
                 aria-label="Close"
               >
-                <X className="w-4 h-4 mr-3" />
+                <X className="w-5 h-5 mr-3" />
               </button>
             </div>
             {richText ? (

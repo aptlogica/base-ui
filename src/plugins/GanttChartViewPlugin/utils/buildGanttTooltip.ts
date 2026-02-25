@@ -51,6 +51,11 @@ const getFieldPriority = (col: Column) => {
   return 20;
 };
 
+const isMeaningfulValue = (value: string) => {
+  const trimmed = value.trim();
+  return trimmed !== '' && trimmed !== '-' && trimmed !== 'N/A';
+};
+
 function formatValue(col: Column, raw: any, formatTime: (t: string) => string): string | null {
   return formatTooltipValue(col, raw, {
     formatTime,
@@ -107,7 +112,7 @@ export function buildGanttTooltipLines(args: {
       const raw = task.rawData[key];
       const formatted = formatValue(col, raw, options.formatTime);
       
-      if (formatted) {
+      if (formatted && isMeaningfulValue(formatted)) {
         visibleFields.push({
           value: formatted,
           priority: getFieldPriority(col),
