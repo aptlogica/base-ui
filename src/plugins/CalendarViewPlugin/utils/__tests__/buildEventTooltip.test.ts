@@ -221,7 +221,7 @@ describe('buildEventTooltip', () => {
         options: { formatTime: mockFormatTime }
       });
 
-      const dateField = result.find(line => line.includes('Feb'));
+      const dateField = result.find(line => line.includes('2026-02-15'));
       expect(dateField).toBeTruthy();
     });
 
@@ -242,7 +242,7 @@ describe('buildEventTooltip', () => {
         options: { formatTime: mockFormatTime }
       });
 
-      const datetimeField = result.find(line => line.includes('Feb'));
+      const datetimeField = result.find(line => line.includes('2026-02-15'));
       expect(datetimeField).toBeTruthy();
     });
 
