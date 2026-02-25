@@ -1,10 +1,10 @@
-import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import React, { useMemo } from "react";
 import { Calendar, Plus } from "lucide-react";
 import { CalendarEvent } from "../hooks/useCalendarData";
 import { SortItem, sortRowsByDataKey } from "../../../utils/sortUtils";
 import { SortPopover } from "../../../components/shared/table/SortPopover";
 import { BaseColumn } from "../../../types/column.types";
-import { useFrontendPagination } from "../../../hooks/useFrontendPagination";
+import { useInfiniteScrollPagination } from "../../../hooks/useInfiniteScrollPagination";
 import { formatCompactNumber } from "../../../utils/helpers";
 import { LoadMoreSection } from "../../../components/shared/LoadMoreSection";
 import { getDateRangeForView, toLocalDateKey } from "../utils/calendarViewUtils";
@@ -77,44 +77,16 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
   // FRONTEND PAGINATION: Paginate sorted events
   // This allows rendering only a portion of events initially for better performance
   const {
-    allLoadedData: paginatedEvents,
-    loadNextPage,
+    paginatedData: paginatedEvents,
+    handleLoadMore,
     hasMore,
     totalItems,
-  } = useFrontendPagination({
+    isLoadingMore,
+    scrollContainerRef,
+  } = useInfiniteScrollPagination({
     data: sortedEvents,
     pageSize: 30, // Same as GridView, Kanban, and Gallery
-    initialPage: 1,
   });
-
-  // Loading state for "Load more" button
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-
-  // Handle loading more with loading state
-  const handleLoadMore = useCallback(() => {
-    setIsLoadingMore(true);
-    loadNextPage();
-    // Brief loading state for better UX (since loadNextPage is synchronous)
-    setTimeout(() => setIsLoadingMore(false), 300);
-  }, [loadNextPage]);
-
-  // Infinite scroll: Load more when scrolling near bottom
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container || !hasMore || isLoadingMore) return;
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      // Load more when user is within 200px of bottom
-      if (scrollHeight - scrollTop - clientHeight < 200) {
-        handleLoadMore();
-      }
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [hasMore, isLoadingMore, handleLoadMore]);
 
 
   const formatDate = (dateStr: string) => {

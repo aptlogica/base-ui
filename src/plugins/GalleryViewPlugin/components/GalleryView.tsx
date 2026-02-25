@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Plus, Image as ImageIcon } from 'lucide-react';
 import type { UseGalleryDataReturn } from '../hooks/useGalleryData';
 import { GalleryHeader } from './GalleryHeader';
@@ -9,7 +9,7 @@ import DeleteConfirmModal from '../../../components/modals/DeleteConfirmModal';
 import { applyFilters, FilterCondition } from '../../../utils/filterUtils';
 import { buildComparator, SortItem } from '../../../utils/sortUtils';
 import { buildInitialValuesForEdit } from '../../../utils/initialValues';
-import { useFrontendPagination } from '../../../hooks/useFrontendPagination';
+import { useInfiniteScrollPagination } from '../../../hooks/useInfiniteScrollPagination';
 import { formatCompactNumber } from '../../../utils/helpers';
 import { LoadMoreSection } from '../../../components/shared/LoadMoreSection';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
@@ -187,44 +187,16 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   // FRONTEND PAGINATION: Paginate filtered and sorted items
   // This allows rendering only a portion of items initially for better performance
   const {
-    allLoadedData: paginatedItems,
-    loadNextPage,
+    paginatedData: paginatedItems,
+    handleLoadMore,
     hasMore,
     totalItems,
-  } = useFrontendPagination({
+    isLoadingMore,
+    scrollContainerRef,
+  } = useInfiniteScrollPagination({
     data: filteredAndSortedItems,
     pageSize: 30, // Same as GridView and Kanban
-    initialPage: 1,
   });
-
-  // Loading state for "Load more" button
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-
-  // Handle loading more with loading state
-  const handleLoadMore = useCallback(() => {
-    setIsLoadingMore(true);
-    loadNextPage();
-    // Brief loading state for better UX (since loadNextPage is synchronous)
-    setTimeout(() => setIsLoadingMore(false), 300);
-  }, [loadNextPage]);
-
-  // Infinite scroll: Load more when scrolling near bottom
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container || !hasMore || isLoadingMore) return;
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      // Load more when user is within 200px of bottom
-      if (scrollHeight - scrollTop - clientHeight < 200) {
-        handleLoadMore();
-      }
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [hasMore, isLoadingMore, handleLoadMore]);
 
   const getEditInitialValues = useCallback(() => {
     if (!selectedRecord) return {};
