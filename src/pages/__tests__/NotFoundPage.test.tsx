@@ -13,28 +13,37 @@ describe('NotFoundPage', () => {
     );
   };
 
-  it('should render the 404 heading', () => {
+  it('should render the page not found heading', () => {
     renderComponent();
     const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading).toHaveTextContent('404 - Page Not Found');
+    expect(heading).toHaveTextContent('Page not found');
   });
 
   it('should render the error message', () => {
     renderComponent();
-    const message = screen.getByText('Sorry, the page you are looking for does not exist.');
+    const message = screen.getByText(
+      "Sorry, we couldn't find the page you're looking for. It may have been moved or no longer exists."
+    );
     expect(message).toBeInTheDocument();
+  });
+
+  it('should render the illustration image', () => {
+    renderComponent();
+    const image = screen.getByAltText('Page not found');
+    expect(image).toBeInTheDocument();
+    expect(image).toHaveAttribute('src', '/assets/page-not-found.png');
   });
 
   it('should render a link to homepage', () => {
     renderComponent();
-    const link = screen.getByRole('link', { name: /Go to Home/i });
+    const link = screen.getByRole('link', { name: /Take me home/i });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute('href', '/workspace');
   });
 
   it('should render with proper styling classes', () => {
     renderComponent();
-    const container = screen.getByText('404 - Page Not Found').closest('div');
+    const container = screen.getByText('Page not found').closest('div');
     expect(container).toHaveClass('text-center');
   });
 });

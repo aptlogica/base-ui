@@ -125,7 +125,7 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
           <span className="text-sm font-medium text-gray-900 truncate" title={workspace.title || workspace.name}>
             {workspace.title || workspace.name}
           </span>
-          <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full flex-shrink-0">
+          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 border border-blue-300 text-xs font-medium rounded-lg flex-shrink-0">
             {baseCount} Base{baseCount === 1 ? '' : 's'}
           </span>
         </div>

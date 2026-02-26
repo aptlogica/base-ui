@@ -639,31 +639,6 @@ export const timeFormatOptions = [
   { label: "hh:mm:ss.SSS", value: "hh:mm:ss.SSS" },
 ];
 
-
-// defined link text options
-export const linkTextOptions = [
-  { label: "Show URL", value: "url" },
-  { label: "Custom text", value: "custom" },
-  { label: "Show domain only", value: "domain" }
-];
-
-// defined source table options
-export const sourceTableOptions = [
-  { label: "Select a table", value: "" },
-  { label: "Users", value: "users" },
-  { label: "Products", value: "products" },
-  { label: "Orders", value: "orders" }
-];
-
-// defined display field options
-export const displayFieldOptions = [
-  { label: "Select display field", value: "" },
-  { label: "Name", value: "name" },
-  { label: "Title", value: "title" },
-  { label: "ID", value: "id" }
-];
-
-
 export const ratingColorOptions = [
   { key: 'yellow', label: 'Yellow', className: 'text-yellow-400', color: '#fbbf24' },
   { key: 'blue', label: 'Blue', className: 'text-blue-400', color: '#60a5fa' },
@@ -994,7 +969,6 @@ export const timeZoneOptions = [
   { label: "Pacific/Wake", value: "WAKT", country: "Wake Island" },
   { label: "Pacific/Wallis", value: "WFT", country: "Wallis and Futuna" }
 ];
-
 
 export const fieldsToFilter = ['lookup', 'createdTime', 'lastModifiedTime', 'createdBy', 'lastModifiedBy'];
 export const fieldsToExcludeInFilter = ['links', 'lookup', 'datetime', 'attachment', 'json', 'id', 'createdTime', 'lastModifiedTime', 'createdBy', 'lastModifiedBy'];

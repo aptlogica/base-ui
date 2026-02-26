@@ -93,7 +93,7 @@ export const AccessDetailsRow: React.FC<AccessDetailsRowProps> = ({
                       <td className="px-4 py-3 text-sm text-gray-900 font-medium">{ws.workspace_name}</td>
                       <td className="px-4 py-3 text-sm text-gray-500">-</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getRolePillStyle(getRoleDisplayName(workspaceRole))}`}>
+                        <span className={`inline-block px-2 py-1 rounded-xl text-xs font-medium ${getRolePillStyle(getRoleDisplayName(workspaceRole))}`}>
                           {getRoleDisplayName(workspaceRole)}
                         </span>
                       </td>
@@ -115,7 +115,7 @@ export const AccessDetailsRow: React.FC<AccessDetailsRowProps> = ({
                       )}
                       <td className="px-4 py-3 text-sm text-gray-700">{baseName}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getRolePillStyle(getRoleDisplayName(baseRole))}`}>
+                        <span className={`inline-block px-2 py-1 rounded-xl text-xs font-medium ${getRolePillStyle(getRoleDisplayName(baseRole))}`}>
                           {getRoleDisplayName(baseRole)}
                         </span>
                       </td>

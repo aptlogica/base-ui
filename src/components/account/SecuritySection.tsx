@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { useUserProfile, useChangePassword } from '../../hooks/useApi';
 import { useToast } from '../common/Toast';
-import { Loader2, Eye, EyeOff, HelpCircle, Monitor, Globe, Clock } from 'lucide-react';
+import { Loader2, Eye, EyeOff, HelpCircle, Monitor, Earth, Clock } from 'lucide-react';
 import { getUserActivity, type LoginSession } from '../../service/activityService';
 import { validatePasswordStrength } from '../../utils/validation';
 import { useFooterButtons } from './AccountSettings';
@@ -130,7 +130,7 @@ const LoginSessions: React.FC<LoginSessionsProps> = ({
               <span className="text-sm text-[var(--color-brand-600)]">{formatDate(currentSession.login_at)}</span>
               {currentSession.timezone && (
                 <>
-                  <Globe className="w-4 h-4 text-[var(--color-brand-600)]" />
+                  <Earth className="w-4 h-4 text-[var(--color-brand-600)]" />
                   <span className="text-sm text-[var(--color-brand-600)]">{currentSession.timezone}</span>
                 </>
               )}
@@ -158,7 +158,7 @@ const LoginSessions: React.FC<LoginSessionsProps> = ({
               <span className="text-sm text-gray-600">{formatDate(session.login_at)}</span>
               {session.timezone && (
                 <>
-                  <Globe className="w-4 h-4 text-gray-400" />
+                  <Earth className="w-4 h-4 text-gray-400" />
                   <span className="text-sm text-gray-600">{session.timezone}</span>
                 </>
               )}

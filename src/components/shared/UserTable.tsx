@@ -84,6 +84,13 @@ const getStatusBadge = (status: string, emailVerified: boolean) => {
 
 const formatTimeZoneLabel = (label: string) => label;
 
+const formatTimeZoneWithCountry = (label: string, country?: string) => {
+  if (!label) return label;
+  const trimmedCountry = country?.trim();
+  if (!trimmedCountry) return label;
+  return `${label} (${trimmedCountry})`;
+};
+
 const getLocaleCountryName = (locale?: string) => {
   if (!locale) return '';
   const parts = locale.split(/[-_]/);
@@ -143,6 +150,20 @@ const getTimezoneName = (
   if (matches.length > 0) return formatTimeZoneLabel(matches[0].label);
 
   return formatTimeZoneLabel(trimmedTimeZone || trimmedCountry || utcLabel);
+};
+
+const getTimezoneDisplay = (
+  timezone: string,
+  activityData?: TenantUser['activity_data'],
+  locale?: string,
+  country?: string
+) => {
+  const label = getTimezoneName(timezone, activityData, locale, country);
+  if (!label) return label;
+
+  const tzByLabel = timeZoneOptions.find(tz => tz.label === label);
+  const tzCountry = tzByLabel?.country || country;
+  return formatTimeZoneWithCountry(label, tzCountry);
 };
 
 const formatCreatedTime = (createdTime?: string) => formatCreatedDate(createdTime);
@@ -216,7 +237,7 @@ const getSortValue = (user: TenantUser, sortColumn: 'name' | 'role' | 'status' |
     case 'language':
       return getLanguageDisplay(user.locale, user.activity_data).toLowerCase();
     case 'timezone':
-      return getTimezoneName(user.timezone, user.activity_data, user.locale, user.country)?.toLowerCase() || '';
+      return getTimezoneDisplay(user.timezone, user.activity_data, user.locale, user.country)?.toLowerCase() || '';
     default:
       return '';
   }
@@ -644,7 +665,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                               {roles.map((role) => (
                                 <span
                                   key={`${user.id}-${role}`}
-                                  className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getRolePillStyle(role)}`}
+                                  className={`inline-block px-2 py-0.5 rounded-xl text-xs font-medium ${getRolePillStyle(role)}`}
                                 >
                                   {role}
                                 </span>
@@ -663,7 +684,7 @@ export const UserTable: React.FC<UserTableProps> = ({
 
                         {/* Status */}
                         <td className="px-6 py-4">
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusBadge.color}`}>
+                          <span className={`inline-block px-3 py-1 rounded-xl text-xs font-medium ${statusBadge.color}`}>
                             {statusBadge.text}
                           </span>
                         </td>
@@ -685,7 +706,9 @@ export const UserTable: React.FC<UserTableProps> = ({
 
                         {/* Timezone */}
                         <td className="px-6 py-4">
-                          <p className="text-sm text-gray-600 min-w-48">{getTimezoneName(user.timezone, user.activity_data, user.locale)}</p>
+                          <p className="text-sm text-gray-600 min-w-48">
+                            {getTimezoneDisplay(user.timezone, user.activity_data, user.locale, user.country)}
+                          </p>
                         </td>
 
                         {/* Actions */}
