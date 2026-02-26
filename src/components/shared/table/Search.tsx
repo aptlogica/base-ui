@@ -261,7 +261,7 @@ export const Search: React.FC<SearchProps> = ({
                     key={field.key}
                     type="button"
                     onClick={() => handleFieldSelect(field)}
-                    className={`w-full px-3 py-2 text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] rounded-xl flex items-center gap-2 ${selectedField?.key === field.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''
+                    className={`w-full px-3 py-2 text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-xl flex items-center gap-2 ${selectedField?.key === field.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''
                       }`}
                   >
                     <span className='flex items-center gap-2 flex-1 min-w-0 overflow-hidden'>

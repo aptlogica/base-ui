@@ -94,7 +94,16 @@ export interface GridData {
   hasMore?: boolean;
 }
 
-export interface GridState {
+export interface GridViewConfigBase {
+  filters: GridFilter[];
+  sorts: GridSort[];
+  groupBy: GridGroupBy | null;
+  columnVisibility: Record<string, boolean>;
+  columnWidths: Record<string, number>;
+  pageSize: number;
+}
+
+export interface GridState extends GridViewConfigBase {
   // View state
   selectedRecords: Set<string>;
   editingCell: GridCellPosition | null;
@@ -102,23 +111,13 @@ export interface GridState {
   error: string | null;
   
   // Filter state
-  filters: GridFilter[];
   quickFilter: string;
   
-  // Sort state
-  sorts: GridSort[];
-  
   // Group state
-  groupBy: GridGroupBy | null;
   expandedGroups: Set<string>;
-  
-  // View state
-  columnVisibility: Record<string, boolean>;
-  columnWidths: Record<string, number>;
   
   // Pagination state
   page: number;
-  pageSize: number;
 }
 
 export interface GridCellPosition {
@@ -176,16 +175,10 @@ export interface SortState {
   direction: 'asc' | 'desc';
 }
 
-export interface GridViewConfig {
+export interface GridViewConfig extends GridViewConfigBase {
   id?: string;
   name: string;
   type: 'grid';
-  filters: GridFilter[];
-  sorts: GridSort[];
-  groupBy: GridGroupBy | null;
-  columnVisibility: Record<string, boolean>;
-  columnWidths: Record<string, number>;
-  pageSize: number;
 }
 
 // API Response types

@@ -105,6 +105,9 @@ describe('MultiSelect Component', () => {
       expect(option).toBeTruthy();
       await userEvent.click(option!);
 
+      // Close dropdown to commit selection
+      await userEvent.click(button);
+
       await waitFor(() => {
         expect(mockOnChange).toHaveBeenCalledWith(['Option 1']);
       });
@@ -651,8 +654,11 @@ describe('MultiSelect Component', () => {
       await userEvent.click(option2!);
       await userEvent.click(option3!);
 
+      // Close dropdown to commit selections
+      await userEvent.click(button);
+
       await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
+        expect(mockOnChange).toHaveBeenCalledWith(['Option 1', 'Option 2', 'Option 3']);
       });
     });
   });

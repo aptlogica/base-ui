@@ -85,7 +85,7 @@ describe('buildGanttTooltipLines', () => {
 
     const lines = buildGanttTooltipLines({ task, columns, options: baseOptions });
 
-    expect(lines[1]).toContain('-');
+    expect(lines).toHaveLength(1);
   });
 
   it('respects fieldsToExclude when building tooltip rows', () => {
@@ -121,7 +121,7 @@ describe('buildGanttTooltipLines', () => {
 
     const lines = buildGanttTooltipLines({ task, columns, options: baseOptions });
 
-    expect(lines[1]).toContain('Jan');
+    expect(lines[1]).toContain('2024-01-08');
     expect(lines[1]).toContain('formatted-09:45');
   });
 

@@ -6,8 +6,9 @@ import { applyFilters } from '../../../utils/filterUtils';
 import { isFormulaField } from '../../../utils/fieldUtils';
 import { GanttTask } from './useGanttData';
 import { buildPositionSignature, buildReorderedFieldConfig } from '../../../utils/viewConfigShared';
+import { useViewFilterSortHandlers, type ViewFilterType } from '../../../hooks/useViewFilterSortHandlers';
 
-export type FilterType = { column: string; operator: string; value: string };
+export type FilterType = ViewFilterType;
 
 interface UseGanttViewConfigOptions {
   view?: any;
@@ -158,77 +159,31 @@ export function useGanttViewConfig({
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   }, [columns, localFieldConfig]);
 
-  // Handle real-time filtering while typing
-  const handleRealTimeFilter = useCallback((filter: FilterType | null) => {
-    setDraftFilter(filter);
-  }, []);
+  const {
+    handleRealTimeFilter,
+    handleAddFilter,
+    handleRemoveFilter,
+    handleUpdateFilter,
+    handleSortChange,
+  } = useViewFilterSortHandlers<SortItem>({
+    filters,
+    setFilters,
+    setDraftFilter,
+    isReadOnly,
+    persistFilters: async (next) => {
+      if (!updateView || !view?.id) return;
+      await updateView(view.id, { meta: { ...view.meta, filters: next } });
+    },
+    persistSorts: async (next) => {
+      if (!updateView || !view?.id) return;
+      await updateView(view.id, { meta: { ...view.meta, sorts: next } });
+    },
+  });
 
-  // Add a filter and persist view config (only if not read-only)
-  const handleAddFilter = useCallback(async (filter: FilterType) => {
-    const newFilters = [...filters, filter];
-    setFilters(newFilters); // Always update local state
-    setDraftFilter(null);
-
-    // Only persist to backend if NOT read-only
-    if (!isReadOnly && updateView && view?.id) {
-      await updateView(view.id, {
-        meta: {
-          ...view.meta,
-          filters: newFilters
-        }
-      });
-    }
-  }, [filters, updateView, view, isReadOnly]);
-
-  // Remove a filter and persist view config (only if not read-only)
-  const handleRemoveFilter = useCallback(async (index: number) => {
-    const newFilters = filters.filter((_, i) => i !== index);
-    setFilters(newFilters); // Always update local state
-
-    // Only persist to backend if NOT read-only
-    if (!isReadOnly && updateView && view?.id) {
-      await updateView(view.id, {
-        meta: {
-          ...view.meta,
-          filters: newFilters
-        }
-      });
-    }
-  }, [filters, updateView, view, isReadOnly]);
-
-  // Update a filter at given index and persist view config (only if not read-only)
-  const handleUpdateFilter = useCallback(async (index: number, updates: Partial<FilterType>) => {
-    const newFilters = [...filters];
-    if (newFilters[index]) {
-      newFilters[index] = { ...newFilters[index], ...updates };
-      setFilters(newFilters); // Always update local state
-
-      // Only persist to backend if NOT read-only
-      if (!isReadOnly && updateView && view?.id) {
-        await updateView(view.id, {
-          meta: {
-            ...view.meta,
-            filters: newFilters
-          }
-        });
-      }
-    }
-  }, [filters, updateView, view, isReadOnly]);
-
-  // Handle sort change and persist view config (only if not read-only)
-  const handleSortChange = useCallback(async (newSorts: SortItem[]) => {
-    setSorts(newSorts); // Always update local state
-
-    // Only persist to backend if NOT read-only
-    if (!isReadOnly && updateView && view?.id) {
-      await updateView(view.id, {
-        meta: {
-          ...view.meta,
-          sorts: newSorts
-        }
-      });
-    }
-  }, [updateView, view, isReadOnly]);
+  const handleSortChangeWithState = useCallback(async (newSorts: SortItem[]) => {
+    setSorts(newSorts);
+    await handleSortChange(newSorts);
+  }, [handleSortChange]);
 
   // Handle field toggle with debounced persistence
   const handleFieldToggle = useCallback(async (fieldId: string) => {
@@ -352,7 +307,7 @@ export function useGanttViewConfig({
     handleAddFilter,
     handleRemoveFilter,
     handleUpdateFilter,
-    handleSortChange,
+    handleSortChange: handleSortChangeWithState,
     handleFieldToggle,
     handleFieldOrderChange,
   };

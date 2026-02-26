@@ -21,21 +21,16 @@ import {
   deleteWorkspaceService,
   getBasesByWorkspaceIdService,
   getWorkspaceMembersService,
-  removeAccessMemberService,
   removeUserFromWorkspaceService,
   createBaseService,
   getBaseByIdService,
   getTablesByBaseIdService,
-  getAllBasesService,
   updateBaseService,
   deleteBaseService,
   getBaseMembersService,
-  removeBaseAccessMemberService,
   removeUserFromBaseService,
   createTableService,
   getTableByIdService,
-  getAllTablesService,
-  getAllFieldsService,
   getAllViewsService,
   getViewsByModelIdService,
   addRow,
@@ -59,12 +54,9 @@ import {
   bulkAddBaseMembersService,
   getUserProfileByIDService,
   updateUserProfileService,
-  getUserAccessDetailsService,
   getUserRolesAndAccessService,
   changePasswordService,
-  addOrUpdateAvatarService,
   removeAvatarService,
-  assignUserToWorkspaceService,
   bulkAddMembersService,
   updateTableService,
   deleteTableService,
@@ -73,7 +65,6 @@ import {
   getFieldByIdService,
   updateFieldService,
   deleteFieldService,
-  reorderColumnService,
   createViewService,
   getViewByIdService,
   updateViewService,
@@ -81,7 +72,6 @@ import {
   addImageService,
   getOrganizationService,
   updateOrganizationService,
-  getOrganizationServiceById,
 } from '../clientService';
 
 const createJwt = (payload: Record<string, unknown>) => {
@@ -314,13 +304,11 @@ describe('clientService', () => {
     await deleteWorkspaceService('w1');
     await getBasesByWorkspaceIdService('w1');
     await getWorkspaceMembersService('w1');
-    await removeAccessMemberService('w1', 'a1');
     await removeUserFromWorkspaceService('w1', { user_id: 'u1' });
 
     await createBaseService({ title: 'b' });
     await getBaseByIdService('b1');
     await getTablesByBaseIdService('b1');
-    await getAllBasesService();
     await updateBaseService('b1', { title: 'B' });
     await deleteBaseService('b1');
     await getBaseMembersService('b1');
@@ -328,21 +316,17 @@ describe('clientService', () => {
       workspaceId: 'w1',
       members: [{ user_id: 'u1', role: 'base-member' }],
     });
-    await removeBaseAccessMemberService('b1', 'a1');
     await removeUserFromBaseService('b1', { user_id: 'u1' });
 
     await createTableService({ title: 't' });
     await getTableByIdService('t1', { includeColumns: true });
-    await getAllTablesService();
     await updateTableService('t1', { title: 't2' });
     await deleteTableService('t1');
     await getColumnsByTableIdService('t1');
     await createFieldService({ model_id: 'm1', title: 'C1' });
     await getFieldByIdService('c1');
-    await getAllFieldsService();
     await updateFieldService('c1', { title: 'C2' });
     await deleteFieldService('c1');
-    await reorderColumnService({ source_column_id: 'c1', target_column_id: 'c2' });
     await createViewService({ model_id: 'm1', type: 'grid' });
     await getViewByIdService('v1');
     await getAllViewsService();
@@ -365,22 +349,14 @@ describe('clientService', () => {
     await getUsersForAssignService();
     await getUserProfileByIDService('u1');
     await updateUserProfileService('u1', { display_name: 'User' });
-    await getUserAccessDetailsService('u1', 'w1');
     await getUserRolesAndAccessService('u1', 'w1');
     await changePasswordService('u1', { old_password: 'x', new_password: 'y' });
-    await addOrUpdateAvatarService('u1', new File(['a'], 'a.png'));
     await removeAvatarService('u1');
     await addUserService({ firstname: 'A', lastname: 'B', email: 'a@b.com' });
     await editUserService({ user_id: 'u1', firstname: 'A' });
     await deactivateTenantUserService('u1');
     await activateTenantUserService('u1');
     await removeUserService('u1');
-    await assignUserToWorkspaceService({
-      workspace_id: 'w1',
-      user_ids: ['u1'],
-      access_level: 'workspace-member',
-      bases_ids: 'b1',
-    });
     await bulkAddMembersService('w1', {
       members: [{
         user_id: 'u1',
@@ -389,9 +365,7 @@ describe('clientService', () => {
     });
     await getOrganizationService();
     await updateOrganizationService('o1', { name: 'Org', description: 'desc' });
-    await getOrganizationServiceById('o1');
     expect(client.workspace.create).toHaveBeenCalled();
-    expect(client.baseService.getAll).toHaveBeenCalled();
     expect(client.tableService.createRow).toHaveBeenCalledWith({ model_id: 'm1' });
     expect(client.organization.getAll).toHaveBeenCalled();
   });
@@ -422,7 +396,7 @@ describe('clientService', () => {
     sessionStorage.setItem('user_id', 'user-1');
 
     (client.auth as any).refreshToken = vi.fn().mockResolvedValue({
-      data: { token: { access_token: newAccess, refresh_token: newRefresh } },
+      data: { data: { access_token: newAccess, refresh_token: newRefresh } },
     });
 
     await expect(isAuthenticated()).resolves.toBe(true);
@@ -443,7 +417,7 @@ describe('clientService', () => {
     sessionStorage.setItem('user_id', 'user-1');
 
     (client.auth as any).refreshToken = vi.fn().mockResolvedValue({
-      data: { token: { access_token: newAccess, refresh_token: refreshToken } },
+      data: { data: { access_token: newAccess, refresh_token: refreshToken } },
     });
 
     const createSpy = vi.fn()

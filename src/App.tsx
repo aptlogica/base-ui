@@ -140,10 +140,10 @@ const Layout = () => {
               )}
               <button 
                 onClick={() => updateSidebarCollapsed(!sidebarCollapsed)} 
-                className='absolute top-1/2 right-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-40 hover:bg-gray-100 transition-colors outline-none'
+                className='absolute top-1/2 right-[-4px] border rounded-tl-full rounded-bl-full bg-gray-100 text-primary p-1 shadow-md z-40 hover:bg-gray-200 transition-colors outline-none'
                 aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
-                {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+                {sidebarCollapsed ? <ChevronRight className="w-5 h-6" /> : <ChevronLeft className="w-5 h-6" />}
               </button>
             </aside>
           )}

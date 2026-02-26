@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, X } from 'lucide-react';
 import { useClickOutside } from '../../../hooks/useClickOutside';
@@ -59,20 +59,49 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
 
   // Note: We allow dropdown to open in read-only mode, but prevent selections
 
+  // Use default value if value is empty/undefined/null and default value is provided
+  let resolvedValue: string[] = [];
+  if (value !== null && value !== undefined && Array.isArray(value) && value.length > 0) {
+    resolvedValue = value;
+  } else if (Array.isArray(defaultValue) && defaultValue.length > 0) {
+    resolvedValue = defaultValue;
+  }
+  const [localValue, setLocalValue] = useState<string[]>(resolvedValue);
+  const [isDirty, setIsDirty] = useState(false);
+
+  const areValuesEqual = (a: string[], b: string[]) => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i += 1) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  };
+
+  const commitSelection = (nextValue: string[]) => {
+    onChange(nextValue);
+    const validationError = validate(nextValue);
+    setError(validationError);
+    setIsDirty(false);
+  };
+
+  useEffect(() => {
+    if (!isDirty && !areValuesEqual(localValue, resolvedValue)) {
+      setLocalValue(resolvedValue);
+    }
+  }, [value, defaultValue, isDirty, localValue, resolvedValue]);
+
   useClickOutside({
     isOpen,
-    onClose: () => setIsOpen(false),
+    onClose: () => {
+      setIsOpen(false);
+      if (isDirty) {
+        commitSelection(localValue);
+      }
+    },
     excludeRefs: [buttonRef, containerRef, dropdownRef]
   });
 
-  // Use default value if value is empty/undefined/null and default value is provided
-  let displayValue: string[] = [];
-  if (value !== null && value !== undefined && Array.isArray(value) && value.length > 0) {
-    displayValue = value;
-  } else if (Array.isArray(defaultValue) && defaultValue.length > 0) {
-    displayValue = defaultValue;
-  }
-  const selectedValuesSet = useMemo(() => new Set(displayValue), [displayValue]);
+  const selectedValuesSet = useMemo(() => new Set(localValue), [localValue]);
   const optionIndexMap = useMemo(
     () => new Map(normalizedOptions.map((opt, index) => [opt.option, index])),
     [normalizedOptions]
@@ -98,29 +127,29 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
     let newValue: string[];
 
     if (selectedValuesSet.has(option)) {
-      newValue = displayValue.filter(v => v !== option);
+      newValue = localValue.filter(v => v !== option);
     } else {
-      if (configMaxSelections && displayValue.length >= configMaxSelections) {
+      if (configMaxSelections && localValue.length >= configMaxSelections) {
         setError(`Maximum ${configMaxSelections} selections allowed`);
         return;
       }
-      newValue = [...displayValue, option];
+      newValue = [...localValue, option];
     }
 
-    onChange(newValue);
-
-    const validationError = validate(newValue);
-    setError(validationError);
+    setLocalValue(newValue);
+    setIsDirty(true);
   };
 
   const handleRemoveOption = (option: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (readOnly) return;
-    const newValue = displayValue.filter(v => v !== option);
-    onChange(newValue);
-
-    const validationError = validate(newValue);
-    setError(validationError);
+    const newValue = localValue.filter(v => v !== option);
+    setLocalValue(newValue);
+    if (isOpen) {
+      setIsDirty(true);
+    } else {
+      commitSelection(newValue);
+    }
   };
 
 
@@ -138,17 +167,23 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
         <button
           ref={buttonRef}
           type="button"
-          onClick={() => !disabled && allowEdit && setIsOpen(!isOpen)}
+          onClick={() => {
+            if (disabled || !allowEdit) return;
+            if (isOpen && isDirty) {
+              commitSelection(localValue);
+            }
+            setIsOpen(!isOpen);
+          }}
           disabled={disabled}
           className={`field-component ${error ? 'border-red-500 bg-red-50' : ''
             } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900 cursor-pointer'}`}
         >
           <div className="w-full flex items-center justify-between min-w-0">
             <div className="flex gap-1 min-w-0 flex-1 overflow-hidden max-h-20 overflow-y-auto">
-              {displayValue.length === 0 ? (
+              {localValue.length === 0 ? (
                 <span className="text-gray-500 text-sm text-left truncate overflow-hidden whitespace-nowrap flex-1">{placeholder}</span>
               ) : (
-                displayValue.map((item, index) => {
+                localValue.map((item, index) => {
                   const optIndex = optionIndexMap.get(item);
                   const opt = optionMap.get(item) || { option: item, color: undefined };
                   const style = opt.color ? { backgroundColor: opt.color, color: getReadableTextColor(opt.color) } : undefined;
@@ -201,7 +236,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                 isSelected={(opt) => selectedValuesSet.has(opt.option)}
                 isDisabled={(opt) => {
                   const isSelected = selectedValuesSet.has(opt.option);
-                  return !!(configMaxSelections && !isSelected && displayValue.length >= configMaxSelections);
+                  return !!(configMaxSelections && !isSelected && localValue.length >= configMaxSelections);
                 }}
                 onSelect={(opt) => handleToggleOption(opt.option)}
                 emptyMessage="No options available"

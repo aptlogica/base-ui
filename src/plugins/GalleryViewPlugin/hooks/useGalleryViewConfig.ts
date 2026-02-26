@@ -5,8 +5,9 @@ import { BaseColumn } from '../../../types/column.types';
 import { extractFieldConfigFromMeta, generateDefaultFieldConfig, mergeFieldConfigWithColumns } from '../../../utils/viewFieldConfigUtils';
 import { isFormulaField } from '../../../utils/fieldUtils';
 import { SearchField } from '../../../hooks/useSearch';
+import { useViewFilterSortHandlers, type ViewFilterType } from '../../../hooks/useViewFilterSortHandlers';
 
-export type FilterType = { column: string; operator: string; value: string };
+export type FilterType = ViewFilterType;
 
 interface UseGalleryViewConfigOptions {
   view?: any;
@@ -175,71 +176,33 @@ export function useGalleryViewConfig({
     });
   }, [columns, localFieldConfig]);
 
-  // Handle real-time filtering while typing
-  const handleRealTimeFilter = useCallback((filter: FilterType | null) => {
-    setDraftFilter(filter);
-  }, []);
+  const {
+    handleRealTimeFilter,
+    handleAddFilter,
+    handleRemoveFilter,
+    handleUpdateFilter,
+    handleSortChange,
+  } = useViewFilterSortHandlers<SortItem>({
+    filters,
+    setFilters,
+    setDraftFilter,
+    isReadOnly,
+    persistFilters: async (next) => {
+      if (!updateView || !view?.id) return;
+      await updateView(view.id, { filters: next });
+    },
+    persistSorts: async (next) => {
+      if (!updateView || !view?.id) return;
+      await updateView(view.id, { sorts: next });
+    },
+    sanitizeSorts: (next) => filterValidSorts(next),
+  });
 
-  // Add a filter and persist view config (only if not read-only)
-  const handleAddFilter = useCallback(async (filter: FilterType) => {
-    const newFilters = [...filters, filter];
-    // Update local state immediately for optimistic UI
-    setFilters(newFilters);
-    // Clear draft filter when filter is saved
-    setDraftFilter(null);
-
-    // Only persist to backend if NOT read-only
-    if (!isReadOnly && updateView && view?.id) {
-      await updateView(view.id, {
-        filters: newFilters
-      });
-    }
-  }, [filters, updateView, view, isReadOnly]);
-
-  // Remove a filter at given index and persist view config (only if not read-only)
-  const handleRemoveFilter = useCallback(async (index: number) => {
-    const newFilters = filters.filter((_, i) => i !== index);
-    // Update local state immediately for optimistic UI
-    setFilters(newFilters);
-
-    // Only persist to backend if NOT read-only
-    if (!isReadOnly && updateView && view?.id) {
-      await updateView(view.id, {
-        filters: newFilters
-      });
-    }
-  }, [filters, updateView, view, isReadOnly]);
-
-  // Update a filter at given index and persist view config (only if not read-only)
-  const handleUpdateFilter = useCallback(async (index: number, updates: Partial<FilterType>) => {
-    const newFilters = [...filters];
-    if (newFilters[index]) {
-      newFilters[index] = { ...newFilters[index], ...updates };
-      // Update local state immediately for optimistic UI
-      setFilters(newFilters);
-
-      // Only persist to backend if NOT read-only
-      if (!isReadOnly && updateView && view?.id) {
-        await updateView(view.id, {
-          filters: newFilters
-        });
-      }
-    }
-  }, [filters, updateView, view, isReadOnly]);
-
-  // Change sorts and persist view config (only if not read-only)
-  const handleSortChange = useCallback(async (newSorts: SortItem[]) => {
-    // Filter out empty sorts (with empty column) before saving
+  const handleSortChangeWithState = useCallback(async (newSorts: SortItem[]) => {
     const validSorts = filterValidSorts(newSorts);
-    
-    // Update local state immediately for optimistic UI
     setSorts(validSorts);
-
-    // Only persist to backend if NOT read-only
-    if (!isReadOnly && updateView && view?.id) {
-      await updateView(view.id, { sorts: validSorts });
-    }
-  }, [updateView, view, isReadOnly]);
+    await handleSortChange(validSorts);
+  }, [handleSortChange]);
 
   // Field toggle handler for FieldsPopover
   const handleFieldToggle = useCallback(async (fieldId: string) => {
@@ -377,7 +340,7 @@ export function useGalleryViewConfig({
     handleAddFilter,
     handleRemoveFilter,
     handleUpdateFilter,
-    handleSortChange,
+    handleSortChange: handleSortChangeWithState,
     handleFieldToggle,
     handleFieldOrderChange,
   };

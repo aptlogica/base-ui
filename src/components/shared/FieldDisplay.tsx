@@ -139,7 +139,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
     }
 
     // Fields that shouldn't show "-" (they have their own empty state handling)
-    const noDashFields = ['boolean', 'rating', 'user', 'attachment', 'links', 'multiSelect', 'json'];
+    const noDashFields = ['boolean', 'rating', 'user', 'attachment', 'links', 'multiSelect'];
     if (noDashFields.includes(fieldType)) {
       return val ?? getDefaultValueFromConfig(parsedConfig, fieldType);
     }
@@ -434,7 +434,9 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       renderedComponent = <User {...commonProps} config={parsedConfig} readOnly={true} />;
       break;
     case 'json':
-      renderedComponent = (
+      renderedComponent = isEmpty(value) ? (
+        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-muted-foreground">-</div>
+      ) : (
         <JSONField {...commonProps} config={{ ...parsedConfig, hideMaximizeButton: hideActionButtons }} />
       );
       break;

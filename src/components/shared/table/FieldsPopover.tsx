@@ -14,16 +14,102 @@ interface FieldsPopoverProps {
   readonly onEnsureAllFieldsRegistered?: () => Promise<void>;
 }
 
+const computeHiddenOverrides = (prev: Record<string, boolean>, fieldConfig: any[]) => {
+  if (!fieldConfig?.length) return { next: prev, changed: false };
+
+  const next: Record<string, boolean> = {};
+  let changed = false;
+
+  for (const [fieldId, desiredHidden] of Object.entries(prev)) {
+    const config = fieldConfig.find(fc => String(fc.id) === String(fieldId));
+    const currentHidden = !!config?.isHidden;
+    if (currentHidden === desiredHidden) {
+      changed = true;
+    } else {
+      next[fieldId] = desiredHidden;
+    }
+  }
+
+  return { next: changed ? next : prev, changed };
+};
+
+const FieldRow: React.FC<{
+  col: ColumnConfig;
+  isHidden: boolean;
+  onToggle: (fieldId: string) => void;
+}> = ({ col, isHidden, onToggle }) => (
+  <div
+    className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded"
+    style={{ userSelect: 'none' }}
+  >
+    <span className="w-5 h-5 flex text-primary items-center justify-center flex-shrink-0">
+      {getFieldTypeIconComponent(col.uidt || 'text') || <span className="w-4 h-4 text-gray-400" />}
+    </span>
+    <span className="flex-1 truncate text-sm select-none text-secondary" title={col.title}>{col.title}</span>
+    <label className="relative inline-flex items-center cursor-pointer ml-2">
+      <span className="sr-only">
+        Toggle visibility for {col.title}
+      </span>
+      <input
+        type="checkbox"
+        checked={col.id ? !isHidden : false}
+        onChange={() => col.id && onToggle(col.id)}
+        className="sr-only peer"
+        aria-label={`Toggle visibility for ${col.title}`}
+      />
+      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
+      <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+    </label>
+  </div>
+);
+
+const buildFieldRows = (
+  fields: ColumnConfig[],
+  getIsHidden: (fieldId: string) => boolean,
+  onToggle: (fieldId: string) => void,
+  keyPrefix: string
+) => {
+  const rows: React.ReactNode[] = [];
+  for (const col of fields) {
+    rows.push(
+      <FieldRow
+        key={col.id || col.column_name || `${keyPrefix}-${col.title}`}
+        col={col}
+        isHidden={col.id ? getIsHidden(col.id) : false}
+        onToggle={onToggle}
+      />
+    );
+  }
+  return rows;
+};
+
+const SystemFieldsSection: React.FC<{
+  show: boolean;
+  rows: React.ReactNode[];
+}> = ({ show, rows }) => {
+  if (!show || rows.length === 0) return null;
+  return (
+    <>
+      <div className="border-t border-gray-100 my-2"/>
+      <div className="px-2 py-1 text-xs font-medium text-gray-500 uppercase tracking-wide">System Fields</div>
+      {rows}
+    </>
+  );
+};
+
 export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fields', iconComponent: IconComponent, onEnsureAllFieldsRegistered }: FieldsPopoverProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
   const [showSystemFields, setShowSystemFields] = React.useState(false);
   const [initDone, setInitDone] = React.useState(false);
   const [initLoading, setInitLoading] = React.useState(false);
+  const [hiddenOverrides, setHiddenOverrides] = React.useState<Record<string, boolean>>({});
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const panelRef = React.useRef<HTMLDivElement>(null);
 
   const getIsHidden = (fieldId: string) => {
+    const override = hiddenOverrides[fieldId];
+    if (override !== undefined) return override;
     const config = fieldConfig?.find(fc => String(fc.id) === String(fieldId));
     return !!config?.isHidden;
   };
@@ -37,9 +123,43 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
     onOutsideClick: () => setOpen(false)
   });
 
+  const openPopover = async () => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+
+    if (!initDone || !onEnsureAllFieldsRegistered) {
+      setOpen(true);
+      return;
+    }
+
+    try {
+      setInitLoading(true);
+      await onEnsureAllFieldsRegistered();
+      setInitDone(true);
+    } catch (e) {
+      // Log the error to help with debugging and monitoring
+      console.error('Failed ensuring fieldConfig on open:', e);
+    } finally {
+      setInitLoading(false);
+    }
+
+    setOpen(true);
+  };
+
   const handleToggle = (fieldId: string) => {
+    const nextHidden = !getIsHidden(fieldId);
+    setHiddenOverrides((prev) => ({ ...prev, [fieldId]: nextHidden }));
     onFieldToggle(fieldId);
   };
+
+  React.useEffect(() => {
+    const { next, changed } = computeHiddenOverrides(hiddenOverrides, fieldConfig);
+    if (changed && next !== hiddenOverrides) {
+      setHiddenOverrides(next);
+    }
+  }, [fieldConfig]);
 
   const isTitleField = (col: ColumnConfig) => {
     const title = (col.title || '').toLowerCase();
@@ -69,34 +189,26 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
     col.title?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const regularFieldRows = buildFieldRows(filteredRegularFields, getIsHidden, handleToggle, 'field');
+  const systemFieldRows = buildFieldRows(filteredSystemFields, getIsHidden, handleToggle, 'system-field');
+
   const visibleCount = columns.filter(col => col.id && !getIsHidden(col.id)).length;
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+  };
+
+  const handleSystemFieldsToggle = () => {
+    setShowSystemFields((prev) => !prev);
+  };
+
 
   return (
     <div className="relative">
       <button
         ref={triggerRef}
         className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium border shadow-xs rounded-xl hover:bg-sidebar-menu focus:outline-none bg-card text-muted-foreground`}
-        onClick={async () => {
-          // If already open, close immediately
-          if (open) {
-            setOpen(false);
-            return;
-          }
-          // If initialization is needed and supported, run it before opening
-          if (!initDone && onEnsureAllFieldsRegistered) {
-            try {
-              setInitLoading(true);
-              await onEnsureAllFieldsRegistered();
-              setInitDone(true);
-            } catch (e) {
-              // Log the error to help with debugging and monitoring
-              console.error('Failed ensuring fieldConfig on open:', e);
-            } finally {
-              setInitLoading(false);
-            }
-          }
-          setOpen(true);
-        }}
+        onClick={openPopover}
         disabled={initLoading}
         aria-busy={initLoading}
         type="button"
@@ -117,75 +229,24 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
               className="field-component field-component-focus field-component-border"
               placeholder="Search fields"
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={handleSearchChange}
               style={{ minWidth: 0 }}
             />
           </div>
           <div className="max-h-64 overflow-y-auto py-1">
             {/* Regular Fields */}
-            {filteredRegularFields.map((col) => (
-              <div
-                key={col.id || col.column_name || `field-${col.title}`}
-                className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded"
-                style={{ userSelect: 'none' }}
-              >
-                <span className="w-5 h-5 flex text-primary items-center justify-center flex-shrink-0">{getFieldTypeIconComponent(col.uidt || 'text') || <span className="w-4 h-4 text-gray-400" />}</span>
-                <span className="flex-1 truncate text-sm select-none text-secondary" title={col.title}>{col.title}</span>
-                {/* Switch for visibility */}
-                <label className="relative inline-flex items-center cursor-pointer ml-2">
-                  <span className="sr-only">
-                    Toggle visibility for {col.title}
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={col.id ? !getIsHidden(col.id) : false}
-                    onChange={() => col.id && handleToggle(col.id)}
-                    className="sr-only peer"
-                    aria-label={`Toggle visibility for ${col.title}`}
-                  />
-                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                  <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-                </label>
-              </div>
-            ))}
+            {regularFieldRows}
 
             {/* System Fields Section */}
-            {showSystemFields && filteredSystemFields.length > 0 && (
-              <>
-                <div className="border-t border-gray-100 my-2"/>
-                <div className="px-2 py-1 text-xs font-medium text-gray-500 uppercase tracking-wide">System Fields</div>
-                {filteredSystemFields.map((col) => (
-                  <div
-                    key={col.id || col.column_name || `system-field-${col.title}`}
-                    className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded"
-                    style={{ userSelect: 'none' }}
-                  >
-                    <span className="w-5 h-5 flex items-center justify-center flex-shrink-0">{getFieldTypeIconComponent(col.uidt || 'text') || <span className="w-4 h-4 text-gray-400" />}</span>
-                    <span className="flex-1 truncate text-sm select-none text-secondary" title={col.title}>{col.title}</span>
-                    {/* Switch for visibility */}
-                    <label className="relative inline-flex items-center cursor-pointer ml-2">
-                      <span className="sr-only">
-                        Toggle visibility for {col.title}
-                      </span>
-                      <input
-                        type="checkbox"
-                        checked={col.id ? !getIsHidden(col.id) : false}
-                        onChange={() => col.id && handleToggle(col.id)}
-                        className="sr-only peer"
-                        aria-label={`Toggle visibility for ${col.title}`}
-                      />
-                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                      <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-                    </label>
-                  </div>
-                ))}
-              </>
-            )}
+            <SystemFieldsSection
+              show={showSystemFields}
+              rows={systemFieldRows}
+            />
           </div>
           <div className="flex items-center justify-between border-t rounded-bl-xl rounded-br-xl px-3 py-2 bg-card">
             <button
               className="flex items-center gap-1 text-gray-600 text-xs font-medium hover:text-gray-800"
-              onClick={() => setShowSystemFields(!showSystemFields)}
+              onClick={handleSystemFieldsToggle}
             >
               {showSystemFields ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               System fields

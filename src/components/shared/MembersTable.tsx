@@ -148,8 +148,8 @@ const getOverallRoles = (member: Member, rolesAndAccessData?: Array<{
 
   // PRIORITY 2: Extract roles from roles array (same as UserTable logic)
   if (Array.isArray(member.roles)) {
-    member.roles.forEach((role: Role) => {
-      const { scope_level, name } = role;
+    member.roles.forEach((role) => {
+      const { scope_level, name } = role as Role;
       const displayName = roleDisplayNames[scope_level]?.[name];
 
       if (displayName) {
@@ -203,7 +203,7 @@ const MemberRoleCell: React.FC<{
         {roles.map((role, idx) => (
           <span
             key={role + idx}
-            className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getRolePillStyle(role)}`}
+            className={`inline-block px-2 py-0.5 rounded-xl text-xs font-medium ${getRolePillStyle(role)}`}
           >
             {role}
           </span>

@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Plus, Image as ImageIcon } from 'lucide-react';
 import type { UseGalleryDataReturn } from '../hooks/useGalleryData';
 import { GalleryHeader } from './GalleryHeader';
@@ -6,17 +6,66 @@ import { MemoizedGalleryCard } from './GalleryCard';
 import CreateRecordModal from '../../../components/modals/CreateRecordModal';
 import EditRecordModal from '../../../components/modals/EditRecordModal';
 import DeleteConfirmModal from '../../../components/modals/DeleteConfirmModal';
-import { applyFilters } from '../../../utils/filterUtils';
-import { buildComparator } from '../../../utils/sortUtils';
+import { applyFilters, FilterCondition } from '../../../utils/filterUtils';
+import { buildComparator, SortItem } from '../../../utils/sortUtils';
 import { buildInitialValuesForEdit } from '../../../utils/initialValues';
-import { useFrontendPagination } from '../../../hooks/useFrontendPagination';
+import { useInfiniteScrollPagination } from '../../../hooks/useInfiniteScrollPagination';
 import { formatCompactNumber } from '../../../utils/helpers';
-import { LoadMoreButton } from '../../../components/shared/LoadMoreButton';
+import { LoadMoreSection } from '../../../components/shared/LoadMoreSection';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
 // Custom hooks
 import { useGalleryViewConfig } from '../hooks/useGalleryViewConfig';
 import { useGalleryModals } from '../hooks/useGalleryModals';
 import { getSearchableColumns } from '../utils/galleryColumns';
+
+const applySearchFilter = (
+  items: UseGalleryDataReturn['galleryItems'],
+  searchTerm: string,
+  selectedSearchField: { key?: string } | null | undefined
+) => {
+  if (!searchTerm || !selectedSearchField?.key) return items;
+  return items.filter(item => {
+    const fieldValue = item.rawData[selectedSearchField.key as string];
+    if (fieldValue === null || fieldValue === undefined) return false;
+    return String(fieldValue).toLowerCase().includes(searchTerm.toLowerCase());
+  });
+};
+
+const applyAllFilters = (
+  items: UseGalleryDataReturn['galleryItems'],
+  filters: FilterCondition[],
+  draftFilter: FilterCondition | null,
+  columns: UseGalleryDataReturn['columns']
+) => {
+  const hasFilters = Array.isArray(filters) && filters.length > 0;
+  const hasDraftFilter = draftFilter !== null;
+  if (!hasFilters && !hasDraftFilter) return items;
+  const allFilters = hasDraftFilter ? [...filters, draftFilter] : filters;
+  const rawRecords = items.map(item => item.rawData);
+  const filteredRecords = applyFilters(rawRecords, allFilters as any, columns as any);
+  return items.filter(item => filteredRecords.some(record => record.id === item.id));
+};
+
+const applySortsToItems = (
+  items: UseGalleryDataReturn['galleryItems'],
+  sorts: SortItem[],
+  columns: UseGalleryDataReturn['columns']
+) => {
+  if (!Array.isArray(sorts) || sorts.length === 0) return items;
+  const allCols = columns.map(c => ({
+    key: c.column_name || c.key,
+    type: String(c.uidt)
+  }));
+  const rawRecords = items.map(item => item.rawData);
+  const cmp = buildComparator<Record<string, unknown>>(allCols, sorts, (row, key) => row[key]);
+  const sortedRecords = [...rawRecords].sort(cmp);
+  const recordIndexMap = new Map(sortedRecords.map((record, index) => [record.id, index]));
+  return items.sort((a, b) => {
+    const aIndex = recordIndexMap.get(a.id) ?? Infinity;
+    const bIndex = recordIndexMap.get(b.id) ?? Infinity;
+    return aIndex - bIndex;
+  });
+};
 
 interface GalleryViewProps {
   tableData: any;
@@ -127,58 +176,10 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   // Apply filters and sorts to gallery items (following KanbanBoard pattern)
   // Includes both saved filters and draft/real-time filter for preview
   const filteredAndSortedItems = useMemo(() => {
-    const hasFilters = Array.isArray(filters) && filters.length > 0;
-    const hasDraftFilter = draftFilter !== null;
-    const hasSorts = Array.isArray(sorts) && sorts.length > 0;
-    const hasSearch = searchTerm && selectedSearchField;
-
     let processedItems = [...galleryData.galleryItems];
-
-    // Apply search filter first
-    if (hasSearch && selectedSearchField) {
-      processedItems = processedItems.filter(item => {
-        const fieldValue = item.rawData[selectedSearchField.key];
-        if (fieldValue === null || fieldValue === undefined) return false;
-        return String(fieldValue).toLowerCase().includes(searchTerm.toLowerCase());
-      });
-    }
-
-    // Combine saved filters with draft filter (if any) for real-time preview
-    const allFilters = hasDraftFilter 
-      ? [...filters, draftFilter]
-      : filters;
-
-    // Apply filters (includes both saved and draft)
-    if (hasFilters || hasDraftFilter) {
-      const rawRecords = processedItems.map(item => item.rawData);
-      const filteredRecords = applyFilters(rawRecords, allFilters as any, galleryData.columns as any);
-      processedItems = processedItems.filter(item => 
-        filteredRecords.some(record => record.id === item.id)
-      );
-    }
-
-    // Apply sorts (optimized with Map for O(1) lookups instead of O(n) findIndex)
-    if (hasSorts) {
-      const allCols = galleryData.columns
-        .map(c => ({
-          key: c.column_name || c.key,
-          type: String(c.uidt)
-        }));
-      const rawRecords = processedItems.map(item => item.rawData);
-      const cmp = buildComparator<Record<string, unknown>>(allCols, sorts, (row, key) => row[key]);
-      const sortedRecords = [...rawRecords].sort(cmp);
-      
-      // Create a map for O(1) lookups instead of O(n) findIndex
-      const recordIndexMap = new Map(
-        sortedRecords.map((record, index) => [record.id, index])
-      );
-      
-      processedItems = processedItems.sort((a, b) => {
-        const aIndex = recordIndexMap.get(a.id) ?? Infinity;
-        const bIndex = recordIndexMap.get(b.id) ?? Infinity;
-        return aIndex - bIndex;
-      });
-    }
+    processedItems = applySearchFilter(processedItems, searchTerm, selectedSearchField);
+    processedItems = applyAllFilters(processedItems, filters, draftFilter, galleryData.columns);
+    processedItems = applySortsToItems(processedItems, sorts, galleryData.columns);
 
     return processedItems;
   }, [galleryData.galleryItems, filters, draftFilter, sorts, galleryData.columns, searchTerm, selectedSearchField]);
@@ -186,44 +187,16 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   // FRONTEND PAGINATION: Paginate filtered and sorted items
   // This allows rendering only a portion of items initially for better performance
   const {
-    allLoadedData: paginatedItems,
-    loadNextPage,
+    paginatedData: paginatedItems,
+    handleLoadMore,
     hasMore,
     totalItems,
-  } = useFrontendPagination({
+    isLoadingMore,
+    scrollContainerRef,
+  } = useInfiniteScrollPagination({
     data: filteredAndSortedItems,
     pageSize: 30, // Same as GridView and Kanban
-    initialPage: 1,
   });
-
-  // Loading state for "Load more" button
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-
-  // Handle loading more with loading state
-  const handleLoadMore = useCallback(() => {
-    setIsLoadingMore(true);
-    loadNextPage();
-    // Brief loading state for better UX (since loadNextPage is synchronous)
-    setTimeout(() => setIsLoadingMore(false), 300);
-  }, [loadNextPage]);
-
-  // Infinite scroll: Load more when scrolling near bottom
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container || !hasMore || isLoadingMore) return;
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      // Load more when user is within 200px of bottom
-      if (scrollHeight - scrollTop - clientHeight < 200) {
-        handleLoadMore();
-      }
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [hasMore, isLoadingMore, handleLoadMore]);
 
   const getEditInitialValues = useCallback(() => {
     if (!selectedRecord) return {};
@@ -298,15 +271,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
             </div>
             
             {/* Load More Button */}
-            {hasMore && (
-              <div className="flex justify-center py-6">
-                <LoadMoreButton
-                  onClick={handleLoadMore}
-                  isLoading={isLoadingMore}
-                  label={`Load more (${formatCompactNumber(totalItems - paginatedItems.length)} remaining)`}
-                />
-              </div>
-            )}
+            <LoadMoreSection
+              isVisible={hasMore}
+              isLoading={isLoadingMore}
+              onLoadMore={handleLoadMore}
+              className="py-6"
+              label={`Load more (${formatCompactNumber(totalItems - paginatedItems.length)} remaining)`}
+            />
           </>
         )}
       </div>

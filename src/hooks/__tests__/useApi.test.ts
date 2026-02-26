@@ -3,9 +3,6 @@ import { renderHook } from "@testing-library/react";
 import {
   useWorkspaces,
   useAddRow,
-  useAllBases,
-  useAllTables,
-  useAllFields,
   useAllViews,
   useViewById,
   useCreateWorkspace,
@@ -24,9 +21,6 @@ import {
   getWorkspaceMembersService,
   getBaseMembersService,
   getTablesByBaseIdService,
-  getAllBasesService,
-  getAllTablesService,
-  getAllFieldsService,
   getAllViewsService,
   getBaseByIdService,
   getTableByIdService,
@@ -46,7 +40,6 @@ import {
   createFieldService,
   updateFieldService,
   deleteFieldService,
-  reorderColumnService,
   createViewService,
   updateViewService,
   deleteViewService,
@@ -62,9 +55,7 @@ import {
   getUserProfileByIDService,
   updateUserProfileService,
   changePasswordService,
-  getUserAccessDetailsService,
   getUserRolesAndAccessService,
-  addOrUpdateAvatarService,
   removeAvatarService,
   getAllRecordsService,
   getTenantUsersService,
@@ -74,12 +65,9 @@ import {
   removeUserService,
   activateTenantUserService,
   deactivateTenantUserService,
-  assignUserToWorkspaceService,
   bulkAddMembersService,
-  removeAccessMemberService,
   removeUserFromWorkspaceService,
   getOrganizationService,
-  getOrganizationServiceById,
 } from "../../service/clientService";
 
 const mockUseLocation = vi.fn();
@@ -106,9 +94,6 @@ vi.mock("../../service/clientService", () => ({
   getWorkspaceMembersService: vi.fn(),
   getBaseMembersService: vi.fn(),
   getTablesByBaseIdService: vi.fn(),
-  getAllBasesService: vi.fn(),
-  getAllTablesService: vi.fn(),
-  getAllFieldsService: vi.fn(),
   getAllViewsService: vi.fn(),
   getBaseByIdService: vi.fn(),
   getTableByIdService: vi.fn(),
@@ -128,7 +113,6 @@ vi.mock("../../service/clientService", () => ({
   createFieldService: vi.fn(),
   updateFieldService: vi.fn(),
   deleteFieldService: vi.fn(),
-  reorderColumnService: vi.fn(),
   createViewService: vi.fn(),
   updateViewService: vi.fn(),
   deleteViewService: vi.fn(),
@@ -144,9 +128,7 @@ vi.mock("../../service/clientService", () => ({
   getUserProfileByIDService: vi.fn(),
   updateUserProfileService: vi.fn(),
   changePasswordService: vi.fn(),
-  getUserAccessDetailsService: vi.fn(),
   getUserRolesAndAccessService: vi.fn(),
-  addOrUpdateAvatarService: vi.fn(),
   removeAvatarService: vi.fn(),
   getAllRecordsService: vi.fn(),
   getTenantUsersService: vi.fn(),
@@ -156,12 +138,9 @@ vi.mock("../../service/clientService", () => ({
   removeUserService: vi.fn(),
   activateTenantUserService: vi.fn(),
   deactivateTenantUserService: vi.fn(),
-  assignUserToWorkspaceService: vi.fn(),
   bulkAddMembersService: vi.fn(),
-  removeAccessMemberService: vi.fn(),
   removeUserFromWorkspaceService: vi.fn(),
   getOrganizationService: vi.fn(),
-  getOrganizationServiceById: vi.fn(),
   forceLogout: vi.fn(),
 }));
 
@@ -300,20 +279,17 @@ describe("useApi hooks", () => {
       return { data: [] };
     });
 
-    vi.mocked(getAllBasesService).mockResolvedValue({ data: { not: "array" } });
-    renderHook(() => useAllBases());
+    renderHook(() => useAllViews());
+    vi.mocked(getAllViewsService).mockResolvedValueOnce({ data: null });
     expect(await opts.queryFn()).toEqual([]);
 
-    vi.mocked(getAllTablesService).mockRejectedValue(new Error("boom"));
-    renderHook(() => useAllTables());
+    vi.mocked(getAllViewsService).mockRejectedValueOnce(new Error("fail"));
     expect(await opts.queryFn()).toEqual([]);
 
-    vi.mocked(getAllFieldsService).mockResolvedValue({ data: ["f1"] });
-    renderHook(() => useAllFields());
+    vi.mocked(getAllViewsService).mockResolvedValueOnce({ data: ["f1"] });
     expect(await opts.queryFn()).toEqual(["f1"]);
 
     vi.mocked(getAllViewsService).mockResolvedValue({});
-    renderHook(() => useAllViews());
     expect(await opts.queryFn()).toEqual([]);
   });
 
@@ -434,7 +410,6 @@ describe("useApi hooks", () => {
     renderHook(() => apiHooks.useWorkspaceBases("w1"));
     renderHook(() => apiHooks.useWorkspaceMembers("w1"));
     renderHook(() => apiHooks.useBulkAddBaseMembers());
-    renderHook(() => apiHooks.useRemoveBaseAccessMember());
     renderHook(() => apiHooks.useRemoveUserFromBase());
     renderHook(() => apiHooks.useBaseMembers("b1"));
     renderHook(() => apiHooks.useBaseTables("b1"));
@@ -454,13 +429,11 @@ describe("useApi hooks", () => {
     renderHook(() => apiHooks.useCreateField());
     renderHook(() => apiHooks.useUpdateField());
     renderHook(() => apiHooks.useDeleteColumn());
-    renderHook(() => apiHooks.useReorderColumn());
     renderHook(() => apiHooks.useCreateView());
     renderHook(() => apiHooks.useUpdateViewAppearance());
     renderHook(() => apiHooks.useUpdateViewMeta());
     renderHook(() => apiHooks.useUpdateView());
     renderHook(() => apiHooks.useDeleteView());
-    renderHook(() => apiHooks.useViewsForTable("t1"));
     renderHook(() => apiHooks.useInsertRowData());
     renderHook(() => apiHooks.useDeleteRecord());
     renderHook(() => apiHooks.useBulkDeleteRecords());
@@ -470,9 +443,7 @@ describe("useApi hooks", () => {
     renderHook(() => apiHooks.useUserProfile("u1"));
     renderHook(() => apiHooks.useUpdateUserProfile("u1"));
     renderHook(() => apiHooks.useChangePassword("u1"));
-    renderHook(() => apiHooks.useUserAccessDetails("u1", "w1"));
     renderHook(() => apiHooks.useUserRolesAndAccess("u1", "w1"));
-    renderHook(() => apiHooks.useAddOrUpdateAvatar("u1"));
     renderHook(() => apiHooks.useRemoveAvatar("u1"));
     renderHook(() => apiHooks.useGetRecordsByPagination("m1"));
     renderHook(() => apiHooks.useGetTenantUsers());
@@ -481,12 +452,9 @@ describe("useApi hooks", () => {
     renderHook(() => apiHooks.useEditUser());
     renderHook(() => apiHooks.useRemoveTenantUser());
     renderHook(() => apiHooks.useActivateTenantUser());
-    renderHook(() => apiHooks.useAssignUserToWorkspace());
     renderHook(() => apiHooks.useBulkAddMembers());
-    renderHook(() => apiHooks.useRemoveAccessMember());
     renderHook(() => apiHooks.useRemoveUserFromWorkspace());
     renderHook(() => apiHooks.useGetOrganization());
-    renderHook(() => apiHooks.useGetOrganizationById("o1"));
   });
 
   it("executes mutation lifecycle callbacks for key hooks", async () => {
@@ -524,7 +492,6 @@ describe("useApi hooks", () => {
     opts = getMutationOptions(() => apiHooks.useDeleteColumn());
     opts.onSuccess?.({}, { tableId: "m1" });
 
-    opts = getMutationOptions(() => apiHooks.useReorderColumn());
     opts.onSuccess?.();
 
     opts = getMutationOptions(() => apiHooks.useCreateView());
@@ -578,16 +545,9 @@ describe("useApi hooks", () => {
     opts.onSuccess?.();
     opts.onError?.(new Error("boom"));
 
-    opts = getMutationOptions(() => apiHooks.useAssignUserToWorkspace());
-    opts.onSuccess?.({}, { user_ids: ["u1", "u2"] });
-    opts.onError?.(new Error("boom"));
-
     opts = getMutationOptions(() => apiHooks.useBulkAddMembers());
     opts.onSuccess?.({}, { workspaceId: "w1", members: [{ user_id: "u1", memberships: [] }] });
     opts.onError?.(new Error("boom"));
-
-    opts = getMutationOptions(() => apiHooks.useRemoveAccessMember());
-    opts.onSuccess?.({}, { workspaceId: "w1" });
 
     opts = getMutationOptions(() => apiHooks.useRemoveUserFromWorkspace());
     opts.onSuccess?.({}, { workspaceId: "w1", user_id: "u1" });
@@ -614,13 +574,11 @@ describe("useApi hooks", () => {
     vi.mocked(getTableByIdService).mockResolvedValue({ data: { id: "t1" } } as any);
     vi.mocked(getViewsByModelIdService).mockResolvedValue({ data: [{ id: "v1" }] } as any);
     vi.mocked(getUserProfileByIDService).mockResolvedValue({ data: { id: "u1" } } as any);
-    vi.mocked(getUserAccessDetailsService).mockResolvedValue({ data: { role: "owner" } } as any);
     vi.mocked(getUserRolesAndAccessService).mockResolvedValue({ data: [{ scope: "workspace" }] } as any);
     vi.mocked(getAllRecordsService).mockResolvedValue({ data: [{ id: "r1" }] } as any);
     vi.mocked(getTenantUsersService).mockResolvedValue({ data: [{ id: "u1" }] } as any);
     vi.mocked(getUsersForAssignService).mockResolvedValue({ data: [{ id: "u2" }] } as any);
     vi.mocked(getOrganizationService).mockResolvedValue({ data: [{ id: "o1" }] } as any);
-    vi.mocked(getOrganizationServiceById).mockResolvedValue({ data: { id: "o1" } } as any);
 
     let opts = getQueryOptions(() => apiHooks.useWorkspaceById("w1"));
     await opts.queryFn();
@@ -642,7 +600,6 @@ describe("useApi hooks", () => {
     await opts.queryFn();
     expect(getViewsByModelIdService).toHaveBeenCalledWith("t1");
 
-    opts = getQueryOptions(() => apiHooks.useViewsForTable("t1"));
     await opts.queryFn();
     expect(getViewsByModelIdService).toHaveBeenCalledWith("t1");
 
@@ -650,9 +607,7 @@ describe("useApi hooks", () => {
     await opts.queryFn();
     expect(getUserProfileByIDService).toHaveBeenCalledWith("u1");
 
-    opts = getQueryOptions(() => apiHooks.useUserAccessDetails("u1", "w1"));
     await opts.queryFn();
-    expect(getUserAccessDetailsService).toHaveBeenCalledWith("u1", "w1");
 
     opts = getQueryOptions(() => apiHooks.useUserRolesAndAccess("u1", "w1"));
     await opts.queryFn();
@@ -670,9 +625,7 @@ describe("useApi hooks", () => {
     await opts.queryFn();
     expect(getOrganizationService).toHaveBeenCalled();
 
-    opts = getQueryOptions(() => apiHooks.useGetOrganizationById("o1"));
     await opts.queryFn();
-    expect(getOrganizationServiceById).toHaveBeenCalledWith("o1");
   });
 
   it("executes additional mutationFns for service paths", async () => {
@@ -688,7 +641,6 @@ describe("useApi hooks", () => {
     vi.mocked(createFieldService).mockResolvedValue({} as any);
     vi.mocked(updateFieldService).mockResolvedValue({} as any);
     vi.mocked(deleteFieldService).mockResolvedValue({} as any);
-    vi.mocked(reorderColumnService).mockResolvedValue({} as any);
     vi.mocked(createViewService).mockResolvedValue({} as any);
     vi.mocked(updateViewService).mockResolvedValue({} as any);
     vi.mocked(deleteViewService).mockResolvedValue({} as any);
@@ -699,15 +651,12 @@ describe("useApi hooks", () => {
     vi.mocked(addImageService).mockResolvedValue({} as any);
     vi.mocked(updateUserProfileService).mockResolvedValue({} as any);
     vi.mocked(changePasswordService).mockResolvedValue({} as any);
-    vi.mocked(addOrUpdateAvatarService).mockResolvedValue({} as any);
     vi.mocked(removeAvatarService).mockResolvedValue({} as any);
     vi.mocked(addUserService).mockResolvedValue({} as any);
     vi.mocked(editUserService).mockResolvedValue({} as any);
     vi.mocked(removeUserService).mockResolvedValue({} as any);
     vi.mocked(activateTenantUserService).mockResolvedValue({} as any);
-    vi.mocked(assignUserToWorkspaceService).mockResolvedValue({} as any);
     vi.mocked(bulkAddMembersService).mockResolvedValue({} as any);
-    vi.mocked(removeAccessMemberService).mockResolvedValue({} as any);
     vi.mocked(removeUserFromWorkspaceService).mockResolvedValue({} as any);
 
     let opts = getMutationOptions(() => apiHooks.useUpdateWorkspace());
@@ -765,9 +714,7 @@ describe("useApi hooks", () => {
     await opts.mutationFn({ tableId: "m1", fieldId: "f1" });
     expect(deleteFieldService).toHaveBeenCalledWith("f1");
 
-    opts = getMutationOptions(() => apiHooks.useReorderColumn());
     await opts.mutationFn({ source_column_id: "c1", target_column_id: "c2" });
-    expect(reorderColumnService).toHaveBeenCalledWith({ source_column_id: "c1", target_column_id: "c2" });
 
     opts = getMutationOptions(() => apiHooks.useCreateView());
     await opts.mutationFn({ model_id: "m1", base_id: "b1", title: "View", meta: {}, type: "grid" });
@@ -809,10 +756,8 @@ describe("useApi hooks", () => {
     await opts.mutationFn({ old_password: "a", new_password: "b" });
     expect(changePasswordService).toHaveBeenCalledWith("u1", { old_password: "a", new_password: "b" });
 
-    opts = getMutationOptions(() => apiHooks.useAddOrUpdateAvatar("u1"));
     const avatarFile = {} as File;
     await opts.mutationFn(avatarFile);
-    expect(addOrUpdateAvatarService).toHaveBeenCalledWith("u1", avatarFile);
 
     opts = getMutationOptions(() => apiHooks.useRemoveAvatar("u1"));
     await opts.mutationFn();
@@ -838,17 +783,13 @@ describe("useApi hooks", () => {
     await opts.mutationFn("u1");
     expect(activateTenantUserService).toHaveBeenCalledWith("u1");
 
-    opts = getMutationOptions(() => apiHooks.useAssignUserToWorkspace());
     await opts.mutationFn({ workspace_id: "w1", user_ids: ["u1"], access_level: "editor", bases_ids: "" });
-    expect(assignUserToWorkspaceService).toHaveBeenCalled();
 
     opts = getMutationOptions(() => apiHooks.useBulkAddMembers());
     await opts.mutationFn({ workspaceId: "w1", members: [{ user_id: "u1", memberships: [] }] });
     expect(bulkAddMembersService).toHaveBeenCalled();
 
-    opts = getMutationOptions(() => apiHooks.useRemoveAccessMember());
     await opts.mutationFn({ workspaceId: "w1", accessId: "a1" });
-    expect(removeAccessMemberService).toHaveBeenCalledWith("w1", "a1");
 
     opts = getMutationOptions(() => apiHooks.useRemoveUserFromWorkspace());
     await opts.mutationFn({ workspaceId: "w1", user_id: "u1" });

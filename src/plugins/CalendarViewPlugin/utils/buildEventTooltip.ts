@@ -51,6 +51,11 @@ const getFieldPriority = (col: Column) => {
   return 20;
 };
 
+const isMeaningfulValue = (value: string) => {
+  const trimmed = value.trim();
+  return trimmed !== '' && trimmed !== '-' && trimmed !== 'N/A';
+};
+
 function formatValue(col: Column, raw: any, formatTime: (t: string) => string): string | null {
   return formatTooltipValue(col, raw, {
     formatTime,
@@ -61,12 +66,74 @@ function formatValue(col: Column, raw: any, formatTime: (t: string) => string): 
   });
 }
 
+const getTitleDateLabel = (
+  event: any,
+  dateField: Column | undefined,
+  formatTime: (t: string) => string
+): string | null => {
+  const dateFieldKey = dateField ? getColumnKey(dateField) : '';
+  const rawDateValue = dateFieldKey ? (event?.data?.[dateFieldKey] ?? event?.[dateFieldKey]) : undefined;
+  const formattedTitleDate = dateField && rawDateValue
+    ? formatValue(dateField, rawDateValue, formatTime)
+    : null;
+
+  if (formattedTitleDate && isMeaningfulValue(formattedTitleDate)) {
+    return formattedTitleDate;
+  }
+
+  if (!(event?.dateTime instanceof Date) || Number.isNaN(event.dateTime.getTime())) {
+    return null;
+  }
+
+  const d = event.dateTime;
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const ymd = `${yyyy}-${mm}-${dd}`; // Local date components avoid UTC shift from toISOString()
+  return event.isDateField
+    ? ymd
+    : `${ymd} ${formatTime(
+      `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    )}`;
+};
+
+const getVisibleFields = (args: {
+  columns: Column[];
+  event: any;
+  options: BuildEventTooltipOptions;
+}) => {
+  const { columns, event, options } = args;
+  const visibleFields: Array<{ col: Column; value: string; priority: number }> = [];
+
+  (columns || []).forEach(col => {
+    const key = getColumnKey(col);
+    if (!key) return;
+    if (isHiddenField(col, options)) return;
+    if (isSystemOrTitleField(key, col)) return;
+    if (isCategoryLikeField(key)) return;
+
+    const raw = event?.data?.[key] ?? event?.[key];
+    const formatted = formatValue(col, raw, options.formatTime);
+
+    if (formatted && isMeaningfulValue(formatted)) {
+      visibleFields.push({
+        col,
+        value: formatted,
+        priority: getFieldPriority(col),
+      });
+    }
+  });
+
+  return visibleFields;
+};
+
 export function buildEventTooltipLines(args: {
   event: any;
   columns: Column[];
   options: BuildEventTooltipOptions;
+  dateField?: Column;
 }): string[] {
-  const { event, columns, options } = args;
+  const { event, columns, options, dateField } = args;
   if (!event) return [];
 
   const lines: string[] = [];
@@ -76,48 +143,15 @@ export function buildEventTooltipLines(args: {
     const titleLine = [String(event.title)];
 
     // Add date/time info (always show date for context)
-    if (event.dateTime instanceof Date && !Number.isNaN(event.dateTime.getTime())) {
-      // Format as local "YYYY-MM-DD HH:MM" (or "YYYY-MM-DD" for date-only)
-      const d = event.dateTime;
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      const ymd = `${yyyy}-${mm}-${dd}`; // Local date components avoid UTC shift from toISOString()
-      const dateStr = event.isDateField
-        ? ymd
-        : `${ymd} ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: false })}`;
-      titleLine.push(dateStr);
-    }
+    const titleDateLabel = getTitleDateLabel(event, dateField, options.formatTime);
+    if (titleDateLabel) titleLine.push(titleDateLabel);
 
     lines.push(titleLine.join(' • '));
   }
 
   // Collect all visible, non-empty fields
   // We use "priority" only for ordering (essential types first), not for exclusion
-  const visibleFields: Array<{ col: Column; value: string; priority: number }> = [];
-
-  (columns || []).forEach(col => {
-    const key = getColumnKey(col);
-    if (!key) return;
-
-    // Respect fieldConfig visibility if provided
-    if (isHiddenField(col, options)) return;
-
-    // Skip title, system fields, and category/tag/type fields (already reflected in title)
-    if (isSystemOrTitleField(key, col)) return;
-    if (isCategoryLikeField(key)) return;
-
-    const raw = event?.data?.[key] ?? event?.[key];
-    const formatted = formatValue(col, raw, options.formatTime);
-
-    if (formatted) {
-      visibleFields.push({
-        col,
-        value: formatted,
-        priority: getFieldPriority(col),
-      });
-    }
-  });
+  const visibleFields = getVisibleFields({ columns, event, options });
 
   // Create horizontal bullet-separated lines (like NocoDB)
   const bulletSeparator = ' \u2022 ';

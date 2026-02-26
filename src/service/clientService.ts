@@ -110,7 +110,10 @@ const getRefreshTokenExpiry = (): number => {
 const isTokenExpired = (expiryTime: number): boolean => {
   if (!expiryTime) return true;
   const currentTime = Math.floor(Date.now() / 1000);
-  const bufferTime = 60; // 1 minute buffer
+  const timeLeft = expiryTime - currentTime;
+  // Dynamic buffer: 10% of remaining time, capped at 30s, min 5s.
+  // Prevents immediate expiry when access tokens are short-lived (e.g., 60s).
+  const bufferTime = Math.min(30, Math.max(5, Math.floor(timeLeft * 0.1)));
   return currentTime >= (expiryTime - bufferTime);
 };
 
@@ -250,17 +253,12 @@ const refreshAccessToken = async (): Promise<string> => {
       refresh_token: refreshToken
     });
 
-
     let newTokenData: any = null;
 
     if (response?.data?.data?.access_token) {
       newTokenData = response.data.data;
     } else if (response?.data?.access_token) {
       newTokenData = response.data;
-    } else if (response?.data?.token?.access_token) {
-      newTokenData = response.data.token;
-    } else if (response?.token?.access_token) {
-      newTokenData = response.token;
     }
 
     if (newTokenData?.access_token) {
@@ -537,7 +535,7 @@ function processAndStoreTokens(response: any): any {
 }
 
 export async function login(params: LoginParams) {
-  const response = await client.auth.login(params);
+  const response: any = await client.auth.login(params);
   if (!response) {
     throw new Error(response.message || 'Login failed');
   }
@@ -674,10 +672,6 @@ export async function getWorkspaceMembersService(workspaceId: string) {
   return await makeAuthenticatedCall(() => client.workspace.getMembersWithRoles(workspaceId));
 }
 
-export async function removeAccessMemberService(workspaceId: string, accessId: string) {
-  return await makeAuthenticatedCall(() => client.workspace.removeAccessMember(workspaceId, accessId));
-}
-
 export async function removeUserFromWorkspaceService(workspaceId: string, params: { user_id: string }) {
   return await makeAuthenticatedCall(() => client.workspace.removeUserFromWorkspace(workspaceId, params));
 }
@@ -693,10 +687,6 @@ export async function getBaseByIdService(id: string) {
 
 export async function getTablesByBaseIdService(id: string) {
   return await makeAuthenticatedCall(() => client.baseService.getTablesByBaseId(id));
-}
-
-export async function getAllBasesService() {
-  return await makeAuthenticatedCall(() => client.baseService.getAll());
 }
 
 export async function updateBaseService(id: string, params: any) {
@@ -715,7 +705,7 @@ export async function updateBaseService(id: string, params: any) {
       // Don't throw - metadata was successfully updated, only image upload failed
     }
   }
-  
+
   return updateResult;
 }
 
@@ -752,11 +742,6 @@ export async function bulkAddBaseMembersService(baseId: string, params: {
   return await makeAuthenticatedCall(() => client.baseService.bulkAddMembers(baseId, bulkRequest));
 }
 
-export async function removeBaseAccessMemberService(_baseId: string, accessId: string) {
-  // Note: baseId is no longer needed in the API path, but kept for backward compatibility
-  return await makeAuthenticatedCall(() => client.baseService.removeAccessMember(accessId));
-}
-
 export async function removeUserFromBaseService(baseId: string, params: { user_id: string }) {
   return await makeAuthenticatedCall(() => client.baseService.removeUserFromBase(baseId, params));
 }
@@ -770,10 +755,6 @@ export async function getTableByIdService(id: string, options?: any) {
   return await makeAuthenticatedCall(() => client.tableService.getById(id, options));
 }
 
-export async function getAllTablesService() {
-  return await makeAuthenticatedCall(() => client.tableService.getAll());
-}
-
 // User Profile Services
 export async function getUserProfileByIDService(id: string) {
   return await makeAuthenticatedCall(() => client.userService.getProfile(id));
@@ -781,10 +762,6 @@ export async function getUserProfileByIDService(id: string) {
 
 export async function updateUserProfileService(id: string, params: any, avatarFile?: File) {
   return await makeAuthenticatedCall(() => client.userService.updateProfile(id, params, avatarFile));
-}
-
-export async function getUserAccessDetailsService(userId: string, workspaceId?: string) {
-  return await makeAuthenticatedCall(() => client.userService.getUserAccessDetails(userId, workspaceId));
 }
 
 export async function getUserRolesAndAccessService(userId: string, scopeId?: string) {
@@ -795,22 +772,8 @@ export async function changePasswordService(id: string, params: any) {
   return await makeAuthenticatedCall(() => client.userService.changePassword(id, params));
 }
 
-export async function addOrUpdateAvatarService(id: string, avatarFile: File) {
-  return await makeAuthenticatedCall(() => client.userService.addOrUpdateAvatar(id, avatarFile));
-}
-
 export async function removeAvatarService(id: string) {
   return await makeAuthenticatedCall(() => client.userService.removeAvatar(id));
-}
-
-export async function assignUserToWorkspaceService(params: {
-  workspace_id: string;
-  user_ids: string[];
-  access_level: string;
-  bases_ids: string;
-}) {
-  // eslint-disable-next-line sonarjs/no-deprecated-apis
-  return await makeAuthenticatedCall(() => client.workspace.inviteUser(params.workspace_id, params)); // NOSONAR - SDK method uses deprecated signature
 }
 
 export async function bulkAddMembersService(workspaceId: string, params: {
@@ -850,20 +813,12 @@ export async function getFieldByIdService(id: string) {
   return await makeAuthenticatedCall(() => client.tableService.getColumnById(id));
 }
 
-export async function getAllFieldsService() {
-  return await makeAuthenticatedCall(() => client.tableService.getAllColumns());
-}
-
 export async function updateFieldService(id: string, params: any) {
   return await makeAuthenticatedCall(() => client.tableService.updateColumn(id, params));
 }
 
 export async function deleteFieldService(id: string) {
   return await makeAuthenticatedCall(() => client.tableService.deleteColumn(id));
-}
-
-export async function reorderColumnService(params: { source_column_id: string; target_column_id: string }) {
-  return await makeAuthenticatedCall(() => client.tableService.reorderColumn(params));
 }
 
 // View Service wrappers
@@ -908,7 +863,10 @@ export async function insertRowDataService(params: { model_id: string; column_id
 }
 
 export async function getAllRecordsService(id: string, options?: { pageNumber?: number; pageLimit?: number }) {
-  return await makeAuthenticatedCall(() => client.tableService.getAllRecords(id, options));
+  const queryOptions = options
+    ? { page: options.pageNumber, page_size: options.pageLimit }
+    : undefined;
+  return await makeAuthenticatedCall(() => client.tableService.getAllRecords(id, queryOptions));
 }
 
 export async function insertRelationDataService(params: { model_id: string; column_id: string; source_row_id: number; target_row_id: number; action: 'link' | 'unlink' }) {
@@ -1061,6 +1019,4 @@ export async function updateOrganizationService(orgId: string, updateData: { nam
   return await makeAuthenticatedCall(() => client.organization.update(orgId, updateData));
 }
 
-export async function getOrganizationServiceById(orgId: string) {
-  return await makeAuthenticatedCall(() => client.organization.getById(orgId));
-}
+

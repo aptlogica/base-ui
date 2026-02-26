@@ -10,6 +10,7 @@ export interface EventChipProps {
   className?: string;
   columns?: GridColumn[];
   fieldConfig?: any[];
+  dateField?: GridColumn;
 }
 
 const EventChip: React.FC<EventChipProps> = ({
@@ -18,6 +19,7 @@ const EventChip: React.FC<EventChipProps> = ({
   className = '',
   columns,
   fieldConfig,
+  dateField,
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('top');
@@ -47,13 +49,34 @@ const EventChip: React.FC<EventChipProps> = ({
     return buildEventTooltipLines({
       event,
       columns: columns || [],
+      dateField,
       options: {
         formatTime,
         fieldConfig,
       },
     });
-  }, [showTooltip, event, columns, fieldConfig, formatTime]);
+  }, [showTooltip, event, columns, fieldConfig, formatTime, dateField]);
 
+  const formatTimeWithFormat = (time: string, timeFormat: string | undefined) => {
+    if (!time) return '';
+    const parts = time.split(':');
+    const hour = Number(parts[0]);
+    const minute = parts.length > 1 ? Number(parts[1]) : 0;
+    if (Number.isNaN(hour) || Number.isNaN(minute)) return time;
+    const includeSeconds = timeFormat?.includes('ss') ?? false;
+    const use12Hour = timeFormat?.includes('hh') ?? false;
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    let baseHour = hour;
+    if (use12Hour) {
+      baseHour = (hour % 12) || 12;
+    }
+    let suffix = '';
+    if (use12Hour) {
+      suffix = hour >= 12 ? ' PM' : ' AM';
+    }
+    const secPart = includeSeconds && parts.length > 2 ? `:${pad2(Number(parts[2]))}` : '';
+    return `${pad2(baseHour)}:${pad2(minute)}${secPart}${suffix}`.trim();
+  };
 
   // Memoize display time to avoid recalculation
   const displayTime = useMemo(() => {
@@ -61,9 +84,19 @@ const EventChip: React.FC<EventChipProps> = ({
     if (event.isDateField) {
       return '';
     }
-    // For datetime fields, show the actual time
+    const dateFieldKey = dateField?.key ?? dateField?.column_name ?? '';
+    const eventRecord = event as Record<string, any>;
+    const rawDateValue = dateFieldKey ? (event?.data?.[dateFieldKey] ?? eventRecord?.[dateFieldKey]) : undefined;
+    if (rawDateValue && typeof rawDateValue === 'string' && rawDateValue.includes('T')) {
+      const timePart = rawDateValue.split('T')[1]?.replace('Z', '').split('.')[0] ?? '';
+      if (timePart) {
+        const timeFormat = dateField?.meta?.timeFormat || 'HH:mm';
+        return formatTimeWithFormat(timePart, timeFormat);
+      }
+    }
+    // Fallback for datetime fields
     return event.dateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-  }, [event.dateTime, event.isDateField]);
+  }, [event.dateTime, event.isDateField, event, dateField]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -238,7 +271,7 @@ const EventChip: React.FC<EventChipProps> = ({
         >
           <div className="space-y-1">
             {tooltipLines.map((line, index) => (
-              <div key={line} className={index === 0 ? "font-semibold text-primary text-sm" : "text-secondary text-xs"}>
+              <div key={`${index}-${line}`} className={index === 0 ? "font-semibold text-primary text-sm" : "text-secondary text-xs"}>
                 {line}
               </div>
             ))}

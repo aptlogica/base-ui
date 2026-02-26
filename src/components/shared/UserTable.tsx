@@ -8,6 +8,7 @@ import { AccessDetailsRow } from './table/AccessDetailsRow';
 import { TablePagination } from './table/TablePagination';
 import { RoleFilterDropdown } from './table/RoleFilterDropdown';
 import { getAccessRoleDisplayName, roleFilterOptions } from './table/roleDisplay';
+import { timeZoneOptions } from '../../types/constants';
 
 export interface TenantUser {
   id: string;
@@ -19,6 +20,7 @@ export interface TenantUser {
   status: string;
   email_verified: boolean;
   timezone: string;
+  country?: string;
   locale: string;
   last_login_at?: string;
   last_active_at?: string;
@@ -79,11 +81,14 @@ const getStatusBadge = (status: string, emailVerified: boolean) => {
   }
 };
 
-import { timeZoneOptions } from '../../types/constants';
 
-const formatTimeZoneLabel = (tz: { label: string; country: string }, includeCountry: boolean) => {
-  if (!includeCountry) return tz.label;
-  return tz.country ? `${tz.label} (${tz.country})` : tz.label;
+const formatTimeZoneLabel = (label: string) => label;
+
+const formatTimeZoneWithCountry = (label: string, country?: string) => {
+  if (!label) return label;
+  const trimmedCountry = country?.trim();
+  if (!trimmedCountry) return label;
+  return `${label} (${trimmedCountry})`;
 };
 
 const getLocaleCountryName = (locale?: string) => {
@@ -106,35 +111,59 @@ const getLocaleCountryName = (locale?: string) => {
   return '';
 };
 
-const getTimezoneName = (timezone: string, activityData?: TenantUser['activity_data'], locale?: string): string => {
-  if (!timezone || timezone.trim() === '') {
-    return '-';
+const getTimezoneName = (
+  timezone: string,
+  activityData?: TenantUser['activity_data'],
+  locale?: string,
+  country?: string
+): string => {
+  const trimmedTimeZone = timezone?.trim() || '';
+  const trimmedCountry = country?.trim() || '';
+  const utcLabel = timeZoneOptions.find(tz => tz.value === 'UTC')?.label || 'UTC';
+  if (!trimmedTimeZone && !trimmedCountry) return utcLabel;
+
+  if (trimmedTimeZone.includes('/')) {
+    const tzByLabel = timeZoneOptions.find(tz => tz.label === trimmedTimeZone);
+    return formatTimeZoneLabel(tzByLabel ? tzByLabel.label : trimmedTimeZone);
   }
 
-  // If timezone is already an IANA label, prefer exact label match.
-  if (timezone.includes('/')) {
-    const tzByLabel = timeZoneOptions.find(tz => tz.label === timezone);
-    return tzByLabel ? tzByLabel.label : timezone;
-  }
+  const matches = trimmedTimeZone
+? timeZoneOptions.filter(tz => tz.value === trimmedTimeZone)
+: timeZoneOptions.filter(tz => tz.country.toLowerCase() === trimmedCountry?.toLowerCase());
 
-  const matches = timeZoneOptions.filter(tz => tz.value === timezone);
-  if (matches.length === 1) {
-    return matches[0].label;
-  }
+  const matchByCountry = (target?: string) =>
+    target ? matches.find(tz => tz.country?.toLowerCase() === target.toLowerCase()) : undefined;
 
-  const loginTimeZone = activityData?.login_sessions?.[0]?.timezone;
-  if (loginTimeZone) {
-    const tzByLogin = matches.find(tz => tz.label === loginTimeZone);
-    if (tzByLogin) return formatTimeZoneLabel(tzByLogin, true);
-  }
+  if (matches.length === 1) return formatTimeZoneLabel(matches[0].label);
+
+  const tzByCountry = matchByCountry(trimmedCountry);
+  if (tzByCountry) return formatTimeZoneLabel(tzByCountry.label);
+
+  const loginTimeZone = activityData?.login_sessions?.[0]?.timezone?.trim();
+  const tzByLogin = loginTimeZone ? matches.find(tz => tz.label === loginTimeZone) : undefined;
+  if (tzByLogin) return formatTimeZoneLabel(tzByLogin.label);
 
   const localeCountry = getLocaleCountryName(locale);
-  if (localeCountry) {
-    const tzByCountry = matches.find(tz => tz.country.toLowerCase() === localeCountry.toLowerCase());
-    if (tzByCountry) return formatTimeZoneLabel(tzByCountry, true);
-  }
+  const tzByLocale = matchByCountry(localeCountry);
+  if (tzByLocale) return formatTimeZoneLabel(tzByLocale.label);
 
-  return matches.length > 0 ? formatTimeZoneLabel(matches[0], true) : timezone;
+  if (matches.length > 0) return formatTimeZoneLabel(matches[0].label);
+
+  return formatTimeZoneLabel(trimmedTimeZone || trimmedCountry || utcLabel);
+};
+
+const getTimezoneDisplay = (
+  timezone: string,
+  activityData?: TenantUser['activity_data'],
+  locale?: string,
+  country?: string
+) => {
+  const label = getTimezoneName(timezone, activityData, locale, country);
+  if (!label) return label;
+
+  const tzByLabel = timeZoneOptions.find(tz => tz.label === label);
+  const tzCountry = tzByLabel?.country || country;
+  return formatTimeZoneWithCountry(label, tzCountry);
 };
 
 const formatCreatedTime = (createdTime?: string) => formatCreatedDate(createdTime);
@@ -163,14 +192,11 @@ const localeToLanguage: Record<string, string> = {
 };
 
 const getLanguageDisplay = (locale: string, activityData?: TenantUser['activity_data']): string => {
-  // First try to get language from login_sessions
-  if (activityData?.login_sessions && activityData.login_sessions.length > 0) {
-    const language = activityData.login_sessions[0].language;
-    if (language) {
-      // Extract language code (e.g., "en-IN" -> "en")
-      const langCode = language.split('-')[0];
-      return localeToLanguage[langCode] || localeToLanguage[language] || language || '-';
-    }
+  const language = activityData?.login_sessions?.[0]?.language;
+  if (language) {
+    // Extract language code (e.g., "en-IN" -> "en")
+    const langCode = language.split('-')[0];
+    return localeToLanguage[langCode] || localeToLanguage[language] || language || '-';
   }
 
   // Fallback to locale
@@ -211,7 +237,7 @@ const getSortValue = (user: TenantUser, sortColumn: 'name' | 'role' | 'status' |
     case 'language':
       return getLanguageDisplay(user.locale, user.activity_data).toLowerCase();
     case 'timezone':
-      return getTimezoneName(user.timezone, user.activity_data, user.locale)?.toLowerCase() || '';
+      return getTimezoneDisplay(user.timezone, user.activity_data, user.locale, user.country)?.toLowerCase() || '';
     default:
       return '';
   }
@@ -639,7 +665,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                               {roles.map((role) => (
                                 <span
                                   key={`${user.id}-${role}`}
-                                  className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getRolePillStyle(role)}`}
+                                  className={`inline-block px-2 py-0.5 rounded-xl text-xs font-medium ${getRolePillStyle(role)}`}
                                 >
                                   {role}
                                 </span>
@@ -658,7 +684,7 @@ export const UserTable: React.FC<UserTableProps> = ({
 
                         {/* Status */}
                         <td className="px-6 py-4">
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusBadge.color}`}>
+                          <span className={`inline-block px-3 py-1 rounded-xl text-xs font-medium ${statusBadge.color}`}>
                             {statusBadge.text}
                           </span>
                         </td>
@@ -680,7 +706,9 @@ export const UserTable: React.FC<UserTableProps> = ({
 
                         {/* Timezone */}
                         <td className="px-6 py-4">
-                          <p className="text-sm text-gray-600 min-w-48">{getTimezoneName(user.timezone, user.activity_data, user.locale)}</p>
+                          <p className="text-sm text-gray-600 min-w-48">
+                            {getTimezoneDisplay(user.timezone, user.activity_data, user.locale, user.country)}
+                          </p>
                         </td>
 
                         {/* Actions */}

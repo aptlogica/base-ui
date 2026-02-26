@@ -136,7 +136,6 @@ const BaseRoleManagement: React.FC<{
           const baseId = base.base_id;
           const baseName = base.base_name || 'Unnamed Base';
           const currentBaseRole = baseRoles[baseId] || base.access || 'base-member';
-          
           return (
             <div key={baseId} className="flex items-center gap-4 justify-between p-3 bg-gray-50 rounded-lg">
               {/* Base Info */}

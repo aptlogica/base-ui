@@ -88,17 +88,6 @@ vi.mock('../../../hooks/useApi', () => ({
     reset: vi.fn(),
     status: 'idle',
   })),
-  useAddOrUpdateAvatar: vi.fn(() => ({
-    mutateAsync: vi.fn(),
-    mutate: vi.fn(),
-    isPending: false,
-    isSuccess: false,
-    isError: false,
-    error: null,
-    data: undefined,
-    reset: vi.fn(),
-    status: 'idle',
-  })),
   useRemoveAvatar: vi.fn(() => ({
     mutateAsync: vi.fn(),
     mutate: vi.fn(),
@@ -174,7 +163,6 @@ import { useCurrentUser } from '../../../auth/useCurrentUser';
 import {
   useUserProfile,
   useUpdateUserProfile,
-  useAddOrUpdateAvatar,
   useRemoveAvatar,
 } from '../../../hooks/useApi';
 import { useFooterButtons } from '../AccountSettings';
@@ -253,18 +241,6 @@ const setupMocksWithProfile = (profile: UserProfile | null) => {
     reset: vi.fn(),
     status: 'idle',
   } as unknown as ReturnType<typeof useUpdateUserProfile>);
-
-  vi.mocked(useAddOrUpdateAvatar).mockReturnValue({
-    mutateAsync: mockAddAvatarMutate,
-    mutate: vi.fn(),
-    isPending: false,
-    isSuccess: false,
-    isError: false,
-    error: null,
-    data: undefined,
-    reset: vi.fn(),
-    status: 'idle',
-  } as unknown as ReturnType<typeof useAddOrUpdateAvatar>);
 
   vi.mocked(useRemoveAvatar).mockReturnValue({
     mutateAsync: mockRemoveAvatarMutate,

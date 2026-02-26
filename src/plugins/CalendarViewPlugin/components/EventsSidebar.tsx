@@ -1,12 +1,13 @@
-import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import React, { useMemo } from "react";
 import { Calendar, Plus } from "lucide-react";
 import { CalendarEvent } from "../hooks/useCalendarData";
 import { SortItem, sortRowsByDataKey } from "../../../utils/sortUtils";
 import { SortPopover } from "../../../components/shared/table/SortPopover";
 import { BaseColumn } from "../../../types/column.types";
-import { useFrontendPagination } from "../../../hooks/useFrontendPagination";
+import { useInfiniteScrollPagination } from "../../../hooks/useInfiniteScrollPagination";
 import { formatCompactNumber } from "../../../utils/helpers";
-import { LoadMoreButton } from "../../../components/shared/LoadMoreButton";
+import { LoadMoreSection } from "../../../components/shared/LoadMoreSection";
+import { getDateRangeForView, toLocalDateKey } from "../utils/calendarViewUtils";
 
 interface EventsSidebarProps {
   events: CalendarEvent[];
@@ -31,79 +32,17 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
 }) => {
   // Filter events based on current view
   const filteredEvents = useMemo(() => {
-    switch (currentView) {
-      case 'day': {
-        // Show events for the current day
-        const year = currentDate.getFullYear();
-        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-        const day = String(currentDate.getDate()).padStart(2, '0');
-        const dateStr = `${year}-${month}-${day}`;
-
-        return events.filter(event => event.date === dateStr);
-      }
-
-      case 'week': {
-        // Show events for the current week
-        const weekStart = new Date(currentDate);
-        weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Monday
-        weekStart.setHours(0, 0, 0, 0);
-
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-        weekEnd.setHours(23, 59, 59, 999);
-
-        return events.filter(event => {
-          const eventDate = new Date(event.dateTime);
-          return eventDate >= weekStart && eventDate <= weekEnd;
-        });
-      }
-
-      case 'month': {
-        // Show events for the current month
-        const monthStart = new Date(
-          currentDate.getFullYear(),
-          currentDate.getMonth(),
-          1
-        );
-
-        const monthEnd = new Date(
-          currentDate.getFullYear(),
-          currentDate.getMonth() + 1,
-          0,
-          23,
-          59,
-          59,
-          999
-        );
-
-        return events.filter(event => {
-          const eventDate = new Date(event.dateTime);
-          return eventDate >= monthStart && eventDate <= monthEnd;
-        });
-      }
-
-      case 'year': {
-        // Show events for the current year
-        const yearStart = new Date(currentDate.getFullYear(), 0, 1);
-        const yearEnd = new Date(
-          currentDate.getFullYear(),
-          11,
-          31,
-          23,
-          59,
-          59,
-          999
-        );
-
-        return events.filter(event => {
-          const eventDate = new Date(event.dateTime);
-          return eventDate >= yearStart && eventDate <= yearEnd;
-        });
-      }
-
-      default:
-        return events;
+    if (currentView === 'day') {
+      // Show events for the current day
+      const dateStr = toLocalDateKey(currentDate);
+      return events.filter(event => event.date === dateStr);
     }
+    const range = getDateRangeForView(currentView, currentDate);
+    if (!range) return events;
+    return events.filter(event => {
+      const eventDate = new Date(event.dateTime);
+      return eventDate >= range.start && eventDate <= range.end;
+    });
   }, [events, currentView, currentDate]);
 
   // Apply sorting to filtered events
@@ -138,44 +77,16 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
   // FRONTEND PAGINATION: Paginate sorted events
   // This allows rendering only a portion of events initially for better performance
   const {
-    allLoadedData: paginatedEvents,
-    loadNextPage,
+    paginatedData: paginatedEvents,
+    handleLoadMore,
     hasMore,
     totalItems,
-  } = useFrontendPagination({
+    isLoadingMore,
+    scrollContainerRef,
+  } = useInfiniteScrollPagination({
     data: sortedEvents,
     pageSize: 30, // Same as GridView, Kanban, and Gallery
-    initialPage: 1,
   });
-
-  // Loading state for "Load more" button
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-
-  // Handle loading more with loading state
-  const handleLoadMore = useCallback(() => {
-    setIsLoadingMore(true);
-    loadNextPage();
-    // Brief loading state for better UX (since loadNextPage is synchronous)
-    setTimeout(() => setIsLoadingMore(false), 300);
-  }, [loadNextPage]);
-
-  // Infinite scroll: Load more when scrolling near bottom
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container || !hasMore || isLoadingMore) return;
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      // Load more when user is within 200px of bottom
-      if (scrollHeight - scrollTop - clientHeight < 200) {
-        handleLoadMore();
-      }
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [hasMore, isLoadingMore, handleLoadMore]);
 
 
   const formatDate = (dateStr: string) => {
@@ -282,7 +193,7 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-2 flex-1 min-w-0">
-                      <div className="w-1 h-14 bg-gray-300 rounded-tl rounded-bl flex-shrink-0"></div>
+                      <div className="w-1.5 h-12 bg-gray-300 rounded-tl-2xl rounded-bl-2xl flex-shrink-0"/>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">
                           {event.title}
@@ -298,15 +209,13 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
             </div>
 
             {/* Load More Button */}
-            {hasMore && (
-              <div className="flex justify-center py-4 px-2">
-                <LoadMoreButton
-                  onClick={handleLoadMore}
-                  isLoading={isLoadingMore}
-                  label={`Load more (${formatCompactNumber(totalItems - paginatedEvents.length)} remaining)`}
-                />
-              </div>
-            )}
+            <LoadMoreSection
+              isVisible={hasMore}
+              isLoading={isLoadingMore}
+              onLoadMore={handleLoadMore}
+              className="py-4 px-2"
+              label={`Load more (${formatCompactNumber(totalItems - paginatedEvents.length)} remaining)`}
+            />
           </>
         )}
       </div>

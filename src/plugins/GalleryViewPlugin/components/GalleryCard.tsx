@@ -152,6 +152,8 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
     setCurrentImageIndex(index);
   }, []);
 
+  const toSafeSrc = useCallback((url?: string) => (url ? encodeURI(url) : url), []);
+
   // Memoize current image data
   const currentImage = useMemo(() => {
     return item.allImages && item.allImages.length > 0 
@@ -306,8 +308,8 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
         <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden">
           {currentImage && isImage(currentImage) && (currentImage.thumbnail_url || currentImage.url) && !imageError ? (
             <img
-              src={currentImage.thumbnail_url || currentImage.url}
-              srcSet={currentImage.url ? `${currentImage.url} 2x` : undefined}
+              src={toSafeSrc(currentImage.thumbnail_url || currentImage.url)}
+              srcSet={currentImage.url ? `${toSafeSrc(currentImage.url)} 2x` : undefined}
               alt={currentImage.title || currentImage.name || `${item.title} - Image ${currentImageIndex + 1}`}
               className="w-full h-full object-cover"
               onError={handleImageError}

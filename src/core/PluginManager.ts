@@ -33,55 +33,65 @@ export class PluginManagerImpl implements PluginManager {
 
   private registerCoreExtensionPoints(): void {
     // Register core extension points that the framework provides
-    this.extensionPoints.set('layout:header', {
-      description: 'Header area of the application layout',
-      order: { type: 'number', default: 100 }
-    });
-    
-    this.extensionPoints.set('layout:footer', {
-      description: 'Footer area of the application layout',
-      order: { type: 'number', default: 100 }
-    });
-    
-    this.extensionPoints.set('layout:sidebar', {
-      description: 'Sidebar area of the application layout',
-      order: { type: 'number', default: 100 }
-    });
-    
-    this.extensionPoints.set('layout:overlay', {
-      description: 'Overlay area for modals, notifications, etc.',
-      order: { type: 'number', default: 1000 }
-    });
-    
-    this.extensionPoints.set('page:homepage', {
-      description: 'Homepage content area',
-      order: { type: 'number', default: 100 }
-    });
+    const corePoints: Array<{ id: string; description: string; order: number }> = [
+      {
+        id: 'layout:header',
+        description: 'Header area of the application layout',
+        order: 100
+      },
+      {
+        id: 'layout:footer',
+        description: 'Footer area of the application layout',
+        order: 100
+      },
+      {
+        id: 'layout:sidebar',
+        description: 'Sidebar area of the application layout',
+        order: 100
+      },
+      {
+        id: 'layout:overlay',
+        description: 'Overlay area for modals, notifications, etc.',
+        order: 1000
+      },
+      {
+        id: 'page:homepage',
+        description: 'Homepage content area',
+        order: 100
+      },
+      {
+        id: 'page:dashboard',
+        description: 'Dashboard page content area',
+        order: 100
+      },
+      {
+        id: 'dashboard:widget',
+        description: 'Dashboard page content area',
+        order: 100
+      },
+      {
+        id: 'app:init',
+        description: 'Application initialization hooks',
+        order: 100
+      },
+      {
+        id: 'app:settings',
+        description: 'Application settings page extensions',
+        order: 100
+      },
+      // New: view extension point for view plugins to render with a unified data host
+      {
+        id: 'view',
+        description: 'View rendering extension point (grid, kanban, calendar, etc.)',
+        order: 100
+      },
+    ];
 
-    this.extensionPoints.set('page:dashboard', {
-      description: 'Dashboard page content area',
-      order: { type: 'number', default: 100 }
-    });
-
-    this.extensionPoints.set('dashboard:widget', {
-      description: 'Dashboard page content area',
-      order: { type: 'number', default: 100 }
-    });
-    
-    this.extensionPoints.set('app:init', {
-      description: 'Application initialization hooks',
-      order: { type: 'number', default: 100 }
-    });
-    
-    this.extensionPoints.set('app:settings', {
-      description: 'Application settings page extensions',
-      order: { type: 'number', default: 100 }
-    });
-
-    // New: view extension point for view plugins to render with a unified data host
-    this.extensionPoints.set('view', {
-      description: 'View rendering extension point (grid, kanban, calendar, etc.)',
-      order: { type: 'number', default: 100 }
+    corePoints.forEach(({ id, description, order }) => {
+      this.extensionPoints.set(id, {
+        description,
+        order: { type: 'number', default: order }
+      });
     });
   }
   

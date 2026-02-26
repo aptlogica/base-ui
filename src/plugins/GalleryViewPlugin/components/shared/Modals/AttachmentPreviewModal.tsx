@@ -179,7 +179,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
                 <Image size={16} className="text-green-600" />
               </div>
               <div>

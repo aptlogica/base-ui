@@ -14,9 +14,7 @@ import {
   getBaseByIdService,
   updateBaseService,
   deleteBaseService,
-  getAllBasesService,
   getBaseMembersService,
-  removeBaseAccessMemberService,
   removeUserFromBaseService,
   // New table API services
   createTableService,
@@ -24,13 +22,11 @@ import {
   updateTableService,
   deleteTableService,
   getTablesByBaseIdService,
-  getAllTablesService,
   importTableService,
   // New field API services
   createFieldService,
   updateFieldService,
   deleteFieldService,
-  getAllFieldsService,
   // New view API services
   createViewService,
   updateViewService,
@@ -42,15 +38,10 @@ import {
   getUserProfileByIDService,
   updateUserProfileService,
   changePasswordService,
-  addOrUpdateAvatarService,
   removeAvatarService,
-  assignUserToWorkspaceService,
   bulkAddMembersService,
   removeUserFromWorkspaceService,
   bulkAddBaseMembersService,
-  
-  removeAccessMemberService,
-  getUserAccessDetailsService,
   getUserRolesAndAccessService,
   // Tenant API services
   getTenantUsersService,
@@ -70,12 +61,10 @@ import {
   removeAttachmentsService,
   updateAssetByIdService,
   addImageService,
-  reorderColumnService,
   getAllRecordsService,
   getWorkspacesByUser,
   //Organization Services 
   getOrganizationService,
-  getOrganizationServiceById,
   updateOrganizationService
 } from '../service/clientService';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
@@ -258,28 +247,6 @@ export const useBulkAddBaseMembers = () => {
   });
 };
 
-export const useRemoveBaseAccessMember = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (params: {
-      baseId: string;
-      accessId: string;
-    }) => {
-      return await removeBaseAccessMemberService(params.baseId, params.accessId);
-    },
-    onSuccess: (_, variables) => {
-      // Invalidate base members query to refresh the list
-      queryClient.invalidateQueries({
-        queryKey: ['base', variables.baseId, 'members']
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['bases']
-      });
-    },
-  });
-};
-
 export const useRemoveUserFromBase = () => {
   const queryClient = useQueryClient();
 
@@ -352,72 +319,6 @@ export const useBaseTables = (baseId: string) => {
 // =========================
 // Bulk API Hooks
 // =========================
-
-export const useAllBases = () => {
-  return useQuery({
-    queryKey: queryKeys.allBases,
-    queryFn: async () => {
-      try {
-        const result = await getAllBasesService() as any;
-        // Ensure we return the data in the expected format
-        if (result?.data) {
-          return Array.isArray(result.data) ? result.data : [];
-        }
-        return [];
-      } catch (error) {
-        console.error('❌ Failed to fetch all bases:', error);
-        return [];
-      }
-    },
-    enabled: true,
-    staleTime: 30 * 1000, // Cache for 30 seconds
-    gcTime: 5 * 60 * 1000,
-  });
-};
-
-export const useAllTables = () => {
-  return useQuery({
-    queryKey: queryKeys.allTables,
-    queryFn: async () => {
-      try {
-        const result = await getAllTablesService() as any;
-        // Ensure we return the data in the expected format
-        if (result?.data) {
-          return Array.isArray(result.data) ? result.data : [];
-        }
-        return [];
-      } catch (error) {
-        console.error('❌ Failed to fetch all tables:', error);
-        return [];
-      }
-    },
-    enabled: true,
-    staleTime: 30 * 1000, // Cache for 30 seconds
-    gcTime: 5 * 60 * 1000,
-  });
-};
-
-export const useAllFields = () => {
-  return useQuery({
-    queryKey: queryKeys.allFields,
-    queryFn: async () => {
-      try {
-        const result = await getAllFieldsService() as any;
-        // Ensure we return the data in the expected format
-        if (result?.data) {
-          return Array.isArray(result.data) ? result.data : [];
-        }
-        return [];
-      } catch (error) {
-        console.error('❌ Failed to fetch all fields:', error);
-        return [];
-      }
-    },
-    enabled: true,
-    staleTime: 30 * 1000, // Cache for 30 seconds
-    gcTime: 5 * 60 * 1000,
-  });
-};
 
 export const useAllViews = () => {
   return useQuery({
@@ -829,22 +730,9 @@ export const useDeleteColumn = () => {
   return useMutation({
     mutationFn: ({ fieldId }: { tableId?: string; fieldId: string }) =>
       deleteFieldService(fieldId),
-    onSuccess: (_, { tableId }) => {
+    onSuccess: (_, vars) => {
+      const tableId = vars?.tableId;
       if (tableId) queryClient.invalidateQueries({ queryKey: queryKeys.fields(tableId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
-    },
-  });
-};
-
-export const useReorderColumn = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ source_column_id, target_column_id }: { source_column_id: string; target_column_id: string }) =>
-      reorderColumnService({ source_column_id, target_column_id }),
-    onSuccess: () => {
-      // Invalidate table and workspace queries to refresh column order
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
@@ -1116,14 +1004,6 @@ export const useDeleteView = () => {
   });
 };
 
-export const useViewsForTable = (tableId: string) => {
-  return useQuery({
-    queryKey: queryKeys.views(tableId),
-    queryFn: () => getViewsByModelIdService(tableId),
-    enabled: !!tableId,
-  });
-};
-
 // =========================
 // Row APIs
 // =========================
@@ -1349,22 +1229,6 @@ export const useChangePassword = (userId: string) => {
   });
 };
 
-export const useUserAccessDetails = (userId: string | null, workspaceId?: string) => {
-  return useQuery({
-    queryKey: ['userAccessDetails', userId, workspaceId],
-    queryFn: async () => {
-      if (!userId) return null;
-      const result = await getUserAccessDetailsService(userId, workspaceId) as any;
-      // Extract the data from StandardResponse structure
-      return result?.data || null;
-    },
-    enabled: !!userId,
-    staleTime: 0, // Always consider data stale to allow refetching when invalidated
-    gcTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnMount: 'always', // Always refetch when component mounts
-  });
-};
-
 export const useUserRolesAndAccess = (userId: string | null, scopeId?: string) => {
   return useQuery({
     queryKey: ['userRolesAndAccess', userId, scopeId],
@@ -1378,21 +1242,6 @@ export const useUserRolesAndAccess = (userId: string | null, scopeId?: string) =
     staleTime: 0, // Always consider data stale to allow refetching when invalidated
     gcTime: 5 * 60 * 1000, // 5 minutes
     refetchOnMount: 'always', // Always refetch when component mounts
-  });
-};
-
-export const useAddOrUpdateAvatar = (userId: string) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (avatarFile: File) => {
-      const result = await addOrUpdateAvatarService(userId, avatarFile);
-      return result;
-    },
-    onSuccess: () => {
-      // Invalidate user profile queries to refetch updated data
-      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
-    },
   });
 };
 
@@ -1588,42 +1437,6 @@ export const useDeactivateTenantUser = () => {
 };
 
 
-export const useAssignUserToWorkspace = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (params: {
-      workspace_id: string;
-      user_ids: string[];
-      access_level: string;
-      bases_ids: string;
-    }) => {
-      const result = await assignUserToWorkspaceService(params);
-      return result;
-    },
-    onSuccess: (_, variables) => {
-      // Invalidate user access details for all assigned users
-      // This ensures "View Access Details" modal refetches updated data
-      variables.user_ids.forEach(userId => {
-        // Invalidate all userAccessDetails queries for this user
-        // This matches ['userAccessDetails', userId] and ['userAccessDetails', userId, workspaceId]
-        queryClient.invalidateQueries({
-          queryKey: ['userAccessDetails', userId],
-          exact: false // Match all queries starting with ['userAccessDetails', userId]
-        });
-      });
-
-      // Invalidate workspaces query to refresh workspace members
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
-      // Invalidate tenant users query in case it affects user data
-      queryClient.invalidateQueries({ queryKey: queryKeys.users });
-    },
-    onError: (error: any) => {
-      console.error('❌ Assign user to workspace failed:', error);
-    }
-  });
-};
-
 export const useBulkAddMembers = () => {
   const queryClient = useQueryClient();
 
@@ -1669,28 +1482,6 @@ export const useBulkAddMembers = () => {
     onError: (error: any) => {
       console.error('❌ Bulk add members failed:', error);
     }
-  });
-};
-
-export const useRemoveAccessMember = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (params: {
-      workspaceId: string;
-      accessId: string;
-    }) => {
-      return await removeAccessMemberService(params.workspaceId, params.accessId);
-    },
-    onSuccess: (_, variables) => {
-      // Invalidate workspace members query to refresh the list
-      queryClient.invalidateQueries({
-        queryKey: ['workspaceMembers', variables.workspaceId]
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['workspaces']
-      });
-    },
   });
 };
 
@@ -1750,21 +1541,6 @@ export const useGetOrganization = () => {
   });
 }
 
-export const useGetOrganizationById = (organizationId: string) => {
-  return useQuery({
-    queryKey: ['organization', organizationId],
-    queryFn: async () => {
-     try{
-      const result = await getOrganizationServiceById(organizationId) as any;
-      return result?.data;
-     } catch (error: any) {
-      console.error('❌ Get organization by ID failed:', error);
-      throw error;
-     }
-    },
-    enabled: !!organizationId,
-  });
-}
 
 export const useUpdateOrganization = (organizationId: string) => {
   const queryClient = useQueryClient();

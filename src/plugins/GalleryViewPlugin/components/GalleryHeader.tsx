@@ -12,6 +12,43 @@ import { ColumnConfig } from '../../../plugins/GridViewPlugin/types/grid.types';
 import { normalizeFieldType } from '../../../utils/fieldType';
 import { getSearchableColumns } from '../utils/galleryColumns';
 
+const AttachmentFieldSelector = ({
+  attachmentFields,
+  attachmentField,
+  columns,
+  onAttachmentFieldChange,
+}: {
+  attachmentFields: BaseColumn[];
+  attachmentField?: BaseColumn;
+  columns: BaseColumn[];
+  onAttachmentFieldChange?: (field: BaseColumn) => void;
+}) => {
+  if (attachmentFields.length === 0 || !onAttachmentFieldChange) return null;
+  return (
+    <GalleryFieldConfiguration
+      columns={columns}
+      attachmentField={attachmentField}
+      onAttachmentFieldChange={(field) => field && onAttachmentFieldChange(field)}
+    />
+  );
+};
+
+const GallerySearch = ({
+  searchableColumns,
+  onSearch,
+  className,
+}: {
+  searchableColumns: BaseColumn[];
+  onSearch: (searchTerm: string, selectedField: any) => void;
+  className?: string;
+}) => (
+  <Search
+    columns={searchableColumns}
+    onSearch={onSearch}
+    className={className}
+  />
+);
+
 interface GalleryHeaderProps {
   itemCount: number;
   loadedCount?: number;
@@ -85,13 +122,12 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
       {/* Desktop Layout - Hidden on mobile */}
       <div className="hidden md:flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {attachmentFields.length > 0 && onAttachmentFieldChange && (
-            <GalleryFieldConfiguration
-              columns={columns}
-              attachmentField={attachmentField}
-              onAttachmentFieldChange={(field) => field && onAttachmentFieldChange(field)}
-            />
-          )}
+          <AttachmentFieldSelector
+            attachmentFields={attachmentFields}
+            attachmentField={attachmentField}
+            columns={columns}
+            onAttachmentFieldChange={onAttachmentFieldChange}
+          />
           {onFieldToggle && (
             <FieldsPopover
               columns={columnConfigs}
@@ -121,10 +157,7 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
 
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1">
-          <Search
-            columns={searchableColumns}
-            onSearch={onSearch}
-          />
+            <GallerySearch searchableColumns={searchableColumns} onSearch={onSearch} />
           </div>
 
           {/* Add Record Button - hide when handler is undefined */}
@@ -155,15 +188,14 @@ export const GalleryHeader: React.FC<GalleryHeaderProps> = ({
 
         {/* Middle row: Attachment field selector and Search */}
         <div className="flex items-center justify-center gap-3">
-          {attachmentFields.length > 0 && onAttachmentFieldChange && (
-            <GalleryFieldConfiguration
-              columns={columns}
-              attachmentField={attachmentField}
-              onAttachmentFieldChange={(field) => field && onAttachmentFieldChange(field)}
-            />
-          )}
-          <Search
-            columns={searchableColumns}
+          <AttachmentFieldSelector
+            attachmentFields={attachmentFields}
+            attachmentField={attachmentField}
+            columns={columns}
+            onAttachmentFieldChange={onAttachmentFieldChange}
+          />
+          <GallerySearch
+            searchableColumns={searchableColumns}
             onSearch={onSearch}
             className="flex-1 max-w-xs"
           />

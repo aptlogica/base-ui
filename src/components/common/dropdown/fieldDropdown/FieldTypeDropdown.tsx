@@ -54,7 +54,7 @@ export function FieldTypeDropdown({ selectedType, setSelectedType, fieldTypes, d
                     {fieldTypes.map((type) => (
                         <button
                             key={type.key}
-                            className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] rounded-xl ${selectedType?.key === type.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''}`}
+                            className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-xl ${selectedType?.key === type.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''}`}
                             onClick={() => {
                                 setSelectedType(type);
                                 setOpen(false);

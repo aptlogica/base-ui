@@ -14,6 +14,75 @@ interface CreateBaseModalProps {
   initialImage?: string | null;
 }
 
+const renderUploadButton = ({
+  className,
+  onDragOver,
+  onDrop,
+  onClick,
+  onChange,
+}: {
+  className: string;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) => (
+  <button
+    type="button"
+    onDragOver={onDragOver}
+    onDrop={onDrop}
+    className={className}
+    onClick={onClick}
+  >
+    <input
+      type="file"
+      id="image-upload"
+      accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
+      onChange={onChange}
+      className="hidden"
+    />
+    <CloudUpload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+    <p className="text-sm text-gray-600 mb-1">
+      <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
+    </p>
+    <p className="text-xs text-gray-500">
+      SVG, PNG, JPG or GIF (max. 800 x 400px)
+    </p>
+  </button>
+);
+
+const renderImagePreview = ({
+  imagePreview,
+  onRemove,
+}: {
+  imagePreview: string;
+  onRemove: (e: React.MouseEvent<HTMLButtonElement>) => void;
+}) => (
+  <div className="relative flex-shrink-0">
+    <button
+      type="button"
+      className="w-32 h-32 bg-green-100 rounded-xl flex items-center justify-center overflow-hidden cursor-pointer hover:bg-green-200 transition-colors"
+      onClick={(e) => {
+        e.stopPropagation();
+        document.getElementById('image-upload')?.click();
+      }}
+    >
+      <img
+        src={imagePreview}
+        alt="Preview"
+        className="w-full h-full object-cover"
+      />
+    </button>
+    <button
+      type="button"
+      onClick={onRemove}
+      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-primary rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+    >
+      <X size={12} />
+    </button>
+  </div>
+);
+
 export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
   isOpen,
   onClose,
@@ -291,90 +360,41 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
               {imagePreview ? (
                 <div className="flex gap-4">
                   {/* Image Preview - Left Side */}
-                  <div className="relative flex-shrink-0">
-                    <button
-                      type="button"
-                      className="w-32 h-32 bg-green-100 rounded-xl flex items-center justify-center overflow-hidden cursor-pointer hover:bg-green-200 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        document.getElementById('image-upload')?.click();
-                      }}
-                    >
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setImage(null);
-                        setImagePreview(null);
-                        setImageError('');
-                        const input = document.getElementById('image-upload') as HTMLInputElement;
-                        if (input) input.value = '';
-                      }}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-primary rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
+                  {renderImagePreview({
+                    imagePreview,
+                    onRemove: (e) => {
+                      e.stopPropagation();
+                      setImage(null);
+                      setImagePreview(null);
+                      setImageError('');
+                      const input = document.getElementById('image-upload') as HTMLInputElement;
+                      if (input) input.value = '';
+                    }
+                  })}
 
                   {/* Upload Area - Right Side */}
-                  <button
-                    type="button"
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                    className="flex-1 relative border-2 border-dashed rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
-                    onClick={(e) => {
+                  {renderUploadButton({
+                    className: 'flex-1 relative border-2 border-dashed rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer',
+                    onDragOver: handleDragOver,
+                    onDrop: handleDrop,
+                    onClick: (e) => {
                       e.stopPropagation();
                       document.getElementById('image-upload')?.click();
-                    }}
-                  >
-                    <input
-                      type="file"
-                      id="image-upload"
-                      accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
-                    <CloudUpload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-sm text-gray-600 mb-1">
-                      <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      SVG, PNG, JPG or GIF (max. 800 x 400px)
-                    </p>
-                  </button>
+                    },
+                    onChange: handleImageChange,
+                  })}
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  className="relative w-full border-2 border-dashed rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
-                  onClick={(e) => {
+                renderUploadButton({
+                  className: 'relative w-full border-2 border-dashed rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer',
+                  onDragOver: handleDragOver,
+                  onDrop: handleDrop,
+                  onClick: (e) => {
                     e.stopPropagation();
                     document.getElementById('image-upload')?.click();
-                  }}
-                >
-                  <input
-                    type="file"
-                    id="image-upload"
-                    accept="image/svg+xml,image/png,image/jpeg,image/jpg,image/gif"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                  <CloudUpload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-sm text-gray-600 mb-1">
-                    <span className="text-green-500 font-medium">Click to upload</span> or drag and drop
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    SVG, PNG, JPG or GIF (max. 800 x 400px)
-                  </p>
-                </button>
+                  },
+                  onChange: handleImageChange,
+                })
               )}
               {/* Image Error - Display here, not under Base Name */}
               {imageError && (
