@@ -75,7 +75,14 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
     isDateField: boolean
   ): { eventDate: string; eventDateTime: Date } | null => {
     if (!dateValue) return null;
-    const dateStr = String(dateValue);
+    const toDateString = (value: unknown) => {
+      if (typeof value === 'string') return value;
+      if (value instanceof Date) return value.toISOString();
+      if (typeof value === 'number') return new Date(value).toISOString();
+      return null;
+    };
+    const dateStr = toDateString(dateValue);
+    if (!dateStr) return null;
     const tz = getTimeZone(fieldMeta);
 
     const parseZoned = (utcIso: string) => {
@@ -189,17 +196,15 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
     }
 
     // Process events
-    const processedEvents: CalendarEvent[] = currentDateField ? records.map((record: any, idx: number) => {
+    const processedEvents: CalendarEvent[] = currentDateField ? records.reduce((acc: CalendarEvent[], record: any, idx: number) => {
       const rowData = record?.data || record;
       const dateValue = rowData?.[currentDateField.key || ''] || record?.[currentDateField.key || ''];
 
-      if (!dateValue) return null;
+      if (!dateValue) return acc;
 
       const isDateTimeField = currentDateField.type === 'datetime' ||
         currentDateField.uidt === 'datetime' ||
-        currentDateField.type === 'createdtime' ||
         currentDateField.uidt === 'createdtime' ||
-        currentDateField.type === 'lastmodifiedtime' ||
         currentDateField.uidt === 'lastmodifiedtime';
 
       const isDateField = currentDateField.type === 'date' || currentDateField.uidt === 'date';
@@ -211,10 +216,10 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
         isDateField
       );
 
-      if (!converted) return null;
+      if (!converted) return acc;
       const { eventDate, eventDateTime } = converted;
 
-      if (Number.isNaN(eventDateTime.getTime())) return null;
+      if (Number.isNaN(eventDateTime.getTime())) return acc;
 
       // Generate a consistent color based on the record ID
       const colors = [
@@ -223,7 +228,7 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
       ];
       const colorIndex = (record?.id ?? idx) % colors.length;
 
-      return {
+      acc.push({
         id: record?.id ?? idx,
         title: rowData?.title || rowData?.Title || rowData?.name || `Record ${record?.id || idx}`,
         date: eventDate,
@@ -231,8 +236,10 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
         data: rowData,
         color: colors[colorIndex],
         isDateField: Boolean(isDateField),
-      };
-    }).filter((event): event is CalendarEvent => event !== null) : [];
+      });
+
+      return acc;
+    }, []) : [];
 
     return {
       uiColumns,
