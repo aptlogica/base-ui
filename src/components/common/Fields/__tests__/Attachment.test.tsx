@@ -170,6 +170,7 @@ describe('Attachment', () => {
   });
 
   it('reverts local change when addAttachmentMutation fails', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     addAttachmentMock.mockRejectedValueOnce(new Error('upload failed'));
     const user = userEvent.setup();
     const onChange = vi.fn();
@@ -195,6 +196,7 @@ describe('Attachment', () => {
 
     const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1]?.[0];
     expect(lastCall).toEqual(initialValue);
+    errorSpy.mockRestore();
   });
 
   it('calls removeAttachmentsMutation when files are removed', async () => {

@@ -57,7 +57,7 @@ const renderUseGanttModals = (overrides: Partial<Parameters<typeof useGanttModal
   };
   return renderHook(() => useGanttModals({
     tasks: [baseTask],
-    tableData: { data: { model: { id: 'model-id' } } },
+    tableData: { model: { id: 'model-id' } },
     actions,
     onRefresh: vi.fn(),
     columns: [createColumn()],

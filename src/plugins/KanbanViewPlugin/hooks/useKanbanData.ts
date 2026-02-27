@@ -44,10 +44,10 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
   const tableData = useMemo(() => {
     const raw = tableQuery.data as any;
     if (!raw) return undefined;
-    const filteredColumns = raw.data.columns.filter((col: any) => !fieldsToFilter.includes(col.uidt));
-    raw.data = { ...raw.data, columns: filteredColumns } as TableData;
-    // Prefer nested data if present; otherwise assume raw is already TableData
-    return (raw.data ?? raw) as TableData;
+    const data = (raw.data ?? raw) as TableData;
+    if (!data?.columns) return undefined;
+    const filteredColumns = data.columns.filter((col: any) => !fieldsToFilter.includes(col.uidt));
+    return { ...data, columns: filteredColumns } as TableData;
   }, [tableQuery.data]);
 
   // CRUD operations - thin wrappers around shared hooks

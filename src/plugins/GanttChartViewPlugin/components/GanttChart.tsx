@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Calendar, Plus, Layers, ZoomIn, ZoomOut } from 'lucide-react';
-import type { TableResponse } from '../../../types/api.types';
+import type { TableData } from '../../../types/api.types';
 import { GanttFieldConfiguration } from './GanttFieldSelector';
 import { FilterPopover } from '../../../components/shared/table/FilterPopover';
 import { SortPopover } from '../../../components/shared/table/SortPopover';
@@ -276,7 +276,7 @@ const ChartTask = React.memo(({
 ChartTask.displayName = 'ChartTask';
 
 interface GanttChartProps {
-  tableData?: TableResponse;
+  tableData?: TableData;
   viewId?: string;
   onRefresh?: () => void;
   actions?: {
@@ -295,7 +295,7 @@ interface GanttChartProps {
 
 export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRefresh, actions }) => {
   // Extract base ID for permission checks
-  const baseId = useMemo(() => String(tableData?.data?.model?.base_id ?? ''), [tableData?.data?.model?.base_id]);
+  const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
 
   // Check permissions for read-only access
   const {
@@ -377,7 +377,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
     actions,
     onRefresh: onRefresh || (() => { }),
     columns: processedData.columns,
-    rawRecords: tableData?.data?.records || [],
+    rawRecords: tableData?.records || [],
     startDateField: processedData.startDateField,
     endDateField: processedData.endDateField,
   });
@@ -836,7 +836,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
         <CreateRecordModal
           isOpen={modalState.create.isOpen}
           onClose={handleCloseCreateModal}
-          table={{ id: tableData?.data?.model?.id, title: tableData?.data?.model?.title || 'Gantt Chart' } as any}
+          table={{ id: tableData?.model?.id, title: tableData?.model?.title || 'Gantt Chart' } as any}
           fields={processedData.columns}
           title="New record"
           submitLabel="Save record"
@@ -849,7 +849,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
         <EditRecordModal
           isOpen={modalState.edit.isOpen}
           onClose={handleCloseEditModal}
-          table={{ id: tableData?.data?.model?.id, title: tableData?.data?.model?.title || 'Gantt Chart' } as any}
+          table={{ id: tableData?.model?.id, title: tableData?.model?.title || 'Gantt Chart' } as any}
           fields={processedData.columns}
           recordId={String(modalState.edit.selectedTask?.id || '')}
           title="Edit record"

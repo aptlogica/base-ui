@@ -184,20 +184,57 @@ const Layout = () => {
   );
 };
 
+const getTableResponse = (response: unknown) => {
+  if (!response || typeof response !== 'object' || !('data' in response)) return null;
+  const data = (response as { data?: { views?: Array<{ id: string | number; type?: string }> } }).data;
+  return data ?? null;
+};
+
+const getKnownTypeSlug = (viewId?: string) => {
+  const slug = (viewId || '').toLowerCase();
+  const knownTypeSlugs = ['grid', 'form', 'gallery', 'kanban', 'calendar', 'gantt'];
+  return knownTypeSlugs.includes(slug) ? slug : '';
+};
+
+const resolveRequestedView = (
+  allViews: Array<{ id: string | number; type?: string }>,
+  viewId?: string
+) => {
+  if (!viewId) return null;
+  return allViews.find((v) => String(v.id) === String(viewId)) ?? null;
+};
+
+const resolveTypeMatchedView = (
+  allViews: Array<{ id: string | number; type?: string }>,
+  slug: string
+) => {
+  if (!slug) return undefined;
+  return allViews.find((v) => String(v.type || '').toLowerCase() === slug);
+};
+
+const buildRouteView = (
+  requestedView: { id: string | number; type?: string } | null,
+  typeMatchedView: { id: string | number; type?: string } | undefined
+) => {
+  if (requestedView) {
+    return { id: requestedView.id, type: requestedView.type };
+  }
+  if (typeMatchedView) {
+    return { id: typeMatchedView.id, type: typeMatchedView.type };
+  }
+  return null;
+};
+
 // Wrapper for /workspace/:workspaceId/base/:baseId/table/:tableId/:viewId to provide table/view context to plugins
 const TableViewRouteWrapper: React.FC = () => {
   const { baseId, tableId, viewId } = useParams();
 
   // Centralized table fetch so only one plugin renders and we can determine view type
-  const { data: response, isLoading, error, refetch } = useTable(tableId || '');
+  const { data: response, isLoading, isFetching, error, refetch } = useTable(tableId || '');
   if (!tableId) {
     console.error('Table ID is missing');
     return <div className="p-8 text-red-600">Table ID is required</div>;
   }
-
-  // Only show loader on initial load (no cached data)
-  // If we have cached data, show it immediately even if refetching
-  // This provides instant navigation between views when data is cached
   const hasCachedData = response && typeof response === 'object' && 'data' in response;
   const isInitialLoad = isLoading && !hasCachedData;
 
@@ -221,29 +258,21 @@ const TableViewRouteWrapper: React.FC = () => {
     );
   }
 
-  const tableResponse = response && typeof response === 'object' && 'data' in response ? (response as { data?: { views?: Array<{ id: string | number; type?: string }> } }).data : null;
+  const tableResponse = getTableResponse(response);
   const allViews = Array.isArray(tableResponse?.views) ? tableResponse.views : [];
-  const requestedView = allViews.find((v) => String(v.id) === String(viewId));
+  const requestedView = resolveRequestedView(allViews, viewId);
 
   // Support URL slugs like /grid, /kanban, etc. as view type selectors
-  const slug = (viewId || '').toLowerCase();
-  const knownTypeSlugs = ['grid', 'form', 'gallery', 'kanban', 'calendar', 'gantt'];
-  const isTypeSlug = knownTypeSlugs.includes(slug);
-  const typeMatchedView = isTypeSlug
-    ? allViews.find((v) => (String(v.type || '').toLowerCase() === slug))
-    : undefined;
+  const slug = getKnownTypeSlug(viewId);
+  const isTypeSlug = Boolean(slug);
+  const typeMatchedView = resolveTypeMatchedView(allViews, slug);
 
   // Determine effective viewType and view object passed to plugins
   const viewType = requestedView?.type || (isTypeSlug ? slug : undefined);
 
   // Construct props for plugins
   const table = { id: tableId, base_id: baseId || '' };
-  let view = null;
-  if (requestedView) {
-    view = { id: requestedView.id, type: requestedView.type };
-  } else if (typeMatchedView) {
-    view = { id: typeMatchedView.id, type: typeMatchedView.type };
-  }
+  const view = buildRouteView(requestedView, typeMatchedView);
 
   const routeFallback = (
     <ExtensionPoint
@@ -255,6 +284,14 @@ const TableViewRouteWrapper: React.FC = () => {
 
   // If a non-slug viewId was provided but not found, show a clear message
   if (viewId && !requestedView && !isTypeSlug) {
+    if (isLoading || isFetching) {
+      return (
+        <div className="h-full flex items-center justify-center">
+          <Loader />
+        </div>
+      );
+    }
+
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">

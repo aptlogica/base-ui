@@ -235,6 +235,64 @@ describe('CalendarView', () => {
     ]
   };
 
+  const buildUiColumns = (columns: any[]) => columns.map((col) => ({
+    ...col,
+    id: col.id ? String(col.id) : col.id,
+    key: col.column_name || String(col.id || ''),
+    title: col.title || col.column_name || '',
+    type: col.uidt,
+    uidt: col.uidt,
+    meta: col.meta ?? {},
+    order_index: col.order_index ?? 0
+  }));
+
+  const getRecordValue = (record: any, key: string) =>
+    record?.data?.[key] ?? record?.[key];
+
+  const buildEvents = (records: any[], dateField: any) => {
+    if (!dateField?.column_name) return [];
+    const key = dateField.column_name;
+    return records
+      .map((record) => {
+        const rawValue = getRecordValue(record, key);
+        if (!rawValue || typeof rawValue !== 'string') return null;
+        const date = rawValue.split('T')[0];
+        const dateTime = rawValue.length === 10
+          ? new Date(`${rawValue}T00:00:00`)
+          : new Date(rawValue);
+        return {
+          id: record.id,
+          title: getRecordValue(record, 'title') ?? '',
+          date,
+          dateTime,
+          data: record.data ?? record,
+          color: 'blue'
+        };
+      })
+      .filter(Boolean);
+  };
+
+  const buildProps = (tableData: any) => {
+    const uiColumns = buildUiColumns(tableData.columns || []);
+    const uiData = tableData.records || [];
+    const view = tableData.views?.[0];
+    const dateField = uiColumns.find((col: any) => String(col.id) === String(view?.meta?.date_field_id));
+    const events = buildEvents(uiData, dateField);
+
+    return {
+      tableData,
+      uiColumns,
+      uiData,
+      uiTableId: String(tableData.model?.id || ''),
+      events,
+      dateField,
+      view,
+      viewId: view?.id,
+      onRefresh: vi.fn(),
+      actions: mockActions
+    };
+  };
+
   const mockActions = {
     addRow: vi.fn(),
     insertRowData: vi.fn(),
@@ -248,12 +306,7 @@ describe('CalendarView', () => {
     updateViewConfig: vi.fn()
   };
 
-  const defaultProps = {
-    tableData: mockTableData,
-    viewId: 'view-1',
-    onRefresh: vi.fn(),
-    actions: mockActions
-  };
+  const defaultProps = buildProps(mockTableData);
 
   const defaultNavigationMock = {
     currentDate: new Date('2026-01-15'),
@@ -592,7 +645,7 @@ describe('CalendarView', () => {
         ]
       };
 
-      render(<CalendarView {...defaultProps} tableData={dataWithoutDates} />);
+      render(<CalendarView {...buildProps(dataWithoutDates)} />);
       expect(screen.getByTestId('month-view')).toHaveTextContent('0');
       expect(screen.getByTestId('month-view')).toHaveTextContent('events in month');
     });
@@ -603,7 +656,7 @@ describe('CalendarView', () => {
         records: []
       };
 
-      render(<CalendarView {...defaultProps} tableData={emptyData} />);
+      render(<CalendarView {...buildProps(emptyData)} />);
       expect(screen.getByTestId('month-view')).toHaveTextContent('0');
       expect(screen.getByTestId('month-view')).toHaveTextContent('events in month');
     });
@@ -631,7 +684,7 @@ describe('CalendarView', () => {
         ]
       };
 
-      render(<CalendarView {...defaultProps} tableData={dateOnlyData} />);
+      render(<CalendarView {...buildProps(dateOnlyData)} />);
       expect(screen.getByTestId('month-view')).toHaveTextContent('1');
       expect(screen.getByTestId('month-view')).toHaveTextContent('events in month');
     });
@@ -668,7 +721,7 @@ describe('CalendarView', () => {
         ]
       };
 
-      render(<CalendarView {...defaultProps} tableData={naiveDateTimeData} />);
+      render(<CalendarView {...buildProps(naiveDateTimeData)} />);
       const monthView = screen.getByTestId('month-view');
       const events = JSON.parse(monthView.getAttribute('data-events') || '[]');
       expect(events.length).toBe(1);
@@ -709,7 +762,7 @@ describe('CalendarView', () => {
         views: []
       };
 
-      render(<CalendarView {...defaultProps} tableData={noViewData} />);
+      render(<CalendarView {...buildProps(noViewData)} />);
       // Default view is month when no view config; ensure a view is rendered
       expect(screen.getByTestId('month-view')).toBeInTheDocument();
     });
@@ -720,7 +773,7 @@ describe('CalendarView', () => {
         columns: []
       };
 
-      render(<CalendarView {...defaultProps} tableData={noColumnsData} />);
+      render(<CalendarView {...buildProps(noColumnsData)} />);
 
       expect(screen.getByTestId('calendar-header')).toBeInTheDocument();
     });

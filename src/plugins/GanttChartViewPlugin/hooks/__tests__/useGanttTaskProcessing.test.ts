@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useGanttTaskProcessing } from '../useGanttTaskProcessing';
-import type { TableResponse, Column, View, Model } from '../../../../types/api.types';
+import type { TableData, Column, View, Model } from '../../../../types/api.types';
 
 vi.mock('../../../../types/constants', () => ({
   fieldsToFilter: ['filterMe'],
@@ -58,23 +58,15 @@ const createView = (overrides: Partial<View>): View => ({
   ...overrides,
 });
 
-const createTableResponse = (
+const createTableData = (
   columns: Column[],
   records: Record<string, unknown>[],
   views: View[],
-): TableResponse => ({
-  success: true,
-  message: 'ok',
-  data: {
-    model: baseModel,
-    columns,
-    views,
-    records,
-  },
-  meta: {
-    code: '200',
-    http_status: 200,
-  },
+): TableData => ({
+  model: baseModel,
+  columns,
+  views,
+  records,
 });
 
 describe('useGanttTaskProcessing', () => {
@@ -104,7 +96,7 @@ describe('useGanttTaskProcessing', () => {
     const filteredColumn = createColumn({ id: 'filtered', column_name: 'Filtered', uidt: 'filterMe' });
     const visibleColumn = createColumn({ id: 'visible', column_name: 'Visible', uidt: 'text' });
     const view = createView({ type: 'ganttChart', meta: {} });
-    const tableData = createTableResponse([filteredColumn, visibleColumn], [], [view]);
+    const tableData = createTableData([filteredColumn, visibleColumn], [], [view]);
 
     const { result } = renderHook(() => useGanttTaskProcessing({ tableData }));
 
@@ -115,7 +107,7 @@ describe('useGanttTaskProcessing', () => {
   it('selects the gantt chart view when available', () => {
     const gridView = createView({ id: 'grid', type: 'grid', meta: {} });
     const ganttView = createView({ id: 'gantt', type: 'ganttChart', meta: {} });
-    const tableData = createTableResponse([], [], [gridView, ganttView]);
+    const tableData = createTableData([], [], [gridView, ganttView]);
 
     const { result } = renderHook(() => useGanttTaskProcessing({ tableData }));
 
@@ -138,7 +130,7 @@ describe('useGanttTaskProcessing', () => {
         completion_field_id: 'completion',
       },
     });
-    const tableData = createTableResponse(
+    const tableData = createTableData(
       [startColumn, endColumn, titleColumn, progressColumn, completionColumn],
       [],
       [view],
@@ -158,7 +150,7 @@ describe('useGanttTaskProcessing', () => {
     const startColumn = createColumn({ id: 'start-id', column_name: 'start', uidt: 'date' });
     const endColumn = createColumn({ id: 'end-id', column_name: 'end', uidt: 'date' });
     const view = createView({ type: 'ganttChart', meta: { start_date_field_id: 'start-id', end_date_field_id: 'end-id' } });
-    const tableData = createTableResponse([titleColumn, startColumn, endColumn], [], [view]);
+    const tableData = createTableData([titleColumn, startColumn, endColumn], [], [view]);
 
     const { result } = renderHook(() => useGanttTaskProcessing({ tableData }));
 
@@ -177,7 +169,7 @@ describe('useGanttTaskProcessing', () => {
         title_field_id: 'title',
       },
     });
-    const tableData = createTableResponse(
+    const tableData = createTableData(
       [startColumn, endColumn, titleColumn],
       [
         {
@@ -209,7 +201,7 @@ describe('useGanttTaskProcessing', () => {
         progress_field_id: 'progress',
       },
     });
-    const tableData = createTableResponse(
+    const tableData = createTableData(
       [startColumn, endColumn, titleColumn, progressColumn],
       [
         {
@@ -232,7 +224,7 @@ describe('useGanttTaskProcessing', () => {
   it('marks a task as pending when start and end dates are missing', () => {
     const titleColumn = createColumn({ id: 'title', column_name: 'title', uidt: 'text' });
     const view = createView({ type: 'ganttChart', meta: { title_field_id: 'title' } });
-    const tableData = createTableResponse([titleColumn], [{ id: 'task-3', title: 'Pending task' }], [view]);
+    const tableData = createTableData([titleColumn], [{ id: 'task-3', title: 'Pending task' }], [view]);
 
     const { result } = renderHook(() => useGanttTaskProcessing({ tableData }));
 
@@ -241,7 +233,7 @@ describe('useGanttTaskProcessing', () => {
 
   it('uses fallback values when optional fields are absent', () => {
     const view = createView({ type: 'ganttChart', meta: {} });
-    const tableData = createTableResponse([], [{}], [view]);
+    const tableData = createTableData([], [{}], [view]);
 
     const { result } = renderHook(() => useGanttTaskProcessing({ tableData }));
 

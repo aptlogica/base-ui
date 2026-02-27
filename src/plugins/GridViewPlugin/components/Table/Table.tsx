@@ -740,6 +740,9 @@ export const Table: React.FC<TableProps> = ({
     const isEditing = editModalOpen && editColumnIndex === index;
 
     const handleColumnContextMenu = (e: React.MouseEvent) => {
+      if (column.isSystem || column.system) {
+        return;
+      }
       e.preventDefault();
       setOpenColumnDropdownIndex(null);
       handleColContextMenu(e, index);

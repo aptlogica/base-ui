@@ -195,6 +195,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                 type="button"
                 onClick={onAttachFile}
                 className="px-4 py-2 btn-primary flex items-center gap-2"
+                aria-label="Attach file"
               >
                 <Paperclip size={16} />
                 Attach File
@@ -204,6 +205,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                 type="button"
                 onClick={onClose}
                 className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
+                aria-label="Close preview"
               >
                 <X size={16} className="text-gray-500" />
               </button>
@@ -420,6 +422,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                               }}
                               className="p-1 text-gray-600 hover:text-gray-900 transition-colors"
                               title="Copy URL"
+                              aria-label="Copy URL"
                             >
                               {copiedIndex === index ? (
                                 <Check size={10} className="text-green-600" />
@@ -435,6 +438,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                               }}
                               className="p-1 text-gray-600 hover:text-gray-900 transition-colors"
                               title="Download"
+                              aria-label="Download file"
                             >
                               <Download size={10} />
                             </button>
@@ -446,6 +450,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                               }}
                               className="p-1 text-gray-600 hover:text-gray-900 transition-colors"
                               title="Edit"
+                              aria-label="Edit filename"
                             >
                               <Edit size={10} />
                             </button>
@@ -457,6 +462,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                               }}
                               className="p-1 text-red-600 hover:text-red-700 transition-colors"
                               title="Delete"
+                              aria-label="Delete file"
                             >
                               <Trash2 size={10} />
                             </button>

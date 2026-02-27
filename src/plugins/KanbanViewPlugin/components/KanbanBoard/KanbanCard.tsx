@@ -265,6 +265,7 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
                   }}
                   className="bg-black absolute left-3 top-1/2 transform -translate-y-1/2 p-2 backdrop-blur-sm text-white rounded-full hover:bg-black/90 transition-all z-10 cursor-pointer shadow-lg hover:scale-110"
                   title="Previous image"
+                  aria-label="Previous image"
                   type="button"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -276,6 +277,7 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
                   }}
                   className="bg-black absolute right-3 top-1/2 transform -translate-y-1/2 p-2 backdrop-blur-sm text-white rounded-full hover:bg-black/90 transition-all z-10 cursor-pointer shadow-lg hover:scale-110"
                   title="Next image"
+                  aria-label="Next image"
                   type="button"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -306,6 +308,7 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
                       : 'bg-white/60 border hover:bg-white/80'
                       }`}
                     title={`Go to image ${index + 1}`}
+                    aria-label={`Go to image ${index + 1}`}
                     type="button"
                   />
                 ))}

@@ -154,6 +154,9 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
             setIsOpen(!isOpen);
           }
         }}
+        role="button"
+        tabIndex={0}
+        aria-label="Show more events"
       >
         {children}
       </div>

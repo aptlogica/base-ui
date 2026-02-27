@@ -29,7 +29,13 @@ const FormViewPlugin: Plugin = {
     const FormViewComponent: React.FC<{ tableId: string; viewId?: string; recordId?: string }> = ({ tableId, viewId, recordId }) => {
       const { tableData, isLoading, error, refresh, addRow, insertRowData, deleteRecord, updateField, deleteColumn, createField, updateView, submitForm, createNewField, updateFieldData, toggleFieldVisibility, setAllFieldsVisibility, updateFieldOrder, updateAppearance, deleteFieldData } = useFormData({ tableId, viewId, recordId });
 
-      if (isLoading) return <div className="h-full flex items-center justify-center">Loading form…</div>;
+      if (isLoading) {
+        return (
+          <div className="h-full flex items-center justify-center">
+            <Loader size={10} />
+          </div>
+        );
+      }
       
       if (error) {
         let errorMessage = 'Unknown error occurred';

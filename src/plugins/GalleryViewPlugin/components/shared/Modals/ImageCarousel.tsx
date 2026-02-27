@@ -162,6 +162,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
       <button
         onClick={onClose}
         className="absolute top-3 right-5 w-8 h-8 flex items-center justify-center hover:scale-110 transition-all duration-200"
+        aria-label="Close preview"
       >
         <X size={18} className="text-primary" />
       </button>
@@ -173,6 +174,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
           handlePrevious();
         }}
         className="absolute left-5 top-1/2 -translate-y-1/2 hover:scale-110 transition-all duration-200"
+        aria-label="Previous image"
       >
         <ChevronLeft size={64} className="text-primary" />
       </button>
@@ -183,6 +185,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
           handleNext();
         }}
         className="absolute right-5 top-1/2 -translate-y-1/2 hover:scale-110 transition-all duration-200"
+        aria-label="Next image"
       >
         <ChevronRight size={64} className="text-primary" />
       </button>
@@ -222,6 +225,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
               setZoom((z) => Math.max(z - 25, 50));
             }}
             className="text-gray-500"
+            aria-label="Zoom out"
           >
             <ZoomOut size={18} />
           </button>
@@ -232,6 +236,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
               setZoom((z) => Math.min(z + 25, 300));
             }}
             className="text-gray-500"
+            aria-label="Zoom in"
           >
             <ZoomIn size={18} />
           </button>
@@ -249,6 +254,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
                   ? "border-[var(--color-bg-brand-primary)] shadow-sm"
                   : "border-gray-300 opacity-70 hover:opacity-100"
                 } transition`}
+              aria-label={`Show image ${images.findIndex(i => i.url === img.url) + 1}`}
             >
               {isImage(img) ? (
                 <img

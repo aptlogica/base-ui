@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { TableResponse, Column, View } from '../../../types/api.types';
+import type { TableData, Column, View } from '../../../types/api.types';
 import { fieldsToFilter } from '../../../types/constants';
 import type { GanttTask } from './useGanttData';
 
@@ -18,11 +18,11 @@ export function useGanttTaskProcessing({
   tableData,
   viewId,
 }: {
-  tableData?: TableResponse;
+  tableData?: TableData;
   viewId?: string;
 }): UseGanttTaskProcessingReturn {
   return useMemo(() => {
-    if (!tableData?.data) {
+    if (!tableData) {
       return {
         tasks: [],
         columns: [],
@@ -35,7 +35,7 @@ export function useGanttTaskProcessing({
       };
     }
 
-    const { columns, records, views } = tableData.data;
+    const { columns, records, views } = tableData;
 
     // Filter out unwanted columns
     const filteredColumns = columns.filter(
@@ -44,7 +44,7 @@ export function useGanttTaskProcessing({
 
     // Find current view
     const currentView = viewId
-      ? (views?.find((v: any) => String(v?.id) === String(viewId)) || null)
+      ? (views?.find((v: any) => String(v?.id) === String(viewId)) || undefined)
       : (views?.find((v: any) => v.type === 'ganttChart') || views?.[0]);
     const viewMeta = currentView?.meta || {};
 

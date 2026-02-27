@@ -56,7 +56,7 @@ export const FieldSelectDropdown: React.FC<FieldSelectDropdownProps> = ({
         <span className="flex-1 text-left">
           {selectedOption ? (
             <span className="flex-1 text-left flex items-center text-primary">
-              <span className="mr-2 align-middle">
+              <span className="mr-2 align-middle text-primary">
                 {getFieldTypeIconComponent(selectedOption.uidt || selectedOption.type || 'text', iconClassName) || (
                   <Type className="w-4 h-4 text-gray-400" />
                 )}
