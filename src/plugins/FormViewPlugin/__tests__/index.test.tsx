@@ -145,7 +145,7 @@ describe('FormViewPlugin', () => {
       });
       render(<>{element}</>);
 
-      expect(screen.getByText(/Loading form/)).toBeInTheDocument();
+      expect(screen.getByLabelText(/loading/i)).toBeInTheDocument();
     });
 
     it('should render error state when error is set', async () => {

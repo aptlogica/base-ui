@@ -133,6 +133,7 @@ const MonthView: React.FC<MonthViewProps> = ({
                   <button
                     onClick={() => onDateClick(date)}
                     className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded"
+                    aria-label={`Add event on ${date.toDateString()}`}
                   >
                     <Plus className="w-4 h-4 text-gray-700" />
                   </button>

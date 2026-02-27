@@ -79,9 +79,9 @@ export function useGanttModals({
 
   // Delete record handler (from edit modal)
   const handleDeleteRecord = useCallback(async (recordId: string) => {
-    if (actions?.deleteRecord && tableData?.data?.model?.id) {
+    if (actions?.deleteRecord && tableData?.model?.id) {
       await actions.deleteRecord.mutateAsync({
-        model_id: String(tableData.data.model.id),
+        model_id: String(tableData.model.id),
         row_id: Number(recordId)
       });
       onRefresh();
@@ -90,14 +90,14 @@ export function useGanttModals({
 
   // Confirm delete handler
   const handleConfirmDelete = useCallback(async () => {
-    if (!actions?.deleteRecord || !taskToDelete || !tableData?.data?.model?.id) {
+    if (!actions?.deleteRecord || !taskToDelete || !tableData?.model?.id) {
       toast.error('Missing information to delete record');
       return;
     }
 
     try {
       await actions.deleteRecord.mutateAsync({
-        model_id: String(tableData.data.model.id),
+        model_id: String(tableData.model.id),
         row_id: Number(taskToDelete.id)
       });
       setDeleteConfirmModalOpen(false);

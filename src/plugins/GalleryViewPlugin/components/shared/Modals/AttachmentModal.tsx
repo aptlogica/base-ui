@@ -550,6 +550,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
                                 onClick={() => handleSaveTitle(file.url)}
                                 disabled={updateAssetMutation.isPending}
                                 className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50"
+                                aria-label="Save title"
                               >
                                 <Check size={16} />
                               </button>
@@ -557,6 +558,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
                                 type="button"
                                 onClick={handleCancelEditTitle}
                                 className="p-1 text-red-600 hover:text-red-700"
+                                aria-label="Cancel edit"
                               >
                                 <XIcon size={16} />
                               </button>
@@ -590,6 +592,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
                               : 'text-gray-400 hover:text-blue-600'
                               }`}
                             title={isUploading ? "Preview unavailable during upload" : "Preview"}
+                            aria-label={isUploading ? "Preview unavailable during upload" : "Preview file"}
                           >
                             <Eye className="w-5 h-5 text-gray-700" />
                           </button>
@@ -607,6 +610,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
                               : 'text-gray-400 hover:text-green-600'
                               }`}
                             title={isUploading ? "Download unavailable during upload" : "Download"}
+                            aria-label={isUploading ? "Download unavailable during upload" : "Download file"}
                           >
                             <Download className="w-5 h-5 text-gray-700" />
                           </button>
@@ -620,6 +624,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
                               : 'text-gray-400 hover:text-red-600'
                               }`}
                             title={isUploading ? "Remove unavailable during upload" : "Remove"}
+                            aria-label={isUploading ? "Remove unavailable during upload" : "Remove file"}
                           >
                             <Trash2 className="w-5 h-5 text-red-500" />
                           </button>

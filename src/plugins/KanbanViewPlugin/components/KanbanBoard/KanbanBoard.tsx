@@ -1064,8 +1064,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           onChange={(e) => handleNewOptionChange(e.target.value)}
                           onKeyDown={handleCreateStackKeyDown}
                         />
-                        <button className='hover:bg-gray-100 p-2 rounded-md'>
-                          <X className="w-4 h-4 text-gray-500 hover:text-gray-700" onClick={toggleStackNameInput} />
+                        <button
+                          className='hover:bg-gray-100 p-2 rounded-md'
+                          onClick={toggleStackNameInput}
+                          aria-label="Close stack name input"
+                        >
+                          <X className="w-4 h-4 text-gray-500 hover:text-gray-700" />
                         </button>
                       </div>
                       :

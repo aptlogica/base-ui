@@ -155,6 +155,7 @@ describe('SecuritySection', () => {
   });
 
   it('shows error toast when password update fails', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mutateAsync.mockRejectedValueOnce(new Error('failed'));
     render(<SecuritySection />);
 
@@ -169,5 +170,6 @@ describe('SecuritySection', () => {
     await waitFor(() => {
       expect(toastError).toHaveBeenCalled();
     });
+    errorSpy.mockRestore();
   });
 });

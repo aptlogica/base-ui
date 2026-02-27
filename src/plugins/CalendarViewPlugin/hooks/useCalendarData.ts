@@ -4,6 +4,7 @@ import type { TableData } from '../../../types/api.types';
 import { parseApiColumnMeta } from '../../../components/shared/table/tableUtils';
 import { normalizeFieldType } from '../../../utils/fieldType';
 import type { GridColumn, GridFieldType } from '../../GridViewPlugin/types/grid.types';
+import { utcISOToZoned } from '../../../utils/dateUtils';
 
 // Data layer for Calendar: fetch + CRUD orchestration; keeps UI components clean
 export interface UseCalendarDataOptions {
@@ -55,6 +56,71 @@ export interface UseCalendarDataReturn {
 
 export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): UseCalendarDataReturn {
   const tableQuery = useTable(String(tableId));
+
+  const getTimeZone = (fieldMeta: Record<string, any> | undefined) =>
+    fieldMeta?.timeZoneLabel ||
+    fieldMeta?.timeZone ||
+    Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  const buildLocalDate = (datePart: string, timePart: string) => {
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours = 0, minutes = 0] = timePart.split(':').map(Number);
+    return new Date(year, month - 1, day, hours, minutes);
+  };
+
+  const convertDateValue = (
+    dateValue: unknown,
+    fieldMeta: Record<string, any> | undefined,
+    isDateTimeField: boolean,
+    isDateField: boolean
+  ): { eventDate: string; eventDateTime: Date } | null => {
+    if (!dateValue) return null;
+    const toDateString = (value: unknown) => {
+      if (typeof value === 'string') return value;
+      if (value instanceof Date) return value.toISOString();
+      if (typeof value === 'number') return new Date(value).toISOString();
+      return null;
+    };
+    const dateStr = toDateString(dateValue);
+    if (!dateStr) return null;
+    const tz = getTimeZone(fieldMeta);
+
+    const parseZoned = (utcIso: string) => {
+      const zonedDateTime = utcISOToZoned(utcIso, tz);
+      const [datePart, timePart = '00:00'] = zonedDateTime.split(' ');
+      return { datePart, timePart };
+    };
+
+    if (dateStr.endsWith('Z')) {
+      if (isDateTimeField) {
+        try {
+          const { datePart, timePart } = parseZoned(dateStr);
+          return { eventDate: datePart, eventDateTime: buildLocalDate(datePart, timePart) };
+        } catch (error) {
+          console.warn(error);
+        }
+      }
+
+      const [datePart] = dateStr.replace('Z', '').split('T');
+      return { eventDate: datePart, eventDateTime: buildLocalDate(datePart, '00:00') };
+    }
+
+    const [datePart, timePart = '00:00'] = dateStr.split('T');
+    if (isDateTimeField) {
+      try {
+        const { datePart: zonedDate, timePart: zonedTime } = parseZoned(`${datePart}T${timePart}Z`);
+        return { eventDate: zonedDate, eventDateTime: buildLocalDate(zonedDate, zonedTime) };
+      } catch (error) {
+        console.warn(error);
+      }
+    }
+
+    if (isDateField) {
+      return { eventDate: datePart, eventDateTime: buildLocalDate(datePart, '00:00') };
+    }
+
+    return { eventDate: datePart, eventDateTime: buildLocalDate(datePart, timePart) };
+  };
 
   // SDK returns a StandardResponse with `data`; unwrap it to our canonical TableData
   const tableData = useMemo(() => {
@@ -130,14 +196,30 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
     }
 
     // Process events
-    const processedEvents: CalendarEvent[] = currentDateField ? records.map((record: any, idx: number) => {
+    const processedEvents: CalendarEvent[] = currentDateField ? records.reduce((acc: CalendarEvent[], record: any, idx: number) => {
       const rowData = record?.data || record;
       const dateValue = rowData?.[currentDateField.key || ''] || record?.[currentDateField.key || ''];
 
-      if (!dateValue) return null;
+      if (!dateValue) return acc;
 
-      const date = new Date(dateValue);
-      if (Number.isNaN(date.getTime())) return null;
+      const isDateTimeField = currentDateField.type === 'datetime' ||
+        currentDateField.uidt === 'datetime' ||
+        currentDateField.uidt === 'createdtime' ||
+        currentDateField.uidt === 'lastmodifiedtime';
+
+      const isDateField = currentDateField.type === 'date' || currentDateField.uidt === 'date';
+
+      const converted = convertDateValue(
+        dateValue,
+        currentDateField.meta || {},
+        isDateTimeField,
+        isDateField
+      );
+
+      if (!converted) return acc;
+      const { eventDate, eventDateTime } = converted;
+
+      if (Number.isNaN(eventDateTime.getTime())) return acc;
 
       // Generate a consistent color based on the record ID
       const colors = [
@@ -146,15 +228,18 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
       ];
       const colorIndex = (record?.id ?? idx) % colors.length;
 
-      return {
+      acc.push({
         id: record?.id ?? idx,
         title: rowData?.title || rowData?.Title || rowData?.name || `Record ${record?.id || idx}`,
-        date: date.toISOString().split('T')[0],
-        dateTime: date,
+        date: eventDate,
+        dateTime: eventDateTime,
         data: rowData,
         color: colors[colorIndex],
-      };
-    }).filter((event): event is CalendarEvent => event !== null) : [];
+        isDateField: Boolean(isDateField),
+      });
+
+      return acc;
+    }, []) : [];
 
     return {
       uiColumns,

@@ -26,10 +26,7 @@ export interface UseGalleryDataReturn {
   isLoading: boolean;
   error: any;
   refresh: () => void;
-  addRow: (data: Record<string, unknown>) => Promise<void>;
-  insertRowData: (data: Record<string, unknown>) => Promise<void>;
   deleteRecord: (recordId: string) => Promise<void>;
-  updateField: (fieldId: string, data: Record<string, unknown>) => Promise<void>;
   updateView: (viewId: string, updates: Record<string, unknown>) => Promise<void>;
   updateViewConfig: (viewId: string, updates: any) => Promise<void>;
   // Gallery-specific data
@@ -169,17 +166,6 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
     };
   }, [tableData, viewId]);
 
-  // Placeholder actions (these would be implemented with actual API calls)
-  const addRow = async (_data: Record<string, unknown>) => {
-    // Implementation would go here
-    // Note: This is a placeholder - actual implementation would use API mutations
-  };
-
-  const insertRowData = async (_data: Record<string, unknown>) => {
-    // Implementation would go here
-    // Note: This is a placeholder - actual implementation would use API mutations
-  };
-
   const deleteRecord = async (recordId: string) => {
     if (!tableId) {
       console.error('Cannot delete record: tableId is missing');
@@ -189,11 +175,6 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
       model_id: String(tableId),
       row_id: Number(recordId)
     });
-  };
-
-  const updateField = async (_fieldId: string, _data: Record<string, unknown>) => {
-    // Implementation would go here
-    // Note: This is a placeholder - actual implementation would use API mutations
   };
 
   const updateView = async (viewId: string, updates: Record<string, unknown>) => {
@@ -260,10 +241,7 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
         // Error handling is done by the query itself
       });
     },
-    addRow,
-    insertRowData,
     deleteRecord,
-    updateField,
     updateView,
     updateViewConfig,
     ...processedData

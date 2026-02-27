@@ -338,9 +338,9 @@ describe('GanttChart', () => {
 
   it('invokes zoom handlers from the timeline hook', async () => {
     const { timelineHandlers } = renderChart();
-    const zoomOutButton = screen.getByRole('button', { name: /ZoomOutIcon/i });
-    const resetButton = screen.getByRole('button', { name: /Reset/i });
-    const zoomInButton = screen.getByRole('button', { name: /ZoomInIcon/i });
+    const zoomOutButton = screen.getByRole('button', { name: /zoom out timeline/i });
+    const resetButton = screen.getByRole('button', { name: /reset zoom/i });
+    const zoomInButton = screen.getByRole('button', { name: /zoom in timeline/i });
 
     await userEvent.click(zoomOutButton);
     await userEvent.click(resetButton);

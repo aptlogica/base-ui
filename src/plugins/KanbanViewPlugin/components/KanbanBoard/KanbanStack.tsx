@@ -69,6 +69,7 @@ const StackHeader = memo<StackHeaderProps>((props) => {
           onMouseDown={onMenuMouseDown}
           onClick={onMenuClick}
           className="p-1 hover:bg-gray-200 rounded transition-colors"
+          aria-label="Stack menu"
         >
           <MoreHorizontal className="w-3 h-3" />
         </button>
@@ -671,6 +672,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
           <button
             onClick={loadNextPage}
             className="px-4 py-2 text-xs font-medium text-primary-brand hover:text-hover-primary-dark bg-[var(--color-bg-secondary-subtle)] hover:bg-[var(--color-bg-brand-primary)] rounded-xl transition-colors"
+            aria-label="Load more cards"
           >
             Load more ({formatCompactNumber(visibleCards.length - paginatedCards.length)} remaining)
           </button>

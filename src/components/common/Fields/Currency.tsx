@@ -221,7 +221,7 @@ export const Currency: React.FC<CurrencyProps> = ({
   const displayValue = getDisplayValue(localValue, placeholder, currencyLocale, currencyType, precision);
   const displayClassName = `field-component pl-8 ${localValue ? "text-gray-800" : "text-gray-400"} ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`.trim();
   const inputClassName = `field-component pl-8 ${isBorder ? "field-component-focus" : ""} ${disabled || readOnly ? "cursor-not-allowed" : ""}`.trim();
-  const containerClassName = `relative ${className} ${isBorder ? "field-component-border" : ""}`.trim();
+  const containerClassName = `relative truncate ${className} ${isBorder ? "field-component-border" : ""}`.trim();
   const showHelperText = helperText && allowEdit;
 
   const containerProps = readOnly

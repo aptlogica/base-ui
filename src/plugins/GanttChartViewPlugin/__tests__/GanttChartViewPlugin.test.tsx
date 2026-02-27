@@ -90,7 +90,7 @@ describe("GanttChartViewPlugin", () => {
   it("renders GanttChart when data is ready", async () => {
     vi.mocked(matchesViewType).mockReturnValue(true);
     vi.mocked(useGanttData).mockReturnValue({
-      tableData: { data: { model: {} } },
+      tableData: { model: {} },
       isLoading: false,
       error: null,
       ...baseActions,

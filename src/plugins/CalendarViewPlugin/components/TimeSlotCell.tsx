@@ -111,6 +111,7 @@ const TimeSlotCell: React.FC<TimeSlotCellProps> = ({
                 <button
                   onClick={handleCreate}
                   className="p-1 hover:bg-gray-200 rounded"
+                  aria-label={`Create event at ${hour}:00`}
                 >
                   <Plus className="w-4 h-4 text-gray-500" />
                 </button>
@@ -125,6 +126,7 @@ const TimeSlotCell: React.FC<TimeSlotCellProps> = ({
           <button
             onClick={handleCreate}
             className="p-1 hover:bg-gray-200 rounded pointer-events-auto"
+            aria-label={`Create event at ${hour}:00`}
           >
             <Plus className="w-4 h-4 text-gray-500" />
           </button>

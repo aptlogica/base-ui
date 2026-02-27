@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Calendar, Plus, Layers, ZoomIn, ZoomOut } from 'lucide-react';
-import type { TableResponse } from '../../../types/api.types';
+import type { TableData } from '../../../types/api.types';
 import { GanttFieldConfiguration } from './GanttFieldSelector';
 import { FilterPopover } from '../../../components/shared/table/FilterPopover';
 import { SortPopover } from '../../../components/shared/table/SortPopover';
@@ -168,7 +168,7 @@ const ChartTask = React.memo(({
 
   return (
     <div //NOSONAR
-      className={`absolute group transition-all duration-200 ${onEdit ? 'cursor-pointer' : ''
+      className={`absolute group rounded-xl border transition-all duration-200 ${onEdit ? 'cursor-pointer' : ''
         } ${isMilestone ? 'w-0 h-0' : 'bg-background border rounded-xl'
         }`}
       style={{
@@ -201,7 +201,7 @@ const ChartTask = React.memo(({
 
       {/* Task Content */}
       {!isMilestone && (
-        <div className="relative pl-4 pr-3 py-2.5 h-full flex items-center bg-card border-l-4 rounded-xl" style={{ borderColor: task.color }}>
+        <div className="relative pl-4 pr-3 py-2.5 h-full flex items-center bg-card border-l-4 rounded-lg" style={{ borderColor: task.color }}>
           <div className="flex items-center justify-between gap-2 flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <h3 className="font-semibold text-gray-900 text-sm truncate">
@@ -276,7 +276,7 @@ const ChartTask = React.memo(({
 ChartTask.displayName = 'ChartTask';
 
 interface GanttChartProps {
-  tableData?: TableResponse;
+  tableData?: TableData;
   viewId?: string;
   onRefresh?: () => void;
   actions?: {
@@ -295,7 +295,7 @@ interface GanttChartProps {
 
 export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRefresh, actions }) => {
   // Extract base ID for permission checks
-  const baseId = useMemo(() => String(tableData?.data?.model?.base_id ?? ''), [tableData?.data?.model?.base_id]);
+  const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
 
   // Check permissions for read-only access
   const {
@@ -353,6 +353,17 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
     fieldConfig: localFieldConfig,
   });
 
+  const timelineWidth = useMemo(() => timelineDays.length * dayWidth, [timelineDays.length, dayWidth]);
+  const todayIndex = useMemo(() => {
+    if (timelineDays.length === 0) return -1;
+    const today = new Date();
+    const todayKey = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    return timelineDays.findIndex((day) => {
+      const dayKey = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
+      return dayKey === todayKey;
+    });
+  }, [timelineDays]);
+
   // Modals hook
   const {
     modalState,
@@ -377,7 +388,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
     actions,
     onRefresh: onRefresh || (() => { }),
     columns: processedData.columns,
-    rawRecords: tableData?.data?.records || [],
+    rawRecords: tableData?.records || [],
     startDateField: processedData.startDateField,
     endDateField: processedData.endDateField,
   });
@@ -448,8 +459,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
     }));
   }, [processedData.columns]);
 
-  // FRONTEND PAGINATION: Paginate sorted tasks for sidebar
-  // This allows rendering only a portion of tasks initially for better performance
+  // FRONTEND PAGINATION: Paginate tasks for both sidebar and chart to keep rows aligned
+  // Use the same ordered list for both panels to avoid row mismatch.
   const {
     allLoadedData: paginatedTasks,
     loadNextPage,
@@ -460,6 +471,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
     pageSize: 30, // Same as GridView, Kanban, Gallery, and Calendar
     initialPage: 1,
   });
+
+  const visibleTasks = useMemo(() => paginatedTasks, [paginatedTasks]);
 
   // Loading state for "Load more" button
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -532,18 +545,19 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
   const ROW_HEIGHT = 60;
 
   const virtualizer = useVirtualizer({
-    count: filteredTasks.length,
+    count: visibleTasks.length,
     getScrollElement: () => chartScrollParentRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 8,
   });
 
   const virtualItems = virtualizer.getVirtualItems();
+  const totalChartHeight = Math.max(virtualizer.getTotalSize() + 20, 100);
 
   // Memoize dependency lines (render only for visible virtual items)
   const dependencyLines = useMemo(() => {
     return virtualItems.map((virtualItem, idx) => {
-      const task = filteredTasks[virtualItem.index];
+      const task = visibleTasks[virtualItem.index];
       if (!task) return null;
       const position = getTaskPosition(task);
       const rowTop = virtualItem.start + 10;
@@ -551,10 +565,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
       // Connect to the next virtual item if consecutive in data
       const nextVirtual = virtualItems[idx + 1];
       if (nextVirtual) {
-        const nextTask = filteredTasks[nextVirtual.index];
-        if (nextTask && task.endDate <= nextTask.startDate) {
-          const nextPosition = getTaskPosition(nextTask);
-          const nextRowTop = nextVirtual.start + 10;
+      const nextTask = visibleTasks[nextVirtual.index];
+      if (nextTask && task.endDate <= nextTask.startDate) {
+        const nextPosition = getTaskPosition(nextTask);
+        const nextRowTop = nextVirtual.start + 10;
 
           return (
             <line
@@ -572,7 +586,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
       }
       return null;
     }).filter(Boolean);
-  }, [filteredTasks, getTaskPosition, virtualItems]);
+  }, [visibleTasks, getTaskPosition, virtualItems]);
 
   // Memoize timeline header cells to prevent re-rendering on zoom
   const timelineHeaderCells = useMemo(() => {
@@ -594,6 +608,82 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
       );
     });
   }, [timelineDays, dayWidth]);
+
+  const todayLineStyle = useMemo(() => {
+    if (todayIndex < 0) return null;
+    return {
+      left: todayIndex * dayWidth,
+      width: 1,
+      backgroundColor: 'var(--color-brand-500)',
+    } as const;
+  }, [todayIndex, dayWidth]);
+
+  const timelineBackgroundColumns = useMemo(() => {
+    return timelineDays.map((day, index) => {
+      const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+      return (
+        <div
+          key={`bg-${day.getTime()}-${index}`}
+          className={isWeekend ? 'bg-gray-50' : 'bg-transparent'}
+          style={{ width: dayWidth, height: '100%' }}
+        />
+      );
+    });
+  }, [timelineDays, dayWidth]);
+
+  const rowBackgrounds = useMemo(() => {
+    return virtualItems.map((virtualItem) => {
+      const isEvenRow = virtualItem.index % 2 === 0;
+      return (
+        <div
+          key={`row-bg-${virtualItem.index}`}
+          className={isEvenRow ? 'bg-white/60' : 'bg-white/0'}
+          style={{
+            position: 'absolute',
+            top: virtualItem.start,
+            left: 0,
+            width: timelineWidth,
+            height: ROW_HEIGHT,
+            borderBottom: '1px solid rgba(0,0,0,0.06)',
+          }}
+        />
+      );
+    });
+  }, [virtualItems, ROW_HEIGHT, timelineWidth]);
+
+  // Sync vertical scroll between task list and chart
+  const isSyncingScrollRef = useRef(false);
+  const syncRafRef = useRef<number | null>(null);
+
+  const syncScrollTop = useCallback((source: 'list' | 'chart') => {
+    if (isSyncingScrollRef.current) return;
+    const list = scrollContainerRef.current;
+    const chart = chartScrollParentRef.current;
+    if (!list || !chart) return;
+
+    const sourceEl = source === 'list' ? list : chart;
+    const targetEl = source === 'list' ? chart : list;
+    const nextTop = sourceEl.scrollTop;
+
+    if (Math.abs(targetEl.scrollTop - nextTop) < 1) return;
+
+    isSyncingScrollRef.current = true;
+    if (syncRafRef.current !== null) {
+      cancelAnimationFrame(syncRafRef.current);
+    }
+    syncRafRef.current = requestAnimationFrame(() => {
+      targetEl.scrollTop = nextTop;
+      isSyncingScrollRef.current = false;
+    });
+  }, []);
+
+  const handleTaskListScroll = useCallback(() => {
+    syncScrollTop('list');
+  }, [syncScrollTop]);
+
+  const handleChartScroll = useCallback(() => {
+    syncScrollTop('chart');
+  }, [syncScrollTop]);
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
@@ -636,6 +726,17 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <button onClick={zoomOut} className="p-1 hover:bg-gray-100 rounded" aria-label="Zoom out timeline">
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <button onClick={resetZoom} className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded" aria-label="Reset zoom">
+                Reset
+              </button>
+              <button onClick={zoomIn} className="p-1 hover:bg-gray-100 rounded" aria-label="Zoom in timeline">
+                <ZoomIn className="w-4 h-4" />
+              </button>
+            </div>
             {/* New Record Button - only show if user can create records and not read-only */}
             {!isReadOnly && canCreateRecord() && (
               <button
@@ -709,6 +810,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
           <div
             ref={scrollContainerRef}
             className="flex-1 overflow-y-auto p-3 space-y-2"
+            onScroll={handleTaskListScroll}
           >
             {totalItems === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -753,23 +855,47 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
         </div>
 
         {/* Gantt Chart Area - Single unified scrollable container */}
-        <div className="flex-1 overflow-auto" ref={chartScrollParentRef}>
+        <div className="flex-1 overflow-auto" ref={chartScrollParentRef} onScroll={handleChartScroll}>
           {/* Timeline Header - Memoized */}
-          <div className="bg-card sticky top-0 z-10">
+          <div className="bg-card top-0 z-10 relative">
             <div className="flex">
               <div className="flex-1">
-                <div className="flex" style={{ width: timelineDays.length * dayWidth }}>
+                <div className="flex" style={{ width: timelineWidth }}>
                   {timelineHeaderCells}
                 </div>
               </div>
             </div>
+            {todayLineStyle && (
+              <div
+                className="absolute top-0 bottom-0 pointer-events-none"
+                style={{ ...todayLineStyle, zIndex: 20 }}
+              />
+            )}
           </div>
 
           {/* Chart Area - Same container as timeline (virtualized) */}
           <div
             className="relative"
-            style={{ height: Math.max(virtualizer.getTotalSize() + 20, 100) }}
+            style={{ height: totalChartHeight, width: timelineWidth }}
           >
+            {/* Timeline background grid */}
+            <div className="absolute inset-0 flex" style={{ width: timelineWidth, height: totalChartHeight }}>
+              {timelineBackgroundColumns}
+            </div>
+
+            {/* Alternating row backgrounds and row lines */}
+            <div className="absolute inset-0 pointer-events-none" style={{ width: timelineWidth, height: totalChartHeight }}>
+              {rowBackgrounds}
+            </div>
+
+            {/* Today marker */}
+            {todayLineStyle && (
+              <div
+                className="absolute top-0 bottom-0 pointer-events-none"
+                style={{ ...todayLineStyle, zIndex: 5 }}
+              />
+            )}
+
             {/* SVG for Dependencies - Memoized */}
             <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
               <defs>
@@ -783,7 +909,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
 
             {/* Chart Tasks - Using memoized components + virtualization */}
             {virtualItems.map((virtualItem) => {
-              const task = filteredTasks[virtualItem.index];
+              const task = visibleTasks[virtualItem.index];
               if (!task) return null;
               const position = getTaskPosition(task);
               const rowTop = virtualItem.start + 10;
@@ -817,17 +943,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
             <span>Zoom: {dayWidth}px/day</span>
             <span>Timeline: {timelineDays.length} days</span>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={zoomOut} className="p-1 hover:bg-gray-100 rounded">
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <button onClick={resetZoom} className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">
-              Reset
-            </button>
-            <button onClick={zoomIn} className="p-1 hover:bg-gray-100 rounded">
-              <ZoomIn className="w-4 h-4" />
-            </button>
-          </div>
+          <div />
         </div>
       </div>
 
@@ -836,7 +952,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
         <CreateRecordModal
           isOpen={modalState.create.isOpen}
           onClose={handleCloseCreateModal}
-          table={{ id: tableData?.data?.model?.id, title: tableData?.data?.model?.title || 'Gantt Chart' } as any}
+          table={{ id: tableData?.model?.id, title: tableData?.model?.title || 'Gantt Chart' } as any}
           fields={processedData.columns}
           title="New record"
           submitLabel="Save record"
@@ -849,7 +965,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
         <EditRecordModal
           isOpen={modalState.edit.isOpen}
           onClose={handleCloseEditModal}
-          table={{ id: tableData?.data?.model?.id, title: tableData?.data?.model?.title || 'Gantt Chart' } as any}
+          table={{ id: tableData?.model?.id, title: tableData?.model?.title || 'Gantt Chart' } as any}
           fields={processedData.columns}
           recordId={String(modalState.edit.selectedTask?.id || '')}
           title="Edit record"

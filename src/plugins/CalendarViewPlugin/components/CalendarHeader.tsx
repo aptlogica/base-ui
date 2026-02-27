@@ -262,6 +262,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <button
               onClick={() => navigateMonth('prev')}
               className="p-1 hover:bg-gray-100 rounded"
+              aria-label="Previous month"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -273,6 +274,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <button
               onClick={() => navigateMonth('next')}
               className="p-1 hover:bg-gray-100 rounded"
+              aria-label="Next month"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -327,6 +329,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <button
               onClick={() => navigateMonth('prev')}
               className="p-1 hover:bg-gray-100 rounded"
+              aria-label="Previous month"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -338,6 +341,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <button
               onClick={() => navigateMonth('next')}
               className="p-1 hover:bg-gray-100 rounded"
+              aria-label="Next month"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -408,6 +412,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <button
               onClick={() => navigateYearByDecade('prev')}
               className="p-1 hover:bg-gray-100 rounded"
+              aria-label="Previous decade"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -419,6 +424,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <button
               onClick={() => navigateYearByDecade('next')}
               className="p-1 hover:bg-gray-100 rounded"
+              aria-label="Next decade"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -462,6 +468,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <button
               onClick={() => navigateYear('prev')}
               className="p-1 hover:bg-gray-100 rounded"
+              aria-label="Previous year"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -473,6 +480,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <button
               onClick={() => navigateYear('next')}
               className="p-1 hover:bg-gray-100 rounded"
+              aria-label="Next year"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -515,6 +523,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               <button
                 onClick={() => setShowDatePicker(!showDatePicker)}
                 className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-900 bg-card border rounded-xl hover:bg-gray-50 focus:outline-none"
+                aria-label="Select date"
               >
                 <span>{getCurrentDisplayText()}</span>
                 <ChevronDown className="w-4 h-4" />
@@ -550,6 +559,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                   else navigateMonth('prev');
                 }}
                 className="p-2 text-gray-500 hover:bg-gray-100 rounded-xl"
+                aria-label="Previous"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -561,6 +571,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                   else navigateMonth('next');
                 }}
                 className="p-2 text-gray-500 hover:bg-gray-100 rounded-xl"
+                aria-label="Next"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -668,6 +679,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <button
               onClick={onExport}
               className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
+              aria-label="Export"
             >
               <ExternalLink className="w-5 h-5" />
             </button>
@@ -676,6 +688,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <button
               onClick={onToggleSidebar}
               className="p-2 text-gray-500 hover:bg-gray-100 rounded-md"
+              aria-label="Toggle sidebar"
             >
               <PanelRightClose className="w-5 h-5" />
             </button>
@@ -693,6 +706,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                 <button
                   onClick={() => setShowDatePicker(!showDatePicker)}
                   className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-900 bg-card border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none"
+                  aria-label="Select date"
                 >
                   <span>{getCurrentDisplayText()}</span>
                   <ChevronDown className="w-4 h-4" />
@@ -748,6 +762,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                   else navigateMonth('prev');
                 }}
                 className="p-2 text-gray-500 hover:bg-gray-100 rounded-md"
+                aria-label="Previous"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -759,6 +774,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                   else navigateMonth('next');
                 }}
                 className="p-2 text-gray-500 hover:bg-gray-100 rounded-md"
+                aria-label="Next"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -767,6 +783,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               <button
                 onClick={onExport}
                 className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
+                aria-label="Export"
               >
                 <ExternalLink className="w-5 h-5" />
               </button>
@@ -775,6 +792,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               <button
                 onClick={onToggleSidebar}
                 className="p-2 text-gray-500 hover:bg-gray-100 rounded-md"
+                aria-label="Toggle sidebar"
               >
                 <PanelRightClose className="w-4 h-4" />
               </button>

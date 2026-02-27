@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTable, useAddRow, useDeleteRecord, useInsertRowData, useUpdateField, useUpdateView } from '../../../hooks/useApi';
-import type { TableResponse, Column, View } from '../../../types/api.types';
+import type { TableData, Column, View } from '../../../types/api.types';
 import { fieldsToFilter } from '../../../types/constants';
 
 // Gantt-specific types
@@ -33,7 +33,7 @@ export interface UseGanttDataOptions {
 
 export interface UseGanttDataReturn {
   // Data
-  tableData?: TableResponse;
+  tableData?: TableData;
   tasks: GanttTask[];
   columns: Column[];
   viewConfig: GanttViewConfig;
@@ -132,7 +132,7 @@ const findFieldColumns = (
 
 export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGanttDataReturn => {
   // Fetch table data
-  const { data: tableData, isLoading, error, refetch } = useTable(tableId);
+  const tableQuery = useTable(tableId);
   
   // CRUD operations
   const addRow = useAddRow();
@@ -142,9 +142,14 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
   const updateViewMutation = useUpdateView();
 
   // Process data into Gantt-ready format
+  const tableData = useMemo(() => {
+    const raw = tableQuery.data as any;
+    if (!raw) return undefined;
+    return (raw.data ?? raw) as TableData;
+  }, [tableQuery.data]);
+
   const processedData = useMemo(() => {
-    const tableDataTyped = tableData as TableResponse | undefined;
-    if (!tableDataTyped?.data) {
+    if (!tableData) {
       return {
         tasks: [],
         columns: [],
@@ -162,7 +167,7 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
       };
     }
 
-    const { columns, records, views } = tableDataTyped.data;
+    const { columns, records, views } = tableData;
 
     // Filter out unwanted columns
     const filteredColumns = columns.filter(
@@ -171,7 +176,7 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
     
     // Find current view
     const currentView = viewId
-      ? (views?.find((v: View) => String(v.id) === String(viewId)) || null)
+      ? (views?.find((v: View) => String(v.id) === String(viewId)) || undefined)
       : (views?.find((v: View) => v.type === 'ganttChart') || views?.[0]);
     const viewMeta = currentView?.meta ?? ({} as Record<string, unknown>);
 
@@ -301,11 +306,10 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
 
 
   const createTask = async (taskData: Partial<GanttTask>) => {
-    const tableDataTyped = tableData as TableResponse | undefined;
-    if (!tableDataTyped?.data?.model?.id) return String(Date.now());
+    if (!tableData?.model?.id) return String(Date.now());
     
     const { startDateField, endDateField, titleField, progressField } = processedData;
-    const modelId = String(tableDataTyped.data.model.id);
+    const modelId = String(tableData.model.id);
     
     // Create a new row first
     const result = await addRow.mutateAsync({
@@ -355,24 +359,22 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
   };
 
   const deleteTask = async (taskId: string) => {
-    const tableDataTyped = tableData as TableResponse | undefined;
-    if (!tableDataTyped?.data?.model?.id) return;
+    if (!tableData?.model?.id) return;
     
     await deleteRecord.mutateAsync({
-      model_id: String(tableDataTyped.data.model.id),
+      model_id: String(tableData.model.id),
       row_id: Number(taskId)
     });
   };
 
   const updateTaskProgress = async (taskId: string, progress: number) => {
-    const tableDataTyped = tableData as TableResponse | undefined;
-    if (!tableDataTyped?.data?.model?.id) return;
+    if (!tableData?.model?.id) return;
     
     const { progressField } = processedData;
     if (!progressField) return;
     
     await insertRowData.mutateAsync({
-      model_id: String(tableDataTyped.data.model.id),
+      model_id: String(tableData.model.id),
       column_id: String(progressField.id),
       row_id: Number(taskId),
       value: progress
@@ -380,14 +382,13 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
   };
 
   const moveTask = async (taskId: string, newStartDate: Date, newEndDate: Date) => {
-    const tableDataTyped = tableData as TableResponse | undefined;
-    if (!tableDataTyped?.data?.model?.id) return;
+    if (!tableData?.model?.id) return;
     
     const { startDateField, endDateField } = processedData;
     
     if (startDateField) {
       await insertRowData.mutateAsync({
-        model_id: String(tableDataTyped.data.model.id),
+        model_id: String(tableData.model.id),
         column_id: String(startDateField.id),
         row_id: Number(taskId),
         value: newStartDate.toISOString().split('T')[0]
@@ -396,7 +397,7 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
     
     if (endDateField) {
       await insertRowData.mutateAsync({
-        model_id: String(tableDataTyped.data.model.id),
+        model_id: String(tableData.model.id),
         column_id: String(endDateField.id),
         row_id: Number(taskId),
         value: newEndDate.toISOString().split('T')[0]
@@ -418,16 +419,16 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
 
   return {
     // Data
-    tableData: tableData as TableResponse | undefined,
+    tableData,
     ...processedData,
     
     // State
-    isLoading,
-    error,
+    isLoading: tableQuery.isLoading,
+    error: tableQuery.error,
     
     // Actions
     refresh: () => {
-      void refetch();
+      void tableQuery.refetch();
     },
     addRow,
     insertRowData,

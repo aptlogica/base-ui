@@ -23,7 +23,7 @@ const CalendarViewPlugin: Plugin = {
   initialize: async (api: PluginAPI) => {
     // Single component: fetch and render CalendarView directly
     const CalendarViewWrapper: React.FC<{ tableId: string; viewId?: string }> = ({ tableId, viewId }) => {
-      const { tableData, isLoading, error, refresh, addRow, insertRowData, deleteRecord, updateField, updateView, updateEvent, createEvent, deleteEvent, changeDateField, updateViewConfig } = useCalendarData({ tableId, viewId });
+      const { tableData, uiColumns, uiData, uiTableId, events, dateField, view, isLoading, error, refresh, addRow, insertRowData, deleteRecord, updateField, updateView, updateEvent, createEvent, deleteEvent, changeDateField, updateViewConfig } = useCalendarData({ tableId, viewId });
 
       if (error) {
         let errorMessage: string;
@@ -57,6 +57,12 @@ const CalendarViewPlugin: Plugin = {
       return (
         <CalendarView
           tableData={tableData}
+          uiColumns={uiColumns}
+          uiData={uiData}
+          uiTableId={uiTableId}
+          events={events}
+          dateField={dateField}
+          view={view}
           viewId={viewId}
           onRefresh={() => refresh().catch(console.error)}
           actions={{ addRow, insertRowData, deleteRecord, updateField, updateView, updateEvent, createEvent, deleteEvent, changeDateField, updateViewConfig }}

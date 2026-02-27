@@ -61,7 +61,7 @@ const GanttChartViewPlugin: Plugin = {
       }
       
       // Show loading state while data is being fetched
-      if (isLoading || !tableData?.data?.model) {
+      if (isLoading || !tableData?.model) {
         return (
           <div className="h-full flex items-center justify-center">
             <Loader size={10} />

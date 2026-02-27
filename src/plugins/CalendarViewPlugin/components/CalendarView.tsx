@@ -14,7 +14,7 @@ import { CalendarEvent } from "../hooks/useCalendarData";
 import { GridColumn } from "../../GridViewPlugin/types/grid.types";
 import { applyFilters } from "../../../utils/filterUtils";
 import { buildInitialValuesForEdit } from "../../../utils/initialValues";
-import { utcISOToZoned, zonedToUtcISO } from '../../../utils/dateUtils';
+import { zonedToUtcISO } from '../../../utils/dateUtils';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
 // Custom hooks
 import { useCalendarViewConfig } from "../hooks/useCalendarViewConfig";
@@ -28,6 +28,12 @@ interface CalendarViewProps {
     records: any[];
     views?: any[];
   };
+  uiColumns: GridColumn[];
+  uiData: any[];
+  uiTableId: string;
+  events: CalendarEvent[];
+  dateField?: GridColumn;
+  view: any;
   viewId?: string;
   onRefresh: () => void;
   actions: {
@@ -46,6 +52,12 @@ interface CalendarViewProps {
 
 const CalendarView: React.FC<CalendarViewProps> = ({
   tableData,
+  uiColumns,
+  uiData,
+  uiTableId,
+  events,
+  dateField,
+  view,
   viewId,
   onRefresh,
   actions,
@@ -58,205 +70,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   // Safe handlers pattern: Check read-only once at top level
   const isReadOnly = isBaseReadOnly();
-
-  // Process raw tableData into calendar-specific data
-  const { uiColumns, uiData, uiTableId, events, dateField, view } = useMemo(() => {
-    const model = tableData.model || ({} as any);
-    const rawColumns = Array.isArray(tableData.columns) ? tableData.columns : [];
-    const rawRecords = Array.isArray(tableData.records) ? tableData.records : [];
-    const views = Array.isArray(tableData.views) ? tableData.views : [];
-    // Optimized with Map for O(1) lookup instead of O(n) find()
-    const viewsMap = new Map(views.map(v => [String(v?.id), v]));
-    const currentView = viewId ? viewsMap.get(String(viewId)) || null : null;
-
-    // Process columns (simplified version of useCalendarData logic)
-    let cols = rawColumns
-      .slice()
-      .sort((a: any, b: any) => (a?.order_index ?? 0) - (b?.order_index ?? 0))
-      .map((apiColumn: any) => ({
-        id: apiColumn.id ? String(apiColumn.id) : undefined,
-        key: String(apiColumn.column_name ?? apiColumn.title ?? apiColumn.id ?? ''),
-        column_name: apiColumn.column_name,
-        title: String(apiColumn.title ?? apiColumn.column_name ?? ''),
-        type: apiColumn.uidt || 'text',
-        uidt: apiColumn.uidt,
-        width: 175,
-        position: apiColumn.order_index ?? 0,
-        order_index: apiColumn.order_index ?? 0,
-        isSystem: Boolean(apiColumn.system) && String(apiColumn.column_name ?? '').toLowerCase() !== 'title',
-        system: Boolean(apiColumn.system) && String(apiColumn.column_name ?? '').toLowerCase() !== 'title',
-        hidden: Boolean(apiColumn.hidden),
-        is_hidden: Boolean(apiColumn.is_hidden),
-        meta: apiColumn.meta,
-      }));
-
-    // Apply view-specific field configuration if available
-    // Optimized with Map for O(1) field config lookups instead of O(n) find() calls
-    if (currentView?.meta?.fieldConfig && Array.isArray(currentView.meta.fieldConfig)) {
-      const fieldConfigMap = new Map(
-        currentView.meta.fieldConfig.map((fc: any) => [String(fc.id), fc])
-      );
-
-      cols = cols.map(col => {
-        const fieldConfig = fieldConfigMap.get(String(col.id)) as any;
-        if (fieldConfig) {
-          return {
-            ...col,
-            hidden: Boolean(fieldConfig.isHidden),
-            is_hidden: Boolean(fieldConfig.isHidden),
-            position: fieldConfig.position ?? col.position
-          };
-        }
-        return col;
-      }).sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-    }
-
-    // Find date fields
-    // Optimized with Set for O(1) lookups instead of O(n) includes() calls
-    const dateFieldTypesSet = new Set(['datetime', 'date', 'createdtime', 'lastmodifiedtime']);
-    const availableDateFields = cols.filter(col => {
-      const colType = col.type?.toLowerCase() || '';
-      const colUidt = col.uidt?.toLowerCase() || '';
-      return dateFieldTypesSet.has(colType) || dateFieldTypesSet.has(colUidt);
-    });
-
-    // Create Map for O(1) lookups
-    const availableDateFieldsMap = new Map(availableDateFields.map(f => [String(f.id), f]));
-
-    // Determine current date field
-    const selectedDateFieldId = currentView?.meta?.date_field_id;
-    let currentDateField = selectedDateFieldId
-      ? availableDateFieldsMap.get(String(selectedDateFieldId))
-      : null;
-
-    if (!currentDateField && availableDateFields.length > 0) {
-      currentDateField = availableDateFields.find(f =>
-        f.key?.toLowerCase().includes('start_date') ||
-        f.key?.toLowerCase().includes('created_at')
-      ) || availableDateFields[0];
-    }
-
-    // Ensure currentDateField is exactly the same object as in availableDateFields
-    if (currentDateField) {
-      currentDateField = availableDateFieldsMap.get(String(currentDateField.id)) || currentDateField;
-    }
-
-    // Process events from raw records (filtering and sorting will be applied later)
-    const processedEvents: CalendarEvent[] = currentDateField ? rawRecords.map((record: any, idx: number): CalendarEvent | null => {
-      const rowData = record?.data || record;
-      const dateValue = rowData?.[currentDateField.key || ''] || record?.[currentDateField.key || ''];
-
-      if (!dateValue) return null;
-
-      // Check if this is a datetime field (not just date)
-      const isDateTimeField = currentDateField.type === 'datetime' ||
-        currentDateField.uidt === 'datetime' ||
-        currentDateField.type === 'createdtime' ||
-        currentDateField.uidt === 'createdtime' ||
-        currentDateField.type === 'lastmodifiedtime' ||
-        currentDateField.uidt === 'lastmodifiedtime';
-
-      // Check if this is a date field (not datetime)
-      const isDateField = currentDateField.type === 'date' || currentDateField.uidt === 'date';
-
-      // Parse date value - handle both UTC (with Z) and local time
-      const dateStr = String(dateValue);
-
-      let eventDate: string;
-      let eventDateTime: Date;
-
-      if (dateStr.endsWith('Z')) {
-        // UTC format
-        if (isDateTimeField) {
-          // For datetime fields, convert UTC to configured timezone (like DateTime component)
-          try {
-            // Get timezone from field meta/config (same logic as DateTime component)
-            const fieldMeta = currentDateField.meta || {};
-            const tz = fieldMeta.timeZoneLabel || fieldMeta.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-            // Convert UTC ISO to configured timezone (returns "yyyy-MM-dd HH:mm" format)
-            const zonedDateTime = utcISOToZoned(dateStr, tz);
-            const [datePart, timePart = '00:00'] = zonedDateTime.split(' ');
-
-            eventDate = datePart; // Use the timezone-converted date
-
-            // Parse the timezone-converted datetime
-            const [year, month, day] = datePart.split('-').map(Number);
-            const [hours = 0, minutes = 0] = timePart.split(':').map(Number);
-            eventDateTime = new Date(year, month - 1, day, hours, minutes);
-          } catch (error) {
-            console.warn(error);
-            // Fallback to original logic if conversion fails
-            const isoStr = dateStr.replace('Z', '');
-            const [datePart, timePart = '00:00'] = isoStr.split('T');
-            eventDate = datePart;
-            const [year, month, day] = datePart.split('-').map(Number);
-            const [hours = 0, minutes = 0] = timePart.split(':').map(Number);
-            eventDateTime = new Date(year, month - 1, day, hours, minutes);
-          }
-        } else {
-          // For date fields, use UTC date directly (no time conversion needed)
-          const isoStr = dateStr.replace('Z', '');
-          const [datePart] = isoStr.split('T');
-          eventDate = datePart;
-          const [year, month, day] = datePart.split('-').map(Number);
-          eventDateTime = new Date(year, month - 1, day, 0, 0);
-        }
-      } else {
-        // Naive datetime (no timezone suffix). Treat as UTC (grid stores UTC without Z) and convert for display.
-        const [datePart, timePart = '00:00'] = dateStr.split('T');
-
-        if (isDateTimeField) {
-          try {
-            const fieldMeta = currentDateField.meta || {};
-            const tz = fieldMeta.timeZoneLabel || fieldMeta.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-            const utcIso = `${datePart}T${timePart}Z`;
-            const zonedDateTime = utcISOToZoned(utcIso, tz);
-            const [zonedDate, zonedTime = '00:00'] = zonedDateTime.split(' ');
-            eventDate = zonedDate;
-            const [year, month, day] = zonedDate.split('-').map(Number);
-            const [hours = 0, minutes = 0] = zonedTime.split(':').map(Number);
-            eventDateTime = new Date(year, month - 1, day, hours, minutes);
-          } catch (error) {
-            console.warn(error);
-            eventDate = datePart;
-            const [year, month, day] = datePart.split('-').map(Number);
-            const [hours = 0, minutes = 0] = timePart.split(':').map(Number);
-            eventDateTime = new Date(year, month - 1, day, hours, minutes);
-          }
-        } else {
-          eventDate = datePart;
-          const [year, month, day] = datePart.split('-').map(Number);
-          const [hours = 0, minutes = 0] = timePart.split(':').map(Number);
-          eventDateTime = new Date(year, month - 1, day, hours, minutes);
-        }
-      }
-
-      if (Number.isNaN(eventDateTime.getTime())) return null;
-
-      return {
-        id: record?.id ?? idx,
-        title: rowData?.title || rowData?.Title || rowData?.name || '-',
-        date: eventDate,
-        dateTime: eventDateTime,
-        data: rowData,
-        color: '#3b82f6',
-        isDateField: Boolean(isDateField), // Add this flag to help components decide how to display time
-      };
-    }).filter((event): event is CalendarEvent => event !== null) : [];
-
-
-
-    return {
-      uiColumns: cols,
-      uiData: rawRecords,
-      uiTableId: String(model?.id ?? ''),
-      view: currentView,
-      dateField: currentDateField,
-      dateFields: availableDateFields,
-      events: processedEvents,
-    };
-  }, [tableData, viewId]);
 
   const {
     updateView,
