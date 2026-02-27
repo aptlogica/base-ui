@@ -857,7 +857,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
         {/* Gantt Chart Area - Single unified scrollable container */}
         <div className="flex-1 overflow-auto" ref={chartScrollParentRef} onScroll={handleChartScroll}>
           {/* Timeline Header - Memoized */}
-          <div className="bg-card sticky top-0 z-10 relative">
+          <div className="bg-card top-0 z-10 relative">
             <div className="flex">
               <div className="flex-1">
                 <div className="flex" style={{ width: timelineWidth }}>
