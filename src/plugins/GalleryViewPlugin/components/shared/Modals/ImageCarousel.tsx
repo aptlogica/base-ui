@@ -82,7 +82,9 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
           controls
           src={file?.url}
           className="w-full max-w-3xl"
-        />
+        >
+          <track kind="captions" />
+        </audio>
       );
     }
 
@@ -92,7 +94,9 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
           controls
           src={file?.url}
           className="max-w-full max-h-full rounded-none shadow-xl"
-        />
+        >
+          <track kind="captions" />
+        </video>
       );
     }
 
