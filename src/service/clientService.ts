@@ -11,7 +11,7 @@ interface TokenData {
   refresh_expires_at?: number;
 }
 
-const STORAGE_KEY = '_st_'; 
+const STORAGE_KEY = '_st_';
 const REFRESH_KEY = '_rt_';
 
 const OBFUSCATE_TOKENS: boolean = Boolean((import.meta as any).env?.VITE_TOKEN_OBFUSCATE);
@@ -692,10 +692,10 @@ export async function getTablesByBaseIdService(id: string) {
 export async function updateBaseService(id: string, params: any) {
   // Separate image from other params since it needs special handling
   const { image, ...updateParams } = params;
-  
+
   // Always update the base metadata first
   const updateResult = await makeAuthenticatedCall(() => client.baseService.update(id, updateParams));
-  
+
   // If image is provided, upload it separately
   if (image instanceof File || image instanceof Blob) {
     try {
@@ -887,8 +887,8 @@ export async function removeAttachmentsService(params: { model_id: string; colum
   return await makeAuthenticatedCall(() => client.tableService.removeAttachments(params));
 }
 
-export async function updateAssetByIdService(id: string, params: { title?: string }) {
-  return await makeAuthenticatedCall(() => client.tableService.updateAssetById(id, params));
+export async function updateAttachmentService(params: { model_id: string, column_id: string, row_id: number, asset_id: string, content: { title?: string } }) {
+  return await makeAuthenticatedCall(() => client.tableService.updateAttachment(params));
 }
 
 export async function addImageService(files: File[], onProgress?: (progressEvent: ProgressEvent) => void) {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Download, Image, Paperclip, Edit, Trash2, Copy, Check } from 'lucide-react';
 import { ImageCarousel } from './ImageCarousel';
-import { useRemoveAttachments, useUpdateAssetById } from '../../../../../hooks/useApi';
+import { useRemoveAttachments, useUpdateAttachment } from '../../../../../hooks/useApi';
 
 interface AttachmentPreviewModalProps {
   isOpen: boolean;
@@ -40,7 +40,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
 
   // API hooks
   const removeAttachmentsMutation = useRemoveAttachments();
-  const updateAssetMutation = useUpdateAssetById();
+  const updateAttachmentMutation = useUpdateAttachment();
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -102,9 +102,12 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
       const attachment = attachments[index];
       if (editingTitle.trim() && editingTitle !== (attachment.title || attachment.name)) {
         // Update via API if we have the required parameters
-        if (attachment.id) {
-          await updateAssetMutation.mutateAsync({
-            id: attachment.id,
+        if (model_id && column_id && row_id && attachment.id) {
+          await updateAttachmentMutation.mutateAsync({
+            model_id,
+            column_id,
+            row_id,
+            asset_id: attachment.id,
             title: editingTitle.trim()
           });
         }

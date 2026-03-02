@@ -4,14 +4,14 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AttachmentModal } from '../AttachmentModal';
 
 const addAttachmentMutateAsync = vi.fn();
-const updateAssetMutateAsync = vi.fn();
+const updateAttachmentMutateAsync = vi.fn();
 
 vi.mock('react-dom', () => ({
   createPortal: (node: React.ReactNode) => node,
 }));
 
 vi.mock('../../../../../../hooks/useApi', () => ({
-  useUpdateAssetById: () => ({ mutateAsync: updateAssetMutateAsync, isPending: false }),
+  useUpdateAttachment: () => ({ mutateAsync: updateAttachmentMutateAsync, isPending: false }),
   useAddAttachment: () => ({ mutateAsync: addAttachmentMutateAsync }),
 }));
 
