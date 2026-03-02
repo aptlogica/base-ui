@@ -339,7 +339,7 @@ export const Lookup: React.FC<LookupProps> = ({
       {isDropdownOpen && hiddenItems.length > 0 && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-50 bg-card border rounded-xl shadow-lg min-w-[300px] max-w-[500px]"
+          className="fixed z-50 bg-gray-100 ml-2 border rounded-xl shadow-lg min-w-[300px] max-w-[500px]"
           style={{
             top: `${dropdownPosition.top}px`,
             left: `${dropdownPosition.left}px`

@@ -9,7 +9,7 @@ import {
   useUpdateOrganization,
   useAddAttachment,
   useRemoveAttachments,
-  useUpdateAssetById,
+  useUpdateAttachment,
   useDeactivateTenantUser,
 } from "../useApi";
 import * as apiHooks from "../useApi";
@@ -50,7 +50,7 @@ import {
   updateOrganizationService,
   addAttachmentService,
   removeAttachmentsService,
-  updateAssetByIdService,
+  updateAttachmentService,
   addImageService,
   getUserProfileByIDService,
   updateUserProfileService,
@@ -123,7 +123,7 @@ vi.mock("../../service/clientService", () => ({
   updateOrganizationService: vi.fn(),
   addAttachmentService: vi.fn(),
   removeAttachmentsService: vi.fn(),
-  updateAssetByIdService: vi.fn(),
+  updateAttachmentService: vi.fn(),
   addImageService: vi.fn(),
   getUserProfileByIDService: vi.fn(),
   updateUserProfileService: vi.fn(),
@@ -372,16 +372,28 @@ describe("useApi hooks", () => {
     );
   });
 
-  it("useUpdateAssetById invalidates tables and workspaces", async () => {
+  it("useUpdateAttachment invalidates tables and workspaces", async () => {
     let opts: any;
     mockUseMutation.mockImplementation((o: any) => {
       opts = o;
       return { mutate: vi.fn() };
     });
 
-    renderHook(() => useUpdateAssetById());
-    await opts.mutationFn({ id: "a1", title: "t1" });
-    expect(updateAssetByIdService).toHaveBeenCalledWith("a1", { title: "t1" });
+    renderHook(() => useUpdateAttachment());
+    await opts.mutationFn({
+      model_id: "m1",
+      column_id: "c1",
+      row_id: 1,
+      asset_id: "a1",
+      title: "t1",
+    });
+    expect(updateAttachmentService).toHaveBeenCalledWith({
+      model_id: "m1",
+      column_id: "c1",
+      row_id: 1,
+      asset_id: "a1",
+      content: { title: "t1" },
+    });
     opts.onSuccess();
     expect(invalidateQueries).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ["tables"] })

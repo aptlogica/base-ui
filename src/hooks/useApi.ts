@@ -59,7 +59,7 @@ import {
   // Attachment services
   addAttachmentService,
   removeAttachmentsService,
-  updateAssetByIdService,
+  updateAttachmentService,
   addImageService,
   getAllRecordsService,
   getWorkspacesByUser,
@@ -164,11 +164,11 @@ export const useAddRow = () => {
     onSuccess: (_, { model_id }) => {
       // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
       // This ensures UI updates instantly after adding a row, regardless of cache age
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
@@ -191,7 +191,7 @@ export const useWorkspaceById = (workspaceId: string) => {
 export const useWorkspaceBases = (workspaceId: string) => {
   const { user } = useAuth();
   const location = useLocation();
-  
+
   // Public routes that don't need workspace data
   const publicRoutes = ['/login', '/forgot-password', '/reset-password'];
   const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
@@ -296,11 +296,11 @@ export const useBaseMembers = (baseId: string) => {
 export const useBaseTables = (baseId: string) => {
   const { user } = useAuth();
   const location = useLocation();
-  
+
   // Public routes that don't need base data
   const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/auth/callback'];
   const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
-  
+
   // Check if workspaces are available before making base API calls
   // This prevents 401 errors when user has no workspaces but baseId is still set
   const { data: workspacesData } = useWorkspaces();
@@ -377,7 +377,7 @@ export const useTable = (tableId: string, options?: any) => {
 export const useTableViews = (tableId: string) => {
   const { user } = useAuth();
   const location = useLocation();
-  
+
   // Public routes that don't need view data
   const publicRoutes = ['/login', '/forgot-password', '/reset-password'];
   const isPublicRoute = publicRoutes.some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
@@ -439,17 +439,17 @@ export const useCreateWorkspace = () => {
         });
       }
       // Invalidate and immediately refetch workspaces list for instant UI update
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: queryKeys.workspaces,
         refetchType: 'active' // Force immediate refetch for active queries
       });
-      
+
       // If the new workspace has an ID, invalidate its bases query
       const newWorkspaceId = data?.data?.id || data?.id;
       if (newWorkspaceId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.bases(newWorkspaceId) });
       }
-      
+
       // Also invalidate all workspace-related queries to ensure bases are refreshed
       queryClient.invalidateQueries({ queryKey: ['workspaces'] });
     },
@@ -792,7 +792,7 @@ export const useUpdateViewAppearance = () => {
 
       // Snapshot previous value for rollback
       const previousView = queryClient.getQueryData(['view', String(viewId)]);
-      
+
       // Get model_id from view data if available (for updating specific table query)
       const viewData = previousView as any;
       const modelId = viewData?.model_id;
@@ -814,44 +814,44 @@ export const useUpdateViewAppearance = () => {
       if (modelId) {
         queryClient.setQueryData(['tables', String(modelId)], (old: any) => {
           if (!old?.views || !Array.isArray(old.views)) return old;
-          
-          const updatedViews = old.views.map((v: any) => 
-            v.id === viewId 
+
+          const updatedViews = old.views.map((v: any) =>
+            v.id === viewId
               ? {
+                ...v,
+                meta: {
+                  ...v.meta,
+                  formViewAppearance: appearance
+                }
+              }
+              : v
+          );
+          return { ...old, views: updatedViews };
+        });
+      }
+
+      // Also update any other table queries that might contain this view (fallback)
+      queryClient.setQueriesData(
+        { queryKey: ['tables'] },
+        (old: any) => {
+          if (!old) return old;
+
+          // Check if this is a table data object with views array
+          if (old.views && Array.isArray(old.views)) {
+            const updatedViews = old.views.map((v: any) =>
+              v.id === viewId
+                ? {
                   ...v,
                   meta: {
                     ...v.meta,
                     formViewAppearance: appearance
                   }
                 }
-              : v
-          );
-          return { ...old, views: updatedViews };
-        });
-      }
-      
-      // Also update any other table queries that might contain this view (fallback)
-      queryClient.setQueriesData(
-        { queryKey: ['tables'] },
-        (old: any) => {
-          if (!old) return old;
-          
-          // Check if this is a table data object with views array
-          if (old.views && Array.isArray(old.views)) {
-            const updatedViews = old.views.map((v: any) => 
-              v.id === viewId 
-                ? {
-                    ...v,
-                    meta: {
-                      ...v.meta,
-                      formViewAppearance: appearance
-                    }
-                  }
                 : v
             );
             return { ...old, views: updatedViews };
           }
-          
+
           return old;
         }
       );
@@ -866,12 +866,12 @@ export const useUpdateViewAppearance = () => {
     },
     onSuccess: (_, { viewId }) => {
       // Invalidate both the view query and table queries to ensure consistency
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: ['view', String(viewId)],
         refetchType: 'none' // Don't refetch, we already updated optimistically
       });
       // Also invalidate table queries so they refetch with fresh data when needed
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: ['tables'],
         refetchType: 'none' // Don't refetch immediately, but mark as stale
       });
@@ -933,22 +933,22 @@ export const useUpdateViewMeta = () => {
     onSuccess: (data, { viewId }) => {
       // Try to extract tableId from the response
       let tableId = (data as any)?.model_id || (data as any)?.model?.id;
-      
+
       // If not in response, try to get from the view cache
       if (!tableId) {
         const viewData = queryClient.getQueryData(['view', String(viewId)]);
         tableId = (viewData as any)?.model_id || (viewData as any)?.model?.id;
       }
-      
+
       // Invalidate the specific view query so components using view data will see updates
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: ['view', String(viewId)]
       });
 
       // Also invalidate the table query to ensure views array is refreshed
       // This ensures KanbanBoard and other view-based components get the updated view metadata
       if (tableId) {
-        queryClient.invalidateQueries({ 
+        queryClient.invalidateQueries({
           queryKey: ['tables', String(tableId)]
         });
       }
@@ -1015,11 +1015,11 @@ export const useInsertRowData = () => {
     onSuccess: (_, vars) => {
       // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
       // This ensures UI updates instantly after cell edits, regardless of cache age
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: queryKeys.records(vars.model_id),
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: ['tables', String(vars.model_id)],
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
@@ -1038,11 +1038,11 @@ export const useDeleteRecord = () => {
     onSuccess: (_, { model_id }) => {
       // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
       // This ensures UI updates instantly after record deletion, regardless of cache age
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
@@ -1060,11 +1060,11 @@ export const useBulkDeleteRecords = () => {
     onSuccess: (_, { model_id }) => {
       // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
       // This ensures UI updates instantly after bulk deletion, regardless of cache age
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
@@ -1097,7 +1097,7 @@ export const useInsertRelationData = () => {
         queryKey: ['tables', String(model_id)],
         refetchType: 'active' // Force immediate refetch for active queries
       });
-      
+
       // Invalidate target table if provided
       // Performance: refetchType: 'active' only refetches if target table is currently open
       // If target table isn't open, this has zero performance impact - no API call happens
@@ -1111,7 +1111,7 @@ export const useInsertRelationData = () => {
           refetchType: 'active' // Only refetch if query is currently active (table is open)
         });
       }
-      
+
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
@@ -1159,19 +1159,37 @@ export const useRemoveAttachments = () => {
   });
 };
 
-export const useUpdateAssetById = () => {
+export const useUpdateAttachment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, title }: { id: string; title?: string }) =>
-      updateAssetByIdService(id, { title }),
+    mutationFn: ({
+      model_id,
+      column_id,
+      row_id,
+      asset_id,
+      title
+    }: {
+      model_id: string;
+      column_id: string;
+      row_id: number;
+      asset_id: string;
+      title?: string;
+    }) =>
+      updateAttachmentService({
+        model_id,
+        column_id,
+        row_id,
+        asset_id,
+        content: { title }
+      }),
     onSuccess: () => {
-      // Invalidate all table queries to refresh asset data
       queryClient.invalidateQueries({ queryKey: ['tables'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
+
 
 export const useAddImage = () => {
   return useMutation({
@@ -1526,18 +1544,18 @@ export const useRemoveUserFromWorkspace = () => {
 
 export const useGetOrganization = () => {
   return useQuery({
-    queryKey: ['organization'], 
+    queryKey: ['organization'],
     queryFn: async () => {
-     try{
-      const result = await getOrganizationService() as any;
-      return result?.data;
-     } catch (error: any) {
-      console.error('❌ Get organization failed:', error);
-      throw error;
-     }
+      try {
+        const result = await getOrganizationService() as any;
+        return result?.data;
+      } catch (error: any) {
+        console.error('❌ Get organization failed:', error);
+        throw error;
+      }
     },
     enabled: true,
-    
+
   });
 }
 

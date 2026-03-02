@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Upload, Download, Eye, Trash2, Check, X as XIcon, Loader2 } from 'lucide-react';
 import { AttachmentFile } from '../../../../GridViewPlugin/types/grid.types';
-import { useUpdateAssetById, useAddAttachment } from '../../../../../hooks/useApi';
+import { useUpdateAttachment, useAddAttachment } from '../../../../../hooks/useApi';
 
 interface AttachmentModalProps {
   isOpen: boolean;
@@ -41,7 +41,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // API hooks
-  const updateAssetMutation = useUpdateAssetById();
+  const updateAttachmentMutation = useUpdateAttachment();
   const addAttachmentMutation = useAddAttachment();
 
   // Reset selected files when modal opens and cleanup blob URLs when closing
@@ -349,8 +349,14 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
     }
 
     try {
-      await updateAssetMutation.mutateAsync({
-        id: file.id,
+      if (!model_id || !column_id || !row_id) {
+        throw new Error('Missing required parameters for update');
+      }
+      await updateAttachmentMutation.mutateAsync({
+        model_id,
+        column_id,
+        row_id,
+        asset_id: file.id,
         title: editingTitleValue.trim() || undefined
       });
 
@@ -548,7 +554,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleSaveTitle(file.url)}
-                                disabled={updateAssetMutation.isPending}
+                                disabled={updateAttachmentMutation.isPending}
                                 className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50"
                                 aria-label="Save title"
                               >

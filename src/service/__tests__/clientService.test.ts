@@ -41,7 +41,7 @@ import {
   insertRelationDataService,
   addAttachmentService,
   removeAttachmentsService,
-  updateAssetByIdService,
+  updateAttachmentService,
   importTableService,
   getTenantUsersService,
   getUsersForAssignService,
@@ -268,7 +268,7 @@ describe('clientService', () => {
     tableApi.insertRelationData = vi.fn().mockResolvedValue({ data: { ok: true } });
     tableApi.addAttachment = vi.fn().mockResolvedValue({ data: { ok: true } });
     tableApi.removeAttachments = vi.fn().mockResolvedValue({ data: { ok: true } });
-    tableApi.updateAssetById = vi.fn().mockResolvedValue({ data: { ok: true } });
+    tableApi.updateAttachment = vi.fn().mockResolvedValue({ data: { ok: true } });
     tableApi.import = vi.fn().mockResolvedValue({ data: { ok: true } });
 
     userApi.listUsers = vi.fn().mockResolvedValue({ data: [] });
@@ -341,7 +341,13 @@ describe('clientService', () => {
     await insertRelationDataService({ model_id: 'm1', column_id: 'c1', source_row_id: 1, target_row_id: 2, action: 'link' });
     await addAttachmentService({ model_id: 'm1', column_id: 'c1', row_id: 1, files: [] });
     await removeAttachmentsService({ model_id: 'm1', column_id: 'c1', row_id: 1, attachments: ['x'] });
-    await updateAssetByIdService('a1', { title: 'asset' });
+    await updateAttachmentService({
+      model_id: 'm1',
+      column_id: 'c1',
+      row_id: 1,
+      asset_id: 'a1',
+      content: { title: 'asset' },
+    });
     await addImageService([new File(['a'], 'a.png')]);
     await importTableService({ workspace_id: 'w1', title: 'T', description: '', order_index: 0, file: new File(['a'], 'a.csv') });
 

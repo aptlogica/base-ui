@@ -4,7 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AttachmentPreviewModal } from '../AttachmentPreviewModal';
 
 const removeAttachmentsMutateAsync = vi.fn();
-const updateAssetMutateAsync = vi.fn();
+const updateAttachmentMutateAsync = vi.fn();
 
 vi.mock('react-dom', () => ({
   createPortal: (node: React.ReactNode) => node,
@@ -18,7 +18,7 @@ vi.mock('../ImageCarousel', () => ({
 
 vi.mock('../../../../../../hooks/useApi', () => ({
   useRemoveAttachments: () => ({ mutateAsync: removeAttachmentsMutateAsync }),
-  useUpdateAssetById: () => ({ mutateAsync: updateAssetMutateAsync }),
+  useUpdateAttachment: () => ({ mutateAsync: updateAttachmentMutateAsync }),
 }));
 
 const attachments = [
@@ -75,7 +75,7 @@ describe('AttachmentPreviewModal', () => {
   });
 
   it('supports edit save and delete actions', async () => {
-    updateAssetMutateAsync.mockResolvedValue({ data: { ok: true } });
+    updateAttachmentMutateAsync.mockResolvedValue({ data: { ok: true } });
     removeAttachmentsMutateAsync.mockResolvedValue({ data: { ok: true } });
     const onAttachmentsChange = vi.fn();
 
@@ -98,7 +98,13 @@ describe('AttachmentPreviewModal', () => {
     fireEvent.keyDown(editInput, { key: 'Enter' });
 
     await waitFor(() => {
-      expect(updateAssetMutateAsync).toHaveBeenCalledWith({ id: '1', title: 'Renamed' });
+      expect(updateAttachmentMutateAsync).toHaveBeenCalledWith({
+        model_id: 'm1',
+        column_id: 'c1',
+        row_id: 1,
+        asset_id: '1',
+        title: 'Renamed',
+      });
       expect(onAttachmentsChange).toHaveBeenCalled();
     });
 
@@ -125,7 +131,7 @@ describe('AttachmentPreviewModal', () => {
     fireEvent.keyDown(editInput, { key: 'Escape' });
 
     await waitFor(() => {
-      expect(updateAssetMutateAsync).not.toHaveBeenCalled();
+      expect(updateAttachmentMutateAsync).not.toHaveBeenCalled();
     });
   });
 
