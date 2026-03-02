@@ -18,6 +18,8 @@ const fileImages = [
   { url: 'http://example.com/archive.zip', name: 'archive.zip', mime_type: 'application/zip' },
   { url: 'http://example.com/app.exe', name: 'app.exe', mime_type: 'application/octet-stream' },
   { url: 'http://example.com/readme.txt', name: 'readme.txt', mime_type: 'text/plain' },
+  { url: 'http://example.com/audio.mp3', name: 'audio.mp3', mime_type: 'audio/mpeg' },
+  { url: 'http://example.com/video.mp4', name: 'video.mp4', mime_type: 'video/mp4' },
 ];
 
 describe('ImageCarousel', () => {
@@ -54,7 +56,7 @@ describe('ImageCarousel', () => {
   });
 
   it('renders non-image previews with correct fallbacks', () => {
-    render(<ImageCarousel isOpen onClose={vi.fn()} images={fileImages} initialIndex={0} />);
+    const { container } = render(<ImageCarousel isOpen onClose={vi.fn()} images={fileImages} initialIndex={0} />);
 
     expect(screen.getByTitle('file.pdf')).toBeInTheDocument();
 
@@ -69,7 +71,13 @@ describe('ImageCarousel', () => {
     expect(screen.getAllByAltText('EXE').length).toBeGreaterThan(0);
 
     fireEvent.click(nextButton);
-    expect(screen.getAllByAltText('FILE').length).toBeGreaterThan(0);
+    expect(screen.getByTitle('readme.txt')).toBeInTheDocument();
+
+    fireEvent.click(nextButton);
+    expect(container.querySelector('audio')).toBeInTheDocument();
+
+    fireEvent.click(nextButton);
+    expect(container.querySelector('video')).toBeInTheDocument();
   });
 
   it('clamps zoom within bounds', () => {

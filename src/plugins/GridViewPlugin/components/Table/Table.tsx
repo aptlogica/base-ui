@@ -288,6 +288,7 @@ export const Table: React.FC<TableProps> = ({
   const [isEditRecordModalOpen, setIsEditRecordModalOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
 
   const openEditRecordModal = useCallback((rowId: string) => {
     setSelectedRecordId(rowId);
@@ -585,13 +586,25 @@ export const Table: React.FC<TableProps> = ({
   }, []);
 
   // Select or clear all rows currently visible in the filtered set
+  const visibleRowIds = useMemo(
+    () =>
+      paginatedData
+        .map(row => (row._meta && typeof row._meta.id === 'string') ? row._meta.id : '')
+        .filter(Boolean),
+    [paginatedData]
+  );
+
   const handleSelectAll = useCallback((selected: boolean) => {
     if (selected) {
-      setSelectedRows(new Set(paginatedData.map(row => (row._meta && typeof row._meta.id === 'string') ? row._meta.id : '').filter(Boolean)));
+      setSelectedRows(new Set(visibleRowIds));
     } else {
-      setSelectedRows(new Set());
+      setSelectedRows(prev => {
+        const next = new Set(prev);
+        visibleRowIds.forEach(id => next.delete(id));
+        return next;
+      });
     }
-  }, [filteredAndSortedData]);
+  }, [visibleRowIds]);
 
   // Add a new row via mutation; list refresh is handled via onRefresh/react-query
   const addNewRow = useCallback(async () => {
@@ -712,7 +725,14 @@ export const Table: React.FC<TableProps> = ({
     handleEditColumnFromHook(col, index, event);
   }, [handleEditColumnFromHook]);
 
-  const isAllRowsSelected = selectedRows.size === filteredAndSortedData.length && filteredAndSortedData.length > 0;
+  const isAllRowsSelected = visibleRowIds.length > 0 && visibleRowIds.every(id => selectedRows.has(id));
+  const isSomeRowsSelected = visibleRowIds.some(id => selectedRows.has(id)) && !isAllRowsSelected;
+
+  useEffect(() => {
+    if (selectAllCheckboxRef.current) {
+      selectAllCheckboxRef.current.indeterminate = isSomeRowsSelected;
+    }
+  }, [isSomeRowsSelected]);
 
   const getColumnHeaderClassName = useCallback((column: ColumnConfig, index: number) => {
     const isEditing = editModalOpen && editColumnIndex === index;
@@ -963,16 +983,17 @@ export const Table: React.FC<TableProps> = ({
                   className="group flex-shrink-0 bg-gray-100 border-r border-b border-border/30 flex items-center justify-center"
                   style={{ position: 'sticky', left: 0, zIndex: 25, width: '48px', minWidth: '48px', maxWidth: '48px', height: '35px', boxShadow: 'inset 1px 0 0 var(--color-border), 2px 0 4px -2px rgba(0,0,0,0.06)' }}
                 >
-                  {!isBaseReadOnly() && canUpdateRecord() && (
-                    <input
-                      type="checkbox"
-                      className={`checkbox-primary-brand w-4 h-4 text-primary rounded-xl focus:ring-primary ${isAllRowsSelected ? '!grid' : '!hidden group-hover:!grid'}`}
-                      checked={isAllRowsSelected}
-                      onChange={(e) => handleSelectAll(e.target.checked)}
-                    />
-                  )}
-                  <span className={`text-xs font-medium text-tertiary ml-2 inline-block ${isAllRowsSelected ? 'hidden' : hideHeaderNumberClass}`}>#</span>
-                </div>
+                    {!isBaseReadOnly() && canUpdateRecord() && (
+                      <input
+                        type="checkbox"
+                        ref={selectAllCheckboxRef}
+                        className={`checkbox-primary-brand w-4 h-4 text-primary rounded-xl focus:ring-primary ${isAllRowsSelected ? '!grid' : '!hidden group-hover:!grid'}`}
+                        checked={isAllRowsSelected}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                      />
+                    )}
+                    <span className={`text-xs font-medium text-tertiary ml-2 inline-block ${(isAllRowsSelected || isSomeRowsSelected) ? 'hidden' : hideHeaderNumberClass}`}>#</span>
+                  </div>
                   );
                 })()}
 
