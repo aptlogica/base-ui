@@ -45,6 +45,7 @@ vi.mock('../../../../hooks/useFrontendPagination', () => ({
     loadNextPage,
     hasMore: mockHasMore,
     totalItems: data.length,
+    isLoadingMore: false,
   }),
 }));
 
