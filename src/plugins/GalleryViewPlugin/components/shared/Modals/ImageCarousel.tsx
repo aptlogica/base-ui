@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
+import { renderFileIcon } from "./filePreviewUtils";
 
 interface ImageCarouselProps {
   isOpen: boolean;
@@ -45,79 +46,17 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
 
   const isImage = (file: any) => String(file?.mime_type || file?.type || '').startsWith('image/');
 
-  const getFileIcon = (file: any, size: 'large' | 'small' = 'large') => {
-    const mime: string = file?.mime_type || file?.type || '';
-    const name: string = String(file?.name || file?.title || '').toLowerCase();
-    const ext = name.includes('.') ? name.split('.').pop() : '';
-
-    const iconSize = size === 'large' ? 'w-16 h-16' : 'w-8 h-8';
-
-    if (mime.startsWith('application/pdf') || ext === 'pdf') {
-      return (
-        <div className="w-full h-full flex items-center justify-center bg-card rounded">
-          <img
-            src="/assets/pdf.png"
-            alt="PDF"
-            className={`${iconSize} object-contain`}
-          />
-        </div>
-      );
-    }
-
-    if (mime.includes('msword') || mime.includes('officedocument.word') || ext === 'doc' || ext === 'docx') {
-      return (
-        <div className="w-full h-full flex items-center justify-center bg-card rounded">
-          <img
-            src="/assets/docx.png"
-            alt="DOC"
-            className={`${iconSize} object-contain`}
-          />
-        </div>
-      );
-    }
-
-    if (ext === 'zip' || ext === 'rar' || ext === '7z') {
-      return (
-        <div className="w-full h-full flex items-center justify-center bg-card rounded">
-          <img
-            src="/assets/zip.png"
-            alt="ZIP"
-            className={`${iconSize} object-contain`}
-          />
-        </div>
-      );
-    }
-
-    if (ext === 'exe') {
-      return (
-        <div className="w-full h-full flex items-center justify-center bg-card rounded">
-          <img
-            src="/assets/exe-file.png"
-            alt="EXE"
-            className={`${iconSize} object-contain`}
-          />
-        </div>
-      );
-    }
-
-    // Default for other files
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-card rounded">
-        <img
-          src="/assets/txt.png"
-          alt="FILE"
-          className={`${iconSize} object-contain`}
-        />
-      </div>
-    );
-  };
-
   const getFilePreview = (file: any, size: 'large' | 'small' = 'large') => {
     const mime: string = file?.mime_type || file?.type || '';
     const name: string = String(file?.name || file?.title || '').toLowerCase();
     const ext = name.includes('.') ? name.split('.').pop() : '';
 
-    if (mime.startsWith('application/pdf') || ext === 'pdf') {
+    const isPdf = mime.startsWith('application/pdf') || ext === 'pdf';
+    const isText = mime.startsWith('text/') || ['txt', 'csv', 'json'].includes(String(ext));
+    const isAudio = mime.startsWith('audio/') || ['mp3', 'wav', 'flac', 'aac', 'mpeg', 'ogg'].includes(String(ext));
+    const isVideo = mime.startsWith('video/') || ['mp4', 'webm', 'ogg', 'mov', 'avi', 'wmv'].includes(String(ext));
+
+    if (isPdf) {
       return (
         <iframe
           src={file?.url}
@@ -126,8 +65,42 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
         />
       );
     }
-    // Default for other files
-    return getFileIcon(file, size);
+
+    if (isText) {
+      return (
+        <iframe
+          src={file?.url}
+          title={file?.name || 'text'}
+          className="w-full h-full rounded-none shadow-xl bg-white"
+        />
+      );
+    }
+
+    if (isAudio) {
+      return (
+        <audio
+          controls
+          src={file?.url}
+          className="w-full max-w-3xl"
+        >
+          <track kind="captions" />
+        </audio>
+      );
+    }
+
+    if (isVideo) {
+      return (
+        <video
+          controls
+          src={file?.url}
+          className="max-w-full max-h-full rounded-none shadow-xl"
+        >
+          <track kind="captions" />
+        </video>
+      );
+    }
+
+    return renderFileIcon(file, size);
   };
 
   const renderNonImagePreview = (file: any) => {
@@ -155,7 +128,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
     >
       {/* Filename Header */}
       <div className="text-[16px] text-primary font-medium mt-3">
-        {currentImage?.name || "image.jpg"}
+        {currentImage?.title || currentImage?.name || "image"}
       </div>
 
       {/* Close Button */}
@@ -263,7 +236,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                getFileIcon(img, 'small')
+                renderFileIcon(img, 'small')
               )}
             </button>
           ))}

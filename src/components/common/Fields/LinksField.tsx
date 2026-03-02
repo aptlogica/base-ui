@@ -217,6 +217,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
         loadNextPage,
         hasMore,
         totalItems,
+        isLoadingMore,
     } = useFrontendPagination<RelatedRecord>({
         data: filteredRecords,
         pageSize: 30, // Same as GridView, Kanban, Gallery, and Calendar
@@ -224,28 +225,13 @@ export const LinksField: React.FC<LinksFieldProps> = ({
     });
 
     // Infinite scroll: Load more records when user scrolls near bottom
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const loadingResetRef = useRef<NodeJS.Timeout | null>(null);
-
-    const resetLoadingMore = useCallback(() => {
-        setIsLoadingMore(false);
-    }, []);
-
-    const scheduleLoadingReset = useCallback(() => {
-        if (loadingResetRef.current) {
-            clearTimeout(loadingResetRef.current);
-        }
-        loadingResetRef.current = setTimeout(resetLoadingMore, 100);
-    }, [resetLoadingMore]);
 
     const triggerLoadMore = useCallback(() => {
         if (!hasMore || isLoadingMore) return;
-        setIsLoadingMore(true);
         loadNextPage();
-        scheduleLoadingReset();
-    }, [hasMore, isLoadingMore, loadNextPage, scheduleLoadingReset]);
+    }, [hasMore, isLoadingMore, loadNextPage]);
 
     useEffect(() => {
         const container = scrollContainerRef.current;
@@ -275,9 +261,6 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             container.removeEventListener('scroll', handleScroll);
             if (scrollTimeoutRef.current) {
                 clearTimeout(scrollTimeoutRef.current);
-            }
-            if (loadingResetRef.current) {
-                clearTimeout(loadingResetRef.current);
             }
         };
     }, [hasMore, isLoadingMore, triggerLoadMore]);

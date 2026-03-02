@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Download, Image, Paperclip, Edit, Trash2, Copy, Check } from 'lucide-react';
 import { ImageCarousel } from './ImageCarousel';
+import { renderFileIcon } from './filePreviewUtils';
 import { useRemoveAttachments, useUpdateAttachment } from '../../../../../hooks/useApi';
 
 interface AttachmentPreviewModalProps {
@@ -240,147 +241,9 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                             e.currentTarget.style.display = "none";
                           }}
                         />
-                      ) : (() => {
-                        const getFilePreview = (file: any) => {
-                          const mimeType: string = file?.mime_type || file?.type || '';
-                          const fileName: string = (file?.name || file?.title || '').toLowerCase();
-                          const ext = fileName.includes('.') ? fileName.split('.').pop() : '';
-
-                          if (mimeType.startsWith('application/pdf') || ext === 'pdf') {
-                            return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
-                                <img
-                                  src="/assets/pdf.png"
-                                  alt="PDF"
-                                  className="w-1/2 h-1/2 object-contain"
-                                />
-                              </div>
-                            );
-                          }
-                          if (mimeType.includes('msword') || mimeType.includes('officedocument.word') || ext === 'doc' || ext === 'docx') {
-                            return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
-                                <img
-                                  src="/assets/docx.png"
-                                  alt="DOC"
-                                  className="w-1/2 h-1/2 object-contain"
-                                />
-                              </div>
-                            );
-                          }
-                          if (mimeType.includes('excel') || mimeType.includes('spreadsheet') || ext === 'xls' || ext === 'xlsx') {
-                            return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
-                                <img
-                                  src="/assets/csv.png"
-                                  alt="Excel"
-                                  className="w-1/2 h-1/2 object-contain"
-                                />
-                              </div>
-                            );
-                          }
-                          if (mimeType.includes('powerpoint') || mimeType.includes('presentation') || ext === 'ppt' || ext === 'pptx') {
-                            return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
-                                <img
-                                  src="/assets/ppt.png"
-                                  alt="PPT"
-                                  className="w-1/2 h-1/2 object-contain"
-                                />
-                              </div>
-                            );
-                          }
-                          if (ext === 'csv') {
-                            return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
-                                <img
-                                  src="/assets/csv.png"
-                                  alt="CSV"
-                                  className="w-1/2 h-1/2 object-contain"
-                                />
-                              </div>
-                            );
-                          }
-                          if (ext === 'txt') {
-                            return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
-                                <img
-                                  src="/assets/txt.png"
-                                  alt="TXT"
-                                  className="w-1/2 h-1/2 object-contain"
-                                />
-                              </div>
-                            );
-                          }
-                          if (ext === 'zip' || ext === 'rar' || ext === '7z') {
-                            return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
-                                <img
-                                  src="/assets/zip.png"
-                                  alt="ZIP"
-                                  className="w-1/2 h-1/2 object-contain"
-                                />
-                              </div>
-                            );
-                          }
-                          if (ext === 'exe') {
-                            return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
-                                <img
-                                  src="/assets/exe-file.png"
-                                  alt="EXE"
-                                  className="w-1/2 h-1/2 object-contain"
-                                />
-                              </div>
-                            );
-                          }
-                          if (mimeType.startsWith('audio/') || ext === 'mp3' || ext === 'wav' || ext === 'flac' || ext === 'aac') {
-                            return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
-                                <img
-                                  src="/assets/audio.png"
-                                  alt="Audio"
-                                  className="w-1/2 h-1/2 object-contain"
-                                />
-                              </div>
-                            );
-                          }
-                          if (mimeType.startsWith('video/') || ext === 'mp4' || ext === 'avi' || ext === 'mov' || ext === 'wmv') {
-                            return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
-                                <img
-                                  src="/assets/video.png"
-                                  alt="Video"
-                                  className="w-1/2 h-1/2 object-contain"
-                                />
-                              </div>
-                            );
-                          }
-                          if (ext === 'tiff' || ext === 'tif') {
-                            return (
-                              <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
-                                <img
-                                  src="/assets/tiff.png"
-                                  alt="TIFF"
-                                  className="w-1/2 h-1/2 object-contain"
-                                />
-                              </div>
-                            );
-                          }
-
-                          return (
-                            <div className="w-full h-full flex items-center justify-center bg-card rounded-xl">
-                              <img
-                                src="/assets/file.png"
-                                alt="FILE"
-                                className="w-1/2 h-1/2 object-contain"
-                              />
-                        </div>
-                          );
-                        };
-
-                        return getFilePreview(file);
-                      })()}
+                      ) : (
+                        renderFileIcon(file, 'large')
+                      )}
                     </div>
 
                     {/* File Name - Inline Editable with Action Icons */}
