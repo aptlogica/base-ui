@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getFieldTypeIconWithMargin } from '../../../types/fieldTypes';
+import { getFieldTypeIconWithMargin, getRelationTypeFromField } from '../../../types/fieldTypes';
 import { GalleryItem } from '../hooks/useGalleryData';
 import { FieldDisplay } from '../../../components/shared/FieldDisplay';
 
@@ -240,7 +240,10 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
         {/* Field Title with Icon */}
         <div className="flex items-center gap-2 mb-1">
           <div className="text-gray-400 flex-shrink-0">
-            {getFieldTypeIconWithMargin(fieldType === 'checkbox' ? 'boolean' : fieldType)}
+            {getFieldTypeIconWithMargin(
+              fieldType === 'checkbox' ? 'boolean' : fieldType,
+              getRelationTypeFromField(col)
+            )}
           </div>
           <div className="text-gray-600 text-base">
             {col.title}

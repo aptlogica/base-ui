@@ -5,6 +5,7 @@ import type { GalleryItem } from '../../hooks/useGalleryData';
 
 vi.mock('../../../../types/fieldTypes', () => ({
   getFieldTypeIconWithMargin: vi.fn(() => <span data-testid="field-icon">Icon</span>),
+  getRelationTypeFromField: vi.fn(() => undefined),
 }));
 
 vi.mock('../../../../components/shared/FieldDisplay', () => ({

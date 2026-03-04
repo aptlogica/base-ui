@@ -1,6 +1,6 @@
 import React from 'react';
 import { AdvancedDropdown } from '../../../components/common/dropdown/AdvancedDropdown';
-import { getFieldTypeIconWithMargin } from '../../../types/fieldTypes';
+import { getFieldTypeIconWithMargin, getRelationTypeFromField } from '../../../types/fieldTypes';
 import { FieldConfigPopoverShell } from '../../shared/FieldConfigPopover';
 import type { Column } from '../../../types/api.types';
 
@@ -55,7 +55,7 @@ export const GanttFieldSelector: React.FC<GanttFieldSelectorProps> = ({
         options={filteredItems.map(item => ({
           label: item.title || item.column_name || '',
           value: item.id,
-          icon: getFieldTypeIconWithMargin(item.uidt || 'text')
+          icon: getFieldTypeIconWithMargin(item.uidt || 'text', getRelationTypeFromField(item))
         }))}
         value={value?.id}
         onChange={(val) => {
@@ -141,7 +141,7 @@ export const GanttFieldConfiguration: React.FC<GanttFieldConfigurationProps> = (
                 options={dateColumns.map(col => ({
                   label: col.title || col.column_name || '',
                   value: col.id,
-                  icon: getFieldTypeIconWithMargin(col.uidt || 'text')
+                  icon: getFieldTypeIconWithMargin(col.uidt || 'text', getRelationTypeFromField(col))
                 }))}
                 value={startDateField?.id}
                 onChange={(val) => {
@@ -172,7 +172,7 @@ export const GanttFieldConfiguration: React.FC<GanttFieldConfigurationProps> = (
                 options={dateColumns.map(col => ({
                   label: col.title || col.column_name || '',
                   value: col.id,
-                  icon: getFieldTypeIconWithMargin(col.uidt || 'text')
+                  icon: getFieldTypeIconWithMargin(col.uidt || 'text', getRelationTypeFromField(col))
                 }))}
                 value={endDateField?.id}
                 onChange={(val) => {
@@ -203,7 +203,7 @@ export const GanttFieldConfiguration: React.FC<GanttFieldConfigurationProps> = (
                 options={progressColumns.map(col => ({
                   label: col.title || col.column_name || '',
                   value: col.id,
-                  icon: getFieldTypeIconWithMargin(col.uidt || 'text')
+                  icon: getFieldTypeIconWithMargin(col.uidt || 'text', getRelationTypeFromField(col))
                 }))}
                 value={progressField?.id}
                 onChange={(val) => {
@@ -225,7 +225,7 @@ export const GanttFieldConfiguration: React.FC<GanttFieldConfigurationProps> = (
                 options={completionColumns.map(col => ({
                   label: col.title || col.column_name || '',
                   value: col.id,
-                  icon: getFieldTypeIconWithMargin(col.uidt || 'text')
+                  icon: getFieldTypeIconWithMargin(col.uidt || 'text', getRelationTypeFromField(col))
                 }))}
                 value={completionField?.id}
                 onChange={(val) => {

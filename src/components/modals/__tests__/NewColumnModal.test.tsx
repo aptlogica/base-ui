@@ -33,6 +33,7 @@ vi.mock('../../../types/fieldTypes', () => {
       'text','number','decimal','boolean','select','multiSelect','rating','datetime','createdTime','lastModifiedTime',
       'currency','percent','duration','year','date','time','phoneNumber','email','url','user','button','json','formula','links','lookup'
     ].map(makeType),
+    getRelationTypeFromField: vi.fn(() => undefined),
   };
 });
 

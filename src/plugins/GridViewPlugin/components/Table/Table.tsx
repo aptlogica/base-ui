@@ -25,7 +25,7 @@ const NewColumnModal = lazy(() =>
 );
 import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldConfirmModal';
 import { useAllViews } from '../../../../hooks/useApi';
-import { getFieldTypeIconComponent } from '../../../../types/fieldTypes';
+import { getFieldTypeIconComponent, getRelationTypeFromField } from '../../../../types/fieldTypes';
 import { ColumnDropdown } from './components/ColumnDropdown';
 import { Loader } from '../../../../components/ui/Loader';
 import { useTableViewConfig, type GroupByItem } from '../../hooks/useTableViewConfig';
@@ -824,7 +824,13 @@ export const Table: React.FC<TableProps> = ({
         <div className={`h-full flex items-center justify-between px-4 relative ${isEditing ? 'overflow-visible' : 'overflow-hidden'}`} style={{ height: '35px' }}>
           <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
             {/* Column type icon */}
-            <span className="field-header-icon">{getFieldTypeIconComponent(column.type)}</span>
+            <span className="field-header-icon">
+              {getFieldTypeIconComponent(
+                column.type,
+                undefined,
+                getRelationTypeFromField(column)
+              )}
+            </span>
             {/* Column title */}
             <span
               className="text-[12px] cursor-default font-medium text-tertiary truncate block max-w-full"

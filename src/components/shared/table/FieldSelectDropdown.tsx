@@ -1,12 +1,17 @@
 import React from 'react';
 import { Check, ChevronDown, ChevronUp, Type } from 'lucide-react';
-import { getFieldTypeIconComponent } from '../../../types/fieldTypes';
+import { getFieldTypeIconComponent, getRelationTypeFromField } from '../../../types/fieldTypes';
 
 export interface FieldSelectOption {
   key: string;
   title: string;
   uidt?: string;
   type?: string;
+  meta?: {
+    relation?: {
+      type?: string;
+    };
+  };
 }
 
 interface FieldSelectDropdownProps {
@@ -57,7 +62,11 @@ export const FieldSelectDropdown: React.FC<FieldSelectDropdownProps> = ({
           {selectedOption ? (
             <span className="flex-1 text-left flex items-center text-primary">
               <span className="mr-2 align-middle text-primary">
-                {getFieldTypeIconComponent(selectedOption.uidt || selectedOption.type || 'text', iconClassName) || (
+                {getFieldTypeIconComponent(
+                  selectedOption.uidt || selectedOption.type || 'text',
+                  iconClassName,
+                  getRelationTypeFromField(selectedOption)
+                ) || (
                   <Type className="w-4 h-4 text-gray-400" />
                 )}
               </span>
@@ -101,7 +110,11 @@ export const FieldSelectDropdown: React.FC<FieldSelectDropdownProps> = ({
                 type="button"
               >
                 <span className="text-gray-500">
-                  {getFieldTypeIconComponent(option.uidt || option.type || 'text', iconClassName) || (
+                  {getFieldTypeIconComponent(
+                    option.uidt || option.type || 'text',
+                    iconClassName,
+                    getRelationTypeFromField(option)
+                  ) || (
                     <Type className="w-4 h-4 text-gray-400" />
                   )}
                 </span>

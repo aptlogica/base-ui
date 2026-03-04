@@ -540,7 +540,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                   {/* First Name */}
                   <div>
                     <label htmlFor="first-name" className="block text-sm font-medium text-gray-700 mb-1">
-                      First Name <span className="text-red-500">*</span>
+                      First Name <span className="field-component-required">*</span>
                     </label>
                     <input
                       id="first-name"
@@ -568,7 +568,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                   {/* Last Name */}
                   <div>
                     <label htmlFor="last-name" className="block text-sm font-medium text-gray-700 mb-1">
-                      Last Name <span className="text-red-500">*</span>
+                      Last Name <span className="field-component-required">*</span>
                     </label>
                     <input
                       id="last-name"
@@ -597,7 +597,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                 {/* Email */}
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email address <span className="text-red-500">*</span>
+                    Email address <span className="field-component-required">*</span>
                   </label>
                   <input
                     id="email"

@@ -414,7 +414,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
               <div className="p-4 space-y-4">
                 <div className="space-y-1">
                   <label htmlFor="workspaceName" className="block text-sm font-medium text-primary mb-1">
-                    Workspace Name <span className="text-red-500">*</span>
+                    Workspace Name <span className="field-component-required">*</span>
                   </label>
                   <div className="relative">
                     <input

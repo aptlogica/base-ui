@@ -379,8 +379,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           <div className="p-4 space-y-4">
             {/* File Upload Area */}
             <div className="space-y-1">
-              <label htmlFor="file-upload-input" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
-                Select File <span className="text-red-500">*</span>
+              <label htmlFor="file-upload-input" className="block text-sm font-medium text-primary mb-1">
+                Select File <span className="field-component-required">*</span>
               </label>
               <div //NOSONAR
                 id="file-upload-input"
@@ -435,7 +435,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                       <Upload size={22} className="text-gray-400" />
                     </div>
                     <div className="space-y-1">
-                      <div className="text-sm font-medium text-primary">
+                      <div className="text-lg font-medium text-primary">
                         Drop your document here or
                       </div>
                       <span className="text-primary text-xl hover:underline font-semibold">Browse files</span>
@@ -455,8 +455,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
             {/* Title Input */}
             <div className="space-y-1">
-              <label htmlFor="tableTitle" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
-                Table Title <span className="text-red-500">*</span>
+              <label htmlFor="tableTitle" className="block text-sm font-medium text-primary mb-1">
+                Table Title <span className="field-component-required">*</span>
               </label>
               <div className="relative">
                 <input

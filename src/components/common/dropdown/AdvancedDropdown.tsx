@@ -276,7 +276,7 @@ export function AdvancedDropdown<T extends string | number>({
               }`}
           >
             {label}
-            {required && <span className="text-red-500">*</span>}
+            {required && <span className="field-component-required">*</span>}
             {helpText && (
               <div className="group relative">
                 <Info className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help" />

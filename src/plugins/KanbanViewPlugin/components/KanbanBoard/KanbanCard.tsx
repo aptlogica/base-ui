@@ -1,6 +1,6 @@
 import React, { memo, useMemo, useState, useEffect } from 'react';
 import { Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getFieldTypeIconWithMargin } from '../../../../types/fieldTypes';
+import { getFieldTypeIconWithMargin, getRelationTypeFromField } from '../../../../types/fieldTypes';
 import { GridColumn } from '../../../GridViewPlugin/types/grid.types';
 import { FieldDisplay } from '../../../../components/shared/FieldDisplay';
 
@@ -361,7 +361,11 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
               {/* Field Title with Icon */}
               <div className="flex items-center gap-2 mb-1">
                 <div className="text-gray-400 flex-shrink-0">
-                  {getFieldTypeIconWithMargin(fieldType === 'checkbox' ? 'boolean' : fieldType)}
+                  
+                  {getFieldTypeIconWithMargin(
+                    fieldType === 'checkbox' ? 'boolean' : fieldType,
+                    getRelationTypeFromField(col)
+                  )}
                 </div>
                 <div className="text-gray-600 text-base font-medium">
                   {col.title}

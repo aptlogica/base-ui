@@ -3,7 +3,7 @@ import { X, HelpCircle, AlertCircle } from 'lucide-react';
 import { VIEW_ICONS, ViewType } from '../../types/viewTypes';
 import { MultiLineText } from '../common/Fields/MultiLineText';
 import AdvancedDropdown from '../common/dropdown/AdvancedDropdown';
-import { getFieldTypeIconComponent } from '../../types/fieldTypes';
+import { getFieldTypeIconComponent, getRelationTypeFromField } from '../../types/fieldTypes';
 import { useTable } from '../../hooks/useApi';
 import { validateViewName, getDefaultViewName, generateUniqueName } from '../../utils/nameValidation';
 
@@ -311,8 +311,8 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
     return isFieldSelectionInvalid(fieldDropdownOptions, showFieldDropdown);
   };
 
-  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (e?:React.SyntheticEvent) => {
+    e?.preventDefault();
 
     // If no name provided, generate a default name
     let finalName = name.trim();
@@ -381,7 +381,9 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
   const fieldDropdownOptions = filteredFields.map((f: any) => ({
     value: f.id,
     label: f.name,
-    icon: getFieldTypeIconComponent(f.uidt || f.type) || <span className="w-4 h-4 text-gray-400" />,
+    icon: getFieldTypeIconComponent(f.uidt || f.type, undefined, getRelationTypeFromField(f)) || (
+      <span className="w-4 h-4 text-gray-400" />
+    ),
     description: f.description || '',
     type: f.uidt || f.type,
     raw: f,

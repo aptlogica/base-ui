@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Eye, EyeOff, List } from 'lucide-react';
 import { useSmartPopover } from '../../../hooks/useSmartPopover';
 import { ColumnConfig } from '../../../plugins/GridViewPlugin/types/grid.types';
-import { getFieldTypeIconComponent } from '../../../types/fieldTypes';
+import { getFieldTypeIconComponent, getRelationTypeFromField } from '../../../types/fieldTypes';
 
 interface FieldsPopoverProps {
   readonly columns: ColumnConfig[];
@@ -43,7 +43,9 @@ const FieldRow: React.FC<{
     style={{ userSelect: 'none' }}
   >
     <span className="w-5 h-5 flex text-primary items-center justify-center flex-shrink-0">
-      {getFieldTypeIconComponent(col.uidt || 'text') || <span className="w-4 h-4 text-gray-400" />}
+      {getFieldTypeIconComponent(col.uidt || 'text', undefined, getRelationTypeFromField(col)) || (
+        <span className="w-4 h-4 text-gray-400" />
+      )}
     </span>
     <span className="flex-1 truncate text-sm select-none text-secondary" title={col.title}>{col.title}</span>
     <label className="relative inline-flex items-center cursor-pointer ml-2">

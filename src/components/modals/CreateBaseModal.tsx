@@ -190,8 +190,8 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
     }
   }, [name, existingBases]);
 
-  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.SyntheticEvent) => {
+    e?.preventDefault();
 
     if (!name.trim()) {
       setError('Base name is required');
@@ -303,7 +303,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
           <div className="p-4 space-y-4">
             <div className="space-y-1">
               <label htmlFor="baseName" className="block text-sm font-medium text-primary mb-1">
-                Base Name <span className="text-red-500">*</span>
+                Base Name <span className="field-component-required">*</span>
               </label>
               <div className="relative">
                 <input

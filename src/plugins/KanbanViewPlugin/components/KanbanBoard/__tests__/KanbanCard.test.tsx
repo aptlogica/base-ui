@@ -4,7 +4,8 @@ import KanbanCard from '../KanbanCard';
 import type { GridColumn } from '../../../../GridViewPlugin/types/grid.types';
 
 vi.mock('../../../../types/fieldTypes', () => ({
-  getFieldTypeIconWithMargin: vi.fn((type: string) => <span data-testid={`icon-${type}`}>{type}</span>)
+  getFieldTypeIconWithMargin: vi.fn((type: string) => <span data-testid={`icon-${type}`}>{type}</span>),
+  getRelationTypeFromField: vi.fn(() => undefined)
 }));
 
 vi.mock('../../../../components/shared/FieldDisplay', () => ({

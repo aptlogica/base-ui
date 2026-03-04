@@ -159,8 +159,8 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
     return 'text-gray-400';
   };
 
-  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (e?:React.SyntheticEvent) => {
+    e?.preventDefault();
 
     if (!name.trim()) {
       setError(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} name is required`);
@@ -269,7 +269,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
           <div className="p-4 space-y-4">
           <div className="space-y-1">
             <label htmlFor="itemName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
-              {itemType.charAt(0).toUpperCase() + itemType.slice(1)} Name <span className="text-red-500">*</span>
+              {itemType.charAt(0).toUpperCase() + itemType.slice(1)} Name <span className="field-component-required">*</span>
             </label>
             <div className="relative">
               <input

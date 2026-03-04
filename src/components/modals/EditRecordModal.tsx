@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { X, Pencil, MoreHorizontal, Trash2 } from 'lucide-react';
 import FieldRenderer from '../../plugins/FormViewPlugin/components/shared/FieldRenderer';
 import { useInsertRowData, useAddAttachment, useRemoveAttachments, useInsertRelationData } from '../../hooks/useApi';
-import { getFieldTypeIconWithMargin } from '../../types/fieldTypes';
+import { getFieldTypeIconWithMargin, getRelationTypeFromField } from '../../types/fieldTypes';
 import {
   createFieldRendererProps,
   getFieldDisplayName,
@@ -532,7 +532,10 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                 return (
                   <div key={field.id} className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-4 items-center">
                     <div className="text-gray-600 flex items-center gap-2">
-                      {getFieldTypeIconWithMargin(getStandardFieldType(field))}
+                      {getFieldTypeIconWithMargin(
+                        getStandardFieldType(field),
+                        getRelationTypeFromField(field)
+                      )}
                       <span className="text-sm">{getFieldDisplayName(field)}</span>
                       {field.required && <span className="text-red-500 ml-1 field-component-required">*</span>}
                     </div>
@@ -566,7 +569,10 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                   return (
                     <div key={field.id} className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-4 items-center">
                       <div className="text-gray-600 flex items-center gap-2">
-                        {getFieldTypeIconWithMargin(getStandardFieldType(field))}
+                        {getFieldTypeIconWithMargin(
+                          getStandardFieldType(field),
+                          getRelationTypeFromField(field)
+                        )}
                         <span className="text-sm">{getFieldDisplayName(field)}</span>
                         {field.required && <span className="text-red-500 ml-1 field-component-required">*</span>}
                       </div>
