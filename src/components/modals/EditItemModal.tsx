@@ -248,7 +248,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
-              <PencilLine size={16} className="text-green-600" />
+              <PencilLine className="text-green-600 h-5 w-5" />
             </div>
             <div className="min-w-0">
               <h2 className="text-xl font-semibold text-primary truncate">{title}</h2>
@@ -260,7 +260,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
             className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
             aria-label="Close"
           >
-            <X size={16} className="text-[var(--text-color-tertiary)]" />
+            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
           </button>
         </div>
 

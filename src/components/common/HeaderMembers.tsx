@@ -24,7 +24,7 @@ const HeaderMembers: React.FC = () => {
     // Try different data structures
     let data: any[] = [];
     const queryData = baseMembersQuery.data as any;
-    
+
     if (Array.isArray(queryData)) {
       data = queryData;
     } else if (queryData?.data && Array.isArray(queryData.data)) {
@@ -59,10 +59,9 @@ const HeaderMembers: React.FC = () => {
           canAssignUsers() && (
             <button
               onClick={() => setShowAddMemberModal(true)}
-              className="p-2.5 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="p-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              <UserPlus className="w-4 h-4" />
-              {/* <span className="text-sm font-medium min-xl:hidden">Add Member</span> */}
+              <UserPlus className="w-5 h-5" />
             </button>
           )
         )}

@@ -422,7 +422,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
             className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
             aria-label="Close"
           >
-            <X size={16} className="text-[var(--text-color-tertiary)]" />
+            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
           </button>
         </div>
 
@@ -430,7 +430,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
         <form id="create-view-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="p-4 space-y-2">
           <div className="space-y-1">
-            <label htmlFor="viewName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
+            <label htmlFor="viewName" className="block text-sm font-medium text-primary mb-1">
               View Name <span className="text-xs text-gray-500">(optional)</span>
             </label>
             <div className="relative">
@@ -564,7 +564,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
           />
 
           {/* View Type Info */}
-          <div className="bg-[var(--color-utility-bg)] rounded-xl p-3">
+          <div className="border bg-[var(--color-utility-bg)] rounded-xl p-3">
             <div className="flex items-center gap-2 mb-2">
               <IconComponent size={24} className='icon-primary p-1.5 rounded-xl bg-primary/10' />
               <span className="text-sm font-medium text-primary">

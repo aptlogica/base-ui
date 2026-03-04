@@ -1002,7 +1002,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                   setInputValue('');
                 }}
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Add filter
               </button>
             )}
@@ -1012,7 +1012,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                 className="flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-xl"
                 onClick={handleAdd}
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Add filter
               </button>
             )}

@@ -48,7 +48,7 @@ function renderDescriptionToggle({
         className={buttonClassName}
         onClick={() => setShowDescription((v: boolean) => !v)}
       >
-        <Plus className="w-4 h-4" />
+        <Plus className="w-5 h-5" />
         Add description
       </button>
       {showDescription && (
@@ -957,7 +957,7 @@ function renderRatingConfig({
 
       <div className="mb-3">
         <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-1" onClick={() => setShowRatingDefault((v: boolean) => !v)}>
-          <Plus className="w-4 h-4" />
+          <Plus className="w-5 h-5" />
           Set default value
         </button>
 
@@ -1239,7 +1239,7 @@ export function renderNewColumnConfigStep(props: any) {
         className={buttonClassName}
         onClick={() => setShow((v: boolean) => !v)}
       >
-        <Plus className="w-4 h-4" />
+        <Plus className="w-5 h-5" />
         {label}
       </button>
       {show && children}
@@ -1472,7 +1472,7 @@ export function renderNewColumnConfigStep(props: any) {
               </>
             )}
             <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowPercentDefault((v: boolean) => !v)}>
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Set default value
             </button>
             {showPercentDefault && (
@@ -1494,7 +1494,7 @@ export function renderNewColumnConfigStep(props: any) {
             )}
             <div className="relative">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Add description
               </button>
               {showDescription && (
@@ -1553,7 +1553,7 @@ export function renderNewColumnConfigStep(props: any) {
               clearable
             />
             <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowCurrencyDefault((v: boolean)  => !v)}>
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Set default value
             </button>
             {showCurrencyDefault && (
@@ -1573,7 +1573,7 @@ export function renderNewColumnConfigStep(props: any) {
             )}
             <div className="relative">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Add description
               </button>
               {showDescription && (
@@ -1606,7 +1606,7 @@ export function renderNewColumnConfigStep(props: any) {
             />
 
             <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDurationDefault((v: boolean) => !v)}>
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Set default value
             </button>
 
@@ -1623,7 +1623,7 @@ export function renderNewColumnConfigStep(props: any) {
 
             <div className="relative">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Add description
               </button>
               {showDescription && (

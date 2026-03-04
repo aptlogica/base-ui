@@ -219,9 +219,9 @@ export const Currency: React.FC<CurrencyProps> = ({
   };
 
   const displayValue = getDisplayValue(localValue, placeholder, currencyLocale, currencyType, precision);
-  const displayClassName = `field-component pl-8 ${localValue ? "text-gray-800" : "text-gray-400"} ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`.trim();
+  const displayClassName = `field-component pl-8 w-full overflow-hidden ${localValue ? "text-gray-800" : "text-gray-400"} ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`.trim();
   const inputClassName = `field-component pl-8 ${isBorder ? "field-component-focus" : ""} ${disabled || readOnly ? "cursor-not-allowed" : ""}`.trim();
-  const containerClassName = `relative truncate ${className} ${isBorder ? "field-component-border" : ""}`.trim();
+  const containerClassName = `relative min-w-0 truncate ${className} ${isBorder ? "field-component-border" : ""}`.trim();
   const showHelperText = helperText && allowEdit;
 
   const containerProps = readOnly
@@ -252,7 +252,7 @@ export const Currency: React.FC<CurrencyProps> = ({
           />
         ) : (
           <div className={displayClassName}>
-            {displayValue}
+            <span className="min-w-0 truncate">{displayValue}</span>
           </div>
         )}
       </div>

@@ -216,7 +216,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
               onClick={() => setIsAssignUserModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 btn-primary text-sm"
             >
-              <Plus size={14} />
+              <Plus className='h-5 w-5' />
               Add Member
             </button>
           ) : undefined
@@ -265,7 +265,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
               </>
             ) : (
               <>
-                <div className="w-8 h-8 bg-gray-400 border rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 bg-gray-400 border justify-center flex-shrink-0">
                   <span className="text-white text-sm">W</span>
                 </div>
                 <span className="text-sm font-medium text-gray-500">Select Workspace</span>
@@ -303,10 +303,10 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
                           setSelectedWorkspaceId(ws.id);
                           setWorkspaceDropdownOpen(false);
                         }}
-                        className={`w-full space-y-1 flex items-center gap-3 px-3 py-2 rounded-xl text-left hover:bg-gray-100 transition-colors ${isSelected ? 'bg-gray-50' : ''
+                        className={`w-full space-y-1 flex items-center gap-3 px-3 py-1 rounded-xl text-left hover:bg-gray-100 transition-colors ${isSelected ? 'bg-gray-50' : ''
                           }`}
                       >
-                        <div className={`w-8 h-8 ${icon.color} rounded-full flex items-center justify-center flex-shrink-0`}>
+                        <div className={`w-10 h-10 ${icon.color} justify-center flex-shrink-0`}>
                           <span className="text-white text-sm">
                             {icon.initials}
                           </span>
@@ -325,7 +325,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
                             )}
                             
                             {isSelected && (
-                              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0 ml-auto"></div>
+                              <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100 flex-shrink-0 ml-auto"></div>
                             )}
                           </div>
                         </div>
@@ -345,7 +345,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
               onClick={() => setIsEditModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 text-sm border rounded-xl text-primary hover:bg-gray-100 transition-colors"
             >
-              <Edit2 size={14} />
+              <Edit2 className='h-5 w-5' />
               Edit Details
             </button>
           )}
@@ -354,7 +354,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
               onClick={() => setIsCreateWorkspaceModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 btn-primary text-sm"
             >
-              <Plus size={14} />
+              <Plus className='h-5 w-5' />
               Create Workspace
             </button>
           )}

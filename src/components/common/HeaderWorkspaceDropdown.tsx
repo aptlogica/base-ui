@@ -324,7 +324,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
 
                             {/* Status Indicator - only for selected */}
                             {isSelected && (
-                              <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-200"></div>
+                              <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100"></div>
                             )}
                           </div>
                         </div>

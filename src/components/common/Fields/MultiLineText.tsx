@@ -77,7 +77,7 @@ export const MultiLineText: React.FC<MultiLineTextProps> = ({
     <div className="w-full relative">
       {/* Label */}
       {label && (
-        <label className="field-component-label">
+        <label className="field-component-label !text-primary">
           {label}
           {required && <span className="field-component-required">*</span>}
         </label>

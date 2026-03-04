@@ -108,7 +108,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
             onClick={onClose}
             className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
           >
-            <X size={16} className="text-[var(--text-color-tertiary)]" />
+            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
           </button>
         </div>
 
@@ -145,7 +145,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
                   )}
                 </div>
                 {!isDisabled && (
-                  <ChevronRight size={16} className="text-[var(--text-color-tertiary)] group-hover:text-primary" />
+                  <ChevronRight className="h-5 w-5 text-[var(--text-color-tertiary)] group-hover:text-primary" />
                 )}
               </button>
             );
@@ -185,7 +185,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
                       )}
                     </div>
                     {!isDisabled && (
-                      <ChevronRight size={16} className="text-[var(--text-color-tertiary)] group-hover:text-primary" />
+                      <ChevronRight className="h-5 w-5 text-[var(--text-color-tertiary)] group-hover:text-primary" />
                     )}
                   </button>
                 );

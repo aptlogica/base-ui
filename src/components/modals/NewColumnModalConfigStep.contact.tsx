@@ -30,7 +30,7 @@ const renderDescriptionSection = (
       className={buttonClassName}
       onClick={() => setShowDescription((v: boolean) => !v)}
     >
-      <Plus className="w-4 h-4" />
+      <Plus className="w-5 h-5" />
       Add description
     </button>
     {showDescription && (
@@ -103,7 +103,7 @@ export function renderContactConfigStep(props: any) {
                 className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2"
                 onClick={() => setShowPhoneDefault((v: boolean) => !v)}
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Set default value
               </button>
               {showPhoneDefault && (
@@ -147,7 +147,7 @@ export function renderContactConfigStep(props: any) {
               className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2"
               onClick={() => setShowEmailDefault((v: boolean) => !v)}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Set default value
             </button>
             {showEmailDefault && (
@@ -188,7 +188,7 @@ export function renderContactConfigStep(props: any) {
               className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]"
               onClick={() => setShowUrlDefault((v: boolean) => !v)}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Set default value
             </button>
             {showUrlDefault && (

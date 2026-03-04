@@ -358,7 +358,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center flex-shrink-0">
-              <Upload size={16} className="text-green-600" />
+              <Upload className="text-green-600 h-5 w-5" />
             </div>
             <div className="min-w-0">
               <h2 className="text-xl font-semibold text-primary truncate">Import {config.label}</h2>
@@ -370,7 +370,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
             aria-label="Close"
           >
-            <X size={16} className="text-[var(--text-color-tertiary)]" />
+            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
           </button>
         </div>
 
@@ -561,7 +561,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             disabled={importMutation.isPending || isSubmitting || !title.trim() || !selectedFile}
             className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {(importMutation.isPending || isSubmitting) && <Loader2 size={16} className="animate-spin" />}
+            {(importMutation.isPending || isSubmitting) && <Loader2 className="animate-spin h-5 w-5" />}
             {(importMutation.isPending || isSubmitting) ? 'Importing...' : 'Import'}
           </button>
         </div>

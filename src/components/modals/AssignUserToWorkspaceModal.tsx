@@ -967,7 +967,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
               className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
               aria-label="Close"
             >
-              <X size={16} className="text-[var(--text-color-tertiary)]" />
+              <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
             </button>
           </div>
           <div className="flex-1 flex items-center justify-center">
@@ -1012,7 +1012,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
             className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
             aria-label="Close"
           >
-            <X size={16} className="text-gray-400" />
+            <X className="text-gray-400 h-5 w-5" />
           </button>
         </div>
 
@@ -1038,7 +1038,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
             disabled={isFooterDisabled}
             className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
-            {isBusy && <Loader2 size={16} className="animate-spin" />}
+            {isBusy && <Loader2 className="animate-spin h-5 w-5" />}
             {footerLabel}
           </button>
         </div>

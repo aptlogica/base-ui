@@ -251,7 +251,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                   onClick={handleCreateRecord}
                   className="px-4 py-2 btn-primary rounded-xl flex items-center gap-2 mx-auto"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-5 h-5" />
                   Add Record
                 </button>
               )}

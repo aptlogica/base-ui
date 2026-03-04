@@ -310,7 +310,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                     onClick={() => setShowLogoUrlInput(true)}
                     className="px-3 py-2 flex-1 border border-gray-300 rounded-xl text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 flex items-center gap-2"
                   >
-                    <Link2 size={16} />
+                    <Link2 className='h-5 w-5' />
                     <span>Insert via URL</span>
                   </button>
                 )}
@@ -336,7 +336,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                       </>
                     ) : (
                       <>
-                        <Upload size={16} />
+                        <Upload className='h-5 w-5' />
                         <span>Browse</span>
                       </>
                     )}
@@ -367,7 +367,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                       className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
                       title="Change logo"
                     >
-                      <ImageUp size={18} />
+                      <ImageUp className='h-5 w-5' />
                     </button>
                   )}
                   <button
@@ -381,7 +381,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                     className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
                     title="Remove logo"
                   >
-                    <Trash2 size={18} />
+                    <Trash2 className='h-5 w-5' />
                   </button>
                 </div>
               </div>
@@ -434,7 +434,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                     onClick={() => setShowBannerUrlInput(true)}
                     className="px-3 py-2 flex-1 border border-gray-300 rounded-xl text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 flex items-center gap-2"
                   >
-                    <Link2 size={16} />
+                    <Link2 className='h-5 w-5' />
                     <span>Insert via URL</span>
                   </button>
                 )}
@@ -461,7 +461,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                       </>
                     ) : (
                       <>
-                        <Upload size={16} />
+                        <Upload className='h-5 w-5' />
                         <span>Browse</span>
                       </>
                     )}
@@ -492,7 +492,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                       className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
                       title="Change banner"
                     >
-                      <ImageUp size={18} />
+                      <ImageUp className='h-5 w-5' />
                     </button>
                   )}
                   <button
@@ -506,7 +506,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                     className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
                     title="Remove banner"
                   >
-                    <Trash2 size={18} />
+                    <Trash2 className='h-5 w-5' />
                   </button>
                 </div>
               </div>

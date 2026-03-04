@@ -78,11 +78,11 @@ export const SortableFieldItem: React.FC<SortableFieldItemProps> = ({
           aria-label="Drag to reorder field"
           tabIndex={0}
         >
-          <GripVertical className="w-4 h-4 text-muted-foreground mr-2" />
+          <GripVertical className="w-5 h-5 text-muted-foreground mr-2" />
           {(() => {
             const fieldType = FIELD_TYPES.find(type => type?.key === field?.type);
             const IconComponent = fieldType?.icon;
-            return IconComponent ? <IconComponent className="w-4 h-4 text-gray-500" /> : null;
+            return IconComponent ? <IconComponent className="w-5 h-5 text-gray-500" /> : null;
           })()}
         </button>
         <div className="flex-1">
@@ -101,7 +101,7 @@ export const SortableFieldItem: React.FC<SortableFieldItemProps> = ({
               onToggle(field.id);
             }}
           >
-            {field.is_hidden ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
+            {field.is_hidden ? <EyeOff className="w-5 h-5 text-muted-foreground" /> : <Eye className="w-5 h-5 text-muted-foreground" />}
           </button>
         )}
         {onDelete && (
@@ -114,7 +114,7 @@ export const SortableFieldItem: React.FC<SortableFieldItemProps> = ({
               onDelete(field.id);
             }}
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-5 h-5" />
           </button>
         )}
       </div>

@@ -743,7 +743,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
                 onClick={handleCreateRecord}
                 className="px-6 py-2 flex gap-2 items-center rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 New Record
               </button>
             )}
@@ -759,7 +759,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
                 onClick={handleCreateRecord}
                 className="px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 New Record
               </button>
             </div>

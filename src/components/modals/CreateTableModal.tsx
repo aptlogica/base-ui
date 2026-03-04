@@ -127,14 +127,14 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
             className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
             aria-label="Close"
           >
-            <X size={16} className="text-[var(--text-color-tertiary)]" />
+            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
           </button>
         </div>
         {/* Scrollable Content Area */}
         <form id="create-table-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="p-4 space-y-4">
           <div className="space-y-1">
-            <label htmlFor="tableName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
+            <label htmlFor="tableName" className="block text-sm font-medium text-primary mb-1">
               Table Name <span className="text-red-500">*</span>
             </label>
             <div className="relative">
