@@ -177,7 +177,7 @@ export function renderDateTimeConfigStep(props: any) {
             setDescription,
             buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
             wrapperClassName: 'relative',
-            clearButtonClassName: 'absolute right-2 top-0 text-gray-400 hover:text-gray-600 text-sm',
+            clearButtonClassName: 'absolute right-2 top-0 text-gray-400 hover:text-red-500 text-sm',
           })}
         </>
       );

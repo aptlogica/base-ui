@@ -789,9 +789,9 @@ export const UserTable: React.FC<UserTableProps> = ({
                 if (user) onEditUser(user);
                 setOpenActionMenu(null);
               }}
-              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl flex items-center gap-2"
+              className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl flex items-center gap-2"
             >
-              <Edit className="w-4 h-4 text-gray-500" />
+              <Edit className="w-5 h-5 text-gray-500" />
               Edit
             </button>
           )}
@@ -828,7 +828,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                   }}
                   className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2"
                 >
-                  <UserX className="w-4 h-4" />
+                  <UserX className="w-5 h-5" />
                   Deactivate User
                 </button>
               );
@@ -841,7 +841,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                   }}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl flex items-center gap-2"
                 >
-                  <UserCheck className="w-4 h-4" />
+                  <UserCheck className="w-5 h-5" />
                   Activate User
                 </button>
               );
@@ -873,7 +873,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                 }}
                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-5 h-5" />
                 Remove User
               </button>
             );

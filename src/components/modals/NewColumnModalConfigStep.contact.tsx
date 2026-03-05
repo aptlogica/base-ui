@@ -47,7 +47,7 @@ const renderDescriptionSection = (
             className={trashButtonClassName}
             onClick={() => setDescription('')}
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-5 h-5" />
           </button>
         )}
       </>
@@ -128,7 +128,7 @@ export function renderContactConfigStep(props: any) {
             description,
             setDescription,
             'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
-            'absolute right-2 top-0.5 text-gray-400 hover:text-gray-600 text-sm'
+            'absolute right-2 top-0.5 text-gray-400 hover:text-red-500 text-sm'
           )}
         </>
       );
@@ -169,7 +169,7 @@ export function renderContactConfigStep(props: any) {
             description,
             setDescription,
             'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
-            'absolute right-2 top-2 text-gray-400 hover:text-gray-600'
+            'absolute right-2 top-2 text-gray-400 hover:text-red-500'
           )}
         </>
       );
@@ -212,7 +212,7 @@ export function renderContactConfigStep(props: any) {
             description,
             setDescription,
             'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
-            'absolute right-2 top-2 text-gray-400 hover:text-gray-600'
+            'absolute right-2 top-2 text-gray-400 hover:text-red-500'
           )}
         </>
       );

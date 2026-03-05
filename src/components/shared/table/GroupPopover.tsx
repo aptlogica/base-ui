@@ -385,7 +385,7 @@ export const GroupPopover: React.FC<{
                     onClick={() => removeGrouping(group.id)}
                     title="Remove grouping"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
               );

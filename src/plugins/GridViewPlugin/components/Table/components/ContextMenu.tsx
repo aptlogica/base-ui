@@ -57,7 +57,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
               onClose();
             }}
           >
-            <Edit className="w-4 h-4" /> Edit record
+            <Edit className="w-5 h-5" /> Edit record
           </button>
           <div className="border-t my-1" />
         </>
@@ -66,7 +66,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       {/* Delete record - only show if user can delete */}
       {canDeleteRecord && (
         <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black transition-colors" onClick={onDelete}>
-          <Trash2 className="w-4 h-4" /> Delete record
+          <Trash2 className="w-5 h-5" /> Delete record
         </button>
       )}
     </div>

@@ -36,8 +36,8 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
       // Fix: Use correct parameter structure
       await updateTableMutation.mutateAsync({
         tableId: table.id,
-        params: { 
-          title: name, 
+        params: {
+          title: name,
           description,
           updated_at: new Date().toISOString()
         }
@@ -75,23 +75,23 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
   // Build menu items based on permissions
   const menuItems = [
     // Pin table - only show if not read-only
-    ...(onPinToggle && !isBaseReadOnly() ? [{ 
-      label: isPinned ? 'Unpin table' : 'Pin table', 
-      icon: <Pin className="w-4 h-4 text-gray-500" />, 
+    ...(onPinToggle && !isBaseReadOnly() ? [{
+      label: isPinned ? 'Unpin table' : 'Pin table',
+      icon: <Pin className="w-5 h-5 text-gray-500" />,
       onClick: handlePinClick
     }] : []),
     // Edit table - only show if user can update table and not read-only
-    ...(canUpdateTable() && !isBaseReadOnly() ? [{ 
-      label: 'Edit table', 
-      icon: <Edit className="w-4 h-4 text-gray-500" />, 
-      onClick: () => setShowEditModal(true) 
+    ...(canUpdateTable() && !isBaseReadOnly() ? [{
+      label: 'Edit table',
+      icon: <Edit className="w-5 h-5 text-gray-500" />,
+      onClick: () => setShowEditModal(true)
     }] : []),
     // Delete table - only show if user can delete
-    ...(canDeleteTable() ? [{ 
-      label: 'Delete table', 
-      icon: <Trash2 className="w-4 h-4 text-red-600" />, 
-      onClick: () => setShowDelete(true), 
-      danger: true 
+    ...(canDeleteTable() ? [{
+      label: 'Delete table',
+      icon: <Trash2 className="w-5 h-5 text-red-600" />,
+      onClick: () => setShowDelete(true),
+      danger: true
     }] : []),
   ];
 

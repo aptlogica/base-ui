@@ -284,7 +284,7 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
           onClick={() => handleRemoveSort(idx)}
           title="Remove sort"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-5 h-5" />
         </button>
       </div>
     );

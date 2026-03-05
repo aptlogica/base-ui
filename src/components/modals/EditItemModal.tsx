@@ -268,7 +268,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
         <form id="edit-item-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="p-4 space-y-4">
           <div className="space-y-1">
-            <label htmlFor="itemName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
+            <label htmlFor="itemName" className="block text-sm font-medium text-primary mb-1">
               {itemType.charAt(0).toUpperCase() + itemType.slice(1)} Name <span className="field-component-required">*</span>
             </label>
             <div className="relative">
@@ -320,7 +320,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
           {/* Image Upload Section - Only for base type */}
           {itemType === 'base' && (
             <div className="space-y-1">
-              <label htmlFor="edit-image-upload" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
+              <label htmlFor="edit-image-upload" className="block text-sm font-medium text-primary mb-1">
                 Image
               </label>
               <input

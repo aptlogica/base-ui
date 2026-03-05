@@ -173,7 +173,7 @@ const BaseRoleManagement: React.FC<{
                   {isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-5 h-5" />
                   )}
                 </button>
               </div>
@@ -236,7 +236,7 @@ const WorkspaceRoleManagement: React.FC<{
           {isPending ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-5 h-5" />
           )}
         </button>
       </div>

@@ -1,5 +1,5 @@
 import React, { memo, useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { Plus, MoreHorizontal, GripVertical, ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
+import { Plus, MoreHorizontal, GripVertical, ChevronUp, ChevronDown, Trash2, PencilLineIcon } from 'lucide-react';
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
 import { KanbanStack as Stack, Row } from './types';
 import { BaseColumn } from '../../../../types/column.types';
@@ -532,25 +532,23 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
         className="select-none border p-2 space-y-1 animate-fade-in"
       >
         <button
-          className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors text-sm"
+          className="w-full flex items-center gap-2 px-4 py-2 text-gray-600 rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors text-sm"
           onClick={handleCollapseClick}
         >
           {stack.isCollapsed ? (
-            <><ChevronDown className="w-4 h-4" /> Expand stack</>
+            <><ChevronDown className="w-5 h-5" /> Expand stack</>
           ) : (
-            <><ChevronUp className="w-4 h-4" /> Collapse stack</>
+            <><ChevronUp className="w-5 h-5" /> Collapse stack</>
           )}
         </button>
         {!isUncategorized && (
           <>
             {onStackEdit && (
               <button
-                className="w-full flex items-center gap-2 px-4 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors text-sm"
+                className="w-full flex items-center gap-2 px-4 py-2 text-gray-600 rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors text-sm"
                 onClick={handleStackEditClick}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
+                <PencilLineIcon className="w-5 h-5 text-gray-500" />
                 Edit stack
               </button>
             )}
@@ -560,7 +558,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
                 className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black transition-colors"
                 onClick={handleDeleteStackClick}
               >
-                <Trash2 className="w-4 h-4" /> Delete stack
+                <Trash2 className="w-5 h-5" /> Delete stack
               </button>
             )}
           </>

@@ -511,7 +511,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                         setMenuOpen(false);
                       }}
                     >
-                      <Trash2 className="w-4 h-4" /> Delete record
+                      <Trash2 className="w-5 h-5" /> Delete record
                     </button>
                   )}
                 </div>

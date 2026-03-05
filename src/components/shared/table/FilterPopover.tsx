@@ -895,7 +895,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                       onRemoveFilter(idx);
                     }}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
               </div>

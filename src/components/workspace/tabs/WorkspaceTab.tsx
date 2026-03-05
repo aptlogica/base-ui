@@ -316,14 +316,14 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
                             <span className="text-sm font-medium text-gray-900 truncate">
                               {ws.title || ws.name || 'Untitled Workspace'}
                             </span>
-                            
+
                             {/* Access Level Badge - Don't show for owner/co-owner */}
                             {ws.access_level && ws.access_level !== 'owner' && ws.access_level !== 'co-owner' && (
                               <span className={`px-2 py-0.5 text-xs font-medium rounded-full border flex-shrink-0 ${accessLevelClasses}`}>
                                 {getRoleLabel(ws.access_level)}
                               </span>
                             )}
-                            
+
                             {isSelected && (
                               <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100 flex-shrink-0 ml-auto"></div>
                             )}
@@ -343,9 +343,9 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
           {selectedWorkspaceId && selectedWorkspace && (isAdmin() || isFullAccess) && !isWorkspaceReadOnly() && (
             <button
               onClick={() => setIsEditModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 text-sm border rounded-xl text-primary hover:bg-gray-100 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-sm border text-gray-600 rounded-xl hover:bg-gray-100 transition-colors"
             >
-              <Edit2 className='h-5 w-5' />
+              <Edit2 className='h-5 w-5 text-gray-500' />
               Edit Details
             </button>
           )}
