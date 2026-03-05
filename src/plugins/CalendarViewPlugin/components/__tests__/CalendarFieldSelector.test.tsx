@@ -13,7 +13,8 @@ vi.mock('../../../../hooks/useSmartPopover', () => ({
 }));
 
 vi.mock('../../../../types/fieldTypes', () => ({
-  getFieldTypeIconWithMargin: () => <span>Icon</span>
+  getFieldTypeIconWithMargin: () => <span>Icon</span>,
+  getRelationTypeFromField: vi.fn(() => undefined)
 }));
 
 vi.mock('../../../../components/common/dropdown/AdvancedDropdown', () => ({

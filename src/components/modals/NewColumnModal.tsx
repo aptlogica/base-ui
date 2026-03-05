@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import {
-  Search, X, Info, Loader2,
-} from 'lucide-react';
-
+import { Search, X, Info, Loader2 } from 'lucide-react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { FIELD_TYPES } from '../../types/fieldTypes';
 import {
@@ -14,19 +11,13 @@ import { useNavigationStore } from '../../stores/navigationStore';
 import { useToast } from '../../components/common/Toast';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../utils/fieldUsageUtils';
 import { renderNewColumnConfigStep } from './NewColumnModalConfigStep';
-import {
-  buildColumnPayload,
-  buildFieldMeta,
-  getUniqueColumnNameByUidt,
-  isDuplicateFieldName
-} from './NewColumnModal.logic';
+import { buildColumnPayload, buildFieldMeta, getUniqueColumnNameByUidt, isDuplicateFieldName } from './NewColumnModal.logic';
 
 interface FieldType {
   key: string;
   label: string;
   icon: any;
 }
-
 interface NewColumnModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -63,6 +54,13 @@ const getRawTables = (tablesData: any) => {
   if (Array.isArray(tablesData?.data)) return tablesData.data;
   return [];
 };
+
+const isFieldTypeLocked = (
+  isFieldUsedInViews: boolean,
+  isLinksFieldEditing: boolean,
+  selectedTypeKey: string | undefined,
+  selectedRelationId: string
+) => isFieldUsedInViews || isLinksFieldEditing || (selectedTypeKey === 'lookup' && !!selectedRelationId);
 
 export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields = [], isAddNewColumn = false, isAddNewField = false, useBackdrop, excludeRefs = [], currentTableId }: Readonly<NewColumnModalProps>) {
   const [step, setStep] = useState<number | null>(initialValues ? 2 : 1);
@@ -1256,10 +1254,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const isCompactAnchor = !isAddNewColumn || fields.length === 0 || fields.length <= 1;
   const positionClass = isCompactAnchor ? "left-0" : "right-0 translate-x-0";
   const shouldUseBackdrop = useBackdrop ?? isAddNewField;
-  const modalAnchorClass = shouldUseBackdrop
-    ? 'bg-modal-backdrop flex items-center justify-center'
-    : `absolute top-full ${positionClass}`;
-
+  const modalAnchorClass = shouldUseBackdrop ? 'bg-modal-backdrop flex items-center justify-center' : `absolute top-full ${positionClass}`;
   const modalWidthClass = selectedType?.key === 'formula' ? 'w-[500px]' : 'w-[416px]';
 
   return (
@@ -1286,7 +1281,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 className={`w-full px-3 py-2 bg-[var(--color-alpha-white)] border border-[var(--color-border-primary)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-[var(--text-color-primary)] placeholder:text-[var(--color-text-placeholder)] ${nameError ? "" : "mb-2"}`}
                 placeholder="Enter Field name"
                 value={fieldName}
-                // onChange={e => setFieldName(e.target.value)}
                 onChange={e => {
                   const value = e?.target?.value;
                   const capitalized = value?.charAt(0)?.toUpperCase() + value?.slice(1);
@@ -1315,7 +1309,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                   {filteredTypes.map((type: FieldType) => (
                     <button
                       key={type.key}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors ${selectedType?.key === type.key ? 'bg-blue-100' : ''}`}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${selectedType?.key === type.key ? 'bg-blue-100' : ''}`}
                       onClick={() => handleTypeSelect(type)}
                       style={{ fontWeight: 500, fontSize: 14 }}
                     >
@@ -1355,7 +1349,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                   fieldTypes={FIELD_TYPES.filter(type => !(type as any).hidden)}
                   selectedType={selectedType}
                   setSelectedType={handleTypeSelect}
-                  disabled={selectedType?.key === 'lookup' || isFieldUsedInViews || isLinksFieldEditing}
+                  disabled={isFieldTypeLocked(isFieldUsedInViews, isLinksFieldEditing, selectedType?.key, selectedRelationId)}
                 />
                 {isFieldUsedInViews && selectedType?.key !== 'links' && (
                   <div className="flex item-start gap-2 justify-between">

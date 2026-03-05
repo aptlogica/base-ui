@@ -92,7 +92,7 @@ export const DeleteBaseModal: React.FC<DeleteBaseModalProps> = ({
             className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
             aria-label="Close"
           >
-            <X size={16} className="text-gray-400" />
+            <X className="text-gray-400 h-5 w-5" />
           </button>
         </div>
 

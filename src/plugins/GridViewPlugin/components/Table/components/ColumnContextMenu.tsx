@@ -50,10 +50,10 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
       {canUpdate && (
         <button
           onClick={(event) => onEdit((event.currentTarget as HTMLElement) ?? menuRef.current ?? undefined)}
-          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors"
+          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-600 rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors"
           title="Edit column"
         >
-          <Pencil className="w-4 h-4" />
+          <Pencil className="w-5 h-5 text-gray-500" />
           Edit column
         </button>
       )}
@@ -66,7 +66,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
             className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black transition-colors"
             title="Delete column"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-5 h-5" />
             Delete column
           </button>
         </>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { getFieldTypeIconWithMargin } from '../../../types/fieldTypes';
+import { getFieldTypeIconWithMargin, getRelationTypeFromField } from '../../../types/fieldTypes';
 import { FieldConfigPopover } from '../../shared/FieldConfigPopover';
 import type { GridColumn } from '../../GridViewPlugin/types/grid.types';
 
@@ -37,7 +37,7 @@ export const CalendarFieldConfiguration: React.FC<CalendarFieldConfigurationProp
         .map(col => ({
           label: col.title || col.key || '',
           value: String(col.id!),
-          icon: getFieldTypeIconWithMargin(col.uidt || col.type || 'text')
+          icon: getFieldTypeIconWithMargin(col.uidt || col.type || 'text', getRelationTypeFromField(col))
         }))}
       value={dateField?.id ? String(dateField.id) : undefined}
       onChange={(val) => {

@@ -42,7 +42,7 @@ export function renderBasicConfigStep(props: any) {
           <div className="mb-3 space-y-2 " >
             <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]"
               onClick={() => setShowTextDefault((v: boolean) => !v)}>
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Set default value
             </button>
             {showTextDefault && (
@@ -72,7 +72,7 @@ export function renderBasicConfigStep(props: any) {
             <label htmlFor="richText" className="text-sm text-[var(--text-color-secondary)]">Enable rich text</label>
           </div>
           <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowTextDefault((v: boolean) => !v)}>
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
             Set default value
           </button>
           {showTextDefault && (
@@ -103,7 +103,7 @@ export function renderBasicConfigStep(props: any) {
             <label htmlFor="showThousands" className="text-sm text-[var(--text-color-secondary)]" >Show thousands separator</label>
           </div>
           <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowTextDefault((v: boolean) => !v)}>
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
             Set default value
           </button>
           {showTextDefault && (
@@ -141,7 +141,7 @@ export function renderBasicConfigStep(props: any) {
             <label htmlFor="showThousands" className="text-sm text-[var(--text-color-secondary)]">Show thousands separator</label>
           </div>
           <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowTextDefault((v: boolean) => !v)}>
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
             Set default value
           </button>
           {showTextDefault && (() => {

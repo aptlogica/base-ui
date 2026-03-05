@@ -61,16 +61,23 @@ const BaseMenuWrapper: React.FC<{
   }
 
   return (
-    <BaseMenu
-      base={base}
-      onEdit={onEdit}
-      onAddMembers={onAddMembers}
-      onDelete={onDelete}
-      canEdit={canEdit}
-      canDelete={canDelete}
-      canAddMembers={canAddMembers}
-      align={"left"}
-    />
+    <div //NOSONAR
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
+      <BaseMenu
+        base={base}
+        onEdit={onEdit}
+        onAddMembers={onAddMembers}
+        onDelete={onDelete}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        canAddMembers={canAddMembers}
+        align={"left"}
+      />
+    </div>
   );
 };
 
@@ -568,7 +575,7 @@ const Breadcrumb: React.FC = () => {
         id: tableId,
         label: table.title || 'Table',
         icon: (
-          <Sheet size={16} color="#2563eb" />
+          <Sheet className='h-5 w-5' color="#2563eb" />
         ),
         onClick: () => {
           setOpenDropdown(null);
@@ -732,7 +739,7 @@ const Breadcrumb: React.FC = () => {
                                 <div className="flex items-center gap-2 flex-shrink-0">
                                   {/* Status Indicator - only for selected */}
                                   {dropdownItem.isActive && (
-                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100"></div>
                                   )}
 
                                   {/* Base Menu - only for base items */}
@@ -757,7 +764,7 @@ const Breadcrumb: React.FC = () => {
                     </div>
 
                     {/* Separator */}
-                    {dropdownItems.length > 0 && (
+                    {dropdownItems.length > 0 && item.type == "base" && (
                       <div className="border-t flex-shrink-0"></div>
                     )}
 
@@ -779,7 +786,7 @@ const Breadcrumb: React.FC = () => {
                           }}
                         >
                           <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
-                            <Plus className="w-4 h-4 text-primary" />
+                            <Plus className="w-5 h-5 text-primary" />
                           </div>
                           <span>Create New Base</span>
                         </button>

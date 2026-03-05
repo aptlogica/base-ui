@@ -154,7 +154,7 @@ const EventsSidebar: React.FC<EventsSidebarProps> = ({
               onClick={onCreateRecord}
               className="px-3 py-1.5 flex items-center gap-2 rounded-xl btn-primary"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Record
             </button>
           )}

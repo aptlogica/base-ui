@@ -385,7 +385,7 @@ export const GroupPopover: React.FC<{
                     onClick={() => removeGrouping(group.id)}
                     title="Remove grouping"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
               );
@@ -402,7 +402,7 @@ export const GroupPopover: React.FC<{
                 disabled={!hasUnusedColumns}
                 data-testid="group-add-button"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Add Group Option
               </button>
             )}

@@ -201,9 +201,9 @@ const ChartTask = React.memo(({
 
       {/* Task Content */}
       {!isMilestone && (
-        <div className="relative pl-4 pr-3 py-2.5 h-full flex items-center bg-card border-l-4 rounded-lg" style={{ borderColor: task.color }}>
+        <div className="relative pl-4 pr-3 py-2.5 h-full flex items-center bg-card border-l-4 rounded-lg rounded-tr-xl rounded-br-xl" style={{ borderColor: task.color }}>
           <div className="flex items-center justify-between gap-2 flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2 flex-1 min-w-0">
               <h3 className="font-semibold text-gray-900 text-sm truncate">
                 {task.name}
               </h3>
@@ -592,10 +592,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
   const timelineHeaderCells = useMemo(() => {
     return timelineDays.map((day, index) => {
       const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+      const isToday = index === todayIndex;
       return (
         <div
           key={`${day.getTime()}-${index}`}
-          className={`border-r bg-card border-b p-2 text-center ${isWeekend ? 'bg-gray-50' : ''}`}
+          className={`border-r bg-card border-b p-2 text-center ${isWeekend ? 'bg-gray-50' : ''} ${isToday ? 'bg-[var(--color-bg-brand-primary)]/10' : ''}`}
           style={{ width: dayWidth }}
         >
           <div className={`text-xs ${isWeekend ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -604,32 +605,30 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
           <div className={`text-sm font-medium ${isWeekend ? 'text-gray-400' : ''}`}>
             {day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </div>
+          {isToday && (
+            <div
+              className="mt-1 mx-auto h-1 w-8 rounded-full bg-[var(--color-brand-500)]"
+              data-testid="gantt-today-marker"
+            />
+          )}
         </div>
       );
     });
-  }, [timelineDays, dayWidth]);
-
-  const todayLineStyle = useMemo(() => {
-    if (todayIndex < 0) return null;
-    return {
-      left: todayIndex * dayWidth,
-      width: 1,
-      backgroundColor: 'var(--color-brand-500)',
-    } as const;
-  }, [todayIndex, dayWidth]);
+  }, [timelineDays, dayWidth, todayIndex]);
 
   const timelineBackgroundColumns = useMemo(() => {
     return timelineDays.map((day, index) => {
       const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+      const isToday = index === todayIndex;
       return (
         <div
           key={`bg-${day.getTime()}-${index}`}
-          className={isWeekend ? 'bg-gray-50' : 'bg-transparent'}
+          className={`${isWeekend ? 'bg-gray-50' : 'bg-transparent'} ${isToday ? 'bg-[var(--color-bg-brand-primary)]/10' : ''}`}
           style={{ width: dayWidth, height: '100%' }}
         />
       );
     });
-  }, [timelineDays, dayWidth]);
+  }, [timelineDays, dayWidth, todayIndex]);
 
   const rowBackgrounds = useMemo(() => {
     return virtualItems.map((virtualItem) => {
@@ -644,7 +643,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
             left: 0,
             width: timelineWidth,
             height: ROW_HEIGHT,
-            borderBottom: '1px solid rgba(0,0,0,0.06)',
+            borderBottom: '1px solid var(--color-border-primary)',
           }}
         />
       );
@@ -743,7 +742,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
                 onClick={handleCreateRecord}
                 className="px-6 py-2 flex gap-2 items-center rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 New Record
               </button>
             )}
@@ -759,7 +758,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
                 onClick={handleCreateRecord}
                 className="px-6 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 New Record
               </button>
             </div>
@@ -865,12 +864,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
                 </div>
               </div>
             </div>
-            {todayLineStyle && (
-              <div
-                className="absolute top-0 bottom-0 pointer-events-none"
-                style={{ ...todayLineStyle, zIndex: 20 }}
-              />
-            )}
           </div>
 
           {/* Chart Area - Same container as timeline (virtualized) */}
@@ -887,14 +880,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
             <div className="absolute inset-0 pointer-events-none" style={{ width: timelineWidth, height: totalChartHeight }}>
               {rowBackgrounds}
             </div>
-
-            {/* Today marker */}
-            {todayLineStyle && (
-              <div
-                className="absolute top-0 bottom-0 pointer-events-none"
-                style={{ ...todayLineStyle, zIndex: 5 }}
-              />
-            )}
 
             {/* SVG for Dependencies - Memoized */}
             <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>

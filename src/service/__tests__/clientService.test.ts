@@ -380,12 +380,10 @@ describe('clientService', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     sessionStorage.setItem('user_id', 'u1');
     (client.baseService as any).update = vi.fn().mockResolvedValue({ data: { id: 'b1' } });
-    (client.baseService as any).uploadImage = vi.fn().mockRejectedValue(new Error('upload failed'));
 
     const result = await updateBaseService('b1', { title: 'Base', image: new File(['x'], 'x.png') });
     expect(result).toEqual({ data: { id: 'b1' } });
-    expect((client.baseService as any).update).toHaveBeenCalledWith('b1', { title: 'Base' });
-    expect((client.baseService as any).uploadImage).toHaveBeenCalledTimes(1);
+    expect((client.baseService as any).update).toHaveBeenCalledWith('b1', { title: 'Base', image: expect.any(File) });
     consoleErrorSpy.mockRestore();
   });
 

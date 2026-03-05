@@ -358,7 +358,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center flex-shrink-0">
-              <Upload size={16} className="text-green-600" />
+              <Upload className="text-green-600 h-5 w-5" />
             </div>
             <div className="min-w-0">
               <h2 className="text-xl font-semibold text-primary truncate">Import {config.label}</h2>
@@ -370,7 +370,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
             aria-label="Close"
           >
-            <X size={16} className="text-[var(--text-color-tertiary)]" />
+            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
           </button>
         </div>
 
@@ -379,8 +379,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           <div className="p-4 space-y-4">
             {/* File Upload Area */}
             <div className="space-y-1">
-              <label htmlFor="file-upload-input" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
-                Select File <span className="text-red-500">*</span>
+              <label htmlFor="file-upload-input" className="block text-sm font-medium text-primary mb-1">
+                Select File <span className="field-component-required">*</span>
               </label>
               <div //NOSONAR
                 id="file-upload-input"
@@ -435,7 +435,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                       <Upload size={22} className="text-gray-400" />
                     </div>
                     <div className="space-y-1">
-                      <div className="text-sm font-medium text-primary">
+                      <div className="text-lg font-medium text-primary">
                         Drop your document here or
                       </div>
                       <span className="text-primary text-xl hover:underline font-semibold">Browse files</span>
@@ -455,8 +455,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
             {/* Title Input */}
             <div className="space-y-1">
-              <label htmlFor="tableTitle" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
-                Table Title <span className="text-red-500">*</span>
+              <label htmlFor="tableTitle" className="block text-sm font-medium text-primary mb-1">
+                Table Title <span className="field-component-required">*</span>
               </label>
               <div className="relative">
                 <input
@@ -561,7 +561,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             disabled={importMutation.isPending || isSubmitting || !title.trim() || !selectedFile}
             className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {(importMutation.isPending || isSubmitting) && <Loader2 size={16} className="animate-spin" />}
+            {(importMutation.isPending || isSubmitting) && <Loader2 className="animate-spin h-5 w-5" />}
             {(importMutation.isPending || isSubmitting) ? 'Importing...' : 'Import'}
           </button>
         </div>

@@ -111,7 +111,7 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
         <div className="space-y-4">
           <div>
             <label htmlFor='company-name' className="block text-sm font-medium text-primary mb-2">
-              Company Name <span className="text-red-500">*</span>
+              Company Name <span className="field-component-required">*</span>
             </label>
             <input
               id='company-name'
@@ -124,7 +124,7 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
           </div>
           <div>
             <label htmlFor='organization-description' className="block text-sm font-medium text-primary mb-2">
-              Description <span className="text-red-500">*</span>
+              Description <span className="field-component-required">*</span>
             </label>
             <MultiLineText
               placeholder="Enter organization description..."

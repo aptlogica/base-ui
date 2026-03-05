@@ -62,8 +62,8 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.SyntheticEvent) => {
+    e?.preventDefault();
 
     if (!name.trim()) {
       setError('Table name is required');
@@ -127,67 +127,66 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
             className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
             aria-label="Close"
           >
-            <X size={16} className="text-[var(--text-color-tertiary)]" />
+            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
           </button>
         </div>
         {/* Scrollable Content Area */}
         <form id="create-table-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="p-4 space-y-4">
-          <div className="space-y-1">
-            <label htmlFor="tableName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
-              Table Name <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                id="tableName"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter table name"
-                className={`field-component field-component-border field-component-focus ${error || validationError ? 'border-red-500' : 'border'}`}
-                required
-                minLength={3}
-                maxLength={50}
-                autoFocus
-              />
-              <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
-                <span className="relative inline-block group">
-                  <HelpCircle className={`w-4 h-4 ${
-                    (() => {
-                      if (validationError) return 'text-red-500';
-                      if (name.trim().length >= 3) return 'text-green-600';
-                      return 'text-gray-400';
-                    })()
-                  } cursor-help`} />
-                  <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
-                    <h4 className="mb-2 text-primary">Table name requirements:</h4>
-                    <ul className="space-y-1">
-                      <li className={`flex items-center ${name.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
-                        • Minimum 3 characters
-                      </li>
-                    </ul>
-                  </div>
-                </span>
+            <div className="space-y-1">
+              <label htmlFor="tableName" className="block text-sm font-medium text-primary mb-1">
+                Table Name <span className="field-component-required">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="tableName"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter table name"
+                  className={`field-component field-component-border field-component-focus ${error || validationError ? 'border-red-500' : 'border'}`}
+                  required
+                  minLength={3}
+                  maxLength={50}
+                  autoFocus
+                />
+                <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
+                  <span className="relative inline-block group">
+                    <HelpCircle className={`w-4 h-4 ${(() => {
+                        if (validationError) return 'text-red-500';
+                        if (name.trim().length >= 3) return 'text-green-600';
+                        return 'text-gray-400';
+                      })()
+                      } cursor-help`} />
+                    <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
+                      <h4 className="mb-2 text-primary">Table name requirements:</h4>
+                      <ul className="space-y-1">
+                        <li className={`flex items-center ${name.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
+                          • Minimum 3 characters
+                        </li>
+                      </ul>
+                    </div>
+                  </span>
+                </div>
               </div>
+              {/* Validation Error */}
+              {(error || validationError) && (
+                <div className="mt-1 text-sm text-red-600">
+                  <span>{validationError || error}</span>
+                </div>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                {name.length}/50 characters
+              </p>
             </div>
-            {/* Validation Error */}
-            {(error || validationError) && (
-              <div className="mt-1 text-sm text-red-600">
-                <span>{validationError || error}</span>
-              </div>
-            )}
-            <p className="mt-1 text-xs text-gray-500">
-              {name.length}/50 characters
-            </p>
-          </div>
-          <MultiLineText
-            label="Description"
-            value={description}
-            onChange={value => setDescription(value)}
-            placeholder="Enter table description"
-            rows={5}
-            isBorder={true}
-          />
+            <MultiLineText
+              label="Description"
+              value={description}
+              onChange={value => setDescription(value)}
+              placeholder="Enter table description"
+              rows={5}
+              isBorder={true}
+            />
           </div>
         </form>
 

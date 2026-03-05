@@ -13,6 +13,7 @@ vi.mock('../../../../hooks/useSmartPopover', () => ({
 
 vi.mock('../../../../types/fieldTypes', () => ({
   getFieldTypeIconComponent: vi.fn(() => null),
+  getRelationTypeFromField: vi.fn(() => undefined),
 }));
 
 const defaultColumns = [

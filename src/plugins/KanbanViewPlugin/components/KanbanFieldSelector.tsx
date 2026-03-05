@@ -1,5 +1,5 @@
 import React from 'react';
-import { getFieldTypeIconWithMargin } from '../../../types/fieldTypes';
+import { getFieldTypeIconWithMargin, getRelationTypeFromField } from '../../../types/fieldTypes';
 import { FieldConfigPopover } from '../../shared/FieldConfigPopover';
 import type { BaseColumn } from '../../../types/column.types';
 
@@ -37,7 +37,7 @@ export const KanbanFieldConfiguration: React.FC<KanbanFieldConfigurationProps> =
         .map(col => ({
           label: col.title || col.column_name || '',
           value: String(col.id!),
-          icon: getFieldTypeIconWithMargin(col.uidt || 'text')
+          icon: getFieldTypeIconWithMargin(col.uidt || 'text', getRelationTypeFromField(col))
         }))}
       value={groupByField?.id ? String(groupByField.id) : undefined}
       onChange={(val) => {

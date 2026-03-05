@@ -13,8 +13,51 @@ const LinksSvgIcon: React.FC<{ className?: string }> = ({ className }) =>
   React.createElement('img', {
     src: '/assets/tableLinks.svg',
     alt: 'Links',
-    className: `${className} invert-[0.5]`, //w-4 h-4 text-gray-400
+    className,
   });
+
+const RelationOneToOneIcon: React.FC<{ className?: string }> = ({ className }) =>
+  React.createElement('img', {
+    src: '/assets/one-to-one.svg',
+    alt: 'One to One',
+    className,
+  });
+
+const RelationOneToManyIcon: React.FC<{ className?: string }> = ({ className }) =>
+  React.createElement('img', {
+    src: '/assets/one-to-many.svg',
+    alt: 'One to Many',
+    className,
+  });
+
+const RelationManyToManyIcon: React.FC<{ className?: string }> = ({ className }) =>
+  React.createElement('img', {
+    src: '/assets/many-to-many.svg',
+    alt: 'Many to Many',
+    className,
+  });
+
+const getRelationIconComponent = (relationType?: string) => {
+  switch (relationType) {
+    case 'one-to-one':
+      return RelationOneToOneIcon;
+    case 'has-many':
+      return RelationOneToManyIcon;
+    case 'many-to-many':
+      return RelationManyToManyIcon;
+    default:
+      return LinksSvgIcon;
+  }
+};
+
+export const getRelationTypeFromField = (field?: unknown) => {
+  if (!field) return undefined;
+  const typedField = field as {
+    meta?: { relation?: { type?: string } };
+    config?: { relation?: { type?: string } };
+  };
+  return typedField.meta?.relation?.type || typedField.config?.relation?.type;
+};
 
 // Field type enum for type safety
 export enum FieldType {
@@ -87,13 +130,21 @@ export const getFieldTypeInfo = (type: string) => {
 };
 
 // Helper function to get field type icon component with consistent styling
-export const getFieldTypeIconComponent = (type: string, className: string = "w-4 h-4 text-gray-400") => {
+export const getFieldTypeIconComponent = (
+  type: string,
+  className: string = "w-4 h-4 text-gray-400",
+  relationType?: string
+) => {
+  if (type === FieldType.Links || type === 'links') {
+    const IconComponent = getRelationIconComponent(relationType);
+    return React.createElement(IconComponent, { className });
+  }
   const fieldType = getFieldTypeInfo(type);
   const IconComponent = fieldType.icon;
   return IconComponent ? React.createElement(IconComponent, { className }) : null;
 };
 
 // Helper function to get field type icon component with margin
-export const getFieldTypeIconWithMargin = (type: string) => {
-  return getFieldTypeIconComponent(type, "w-4 h-4 mr-2 text-gray-400");
+export const getFieldTypeIconWithMargin = (type: string, relationType?: string) => {
+  return getFieldTypeIconComponent(type, "w-4 h-4 mr-2 text-gray-400", relationType);
 };

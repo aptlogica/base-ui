@@ -46,7 +46,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
   // Keyboard shortcuts
   useEffect(() => {
     if (!isOpen) return;
-    
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !carouselOpen && editingIndex === null) {
         onClose();
@@ -175,189 +175,189 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
       {/* Preview Modal */}
       {createPortal(
         <div //NOSONAR
-        className="bg-modal-backdrop" onClick={onClose}>
-        <div //NOSONAR
-          className="bg-[var(--color-card)] border rounded-xl shadow-2xl w-full transform transition-all duration-200 scale-100 relative max-w-6xl mx-4 min-h-[90vh] max-h-[90vh] flex flex-col"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                <Image size={16} className="text-green-600" />
+          className="bg-modal-backdrop" onClick={onClose}>
+          <div //NOSONAR
+            className="bg-[var(--color-card)] border rounded-xl shadow-2xl w-full transform transition-all duration-200 scale-100 relative max-w-6xl mx-4 min-h-[90vh] max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                  <Image className="text-green-600 h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Thumbnail</h2>
+                  <p className="text-sm text-gray-500">
+                    Preview all attachments {attachments.length > 0 && `(${attachments.length})`}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">Thumbnail</h2>
-                <p className="text-sm text-gray-500">
-                  Preview all attachments {attachments.length > 0 && `(${attachments.length})`}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              {!readOnly && allowEdit && onAttachFile && (
-              <button
-                type="button"
-                onClick={onAttachFile}
-                className="px-4 py-2 btn-primary flex items-center gap-2"
-                aria-label="Attach file"
-              >
-                <Paperclip size={16} />
-                Attach File
-              </button>
-              )}
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
-                aria-label="Close preview"
-              >
-                <X size={16} className="text-gray-500" />
-              </button>
-            </div>
-          </div>
-
-          {/* Content - Grid of thumbnails */}
-          <div className="p-6 max-h-[80vh] overflow-y-auto">
-            {attachments.length > 0 ? (
-              <div className="grid grid-cols-5 gap-4">
-                {attachments.map((file, index) => {
-                  const isHovered = hoveredCardIndex === index;
-                  return (
-                  <div //NOSONAR
-                    key={file.id || file.url || index}
-                    className="relative bg-card border rounded-xl p-2 hover:shadow-md transition-all cursor-pointer"
-                    onClick={() => handleImageClick(index)}
-                    onMouseEnter={() => setHoveredCardIndex(index)}
-                    onMouseLeave={() => setHoveredCardIndex(null)}
+              <div className="flex items-center gap-3">
+                {!readOnly && allowEdit && onAttachFile && (
+                  <button
+                    type="button"
+                    onClick={onAttachFile}
+                    className="px-4 py-2 btn-primary flex items-center gap-2"
+                    aria-label="Attach file"
                   >
-                    {/* File Preview */}
-                    <div className="relative aspect-square mb-3 rounded-xl overflow-hidden bg-gray-50">
-                      {file.mime_type?.startsWith("image/") ? (
-                        <img
-                          src={file.thumbnail_url || file.url}
-                          alt={file.title || file.name}
-                          className={`w-full h-full object-cover transition-transform duration-200 ${isHovered ? 'scale-105' : ''}`}
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                          }}
-                        />
-                      ) : (
-                        renderFileIcon(file, 'large')
-                      )}
-                    </div>
+                    <Paperclip className='h-5 w-5' />
+                    Attach File
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
+                  aria-label="Close preview"
+                >
+                  <X className="text-gray-500 h-5 w-5" />
+                </button>
+              </div>
+            </div>
 
-                    {/* File Name - Inline Editable with Action Icons */}
-                    <div className="text-xs font-medium w-full">
-                      {!readOnly && editingIndex === index ? (
-                        <div className="flex items-center gap-1 border rounded-[var(--radius-lg)] bg-[--color-alpha-white] focus:border focus:border-[--color-brand-600] px-2 py-1 w-full min-w-0">
-                          <input
-                            type="text"
-                            value={editingTitle}
-                            onChange={(e) => setEditingTitle(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                handleSaveEdit(index);
-                              } else if (e.key === "Escape") {
-                                handleCancelEdit();
-                              }
-                            }}
-                            onBlur={() => handleSaveEdit(index)}
-                            className="flex-1 min-w-0 w-full px-1 py-0.5 text-xs text-[var(--color-text-primary)] bg-transparent border-none outline-none placeholder-gray-400"
-                            placeholder="Enter filename..."
-                            autoFocus
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="flex items-center justify-between gap-2">
-                        <div
-                              className="truncate cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded text-gray-700 flex-1"
-                          title={file.title || file.name || "Unknown file"}
-                        >
-                          {file.title || file.name || "Unknown file"}
-                            </div>
-                            {/* Action Buttons - Visible only on hover of this card and when allowEdit is true and not readOnly */}
-                            {!readOnly && allowEdit && (
-                            <div className={`flex items-center gap-1 transition-all duration-200 ${isHovered ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCopyUrl(file, index, e);
+            {/* Content - Grid of thumbnails */}
+            <div className="p-6 max-h-[80vh] overflow-y-auto">
+              {attachments.length > 0 ? (
+                <div className="grid grid-cols-5 gap-4">
+                  {attachments.map((file, index) => {
+                    const isHovered = hoveredCardIndex === index;
+                    return (
+                      <div //NOSONAR
+                        key={file.id || file.url || index}
+                        className="relative bg-card border rounded-xl p-2 hover:shadow-md transition-all cursor-pointer"
+                        onClick={() => handleImageClick(index)}
+                        onMouseEnter={() => setHoveredCardIndex(index)}
+                        onMouseLeave={() => setHoveredCardIndex(null)}
+                      >
+                        {/* File Preview */}
+                        <div className="relative aspect-square mb-3 rounded-xl overflow-hidden bg-gray-50">
+                          {file.mime_type?.startsWith("image/") ? (
+                            <img
+                              src={file.thumbnail_url || file.url}
+                              alt={file.title || file.name}
+                              className={`w-full h-full object-cover transition-transform duration-200 ${isHovered ? 'scale-105' : ''}`}
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
                               }}
-                              className="p-1 text-gray-600 hover:text-gray-900 transition-colors"
-                              title="Copy URL"
-                              aria-label="Copy URL"
-                            >
-                              {copiedIndex === index ? (
-                                <Check size={10} className="text-green-600" />
-                              ) : (
-                                <Copy size={10} />
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDownloadAttachment(file, e);
-                              }}
-                              className="p-1 text-gray-600 hover:text-gray-900 transition-colors"
-                              title="Download"
-                              aria-label="Download file"
-                            >
-                              <Download size={10} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditAttachment(file, index, e);
-                              }}
-                              className="p-1 text-gray-600 hover:text-gray-900 transition-colors"
-                              title="Edit"
-                              aria-label="Edit filename"
-                            >
-                              <Edit size={10} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteAttachment(file, index, e);
-                              }}
-                              className="p-1 text-red-600 hover:text-red-700 transition-colors"
-                              title="Delete"
-                              aria-label="Delete file"
-                            >
-                              <Trash2 size={10} />
-                            </button>
-                          </div>
+                            />
+                          ) : (
+                            renderFileIcon(file, 'large')
                           )}
                         </div>
-                        {/* File Size */}
-                        {file.size && (
-                          <div className="text-xs text-gray-500 mt-0.5 px-1">
-                            {formatFileSize(file.size)}
-                          </div>
-                        )}
+
+                        {/* File Name - Inline Editable with Action Icons */}
+                        <div className="text-xs font-medium w-full">
+                          {!readOnly && editingIndex === index ? (
+                            <div className="flex items-center gap-1 border rounded-[var(--radius-lg)] bg-[--color-alpha-white] focus:border focus:border-[--color-brand-600] px-2 py-1 w-full min-w-0">
+                              <input
+                                type="text"
+                                value={editingTitle}
+                                onChange={(e) => setEditingTitle(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    handleSaveEdit(index);
+                                  } else if (e.key === "Escape") {
+                                    handleCancelEdit();
+                                  }
+                                }}
+                                onBlur={() => handleSaveEdit(index)}
+                                className="flex-1 min-w-0 w-full px-1 py-0.5 text-xs text-[var(--color-text-primary)] bg-transparent border-none outline-none placeholder-gray-400"
+                                placeholder="Enter filename..."
+                                autoFocus
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          ) : (
+                            <div>
+                              <div className="flex items-center justify-between gap-2">
+                                <div
+                                  className="truncate cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded text-gray-700 flex-1"
+                                  title={file.title || file.name || "Unknown file"}
+                                >
+                                  {file.title || file.name || "Unknown file"}
+                                </div>
+                                {/* Action Buttons - Visible only on hover of this card and when allowEdit is true and not readOnly */}
+                                {!readOnly && allowEdit && (
+                                  <div className={`flex items-center gap-1 transition-all duration-200 ${isHovered ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCopyUrl(file, index, e);
+                                      }}
+                                      className="p-1 text-gray-600 hover:text-gray-900 transition-colors"
+                                      title="Copy URL"
+                                      aria-label="Copy URL"
+                                    >
+                                      {copiedIndex === index ? (
+                                        <Check size={10} className="text-green-600" />
+                                      ) : (
+                                        <Copy size={10} />
+                                      )}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDownloadAttachment(file, e);
+                                      }}
+                                      className="p-1 text-gray-600 hover:text-gray-900 transition-colors"
+                                      title="Download"
+                                      aria-label="Download file"
+                                    >
+                                      <Download size={10} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditAttachment(file, index, e);
+                                      }}
+                                      className="p-1 text-gray-600 hover:text-gray-900 transition-colors"
+                                      title="Edit"
+                                      aria-label="Edit filename"
+                                    >
+                                      <Edit size={10} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteAttachment(file, index, e);
+                                      }}
+                                      className="p-1 text-red-600 hover:text-red-700 transition-colors"
+                                      title="Delete"
+                                      aria-label="Delete file"
+                                    >
+                                      <Trash2 size={10} />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              {/* File Size */}
+                              {file.size && (
+                                <div className="text-xs text-gray-500 mt-0.5 px-1">
+                                  {formatFileSize(file.size)}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <Image className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg">No attachments to preview</p>
-              </div>
-            )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <Image className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg">No attachments to preview</p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </div>,
-      document.body
+        </div>,
+        document.body
       )}
 
       {/* Image Carousel */}

@@ -80,6 +80,7 @@ vi.mock('../../../utils/standardFieldUtils', () => ({
 
 vi.mock('../../../types/fieldTypes', () => ({
   getFieldTypeIconWithMargin: vi.fn(() => <span data-testid="field-icon">📝</span>),
+  getRelationTypeFromField: vi.fn(() => undefined),
 }));
 
 const createTestQueryClient = () =>

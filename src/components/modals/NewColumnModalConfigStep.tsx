@@ -31,7 +31,7 @@ function renderDescriptionToggle({
   setDescription,
   buttonClassName = 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
   wrapperClassName = 'relative',
-  clearButtonClassName = 'absolute right-2 top-2 text-gray-400 hover:text-gray-600',
+  clearButtonClassName = 'absolute right-2 top-2 text-gray-400 hover:text-red-500',
 }: {
   showDescription: boolean;
   setShowDescription: (value: boolean | ((prev: boolean) => boolean)) => void;
@@ -48,7 +48,7 @@ function renderDescriptionToggle({
         className={buttonClassName}
         onClick={() => setShowDescription((v: boolean) => !v)}
       >
-        <Plus className="w-4 h-4" />
+        <Plus className="w-5 h-5" />
         Add description
       </button>
       {showDescription && (
@@ -66,7 +66,7 @@ function renderDescriptionToggle({
               className={clearButtonClassName}
               onClick={() => setDescription('')}
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-5 h-5" />
             </button>
           )}
         </>
@@ -77,7 +77,7 @@ function renderDescriptionToggle({
 
 const descriptionButtonClassName = 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2';
 const descriptionWrapperClassName = 'relative';
-const descriptionClearButtonClassName = 'absolute right-2 top-2 text-gray-400 hover:text-gray-600';
+const descriptionClearButtonClassName = 'absolute right-2 top-2 text-gray-400 hover:text-red-500';
 
 function renderBooleanConfig({
   checkboxIcon,
@@ -357,8 +357,8 @@ function renderBooleanConfig({
           isBorder={true}
         />
         {description &&
-          <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-            <Trash2 className="w-4 h-4" />
+          <button className="absolute right-2 top-2 text-gray-400 hover:text-red-500" onClick={() => setDescription('')}>
+            <Trash2 className="w-5 h-5" />
           </button>
         }
       </div>
@@ -576,7 +576,7 @@ function renderMultiSelectConfig({
                     handleRemoveOption(opt.option, idx);
                   }}
                 >
-                  <Trash2 className='w-4 h-4 text-[var(--color-error-400)]' />
+                  <Trash2 className='w-5 h-5 text-[var(--color-error-400)]' />
                 </button>
               </div>
             ))}
@@ -957,7 +957,7 @@ function renderRatingConfig({
 
       <div className="mb-3">
         <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-1" onClick={() => setShowRatingDefault((v: boolean) => !v)}>
-          <Plus className="w-4 h-4" />
+          <Plus className="w-5 h-5" />
           Set default value
         </button>
 
@@ -1239,7 +1239,7 @@ export function renderNewColumnConfigStep(props: any) {
         className={buttonClassName}
         onClick={() => setShow((v: boolean) => !v)}
       >
-        <Plus className="w-4 h-4" />
+        <Plus className="w-5 h-5" />
         {label}
       </button>
       {show && children}
@@ -1472,7 +1472,7 @@ export function renderNewColumnConfigStep(props: any) {
               </>
             )}
             <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowPercentDefault((v: boolean) => !v)}>
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Set default value
             </button>
             {showPercentDefault && (
@@ -1494,7 +1494,7 @@ export function renderNewColumnConfigStep(props: any) {
             )}
             <div className="relative">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Add description
               </button>
               {showDescription && (
@@ -1507,8 +1507,8 @@ export function renderNewColumnConfigStep(props: any) {
                     isBorder={true}
                   />
                   {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
+                    <button className="absolute right-2 top-2 text-gray-400 hover:text-red-500" onClick={() => setDescription('')}>
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   }
                 </>
@@ -1553,7 +1553,7 @@ export function renderNewColumnConfigStep(props: any) {
               clearable
             />
             <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowCurrencyDefault((v: boolean)  => !v)}>
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Set default value
             </button>
             {showCurrencyDefault && (
@@ -1573,7 +1573,7 @@ export function renderNewColumnConfigStep(props: any) {
             )}
             <div className="relative">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Add description
               </button>
               {showDescription && (
@@ -1586,8 +1586,8 @@ export function renderNewColumnConfigStep(props: any) {
                     isBorder={true}
                   />
                   {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
+                    <button className="absolute right-2 top-2 text-gray-400 hover:text-red-500" onClick={() => setDescription('')}>
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   }
                 </>
@@ -1606,7 +1606,7 @@ export function renderNewColumnConfigStep(props: any) {
             />
 
             <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDurationDefault((v: boolean) => !v)}>
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Set default value
             </button>
 
@@ -1623,7 +1623,7 @@ export function renderNewColumnConfigStep(props: any) {
 
             <div className="relative">
               <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Add description
               </button>
               {showDescription && (
@@ -1636,8 +1636,8 @@ export function renderNewColumnConfigStep(props: any) {
                     isBorder={true}
                   />
                   {description &&
-                    <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onClick={() => setDescription('')}>
-                      <Trash2 className="w-4 h-4" />
+                    <button className="absolute right-2 top-2 text-gray-400 hover:text-red-500" onClick={() => setDescription('')}>
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   }
                 </>

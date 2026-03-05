@@ -98,7 +98,7 @@ export const UserSettingsTab: React.FC<UserSettingsTabProps> = () => {
             }}
             className="px-4 py-2 btn-primary flex items-center gap-1 transition font-medium whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
             Add User
           </button>
         }

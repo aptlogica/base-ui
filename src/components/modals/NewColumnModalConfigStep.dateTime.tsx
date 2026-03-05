@@ -73,7 +73,7 @@ export function renderDateTimeConfigStep(props: any) {
                 className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-2 space-y-2"
                 onClick={() => setShowDateDefault((v: boolean) => !v)}
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Set default value
               </button>
               {showDateDefault && (
@@ -101,7 +101,7 @@ export function renderDateTimeConfigStep(props: any) {
       return (
         <>
           <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowYearDefault((v: boolean) => !v)}>
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
             Set default value
           </button>
           {showYearDefault && (
@@ -152,7 +152,7 @@ export function renderDateTimeConfigStep(props: any) {
                 className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2"
                 onClick={() => setShowTimeDefault((v: boolean) => !v)}
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Set default value
               </button>
               {showTimeDefault && (
@@ -177,7 +177,7 @@ export function renderDateTimeConfigStep(props: any) {
             setDescription,
             buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
             wrapperClassName: 'relative',
-            clearButtonClassName: 'absolute right-2 top-0 text-gray-400 hover:text-gray-600 text-sm',
+            clearButtonClassName: 'absolute right-2 top-0 text-gray-400 hover:text-red-500 text-sm',
           })}
         </>
       );

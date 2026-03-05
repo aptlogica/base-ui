@@ -362,7 +362,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
           <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
-                <Plus size={16} className="text-green-600" />
+                <Plus className="text-green-600 h-5 w-5" />
               </div>
               <div className="min-w-0">
                 <h2 className="text-xl font-semibold text-primary truncate">{title}</h2>
@@ -374,7 +374,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
               className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
               aria-label="Close"
             >
-              <X size={16} className="text-[var(--text-color-tertiary)]" />
+              <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
             </button>
           </div>
 
@@ -413,8 +413,8 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
             <form id="create-workspace-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
               <div className="p-4 space-y-4">
                 <div className="space-y-1">
-                  <label htmlFor="workspaceName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
-                    Workspace Name <span className="text-red-500">*</span>
+                  <label htmlFor="workspaceName" className="block text-sm font-medium text-primary mb-1">
+                    Workspace Name <span className="field-component-required">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -473,7 +473,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
             /* Danger Tab Content */
             <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
               <div className="p-6 space-y-6">
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Danger Zone</h2>
+                <h2 className="text-lg text-gray-900 mb-4">Danger Zone</h2>
                 {canDelete && (
                   <div className="flex items-center justify-between p-4 rounded-xl border border-red-400">
                     <div className="flex-1">
@@ -511,7 +511,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
                 disabled={isSubmitDisabled}
                 className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
               >
-                {submitting && <Loader2 size={16} className="animate-spin" />}
+                {submitting && <Loader2 className="animate-spin h-5 w-5" />}
                 {buttonText}
               </button>
             </div>

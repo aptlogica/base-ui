@@ -219,13 +219,13 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
         </button>
         {logicDropdownOpen === rowKey && (
           <div //NOSONAR
-            className="absolute z-50 mt-1 p-1 left-0 w-20 bg-background border rounded-xl shadow-lg"
+            className="absolute z-50 space-y-1 mt-1 p-1 left-0 w-20 bg-background border rounded-xl shadow-lg"
             onMouseLeave={() => setLogicDropdownOpen(null)}
           >
             {['AND', 'OR'].map((logic) => (
               <button
                 key={logic}
-                className={`w-full text-left px-3 py-1.5 text-sm rounded hover:bg-[var(--color-bg-brand-primary)] hover:text-black ${currentLogic === logic ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''
+                className={`w-full text-left px-3 py-1.5 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black ${currentLogic === logic ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'
                   }`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -264,7 +264,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
         onSelect={onSelectField}
         placeholder="Select field"
         menuTestId={menuTestId}
-        buttonClassName="w-full px-3 py-1.5 text-sm text-left bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-between"
+        buttonClassName="w-full px-3 py-1.5 text-sm text-left text-primary bg-background border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-between"
         menuClassName={menuClassName}
         optionClassName={optionClassName}
         labelClassName={labelClassName}
@@ -895,7 +895,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                       onRemoveFilter(idx);
                     }}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
               </div>
@@ -936,7 +936,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                   "filter-new-field-options",
                   "absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-primary rounded-xl shadow-lg max-h-64 overflow-y-auto",
                   (_, isSelected) =>
-                    `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap group ${isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'}`,
+                    `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap group ${isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''}`,
                   (_, isSelected) => (isSelected ? 'text-black' : 'text-primary group-hover:text-black')
                 )}
               </div>
@@ -1002,7 +1002,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                   setInputValue('');
                 }}
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Add filter
               </button>
             )}
@@ -1012,7 +1012,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                 className="flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-xl"
                 onClick={handleAdd}
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Add filter
               </button>
             )}

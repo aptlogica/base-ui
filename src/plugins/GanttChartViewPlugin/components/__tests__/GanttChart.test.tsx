@@ -189,6 +189,7 @@ const setupMocks = (overrides?: {
   totalItems?: number;
   paginatedTasks?: GanttTask[];
   filteredTasks?: GanttTask[];
+  timelineDays?: Date[];
   modalState?: any;
   deleteConfirmModalOpen?: boolean;
   taskToDelete?: GanttTask | null;
@@ -236,7 +237,7 @@ const setupMocks = (overrides?: {
 
   const timelineHandlers = {
     dayWidth: 30,
-    timelineDays: [new Date('2024-01-01T00:00:00.000Z')],
+    timelineDays: overrides?.timelineDays ?? [new Date('2024-01-01T00:00:00.000Z')],
     showTooltip: false,
     tooltipTask: null,
     tooltipRef: { current: null },
@@ -356,6 +357,15 @@ describe('GanttChart', () => {
     render(<GanttChart tableData={tableData} onRefresh={() => undefined} actions={buildActions()} />);
     expect(screen.getByText('No tasks found')).toBeInTheDocument();
     expect(screen.getByText('Try adjusting your filters')).toBeInTheDocument();
+  });
+
+  it('shows the today marker when the timeline includes today', () => {
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    setupMocks({ timelineDays: [todayStart] });
+    render(<GanttChart tableData={tableData} onRefresh={() => undefined} actions={buildActions()} />);
+
+    expect(screen.getByTestId('gantt-today-marker')).toBeInTheDocument();
   });
 
   it('loads more when load more button is clicked', async () => {

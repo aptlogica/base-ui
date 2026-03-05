@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { X, CirclePlus } from 'lucide-react';
 import FieldRenderer from '../../plugins/FormViewPlugin/components/shared/FieldRenderer';
 import { useAddRow, useInsertRowData, useAddAttachment, useInsertRelationData } from '../../hooks/useApi';
-import { getFieldTypeIconWithMargin } from '../../types/fieldTypes';
+import { getFieldTypeIconWithMargin, getRelationTypeFromField } from '../../types/fieldTypes';
 import { getStandardFieldType, getFieldDisplayName, getFieldDefaultValue, createFieldRendererProps } from '../../utils/standardFieldUtils';
 import { isFormulaField } from '../../utils/fieldUtils';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
@@ -417,7 +417,10 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                                 return (
                                     <div key={field.id} className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-4 items-center">
                                         <div className="text-gray-600 flex items-center gap-2">
-                                            {getFieldTypeIconWithMargin(getStandardFieldType(field))}
+                                            {getFieldTypeIconWithMargin(
+                                              getStandardFieldType(field),
+                                              getRelationTypeFromField(field)
+                                            )}
                                             <span className="text-sm">{getFieldDisplayName(field)}</span>
                                             {field.required && <span className="text-red-500 ml-1 field-component-required">*</span>}
                                         </div>
@@ -451,7 +454,10 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                                     return (
                                         <div key={field.id} className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-4 items-center">
                                             <div className="text-gray-600 flex items-center gap-2">
-                                                {getFieldTypeIconWithMargin(getStandardFieldType(field))}
+                                                {getFieldTypeIconWithMargin(
+                                                  getStandardFieldType(field),
+                                                  getRelationTypeFromField(field)
+                                                )}
                                                 <span className="text-sm">{getFieldDisplayName(field)}</span>
                                                 {field.required && <span className="text-red-500 ml-1 field-component-required">*</span>}
                                             </div>

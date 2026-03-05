@@ -159,8 +159,8 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
     return 'text-gray-400';
   };
 
-  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (e?:React.SyntheticEvent) => {
+    e?.preventDefault();
 
     if (!name.trim()) {
       setError(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} name is required`);
@@ -248,7 +248,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
-              <PencilLine size={16} className="text-green-600" />
+              <PencilLine className="text-green-600 h-5 w-5" />
             </div>
             <div className="min-w-0">
               <h2 className="text-xl font-semibold text-primary truncate">{title}</h2>
@@ -260,7 +260,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
             className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
             aria-label="Close"
           >
-            <X size={16} className="text-[var(--text-color-tertiary)]" />
+            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
           </button>
         </div>
 
@@ -268,8 +268,8 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
         <form id="edit-item-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="p-4 space-y-4">
           <div className="space-y-1">
-            <label htmlFor="itemName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
-              {itemType.charAt(0).toUpperCase() + itemType.slice(1)} Name <span className="text-red-500">*</span>
+            <label htmlFor="itemName" className="block text-sm font-medium text-primary mb-1">
+              {itemType.charAt(0).toUpperCase() + itemType.slice(1)} Name <span className="field-component-required">*</span>
             </label>
             <div className="relative">
               <input
@@ -320,7 +320,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
           {/* Image Upload Section - Only for base type */}
           {itemType === 'base' && (
             <div className="space-y-1">
-              <label htmlFor="edit-image-upload" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
+              <label htmlFor="edit-image-upload" className="block text-sm font-medium text-primary mb-1">
                 Image
               </label>
               <input

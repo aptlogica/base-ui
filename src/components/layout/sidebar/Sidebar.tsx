@@ -379,7 +379,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               title={selectedBase && effectiveSelectedWorkspace ? "Import Table" : "Select a base to import a table"}
               disabled={!selectedBase || !effectiveSelectedWorkspace}
             >
-              <Download size={16} /> Import Table
+              <Download className="h-5 w-5"/> Import Table
             </button>
             <button
               className="w-full flex items-center justify-center gap-2 btn-primary p-2 rounded transition overflow-hidden"
@@ -394,7 +394,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               title={selectedBase ? "Create Table" : "Select a base to create a table"}
               disabled={!selectedBase}
             >
-              <Plus size={16} /> Create Table
+              <Plus className="h-5 w-5"/> Create Table
             </button>
           </>
         )}

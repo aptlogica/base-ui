@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Upload, Download, Eye, Trash2, Check, X as XIcon, Loader2 } from 'lucide-react';
+import { X, Upload, Download, Eye, Trash2, Check, Loader2 } from 'lucide-react';
 import { AttachmentFile } from '../../../../GridViewPlugin/types/grid.types';
 import { useUpdateAttachment, useAddAttachment } from '../../../../../hooks/useApi';
 
@@ -440,7 +440,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
             className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
             aria-label="Close"
           >
-            <X size={16} className="text-[var(--text-color-tertiary)]" />
+            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
           </button>
         </div>
 
@@ -558,7 +558,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
                                 className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50"
                                 aria-label="Save title"
                               >
-                                <Check size={16} />
+                                <Check className="h-5 w-5" />
                               </button>
                               <button
                                 type="button"
@@ -566,7 +566,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
                                 className="p-1 text-red-600 hover:text-red-700"
                                 aria-label="Cancel edit"
                               >
-                                <XIcon size={16} />
+                                <X className="h-5 w-5" />
                               </button>
                             </div>
                           ) : (

@@ -3,7 +3,7 @@ import { X, HelpCircle, AlertCircle } from 'lucide-react';
 import { VIEW_ICONS, ViewType } from '../../types/viewTypes';
 import { MultiLineText } from '../common/Fields/MultiLineText';
 import AdvancedDropdown from '../common/dropdown/AdvancedDropdown';
-import { getFieldTypeIconComponent } from '../../types/fieldTypes';
+import { getFieldTypeIconComponent, getRelationTypeFromField } from '../../types/fieldTypes';
 import { useTable } from '../../hooks/useApi';
 import { validateViewName, getDefaultViewName, generateUniqueName } from '../../utils/nameValidation';
 
@@ -311,8 +311,8 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
     return isFieldSelectionInvalid(fieldDropdownOptions, showFieldDropdown);
   };
 
-  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.SyntheticEvent) => {
+    e?.preventDefault();
 
     // If no name provided, generate a default name
     let finalName = name.trim();
@@ -381,7 +381,9 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
   const fieldDropdownOptions = filteredFields.map((f: any) => ({
     value: f.id,
     label: f.name,
-    icon: getFieldTypeIconComponent(f.uidt || f.type) || <span className="w-4 h-4 text-gray-400" />,
+    icon: getFieldTypeIconComponent(f.uidt || f.type, undefined, getRelationTypeFromField(f)) || (
+      <span className="w-4 h-4 text-gray-400" />
+    ),
     description: f.description || '',
     type: f.uidt || f.type,
     raw: f,
@@ -422,197 +424,216 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
             className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
             aria-label="Close"
           >
-            <X size={16} className="text-[var(--text-color-tertiary)]" />
+            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
           </button>
         </div>
 
         {/* Scrollable Content Area */}
         <form id="create-view-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="p-4 space-y-2">
-          <div className="space-y-1">
-            <label htmlFor="viewName" className="block text-sm font-medium text-[var(--text-color-tertiary)] mb-1">
-              View Name <span className="text-xs text-gray-500">(optional)</span>
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                id="viewName"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter view name"
-                className={`field-component field-component-border field-component-focus ${error || validationError ? 'border-red-500' : 'border'
-                  }`}
-                minLength={3}
-                maxLength={50}
-                autoFocus
-              />
-              <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
-                <span className="relative inline-block group">
-                  {(() => {
-                    let iconColor = 'text-gray-400';
-                    if (validationError) {
-                      iconColor = 'text-red-500';
-                    } else if (name.trim().length === 0 || name.trim().length >= 3) {
-                      iconColor = 'text-green-600';
-                    }
-                    return <HelpCircle className={`w-4 h-4 ${iconColor} cursor-help`} />;
-                  })()}
-                  <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
-                    <h4 className="mb-2 text-primary">View name info:</h4>
-                    <ul className="space-y-1 text-gray-600">
-                      <li>• Optional - leave empty for auto-generated name</li>
-                      <li className={`${name.trim().length >= 3 || name.trim().length === 0 ? 'text-green-600' : 'text-gray-600'}`}>
-                        • If provided, minimum 3 characters
-                      </li>
-                      <li>• Default: "{viewType.charAt(0).toUpperCase() + viewType.slice(1)} View"</li>
-                    </ul>
-                  </div>
-                </span>
-              </div>
-
-            </div>
-            {/* Validation Error */}
-            {(error || validationError) && (
-              <div className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{validationError || error}</span>
-              </div>
-            )}
-            <p className="mt-1 text-xs text-gray-500">
-              {name.length}/50 characters
-            </p>
-          </div>
-
-          {/* Field Selection for different view types */}
-          {showFieldDropdown && (() => {
-            if (fieldDropdownOptions.length === 0) {
-              // Show a small loading / empty state while fetching columns
-              if (tableQuery.isLoading) {
-                return <div className="text-sm text-secondary px-2 py-2">Loading fields...</div>;
-              }
-              return <div className="text-sm text-red-500 px-2 py-2">No required fields are available for this view.</div>;
-            }
-
-            if (viewType === 'ganttChart') {
-                // Gantt Chart: Dual field selection for start and end dates
-              return (
-                <div className="space-y-4">
-                  <AdvancedDropdown
-                    label="Start Date Field"
-                    options={fieldDropdownOptions}
-                    value={startDateField}
-                    onChange={(val) => {
-                      setStartDateField(val as FieldValue);
-                    }}
-                    placeholder="Select start date field..."
-                    searchable
-                    required
-                  />
-                  <AdvancedDropdown
-                    label="End Date Field"
-                    options={fieldDropdownOptions}
-                    value={endDateField}
-                    onChange={(val) => {
-                      setEndDateField(val as FieldValue);
-                    }}
-                    placeholder="Select end date field..."
-                    searchable
-                    required
-                  />
+            <div className="space-y-1">
+              <label htmlFor="viewName" className="block text-sm font-medium text-primary mb-1">
+                View Name <span className="text-xs text-gray-500">(optional)</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="viewName"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter view name"
+                  className={`field-component field-component-border field-component-focus ${error || validationError ? 'border-red-500' : 'border'
+                    }`}
+                  minLength={3}
+                  maxLength={50}
+                  autoFocus
+                />
+                <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
+                  <span className="relative inline-block group">
+                    {(() => {
+                      let iconColor = 'text-gray-400';
+                      if (validationError) {
+                        iconColor = 'text-red-500';
+                      } else if (name.trim().length === 0 || name.trim().length >= 3) {
+                        iconColor = 'text-green-600';
+                      }
+                      return <HelpCircle className={`w-4 h-4 ${iconColor} cursor-help`} />;
+                    })()}
+                    <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
+                      <h4 className="mb-2 text-primary">View name info:</h4>
+                      <ul className="space-y-1 text-gray-600">
+                        <li>• Optional - leave empty for auto-generated name</li>
+                        <li className={`${name.trim().length >= 3 || name.trim().length === 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                          • If provided, minimum 3 characters
+                        </li>
+                        <li>• Default: "{viewType.charAt(0).toUpperCase() + viewType.slice(1)} View"</li>
+                      </ul>
+                    </div>
+                  </span>
                 </div>
-              );
-            }
 
-                // Other view types: Single field selection
-            const getFieldLabel = () => {
-              if (viewType === 'calendar') return 'Date Field';
-              if (viewType === 'kanban') return 'Group by Field';
-              return 'Organize by';
-            };
+              </div>
+              {/* Validation Error */}
+              {(error || validationError) && (
+                <div className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{validationError || error}</span>
+                </div>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                {name.length}/50 characters
+              </p>
+            </div>
 
-            return (
+            {/* Field Selection for different view types */}
+            {showFieldDropdown && (() => {
+              if (fieldDropdownOptions.length === 0) {
+                // Show a small loading / empty state while fetching columns
+                if (tableQuery.isLoading) {
+                  return <div className="text-sm text-secondary px-2 py-2">Loading fields...</div>;
+                }
+                const getExpectedFieldMessage = () => {
+                  if (viewType === 'calendar') {
+                    return 'Create a Date or DateTime field to continue.';
+                  }
+                  if (viewType === 'ganttChart') {
+                    return 'Create Date/DateTime fields for start and end dates to continue.';
+                  }
+                  if (viewType === 'kanban') {
+                    return 'Create a Select or Single Select field to group by.';
+                  }
+                  if (viewType === 'gallery') {
+                    return 'Create a Attachment field to continue.';
+                  }
+                  return 'Create a compatible field to continue.';
+                };
+                return (
+                  <div className="text-xl text-red-500 px-2 py-2">
+                    No eligible fields found. {getExpectedFieldMessage()}
+                  </div>
+                );
+              }
+
+              if (viewType === 'ganttChart') {
+                // Gantt Chart: Dual field selection for start and end dates
+                return (
+                  <div className="space-y-4">
+                    <AdvancedDropdown
+                      label="Start Date Field"
+                      options={fieldDropdownOptions}
+                      value={startDateField}
+                      onChange={(val) => {
+                        setStartDateField(val as FieldValue);
+                      }}
+                      placeholder="Select start date field..."
+                      searchable
+                      required
+                    />
+                    <AdvancedDropdown
+                      label="End Date Field"
+                      options={fieldDropdownOptions}
+                      value={endDateField}
+                      onChange={(val) => {
+                        setEndDateField(val as FieldValue);
+                      }}
+                      placeholder="Select end date field..."
+                      searchable
+                      required
+                    />
+                  </div>
+                );
+              }
+
+              // Other view types: Single field selection
+              const getFieldLabel = () => {
+                if (viewType === 'calendar') return 'Date Field';
+                if (viewType === 'kanban') return 'Group by Field';
+                return 'Organize by';
+              };
+
+              return (
                 <AdvancedDropdown
-                label={getFieldLabel()}
+                  label={getFieldLabel()}
                   options={fieldDropdownOptions}
                   value={selectedField}
                   onChange={(val) => {
-                  setSelectedField(val as FieldValue);
+                    setSelectedField(val as FieldValue);
                     setFieldError(''); // Clear error when user makes selection
                   }}
                   placeholder="Select field..."
                   searchable
                   required
                 />
-            );
-          })()}
+              );
+            })()}
 
-          {/* Field Error Display */}
-          {fieldError && (
-            <div className="text-sm text-red-600 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{fieldError}</span>
+            {/* Field Error Display */}
+            {fieldError && (
+              <div className="text-sm text-red-600 flex items-center gap-1">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{fieldError}</span>
+              </div>
+            )}
+
+            <MultiLineText
+              label="Description"
+              value={description}
+              onChange={value => setDescription(value)}
+              placeholder="Enter view description"
+              rows={5}
+              isBorder={true}
+            />
+
+            {/* View Type Info */}
+            <div className="border bg-[var(--color-utility-bg)] rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <IconComponent size={24} className='icon-primary p-1.5 rounded-xl bg-primary/10' />
+                <span className="text-sm font-medium text-primary">
+                  {viewType.charAt(0).toUpperCase() + viewType.slice(1)} View
+                </span>
+              </div>
+              <p className="text-xs text-secondary">
+                {viewType === ViewType.Grid && 'Display data in a spreadsheet-like grid with sorting and filtering.'}
+                {viewType === ViewType.Form && 'Create forms for data entry with customizable fields and layouts.'}
+                {viewType === ViewType.Gallery && 'Show data as cards with images and rich content.'}
+                {viewType === ViewType.Kanban && 'Organize data in columns for project management workflows.'}
+                {viewType === ViewType.Calendar && 'Display data in a calendar format with date-based views.'}
+                {viewType === ViewType.GanttChart && 'Show project timelines and dependencies in a Gantt chart.'}
+              </p>
             </div>
-          )}
-
-          <MultiLineText
-            label="Description"
-            value={description}
-            onChange={value => setDescription(value)}
-            placeholder="Enter view description"
-            rows={5}
-            isBorder={true}
-          />
-
-          {/* View Type Info */}
-          <div className="bg-[var(--color-utility-bg)] rounded-xl p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <IconComponent size={24} className='icon-primary p-1.5 rounded-xl bg-primary/10' />
-              <span className="text-sm font-medium text-primary">
-                {viewType.charAt(0).toUpperCase() + viewType.slice(1)} View
-              </span>
-            </div>
-            <p className="text-xs text-secondary">
-              {viewType === ViewType.Grid && 'Display data in a spreadsheet-like grid with sorting and filtering.'}
-              {viewType === ViewType.Form && 'Create forms for data entry with customizable fields and layouts.'}
-              {viewType === ViewType.Gallery && 'Show data as cards with images and rich content.'}
-              {viewType === ViewType.Kanban && 'Organize data in columns for project management workflows.'}
-              {viewType === ViewType.Calendar && 'Display data in a calendar format with date-based views.'}
-              {viewType === ViewType.GanttChart && 'Show project timelines and dependencies in a Gantt chart.'}
-            </p>
-          </div>
 
           </div>
         </form>
 
         {/* Footer - Fixed at Bottom */}
         <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
             className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
-            >
-              Cancel
-            </button>
-            <button
+          >
+            Cancel
+          </button>
+          <button
             type="button"
             onClick={(e) => {
               e.preventDefault();
               handleSubmit(e);
             }}
             disabled={isSubmitDisabled(fieldDropdownOptions, showFieldDropdown)}
-              className="px-16 py-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Creating...
-                </>
-              ) : (
-                'Create View'
-              )}
-            </button>
-          </div>
+            className="px-16 py-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Creating...
+              </>
+            ) : (
+              'Create View'
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

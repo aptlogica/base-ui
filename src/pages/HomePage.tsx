@@ -540,7 +540,7 @@ const HomePage: React.FC = () => {
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-primary">Recent</span>
                       {sortOption === 'recent' && (
-                        <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                        <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100 flex-shrink-0"></div>
                       )}
                     </div>
                   </button>
@@ -554,7 +554,7 @@ const HomePage: React.FC = () => {
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-primary">A-Z</span>
                       {sortOption === 'a-z' && (
-                        <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                        <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100 flex-shrink-0"></div>
                       )}
                     </div>
                   </button>
@@ -568,7 +568,7 @@ const HomePage: React.FC = () => {
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-primary">Z-A</span>
                       {sortOption === 'z-a' && (
-                        <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                        <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100 flex-shrink-0"></div>
                       )}
                     </div>
                   </button>
