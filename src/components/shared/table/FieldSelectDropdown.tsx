@@ -70,7 +70,7 @@ export const FieldSelectDropdown: React.FC<FieldSelectDropdownProps> = ({
                   <Type className="w-4 h-4 text-gray-400" />
                 )}
               </span>
-              <span className={labelClassName ? labelClassName(selectedOption, true) : ''}>
+              <span className={`${labelClassName ? labelClassName(selectedOption, true) : ''} text-primary`}>
                 {selectedOption.title}
               </span>
             </span>
@@ -119,7 +119,7 @@ export const FieldSelectDropdown: React.FC<FieldSelectDropdownProps> = ({
                   )}
                 </span>
                 <span className={labelClasses}>{option.title}</span>
-                {showCheck && isSelected && <Check className="w-4 h-4 ml-auto text-primary" />}
+                {showCheck && isSelected && <Check className="w-4 h-4 ml-auto" />}
               </button>
             );
           })}
