@@ -256,6 +256,49 @@ describe('AuthContext', () => {
       });
     });
 
+    it('should lock tab when another tab holds the auth lock for same user', async () => {
+      const userId = 'user-123';
+      vi.mocked(clientService.isAuthenticated).mockResolvedValue(true);
+
+      (sessionStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) => {
+        switch (key) {
+          case 'user_id':
+            return userId;
+          case 'sb_tab_id':
+            return 'tab-1';
+          default:
+            return null;
+        }
+      });
+
+      (localStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) => {
+        if (key === 'sb_auth_lock') {
+          return JSON.stringify({ user_id: userId, tab_id: 'tab-2', ts: Date.now() });
+        }
+        return null;
+      });
+
+      const TestComponent = () => {
+        const { user, loading } = useAuth();
+        if (loading) return <div>Loading</div>;
+        return <div data-testid="user">{user ? 'authenticated' : 'not-authenticated'}</div>;
+      };
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <DefaultAuthProvider>
+            <TestComponent />
+          </DefaultAuthProvider>
+        </QueryClientProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('user')).toHaveTextContent('not-authenticated');
+      });
+
+      expect(sessionStorage.setItem).toHaveBeenCalledWith('sb_tab_locked', '1');
+    });
+
     it('should not set user data when no user_id is found', async () => {
       vi.mocked(clientService.isAuthenticated).mockResolvedValue(true);
       (sessionStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue(null);
@@ -340,7 +383,7 @@ describe('AuthContext', () => {
       );
 
       await waitFor(() => {
-        expect(sessionStorage.setItem).not.toHaveBeenCalled();
+        expect(sessionStorage.setItem).not.toHaveBeenCalledWith('user_id', expect.anything());
       });
 
       const loginButton = screen.getByText('Login');
@@ -1390,8 +1433,11 @@ describe('AuthContext', () => {
   describe('Edge Cases and Error Handling', () => {
     it('should handle storage errors gracefully during login', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      (sessionStorage.setItem as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
-        throw new Error('Storage quota exceeded');
+      (sessionStorage.setItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) => {
+        if (key === 'user_id') {
+          throw new Error('Storage quota exceeded');
+        }
+        return undefined;
       });
 
       const TestComponent = () => {

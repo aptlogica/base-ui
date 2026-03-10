@@ -139,7 +139,18 @@ const clearTokens = (): void => {
  * Retrieves the access token from storage, automatically refreshing if expired
  * @returns The access token string, or empty string if refresh fails
  */
+const isTabLocked = (): boolean => {
+  try {
+    return sessionStorage.getItem('sb_tab_locked') === '1';
+  } catch {
+    return false;
+  }
+};
+
 const getStoredToken = async (): Promise<string> => {
+  if (isTabLocked()) {
+    return '';
+  }
   const accessToken = getStoredAccessToken();
   const accessExpiry = getTokenExpiry();
 
@@ -320,7 +331,6 @@ export const forceLogout = async (): Promise<void> => {
     sessionStorage.removeItem(k);
     localStorage.removeItem(k);
   });
-  localStorage.removeItem('sb_auth');
 
   // Dispatch custom event for React Router navigation (prevents page refresh)
   globalThis.dispatchEvent(new CustomEvent('auth_token_expired', { detail: { navigate: true } }));
@@ -934,6 +944,7 @@ export const initializeClientToken = async () => {
 };
 
 export const isAuthenticated = async (): Promise<boolean> => {
+  if (isTabLocked()) return false;
   const token = await getStoredToken();
   const userId = sessionStorage.getItem('user_id') || localStorage.getItem('user_id');
   return !!(token && userId);

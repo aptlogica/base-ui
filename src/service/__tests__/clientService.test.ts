@@ -469,6 +469,16 @@ describe('clientService', () => {
     await expect(isAuthenticated()).resolves.toBe(true);
   });
 
+  it('returns false when tab is locked', async () => {
+    sessionStorage.setItem('sb_tab_locked', '1');
+    sessionStorage.setItem('_st_', 'access-token');
+    sessionStorage.setItem('user_id', 'user-1');
+
+    await expect(isAuthenticated()).resolves.toBe(false);
+
+    sessionStorage.removeItem('sb_tab_locked');
+  });
+
   it('forceLogout does not hard-redirect when already on login route', async () => {
     const setAuthSpy = vi.spyOn(client, 'setAuth');
     sessionStorage.setItem('user_id', 'user-1');

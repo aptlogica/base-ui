@@ -52,6 +52,7 @@ const LogIn: React.FC = () => {
       setHasOtherSession(false);
       hasNotifiedOtherSessionRef.current = false;
     };
+    const AUTH_LOCK_KEY = 'sb_auth_lock';
     const parseCrossTabPayload = (raw: string | null) => {
       if (!raw) return { valid: false, userId: '' };
       try {
@@ -67,10 +68,10 @@ const LogIn: React.FC = () => {
     };
     const readCrossTabAuth = () => {
       try {
-        const raw = localStorage.getItem('sb_auth');
+        const raw = localStorage.getItem(AUTH_LOCK_KEY);
         const { valid } = parseCrossTabPayload(raw);
         if (!valid && raw) {
-          localStorage.removeItem('sb_auth');
+          localStorage.removeItem(AUTH_LOCK_KEY);
         }
         return valid ? raw : null;
       } catch {
@@ -104,7 +105,7 @@ const LogIn: React.FC = () => {
 
     checkExistingSession();
     const onStorage = (e: StorageEvent) => {
-      if (e.key === 'sb_auth') {
+      if (e.key === AUTH_LOCK_KEY) {
         if (shouldSuppressCrossTab()) return;
         if (e.newValue) {
           const { valid } = parseCrossTabPayload(e.newValue);
@@ -112,7 +113,7 @@ const LogIn: React.FC = () => {
             markOtherSession();
             return;
           }
-          try { localStorage.removeItem('sb_auth'); } catch { }
+          try { localStorage.removeItem(AUTH_LOCK_KEY); } catch { }
         }
         if (!e.newValue) {
           clearOtherSession();
@@ -150,6 +151,7 @@ const LogIn: React.FC = () => {
     setError("");
     setEmailError(null);
     setPasswordError(null);
+    try { sessionStorage.removeItem('sb_tab_locked'); } catch { }
     const { email, password } = formData;
 
     // Basic validation - only check if fields are filled
@@ -233,7 +235,7 @@ const LogIn: React.FC = () => {
           <p className="text-base lg:text-lg text-white/90 leading-relaxed drop-shadow-md">Welcome back! Please enter your details.</p>
           {hasOtherSession && (
             <div className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
-              You are already signed in in another tab. You can continue there or sign in again.
+              Another tab is already signed in. Signing in here will sign out the other tab.
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-4">

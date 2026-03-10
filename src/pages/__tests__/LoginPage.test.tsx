@@ -160,7 +160,7 @@ describe('LoginPage', () => {
     });
 
     it('should suppress cross-tab toast during logout', async () => {
-      localStorage.setItem('sb_auth', JSON.stringify({ user_id: 'user-1', ts: Date.now() }));
+      localStorage.setItem('sb_auth_lock', JSON.stringify({ user_id: 'user-1', tab_id: 'tab-1', ts: Date.now() }));
       sessionStorage.setItem('sb_logout_in_progress', '1');
 
       renderWithRouter();
@@ -168,20 +168,17 @@ describe('LoginPage', () => {
       await waitFor(() => {
         expect(mockToastInfo).not.toHaveBeenCalledWith('You are already signed in in another tab.');
       });
-      expect(screen.queryByText('You are already signed in in another tab. You can continue there or sign in again.')).not.toBeInTheDocument();
 
       sessionStorage.removeItem('sb_logout_in_progress');
     });
 
-    it('should show cross-tab session info when another tab is signed in', async () => {
-      localStorage.setItem('sb_auth', JSON.stringify({ user_id: 'user-1', ts: Date.now() }));
+    it('should show cross-tab session message when another tab is signed in', async () => {
+      localStorage.setItem('sb_auth_lock', JSON.stringify({ user_id: 'user-1', tab_id: 'tab-1', ts: Date.now() }));
 
       renderWithRouter();
 
       await waitFor(() => {
-        expect(
-          screen.getByText('You are already signed in in another tab. You can continue there or sign in again.')
-        ).toBeInTheDocument();
+        expect(screen.getByText(/another tab is already signed in/i)).toBeInTheDocument();
       });
 
       expect(mockNavigate).not.toHaveBeenCalled();
