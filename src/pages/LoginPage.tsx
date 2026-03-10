@@ -5,6 +5,12 @@ import { useAuth } from '../auth/AuthContext';
 import { isAuthenticated, login as apiLogin, resendOtp } from '../service/clientService';
 import { useToast } from "../components/common/Toast";
 
+declare global {
+  interface ImportMeta {
+    env: Record<string, string | undefined>;
+  }
+}
+
 interface FormData {
   email: string;
   password: string;
@@ -27,23 +33,53 @@ const LogIn: React.FC = () => {
 
   useEffect(() => {
     let isActive = true;
-    const getCrossTabFlag = () => {
+    const envTtl = Number(import.meta.env.VITE_CROSS_TAB_TTL_MS);
+    const CROSS_TAB_TTL_MS = Number.isFinite(envTtl) && envTtl > 0 ? envTtl : 15 * 60 * 1000;
+    const shouldSuppressCrossTab = () => {
       try {
-        return localStorage.getItem('sb_auth');
+        return sessionStorage.getItem('sb_logout_in_progress') === '1';
+      } catch {
+        return false;
+      }
+    };
+    const markOtherSession = () => {
+      setHasOtherSession(true);
+      if (!hasNotifiedOtherSessionRef.current) {
+        hasNotifiedOtherSessionRef.current = true;
+      }
+    };
+    const clearOtherSession = () => {
+      setHasOtherSession(false);
+      hasNotifiedOtherSessionRef.current = false;
+    };
+    const parseCrossTabPayload = (raw: string | null) => {
+      if (!raw) return { valid: false, userId: '' };
+      try {
+        const parsed = JSON.parse(raw);
+        const ts = Number(parsed?.ts);
+        const userId = String(parsed?.user_id || '');
+        if (!Number.isFinite(ts)) return { valid: false, userId: '' };
+        const isFresh = Date.now() - ts <= CROSS_TAB_TTL_MS;
+        return { valid: isFresh, userId };
+      } catch {
+        return { valid: false, userId: '' };
+      }
+    };
+    const readCrossTabAuth = () => {
+      try {
+        const raw = localStorage.getItem('sb_auth');
+        const { valid } = parseCrossTabPayload(raw);
+        if (!valid && raw) {
+          localStorage.removeItem('sb_auth');
+        }
+        return valid ? raw : null;
       } catch {
         return null;
       }
     };
     const checkExistingSession = async () => {
       try {
-        const isLoggingOut = (() => {
-          try {
-            return sessionStorage.getItem('sb_logout_in_progress') === '1';
-          } catch {
-            return false;
-          }
-        })();
-        if (isLoggingOut) {
+        if (shouldSuppressCrossTab()) {
           return;
         }
         const alreadyAuthed = await isAuthenticated();
@@ -55,16 +91,11 @@ const LogIn: React.FC = () => {
           return;
         }
 
-        const crossTabFlag = getCrossTabFlag();
+        const crossTabFlag = readCrossTabAuth();
         if (crossTabFlag) {
-          setHasOtherSession(true);
-          if (!hasNotifiedOtherSessionRef.current) {
-            hasNotifiedOtherSessionRef.current = true;
-            toast.info('You are already signed in in another tab.');
-          }
+          markOtherSession();
         } else {
-          setHasOtherSession(false);
-          hasNotifiedOtherSessionRef.current = false;
+          clearOtherSession();
         }
       } catch (error) {
         console.warn('LoginPage auth check failed:', error);
@@ -74,23 +105,17 @@ const LogIn: React.FC = () => {
     checkExistingSession();
     const onStorage = (e: StorageEvent) => {
       if (e.key === 'sb_auth') {
-        const isLoggingOut = (() => {
-          try {
-            return sessionStorage.getItem('sb_logout_in_progress') === '1';
-          } catch {
-            return false;
-          }
-        })();
-        if (isLoggingOut) return;
+        if (shouldSuppressCrossTab()) return;
         if (e.newValue) {
-          setHasOtherSession(true);
-          if (!hasNotifiedOtherSessionRef.current) {
-            hasNotifiedOtherSessionRef.current = true;
-            toast.info('You are already signed in in another tab.');
+          const { valid } = parseCrossTabPayload(e.newValue);
+          if (valid) {
+            markOtherSession();
+            return;
           }
-        } else {
-          setHasOtherSession(false);
-          hasNotifiedOtherSessionRef.current = false;
+          try { localStorage.removeItem('sb_auth'); } catch { }
+        }
+        if (!e.newValue) {
+          clearOtherSession();
         }
       }
     };

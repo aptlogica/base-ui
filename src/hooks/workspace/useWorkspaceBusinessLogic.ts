@@ -307,6 +307,15 @@ export const useWorkspaceBusinessLogic = () => {
     return () => globalThis.removeEventListener('workspace-config-changed', handler);
   }, []);
 
+  // Reset create workspace form state when modal closes (covers all close paths)
+  useEffect(() => {
+    if (showCreateWorkspace) return;
+    setNewWorkspaceName('');
+    setNewWorkspaceDescription('');
+    setWorkspaceError('');
+    setIsError(false);
+  }, [showCreateWorkspace]);
+
   // Use extracted hook for workspace selection synchronization
   useWorkspaceSelection(
     workspaces,

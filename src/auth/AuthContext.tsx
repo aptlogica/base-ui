@@ -43,6 +43,10 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
   const [restoreCompleted, setRestoreCompleted] = useState(false);
   const queryClient = useQueryClient();
   const lastUserIdRef = useRef<string | null>(null);
+  const crossTabTtlMs = (() => {
+    const envTtl = Number(import.meta.env.VITE_CROSS_TAB_TTL_MS);
+    return Number.isFinite(envTtl) && envTtl > 0 ? envTtl : 15 * 60 * 1000;
+  })();
 
   // Get user role from sessionStorage or user object
   const userRole = React.useMemo(() => {
@@ -128,6 +132,34 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
   }, [clearUserNavigation, queryClient]);
 
   useEffect(() => {
+    const syncCrossTabAuth = (userId: string) => {
+      try {
+        localStorage.setItem('sb_auth', JSON.stringify({ user_id: userId, ts: Date.now() }));
+      } catch { }
+    };
+    const resetUserState = () => {
+      if (lastUserIdRef.current) {
+        debug('Auth lost on init - clearing all React Query cache');
+        queryClient.clear(); // Use clear() to prevent refetch attempts
+      }
+      lastUserIdRef.current = null;
+      setUser(null);
+    };
+    const updateUserStateFromStorage = (userId: string, displayName: string | null, avatar: string | null) => {
+      if (lastUserIdRef.current && lastUserIdRef.current !== userId) {
+        debug('User changed on init - resetting all React Query cache and clearing navigation store');
+        queryClient.resetQueries();
+        const { reset } = useNavigationStore.getState();
+        reset();
+      }
+      lastUserIdRef.current = userId;
+      setUser({
+        id: userId,
+        display_name: displayName || undefined,
+        avatar: avatar || undefined,
+      });
+      syncCrossTabAuth(userId);
+    };
     const initializeAuth = async () => {
       const isAuth = await isAuthenticated();
       if (isAuth) {
@@ -137,44 +169,31 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
         const user_avatar = sessionStorage.getItem('user_avatar');
 
         if (user_id) {
-          // Clear cache if user changed (e.g., different user logged in this session)
-          if (lastUserIdRef.current && lastUserIdRef.current !== user_id) {
-            debug('User changed on init - resetting all React Query cache and clearing navigation store');
-            queryClient.resetQueries();
-            // Clear navigation store for old user
-            const { reset } = useNavigationStore.getState();
-            reset();
-          }
-          lastUserIdRef.current = user_id;
-
-          // Set minimal user state - full profile will be fetched via useUserProfile hook
-          setUser({
-            id: user_id,
-            display_name: user_display_name || undefined,
-            avatar: user_avatar || undefined,
-          });
+          updateUserStateFromStorage(user_id, user_display_name, user_avatar);
         } else {
-          // No user ID - clear cache to be safe
-          if (lastUserIdRef.current) {
-            debug('User removed on init - clearing all React Query cache');
-            queryClient.clear(); // Use clear() to prevent refetch attempts
-            lastUserIdRef.current = null;
-          }
-          setUser(null);
+          resetUserState();
         }
       } else {
-        // Not authenticated - clear cache
-        if (lastUserIdRef.current) {
-          debug('Auth lost on init - clearing all React Query cache');
-          queryClient.clear(); // Use clear() to prevent refetch attempts
-          lastUserIdRef.current = null;
-        }
-        setUser(null);
+        resetUserState();
       }
       setLoading(false);
     };
     initializeAuth();
   }, [queryClient]);
+
+  // Cross-tab heartbeat: keep sb_auth fresh while authenticated
+  useEffect(() => {
+    if (!user?.id) return;
+    const heartbeatMs = Math.max(10_000, Math.floor(crossTabTtlMs / 2));
+    const writeHeartbeat = () => {
+      try {
+        localStorage.setItem('sb_auth', JSON.stringify({ user_id: user.id, ts: Date.now() }));
+      } catch { }
+    };
+    writeHeartbeat();
+    const timer = setInterval(writeHeartbeat, heartbeatMs);
+    return () => clearInterval(timer);
+  }, [user?.id, crossTabTtlMs]);
 
 
   const login = async (userInfo: any) => {

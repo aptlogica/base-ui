@@ -141,7 +141,7 @@ describe('CreateViewModal', () => {
     it('renders the modal when isOpen is true', () => {
       renderWithQueryClient(<CreateViewModal {...defaultProps} />);
 
-      expect(screen.getByText('Create View')).toBeInTheDocument();
+      expect(screen.getByText('Create Grid View')).toBeInTheDocument();
     });
 
     it('renders form elements', () => {

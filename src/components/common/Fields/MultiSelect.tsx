@@ -68,6 +68,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   }
   const [localValue, setLocalValue] = useState<string[]>(resolvedValue);
   const [isDirty, setIsDirty] = useState(false);
+  const pendingCommitRef = useRef<string[] | null>(null);
 
   const areValuesEqual = (a: string[], b: string[]) => {
     if (a.length !== b.length) return false;
@@ -78,14 +79,22 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   };
 
   const commitSelection = (nextValue: string[]) => {
+    pendingCommitRef.current = nextValue;
     onChange(nextValue);
     const validationError = validate(nextValue);
     setError(validationError);
-    setIsDirty(false);
+    setIsDirty(true);
   };
 
   useEffect(() => {
-    if (!isDirty && !areValuesEqual(localValue, resolvedValue)) {
+    const pendingCommit = pendingCommitRef.current;
+    if (pendingCommit && areValuesEqual(resolvedValue, pendingCommit)) {
+      pendingCommitRef.current = null;
+      setLocalValue(resolvedValue);
+      setIsDirty(false);
+      return;
+    }
+    if (!isDirty && !pendingCommit && !areValuesEqual(localValue, resolvedValue)) {
       setLocalValue(resolvedValue);
     }
   }, [value, defaultValue, isDirty, localValue, resolvedValue]);
