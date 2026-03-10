@@ -37,6 +37,20 @@ interface ActivityData {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
+let fallbackTabIdCounter = 0;
+
+const buildFallbackTabId = () => {
+  fallbackTabIdCounter += 1;
+  return `${Date.now()}-${fallbackTabIdCounter.toString(16)}`;
+};
+
+const buildCryptoTabId = () => {
+  if (!globalThis.crypto?.getRandomValues) return null;
+  const buf = new Uint32Array(2);
+  globalThis.crypto.getRandomValues(buf);
+  return `${Date.now()}-${buf[0].toString(16)}${buf[1].toString(16)}`;
+};
+
 export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,11 +99,11 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
       if (existing) return existing;
       const generated = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
         ? globalThis.crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        : (buildCryptoTabId() || buildFallbackTabId());
       sessionStorage.setItem(TAB_ID_KEY, generated);
       return generated;
     } catch {
-      return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      return buildCryptoTabId() || buildFallbackTabId();
     }
   };
 
