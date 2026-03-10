@@ -37,16 +37,34 @@ interface ActivityData {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
+let fallbackTabIdCounter = 0;
+
+const buildFallbackTabId = () => {
+  fallbackTabIdCounter += 1;
+  return `${Date.now()}-${fallbackTabIdCounter.toString(16)}`;
+};
+
+const buildCryptoTabId = () => {
+  if (!globalThis.crypto?.getRandomValues) return null;
+  const buf = new Uint32Array(2);
+  globalThis.crypto.getRandomValues(buf);
+  return `${Date.now()}-${buf[0].toString(16)}${buf[1].toString(16)}`;
+};
+
 export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [restoreCompleted, setRestoreCompleted] = useState(false);
   const queryClient = useQueryClient();
   const lastUserIdRef = useRef<string | null>(null);
+  const tabIdRef = useRef<string>('');
   const crossTabTtlMs = (() => {
     const envTtl = Number(import.meta.env.VITE_CROSS_TAB_TTL_MS);
     return Number.isFinite(envTtl) && envTtl > 0 ? envTtl : 15 * 60 * 1000;
   })();
+  const AUTH_LOCK_KEY = 'sb_auth_lock';
+  const TAB_ID_KEY = 'sb_tab_id';
+  const TAB_LOCKED_KEY = 'sb_tab_locked';
 
   // Get user role from sessionStorage or user object
   const userRole = React.useMemo(() => {
@@ -75,6 +93,73 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
   // Get navigation store methods
   const { loadUserNavigation, clearUserNavigation, updateActivityData, loadFromActivityData } = useNavigationStore();
 
+  const getTabId = () => {
+    try {
+      const existing = sessionStorage.getItem(TAB_ID_KEY);
+      if (existing) return existing;
+      const generated = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
+        ? globalThis.crypto.randomUUID()
+        : (buildCryptoTabId() || buildFallbackTabId());
+      sessionStorage.setItem(TAB_ID_KEY, generated);
+      return generated;
+    } catch {
+      return buildCryptoTabId() || buildFallbackTabId();
+    }
+  };
+
+  if (!tabIdRef.current) {
+    tabIdRef.current = getTabId();
+  }
+
+  const parseAuthLock = (raw: string | null) => {
+    if (!raw) return { valid: false, userId: '', tabId: '' };
+    try {
+      const parsed = JSON.parse(raw);
+      const ts = Number(parsed?.ts);
+      const userId = String(parsed?.user_id || '');
+      const tabId = String(parsed?.tab_id || '');
+      if (!Number.isFinite(ts)) return { valid: false, userId: '', tabId: '' };
+      const isFresh = Date.now() - ts <= crossTabTtlMs;
+      return { valid: isFresh, userId, tabId };
+    } catch {
+      return { valid: false, userId: '', tabId: '' };
+    }
+  };
+
+  const writeAuthLock = (userId: string) => {
+    try {
+      localStorage.setItem(
+        AUTH_LOCK_KEY,
+        JSON.stringify({ user_id: userId, tab_id: tabIdRef.current, ts: Date.now() })
+      );
+    } catch { }
+  };
+
+  const clearAuthLockIfOwner = () => {
+    try {
+      const current = parseAuthLock(localStorage.getItem(AUTH_LOCK_KEY));
+      if (current.valid && current.tabId === tabIdRef.current) {
+        localStorage.removeItem(AUTH_LOCK_KEY);
+      }
+    } catch { }
+  };
+
+  const markTabLocked = () => {
+    try { sessionStorage.setItem(TAB_LOCKED_KEY, '1'); } catch { }
+  };
+
+  const clearTabLocked = () => {
+    try { sessionStorage.removeItem(TAB_LOCKED_KEY); } catch { }
+  };
+
+  const isTabLocked = () => {
+    try {
+      return sessionStorage.getItem(TAB_LOCKED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  };
+
   // Cross-tab signout handler: listen for 'sb_signout' events
   React.useEffect(() => {
     const onStorage = async (e: StorageEvent) => {
@@ -96,7 +181,7 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
         // Remove known keys (only what we actually store)
         const keys = ['user_id', 'user_display_name', 'user_avatar', 'user_role'];
         keys.forEach(k => { sessionStorage.removeItem(k); localStorage.removeItem(k); });
-        localStorage.removeItem('sb_auth');
+        localStorage.removeItem(AUTH_LOCK_KEY);
         // Clear navigation for current user if any
         const remoteUserId = sessionStorage.getItem('user_id') || localStorage.getItem('user_id');
         if (remoteUserId) clearUserNavigation(remoteUserId);
@@ -132,11 +217,6 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
   }, [clearUserNavigation, queryClient]);
 
   useEffect(() => {
-    const syncCrossTabAuth = (userId: string) => {
-      try {
-        localStorage.setItem('sb_auth', JSON.stringify({ user_id: userId, ts: Date.now() }));
-      } catch { }
-    };
     const resetUserState = () => {
       if (lastUserIdRef.current) {
         debug('Auth lost on init - clearing all React Query cache');
@@ -158,9 +238,14 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
         display_name: displayName || undefined,
         avatar: avatar || undefined,
       });
-      syncCrossTabAuth(userId);
+      writeAuthLock(userId);
     };
     const initializeAuth = async () => {
+      if (isTabLocked()) {
+        resetUserState();
+        setLoading(false);
+        return;
+      }
       const isAuth = await isAuthenticated();
       if (isAuth) {
         // Only read minimal data needed for initialization
@@ -169,6 +254,13 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
         const user_avatar = sessionStorage.getItem('user_avatar');
 
         if (user_id) {
+          const currentLock = parseAuthLock(localStorage.getItem(AUTH_LOCK_KEY));
+          if (currentLock.valid && currentLock.userId === user_id && currentLock.tabId !== tabIdRef.current) {
+            markTabLocked();
+            resetUserState();
+            setLoading(false);
+            return;
+          }
           updateUserStateFromStorage(user_id, user_display_name, user_avatar);
         } else {
           resetUserState();
@@ -181,19 +273,44 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
     initializeAuth();
   }, [queryClient]);
 
-  // Cross-tab heartbeat: keep sb_auth fresh while authenticated
+  // Cross-tab heartbeat: keep auth lock fresh while authenticated
   useEffect(() => {
-    if (!user?.id) return;
+    const userId = user?.id;
+    if (!userId) return;
     const heartbeatMs = Math.max(10_000, Math.floor(crossTabTtlMs / 2));
     const writeHeartbeat = () => {
-      try {
-        localStorage.setItem('sb_auth', JSON.stringify({ user_id: user.id, ts: Date.now() }));
-      } catch { }
+      writeAuthLock(userId);
     };
     writeHeartbeat();
     const timer = setInterval(writeHeartbeat, heartbeatMs);
     return () => clearInterval(timer);
   }, [user?.id, crossTabTtlMs]);
+
+  // Enforce single-tab lock for the same user
+  useEffect(() => {
+    const userId = user?.id;
+    if (!userId) return;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== AUTH_LOCK_KEY) return;
+      const current = parseAuthLock(e.newValue);
+      if (!current.valid) return;
+      if (current.userId !== userId) return;
+      if (current.tabId === tabIdRef.current) return;
+
+      // Another tab took over this user's session
+      markTabLocked();
+      try {
+        queryClient.clear();
+      } catch (err) {
+        debug('Failed to clear React Query cache on tab lock', err);
+      }
+      lastUserIdRef.current = null;
+      setUser(null);
+    };
+
+    globalThis.addEventListener('storage', onStorage);
+    return () => globalThis.removeEventListener('storage', onStorage);
+  }, [user?.id, queryClient]);
 
 
   const login = async (userInfo: any) => {
@@ -208,16 +325,11 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
     setRestoreCompleted(false);
 
     try {
+      clearTabLocked();
       // Store user data in sessionStorage
       storeUserData(userInfo);
 
-      // Cross-tab flag (no tokens stored): signals an active session in another tab
-      try {
-        localStorage.setItem('sb_auth', JSON.stringify({
-          user_id: userInfo.id,
-          ts: Date.now()
-        }));
-      } catch { }
+      writeAuthLock(userInfo.id);
 
       // Set minimal user state
       setUser({
@@ -382,7 +494,7 @@ export function DefaultAuthProvider({ children }: Readonly<{ children: ReactNode
       try { sessionStorage.removeItem(k); } catch { }
       try { localStorage.removeItem(k); } catch { }
     });
-    try { localStorage.removeItem('sb_auth'); } catch { }
+    clearAuthLockIfOwner();
 
     // STEP 7: Clear user navigation persistence for this user (if any)
     try {
