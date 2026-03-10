@@ -73,17 +73,27 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
 
   switch (viewType) {
     case 'calendar':
-      // Only include actual date/datetime fields, exclude user audit fields
+      // Calendar views can use any date/datetime fields
       filteredFields = normalizedFields.filter((f: any) => isDateField(f));
       showFieldDropdown = true;
 
-      // If no user-visible date-like fields exist, add system fallbacks so the dropdown is never empty
+      // If no date fields exist, add system fallbacks for calendar
       if (filteredFields.length === 0) {
         filteredFields = [
           { id: 'created_at', uidt: 'datetime', name: 'Created at', description: 'System created timestamp', system: true },
           { id: 'updated_at', uidt: 'datetime', name: 'Updated at', description: 'System updated timestamp', system: true },
         ];
       }
+      break;
+    case 'gantt':
+    case 'ganttChart':
+      // Gantt charts need pure date fields only (not datetime/timestamp)
+      filteredFields = normalizedFields.filter((f: any) => {
+        const fieldType = String((f?.uidt || f?.type || '')).toLowerCase();
+        return fieldType === 'date';
+      });
+      showFieldDropdown = true;
+      // No system fallbacks for Gantt - user must create proper date fields
       break;
     case 'kanban':
       filteredFields = normalizedFields.filter((f: any) => String((f.uidt || f.type || '')).toLowerCase() === 'select');
@@ -95,19 +105,6 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
         String((f.uidt || f.type || '')).toLowerCase() === 'attachment'
       );
       showFieldDropdown = true;
-      break;
-    case 'ganttChart':
-      // Filter for date fields only (exclude datetime and timestamp) for both start and end date selection
-      filteredFields = normalizedFields.filter((f: any) => String((f?.uidt || f?.type || '')).toLowerCase() === 'date');
-      showFieldDropdown = true;
-
-      // If no date fields exist, add system fallbacks
-      if (filteredFields.length === 0) {
-        filteredFields = [
-          { id: 'created_at', uidt: 'date', name: 'Created at', description: 'System created date', system: true },
-          { id: 'updated_at', uidt: 'date', name: 'Updated at', description: 'System updated date', system: true },
-        ];
-      }
       break;
     default:
       filteredFields = normalizedFields;
@@ -168,7 +165,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
 
   // Validate Gantt chart date fields in real-time
   useEffect(() => {
-    if (viewType === 'ganttChart' && startDateField && endDateField) {
+    if ((viewType === 'gantt' || viewType === 'ganttChart') && startDateField && endDateField) {
       const startFieldId = getFieldId(startDateField);
       const endFieldId = getFieldId(endDateField);
 
@@ -209,7 +206,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
       return null;
     }
 
-    if (viewType === 'ganttChart') {
+    if (viewType === 'gantt' || viewType === 'ganttChart') {
       return validateGanttFields();
     }
 
@@ -296,7 +293,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
   ): boolean => {
     if (!showFieldDropdown) return false;
     if (fieldDropdownOptions.length === 0) return true;
-    if (viewType === 'ganttChart') {
+    if (viewType === 'gantt' || viewType === 'ganttChart') {
       return areGanttFieldsInvalid();
     }
     return !selectedField;
@@ -348,7 +345,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
     setIsSubmitting(true);
     try {
       let payload;
-      if (viewType === 'ganttChart') {
+      if (viewType === 'gantt' || viewType === 'ganttChart') {
         payload = buildGanttPayload(finalName);
       } else {
         payload = buildStandardPayload(finalName);
@@ -496,8 +493,8 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
                   if (viewType === 'calendar') {
                     return 'Create a Date or DateTime field to continue.';
                   }
-                  if (viewType === 'ganttChart') {
-                    return 'Create Date/DateTime fields for start and end dates to continue.';
+                  if (viewType === 'gantt' || viewType === 'ganttChart') {
+                    return 'Create Date field for start and end dates to continue.';
                   }
                   if (viewType === 'kanban') {
                     return 'Create a Select or Single Select field to group by.';
@@ -514,7 +511,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
                 );
               }
 
-              if (viewType === 'ganttChart') {
+              if (viewType === 'gantt' || viewType === 'ganttChart') {
                 // Gantt Chart: Dual field selection for start and end dates
                 return (
                   <div className="space-y-4">
@@ -598,7 +595,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
                 {viewType === ViewType.Gallery && 'Show data as cards with images and rich content.'}
                 {viewType === ViewType.Kanban && 'Organize data in columns for project management workflows.'}
                 {viewType === ViewType.Calendar && 'Display data in a calendar format with date-based views.'}
-                {viewType === ViewType.GanttChart && 'Show project timelines and dependencies in a Gantt chart.'}
+                {(viewType === ViewType.GanttChart || viewType === 'gantt') && 'Show project timelines and dependencies in a Gantt chart.'}
               </p>
             </div>
 

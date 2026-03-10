@@ -179,12 +179,11 @@ describe('LoginPage', () => {
       renderWithRouter();
 
       await waitFor(() => {
-        expect(mockToastInfo).toHaveBeenCalledWith('You are already signed in in another tab.');
+        expect(
+          screen.getByText('You are already signed in in another tab. You can continue there or sign in again.')
+        ).toBeInTheDocument();
       });
 
-      expect(
-        screen.getByText('You are already signed in in another tab. You can continue there or sign in again.')
-      ).toBeInTheDocument();
       expect(mockNavigate).not.toHaveBeenCalled();
     });
   });

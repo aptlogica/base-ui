@@ -44,7 +44,7 @@ export function renderRelationsConfigStep(props: any) {
               <button
                 type="button"
                 disabled={isLinksFieldEditing}
-                className={`p-3 rounded-xl border-2 transition-all ${isLinksFieldEditing
+                className={`p-3 min-h-[150px] rounded-xl border-2 transition-all ${isLinksFieldEditing
                   ? 'opacity-50 cursor-not-allowed'
                   : 'hover:bg-gray-50'
                   } ${relationType === 'one-to-one'
@@ -54,12 +54,12 @@ export function renderRelationsConfigStep(props: any) {
                 onClick={() => !isLinksFieldEditing && setRelationType('one-to-one')}
                 title="Each record in this table links to exactly one record in the target table, and vice versa"
               >
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex h-full flex-col items-center gap-2">
                   <div className="w-9 h-9 p-1 rounded-full bg-purple-100 flex items-center justify-center">
-                  <img src="/assets/one-to-one.svg" alt="one-to-one-relation"/>
+                    <img src="/assets/one-to-one.svg" alt="one-to-one-relation" className="w-5 h-5 block" />
                   </div>
                   <span className="text-xs font-medium">One to One</span>
-                  <p className="text-xs text-gray-500 text-center mt-1 px-1">
+                  <p className="text-xs text-gray-500 text-center mt-1 px-1 leading-5">
                     Each record links to exactly one related record
                   </p>
                 </div>
@@ -67,7 +67,7 @@ export function renderRelationsConfigStep(props: any) {
               <button
                 type="button"
                 disabled={isLinksFieldEditing}
-                className={`p-3 rounded-xl border-2 transition-all ${isLinksFieldEditing
+                className={`p-3 min-h-[150px] rounded-xl border-2 transition-all ${isLinksFieldEditing
                   ? 'opacity-50 cursor-not-allowed'
                   : 'hover:bg-gray-50'
                   } ${relationType === 'has-many'
@@ -77,12 +77,12 @@ export function renderRelationsConfigStep(props: any) {
                 onClick={() => !isLinksFieldEditing && setRelationType('has-many')}
                 title="Each record in this table can link to multiple records in the target table"
               >
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex h-full flex-col items-center gap-2">
                   <div className="w-9 h-9 p-1 rounded-full bg-orange-100 flex items-center justify-center">
-                    <img src="/assets/one-to-many.svg" alt="one-to-many-relation"/>
+                    <img src="/assets/one-to-many.svg" alt="one-to-many-relation" className="w-5 h-5 block" />
                   </div>
                   <span className="text-xs font-medium">Has Many</span>
-                  <p className="text-xs text-gray-500 text-center mt-1 px-1">
+                  <p className="text-xs text-gray-500 text-center mt-1 px-1 leading-5">
                     One record can link to many related records
                   </p>
                 </div>
@@ -90,7 +90,7 @@ export function renderRelationsConfigStep(props: any) {
               <button
                 type="button"
                 disabled={isLinksFieldEditing}
-                className={`p-3 rounded-xl border-2 transition-all ${isLinksFieldEditing
+                className={`p-3 min-h-[150px] rounded-xl border-2 transition-all ${isLinksFieldEditing
                   ? 'opacity-50 cursor-not-allowed'
                   : 'hover:bg-gray-50'
                   } ${relationType === 'many-to-many'
@@ -100,12 +100,12 @@ export function renderRelationsConfigStep(props: any) {
                 onClick={() => !isLinksFieldEditing && setRelationType('many-to-many')}
                 title="Records in both tables can link to multiple records in the other table"
               >
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex h-full flex-col items-center gap-2">
                   <div className="w-9 h-9 p-1 rounded-full bg-pink-100 flex items-center justify-center">
-                  <img src="/assets/many-to-many.svg" alt="many-to-many-relation"/>
+                    <img src="/assets/many-to-many.svg" alt="many-to-many-relation" className="w-5 h-5 block" />
                   </div>
                   <span className="text-xs font-medium">Many to Many</span>
-                  <p className="text-xs text-gray-500 text-center mt-1 px-1">
+                  <p className="text-xs text-gray-500 text-center mt-1 px-1 leading-5">
                     Multiple records link to multiple related records
                   </p>
                 </div>
