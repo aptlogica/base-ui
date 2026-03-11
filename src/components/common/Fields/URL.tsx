@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useClickHandler } from '../../../utils/helpers';
+import { sanitizeExternalUrl } from '../../../utils/urlSecurity';
 
 // Safe URL validation helpers (no ReDoS vulnerabilities)
 const removeProtocol = (url: string): string => {
@@ -243,6 +244,7 @@ export const URL: React.FC<URLProps> = ({
       );
     }
 
+    const safeHref = sanitizeExternalUrl(localValue);
     // Use a regular anchor tag for reliable rendering
     return (
       <div
@@ -252,21 +254,25 @@ export const URL: React.FC<URLProps> = ({
           ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
       >
         <span className="block w-full min-w-0 truncate whitespace-nowrap">
-          <a 
-            href={normalizeURL(localValue)} 
-            target={openInNewTab ? '_blank' : '_self'} 
-            rel="noopener noreferrer"
-            onClick={(e) => {
-              e.preventDefault();
-              if (openInNewTab) {
-                window.open(normalizeURL(localValue), '_blank', 'noopener,noreferrer');
-              } else {
-                globalThis.location.href = normalizeURL(localValue);
-              }
-            }}
-          >
-            {localValue}
-          </a>
+          {safeHref ? (
+            <a
+              href={safeHref}
+              target={openInNewTab ? '_blank' : '_self'}
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                e.preventDefault();
+                if (openInNewTab) {
+                  window.open(safeHref, '_blank', 'noopener,noreferrer');
+                } else {
+                  globalThis.location.href = safeHref;
+                }
+              }}
+            >
+              {localValue}
+            </a>
+          ) : (
+            <span>{localValue}</span>
+          )}
         </span>
       </div>
     );

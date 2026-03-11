@@ -7,6 +7,7 @@ import {
   useUserRolesAndAccess
 } from '../../../hooks/useApi';
 import { useToast } from '../../common/Toast';
+import { sanitizeImageSrc } from '../../../utils/urlSecurity';
 import { WorkspaceItem, WorkspaceAssignment } from './WorkspaceItem';
 import { TenantUser } from '../../shared/UserTable';
 import { useCurrentUser } from '../../../auth/useCurrentUser';
@@ -641,7 +642,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                       <div className="relative flex-shrink-0">
                         <div className="w-32 h-32 bg-green-100 rounded-xl flex items-center justify-center overflow-hidden">
                           <img
-                            src={avatarPreview}
+                            src={sanitizeImageSrc(avatarPreview)}
                             alt="Avatar preview"
                             className="w-full h-full object-cover"
                           />

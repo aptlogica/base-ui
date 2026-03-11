@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MultiLineText } from '../common/Fields/MultiLineText';
 import { X, HelpCircle, PencilLine, CloudUpload } from 'lucide-react';
 import { validateTableName, validateViewName, validateBaseName, ExistingItem } from '../../utils/nameValidation';
+import { sanitizeImageSrc } from '../../utils/urlSecurity';
 
 interface EditItemModalProps {
   isOpen: boolean;
@@ -337,7 +338,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
                   <div className="relative flex-shrink-0">
                     <div className="w-32 h-32 bg-green-100 rounded-xl flex items-center justify-center overflow-hidden">
                       <img
-                        src={imagePreview}
+                        src={sanitizeImageSrc(imagePreview)}
                         alt="Preview"
                         className="w-full h-full object-cover"
                       />

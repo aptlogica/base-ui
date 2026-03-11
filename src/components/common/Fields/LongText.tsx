@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AlignLeft, Maximize2, X, Bold, Italic, Underline, Strikethrough, List, ListOrdered, Quote, Link2, ExternalLink, Trash2, Edit } from 'lucide-react';
+import { sanitizeExternalUrl } from '../../../utils/urlSecurity';
 
 interface LongTextProps {
   label?: string;
@@ -66,9 +67,40 @@ export const LongText: React.FC<LongTextProps> = ({
   // Helper to strip HTML tags for length validation
   const stripHTML = (html: string): string => {
     if (!html) return '';
-    const tmp = document.createElement('DIV');
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || '';
+    try {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      return doc.body.textContent || '';
+    } catch {
+      return html;
+    }
+  };
+
+  const sanitizeRichTextHtml = (html: string): string => {
+    if (!html) return '';
+    try {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      doc.querySelectorAll('script,style,iframe,object,embed').forEach(node => node.remove());
+      doc.querySelectorAll('*').forEach((el) => {
+        [...el.attributes].forEach((attr) => {
+          const name = attr.name.toLowerCase();
+          if (name.startsWith('on')) {
+            el.removeAttribute(attr.name);
+            return;
+          }
+          if (name === 'href') {
+            const safeHref = sanitizeExternalUrl(attr.value);
+            if (!safeHref) {
+              el.removeAttribute(attr.name);
+              return;
+            }
+            el.setAttribute('href', safeHref);
+          }
+        });
+      });
+      return doc.body.innerHTML;
+    } catch {
+      return '';
+    }
   };
 
   useEffect(() => {
@@ -89,9 +121,16 @@ export const LongText: React.FC<LongTextProps> = ({
     links.forEach((link) => {
       const href = link.getAttribute('href');
       if (href) {
+        const safeHref = sanitizeExternalUrl(href);
+        if (!safeHref) {
+          link.removeAttribute('href');
+          link.removeAttribute('title');
+          return;
+        }
+        link.setAttribute('href', safeHref);
         // Add title if missing (use href as title)
         if (!link.getAttribute('title')) {
-          link.setAttribute('title', href);
+          link.setAttribute('title', safeHref);
         }
         // Ensure target="_blank" for external links
         if (!link.getAttribute('target')) {
@@ -115,10 +154,11 @@ export const LongText: React.FC<LongTextProps> = ({
         // Use requestAnimationFrame to ensure DOM is ready
         requestAnimationFrame(() => {
           if (richTextEditorRef.current) {
+            const safeValue = sanitizeRichTextHtml(currentValue);
             // Only update if content is different to avoid cursor jumping
             const currentHTML = richTextEditorRef.current.innerHTML;
-            if (currentHTML !== currentValue) {
-              richTextEditorRef.current.innerHTML = currentValue;
+            if (currentHTML !== safeValue) {
+              richTextEditorRef.current.innerHTML = safeValue;
               // Enhance all links after setting content
               enhanceLinks(richTextEditorRef.current);
             }
@@ -199,7 +239,7 @@ export const LongText: React.FC<LongTextProps> = ({
     // For rich text, get HTML content from the editor
     let finalValue = modalValue;
     if (richText && richTextEditorRef.current) {
-      finalValue = richTextEditorRef.current.innerHTML || '';
+      finalValue = sanitizeRichTextHtml(richTextEditorRef.current.innerHTML || '');
       // Normalize empty content
       if (finalValue === '<br>' || finalValue === '<br/>' || finalValue.trim() === '') {
         finalValue = '';
@@ -391,12 +431,8 @@ export const LongText: React.FC<LongTextProps> = ({
 
   // Helper to normalize URL
   const normalizeUrl = (url: string): string => {
-    if (!url) return '';
-    let normalized = url.trim();
-    if (normalized && !/^https?:\/\//i.exec(normalized)) {
-      normalized = 'https://' + normalized;
-    }
-    return normalized;
+    const safeUrl = sanitizeExternalUrl(url);
+    return safeUrl || '';
   };
 
   // Helper to find the link at current selection
@@ -543,6 +579,12 @@ export const LongText: React.FC<LongTextProps> = ({
     }
 
     const normalizedUrl = normalizeUrl(url);
+    if (!normalizedUrl) {
+      setIsLinkPopupOpen(false);
+      setLinkEditData({ link: null, text: '', url: '', isEditing: false });
+      savedLinkSelectionRef.current = null;
+      return;
+    }
 
     if (link) {
       // Editing existing link
@@ -626,8 +668,9 @@ export const LongText: React.FC<LongTextProps> = ({
     if (!link) return;
 
     const href = link.getAttribute('href');
-    if (href) {
-      globalThis.open(href, '_blank', 'noopener,noreferrer');
+    const safeHref = href ? sanitizeExternalUrl(href) : null;
+    if (safeHref) {
+      globalThis.open(safeHref, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -732,7 +775,7 @@ export const LongText: React.FC<LongTextProps> = ({
           {/* Backdrop */}
           <div className="absolute inset-0 backdrop-blur-sm bg-opacity-40" onClick={closeModal} /> {/* NOSONAR */}
           {/* Modal Content */}
-          <div ref={modalRef} className="relative bg-[var(--color-card)] border rounded-xl shadow-xl w-full max-w-5xl h-[85vh] p-6 flex flex-col z-10">
+          <div ref={modalRef} className="relative bg-[var(--color-card)] border rounded-xl shadow-xl w-full max-w-5xl h-[85vh] p-6 flex flex-col z-10 overflow-hidden">
             <div className="flex items-center mb-4 flex-shrink-0">
               <AlignLeft className="w-8 h-8 rounded icon-primary p-1 mr-2" />
               <span className="text-lg font-medium text-muted-foreground">Long Text</span>
@@ -817,7 +860,7 @@ export const LongText: React.FC<LongTextProps> = ({
               </button>
             </div>
             {richText ? (
-              <div className="w-full flex-1 flex flex-col min-h-[400px]">
+              <div className="w-full flex-1 flex flex-col min-h-0">
                 <div //NOSONAR
                   ref={richTextEditorRef}
                   contentEditable={!readOnly}
@@ -859,9 +902,8 @@ export const LongText: React.FC<LongTextProps> = ({
                       }
                     }
                   }}
-                  className="w-full flex-1 bg-[var(--background)] border rounded-xl p-3 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand-600)] transition-all overflow-y-auto"
+                  className="w-full flex-1 min-h-0 bg-[var(--background)] border rounded-xl p-3 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand-600)] transition-all overflow-y-auto"
                   style={{
-                    minHeight: '400px',
                     outline: 'none'
                   }}
                   data-placeholder={placeholder || 'Start typing...'}
@@ -916,8 +958,7 @@ export const LongText: React.FC<LongTextProps> = ({
                 onChange={handleModalChange}
                 onKeyDown={(e) => e.stopPropagation()}
                 maxLength={maxLength}
-                rows={20}
-                className="w-full flex-1 bg-[var(--background)] border rounded-xl p-3 text-sm text-muted-foreground focus:outline-none focus:border-[var(--color-brand-600)] transition-all resize-vertical min-h-[400px]"
+                className="w-full flex-1 min-h-0 bg-[var(--background)] border rounded-xl p-3 text-sm text-muted-foreground focus:outline-none focus:border-[var(--color-brand-600)] transition-all resize-vertical"
                 placeholder={placeholder}
                 disabled={disabled || readOnly}
               />
@@ -1004,7 +1045,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   <button
                     type="button"
                     onClick={handleLinkSave}
-                    className="px-3 py-1.5 bg-blue-600 text-primary rounded text-sm hover:bg-blue-700 transition-colors"
+                    className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-sm hover:bg-blue-700 transition-colors"
                   >
                     {linkEditData.link ? 'Save' : 'Insert'}
                   </button>
@@ -1022,7 +1063,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   <button
                     type="button"
                     onClick={handleLinkOpen}
-                    className="flex items-center gap-1.5 px-2 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                    className="flex items-center gap-1.5 px-2 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
                     title="Open link"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -1031,7 +1072,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   <button
                     type="button"
                     onClick={editLink}
-                    className="flex items-center gap-1.5 px-2 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                    className="flex items-center gap-1.5 px-2 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
                     title="Edit link"
                   >
                     <Edit className="w-3.5 h-3.5" />
@@ -1040,7 +1081,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   <button
                     type="button"
                     onClick={handleLinkRemove}
-                    className="flex items-center gap-1.5 px-2 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors ml-auto"
+                    className="flex items-center gap-1.5 px-2 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors ml-auto"
                     title="Remove link"
                   >
                     <Trash2 className="w-3.5 h-3.5" />

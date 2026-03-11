@@ -131,7 +131,9 @@ describe('CreateBaseModal', () => {
     const validation = screen.getByText(/already exists/i);
     expect(validation).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Create Base' }));
+    const submit = screen.getByRole('button', { name: 'Create Base' });
+    expect(submit).toBeDisabled();
+    fireEvent.click(submit);
     expect(onCreate).not.toHaveBeenCalled();
   });
 

@@ -3,6 +3,16 @@ import { useState, useCallback, useRef } from "react";
 export function useUniqueTwoDigit() {
   const [usedNumbers, setUsedNumbers] = useState<Set<number>>(new Set());
   const availableNumbers = useRef<number[]>([]);
+  const getRandomIndex = useCallback((max: number) => {
+    if (max <= 0) return 0;
+    const range = 0x100000000;
+    const limit = Math.floor(range / max) * max;
+    let value = 0;
+    do {
+      value = crypto.getRandomValues(new Uint32Array(1))[0];
+    } while (value >= limit);
+    return value % max;
+  }, []);
 
   // Initialize available numbers (10-99) if not already done
   if (availableNumbers.current.length === 0) {
@@ -18,11 +28,11 @@ export function useUniqueTwoDigit() {
     if (unusedNumbers.length === 0) {
       // If all numbers are used, clear the used set and start over
       setUsedNumbers(new Set());
-      return (crypto.getRandomValues(new Uint32Array(1))[0] % 90) + 10; // Return random number
+      return getRandomIndex(90) + 10; // Return random number
     }
     
     // Pick a random number from unused numbers
-    const randomIndex = crypto.getRandomValues(new Uint32Array(1))[0] % unusedNumbers.length;
+    const randomIndex = getRandomIndex(unusedNumbers.length);
     const randomNum = unusedNumbers[randomIndex];
     
     // Mark this number as used

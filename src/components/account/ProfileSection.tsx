@@ -4,6 +4,7 @@ import { useCurrentUser } from '../../auth/useCurrentUser';
 import { useUserProfile, useUpdateUserProfile, useRemoveAvatar } from '../../hooks/useApi';
 import { UserProfile } from '../../types/userProfile';
 import { useToast } from '../common/Toast';
+import { sanitizeImageSrc } from '../../utils/urlSecurity';
 import { Loader2, CheckCircle, CloudUpload, X } from 'lucide-react';
 import { AdvancedDropdown } from '../common/dropdown/AdvancedDropdown';
 import { timeZoneOptions, currencyLocaleOptions } from '../../types/constants';
@@ -151,7 +152,7 @@ const AvatarImage: React.FC<AvatarImageProps> = ({
   <div className="relative flex-shrink-0">
     <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center overflow-hidden">
       <img
-        src={displayAvatarUrl || ''}
+        src={sanitizeImageSrc(displayAvatarUrl)}
         alt="Profile"
         className="w-full h-full object-cover"
       />

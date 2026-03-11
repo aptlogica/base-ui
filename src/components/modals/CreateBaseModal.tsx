@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, X, HelpCircle, CloudUpload } from 'lucide-react';
 import { MultiLineText } from '../common/Fields/MultiLineText';
 import { validateBaseName } from '../../utils/nameValidation';
+import { sanitizeImageSrc } from '../../utils/urlSecurity';
 
 interface CreateBaseModalProps {
   isOpen: boolean;
@@ -68,7 +69,7 @@ const renderImagePreview = ({
       }}
     >
       <img
-        src={imagePreview}
+        src={sanitizeImageSrc(imagePreview)}
         alt="Preview"
         className="w-full h-full object-cover"
       />
@@ -423,7 +424,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
               e.preventDefault();
               handleSubmit(e);
             }}
-            disabled={isSubmitting || !name.trim() || name.trim().length < 3 || !!imageError}
+            disabled={isSubmitting || !name.trim() || name.trim().length < 3 || !!imageError || !!validationError}
             className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             {isSubmitting ? (
