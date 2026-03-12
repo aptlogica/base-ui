@@ -126,7 +126,7 @@ Before setting up SereniBase Frontend, ensure you have the following:
 ### Required
 - **Node.js 20+** - JavaScript runtime ([Download](https://nodejs.org/))
 - **npm 10+** - Package manager (included with Node.js)
-- **SereniBase Backend** - Running instance of sereni-base ([Setup Guide](https://github.com/yourusername/sereni-base#quick-start))
+- **SereniBase Backend** - Running instance of sereni-base ([Setup Guide](https://github.com/aptlogica/sereni-base#quick-start))
 
 ### Optional
 - **Docker 20.10+** - For containerized deployment ([Download](https://docs.docker.com/get-docker/))
@@ -144,10 +144,10 @@ Before setting up SereniBase Frontend, ensure you have the following:
 
 ```bash
 # Step 1: Ensure SereniBase Backend is running
-# Visit https://github.com/yourusername/sereni-base for backend setup
+# Visit https://github.com/aptlogica/sereni-base for backend setup
 
 # Step 2: Clone the repository
-git clone https://github.com/yourusername/base-ui.git
+git clone https://github.com/aptlogica/base-ui.git
 cd base-ui
 
 # Step 3: Install dependencies
@@ -179,7 +179,7 @@ For active development, hot module replacement, and debugging.
 
 ```bash
 # Step 1: Clone the repository
-git clone https://github.com/yourusername/base-ui.git
+git clone https://github.com/aptlogica/base-ui.git
 cd base-ui
 
 # Step 2: Install root dependencies
@@ -214,7 +214,7 @@ For consistent development environment across team.
 
 ```bash
 # Step 1: Clone repository
-git clone https://github.com/yourusername/base-ui.git
+git clone https://github.com/aptlogica/base-ui.git
 cd base-ui
 
 # Step 2: Create environment file
@@ -240,7 +240,7 @@ For production deployment with optimized build.
 
 ```bash
 # Step 1: Clone repository
-git clone https://github.com/yourusername/base-ui.git
+git clone https://github.com/aptlogica/base-ui.git
 cd base-ui
 
 # Step 2: Build Docker image with backend URL
@@ -271,7 +271,7 @@ For deploying to static hosting (Netlify, Vercel, S3, etc.).
 
 ```bash
 # Step 1: Clone repository
-git clone https://github.com/yourusername/base-ui.git
+git clone https://github.com/aptlogica/base-ui.git
 cd base-ui
 
 # Step 2: Install dependencies
@@ -1480,7 +1480,7 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed gu
 1. **Fork the repository** on GitHub
 2. **Clone your fork** locally
    ```bash
-   git clone https://github.com/yourusername/base-ui.git
+   git clone https://github.com/aptlogica/base-ui.git
    cd base-ui
    ```
 3. **Create a feature branch**
@@ -1512,12 +1512,3 @@ This project is licensed under the **MIT License**.
 
 See [LICENSE](LICENSE) file for full license text.
 
----
-
-**Made with ❤️ by the SereniBase Team**
-
-**Links:**
-- [SereniBase Backend](https://github.com/yourusername/sereni-base)
-- [Documentation](https://docs.serenibase.com)
-- [Community Discord](https://discord.gg/serenibase)
-- [Report Issues](https://github.com/yourusername/base-ui/issues)
