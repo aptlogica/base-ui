@@ -5,13 +5,11 @@ export function useUniqueTwoDigit() {
   const availableNumbers = useRef<number[]>([]);
   const getRandomIndex = useCallback((max: number) => {
     if (max <= 0) return 0;
-    const range = 0x100000000;
-    const limit = Math.floor(range / max) * max;
-    let value = 0;
-    do {
-      value = crypto.getRandomValues(new Uint32Array(1))[0];
-    } while (value >= limit);
-    return value % max;
+    // Use Fisher-Yates-like approach to avoid modulo bias
+    const randomBytes = new Uint32Array(1);
+    crypto.getRandomValues(randomBytes);
+    // Use the full 32-bit range and scale properly
+    return Math.floor((randomBytes[0] / 0x100000000) * max);
   }, []);
 
   // Initialize available numbers (10-99) if not already done
