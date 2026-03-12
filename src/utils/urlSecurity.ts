@@ -35,11 +35,21 @@ export const sanitizeImageSrc = (raw: string | null | undefined): string => {
   const trimmed = String(raw ?? '').trim();
   if (!trimmed) return '';
 
-  if (trimmed.startsWith('blob:')) return trimmed;
+  if (trimmed.startsWith('blob:')) {
+    try {
+      const url = new URL(trimmed);
+      if (url.protocol !== 'blob:') return '';
+      if (typeof globalThis !== 'undefined' && globalThis.location?.origin) {
+        if (url.origin !== globalThis.location.origin) return '';
+      }
+      return trimmed;
+    } catch {
+      return '';
+    }
+  }
+
   if (trimmed.startsWith('data:')) {
-    const lower = trimmed.toLowerCase();
-    const isAllowed = SAFE_IMAGE_DATA_PREFIXES.some(prefix => lower.startsWith(prefix));
-    return isAllowed ? trimmed : '';
+    return '';
   }
 
   return isSafeHttpUrl(trimmed) ? trimmed : '';

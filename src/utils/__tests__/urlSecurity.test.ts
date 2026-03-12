@@ -40,12 +40,12 @@ describe('sanitizeImageSrc', () => {
   });
 
   it('allows blob URLs', () => {
-    expect(sanitizeImageSrc('blob:https://app.example.com/1234')).toBe('blob:https://app.example.com/1234');
+    expect(sanitizeImageSrc('blob:http://localhost/1234')).toBe('blob:http://localhost/1234');
   });
 
-  it('allows data image URLs for known types', () => {
-    expect(sanitizeImageSrc('data:image/png;base64,abc')).toBe('data:image/png;base64,abc');
-    expect(sanitizeImageSrc('data:image/svg+xml;base64,abc')).toBe('data:image/svg+xml;base64,abc');
+  it('rejects data image URLs', () => {
+    expect(sanitizeImageSrc('data:image/png;base64,abc')).toBe('');
+    expect(sanitizeImageSrc('data:image/svg+xml;base64,abc')).toBe('');
   });
 
   it('rejects non-image data URLs and unsafe protocols', () => {

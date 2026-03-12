@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { MultiLineText } from '../common/Fields/MultiLineText';
 import { X, HelpCircle, PencilLine, CloudUpload } from 'lucide-react';
 import { validateTableName, validateViewName, validateBaseName, ExistingItem } from '../../utils/nameValidation';
-import { sanitizeImageSrc } from '../../utils/urlSecurity';
 
 interface EditItemModalProps {
   isOpen: boolean;
@@ -43,13 +42,36 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
   const [imageError, setImageError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const getSafeImageSrc = (value: string | null): string | null => {
+    if (!value) return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    try {
+      const url = new URL(trimmed);
+      if (url.protocol === 'http:' || url.protocol === 'https:') {
+        return url.toString();
+      }
+      if (url.protocol === 'blob:') {
+        if (typeof globalThis !== 'undefined' && globalThis.location?.origin) {
+          if (url.origin !== globalThis.location.origin) return null;
+        }
+        return url.toString();
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  };
+
   useEffect(() => {
     if (isOpen) {
       // Use nullish coalescing to avoid setting `undefined` which would break `trim()`
       setName(initialName ?? '');
       setDescription(initialDescription ?? '');
       setImage(null);
-      setImagePreview(initialImage);
+      setImagePreview(getSafeImageSrc(initialImage));
       setError('');
       setValidationError('');
       setImageError('');
@@ -94,7 +116,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
       // Set image and preview immediately (so it's available for submission)
       const previewUrl = URL.createObjectURL(file);
       setImage(file);
-      setImagePreview(previewUrl);
+      setImagePreview(getSafeImageSrc(previewUrl));
       setImageError('');
       
       // Validate dimensions asynchronously (show error if invalid, but keep the image)
@@ -129,7 +151,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
         // Set image and preview immediately (so it's available for submission)
         const previewUrl = URL.createObjectURL(file);
         setImage(file);
-        setImagePreview(previewUrl);
+        setImagePreview(getSafeImageSrc(previewUrl));
         setImageError('');
         
         // Validate dimensions asynchronously (show error if invalid, but keep the image)
@@ -338,7 +360,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({
                   <div className="relative flex-shrink-0">
                     <div className="w-32 h-32 bg-green-100 rounded-xl flex items-center justify-center overflow-hidden">
                       <img
-                        src={sanitizeImageSrc(imagePreview)}
+                        src={getSafeImageSrc(imagePreview) || ''}
                         alt="Preview"
                         className="w-full h-full object-cover"
                       />
