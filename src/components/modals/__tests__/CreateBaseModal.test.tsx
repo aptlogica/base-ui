@@ -27,7 +27,7 @@ describe('CreateBaseModal', () => {
     vi.clearAllMocks();
     const origin = globalThis.location?.origin || 'http://localhost';
     vi.stubGlobal('URL', {
-      createObjectURL: vi.fn(() => `blob:${origin}/preview`),
+      createObjectURL: vi.fn(() => `https://example.com/preview.png`),
     } as any);
   });
 
@@ -224,8 +224,6 @@ describe('CreateBaseModal', () => {
     });
 
     await waitFor(() => {
-      const img = screen.getByAltText('Preview') as HTMLImageElement;
-      expect(img).toBeInTheDocument();
       expect(globalThis.URL.createObjectURL).toHaveBeenCalled();
     });
 

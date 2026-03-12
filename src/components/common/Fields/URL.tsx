@@ -261,10 +261,14 @@ export const URL: React.FC<URLProps> = ({
               rel="noopener noreferrer"
               onClick={(e) => {
                 e.preventDefault();
+                if (!safeHref) {
+                  return;
+                }
                 if (openInNewTab) {
-                  window.open(safeHref, '_blank', 'noopener,noreferrer');
-                } else {
-                  globalThis.location.href = safeHref;
+                  globalThis.open?.(safeHref, '_blank', 'noopener,noreferrer');
+                } else if (globalThis.location) {
+                  const url = new globalThis.URL(safeHref, globalThis.location.origin);
+                  globalThis.location.href = url.toString();
                 }
               }}
             >
