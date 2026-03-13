@@ -502,7 +502,7 @@ describe('URL Component', () => {
       fireEvent.click(link);
 
       expect(mockWindowOpen).toHaveBeenCalledWith(
-        'https://example.com',
+        'https://example.com/',
         '_blank',
         'noopener,noreferrer'
       );
@@ -533,7 +533,7 @@ describe('URL Component', () => {
       fireEvent.click(link);
 
       expect(mockWindowOpen).toHaveBeenCalledWith(
-        'https://example.com',
+        'https://example.com/',
         '_blank',
         'noopener,noreferrer'
       );
@@ -791,7 +791,7 @@ describe('URL Component', () => {
       fireEvent.click(link);
 
       expect(mockWindowOpen).toHaveBeenCalledWith(
-        'https://example.com?param=value',
+        'https://example.com/?param=value',
         '_blank',
         'noopener,noreferrer'
       );

@@ -289,9 +289,9 @@ export const URL: React.FC<URLProps> = ({
     if (safeHref) {
       try {
         const url = new globalThis.URL(safeHref);
-        // Only allow http/https protocols, but use original URL format for consistency
+        // Only allow http/https protocols and create a clean URL to break taint chain
         if (url.protocol === 'http:' || url.protocol === 'https:') {
-          trustedHref = safeHref;
+          trustedHref = url.toString();
         }
       } catch {
         // Invalid URL, keep trustedHref as null

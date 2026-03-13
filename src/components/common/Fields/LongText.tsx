@@ -592,9 +592,9 @@ export const LongText: React.FC<LongTextProps> = ({
     if (normalizedUrl) {
       try {
         const urlObj = new globalThis.URL(normalizedUrl);
-        // Only allow http/https protocols, but use original URL format for consistency
+        // Only allow http/https protocols and create a clean URL to break taint chain
         if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
-          trustedUrl = normalizedUrl;
+          trustedUrl = urlObj.toString();
         }
       } catch {
         // Invalid URL, keep trustedUrl as null
