@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -139,7 +140,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
     return (
       <output
         key={toast.id}
-        className={`shadow-md rounded-md px-4 py-3 mb-2 w-80 z-50 ${baseColor} transition-all duration-200`}
+        className={`shadow-md rounded-xl px-4 py-3 mb-2 w-80 z-50 ${baseColor} transition-all duration-200`}
       >
         <div className="flex items-start gap-3">
           <div className="flex-1">
@@ -161,7 +162,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
                 className="text-white/80 hover:text-white text-lg leading-none"
                 onClick={() => dismiss(toast.id)}
               >
-                ×
+                <X className='h-4 w-4 text-black' />
               </button>
             )}
           </div>
