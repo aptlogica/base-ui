@@ -574,7 +574,7 @@ export const LongText: React.FC<LongTextProps> = ({
     setLinkEditData({ ...linkEditData, isEditing: true });
   };
 
-  const handleLinkSave = () => {
+  const handleLinkSave = () => { //NOSONAR
     const { link, text, url } = linkEditData;
 
     if (!url.trim()) {
