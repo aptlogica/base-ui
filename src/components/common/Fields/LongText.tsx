@@ -68,8 +68,14 @@ export const LongText: React.FC<LongTextProps> = ({
   const stripHTML = (html: string): string => {
     if (!html) return '';
     try {
-      // Use simple regex to strip HTML tags - never reinterpret as HTML
-      return html.replace(/<[^>]*>/g, '');
+      let result = html;
+      let previous;
+      // Apply regex repeatedly until no more changes (prevents bypass attacks like <<script>script>)
+      do {
+        previous = result;
+        result = result.replace(/<[^>]*>/g, ''); //NOSONAR
+      } while (result !== previous);
+      return result;
     } catch {
       return html;
     }

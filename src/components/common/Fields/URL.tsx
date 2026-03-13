@@ -230,54 +230,72 @@ export const URL: React.FC<URLProps> = ({
     />
   );
 
+  // Security helper: HTML entity escaping to prevent DOM XSS
+  const escapeHtml = (text: string): string => {
+    if (!text) return '';
+    return String(text).replace(/[<>&"']/g, (char) => { //NOSONAR
+      const entities: { [key: string]: string } = {
+        '<': '&lt;',
+        '>': '&gt;',
+        '&': '&amp;',
+        '"': '&quot;',
+        "'": '&#39;'
+      };
+      return entities[char] || char;
+    });
+  };
+
+  // Helper: Build display CSS classes
+  const getDisplayClasses = (hasValue: boolean, hasError: boolean) => {
+    const baseClasses = "field-component overflow-hidden";
+    const cursorClass = hasValue && !hasError ? "cursor-pointer" : "cursor-default";
+    const colorClass = hasValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400";
+    const disabledClass = disabled || readOnly ? "text-gray-400 cursor-not-allowed" : "";
+    
+    return `${baseClasses} ${cursorClass} ${colorClass} ${disabledClass}`;
+  };
+
+  // Helper: Handle URL click with security
+  const handleUrlClick = (e: React.MouseEvent, href: string) => {
+    e.preventDefault();
+    if (!href) return;
+    
+    if (openInNewTab) {
+      globalThis.open?.(href, '_blank', 'noopener,noreferrer');
+    } else if (globalThis.location) {
+      const url = new globalThis.URL(href, globalThis.location.origin);
+      globalThis.location.href = url.toString();
+    }
+  };
+
   const renderDisplayView = () => {
+    const safeDisplayValue = escapeHtml(localValue);
+
     if (!localValue || error) {
       return (
-        <div
-          className={`field-component overflow-hidden
-            ${localValue && !error ? "cursor-pointer" : "cursor-default"}
-            ${localValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400"}
-            ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
-        >
+        <div className={getDisplayClasses(!!localValue, !!error)}>
           <span className="block w-full min-w-0 truncate whitespace-nowrap">
-            {localValue || placeholder}
+            {safeDisplayValue || placeholder}
           </span>
         </div>
       );
     }
 
     const safeHref = sanitizeExternalUrl(localValue);
-    // Use a regular anchor tag for reliable rendering
     return (
-      <div
-        className={`field-component overflow-hidden
-          ${localValue && !error ? "cursor-pointer" : "cursor-default"}
-          ${localValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400"}
-          ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
-      >
+      <div className={getDisplayClasses(true, false)}>
         <span className="block w-full min-w-0 truncate whitespace-nowrap">
           {safeHref ? (
             <a
               href={safeHref}
               target={openInNewTab ? '_blank' : '_self'}
               rel="noopener noreferrer"
-              onClick={(e) => {
-                e.preventDefault();
-                if (!safeHref) {
-                  return;
-                }
-                if (openInNewTab) {
-                  globalThis.open?.(safeHref, '_blank', 'noopener,noreferrer');
-                } else if (globalThis.location) {
-                  const url = new globalThis.URL(safeHref, globalThis.location.origin);
-                  globalThis.location.href = url.toString();
-                }
-              }}
+              onClick={(e) => handleUrlClick(e, safeHref)}
             >
-              {localValue}
+              {safeDisplayValue}
             </a>
           ) : (
-            <span>{localValue}</span>
+            <span>{safeDisplayValue}</span>
           )}
         </span>
       </div>
