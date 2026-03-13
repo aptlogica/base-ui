@@ -274,9 +274,10 @@ export const URL: React.FC<URLProps> = ({
     if (!localValue || error) {
       return (
         <div className={getDisplayClasses(!!localValue, !!error)}>
-          <span className="block w-full min-w-0 truncate whitespace-nowrap">
-            {safeDisplayValue || placeholder}
-          </span>
+          <span 
+            className="block w-full min-w-0 truncate whitespace-nowrap"
+            dangerouslySetInnerHTML={{ __html: safeDisplayValue || placeholder || '' }}
+          />
         </div>
       );
     }
@@ -291,11 +292,10 @@ export const URL: React.FC<URLProps> = ({
               target={openInNewTab ? '_blank' : '_self'}
               rel="noopener noreferrer"
               onClick={(e) => handleUrlClick(e, safeHref)}
-            >
-              {safeDisplayValue}
-            </a>
+              dangerouslySetInnerHTML={{ __html: safeDisplayValue }}
+            />
           ) : (
-            <span>{safeDisplayValue}</span>
+            <span dangerouslySetInnerHTML={{ __html: safeDisplayValue }} />
           )}
         </span>
       </div>
