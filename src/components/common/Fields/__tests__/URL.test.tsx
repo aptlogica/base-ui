@@ -6,7 +6,29 @@ import { URL } from '../URL';
 
 // Mock window.open and window.location
 const mockWindowOpen = vi.fn();
+const mockLocationAssign = vi.fn();
 const originalLocation = window.location;
+let mockHref = 'http://localhost/';
+
+const installMockLocation = () => {
+  mockHref = 'http://localhost/';
+  // jsdom allows redefining location when configurable
+  delete (window as any).location;
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    enumerable: true,
+    value: {
+      origin: 'http://localhost',
+      assign: mockLocationAssign,
+      get href() {
+        return mockHref;
+      },
+      set href(value: string) {
+        mockHref = value;
+      },
+    },
+  });
+};
 
 Object.defineProperty(window, 'open', {
   writable: true,
@@ -32,10 +54,17 @@ describe('URL Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockWindowOpen.mockClear();
+    mockLocationAssign.mockClear();
+    installMockLocation();
   });
 
   afterEach(() => {
     document.body.innerHTML = '';
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      enumerable: true,
+      value: originalLocation,
+    });
   });
 
   describe('Rendering', () => {
@@ -473,7 +502,7 @@ describe('URL Component', () => {
       fireEvent.click(link);
 
       expect(mockWindowOpen).toHaveBeenCalledWith(
-        'https://example.com',
+        'https://example.com/',
         '_blank',
         'noopener,noreferrer'
       );
@@ -492,7 +521,9 @@ describe('URL Component', () => {
       fireEvent.click(link);
 
       // Should navigate in same tab
-      expect(link).toHaveAttribute('href', 'https://example.com');
+      expect(mockWindowOpen).not.toHaveBeenCalled();
+      expect(mockLocationAssign).not.toHaveBeenCalled();
+      expect(window.location.href).toBe('https://example.com/');
     });
 
     it('should normalize URL before opening', async () => {
@@ -502,7 +533,7 @@ describe('URL Component', () => {
       fireEvent.click(link);
 
       expect(mockWindowOpen).toHaveBeenCalledWith(
-        'https://example.com',
+        'https://example.com/',
         '_blank',
         'noopener,noreferrer'
       );
@@ -760,7 +791,7 @@ describe('URL Component', () => {
       fireEvent.click(link);
 
       expect(mockWindowOpen).toHaveBeenCalledWith(
-        'https://example.com?param=value',
+        'https://example.com/?param=value',
         '_blank',
         'noopener,noreferrer'
       );

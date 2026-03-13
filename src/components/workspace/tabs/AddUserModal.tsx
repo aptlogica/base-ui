@@ -7,7 +7,6 @@ import {
   useUserRolesAndAccess
 } from '../../../hooks/useApi';
 import { useToast } from '../../common/Toast';
-import { sanitizeImageSrc } from '../../../utils/urlSecurity';
 import { WorkspaceItem, WorkspaceAssignment } from './WorkspaceItem';
 import { TenantUser } from '../../shared/UserTable';
 import { useCurrentUser } from '../../../auth/useCurrentUser';
@@ -58,6 +57,29 @@ const getUserFormErrors = (params: {
   }
 
   return newErrors;
+};
+
+const getSafeImageSrc = (value: string | null): string | null => {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return url.toString();
+    }
+    if (url.protocol === 'blob:') {
+      if (typeof globalThis !== 'undefined' && globalThis.location?.origin) {
+        if (url.origin !== globalThis.location.origin) return null;
+      }
+      return url.toString();
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 };
 
 const buildMembershipFromAssignments = (
@@ -151,7 +173,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
     setIsCoOwner(isCoOwnerRole);
 
     // Load avatar preview if exists
-    setAvatarPreview(editUser.avatar || null);
+    setAvatarPreview(getSafeImageSrc(editUser.avatar || null));
     setAvatar(null); // Reset file input
 
     setErrors({});
@@ -240,7 +262,8 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
           return;
         }
         setAvatar(file);
-        setAvatarPreview(globalThis.URL.createObjectURL(file));
+        const preview = getSafeImageSrc(globalThis.URL.createObjectURL(file));
+        setAvatarPreview(preview);
         setErrors(prev => {
           const newErrors = { ...prev };
           delete newErrors.avatar;
@@ -268,7 +291,8 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
         img.onload = () => {
           if (img.width <= 800 && img.height <= 400) {
             setAvatar(file);
-            setAvatarPreview(globalThis.URL.createObjectURL(file));
+            const preview = getSafeImageSrc(globalThis.URL.createObjectURL(file));
+            setAvatarPreview(preview);
             setErrors(prev => {
               const newErrors = { ...prev };
               delete newErrors.avatar;
@@ -642,7 +666,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                       <div className="relative flex-shrink-0">
                         <div className="w-32 h-32 bg-green-100 rounded-xl flex items-center justify-center overflow-hidden">
                           <img
-                            src={sanitizeImageSrc(avatarPreview)}
+                            src={getSafeImageSrc(avatarPreview) || ''}
                             alt="Avatar preview"
                             className="w-full h-full object-cover"
                           />

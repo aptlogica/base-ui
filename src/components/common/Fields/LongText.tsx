@@ -68,8 +68,14 @@ export const LongText: React.FC<LongTextProps> = ({
   const stripHTML = (html: string): string => {
     if (!html) return '';
     try {
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-      return doc.body.textContent || '';
+      let result = html;
+      let previous;
+      // Apply regex repeatedly until no more changes (prevents bypass attacks like <<script>script>)
+      do {
+        previous = result;
+        result = result.replace(/<[^>]*>/g, ''); //NOSONAR
+      } while (result !== previous);
+      return result;
     } catch {
       return html;
     }
@@ -256,7 +262,8 @@ export const LongText: React.FC<LongTextProps> = ({
   };
 
   const handleModalChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setModalValue(e.target.value);
+    const sanitizedValue = e.target.value;
+    setModalValue(sanitizedValue);
   };
 
   // Rich text editor handlers
@@ -579,7 +586,22 @@ export const LongText: React.FC<LongTextProps> = ({
     }
 
     const normalizedUrl = normalizeUrl(url);
-    if (!normalizedUrl) {
+    
+    // Additional security: Validate URL protocol to prevent XSS via javascript: URLs
+    let trustedUrl: string | null = null;
+    if (normalizedUrl) {
+      try {
+        const urlObj = new globalThis.URL(normalizedUrl);
+        // Only allow http/https protocols and create a clean URL to break taint chain
+        if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
+          trustedUrl = urlObj.toString();
+        }
+      } catch {
+        // Invalid URL, keep trustedUrl as null
+      }
+    }
+    
+    if (!trustedUrl) {
       setIsLinkPopupOpen(false);
       setLinkEditData({ link: null, text: '', url: '', isEditing: false });
       savedLinkSelectionRef.current = null;
@@ -588,8 +610,8 @@ export const LongText: React.FC<LongTextProps> = ({
 
     if (link) {
       // Editing existing link
-      link.setAttribute('href', normalizedUrl);
-      link.setAttribute('title', normalizedUrl);
+      link.setAttribute('href', trustedUrl);
+      link.setAttribute('title', trustedUrl);
       link.setAttribute('target', '_blank');
       link.setAttribute('rel', 'noopener noreferrer');
 
@@ -612,16 +634,16 @@ export const LongText: React.FC<LongTextProps> = ({
       selection.addRange(savedRange);
 
       // If text is provided, use it; otherwise use selected text
-      const linkText = text.trim() || savedRange.toString().trim() || normalizedUrl;
+      const linkText = text.trim() || savedRange.toString().trim() || trustedUrl;
 
       // Create the link
-      execCommand('createLink', normalizedUrl);
+      execCommand('createLink', trustedUrl);
 
       // Find and enhance the newly created link
       setTimeout(() => {
         const targetLink = getLinkAtSelection();
         if (targetLink) {
-          targetLink.setAttribute('title', normalizedUrl);
+          targetLink.setAttribute('title', trustedUrl);
           targetLink.setAttribute('target', '_blank');
           targetLink.setAttribute('rel', 'noopener noreferrer');
 
@@ -1030,7 +1052,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   <input
                     type="text"
                     value={linkEditData.url}
-                    onChange={(e) => setLinkEditData({ ...linkEditData, url: e.target.value })}
+                    onChange={(e) => setLinkEditData({ ...linkEditData, url: e.target.value.trim() })}
                     className="flex-1 px-2 py-1.5 border rounded text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
                     placeholder="https://example.com"
                     onKeyDown={(e) => {

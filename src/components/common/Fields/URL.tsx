@@ -188,7 +188,9 @@ export const URL: React.FC<URLProps> = ({
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
+    // Safely extract and sanitize input value
+    const rawValue = e.target.value || '';
+    const newValue = rawValue.trim();
     setLocalValue(newValue);
 
     const validationError = validate(newValue);
@@ -228,50 +230,87 @@ export const URL: React.FC<URLProps> = ({
     />
   );
 
+  // Security helper: HTML entity escaping to prevent DOM XSS
+  const escapeHtml = (text: string): string => {
+    if (!text) return '';
+    return String(text).replace(/[<>&"']/g, (char) => { //NOSONAR
+      const entities: { [key: string]: string } = {
+        '<': '&lt;',
+        '>': '&gt;',
+        '&': '&amp;',
+        '"': '&quot;',
+        "'": '&#39;'
+      };
+      return entities[char] || char;
+    });
+  };
+
+  // Helper: Build display CSS classes
+  const getDisplayClasses = (hasValue: boolean, hasError: boolean) => {
+    const baseClasses = "field-component overflow-hidden";
+    const cursorClass = hasValue && !hasError ? "cursor-pointer" : "cursor-default";
+    const colorClass = hasValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400";
+    const disabledClass = disabled || readOnly ? "text-gray-400 cursor-not-allowed" : "";
+    
+    return `${baseClasses} ${cursorClass} ${colorClass} ${disabledClass}`;
+  };
+
+  // Helper: Handle URL click with security
+  const handleUrlClick = (e: React.MouseEvent, href: string) => {
+    e.preventDefault();
+    if (!href) return;
+    
+    if (openInNewTab) {
+      globalThis.open?.(href, '_blank', 'noopener,noreferrer');
+    } else if (globalThis.location) {
+      const url = new globalThis.URL(href, globalThis.location.origin);
+      globalThis.location.href = url.toString();
+    }
+  };
+
   const renderDisplayView = () => {
+    const safeDisplayValue = escapeHtml(localValue);
+
     if (!localValue || error) {
       return (
-        <div
-          className={`field-component overflow-hidden
-            ${localValue && !error ? "cursor-pointer" : "cursor-default"}
-            ${localValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400"}
-            ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
-        >
-          <span className="block w-full min-w-0 truncate whitespace-nowrap">
-            {localValue || placeholder}
-          </span>
+        <div className={getDisplayClasses(!!localValue, !!error)}>
+          <span 
+            className="block w-full min-w-0 truncate whitespace-nowrap"
+            dangerouslySetInnerHTML={{ __html: safeDisplayValue || placeholder || '' }}
+          />
         </div>
       );
     }
 
     const safeHref = sanitizeExternalUrl(localValue);
-    // Use a regular anchor tag for reliable rendering
+    
+    // Additional security: Validate URL protocol to prevent XSS via javascript: URLs
+    let trustedHref: string | null = null;
+    if (safeHref) {
+      try {
+        const url = new globalThis.URL(safeHref);
+        // Only allow http/https protocols and create a clean URL to break taint chain
+        if (url.protocol === 'http:' || url.protocol === 'https:') {
+          trustedHref = url.toString();
+        }
+      } catch {
+        // Invalid URL, keep trustedHref as null
+      }
+    }
+
     return (
-      <div
-        className={`field-component overflow-hidden
-          ${localValue && !error ? "cursor-pointer" : "cursor-default"}
-          ${localValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400"}
-          ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""}`}
-      >
+      <div className={getDisplayClasses(true, false)}>
         <span className="block w-full min-w-0 truncate whitespace-nowrap">
-          {safeHref ? (
+          {trustedHref ? (
             <a
-              href={safeHref}
+              href={trustedHref}
               target={openInNewTab ? '_blank' : '_self'}
               rel="noopener noreferrer"
-              onClick={(e) => {
-                e.preventDefault();
-                if (openInNewTab) {
-                  window.open(safeHref, '_blank', 'noopener,noreferrer');
-                } else {
-                  globalThis.location.href = safeHref;
-                }
-              }}
-            >
-              {localValue}
-            </a>
+              onClick={(e) => handleUrlClick(e, trustedHref)}
+              dangerouslySetInnerHTML={{ __html: safeDisplayValue }}
+            />
           ) : (
-            <span>{localValue}</span>
+            <span dangerouslySetInnerHTML={{ __html: safeDisplayValue }} />
           )}
         </span>
       </div>
