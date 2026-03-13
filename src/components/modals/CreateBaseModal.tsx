@@ -102,12 +102,35 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
   const [imageError, setImageError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const getSafeImageSrc = (value: string | null): string | null => {
+    if (!value) return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    try {
+      const url = new URL(trimmed);
+      if (url.protocol === 'http:' || url.protocol === 'https:') {
+        return url.toString();
+      }
+      if (url.protocol === 'blob:') {
+        if (typeof globalThis !== 'undefined' && globalThis.location?.origin) {
+          if (url.origin !== globalThis.location.origin) return null;
+        }
+        return url.toString();
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  };
+
   useEffect(() => {
     if (isOpen) {
       setName(defaultName);
       setDescription('');
       setImage(null);
-      setImagePreview(initialImage);
+      setImagePreview(getSafeImageSrc(initialImage));
       setError('');
       setValidationError('');
       setImageError('');
@@ -134,12 +157,12 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
           setImageError('');
         }
         setImage(file);
-        setImagePreview(URL.createObjectURL(file));
+        setImagePreview(getSafeImageSrc(URL.createObjectURL(file)));
       };
       img.onerror = () => {
         setImageError('Failed to load image. Please try again.');
         setImage(file);
-        setImagePreview(URL.createObjectURL(file));
+        setImagePreview(getSafeImageSrc(URL.createObjectURL(file)));
       };
       img.src = URL.createObjectURL(file);
     }
@@ -166,12 +189,12 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
             setImageError('');
           }
           setImage(file);
-          setImagePreview(URL.createObjectURL(file));
+          setImagePreview(getSafeImageSrc(URL.createObjectURL(file)));
         };
         img.onerror = () => {
           setImageError('Failed to load image. Please try again.');
           setImage(file);
-          setImagePreview(URL.createObjectURL(file));
+          setImagePreview(getSafeImageSrc(URL.createObjectURL(file)));
         };
         img.src = URL.createObjectURL(file);
       } else {
@@ -360,12 +383,12 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
               {imagePreview ? (
                 <div className="flex gap-4">
                   {/* Image Preview - Left Side */}
-                  {renderImagePreview({
-                    imagePreview,
-                    onRemove: (e) => {
-                      e.stopPropagation();
-                      setImage(null);
-                      setImagePreview(null);
+              {renderImagePreview({
+                imagePreview: getSafeImageSrc(imagePreview) || '',
+                onRemove: (e) => {
+                  e.stopPropagation();
+                  setImage(null);
+                  setImagePreview(null);
                       setImageError('');
                       const input = document.getElementById('image-upload') as HTMLInputElement;
                       if (input) input.value = '';
@@ -423,7 +446,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
               e.preventDefault();
               handleSubmit(e);
             }}
-            disabled={isSubmitting || !name.trim() || name.trim().length < 3 || !!imageError}
+            disabled={isSubmitting || !name.trim() || name.trim().length < 3 || !!imageError || !!validationError}
             className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             {isSubmitting ? (

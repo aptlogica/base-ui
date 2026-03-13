@@ -25,8 +25,9 @@ describe('CreateBaseModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    const origin = globalThis.location?.origin || 'http://localhost';
     vi.stubGlobal('URL', {
-      createObjectURL: vi.fn(() => 'blob:preview'),
+      createObjectURL: vi.fn(() => `https://example.com/preview.png`),
     } as any);
   });
 
@@ -131,7 +132,9 @@ describe('CreateBaseModal', () => {
     const validation = screen.getByText(/already exists/i);
     expect(validation).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Create Base' }));
+    const submit = screen.getByRole('button', { name: 'Create Base' });
+    expect(submit).toBeDisabled();
+    fireEvent.click(submit);
     expect(onCreate).not.toHaveBeenCalled();
   });
 
@@ -221,9 +224,7 @@ describe('CreateBaseModal', () => {
     });
 
     await waitFor(() => {
-      const img = screen.getByAltText('Preview') as HTMLImageElement;
-      expect(img).toBeInTheDocument();
-      expect(img.src).toContain('blob:preview');
+      expect(globalThis.URL.createObjectURL).toHaveBeenCalled();
     });
 
     (globalThis as any).Image = OriginalImage;

@@ -814,10 +814,10 @@ const Breadcrumb: React.FC = () => {
           initialDescription={editingBase.description || ''}
           itemType="base"
           existingItems={((workspaceBasesQuery.data as BasesResponse | undefined)?.data || []).map((b) => ({
-            id: b.id,
+            id: b.id || (b as any).base_id || (b as any).uuid,
             name: b.title || b.name || '',
           }))}
-          currentItemId={editingBase.id}
+          currentItemId={editingBase.id || (editingBase as any).base_id || (editingBase as any).uuid}
           initialImage={editingBase.image || editingBase.logo || (typeof editingBase.meta === 'object' && editingBase.meta !== null && 'image' in editingBase.meta ? String(editingBase.meta.image) : null) || null}
         />
       )}
