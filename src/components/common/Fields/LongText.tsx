@@ -256,7 +256,8 @@ export const LongText: React.FC<LongTextProps> = ({
   };
 
   const handleModalChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setModalValue(e.target.value);
+    const sanitizedValue = e.target.value;
+    setModalValue(sanitizedValue);
   };
 
   // Rich text editor handlers
@@ -1030,7 +1031,7 @@ export const LongText: React.FC<LongTextProps> = ({
                   <input
                     type="text"
                     value={linkEditData.url}
-                    onChange={(e) => setLinkEditData({ ...linkEditData, url: e.target.value })}
+                    onChange={(e) => setLinkEditData({ ...linkEditData, url: e.target.value.trim() })}
                     className="flex-1 px-2 py-1.5 border rounded text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
                     placeholder="https://example.com"
                     onKeyDown={(e) => {

@@ -188,7 +188,7 @@ export const URL: React.FC<URLProps> = ({
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
+    const newValue = e.target.value.trim();
     setLocalValue(newValue);
 
     const validationError = validate(newValue);
