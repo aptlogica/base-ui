@@ -1035,7 +1035,7 @@ export const LongText: React.FC<LongTextProps> = ({
                     type="text"
                     value={linkEditData.text}
                     onChange={(e) => setLinkEditData({ ...linkEditData, text: e.target.value })}
-                    className="w-full px-2 py-1.5 border rounded text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
+                    className="w-full bg-[--color-alpha-white] text-[var(--color-text-primary)] px-2 py-1.5 border rounded-xl text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
                     placeholder="Link text"
                     autoFocus
                     onKeyDown={(e) => {
@@ -1053,7 +1053,7 @@ export const LongText: React.FC<LongTextProps> = ({
                     type="text"
                     value={linkEditData.url}
                     onChange={(e) => setLinkEditData({ ...linkEditData, url: e.target.value.trim() })}
-                    className="flex-1 px-2 py-1.5 border rounded text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
+                    className="flex-1 bg-[--color-alpha-white] text-[var(--color-text-primary)] px-2 py-1.5 border rounded-xl text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
                     placeholder="https://example.com"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
