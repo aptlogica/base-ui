@@ -283,15 +283,30 @@ export const URL: React.FC<URLProps> = ({
     }
 
     const safeHref = sanitizeExternalUrl(localValue);
+    
+    // Additional security: Validate URL protocol to prevent XSS via javascript: URLs
+    let trustedHref: string | null = null;
+    if (safeHref) {
+      try {
+        const url = new globalThis.URL(safeHref);
+        // Only allow http/https protocols, but use original URL format for consistency
+        if (url.protocol === 'http:' || url.protocol === 'https:') {
+          trustedHref = safeHref;
+        }
+      } catch {
+        // Invalid URL, keep trustedHref as null
+      }
+    }
+
     return (
       <div className={getDisplayClasses(true, false)}>
         <span className="block w-full min-w-0 truncate whitespace-nowrap">
-          {safeHref ? (
+          {trustedHref ? (
             <a
-              href={safeHref}
+              href={trustedHref}
               target={openInNewTab ? '_blank' : '_self'}
               rel="noopener noreferrer"
-              onClick={(e) => handleUrlClick(e, safeHref)}
+              onClick={(e) => handleUrlClick(e, trustedHref)}
               dangerouslySetInnerHTML={{ __html: safeDisplayValue }}
             />
           ) : (

@@ -586,7 +586,22 @@ export const LongText: React.FC<LongTextProps> = ({
     }
 
     const normalizedUrl = normalizeUrl(url);
-    if (!normalizedUrl) {
+    
+    // Additional security: Validate URL protocol to prevent XSS via javascript: URLs
+    let trustedUrl: string | null = null;
+    if (normalizedUrl) {
+      try {
+        const urlObj = new globalThis.URL(normalizedUrl);
+        // Only allow http/https protocols, but use original URL format for consistency
+        if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
+          trustedUrl = normalizedUrl;
+        }
+      } catch {
+        // Invalid URL, keep trustedUrl as null
+      }
+    }
+    
+    if (!trustedUrl) {
       setIsLinkPopupOpen(false);
       setLinkEditData({ link: null, text: '', url: '', isEditing: false });
       savedLinkSelectionRef.current = null;
@@ -595,8 +610,8 @@ export const LongText: React.FC<LongTextProps> = ({
 
     if (link) {
       // Editing existing link
-      link.setAttribute('href', normalizedUrl);
-      link.setAttribute('title', normalizedUrl);
+      link.setAttribute('href', trustedUrl);
+      link.setAttribute('title', trustedUrl);
       link.setAttribute('target', '_blank');
       link.setAttribute('rel', 'noopener noreferrer');
 
@@ -619,16 +634,16 @@ export const LongText: React.FC<LongTextProps> = ({
       selection.addRange(savedRange);
 
       // If text is provided, use it; otherwise use selected text
-      const linkText = text.trim() || savedRange.toString().trim() || normalizedUrl;
+      const linkText = text.trim() || savedRange.toString().trim() || trustedUrl;
 
       // Create the link
-      execCommand('createLink', normalizedUrl);
+      execCommand('createLink', trustedUrl);
 
       // Find and enhance the newly created link
       setTimeout(() => {
         const targetLink = getLinkAtSelection();
         if (targetLink) {
-          targetLink.setAttribute('title', normalizedUrl);
+          targetLink.setAttribute('title', trustedUrl);
           targetLink.setAttribute('target', '_blank');
           targetLink.setAttribute('rel', 'noopener noreferrer');
 
