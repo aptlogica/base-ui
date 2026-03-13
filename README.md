@@ -1,6 +1,6 @@
 # SereniBase UI - Modern Database Management Console
 
-> The official React-based frontend for SereniBase - a plugin-extensible, multi-view database management interface with 25+ field types and 6 view layouts. Built with React 19, TypeScript, and Vite for blazing-fast development and production performance.
+> Enterprise-grade open source admin panel and database UI builder. A comprehensive React admin panel and admin dashboard UI providing plugin-extensible UI architecture with advanced field types, multiple view layouts, and real-time collaboration capabilities for modern data management.
 
 [![Version](https://img.shields.io/badge/Version-1.0.0-blue.svg)](LICENSE)
 [![React](https://img.shields.io/badge/React-19.2.3-61DAFB?style=flat-square&logo=react)](https://react.dev)
@@ -10,15 +10,18 @@
 
 ## Overview
 
-**SereniBase UI** is the modern, responsive web interface for the SereniBase platform - an open-source alternative to Airtable and Notion databases. Built with React 19 and TypeScript, it provides an intuitive, plugin-based UI for managing complex relational data with multiple view types, rich field components, and real-time collaboration features.
+**SereniBase UI** is a professional-grade open source web dashboard and admin UI framework built with modern web technologies. This comprehensive admin panel framework and no-code admin panel serves as an enterprise alternative to Airtable and Notion, providing intuitive data management capabilities through an open source dashboard with advanced plugin architecture, extensive field types, and collaborative features for teams and organizations.
 
-## Features
+## Key Features
 
-- Plugin-extensible UI
-- 25+ field types, 6 view layouts
-- Real-time collaboration
-- Type-safe API via serenibase-sdk
-- Modern, accessible design
+- **Plugin Architecture**: Extensible UI framework supporting custom components and integrations
+- **Advanced Field Types**: 25+ specialized field types including relations, formulas, and rich content
+- **Multiple View Layouts**: 6 distinct view types (Grid, Kanban, Calendar, Gallery, Form, Chart)
+- **Real-time Collaboration**: Live cursors, comments, and synchronized editing
+- **Admin UI Toolkit**: Comprehensive admin ui framework with backend admin panel capabilities
+- **Web Admin Interface**: Developer admin dashboard with open source control panel features
+- **Type-Safe Integration**: Seamless API communication via serenibase-sdk
+- **Modern Design System**: Accessible, responsive interface built with design best practices
 
 ## Architecture
 
@@ -36,20 +39,80 @@ npm install
 
 See `.env.example` for environment variables and configuration options.
 
-## Usage
+## Quick Start
 
-```sh
+```bash
+# Clone the repository
+git clone https://github.com/aptlogica/base-ui.git
+cd base-ui
+
+# Install dependencies
+npm install
+
+# Set up environment
+cp .env.example .env
+# Configure API endpoints
+
+# Start development server
 npm run dev
+```
+
+### Environment Configuration
+```bash
+VITE_API_URL=http://localhost:8080
+VITE_WS_URL=ws://localhost:8080/ws
+VITE_APP_NAME=SereniBase
+VITE_ENABLE_PLUGINS=true
+```
+
+### Production Build
+```bash
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+
+# Deploy with Docker
+docker build -t serenibase-ui .
+docker run -p 3000:3000 serenibase-ui
 ```
 
 ## Development
 
-- Use `npm run dev` for local development
-- Storybook for component documentation (recommended)
+### Prerequisites
+- Node.js 18+ and npm 9+
+- SereniBase backend running locally or accessible endpoint
 
-## Testing
+### Setup
+```bash
+# Install dependencies
+npm install
 
-- Run `npm run test` to execute unit tests
+# Set up pre-commit hooks
+npm run prepare
+
+# Start development server with hot reload
+npm run dev
+
+# Start Storybook for component development
+npm run storybook
+```
+
+### Code Quality
+```bash
+# Run linting
+npm run lint
+
+# Fix linting issues
+npm run lint:fix
+
+# Run type checking
+npm run type-check
+
+# Run all quality checks
+npm run check-all
+```
 
 ## Security
 
