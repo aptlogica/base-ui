@@ -111,16 +111,18 @@ function removeRgbAndColorsAndUnits(input: string): string {
   return out;
 }
 
+const decodeHtmlEntities = (input: string): string =>
+  input
+    .replaceAll('&quot;', '"')
+    .replaceAll('&#39;', "'")
+    .replaceAll('&apos;', "'")
+    .replaceAll('&nbsp;', ' ')
+    .replaceAll('&amp;', '&');
+
 export function cleanRichTextContent(content: string): string {
   if (!content || typeof content !== 'string') return '';
 
-  let cleaned = stripHtmlTags(content)
-    .replaceAll('&quot;', '"')
-    .replaceAll('&amp;', '&')
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&nbsp;', ' ')
-    .trim();
+  let cleaned = decodeHtmlEntities(stripHtmlTags(content)).trim();
   cleaned = collapseWhitespace(cleaned).trim();
 
   cleaned = removeCssDeclarations(cleaned);

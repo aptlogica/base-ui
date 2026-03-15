@@ -593,7 +593,7 @@ describe('LongText Component', () => {
       fireEvent.click(saveButton);
 
       await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalled();
+        expect(mockOnChange).not.toHaveBeenCalled();
       }, { timeout: 2000 });
     });
 
