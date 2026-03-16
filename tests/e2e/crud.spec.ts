@@ -27,6 +27,7 @@ test('basic CRUD via API', async ({ request }) => {
   const createResp = await request.post(`${apiBase}/row/create`, {
     headers,
     data: { model_id: tableId },
+  });
   expect(createResp.ok()).toBeTruthy();
   const createBody = await createResp.json();
   const rowId = createBody?.data?.record?.id || createBody?.data?.record?.row_id;
