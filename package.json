@@ -19,7 +19,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
-    "serenibase-sdk": "^1.0.0",
+    "serenibase-sdk": "serenibase-sdk-1.0.0.tgz",
     "@tanstack/react-query": "^5.90.16",
     "@tanstack/react-virtual": "^3.13.12",
     "axios": "^1.10.0",
