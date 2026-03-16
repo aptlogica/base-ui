@@ -825,7 +825,9 @@ describe('URL Component', () => {
       // The URL is rendered as a link
       await waitFor(() => {
         const links = screen.queryAllByRole('link');
-        const hasThirdUrl = links.some(link => link.textContent?.includes('third.com'));
+        const hasThirdUrl = links.some(link =>
+          (link as HTMLAnchorElement).href === 'https://third.com/'
+        );
         expect(hasThirdUrl).toBe(true);
       });
     });
