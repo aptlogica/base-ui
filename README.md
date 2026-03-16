@@ -10,7 +10,7 @@
 
 ## Overview
 
-**SereniBase UI** is a professional-grade open source web dashboard and admin UI framework built with modern web technologies. This comprehensive admin panel framework and no-code admin panel serves as an enterprise alternative to Airtable and Notion, providing intuitive data management capabilities through an open source dashboard with advanced plugin architecture, extensive field types, and collaborative features for teams and organizations.
+**SereniBase UI** is a professional-grade open source web dashboard and admin UI framework built with modern web technologies. This comprehensive admin panel framework and no-code admin panel serves as an enterprise alternative to Airtable and Notion, providing intuitive data management capabilities through an open source dashboard and open source ui dashboard with advanced plugin architecture, extensive field types, and collaborative features for teams and organizations, designed as a flexible web admin interface for data-heavy teams.
 
 ## Key Features
 
