@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import React from 'react';
 import { NavigationResolver } from '../NavigationResolver';
+import { getBestNavigationTarget } from '../../utils/navigationPersistence';
 import { AuthContext } from '../../auth/AuthContext';
 
 let mockPathname = '/';
@@ -12,10 +13,23 @@ let workspacesData: any = [
     bases: [{ id: 'b1' }],
   },
 ];
+let selectedWorkspaceId: string | null = null;
+let selectedBaseId: string | null = null;
+let selectedTableId: string | null = null;
+let selectedViewId: string | null = null;
+let workspaceBasesData: any = null;
+let baseTablesData: any = null;
+let tableViewsData: any = null;
+let basesLoading = false;
+let tablesLoading = false;
+let viewsLoading = false;
 const replaceNavigateSpy = vi.fn();
 const navigateSpy = vi.fn();
 const setWorkspaceSpy = vi.fn();
 const setBaseSpy = vi.fn();
+const setTableSpy = vi.fn();
+const setViewSpy = vi.fn();
+const navigateToViewSpy = vi.fn();
 
 vi.mock('react-router-dom', () => ({
   useLocation: () => ({ pathname: mockPathname }),
@@ -32,15 +46,18 @@ vi.mock('../../stores/pluginStore', () => ({
 
 const useNavigationStoreImpl = vi.hoisted(() => Object.assign(
   () => ({
-    selectedWorkspaceId: null,
-    selectedBaseId: null,
-    selectedTableId: null,
-    selectedViewId: null,
+    selectedWorkspaceId,
+    selectedBaseId,
+    selectedTableId,
+    selectedViewId,
   }),
   {
     getState: () => ({
       setWorkspace: setWorkspaceSpy,
       setBase: setBaseSpy,
+      setTable: setTableSpy,
+      setView: setViewSpy,
+      navigateToView: navigateToViewSpy,
     }),
   },
 ));
@@ -54,13 +71,13 @@ vi.mock('../../hooks/useApi', () => ({
     data: workspacesData,
     isLoading: workspacesLoading,
   }),
-  useWorkspaceBases: () => ({ data: null, isLoading: false }),
-  useBaseTables: () => ({ data: null, isLoading: false }),
-  useTableViews: () => ({ data: null, isLoading: false }),
+  useWorkspaceBases: () => ({ data: workspaceBasesData, isLoading: basesLoading }),
+  useBaseTables: () => ({ data: baseTablesData, isLoading: tablesLoading }),
+  useTableViews: () => ({ data: tableViewsData, isLoading: viewsLoading }),
 }));
 
 vi.mock('../../utils/navigationPersistence', () => ({
-  getBestNavigationTarget: () => '/workspace/ws1',
+  getBestNavigationTarget: vi.fn(() => '/workspace/ws1'),
 }));
 
 const renderWithAuth = (user: any) =>
@@ -80,10 +97,23 @@ describe('NavigationResolver', () => {
         bases: [{ id: 'b1' }],
       },
     ];
+    selectedWorkspaceId = null;
+    selectedBaseId = null;
+    selectedTableId = null;
+    selectedViewId = null;
+    workspaceBasesData = null;
+    baseTablesData = null;
+    tableViewsData = null;
+    basesLoading = false;
+    tablesLoading = false;
+    viewsLoading = false;
     replaceNavigateSpy.mockReset();
     navigateSpy.mockReset();
     setWorkspaceSpy.mockReset();
     setBaseSpy.mockReset();
+    setTableSpy.mockReset();
+    setViewSpy.mockReset();
+    navigateToViewSpy.mockReset();
   });
 
   it('returns null on public routes', () => {
@@ -112,6 +142,27 @@ describe('NavigationResolver', () => {
 
     await waitFor(() => {
       expect(replaceNavigateSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  it('does not navigate while workspaces are loading', async () => {
+    workspacesLoading = true;
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  it('auto-selects best target on initial navigation', async () => {
+    mockPathname = '/workspace';
+    workspacesData = [{ id: 'ws1', bases: [{ id: 'b1' }] }];
+    vi.mocked(getBestNavigationTarget).mockReturnValueOnce('/workspace/ws1');
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).toHaveBeenCalledWith(navigateSpy, '/workspace/ws1');
     });
   });
 });

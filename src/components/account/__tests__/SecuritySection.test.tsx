@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { SecuritySection } from '../SecuritySection';
 import { getUserActivity } from '../../../service/activityService';
+import { validatePasswordStrength } from '../../../utils/validation';
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
@@ -53,7 +54,7 @@ vi.mock('../../../service/activityService', () => ({
 }));
 
 vi.mock('../../../utils/validation', () => ({
-  validatePasswordStrength: () => ({
+  validatePasswordStrength: vi.fn(() => ({
     isValid: true,
     hasLength: true,
     hasUpper: true,
@@ -62,7 +63,7 @@ vi.mock('../../../utils/validation', () => ({
     hasSymbol: true,
     containsNameAndEmail: false,
     containsCommon: false,
-  }),
+  })),
 }));
 
 vi.mock('../AccountSettings', () => ({
@@ -171,5 +172,62 @@ describe('SecuritySection', () => {
       expect(toastError).toHaveBeenCalled();
     });
     errorSpy.mockRestore();
+  });
+
+  it('shows validation error when new password is invalid', async () => {
+    vi.mocked(getUserActivity).mockResolvedValueOnce({ login_sessions: [] });
+    vi.mocked(validatePasswordStrength).mockImplementation(() => ({
+      isValid: false,
+      errorMessage: 'Weak password',
+      hasLength: false,
+      hasUpper: false,
+      hasLower: false,
+      hasNumber: false,
+      hasSymbol: false,
+      containsNameAndEmail: false,
+      containsCommon: true,
+    }));
+
+    render(<SecuritySection />);
+    const newPassword = screen.getByLabelText('New Password');
+    fireEvent.change(newPassword, { target: { value: 'weak' } });
+    fireEvent.blur(newPassword);
+
+    expect(await screen.findByText(/Weak password/i)).toBeInTheDocument();
+  });
+
+  it('shows error when confirm password is empty', async () => {
+    render(<SecuritySection />);
+    const confirmPassword = screen.getByLabelText('Confirm New Password');
+    fireEvent.blur(confirmPassword);
+
+    expect(await screen.findByText(/Please confirm your new password/i)).toBeInTheDocument();
+  });
+
+  it('renders past login sessions with timezone label', async () => {
+    vi.mocked(getUserActivity).mockResolvedValueOnce({
+      login_sessions: [
+        {
+          login_at: new Date('2026-01-10T10:00:00Z').toISOString(),
+          browser: 'Chrome',
+          browser_version: '120',
+          os: 'Windows',
+          timezone: 'UTC',
+        },
+        {
+          login_at: new Date('2026-01-09T10:00:00Z').toISOString(),
+          browser: 'Firefox',
+          browser_version: '122',
+          os: 'Linux',
+          timezone: 'UTC',
+        },
+      ],
+    });
+
+    render(<SecuritySection />);
+
+    expect(await screen.findByText(/Chrome/)).toBeInTheDocument();
+    expect(await screen.findByText(/Firefox/)).toBeInTheDocument();
+    expect(screen.getAllByText('UTC').length).toBeGreaterThanOrEqual(1);
   });
 });

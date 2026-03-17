@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import Breadcrumb from '../Breadcrumb';
 
@@ -151,5 +152,24 @@ describe('Breadcrumb', () => {
     expect(screen.getByText('Base One')).toBeInTheDocument();
     expect(screen.getByText('Table One')).toBeInTheDocument();
     expect(screen.queryByText('View One')).not.toBeInTheDocument();
+  });
+
+  it('renders base image when available', () => {
+    (base as any).image = 'https://example.com/base.png';
+
+    render(<Breadcrumb />);
+
+    expect(screen.getByAltText('Base One')).toBeInTheDocument();
+    delete (base as any).image;
+  });
+
+  it('opens base dropdown on click', async () => {
+    const user = userEvent.setup();
+    render(<Breadcrumb />);
+
+    const baseButton = screen.getByRole('button', { name: /base one/i });
+    await user.click(baseButton);
+
+    expect(screen.getByText('Bases')).toBeInTheDocument();
   });
 });

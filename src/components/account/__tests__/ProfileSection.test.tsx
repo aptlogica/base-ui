@@ -1272,5 +1272,33 @@ describe('ProfileSection', () => {
       expect(screen.getByText('First Name')).toBeInTheDocument();
     });
   });
+
+  // ==========================================================================
+  // Avatar URL Safety Tests
+  // ==========================================================================
+
+  describe('Avatar URL Safety', () => {
+    it('clears unsafe avatar URLs', () => {
+      const mockProfile = createMockUserProfile({ avatar: 'javascript:alert(1)' });
+      setupMocksWithProfile(mockProfile);
+      vi.mocked(useCurrentUser).mockReturnValue({ ...mockCurrentUser, avatar: undefined });
+
+      renderProfileSection(queryClient);
+
+      const avatarImg = screen.getByAltText('Profile') as HTMLImageElement;
+      expect(avatarImg.getAttribute('src')).toBeNull();
+    });
+
+    it('clears cross-origin blob avatar URLs', () => {
+      const mockProfile = createMockUserProfile({ avatar: 'blob:https://evil.com/123' });
+      setupMocksWithProfile(mockProfile);
+      vi.mocked(useCurrentUser).mockReturnValue({ ...mockCurrentUser, avatar: undefined });
+
+      renderProfileSection(queryClient);
+
+      const avatarImg = screen.getByAltText('Profile') as HTMLImageElement;
+      expect(avatarImg.getAttribute('src')).toBe('blob:https://evil.com/123');
+    });
+  });
 });
 
