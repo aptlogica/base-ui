@@ -58,6 +58,26 @@ describe('EventChip', () => {
       const chip = container.querySelector('.custom-class');
       expect(chip).toBeInTheDocument();
     });
+
+    it('formats time from raw date field with custom format', () => {
+      const dateField = {
+        id: 'start',
+        key: 'start',
+        title: 'Start',
+        type: 'date',
+        meta: { timeFormat: 'hh:mm:ss' },
+      } as any;
+
+      const eventWithRawDate = {
+        ...mockEvent,
+        dateTime: new Date('2026-02-01T13:05:09Z'),
+        data: { start: '2026-02-01T13:05:09.000Z' },
+      };
+
+      render(<EventChip event={eventWithRawDate} dateField={dateField} />);
+
+      expect(screen.getByText(/01:05:09 PM/)).toBeInTheDocument();
+    });
   });
 
   describe('onClick behavior', () => {
