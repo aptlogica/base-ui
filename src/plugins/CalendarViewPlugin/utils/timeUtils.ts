@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 // Converts a formatted time string like "10:45 AM" to short form "10:45a"
 export function toShortTime(formatted: string | undefined | null): string {
   if (!formatted) return "";

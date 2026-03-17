@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 const OPTION_COLOR_CLASSES = [
   'bg-blue-100 text-blue-800',
   'bg-green-100 text-green-800',

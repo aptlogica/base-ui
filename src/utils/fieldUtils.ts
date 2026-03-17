@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 /**
  * Shared field utility functions for both GridViewPlugin and FormViewPlugin
  * Consolidates field type handling, default values, and data processing

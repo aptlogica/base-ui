@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { useUserProfile, useChangePassword } from '../../hooks/useApi';

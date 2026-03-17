@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 import { ChevronDown, ChevronUp } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import { getDisplayValue, isSelected as isSelectedValue, normalizeSelection, toggleSelection } from "../../../../../components/common/dropdown/dropdownSelection";

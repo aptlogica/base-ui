@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 import React, { useRef, useState, useMemo } from 'react';
 import { Group, Check, Plus, ChevronDown as ChevronDownIcon, ChevronUp, Trash2 } from 'lucide-react';
 import { useSmartPopover } from '../../../hooks/useSmartPopover';

@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Loader2, CheckCircle2, UserPlus, Edit, Trash2 } from 'lucide-react';
 import { useBulkAddMembers, useGetUsersForAssign, useWorkspaceBases, useWorkspaceMembers, useBaseMembers, useUserRolesAndAccess, useRemoveUserFromWorkspace, useRemoveUserFromBase } from '../../hooks/useApi';

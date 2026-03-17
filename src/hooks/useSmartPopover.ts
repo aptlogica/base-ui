@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 import { RefObject, useEffect, useLayoutEffect, useState } from 'react';
 
 type HV = 'left' | 'right' | 'top' | 'bottom';

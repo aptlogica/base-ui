@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { VIEW_ICONS } from '../../../../types/viewTypes';
 import ViewOptionsMenu from '../../../../components/views/ViewOptionsMenu';

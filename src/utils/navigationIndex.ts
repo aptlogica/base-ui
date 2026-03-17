@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 /** A minimal, shape-agnostic workspace graph used for fast lookups. */
 export interface WorkspaceNode { id: string; bases?: BaseNode[] }
 export interface BaseNode { id: string; workspace_id?: string; workspaceId?: string; tables?: TableNode[] }

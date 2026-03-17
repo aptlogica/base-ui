@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 import React, { useState, createContext, useContext, useCallback, useRef, useEffect } from 'react';
 import { ProfileSection } from './ProfileSection';
 import { SecuritySection } from './SecuritySection';
