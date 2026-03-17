@@ -112,7 +112,6 @@ const LoginSessions: React.FC<LoginSessionsProps> = ({
         {currentSession && (
           <div className="relative flex items-center pb-4">
             <div className="flex flex-col items-center mr-4 flex-shrink-0">
-              <div className="w-3 h-3 bg-[var(--color-brand-600)] rounded-full z-10"></div>
               {pastSessions.length > 0 && (
                 <div className="w-0.5 h-full bg-gray-300 mt-2" style={{ borderStyle: 'dotted' }}></div>
               )}

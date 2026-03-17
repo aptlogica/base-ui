@@ -29,8 +29,8 @@ describe('activityService', () => {
     setNavigatorProperty('language', 'en-US');
     setNavigatorProperty('deviceMemory', 8);
 
-    vi.spyOn(Intl, 'DateTimeFormat').mockReturnValue({
-      resolvedOptions: () => ({ timeZone: 'UTC' }),
+    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockReturnValue({
+      timeZone: 'UTC',
     } as any);
   });
 

@@ -143,4 +143,13 @@ describe('Breadcrumb', () => {
     const { container } = render(<Breadcrumb />);
     expect(container.firstChild).toBeNull();
   });
+
+  it('renders base and table for legacy routes without view', () => {
+    mockPathname = '/base/b1/table/t1';
+    render(<Breadcrumb />);
+
+    expect(screen.getByText('Base One')).toBeInTheDocument();
+    expect(screen.getByText('Table One')).toBeInTheDocument();
+    expect(screen.queryByText('View One')).not.toBeInTheDocument();
+  });
 });

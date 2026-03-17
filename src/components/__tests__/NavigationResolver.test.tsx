@@ -5,6 +5,13 @@ import { NavigationResolver } from '../NavigationResolver';
 import { AuthContext } from '../../auth/AuthContext';
 
 let mockPathname = '/';
+let workspacesLoading = false;
+let workspacesData: any = [
+  {
+    id: 'ws1',
+    bases: [{ id: 'b1' }],
+  },
+];
 const replaceNavigateSpy = vi.fn();
 const navigateSpy = vi.fn();
 const setWorkspaceSpy = vi.fn();
@@ -44,13 +51,8 @@ vi.mock('../../stores/navigationStore', () => ({
 
 vi.mock('../../hooks/useApi', () => ({
   useWorkspaces: () => ({
-    data: [
-      {
-        id: 'ws1',
-        bases: [{ id: 'b1' }],
-      },
-    ],
-    isLoading: false,
+    data: workspacesData,
+    isLoading: workspacesLoading,
   }),
   useWorkspaceBases: () => ({ data: null, isLoading: false }),
   useBaseTables: () => ({ data: null, isLoading: false }),
@@ -71,6 +73,13 @@ const renderWithAuth = (user: any) =>
 describe('NavigationResolver', () => {
   beforeEach(() => {
     mockPathname = '/';
+    workspacesLoading = false;
+    workspacesData = [
+      {
+        id: 'ws1',
+        bases: [{ id: 'b1' }],
+      },
+    ];
     replaceNavigateSpy.mockReset();
     navigateSpy.mockReset();
     setWorkspaceSpy.mockReset();
@@ -94,6 +103,15 @@ describe('NavigationResolver', () => {
 
     await waitFor(() => {
       expect(replaceNavigateSpy).toHaveBeenCalledWith(navigateSpy, '/workspace/ws1');
+    });
+  });
+
+  it('skips resolution on excluded routes', async () => {
+    mockPathname = '/workspace/ws1/settings';
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).not.toHaveBeenCalled();
     });
   });
 });
