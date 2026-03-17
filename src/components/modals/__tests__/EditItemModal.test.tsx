@@ -353,7 +353,7 @@ describe('EditItemModal', () => {
     it('includes image in save data for base type', async () => {
       const user = userEvent.setup();
       const onSave = vi.fn().mockResolvedValue(undefined);
-      const mockObjectUrl = 'blob:http://localhost/test-image';
+      const mockObjectUrl = `blob:${window.location.origin}/test-image`;
       global.URL.createObjectURL = vi.fn(() => mockObjectUrl);
       
       const mockImage = {
@@ -362,7 +362,11 @@ describe('EditItemModal', () => {
         width: 400,
         height: 200,
       };
-      global.Image = vi.fn(() => mockImage) as unknown as typeof Image;
+      global.Image = class {
+        constructor() {
+          return mockImage as any;
+        }
+      } as unknown as typeof Image;
 
       render(
         <EditItemModal
@@ -604,7 +608,7 @@ describe('EditItemModal', () => {
       const user = userEvent.setup();
       
       // Mock URL.createObjectURL
-      const mockObjectUrl = 'blob:http://localhost/test-image';
+      const mockObjectUrl = `blob:${window.location.origin}/test-image`;
       global.URL.createObjectURL = vi.fn(() => mockObjectUrl);
       
       // Mock Image constructor for dimension validation
@@ -614,7 +618,11 @@ describe('EditItemModal', () => {
         width: 400,
         height: 200,
       };
-      global.Image = vi.fn(() => mockImage) as unknown as typeof Image;
+      global.Image = class {
+        constructor() {
+          return mockImage as any;
+        }
+      } as unknown as typeof Image;
 
       render(<EditItemModal {...baseProps} initialName="Test Base" />);
 
@@ -656,7 +664,7 @@ describe('EditItemModal', () => {
       const user = userEvent.setup();
       
       // Mock URL.createObjectURL
-      global.URL.createObjectURL = vi.fn(() => 'blob:http://localhost/large-image');
+      global.URL.createObjectURL = vi.fn(() => `blob:${window.location.origin}/large-image`);
       
       // Mock Image with dimensions exceeding max (800x400)
       const mockImage = {
@@ -665,7 +673,11 @@ describe('EditItemModal', () => {
         width: 1000, // exceeds 800
         height: 500,  // exceeds 400
       };
-      global.Image = vi.fn(() => mockImage) as unknown as typeof Image;
+      global.Image = class {
+        constructor() {
+          return mockImage as any;
+        }
+      } as unknown as typeof Image;
 
       render(<EditItemModal {...baseProps} initialName="Test Base" />);
 
@@ -692,7 +704,7 @@ describe('EditItemModal', () => {
     it('shows error when image dimensions are invalid but keeps preview', async () => {
       const user = userEvent.setup();
       
-      const mockObjectUrl = 'blob:http://localhost/large-image';
+      const mockObjectUrl = `blob:${window.location.origin}/large-image`;
       global.URL.createObjectURL = vi.fn(() => mockObjectUrl);
       
       const mockImage = {
@@ -701,7 +713,11 @@ describe('EditItemModal', () => {
         width: 1000,
         height: 500,
       };
-      global.Image = vi.fn(() => mockImage) as unknown as typeof Image;
+      global.Image = class {
+        constructor() {
+          return mockImage as any;
+        }
+      } as unknown as typeof Image;
 
       render(<EditItemModal {...baseProps} initialName="Test Base" />);
 
@@ -729,7 +745,7 @@ describe('EditItemModal', () => {
     });
 
     it('handles drag and drop image upload', async () => {
-      const mockObjectUrl = 'blob:http://localhost/dropped-image';
+      const mockObjectUrl = `blob:${window.location.origin}/dropped-image`;
       global.URL.createObjectURL = vi.fn(() => mockObjectUrl);
       
       const mockImage = {
@@ -738,7 +754,11 @@ describe('EditItemModal', () => {
         width: 400,
         height: 200,
       };
-      global.Image = vi.fn(() => mockImage) as unknown as typeof Image;
+      global.Image = class {
+        constructor() {
+          return mockImage as any;
+        }
+      } as unknown as typeof Image;
 
       render(<EditItemModal {...baseProps} initialName="Test Base" />);
 
@@ -787,7 +807,7 @@ describe('EditItemModal', () => {
 
     it('shows error when image fails to load', async () => {
       const user = userEvent.setup();
-      const mockObjectUrl = 'blob:http://localhost/failed-image';
+      const mockObjectUrl = `blob:${window.location.origin}/failed-image`;
       global.URL.createObjectURL = vi.fn(() => mockObjectUrl);
       
       const mockImage = {
@@ -797,7 +817,11 @@ describe('EditItemModal', () => {
         width: 400,
         height: 200,
       };
-      global.Image = vi.fn(() => mockImage) as unknown as typeof Image;
+      global.Image = class {
+        constructor() {
+          return mockImage as any;
+        }
+      } as unknown as typeof Image;
 
       render(<EditItemModal {...baseProps} initialName="Test Base" />);
 

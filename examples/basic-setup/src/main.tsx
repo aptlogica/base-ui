@@ -4,12 +4,11 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import './index.css';
 
 // Mock SereniBase UI components (replace with actual imports)
-import { 
+import {
   WorkspaceProvider,
   DatabaseGrid,
   NavigationSidebar,
   UserProfile,
-  FieldTypes
 } from '@serenibase/ui';
 
 // Configuration
@@ -81,7 +80,7 @@ function App() {
           {/* Main Content */}
           <div className="app-body">
             <NavigationSidebar workspace={sampleWorkspace} />
-            
+
             <main className="main-content">
               <Routes>
                 <Route path="/" element={<Dashboard />} />
@@ -137,14 +136,14 @@ function Dashboard() {
 // Users Table Component
 function UsersTable() {
   const usersTable = sampleWorkspace.tables.find(t => t.id === 'users');
-  
+
   return (
     <div className="table-view">
       <h2>👥 Users</h2>
-      <DatabaseGrid 
+      <DatabaseGrid
         table={usersTable}
-        onRowClick={(row) => console.log('User clicked:', row)}
-        onCellEdit={(rowId, fieldId, value) => console.log('Cell edited:', rowId, fieldId, value)}
+        onRowClick={(row: any) => console.log('User clicked:', row)}
+        onCellEdit={(rowId: any, fieldId: any, value: any) => console.log('Cell edited:', rowId, fieldId, value)}
         features={{
           search: true,
           filter: true,
@@ -159,14 +158,14 @@ function UsersTable() {
 // Projects Table Component  
 function ProjectsTable() {
   const projectsTable = sampleWorkspace.tables.find(t => t.id === 'projects');
-  
+
   return (
     <div className="table-view">
       <h2>📋 Projects</h2>
-      <DatabaseGrid 
+      <DatabaseGrid
         table={projectsTable}
-        onRowClick={(row) => console.log('Project clicked:', row)}
-        onCellEdit={(rowId, fieldId, value) => console.log('Cell edited:', rowId, fieldId, value)}
+        onRowClick={(row: any) => console.log('Project clicked:', row)}
+        onCellEdit={(rowId: any, fieldId: any, value: any) => console.log('Cell edited:', rowId, fieldId, value)}
         features={{
           search: true,
           filter: true,
@@ -188,43 +187,39 @@ function ProfilePage() {
         <div className="profile-section">
           <h3>Account Information</h3>
           <div className="profile-field">
-            <label>Name:</label>
-            <span>Demo User</span>
+            <label htmlFor='name'>Name:</label>
+            <span id='name'>Demo User</span>
           </div>
           <div className="profile-field">
-            <label>Email:</label>
-            <span>demo@example.com</span>
+            <label htmlFor='email'>Email:</label>
+            <span id='email'>demo@example.com</span>
           </div>
           <div className="profile-field">
-            <label>Role:</label>
-            <span>Admin</span>
+            <label htmlFor='role'>Role:</label>
+            <span id='role'>Admin</span>
           </div>
         </div>
-        
+
         <div className="profile-section">
           <h3>Preferences</h3>
           <div className="preference-group">
-            <label>
-              <input type="checkbox" defaultChecked />
-              Email notifications
-            </label>
+            <label htmlFor='email-notifications'>
+              <input type="checkbox" id='email-notifications' defaultChecked />Email notifications</label>
           </div>
           <div className="preference-group">
-            <label>
-              <input type="checkbox" />
-              Desktop notifications  
-            </label>
+            <label htmlFor='desktop-notifications'>
+              <input type="checkbox" id='desktop-notifications' />Desktop notifications  </label>
           </div>
           <div className="preference-group">
-            <label>Theme:</label>
-            <select>
+            <label htmlFor='theme'>Theme:</label>
+            <select id='theme'>
               <option>Light</option>
               <option>Dark</option>
               <option>Auto</option>
             </select>
           </div>
         </div>
-        
+
         <div className="profile-section">
           <h3>Actions</h3>
           <button className="profile-btn">Change Password</button>
