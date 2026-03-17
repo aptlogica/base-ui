@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 import { isTruthyValue } from '../../shared/tooltipTextUtils';
 import { formatTooltipValue } from '../../shared/tooltipValueUtils';
 import { toBulletLines } from '../../shared/tooltipLineUtils';

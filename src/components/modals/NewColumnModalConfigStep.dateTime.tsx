@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 import { Plus } from 'lucide-react';
 import { DateField, Time, Year } from '../../components/common/Fields';
 import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown';

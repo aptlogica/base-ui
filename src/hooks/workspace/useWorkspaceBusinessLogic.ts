@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 import { useWorkspaceDataService } from './useWorkspaceDataService';
 import { useWorkspaceStateManager } from './useWorkspaceStateManager';
 import { useEffect, useCallback, useState } from 'react';

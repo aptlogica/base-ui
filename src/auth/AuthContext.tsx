@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigationStore } from '../stores/navigationStore';

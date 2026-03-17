@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 // @ts-ignore - SDK module does not have type declarations
 import { SereniBaseClient } from 'serenibase-sdk';
 import { WorkspaceBaseInput } from "../types/interfaces/workspace.interface.js";

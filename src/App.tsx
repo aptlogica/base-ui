@@ -1,3 +1,16 @@
+/*
+Copyright (c) 2026 Aptlogica Technologies Private Limited
+This file is part of software developed by Aptlogica Technologies Private Limited.
+Licensed under the MIT License. See the LICENSE file in the project root
+for full license information.
+Websites:
+https://www.aptlogica.com
+https://www.serenibase.com
+Support:
+support@aptlogica.com
+support@serenibase.com
+*/
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTable, useBaseTables, useWorkspaces } from './hooks/useApi';

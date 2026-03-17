@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 import React from 'react';
 import { Edit, Users, Trash2, MoreVertical } from 'lucide-react';
 import { PopoverMenu } from './PopoverMenu';
