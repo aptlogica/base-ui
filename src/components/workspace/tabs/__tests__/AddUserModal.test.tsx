@@ -406,6 +406,24 @@ describe('AddUserModal', () => {
       expect(screen.queryByText(/Set as Co-owner/i)).not.toBeInTheDocument();
     });
 
+    it('shows co-owner toggle when owner edits a co-owner', () => {
+      mockUseUserRole.mockReturnValue({ isOwner: () => true });
+      render(
+        <AddUserModal
+          {...defaultProps}
+          editUser={{
+            id: 'user-2',
+            first_name: 'Jane',
+            last_name: 'Doe',
+            email: 'jane@example.com',
+            roles: [{ name: 'co-owner', scope_level: 'system' }],
+          }}
+        />
+      );
+
+      expect(screen.getByText(/Set as Co-owner/i)).toBeInTheDocument();
+    });
+
     it('shows avatar validation error for invalid file type', async () => {
       const user = userEvent.setup();
       render(<AddUserModal {...defaultProps} />);
