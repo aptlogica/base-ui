@@ -23,6 +23,8 @@ let tableViewsData: any = null;
 let basesLoading = false;
 let tablesLoading = false;
 let viewsLoading = false;
+const openFlyoutSpy = vi.fn();
+const closeFlyoutSpy = vi.fn();
 const replaceNavigateSpy = vi.fn();
 const navigateSpy = vi.fn();
 const setWorkspaceSpy = vi.fn();
@@ -41,7 +43,7 @@ vi.mock('../../utils/navigationRedirect', () => ({
 }));
 
 vi.mock('../../stores/pluginStore', () => ({
-  usePluginStore: () => ({ openFlyout: vi.fn(), closeFlyout: vi.fn() }),
+  usePluginStore: () => ({ openFlyout: openFlyoutSpy, closeFlyout: closeFlyoutSpy }),
 }));
 
 const useNavigationStoreImpl = vi.hoisted(() => Object.assign(
@@ -114,6 +116,8 @@ describe('NavigationResolver', () => {
     setTableSpy.mockReset();
     setViewSpy.mockReset();
     navigateToViewSpy.mockReset();
+    openFlyoutSpy.mockReset();
+    closeFlyoutSpy.mockReset();
   });
 
   it('returns null on public routes', () => {
@@ -164,5 +168,27 @@ describe('NavigationResolver', () => {
     await waitFor(() => {
       expect(replaceNavigateSpy).toHaveBeenCalledWith(navigateSpy, '/workspace/ws1');
     });
+  });
+
+  it('navigates to saved view when navigation state is valid', async () => {
+    mockPathname = '/app';
+    selectedWorkspaceId = 'ws1';
+    selectedBaseId = 'b1';
+    selectedTableId = 't1';
+    selectedViewId = 'v1';
+    workspaceBasesData = { data: [{ id: 'b1' }] };
+    baseTablesData = { data: [{ id: 't1' }] };
+    tableViewsData = { data: [{ id: 'v1' }] };
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).toHaveBeenCalledWith(
+        navigateSpy,
+        '/workspace/ws1/base/b1/table/t1/v1'
+      );
+    });
+    expect(navigateToViewSpy).toHaveBeenCalledWith('ws1', 'b1', 't1', 'v1');
+    expect(openFlyoutSpy).toHaveBeenCalledWith('workspace-flyout-menu');
   });
 });

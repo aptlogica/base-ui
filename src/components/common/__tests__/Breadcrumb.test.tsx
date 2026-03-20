@@ -1,19 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import Breadcrumb from '../Breadcrumb';
 
+const base = { id: 'b1', title: 'Base One', workspace_id: 'ws1' } as any;
+const table = { id: 't1', title: 'Table One' } as any;
+const view = { id: 'v1', title: 'View One', type: 'grid' } as any;
+
 let mockPathname = '/workspace/ws1/base/b1/table/t1/v1';
 let mockVisibility = true;
+let workspaceBasesData: any = { data: [base] };
+let baseTablesData: any = { data: [table] };
+let tableViewsData: any = { data: [view] };
+let canCreateBaseValue = false;
 
 const navigateSpy = vi.fn();
 const navigateToTableSpy = vi.fn();
 const navigateToViewSpy = vi.fn();
-
-const base = { id: 'b1', title: 'Base One', workspace_id: 'ws1' } as any;
-const table = { id: 't1', title: 'Table One' } as any;
-const view = { id: 'v1', title: 'View One', type: 'grid' } as any;
 
 const useNavigationStoreImpl = vi.hoisted(() => Object.assign(
   () => ({
@@ -48,9 +52,9 @@ vi.mock('../../../hooks/workspace/useWorkspaceDataService', () => ({
 }));
 
 vi.mock('../../../hooks/useApi', () => ({
-  useWorkspaceBases: () => ({ data: { data: [base] } }),
-  useBaseTables: () => ({ data: { data: [table] } }),
-  useTableViews: () => ({ data: { data: [view] } }),
+  useWorkspaceBases: () => ({ data: workspaceBasesData }),
+  useBaseTables: () => ({ data: baseTablesData }),
+  useTableViews: () => ({ data: tableViewsData }),
   useUpdateBase: () => ({ mutateAsync: vi.fn() }),
   useDeleteBase: () => ({ mutateAsync: vi.fn() }),
   useCreateBase: () => ({ mutateAsync: vi.fn() }),
@@ -62,7 +66,7 @@ vi.mock('../../../hooks/useNavigateToBaseFirstView', () => ({
 
 vi.mock('../../../hooks/useWorkspaceAccess', () => ({
   useWorkspaceAccess: () => ({
-    canCreateBase: () => false,
+    canCreateBase: () => canCreateBaseValue,
     isBaseLevelAccess: () => false,
     canAssignUsers: () => false,
     canUpdateBase: () => false,
@@ -119,6 +123,10 @@ describe('Breadcrumb', () => {
   beforeEach(() => {
     mockPathname = '/workspace/ws1/base/b1/table/t1/v1';
     mockVisibility = true;
+    workspaceBasesData = { data: [base] };
+    baseTablesData = { data: [table] };
+    tableViewsData = { data: [view] };
+    canCreateBaseValue = false;
     navigateSpy.mockClear();
     navigateToTableSpy.mockClear();
     navigateToViewSpy.mockClear();
@@ -171,5 +179,61 @@ describe('Breadcrumb', () => {
     await user.click(baseButton);
 
     expect(screen.getByText('Bases')).toBeInTheDocument();
+  });
+
+  it('opens table dropdown and navigates on table click', async () => {
+    const user = userEvent.setup();
+    render(<Breadcrumb />);
+
+    const tableButton = screen.getByRole('button', { name: /table one/i });
+    await user.click(tableButton);
+
+    expect(screen.getByText('Tables')).toBeInTheDocument();
+    const portal = document.querySelector('.breadcrumb-dropdown-portal') as HTMLElement;
+    const portalUtils = within(portal);
+    const tableOptions = portalUtils.getAllByRole('button', { name: /table one/i });
+    await user.click(tableOptions[0]);
+
+    expect(navigateToTableSpy).toHaveBeenCalledWith('ws1', 'b1', 't1');
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws1/base/b1/table/t1/grid');
+  });
+
+  it('opens view dropdown and navigates on view click', async () => {
+    const user = userEvent.setup();
+    render(<Breadcrumb />);
+
+    const viewButton = screen.getByRole('button', { name: /view one/i });
+    await user.click(viewButton);
+
+    expect(screen.getByText('Views')).toBeInTheDocument();
+    const portal = document.querySelector('.breadcrumb-dropdown-portal') as HTMLElement;
+    const portalUtils = within(portal);
+    const viewOptions = portalUtils.getAllByRole('button', { name: /view one/i });
+    await user.click(viewOptions[0]);
+
+    expect(navigateToViewSpy).toHaveBeenCalledWith('ws1', 'b1', 't1', 'v1');
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws1/base/b1/table/t1/v1');
+  });
+
+  it('shows Create New Base button when allowed', async () => {
+    const user = userEvent.setup();
+    canCreateBaseValue = true;
+    render(<Breadcrumb />);
+
+    const baseButton = screen.getByRole('button', { name: /base one/i });
+    await user.click(baseButton);
+
+    expect(screen.getByText('Create New Base')).toBeInTheDocument();
+  });
+
+  it('shows empty state when dropdown has no items', async () => {
+    const user = userEvent.setup();
+    workspaceBasesData = { data: [] };
+    render(<Breadcrumb />);
+
+    const baseButton = screen.getByRole('button', { name: /base one/i });
+    await user.click(baseButton);
+
+    expect(screen.getByText('No items found.')).toBeInTheDocument();
   });
 });
