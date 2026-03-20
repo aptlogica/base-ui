@@ -110,6 +110,18 @@ describe('AccountSettingsModal', () => {
 
       expect(onClose).not.toHaveBeenCalled();
     });
+
+    it('stops propagation on modal content keydown', () => {
+      const onClose = vi.fn();
+      const { container } = render(
+        <AccountSettingsModal {...defaultProps} onClose={onClose} />
+      );
+
+      const modal = container.querySelector('.bg-card');
+      fireEvent.keyDown(modal!, { key: 'Escape' });
+
+      expect(onClose).not.toHaveBeenCalled();
+    });
   });
 
   describe('styling', () => {
