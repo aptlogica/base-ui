@@ -1,98 +1,108 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import UserDropdown from '../UserDropdown';
 
-const logoutSpy = vi.fn();
-const navigateSpy = vi.fn();
-const mockUseUserProfile = vi.fn();
+const logoutMock = vi.fn();
+const navigateMock = vi.fn();
+const useUserProfileMock = vi.fn();
 
 vi.mock('react-router-dom', () => ({
-  useNavigate: () => navigateSpy,
+  useNavigate: () => navigateMock,
 }));
 
 vi.mock('../../../auth/AuthContext', () => ({
-  useAuth: () => ({ logout: logoutSpy, user: { id: 'u1' } }),
+  useAuth: () => ({ logout: logoutMock, user: { id: 'user-1' } }),
 }));
 
 vi.mock('../../../hooks/useApi', () => ({
-  useUserProfile: () => mockUseUserProfile(),
+  useUserProfile: (...args: any[]) => useUserProfileMock(...args),
 }));
 
 vi.mock('../../modals/AccountSettingsModal', () => ({
   AccountSettingsModal: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="account-settings-modal">Account Settings</div> : null,
+    isOpen ? <div data-testid="account-modal">Account Settings</div> : null,
 }));
 
-const mockMatchMedia = (matches = false) => {
-  return vi.fn().mockImplementation(() => ({
-    matches,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  }));
-};
+const matchMediaMock = vi.fn();
 
 describe('UserDropdown', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseUserProfile.mockReturnValue({
+    logoutMock.mockResolvedValue(undefined);
+    navigateMock.mockClear();
+    useUserProfileMock.mockReturnValue({
       data: { data: { display_name: 'Jane Doe', email: 'jane@example.com' } },
       isLoading: false,
     });
-    Object.defineProperty(globalThis, 'matchMedia', {
-      writable: true,
-      value: mockMatchMedia(false),
+
+    matchMediaMock.mockReturnValue({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
     });
+
+    Object.defineProperty(globalThis, 'matchMedia', {
+      value: matchMediaMock,
+      writable: true,
+    });
+
     localStorage.clear();
     document.documentElement.classList.remove('dark');
-    delete document.documentElement.dataset.theme;
+    document.documentElement.dataset.theme = '';
   });
 
-  it('renders display name and email', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders user name and email from profile', () => {
     render(<UserDropdown />);
     expect(screen.getByText('Jane Doe')).toBeInTheDocument();
     expect(screen.getByText('jane@example.com')).toBeInTheDocument();
   });
 
-  it('opens menu and shows profile action', async () => {
-    const user = userEvent.setup();
+  it('opens dropdown and shows actions', () => {
     render(<UserDropdown />);
-
-    await user.click(screen.getByTitle(/user menu/i));
+    fireEvent.click(screen.getByTitle(/user menu/i));
     expect(screen.getByText('Profile')).toBeInTheDocument();
+    expect(screen.getByText('Sign out')).toBeInTheDocument();
   });
 
-  it('opens account settings modal when Profile is clicked', async () => {
-    const user = userEvent.setup();
+  it('opens account settings modal from profile action', () => {
     render(<UserDropdown />);
-
-    await user.click(screen.getByTitle(/user menu/i));
-    await user.click(screen.getByText('Profile'));
-
-    expect(screen.getByTestId('account-settings-modal')).toBeInTheDocument();
+    fireEvent.click(screen.getByTitle(/user menu/i));
+    fireEvent.click(screen.getByText('Profile'));
+    expect(screen.getByTestId('account-modal')).toBeInTheDocument();
   });
 
-  it('toggles theme and stores preference', async () => {
-    const user = userEvent.setup();
+  it('toggles theme and updates localStorage', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('theme', 'light');
     render(<UserDropdown />);
-
-    await user.click(screen.getByTitle(/user menu/i));
-    await user.click(screen.getByRole('button', { name: /switch to dark mode/i }));
-
+    fireEvent.click(screen.getByTitle(/user menu/i));
+    fireEvent.click(screen.getByLabelText(/switch to dark mode/i));
+    act(() => {
+      vi.runAllTimers();
+    });
     expect(localStorage.getItem('theme')).toBe('dark');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
-    expect(document.documentElement.dataset.theme).toBe('dark');
+    vi.useRealTimers();
   });
 
   it('logs out and navigates to login', async () => {
-    const user = userEvent.setup();
-    logoutSpy.mockResolvedValue(undefined);
     render(<UserDropdown />);
+    fireEvent.click(screen.getByTitle(/user menu/i));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Sign out'));
+    });
+    expect(logoutMock).toHaveBeenCalledTimes(1);
+    expect(navigateMock).toHaveBeenCalledWith('/login');
+  });
 
-    await user.click(screen.getByTitle(/user menu/i));
-    await user.click(screen.getByText('Sign out'));
-
-    expect(logoutSpy).toHaveBeenCalled();
-    expect(navigateSpy).toHaveBeenCalledWith('/login');
+  it('closes dropdown when clicking outside', () => {
+    render(<UserDropdown />);
+    fireEvent.click(screen.getByTitle(/user menu/i));
+    expect(screen.getByText('Sign out')).toBeInTheDocument();
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByText('Sign out')).not.toBeInTheDocument();
   });
 });

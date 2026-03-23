@@ -167,6 +167,21 @@ describe('UserTable', () => {
       expect(screen.getByText('Active')).toBeInTheDocument();
     });
 
+    it('should render Inactive status badge for inactive user', () => {
+      renderWithQueryClient(<UserTable users={[createUser({ status: 'inactive', email_verified: true })]} />);
+      expect(screen.getByText('Inactive')).toBeInTheDocument();
+    });
+
+    it('should render Deactivated status badge for deactivated user', () => {
+      renderWithQueryClient(<UserTable users={[createUser({ status: 'deactivated', email_verified: true })]} />);
+      expect(screen.getByText('Deactivated')).toBeInTheDocument();
+    });
+
+    it('should render custom status label for unknown status', () => {
+      renderWithQueryClient(<UserTable users={[createUser({ status: 'custom-status', email_verified: true })]} />);
+      expect(screen.getByText('custom-status')).toBeInTheDocument();
+    });
+
     it('should render Pending status for unverified user', () => {
       renderWithQueryClient(<UserTable users={[createUser({ email_verified: false })]} />);
       expect(screen.getByText('Pending')).toBeInTheDocument();
@@ -423,6 +438,72 @@ describe('UserTable', () => {
 
       renderWithQueryClient(<UserTable users={[user]} />);
       expect(screen.getByText(/America\/Chicago \(United States\)/)).toBeInTheDocument();
+    });
+
+    it('uses login session timezone when timezone value matches multiple entries', () => {
+      const user = createUser({
+        timezone: 'PST',
+        country: '',
+        locale: 'fr-FR',
+        activity_data: {
+          login_sessions: [
+            {
+              browser: 'Chrome',
+              language: 'en-US',
+              login_at: '2024-01-01T00:00:00Z',
+              timezone: 'America/Vancouver',
+            },
+          ],
+        },
+      });
+
+      renderWithQueryClient(<UserTable users={[user]} />);
+      expect(screen.getByText('America/Vancouver (Canada)')).toBeInTheDocument();
+    });
+
+    it('uses locale country when timezone value matches multiple entries', () => {
+      const originalDisplayNames = (Intl as any).DisplayNames;
+      (Intl as any).DisplayNames = class MockDisplayNames {
+        constructor() {}
+        of(region: string) {
+          if (region === 'US') return 'United States';
+          return '';
+        }
+      };
+
+      try {
+        const user = createUser({
+          timezone: 'PST',
+          country: '',
+          locale: 'en-US',
+        });
+
+        renderWithQueryClient(<UserTable users={[user]} />);
+        expect(screen.getByText('America/Los_Angeles (United States)')).toBeInTheDocument();
+      } finally {
+        (Intl as any).DisplayNames = originalDisplayNames;
+      }
+    });
+
+    it('falls back to first timezone match when no country or locale matches', () => {
+      const user = createUser({
+        timezone: 'PST',
+        country: 'Atlantis',
+        locale: 'xx-YY',
+        activity_data: {
+          login_sessions: [
+            {
+              browser: 'Chrome',
+              language: 'en-US',
+              login_at: '2024-01-01T00:00:00Z',
+              timezone: 'Unknown/Zone',
+            },
+          ],
+        },
+      });
+
+      renderWithQueryClient(<UserTable users={[user]} />);
+      expect(screen.getByText(/America\/Los_Angeles/)).toBeInTheDocument();
     });
   });
 

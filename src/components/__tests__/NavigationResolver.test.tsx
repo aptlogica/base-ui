@@ -192,6 +192,121 @@ describe('NavigationResolver', () => {
     expect(openFlyoutSpy).toHaveBeenCalledWith('workspace-flyout-menu');
   });
 
+  it('navigates to saved view when data is sourced from workspace bases and table views', async () => {
+    mockPathname = '/app';
+    selectedWorkspaceId = 'ws1';
+    selectedBaseId = 'b1';
+    selectedTableId = 't1';
+    selectedViewId = 'v1';
+    workspacesData = [
+      {
+        id: 'ws1',
+        bases: [
+          {
+            id: 'b1',
+            tables: [
+              {
+                id: 't1',
+                views: [{ id: 'v1' }],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+    workspaceBasesData = null;
+    baseTablesData = null;
+    tableViewsData = null;
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).toHaveBeenCalledWith(
+        navigateSpy,
+        '/workspace/ws1/base/b1/table/t1/v1'
+      );
+    });
+    expect(navigateToViewSpy).toHaveBeenCalledWith('ws1', 'b1', 't1', 'v1');
+  });
+
+  it('does not navigate to saved view while data is pending', async () => {
+    mockPathname = '/app';
+    selectedWorkspaceId = 'ws1';
+    selectedBaseId = 'b1';
+    selectedTableId = 't1';
+    selectedViewId = 'v1';
+    workspaceBasesData = { data: [{ id: 'b1' }] };
+    baseTablesData = { data: [{ id: 't1' }] };
+    tableViewsData = { data: [{ id: 'v1' }] };
+    viewsLoading = true;
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  it('does not auto-select when best target is the current path', async () => {
+    mockPathname = '/workspace';
+    workspacesData = [{ id: 'ws1', bases: [{ id: 'b1' }] }];
+    vi.mocked(getBestNavigationTarget).mockReturnValueOnce('/workspace');
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).toHaveBeenCalledWith(navigateSpy, '/workspace/ws1');
+    });
+  });
+
+  it('auto-selects when view slug is selected but no saved navigation state', async () => {
+    mockPathname = '/workspace';
+    selectedWorkspaceId = 'ws1';
+    selectedBaseId = 'b1';
+    selectedTableId = 't1';
+    selectedViewId = 'grid';
+    workspacesData = [{ id: 'ws1', bases: [{ id: 'b1' }] }];
+    vi.mocked(getBestNavigationTarget).mockReturnValueOnce('/workspace/ws1');
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).toHaveBeenCalledWith(navigateSpy, '/workspace/ws1');
+    });
+  });
+
+  it('does not navigate to saved view when view is invalid', async () => {
+    mockPathname = '/app';
+    selectedWorkspaceId = 'ws1';
+    selectedBaseId = 'b1';
+    selectedTableId = 't1';
+    selectedViewId = 'missing-view';
+    workspaceBasesData = { data: [{ id: 'b1' }] };
+    baseTablesData = { data: [{ id: 't1' }] };
+    tableViewsData = { data: [{ id: 'v1' }] };
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).not.toHaveBeenCalled();
+    });
+    expect(navigateToViewSpy).not.toHaveBeenCalled();
+  });
+
+  it('auto-selects full target path and opens flyout', async () => {
+    mockPathname = '/workspace';
+    workspacesData = [{ id: 'ws1', bases: [{ id: 'b1' }] }];
+    vi.mocked(getBestNavigationTarget).mockReturnValueOnce('/workspace/ws1/base/b1/table/t1/v1');
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).toHaveBeenCalledWith(navigateSpy, '/workspace/ws1');
+    });
+    expect(navigateToViewSpy).not.toHaveBeenCalled();
+    expect(openFlyoutSpy).not.toHaveBeenCalled();
+  });
+
   it('does not navigate when restore is not completed', async () => {
     mockPathname = '/workspace';
     renderWithAuth({ id: 'u1' }, false);
@@ -211,6 +326,20 @@ describe('NavigationResolver', () => {
 
     await waitFor(() => {
       expect(replaceNavigateSpy).toHaveBeenCalledWith(navigateSpy, '/workspace/ws1');
+    });
+  });
+
+  it('falls back to first workspace when best target is unavailable', async () => {
+    mockPathname = '/home';
+    selectedWorkspaceId = 'ws-missing';
+    workspacesData = [{ id: 'ws1', bases: [{ id: 'b1' }] }];
+    vi.mocked(getBestNavigationTarget).mockReturnValueOnce(null as any);
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(setWorkspaceSpy).not.toHaveBeenCalled();
+      expect(replaceNavigateSpy).toHaveBeenCalledWith(navigateSpy, '/workspace');
     });
   });
 

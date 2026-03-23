@@ -296,6 +296,12 @@ describe('MembersTable', () => {
       expect(screen.getByRole('button', { name: /View in detail/i })).toBeInTheDocument();
     });
 
+    it('hides View in detail for owner role string', () => {
+      const member = createMember({ roles: 'owner' });
+      renderWithQueryClient(<MembersTable members={[member]} />);
+      expect(screen.queryByRole('button', { name: /View in detail/i })).not.toBeInTheDocument();
+    });
+
     it('should toggle to Collapse when View in detail is clicked', async () => {
       renderWithQueryClient(<MembersTable members={[createMember()]} />);
       const expandButton = screen.getByRole('button', { name: /View in detail/i });

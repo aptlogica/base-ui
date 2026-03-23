@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AddUserModal } from '../AddUserModal';
 
@@ -53,12 +53,26 @@ vi.mock('../WorkspaceItem', () => ({
       <button type="button" onClick={() => onRoleChange(workspace.id, 'maintainer')} data-testid={`role-${workspace.id}`}>
         Set Maintainer
       </button>
+      <button type="button" onClick={() => onBaseRoleChange(workspace.id, 'base-1', 'base-read')} data-testid={`base-role-${workspace.id}`}>
+        Set Base Read
+      </button>
       <button type="button" onClick={() => onToggleBase(workspace.id, 'base-1')} data-testid={`toggle-${workspace.id}`}>
         Toggle Base
       </button>
     </div>
   ),
 }));
+
+const setMockImageDimensions = (width: number, height: number) => {
+  (globalThis as any).Image = class MockImage {
+    onload: (() => void) | null = null;
+    width = width;
+    height = height;
+    set src(_value: string) {
+      this.onload?.();
+    }
+  };
+};
 
 describe('AddUserModal', () => {
   const defaultProps = {
@@ -73,9 +87,14 @@ describe('AddUserModal', () => {
     mockUseUserRolesAndAccess.mockReturnValue({ data: null });
     mockUseCurrentUser.mockReturnValue({ id: 'current-1', email: 'current@example.com' });
     mockUseUserRole.mockReturnValue({ isOwner: () => true });
-    vi.stubGlobal('URL', {
-      createObjectURL: vi.fn(() => 'blob:preview'),
-    } as any);
+      const urlRef = globalThis.URL;
+      vi.stubGlobal(
+        'URL',
+        Object.assign(urlRef, {
+          createObjectURL: vi.fn(() => 'http://localhost/preview.png'),
+        }) as any
+      );
+    setMockImageDimensions(400, 300);
     mockAddUser.mockImplementation(
       (_payload: unknown, opts: { onSuccess?: () => void }) => {
         opts?.onSuccess?.();
@@ -328,6 +347,72 @@ describe('AddUserModal', () => {
 
       expect(mockToast.error).toHaveBeenCalledWith('Update failed');
     });
+
+    it('includes workspace membership in edit mode when access data is available', async () => {
+      mockUseUserRolesAndAccess.mockReturnValue({
+        data: [
+          {
+            workspace_id: 'ws-1',
+            access: 'maintainer',
+            bases: [],
+          },
+        ],
+      });
+
+      const user = userEvent.setup();
+      render(
+        <AddUserModal
+          {...defaultProps}
+          editUser={{
+            id: 'user-1',
+            first_name: 'John',
+            last_name: 'Doe',
+            email: 'john@example.com',
+          }}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /^update$/i }));
+
+      expect(mockEditUserMutation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          membership: [{ workspace_id: 'ws-1', role: 'maintainer', bases: [] }],
+        })
+      );
+    });
+
+    it('includes base-specific memberships in edit mode when workspace access is empty', async () => {
+      mockUseUserRolesAndAccess.mockReturnValue({
+        data: [
+          {
+            workspace_id: 'ws-1',
+            access: '',
+            bases: [{ base_id: 'base-1', access: 'base-read' }],
+          },
+        ],
+      });
+
+      const user = userEvent.setup();
+      render(
+        <AddUserModal
+          {...defaultProps}
+          editUser={{
+            id: 'user-1',
+            first_name: 'John',
+            last_name: 'Doe',
+            email: 'john@example.com',
+          }}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /^update$/i }));
+
+      expect(mockEditUserMutation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          membership: [{ workspace_id: 'ws-1', role: '', bases: [{ base_id: 'base-1', role: 'base-read' }] }],
+        })
+      );
+    });
   });
 
   describe('Workspace assignment', () => {
@@ -350,6 +435,20 @@ describe('AddUserModal', () => {
 
       await user.type(screen.getByPlaceholderText(/search workspace or base/i), 'nope');
       expect(screen.getByText(/no workspaces found/i)).toBeInTheDocument();
+    });
+
+    it('shows loading state while workspaces are loading', () => {
+      mockUseWorkspaces.mockReturnValue({ data: [], isLoading: true });
+      render(<AddUserModal {...defaultProps} />);
+
+      expect(document.querySelector('.animate-spin')).toBeInTheDocument();
+    });
+
+    it('shows no workspaces available when list is empty', () => {
+      mockUseWorkspaces.mockReturnValue({ data: [], isLoading: false });
+      render(<AddUserModal {...defaultProps} />);
+
+      expect(screen.getByText(/no workspaces available/i)).toBeInTheDocument();
     });
   });
 
@@ -434,6 +533,44 @@ describe('AddUserModal', () => {
 
       expect(screen.getByText(/valid image file/i)).toBeInTheDocument();
     });
+
+    it('shows avatar dimension error when image is too large', async () => {
+      setMockImageDimensions(1200, 900);
+      render(<AddUserModal {...defaultProps} />);
+
+      const fileInput = document.getElementById('avatar-upload') as HTMLInputElement;
+      const file = new File(['img'], 'large.png', { type: 'image/png' });
+      fireEvent.change(fileInput, { target: { files: [file] } });
+
+      expect(screen.getByText(/max 800 x 400px/i)).toBeInTheDocument();
+    });
+
+    it('sets avatar preview for valid image upload', async () => {
+      setMockImageDimensions(600, 300);
+      render(<AddUserModal {...defaultProps} />);
+
+      const fileInput = document.getElementById('avatar-upload') as HTMLInputElement;
+      const file = new File(['img'], 'ok.png', { type: 'image/png' });
+      fireEvent.change(fileInput, { target: { files: [file] } });
+
+      await waitFor(() => {
+        expect(globalThis.URL.createObjectURL).toHaveBeenCalled();
+      });
+      expect(screen.queryByText(/max 800 x 400px/i)).not.toBeInTheDocument();
+    });
+
+    it('hides workspace panel when co-owner toggle is enabled', async () => {
+      const user = userEvent.setup();
+      render(<AddUserModal {...defaultProps} />);
+
+      const label = screen.getByText(/set as co-owner/i);
+      const toggle = label.closest('div')?.querySelector('button');
+      if (toggle) {
+        await user.click(toggle);
+      }
+
+      expect(screen.queryByText(/select workspace\(s\) & base\(s\)/i)).not.toBeInTheDocument();
+    });
   });
 
   describe('Membership payload', () => {
@@ -451,6 +588,45 @@ describe('AddUserModal', () => {
       expect(mockAddUser).toHaveBeenCalledWith(
         expect.objectContaining({
           membership: [{ workspace_id: 'ws-1', role: 'maintainer', bases: [] }],
+        }),
+        expect.any(Object)
+      );
+    });
+
+    it('adds base-specific membership when toggling a base', async () => {
+      const user = userEvent.setup();
+      render(<AddUserModal {...defaultProps} />);
+
+      await user.type(screen.getByLabelText(/first name/i), 'Jane');
+      await user.type(screen.getByLabelText(/last name/i), 'Doe');
+      await user.type(screen.getByLabelText(/email address/i), 'jane@example.com');
+
+      await user.click(screen.getByTestId('toggle-ws-1'));
+      await user.click(screen.getByRole('button', { name: /^add$/i }));
+
+      expect(mockAddUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          membership: [{ workspace_id: 'ws-1', role: '', bases: [{ base_id: 'base-1', role: 'base-member' }] }],
+        }),
+        expect.any(Object)
+      );
+    });
+
+    it('updates base role when base role change is triggered', async () => {
+      const user = userEvent.setup();
+      render(<AddUserModal {...defaultProps} />);
+
+      await user.type(screen.getByLabelText(/first name/i), 'Jane');
+      await user.type(screen.getByLabelText(/last name/i), 'Doe');
+      await user.type(screen.getByLabelText(/email address/i), 'jane@example.com');
+
+      await user.click(screen.getByTestId('toggle-ws-1'));
+      await user.click(screen.getByTestId('base-role-ws-1'));
+      await user.click(screen.getByRole('button', { name: /^add$/i }));
+
+      expect(mockAddUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          membership: [{ workspace_id: 'ws-1', role: '', bases: [{ base_id: 'base-1', role: 'base-read' }] }],
         }),
         expect.any(Object)
       );
