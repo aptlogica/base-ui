@@ -82,9 +82,9 @@ vi.mock('../../utils/navigationPersistence', () => ({
   getBestNavigationTarget: vi.fn(() => '/workspace/ws1'),
 }));
 
-const renderWithAuth = (user: any) =>
+const renderWithAuth = (user: any, restoreCompleted = true) =>
   render(
-    <AuthContext.Provider value={{ user, restoreCompleted: true } as any}>
+    <AuthContext.Provider value={{ user, restoreCompleted } as any}>
       <NavigationResolver />
     </AuthContext.Provider>
   );
@@ -190,5 +190,54 @@ describe('NavigationResolver', () => {
     });
     expect(navigateToViewSpy).toHaveBeenCalledWith('ws1', 'b1', 't1', 'v1');
     expect(openFlyoutSpy).toHaveBeenCalledWith('workspace-flyout-menu');
+  });
+
+  it('does not navigate when restore is not completed', async () => {
+    mockPathname = '/workspace';
+    renderWithAuth({ id: 'u1' }, false);
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  it('redirects to best target when selected workspace is missing', async () => {
+    mockPathname = '/home';
+    selectedWorkspaceId = 'ws-missing';
+    workspacesData = [{ id: 'ws1', bases: [{ id: 'b1' }] }];
+    vi.mocked(getBestNavigationTarget).mockReturnValueOnce('/workspace/ws1');
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).toHaveBeenCalledWith(navigateSpy, '/workspace/ws1');
+    });
+  });
+
+  it('clears navigation state and returns to /workspace when no workspaces exist', async () => {
+    mockPathname = '/home';
+    selectedWorkspaceId = 'ws1';
+    workspacesData = [];
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(setWorkspaceSpy).toHaveBeenCalledWith(null);
+      expect(setBaseSpy).toHaveBeenCalledWith(null);
+      expect(setTableSpy).toHaveBeenCalledWith(null);
+      expect(setViewSpy).toHaveBeenCalledWith(null);
+      expect(replaceNavigateSpy).toHaveBeenCalledWith(navigateSpy, '/workspace');
+    });
+  });
+
+  it('skips validation redirect on excluded workspace routes', async () => {
+    mockPathname = '/workspace/ws1/settings';
+    selectedWorkspaceId = 'ws1';
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).not.toHaveBeenCalled();
+    });
   });
 });

@@ -14,6 +14,24 @@ let workspaceBasesData: any = { data: [base] };
 let baseTablesData: any = { data: [table] };
 let tableViewsData: any = { data: [view] };
 let canCreateBaseValue = false;
+let canAssignUsersValue = false;
+let canUpdateBaseFromWorkspaceValue = false;
+let canDeleteBaseFromWorkspaceValue = false;
+let canUpdateBaseFromBaseValue = false;
+let canDeleteBaseFromBaseValue = false;
+let canManageBaseMembersValue = false;
+let baseAccessValue: string = 'base-read';
+let editItemModalSavePayload: { name: string; description: string; image?: File | null; removeImage?: boolean } = {
+  name: base.title,
+  description: '',
+};
+const updateBaseMutationSpy = vi.fn();
+const deleteBaseMutationSpy = vi.fn();
+const createBaseMutationSpy = vi.fn();
+const invalidateQueriesSpy = vi.fn();
+const toastInfoSpy = vi.fn();
+const toastSuccessSpy = vi.fn();
+const toastErrorSpy = vi.fn();
 
 const navigateSpy = vi.fn();
 const navigateToTableSpy = vi.fn();
@@ -55,9 +73,9 @@ vi.mock('../../../hooks/useApi', () => ({
   useWorkspaceBases: () => ({ data: workspaceBasesData }),
   useBaseTables: () => ({ data: baseTablesData }),
   useTableViews: () => ({ data: tableViewsData }),
-  useUpdateBase: () => ({ mutateAsync: vi.fn() }),
-  useDeleteBase: () => ({ mutateAsync: vi.fn() }),
-  useCreateBase: () => ({ mutateAsync: vi.fn() }),
+  useUpdateBase: () => ({ mutateAsync: updateBaseMutationSpy }),
+  useDeleteBase: () => ({ mutateAsync: deleteBaseMutationSpy }),
+  useCreateBase: () => ({ mutateAsync: createBaseMutationSpy }),
 }));
 
 vi.mock('../../../hooks/useNavigateToBaseFirstView', () => ({
@@ -68,18 +86,18 @@ vi.mock('../../../hooks/useWorkspaceAccess', () => ({
   useWorkspaceAccess: () => ({
     canCreateBase: () => canCreateBaseValue,
     isBaseLevelAccess: () => false,
-    canAssignUsers: () => false,
-    canUpdateBase: () => false,
-    canDeleteBase: () => false,
+    canAssignUsers: () => canAssignUsersValue,
+    canUpdateBase: () => canUpdateBaseFromWorkspaceValue,
+    canDeleteBase: () => canDeleteBaseFromWorkspaceValue,
   }),
 }));
 
 vi.mock('../../../hooks/useBaseAccess', () => ({
   useBaseAccess: () => ({
-    canUpdateBase: () => false,
-    canDeleteBase: () => false,
-    canManageBaseMembers: () => false,
-    baseAccess: 'base-read',
+    canUpdateBase: () => canUpdateBaseFromBaseValue,
+    canDeleteBase: () => canDeleteBaseFromBaseValue,
+    canManageBaseMembers: () => canManageBaseMembersValue,
+    baseAccess: baseAccessValue,
   }),
 }));
 
@@ -93,14 +111,14 @@ vi.mock('../../../auth/AuthContext', () => ({
 
 vi.mock('../Toast', () => ({
   useToast: () => ({
-    success: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
+    success: toastSuccessSpy,
+    error: toastErrorSpy,
+    info: toastInfoSpy,
   }),
 }));
 
 vi.mock('@tanstack/react-query', () => ({
-  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+  useQueryClient: () => ({ invalidateQueries: invalidateQueriesSpy }),
 }));
 
 vi.mock('../../../contexts/RouteContext', () => ({
@@ -119,6 +137,62 @@ vi.mock('../../../utils/helpers', () => ({
   getInitials: () => 'B',
 }));
 
+vi.mock('../BaseMenu', () => ({
+  BaseMenu: ({ onEdit, onAddMembers, onDelete, canEdit, canAddMembers, canDelete }: any) => (
+    <div data-testid="base-menu">
+      {canEdit && (
+        <button onClick={() => onEdit({ id: 'b1', title: 'Base One', workspace_id: 'ws1' })}>
+          Edit Base
+        </button>
+      )}
+      {canAddMembers && (
+        <button onClick={() => onAddMembers({ id: 'b1', title: 'Base One', workspace_id: 'ws1' })}>
+          Add Members
+        </button>
+      )}
+      {canDelete && (
+        <button onClick={() => onDelete({ id: 'b1', title: 'Base One', workspace_id: 'ws1' })}>
+          Delete Base
+        </button>
+      )}
+    </div>
+  ),
+}));
+
+vi.mock('../../modals/EditItemModal', () => ({
+  EditItemModal: ({ isOpen, onSave, onClose }: any) =>
+    isOpen ? (
+      <div data-testid="edit-item-modal">
+        <button onClick={() => onSave(editItemModalSavePayload)}>Save Edit</button>
+        <button onClick={onClose}>Close Edit</button>
+      </div>
+    ) : null,
+}));
+
+vi.mock('../../modals/DeleteBaseModal', () => ({
+  DeleteBaseModal: ({ isOpen, base, onConfirm }: any) =>
+    isOpen ? (
+      <div data-testid="delete-base-modal">
+        <button onClick={() => onConfirm(base?.id)}>Confirm Delete</button>
+      </div>
+    ) : null,
+}));
+
+vi.mock('../../modals/AddBaseMembersModal', () => ({
+  AddBaseMembersModal: ({ isOpen }: any) => (isOpen ? <div data-testid="add-members-modal" /> : null),
+}));
+
+vi.mock('../../modals/CreateBaseModal', () => ({
+  CreateBaseModal: ({ isOpen, onCreate }: any) =>
+    isOpen ? (
+      <div data-testid="create-base-modal">
+        <button onClick={() => onCreate({ name: 'New Base', description: 'Desc', image: null })}>
+          Confirm Create
+        </button>
+      </div>
+    ) : null,
+}));
+
 describe('Breadcrumb', () => {
   beforeEach(() => {
     mockPathname = '/workspace/ws1/base/b1/table/t1/v1';
@@ -127,9 +201,27 @@ describe('Breadcrumb', () => {
     baseTablesData = { data: [table] };
     tableViewsData = { data: [view] };
     canCreateBaseValue = false;
+    canAssignUsersValue = false;
+    canUpdateBaseFromWorkspaceValue = false;
+    canDeleteBaseFromWorkspaceValue = false;
+    canUpdateBaseFromBaseValue = false;
+    canDeleteBaseFromBaseValue = false;
+    canManageBaseMembersValue = false;
+    baseAccessValue = 'base-read';
+    editItemModalSavePayload = {
+      name: base.title,
+      description: '',
+    };
     navigateSpy.mockClear();
     navigateToTableSpy.mockClear();
     navigateToViewSpy.mockClear();
+    updateBaseMutationSpy.mockReset();
+    deleteBaseMutationSpy.mockReset();
+    createBaseMutationSpy.mockReset();
+    invalidateQueriesSpy.mockReset();
+    toastInfoSpy.mockReset();
+    toastSuccessSpy.mockReset();
+    toastErrorSpy.mockReset();
   });
 
   it('renders base, table, and view labels for a full path', () => {
@@ -235,5 +327,107 @@ describe('Breadcrumb', () => {
     await user.click(baseButton);
 
     expect(screen.getByText('No items found.')).toBeInTheDocument();
+  });
+
+  it('renders base menu when user has permissions', async () => {
+    const user = userEvent.setup();
+    canUpdateBaseFromBaseValue = true;
+
+    render(<Breadcrumb />);
+
+    const baseButton = screen.getByRole('button', { name: /base one/i });
+    await user.click(baseButton);
+
+    expect(screen.getByTestId('base-menu')).toBeInTheDocument();
+  });
+
+  it('shows info toast when saving base with no changes', async () => {
+    const user = userEvent.setup();
+    canUpdateBaseFromBaseValue = true;
+    editItemModalSavePayload = { name: 'Base One', description: '' };
+
+    render(<Breadcrumb />);
+
+    const baseButton = screen.getByRole('button', { name: /base one/i });
+    await user.click(baseButton);
+    await user.click(screen.getByText('Edit Base'));
+
+    await user.click(screen.getByText('Save Edit'));
+
+    expect(toastInfoSpy).toHaveBeenCalledWith('No changes to save');
+    expect(updateBaseMutationSpy).not.toHaveBeenCalled();
+  });
+
+  it('updates base when changes are provided', async () => {
+    const user = userEvent.setup();
+    canUpdateBaseFromBaseValue = true;
+    editItemModalSavePayload = { name: 'Base One Updated', description: 'New desc' };
+    updateBaseMutationSpy.mockResolvedValueOnce(undefined);
+
+    render(<Breadcrumb />);
+
+    const baseButton = screen.getByRole('button', { name: /base one/i });
+    await user.click(baseButton);
+    await user.click(screen.getByText('Edit Base'));
+    await user.click(screen.getByText('Save Edit'));
+
+    expect(updateBaseMutationSpy).toHaveBeenCalledWith({
+      baseId: 'b1',
+      updates: { title: 'Base One Updated', description: 'New desc' },
+    });
+    expect(invalidateQueriesSpy).toHaveBeenCalled();
+    expect(toastSuccessSpy).toHaveBeenCalledWith('Base updated successfully');
+  });
+
+  it('opens add members modal from base menu', async () => {
+    const user = userEvent.setup();
+    canAssignUsersValue = true;
+
+    render(<Breadcrumb />);
+
+    const baseButton = screen.getByRole('button', { name: /base one/i });
+    await user.click(baseButton);
+    await user.click(screen.getByText('Add Members'));
+
+    expect(screen.getByTestId('add-members-modal')).toBeInTheDocument();
+  });
+
+  it('deletes base and triggers navigation cleanup', async () => {
+    const user = userEvent.setup();
+    canDeleteBaseFromBaseValue = true;
+    deleteBaseMutationSpy.mockResolvedValueOnce(undefined);
+
+    render(<Breadcrumb />);
+
+    const baseButton = screen.getByRole('button', { name: /base one/i });
+    await user.click(baseButton);
+    await user.click(screen.getByText('Delete Base'));
+    await user.click(screen.getByText('Confirm Delete'));
+
+    expect(deleteBaseMutationSpy).toHaveBeenCalledWith('b1');
+    expect(toastSuccessSpy).toHaveBeenCalledWith('Base deleted successfully');
+    expect(invalidateQueriesSpy).toHaveBeenCalled();
+  });
+
+  it('creates base from create base modal', async () => {
+    const user = userEvent.setup();
+    canCreateBaseValue = true;
+    createBaseMutationSpy.mockResolvedValueOnce(undefined);
+
+    render(<Breadcrumb />);
+
+    const baseButton = screen.getByRole('button', { name: /base one/i });
+    await user.click(baseButton);
+    await user.click(screen.getByText('Create New Base'));
+    await user.click(screen.getByText('Confirm Create'));
+
+    expect(createBaseMutationSpy).toHaveBeenCalledWith({
+      title: 'New Base',
+      description: 'Desc',
+      workspace_id: 'ws1',
+      image: undefined,
+    });
+    expect(toastSuccessSpy).toHaveBeenCalledWith('Base created successfully');
+    expect(invalidateQueriesSpy).toHaveBeenCalled();
   });
 });
