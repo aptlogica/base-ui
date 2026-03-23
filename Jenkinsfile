@@ -23,10 +23,6 @@ pipeline {
     stage('SonarQube Analysis') {
       steps {
         script {
-          sh 'pwd'
-          sh 'ls -la'
-          sh 'ls -la coverage-vitest || true'
-          sh 'head -n 5 coverage-vitest/lcov.info || true'
           // Get path to the installed Sonar Scanner tool
           def scannerHome = tool 'SonarScanner'
 

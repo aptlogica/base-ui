@@ -86,13 +86,16 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
 
 // Lazy component mock
 vi.mock('../../components/modals/CreateTableModal', () => ({
-  CreateTableModal: ({ isOpen, onClose }: any) =>
+  CreateTableModal: ({ isOpen, onClose, onCreate }: any) =>
     isOpen ? (
       <div data-testid="create-table-modal">
         Create Table Modal
         {/* eslint-disable-next-line jsx-a11y/control-has-associated-label */}
         <button type="button" onClick={onClose}>
           Close
+        </button>
+        <button type="button" onClick={() => onCreate?.({ name: 'New Table', description: 'Desc' })}>
+          Create Table
         </button>
       </div>
     ) : null,
@@ -1516,6 +1519,75 @@ describe('HomePage', () => {
 
       const actionButtons = container.querySelector(String.raw`.sm\:flex-row`);
       expect(actionButtons).toBeInTheDocument();
+    });
+  });
+
+  // ========================================
+  // Base Click / Create Table Flow
+  // ========================================
+  describe('Base click flow', () => {
+    it('opens create table modal when base has no tables', async () => {
+      const user = userEvent.setup();
+      const mockBases = [createMockBase({ id: 'base-1', title: 'Empty Base' })];
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: mockBases },
+        isLoading: false,
+      });
+      mockUseBaseTables.mockReturnValue({ data: [], isLoading: false });
+
+      const mockToastObj = {
+        success: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+      };
+      mockUseToast.mockReturnValue(mockToastObj);
+
+      renderWithProviders(<HomePage />);
+
+      const baseCard = screen.getByText('Empty Base').closest('div');
+      await user.click(baseCard!);
+
+      await waitFor(() => {
+        expect(mockToastObj.info).toHaveBeenCalledWith('This base has no tables yet. Create your first table to get started!');
+        expect(screen.getByTestId('create-table-modal')).toBeInTheDocument();
+      });
+    });
+
+    it('creates table and navigates to it', async () => {
+      const user = userEvent.setup();
+      const mockBases = [createMockBase({ id: 'base-1', title: 'Base With Create' })];
+
+      const navigateToTable = vi.fn();
+      mockUseNavigationStore.mockReturnValue({
+        selectedWorkspaceId: 'ws-1',
+        navigateToTable,
+      });
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: mockBases },
+        isLoading: false,
+      });
+      mockUseBaseTables.mockReturnValue({ data: [], isLoading: false });
+
+      const mockCreateTable = {
+        mutateAsync: vi.fn().mockResolvedValue({ data: { id: 'table-1' } }),
+        isPending: false,
+      };
+      mockUseCreateTable.mockReturnValue(mockCreateTable);
+
+      renderWithProviders(<HomePage />);
+
+      const baseCard = screen.getByText('Base With Create').closest('div');
+      await user.click(baseCard!);
+      await waitFor(() => expect(screen.getByTestId('create-table-modal')).toBeInTheDocument());
+
+      await user.click(screen.getByRole('button', { name: 'Create Table' }));
+
+      await waitFor(() => {
+        expect(mockCreateTable.mutateAsync).toHaveBeenCalled();
+        expect(navigateToTable).toHaveBeenCalledWith('ws-1', 'base-1', 'table-1');
+      });
     });
   });
 });

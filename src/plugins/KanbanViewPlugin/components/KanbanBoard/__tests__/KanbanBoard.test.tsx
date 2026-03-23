@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import KanbanBoard from '../KanbanBoard';
 
 const mockShowToast = vi.fn();
@@ -29,9 +29,11 @@ vi.mock('../../../hooks/useKanbanStacks', () => ({
 }));
 
 vi.mock('../KanbanStack', () => ({
-  default: vi.fn(({ stack, onCardEdit, onCardCreate }) => (
+  default: vi.fn(({ stack, onCardEdit, onCardCreate, onStackDelete, onStackEdit }) => (
     <div data-testid={`stack-${stack.id}`}>
       <button onClick={() => onCardCreate?.(stack.id)}>Add Card</button>
+      <button onClick={() => onStackDelete?.(stack.id)}>Delete Stack</button>
+      <button onClick={() => onStackEdit?.(stack.id, `${stack.id}-renamed`)}>Edit Stack</button>
       {stack.cards.map((card: any) => (
         <button key={card._meta.id} data-testid={`card-${card._meta.id}`} onClick={() => onCardEdit?.(card._meta.id)}>
           {card.title || 'Card'}
@@ -63,23 +65,26 @@ describe('KanbanBoard Component', () => {
   const mockChangeGroupByColumn = vi.fn().mockResolvedValue(undefined);
 
   const mockColumns = [
-    { id: '1', key: 'title', title: 'Title', type: 'text', uidt: 'text' },
+    { id: '1', key: 'title', column_name: 'title', title: 'Title', type: 'text', uidt: 'text' },
     { 
       id: '2', 
-      key: 'status', 
+      key: 'status',
+      column_name: 'status',
       title: 'Status', 
       type: 'select', 
       uidt: 'select',
-      options: [
-        { id: 'opt1', title: 'To Do', value: 'To Do', color: '#FF0000' },
-        { id: 'opt2', title: 'In Progress', value: 'In Progress', color: '#00FF00' }
-      ]
+      meta: {
+        options: [
+          { option: 'To Do', color: '#FF0000' },
+          { option: 'In Progress', color: '#00FF00' }
+        ]
+      }
     }
   ] as any[];
 
   const mockRecords = [
-    { _meta: { id: 'r1' }, title: 'Task 1', status: 'To Do' },
-    { _meta: { id: 'r2' }, title: 'Task 2', status: 'In Progress' }
+    { id: 'r1', _meta: { id: 'r1' }, title: 'Task 1', status: 'To Do' },
+    { id: 'r2', _meta: { id: 'r2' }, title: 'Task 2', status: 'In Progress' }
   ];
 
   const mockTableData = {
@@ -653,6 +658,97 @@ describe('KanbanBoard Component', () => {
       const newStackButton = screen.getByRole('button', { name: /new stack/i });
       fireEvent.click(newStackButton);
       expect(mockHandleCreateStackClick).toHaveBeenCalled();
+    });
+
+    it('shows duplicate stack error when name already exists', async () => {
+      mockUseKanbanStacks.mockReturnValue({
+        uiState: { isCreateStack: false, newOption: 'To Do', isLoadingGroupBy: false },
+        collapsedStacks: new Set(),
+        setUiState: vi.fn(),
+        handleStackCollapse: vi.fn(),
+        handleCreateStackClick: vi.fn(),
+        handleCancelCreateStack: vi.fn(),
+        handleNewOptionChange: vi.fn(),
+        handleStackDragStart: vi.fn(),
+        handleStackDrop: vi.fn(),
+      });
+
+      render(
+        <KanbanBoard
+          tableData={mockTableData}
+          viewId="view1"
+          onRefresh={vi.fn()}
+          actions={mockActions}
+        />
+      );
+
+      fireEvent.click(screen.getByText('Add New Stack'));
+      const input = screen.getByPlaceholderText('Enter Stack Name');
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalled();
+      });
+    });
+
+    it('creates new stack option when name is unique', async () => {
+      const updateFieldOptions = vi.fn().mockResolvedValue(undefined);
+      const onRefresh = vi.fn();
+
+      mockUseKanbanStacks.mockReturnValue({
+        uiState: { isCreateStack: false, newOption: 'New Stack', isLoadingGroupBy: false },
+        collapsedStacks: new Set(),
+        setUiState: vi.fn(),
+        handleStackCollapse: vi.fn(),
+        handleCreateStackClick: vi.fn(),
+        handleCancelCreateStack: vi.fn(),
+        handleNewOptionChange: vi.fn(),
+        handleStackDragStart: vi.fn(),
+        handleStackDrop: vi.fn(),
+      });
+
+      render(
+        <KanbanBoard
+          tableData={mockTableData}
+          viewId="view1"
+          onRefresh={onRefresh}
+          actions={{ ...mockActions, updateFieldOptions }}
+        />
+      );
+
+      fireEvent.click(screen.getByText('Add New Stack'));
+      const input = screen.getByPlaceholderText('Enter Stack Name');
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      await waitFor(() => {
+        expect(updateFieldOptions).toHaveBeenCalled();
+        expect(onRefresh).toHaveBeenCalled();
+      });
+    });
+
+    it('deletes a stack and updates records', async () => {
+      const updateFieldOptions = vi.fn().mockResolvedValue(undefined);
+      const insertRowData = { mutateAsync: vi.fn().mockResolvedValue(undefined) };
+      const onRefresh = vi.fn();
+
+      render(
+        <KanbanBoard
+          tableData={mockTableData}
+          viewId="view1"
+          onRefresh={onRefresh}
+          actions={{ ...mockActions, updateFieldOptions, insertRowData }}
+        />
+      );
+
+      const stacks = screen.getAllByTestId(/^stack-/);
+      const target = stacks.find((node) => node.getAttribute('data-testid')?.includes('To Do')) ?? stacks[0];
+      fireEvent.click(within(target).getByText('Delete Stack'));
+
+      await waitFor(() => {
+        expect(updateFieldOptions).toHaveBeenCalled();
+        expect(insertRowData.mutateAsync).toHaveBeenCalled();
+        expect(onRefresh).toHaveBeenCalled();
+      });
     });
   });
 
