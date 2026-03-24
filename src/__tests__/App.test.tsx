@@ -254,7 +254,10 @@ describe('App', () => {
     baseTablesState = { isLoading: false, error: null };
 
     render(<App />);
-    await waitForElementToBeRemoved(() => screen.getByText('Loader'));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(screen.queryByText('Loader')).not.toBeInTheDocument());
     await waitFor(() => expect(screen.getByText('Something went wrong')).toBeInTheDocument());
     const retryBtn = screen.getByRole('button', { name: /retry/i });
     retryBtn.click();

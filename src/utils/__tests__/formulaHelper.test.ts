@@ -157,6 +157,7 @@ describe('formulaHelper evaluation and formatting', () => {
     expect(evaluateFormula('MOD(10, 3)', context, validateFormula).result).toBe(1);
     expect(evaluateFormula('DIVIDE(10, 2)', context, validateFormula).result).toBe(5);
     expect(evaluateFormula('{Price} + 2', context, validateFormula).result).toBe(14.5);
+    expect(evaluateFormula('{Price} / 0', context, validateFormula).result).toBeNull();
   });
 
   it('evaluates date, comparison, and text helpers', () => {
@@ -192,6 +193,8 @@ describe('formulaHelper evaluation and formatting', () => {
     const today = evaluateFormula('TODAY()', context, validateFormula).result;
     expect(today).toBeInstanceOf(Date);
     expect(today.getHours()).toBe(0);
+    const now = evaluateFormula('NOW()', context, validateFormula).result;
+    expect(now).toBeInstanceOf(Date);
   });
 
   it('formats numeric results', () => {
@@ -201,6 +204,8 @@ describe('formulaHelper evaluation and formatting', () => {
     const dateValue = new Date('2025-01-02T03:04:05.000Z');
     expect(formatResult(dateValue, 'date', 2, { formatting: { dateFormat: 'YYYY-MM-DD' } }, '')).not.toBe('');
     expect(formatResult(dateValue, 'date', 2, {}, 'NOW()')).toMatch(/\d/);
+    expect(formatResult(true, 'text', 2, {}, '')).toBe('TRUE');
+    expect(formatResult('plain', 'text', 2, {}, '')).toBe('plain');
   });
 });
 
@@ -224,6 +229,10 @@ describe('formulaHelper dependencies', () => {
 
 describe('formulaHelper validation', () => {
   it('flags invalid operator usage and unknown fields', () => {
+    expect(validateFormula('\"bad', context)).toMatch(/Unclosed double-quoted/i);
+    expect(validateFormula("'{bad", context)).toMatch(/Unclosed single-quoted/i);
+    expect(validateFormula('SUM(1) SUM(2)', context)).toMatch(/Compound expressions are not supported/i);
+    expect(validateFormula('{123}', context)).toBeNull();
     expect(validateFormula('{Price} ++ {Price}', context)).toMatch(/invalid operator usage/i);
     expect(validateFormula('* {Price}', context)).toMatch(/cannot start with/i);
     expect(validateFormula('{Price} +', context)).toMatch(/cannot end with/i);
@@ -283,20 +292,25 @@ describe('formulaHelper helper utilities', () => {
     expect(getFunctionAtCursor('SUM({Price}, {Tax})', 2)).toBeNull();
     expect(getFunctionAtCursor('SUM({Price}, {Tax})', 6)).toBe('SUM');
     expect(getFunctionAtCursor('{Price} + 2', 10)).toBe('MATH_OPERATOR');
+    expect(getFunctionAtCursor('SUM({Price})', -1)).toBeNull();
+    expect(getFunctionAtCursor('SUM({Price})', 999)).toBeNull();
     expect(getCompatibleFieldTypes('SUM')).toContain('number');
     expect(getCompatibleFieldTypes('MATH_OPERATOR')).toContain('number');
     expect(getCompatibleFieldTypes('YEAR')).toContain('date');
     expect(getFunctionSyntax('UNKNOWN()', '')).toBe('UNKNOWN(...)');
+    expect(getFunctionSyntax('ADD', 'ADD({Price},{Price})')).toBe('ADD(number1, number2, ...)');
   });
 
   it('normalizes comparison values and converts results', () => {
     expect(normalizeForComparison('')).toBeNull();
     expect(normalizeForComparison('12')).toBe(12);
     expect(normalizeForComparison('12.5')).toBe(12.5);
+    expect(normalizeForComparison('12.50')).toBe('12.50');
     expect(normalizeForComparison(true)).toBe(true);
     expect(convertResultToValue(5, 'number')).toBe(5);
     expect(convertResultToValue(false, 'boolean')).toBe(false);
     const dateValue = new Date('2025-01-02T00:00:00.000Z');
     expect(convertResultToValue(dateValue, 'date')).toBe('2025-01-02');
+    expect(convertResultToValue(null, 'text')).toBe('null');
   });
 });

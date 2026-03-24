@@ -155,6 +155,66 @@ describe('DateTime', () => {
     expect(onChange).toHaveBeenCalled();
   });
 
+  it('clears value when input is emptied', () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <DateTime
+        value="2026-02-13T10:30:00Z"
+        onChange={onChange}
+        allowEdit={false}
+        config={{ dateFormat: 'YYYY-MM-DD', timeFormat: 'HH:mm', hourFormat: '24' }}
+      />
+    );
+
+    fireEvent.doubleClick(container.firstChild as HTMLElement);
+    const input = screen.getByPlaceholderText('YYYY-MM-DD HH:mm');
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.blur(input);
+
+    expect(onChange).toHaveBeenCalledWith('');
+  });
+
+  it('handles 12-hour time selection', () => {
+    const onChange = vi.fn();
+    render(
+      <DateTime
+        value="2026-02-13T00:00:00Z"
+        onChange={onChange}
+        config={{ dateFormat: 'YYYY-MM-DD', timeFormat: 'HH:mm', hourFormat: '12' }}
+      />
+    );
+
+    const buttons = screen.getAllByRole('button');
+    const timeButton = buttons[1];
+    fireEvent.click(timeButton);
+    const timeOptions = screen.getAllByRole('button', { name: /^1:00 PM$/i });
+    fireEvent.click(timeOptions[0]);
+
+    expect(onChange).toHaveBeenCalled();
+    const value = onChange.mock.calls[0][0] as string;
+    expect(value).toMatch(/T13:00/);
+  });
+
+  it('uses Now action to set UTC time', () => {
+    const onChange = vi.fn();
+    render(
+      <DateTime
+        value=""
+        onChange={onChange}
+        config={{ dateFormat: 'YYYY-MM-DD', timeFormat: 'HH:mm:ss', hourFormat: '24' }}
+      />
+    );
+
+    const buttons = screen.getAllByRole('button');
+    const timeButton = buttons[1];
+    fireEvent.click(timeButton);
+    fireEvent.click(screen.getByRole('button', { name: /now/i }));
+
+    expect(onChange).toHaveBeenCalled();
+    const value = onChange.mock.calls[0][0] as string;
+    expect(value.endsWith('Z')).toBe(true);
+  });
+
   it('renders value in configured display formats', () => {
     const onChange = vi.fn();
     render(

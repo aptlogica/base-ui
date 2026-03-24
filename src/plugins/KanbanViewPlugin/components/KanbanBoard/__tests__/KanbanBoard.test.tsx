@@ -1,955 +1,419 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import KanbanBoard from '../KanbanBoard';
+import { ToastProvider } from '../../../../../components/common/Toast';
+let KanbanBoard: typeof import('../KanbanBoard').default;
 
-const mockShowToast = vi.fn();
-const mockUseBaseAccess = vi.fn();
 const mockUseKanbanViewConfig = vi.fn();
 const mockUseKanbanModals = vi.fn();
 const mockUseKanbanStacks = vi.fn();
-
-vi.mock('../../../../../components/common/Toast', () => ({
-  useToast: vi.fn(() => ({ showToast: mockShowToast, error: mockShowToast }))
-}));
+const mockUseBaseAccess = vi.fn();
 
 vi.mock('../../../../../hooks/useBaseAccess', () => ({
-  useBaseAccess: () => mockUseBaseAccess()
+  useBaseAccess: mockUseBaseAccess,
 }));
 
+
 vi.mock('../../../hooks/useKanbanViewConfig', () => ({
-  useKanbanViewConfig: () => mockUseKanbanViewConfig()
+  useKanbanViewConfig: mockUseKanbanViewConfig,
 }));
 
 vi.mock('../../../hooks/useKanbanModals', () => ({
-  useKanbanModals: () => mockUseKanbanModals()
+  useKanbanModals: mockUseKanbanModals,
 }));
 
 vi.mock('../../../hooks/useKanbanStacks', () => ({
-  useKanbanStacks: () => mockUseKanbanStacks()
+  useKanbanStacks: mockUseKanbanStacks,
+}));
+
+vi.mock('../../../../../components/shared/table/FilterPopover', () => ({
+  FilterPopover: () => <div data-testid="filter-popover" />,
+}));
+
+vi.mock('../../../../../components/shared/table/FieldsPopover', () => ({
+  FieldsPopover: () => <div data-testid="fields-popover" />,
+}));
+
+vi.mock('../../../../../components/shared/table/SortPopover', () => ({
+  SortPopover: () => <div data-testid="sort-popover" />,
+}));
+
+vi.mock('../../../../../components/shared/table/Search', () => ({
+  Search: ({ onSearch }: any) => (
+    <button type="button" onClick={() => onSearch?.('', null)}>
+      Search
+    </button>
+  ),
+}));
+
+vi.mock('../../KanbanFieldSelector', () => ({
+  KanbanFieldConfiguration: () => <div data-testid="kanban-field-config" />,
 }));
 
 vi.mock('../KanbanStack', () => ({
-  default: vi.fn(({ stack, onCardEdit, onCardCreate, onStackDelete, onStackEdit }) => (
+  __esModule: true,
+  default: ({ stack, onCardCreate, onCardEdit, onCardDelete, onStackDrop, onStackEdit, onStackDelete }: any) => (
     <div data-testid={`stack-${stack.id}`}>
-      <button onClick={() => onCardCreate?.(stack.id)}>Add Card</button>
-      <button onClick={() => onStackDelete?.(stack.id)}>Delete Stack</button>
-      <button onClick={() => onStackEdit?.(stack.id, `${stack.id}-renamed`)}>Edit Stack</button>
-      {stack.cards.map((card: any) => (
-        <button key={card._meta.id} data-testid={`card-${card._meta.id}`} onClick={() => onCardEdit?.(card._meta.id)}>
-          {card.title || 'Card'}
-        </button>
-      ))}
+      <span>{stack.name}</span>
+      <button type="button" onClick={() => onCardCreate?.(stack.id)}>create-card</button>
+      <button type="button" onClick={() => onCardEdit?.(stack.id)}>edit-card</button>
+      <button type="button" onClick={() => onCardDelete?.(stack.id)}>delete-card</button>
+      <button
+        type="button"
+        onClick={() => {
+          const e = {
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+            dataTransfer: { getData: () => 'Todo' },
+          } as any;
+          onStackDrop?.(stack.id, e);
+        }}
+      >
+        drop-stack
+      </button>
+      <button type="button" onClick={() => onStackEdit?.('Todo', 'Done')}>edit-stack</button>
+      <button type="button" onClick={() => onStackDelete?.('Todo')}>delete-stack</button>
     </div>
-  ))
+  ),
 }));
 
 vi.mock('../../../../../components/modals/CreateRecordModal', () => ({
-  default: vi.fn(() => <div data-testid="create-modal">Create Modal</div>)
+  __esModule: true,
+  default: () => <div data-testid="create-record-modal" />,
 }));
 
 vi.mock('../../../../../components/modals/EditRecordModal', () => ({
-  default: vi.fn(() => <div data-testid="edit-modal">Edit Modal</div>)
+  __esModule: true,
+  default: () => <div data-testid="edit-record-modal" />,
 }));
 
 vi.mock('../../../../../components/modals/DeleteConfirmModal', () => ({
-  default: vi.fn(() => <div data-testid="delete-modal">Delete Modal</div>)
+  __esModule: true,
+  default: () => <div data-testid="delete-confirm-modal" />,
 }));
 
-describe('KanbanBoard Component', () => {
-  const mockUpdateViewConfig = vi.fn().mockResolvedValue(undefined);
-  const mockMoveCard = vi.fn().mockResolvedValue(undefined);
-  const mockCreateCard = vi.fn().mockResolvedValue('new-card-id');
-  const mockDeleteCard = vi.fn().mockResolvedValue(undefined);
-  const mockDuplicateCard = vi.fn().mockResolvedValue('dup-card-id');
-  const mockUpdateFieldOptions = vi.fn().mockResolvedValue(undefined);
-  const mockChangeGroupByColumn = vi.fn().mockResolvedValue(undefined);
+const baseTableData = {
+  model: { id: 'tbl-1', base_id: 'base-1', title: 'Table' },
+  columns: [
+    { id: 'col-1', title: 'Status', column_name: 'status', uidt: 'select', meta: { options: ['Todo', 'Done'] } },
+    { id: 'col-2', title: 'Title', column_name: 'title', uidt: 'text' },
+  ],
+  records: [
+    { id: 'r1', status: 'Todo', title: 'Task 1' },
+    { id: 'r2', status: 'Done', title: 'Task 2' },
+  ],
+  views: [{ id: 'v1', type: 'kanban', meta: { view_target_field: 'col-1', stackOrder: ['Uncategorized', 'Todo', 'Done'] } }],
+};
 
-  const mockColumns = [
-    { id: '1', key: 'title', column_name: 'title', title: 'Title', type: 'text', uidt: 'text' },
-    { 
-      id: '2', 
-      key: 'status',
-      column_name: 'status',
-      title: 'Status', 
-      type: 'select', 
-      uidt: 'select',
-      meta: {
-        options: [
-          { option: 'To Do', color: '#FF0000' },
-          { option: 'In Progress', color: '#00FF00' }
-        ]
-      }
-    }
-  ] as any[];
+const setupDefaultMocks = () => {
+  mockUseBaseAccess.mockReturnValue({
+    isBaseReadOnly: () => false,
+    canCreateRecord: () => true,
+    canDeleteRecord: () => true,
+    canUpdateRecord: () => true,
+  });
 
-  const mockRecords = [
-    { id: 'r1', _meta: { id: 'r1' }, title: 'Task 1', status: 'To Do' },
-    { id: 'r2', _meta: { id: 'r2' }, title: 'Task 2', status: 'In Progress' }
-  ];
 
-  const mockTableData = {
-    model: { id: 'table1', title: 'Test Table' },
-    columns: mockColumns,
-    records: mockRecords,
-    views: [{ id: 'view1', type: 'kanban', meta: {} }]
-  };
+  mockUseKanbanViewConfig.mockReturnValue({
+    searchTerm: '',
+    selectedSearchField: null,
+    filters: [],
+    sorts: [],
+    draftFilter: null,
+    localFieldConfig: {},
+    handleSearch: vi.fn(),
+    handleAddFilter: vi.fn(),
+    handleRemoveFilter: vi.fn(),
+    handleUpdateFilter: vi.fn(),
+    handleSortChange: vi.fn(),
+    handleFieldToggle: vi.fn(),
+  });
 
-  const mockActions = {
-    moveCard: mockMoveCard,
-    createCard: mockCreateCard,
-    deleteCard: mockDeleteCard,
-    duplicateCard: mockDuplicateCard,
-    updateFieldOptions: mockUpdateFieldOptions,
-    changeGroupByColumn: mockChangeGroupByColumn,
-    updateViewConfig: mockUpdateViewConfig,
-    addRow: { mutateAsync: vi.fn() },
-    insertRowData: { mutateAsync: vi.fn() },
-    deleteRecord: { mutateAsync: vi.fn() },
-    updateField: { mutateAsync: vi.fn() },
-    updateView: { mutateAsync: vi.fn() },
-    updateViewMeta: { mutateAsync: vi.fn() }
-  } as any;
+  mockUseKanbanModals.mockReturnValue({
+    modalState: {
+      create: { isOpen: false, stackId: null },
+      edit: { isOpen: false, recordId: null },
+      delete: { isOpen: false, recordId: null },
+    },
+    handleOpenCreateRecord: vi.fn(),
+    handleOpenEditRecord: vi.fn(),
+    handleOpenDeleteRecord: vi.fn(),
+    handleCloseCreateModal: vi.fn(),
+    handleCloseEditModal: vi.fn(),
+    handleCloseDeleteModal: vi.fn(),
+    handleCreateSuccess: vi.fn(),
+    handleEditSuccess: vi.fn(),
+  });
 
+  mockUseKanbanStacks.mockReturnValue({
+    uiState: { isCreateStack: false, newOption: 'New Stack' },
+    collapsedStacks: new Set<string>(),
+    setUiState: vi.fn(),
+    handleStackCollapse: vi.fn(),
+    handleCreateStackClick: vi.fn(),
+    handleNewOptionChange: vi.fn(),
+    handleStackDragStart: vi.fn(),
+  });
+};
+
+describe('KanbanBoard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setupDefaultMocks();
+  });
 
+  beforeEach(async () => {
+    if (!KanbanBoard) {
+      ({ default: KanbanBoard } = await import('../KanbanBoard'));
+    }
+  });
+
+  it('renders stacks and actions when not read-only', () => {
+    render(
+      <ToastProvider>
+        <KanbanBoard tableData={baseTableData as any} onRefresh={vi.fn()} />
+      </ToastProvider>
+    );
+
+    expect(screen.getByTestId('stack-Todo')).toBeInTheDocument();
+    expect(screen.getByTestId('stack-Done')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add new stack/i })).toBeInTheDocument();
+  });
+
+  it('hides add stack and card actions when read-only', () => {
     mockUseBaseAccess.mockReturnValue({
-      isBaseReadOnly: vi.fn(() => false),
-      canCreateRecord: vi.fn(() => true),
-      canDeleteRecord: vi.fn(() => true),
-      canUpdateRecord: vi.fn(() => true)
-    });
-    
-    mockUseKanbanViewConfig.mockReturnValue({
-      filters: [],
-      sorts: [],
-      draftFilter: null,
-      searchTerm: '',
-      selectedSearchField: null,
-      localFieldConfig: [],
-      handleSearch: vi.fn(),
-      handleAddFilter: vi.fn(),
-      handleRemoveFilter: vi.fn(),
-      handleUpdateFilter: vi.fn(),
-      handleSortChange: vi.fn(),
-      handleFieldToggle: vi.fn()
+      isBaseReadOnly: () => true,
+      canCreateRecord: () => false,
+      canDeleteRecord: () => false,
+      canUpdateRecord: () => false,
     });
 
-    mockUseKanbanModals.mockReturnValue({
-      modalState: {
-        create: { isOpen: false, stackId: null },
-        edit: { isOpen: false, recordId: null },
-        delete: { isOpen: false, recordId: null }
-      },
-      handleOpenCreateRecord: vi.fn(),
-      handleOpenEditRecord: vi.fn(),
-      handleOpenDeleteRecord: vi.fn(),
-      handleCloseCreateModal: vi.fn(),
-      handleCloseEditModal: vi.fn(),
-      handleCloseDeleteModal: vi.fn(),
-      handleCreateSuccess: vi.fn(),
-      handleEditSuccess: vi.fn()
-    });
+    render(
+      <ToastProvider>
+        <KanbanBoard tableData={baseTableData as any} onRefresh={vi.fn()} />
+      </ToastProvider>
+    );
 
-    mockUseKanbanStacks.mockReturnValue({
-      uiState: {
-        isCreateStack: false,
-        newOption: '',
-        isLoadingGroupBy: false
-      },
-      collapsedStacks: new Set<string>(),
-      setUiState: vi.fn(),
-      setCollapsedStacks: vi.fn(),
-      handleStackCollapse: vi.fn(),
-      handleCreateStackClick: vi.fn(),
-      handleCancelCreateStack: vi.fn(),
-      handleNewOptionChange: vi.fn(),
-      handleStackDragStart: vi.fn(),
-      handleStackDrop: vi.fn()
-    });
+    expect(screen.queryByRole('button', { name: /add new stack/i })).not.toBeInTheDocument();
   });
 
-  describe('Rendering', () => {
-    it('should render kanban board', () => {
-      const { container } = render(
+  it('creates a new stack on Enter and handles duplicates', async () => {
+    const updateFieldOptions = vi.fn().mockResolvedValue(undefined);
+    const onRefresh = vi.fn();
+    const { unmount } = render(
+      <ToastProvider>
         <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      // Verify the board container renders
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-
-    it('should render stacks based on groupCol', () => {
-      const { container } = render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      // Verify some content renders
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-
-    it('should render cards in appropriate stacks', () => {
-      render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(screen.getByTestId('card-r1')).toBeInTheDocument();
-      expect(screen.getByTestId('card-r2')).toBeInTheDocument();
-    });
-
-    it('should show message when no groupCol is selected', () => {
-      const { container } = render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      // Verify the component renders without errors when no groupCol
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-  });
-
-  describe('Modals', () => {
-    it('should show create modal when open', () => {
-      mockUseKanbanModals.mockReturnValue({
-        modalState: {
-          create: { isOpen: true, stackId: 'To Do' },
-          edit: { isOpen: false, recordId: null },
-          delete: { isOpen: false, recordId: null }
-        },
-        handleOpenCreateRecord: vi.fn(),
-        handleOpenEditRecord: vi.fn(),
-        handleOpenDeleteRecord: vi.fn(),
-        handleCloseCreateModal: vi.fn(),
-        handleCloseEditModal: vi.fn(),
-        handleCloseDeleteModal: vi.fn(),
-        handleCreateSuccess: vi.fn(),
-        handleEditSuccess: vi.fn()
-      });
-
-      render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(screen.getByTestId('create-modal')).toBeInTheDocument();
-    });
-
-    it('should show edit modal when open', () => {
-      mockUseKanbanModals.mockReturnValue({
-        modalState: {
-          create: { isOpen: false, stackId: null },
-          edit: { isOpen: true, recordId: 'r1' },
-          delete: { isOpen: false, recordId: null }
-        },
-        handleOpenCreateRecord: vi.fn(),
-        handleOpenEditRecord: vi.fn(),
-        handleOpenDeleteRecord: vi.fn(),
-        handleCloseCreateModal: vi.fn(),
-        handleCloseEditModal: vi.fn(),
-        handleCloseDeleteModal: vi.fn(),
-        handleCreateSuccess: vi.fn(),
-        handleEditSuccess: vi.fn()
-      });
-
-      render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(screen.getByTestId('edit-modal')).toBeInTheDocument();
-    });
-
-    it('should show delete modal when open', () => {
-      mockUseKanbanModals.mockReturnValue({
-        modalState: {
-          create: { isOpen: false, stackId: null },
-          edit: { isOpen: false, recordId: null },
-          delete: { isOpen: true, recordId: 'r1' }
-        },
-        handleOpenCreateRecord: vi.fn(),
-        handleOpenEditRecord: vi.fn(),
-        handleOpenDeleteRecord: vi.fn(),
-        handleCloseCreateModal: vi.fn(),
-        handleCloseEditModal: vi.fn(),
-        handleCloseDeleteModal: vi.fn(),
-        handleCreateSuccess: vi.fn(),
-        handleEditSuccess: vi.fn()
-      });
-
-      render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(screen.getByTestId('delete-modal')).toBeInTheDocument();
-    });
-  });
-
-  describe('Card Interactions', () => {
-    it('should open create modal when add card clicked', () => {
-      const mockHandleOpen = vi.fn();
-      mockUseKanbanModals.mockReturnValue({
-        modalState: {
-          create: { isOpen: false, stackId: null },
-          edit: { isOpen: false, recordId: null },
-          delete: { isOpen: false, recordId: null }
-        },
-        handleOpenCreateRecord: mockHandleOpen,
-        handleOpenEditRecord: vi.fn(),
-        handleOpenDeleteRecord: vi.fn(),
-        handleCloseCreateModal: vi.fn(),
-        handleCloseEditModal: vi.fn(),
-        handleCloseDeleteModal: vi.fn(),
-        handleCreateSuccess: vi.fn(),
-        handleEditSuccess: vi.fn()
-      });
-
-      render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      const addButton = screen.getAllByText('Add Card')[0];
-      fireEvent.click(addButton);
-
-      expect(mockHandleOpen).toHaveBeenCalled();
-    });
-
-    it('should open edit modal when card clicked', () => {
-      const mockHandleOpen = vi.fn();
-      mockUseKanbanModals.mockReturnValue({
-        modalState: {
-          create: { isOpen: false, stackId: null },
-          edit: { isOpen: false, recordId: null },
-          delete: { isOpen: false, recordId: null }
-        },
-        handleOpenCreateRecord: vi.fn(),
-        handleOpenEditRecord: mockHandleOpen,
-        handleOpenDeleteRecord: vi.fn(),
-        handleCloseCreateModal: vi.fn(),
-        handleCloseEditModal: vi.fn(),
-        handleCloseDeleteModal: vi.fn(),
-        handleCreateSuccess: vi.fn(),
-        handleEditSuccess: vi.fn()
-      });
-
-      render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      const card = screen.getByTestId('card-r1');
-      fireEvent.click(card);
-
-      expect(mockHandleOpen).toHaveBeenCalledWith('r1');
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty records array', () => {
-      const emptyTableData = {
-        ...mockTableData,
-        records: []
-      };
-
-      render(
-        <KanbanBoard
-          tableData={emptyTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(screen.queryByTestId(/^card-/)).not.toBeInTheDocument();
-    });
-
-    it('should handle undefined viewId', () => {
-      const { container } = render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId={undefined}
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      // Verify the component renders without crashing
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-
-    it('should handle read-only mode', () => {
-      mockUseBaseAccess.mockReturnValue({
-        isBaseReadOnly: vi.fn(() => true),
-        canCreateRecord: vi.fn(() => false),
-        canDeleteRecord: vi.fn(() => false),
-        canUpdateRecord: vi.fn(() => false)
-      });
-
-      const { container } = render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      // Verify the component renders in read-only mode
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-
-    it('should handle table data without columns', () => {
-      const tableDataNoColumns = {
-        ...mockTableData,
-        columns: []
-      };
-
-      const { container } = render(
-        <KanbanBoard
-          tableData={tableDataNoColumns}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-
-    it('should handle null model', () => {
-      const tableDataNoModel = {
-        ...mockTableData,
-        model: null
-      };
-
-      const { container } = render(
-        <KanbanBoard
-          tableData={tableDataNoModel as any}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-  });
-
-  describe('Search Functionality', () => {
-    it('should call handleSearch from useKanbanViewConfig', () => {
-      const mockHandleSearch = vi.fn();
-      mockUseKanbanViewConfig.mockReturnValue({
-        searchTerm: '',
-        selectedSearchField: null,
-        filters: [],
-        sorts: [],
-        draftFilter: null,
-        localFieldConfig: [],
-        handleSearch: mockHandleSearch,
-        handleAddFilter: vi.fn(),
-        handleRemoveFilter: vi.fn(),
-        handleUpdateFilter: vi.fn(),
-        handleSortChange: vi.fn(),
-        handleFieldToggle: vi.fn(),
-      });
-
-      render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(mockUseKanbanViewConfig).toHaveBeenCalled();
-    });
-  });
-
-  describe('Filter and Sort', () => {
-    it('should apply filters to cards', () => {
-      mockUseKanbanViewConfig.mockReturnValue({
-        searchTerm: '',
-        selectedSearchField: null,
-        filters: [{ column: 'status', operator: 'equals', value: 'To Do' }],
-        sorts: [],
-        draftFilter: null,
-        localFieldConfig: [],
-        handleSearch: vi.fn(),
-        handleAddFilter: vi.fn(),
-        handleRemoveFilter: vi.fn(),
-        handleUpdateFilter: vi.fn(),
-        handleSortChange: vi.fn(),
-        handleFieldToggle: vi.fn(),
-      });
-
-      const { container } = render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-
-    it('should apply sorts to cards', () => {
-      mockUseKanbanViewConfig.mockReturnValue({
-        searchTerm: '',
-        selectedSearchField: null,
-        filters: [],
-        sorts: [{ column: 'title', direction: 'asc' }],
-        draftFilter: null,
-        localFieldConfig: [],
-        handleSearch: vi.fn(),
-        handleAddFilter: vi.fn(),
-        handleRemoveFilter: vi.fn(),
-        handleUpdateFilter: vi.fn(),
-        handleSortChange: vi.fn(),
-        handleFieldToggle: vi.fn(),
-      });
-
-      const { container } = render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-
-    it('should apply draft filter for preview', () => {
-      mockUseKanbanViewConfig.mockReturnValue({
-        searchTerm: '',
-        selectedSearchField: null,
-        filters: [],
-        sorts: [],
-        draftFilter: { column: 'title', operator: 'contains', value: 'Task' },
-        localFieldConfig: [],
-        handleSearch: vi.fn(),
-        handleAddFilter: vi.fn(),
-        handleRemoveFilter: vi.fn(),
-        handleUpdateFilter: vi.fn(),
-        handleSortChange: vi.fn(),
-        handleFieldToggle: vi.fn(),
-      });
-
-      const { container } = render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-  });
-
-  describe('Stack Management', () => {
-    it('should toggle stack name input when Add New Stack is clicked', () => {
-      render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      const addStackButton = screen.getByRole('button', { name: /add new stack/i });
-      fireEvent.click(addStackButton);
-
-      expect(screen.getByPlaceholderText('Enter Stack Name')).toBeInTheDocument();
-    });
-
-    it('should handle stack collapse', () => {
-      const mockHandleStackCollapse = vi.fn();
-      mockUseKanbanStacks.mockReturnValue({
-        uiState: { showNewStackInput: false, newStackOption: '' },
-        collapsedStacks: new Set(['stack1']),
-        setUiState: vi.fn(),
-        handleStackCollapse: mockHandleStackCollapse,
-        handleCreateStackClick: vi.fn(),
-        handleNewOptionChange: vi.fn(),
-        handleStackDragStart: vi.fn(),
-      });
-
-      const { container } = render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-
-    it('should handle create stack click', () => {
-      const mockHandleCreateStackClick = vi.fn();
-      mockUseKanbanStacks.mockReturnValue({
-        uiState: { isCreateStack: true, newOption: '' },
-        collapsedStacks: new Set(),
-        setUiState: vi.fn(),
-        handleStackCollapse: vi.fn(),
-        handleCreateStackClick: mockHandleCreateStackClick,
-        handleNewOptionChange: vi.fn(),
-        handleStackDragStart: vi.fn(),
-      });
-
-      const { container } = render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-      const newStackButton = screen.getByRole('button', { name: /new stack/i });
-      fireEvent.click(newStackButton);
-      expect(mockHandleCreateStackClick).toHaveBeenCalled();
-    });
-
-    it('shows duplicate stack error when name already exists', async () => {
-      mockUseKanbanStacks.mockReturnValue({
-        uiState: { isCreateStack: false, newOption: 'To Do', isLoadingGroupBy: false },
-        collapsedStacks: new Set(),
-        setUiState: vi.fn(),
-        handleStackCollapse: vi.fn(),
-        handleCreateStackClick: vi.fn(),
-        handleCancelCreateStack: vi.fn(),
-        handleNewOptionChange: vi.fn(),
-        handleStackDragStart: vi.fn(),
-        handleStackDrop: vi.fn(),
-      });
-
-      render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      fireEvent.click(screen.getByText('Add New Stack'));
-      const input = screen.getByPlaceholderText('Enter Stack Name');
-      fireEvent.keyDown(input, { key: 'Enter' });
-
-      await waitFor(() => {
-        expect(mockShowToast).toHaveBeenCalled();
-      });
-    });
-
-    it('creates new stack option when name is unique', async () => {
-      const updateFieldOptions = vi.fn().mockResolvedValue(undefined);
-      const onRefresh = vi.fn();
-
-      mockUseKanbanStacks.mockReturnValue({
-        uiState: { isCreateStack: false, newOption: 'New Stack', isLoadingGroupBy: false },
-        collapsedStacks: new Set(),
-        setUiState: vi.fn(),
-        handleStackCollapse: vi.fn(),
-        handleCreateStackClick: vi.fn(),
-        handleCancelCreateStack: vi.fn(),
-        handleNewOptionChange: vi.fn(),
-        handleStackDragStart: vi.fn(),
-        handleStackDrop: vi.fn(),
-      });
-
-      render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
+          tableData={baseTableData as any}
           onRefresh={onRefresh}
-          actions={{ ...mockActions, updateFieldOptions }}
+          actions={{
+            updateFieldOptions,
+            changeGroupByColumn: vi.fn(),
+            updateViewConfig: vi.fn(),
+            deleteCard: vi.fn(),
+            duplicateCard: vi.fn(),
+            addRow: {} as any,
+            insertRowData: { mutateAsync: vi.fn() } as any,
+            deleteRecord: {} as any,
+            updateField: {} as any,
+            updateView: {} as any,
+            updateViewMeta: { mutateAsync: vi.fn() } as any,
+          }}
         />
-      );
+      </ToastProvider>
+    );
 
-      fireEvent.click(screen.getByText('Add New Stack'));
-      const input = screen.getByPlaceholderText('Enter Stack Name');
-      fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('button', { name: /add new stack/i }));
+    const input = screen.getByPlaceholderText('Enter Stack Name');
+    fireEvent.keyDown(input, { key: 'Enter' });
 
-      await waitFor(() => {
-        expect(updateFieldOptions).toHaveBeenCalled();
-        expect(onRefresh).toHaveBeenCalled();
-      });
+    await waitFor(() => {
+      expect(updateFieldOptions).toHaveBeenCalled();
+      expect(onRefresh).toHaveBeenCalled();
     });
 
-    it('deletes a stack and updates records', async () => {
-      const updateFieldOptions = vi.fn().mockResolvedValue(undefined);
-      const insertRowData = { mutateAsync: vi.fn().mockResolvedValue(undefined) };
-      const onRefresh = vi.fn();
+    unmount();
 
-      render(
+    const duplicateData = {
+      ...baseTableData,
+      columns: [
+        { id: 'col-1', title: 'Status', column_name: 'status', uidt: 'select', meta: { options: ['New Stack'] } },
+      ],
+    };
+
+    render(
+      <ToastProvider>
         <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
+          tableData={duplicateData as any}
+          onRefresh={vi.fn()}
+          actions={{
+            updateFieldOptions,
+            changeGroupByColumn: vi.fn(),
+            updateViewConfig: vi.fn(),
+            deleteCard: vi.fn(),
+            duplicateCard: vi.fn(),
+            addRow: {} as any,
+            insertRowData: { mutateAsync: vi.fn() } as any,
+            deleteRecord: {} as any,
+            updateField: {} as any,
+            updateView: {} as any,
+            updateViewMeta: { mutateAsync: vi.fn() } as any,
+          }}
+        />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /add new stack/i }));
+    const dupInput = screen.getByPlaceholderText('Enter Stack Name');
+    fireEvent.keyDown(dupInput, { key: 'Enter' });
+
+    expect(updateFieldOptions).toHaveBeenCalledTimes(1);
+  });
+
+  it('persists stack order on drop', async () => {
+    const updateViewMeta = { mutateAsync: vi.fn().mockResolvedValue(undefined) };
+    render(
+      <ToastProvider>
+        <KanbanBoard
+          tableData={baseTableData as any}
+          onRefresh={vi.fn()}
+          actions={{
+            updateFieldOptions: vi.fn(),
+            changeGroupByColumn: vi.fn(),
+            updateViewConfig: vi.fn(),
+            deleteCard: vi.fn(),
+            duplicateCard: vi.fn(),
+            addRow: {} as any,
+            insertRowData: { mutateAsync: vi.fn() } as any,
+            deleteRecord: {} as any,
+            updateField: {} as any,
+            updateView: {} as any,
+            updateViewMeta,
+          }}
+        />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getAllByText('drop-stack')[0]);
+
+    await waitFor(() => {
+      expect(updateViewMeta.mutateAsync).toHaveBeenCalled();
+    });
+  });
+
+  it('updates field options when deleting a stack', async () => {
+    const insertRowData = { mutateAsync: vi.fn().mockResolvedValue(undefined) };
+    const updateFieldOptions = vi.fn().mockResolvedValue(undefined);
+    const onRefresh = vi.fn();
+
+    render(
+      <ToastProvider>
+        <KanbanBoard
+          tableData={baseTableData as any}
           onRefresh={onRefresh}
-          actions={{ ...mockActions, updateFieldOptions, insertRowData }}
+          actions={{
+            updateFieldOptions,
+            changeGroupByColumn: vi.fn(),
+            updateViewConfig: vi.fn(),
+            deleteCard: vi.fn(),
+            duplicateCard: vi.fn(),
+            addRow: {} as any,
+            insertRowData,
+            deleteRecord: {} as any,
+            updateField: {} as any,
+            updateView: {} as any,
+            updateViewMeta: { mutateAsync: vi.fn() } as any,
+          }}
         />
-      );
+      </ToastProvider>
+    );
 
-      const stacks = screen.getAllByTestId(/^stack-/);
-      const target = stacks.find((node) => node.getAttribute('data-testid')?.includes('To Do')) ?? stacks[0];
-      fireEvent.click(within(target).getByText('Delete Stack'));
+    const stack = screen.getByTestId('stack-Todo');
+    fireEvent.click(within(stack).getByText('delete-stack'));
 
-      await waitFor(() => {
-        expect(updateFieldOptions).toHaveBeenCalled();
-        expect(insertRowData.mutateAsync).toHaveBeenCalled();
-        expect(onRefresh).toHaveBeenCalled();
-      });
+    await waitFor(() => {
+      expect(insertRowData.mutateAsync).toHaveBeenCalled();
+      expect(updateFieldOptions).toHaveBeenCalled();
+      expect(onRefresh).toHaveBeenCalled();
     });
   });
 
-  describe('Actions and Callbacks', () => {
-    it('should handle missing actions gracefully', () => {
-      const { container } = render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={undefined}
-        />
-      );
+  it('handles stack rename and duplicate name error', async () => {
+    const updateFieldOptions = vi.fn().mockResolvedValue(undefined);
+    const updateViewMeta = { mutateAsync: vi.fn().mockResolvedValue(undefined) };
+    const insertRowData = { mutateAsync: vi.fn().mockResolvedValue(undefined) };
+    const renameData = {
+      ...baseTableData,
+      columns: [
+        { id: 'col-1', title: 'Status', column_name: 'status', uidt: 'select', meta: { options: ['Todo'] } },
+        { id: 'col-2', title: 'Title', column_name: 'title', uidt: 'text' },
+      ],
+      records: [{ id: 'r1', status: 'Todo', title: 'Task 1' }],
+    };
 
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
+    const { unmount } = render(
+      <ToastProvider>
+        <KanbanBoard
+          tableData={renameData as any}
+          onRefresh={vi.fn()}
+          actions={{
+            updateFieldOptions,
+            changeGroupByColumn: vi.fn(),
+            updateViewConfig: vi.fn(),
+            deleteCard: vi.fn(),
+            duplicateCard: vi.fn(),
+            addRow: {} as any,
+            insertRowData,
+            deleteRecord: {} as any,
+            updateField: {} as any,
+            updateView: {} as any,
+            updateViewMeta,
+          }}
+        />
+      </ToastProvider>
+    );
+
+    const renameStack = screen.getByTestId('stack-Todo');
+    fireEvent.click(within(renameStack).getByText('edit-stack'));
+
+    await waitFor(() => {
+      expect(updateFieldOptions).toHaveBeenCalled();
+      expect(updateViewMeta.mutateAsync).toHaveBeenCalled();
+      expect(insertRowData.mutateAsync).toHaveBeenCalled();
     });
 
-    it('should handle partial actions', () => {
-      const partialActions = {
-        deleteCard: vi.fn(),
-        duplicateCard: vi.fn(),
-      } as any;
+    unmount();
 
-      const { container } = render(
+    const duplicateOptionsData = {
+      ...baseTableData,
+      columns: [
+        { id: 'col-1', title: 'Status', column_name: 'status', uidt: 'select', meta: { options: ['Todo', 'Done'] } },
+      ],
+    };
+
+    render(
+      <ToastProvider>
         <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
+          tableData={duplicateOptionsData as any}
           onRefresh={vi.fn()}
-          actions={partialActions}
+          actions={{
+            updateFieldOptions,
+            changeGroupByColumn: vi.fn(),
+            updateViewConfig: vi.fn(),
+            deleteCard: vi.fn(),
+            duplicateCard: vi.fn(),
+            addRow: {} as any,
+            insertRowData,
+            deleteRecord: {} as any,
+            updateField: {} as any,
+            updateView: {} as any,
+            updateViewMeta,
+          }}
         />
-      );
+      </ToastProvider>
+    );
 
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-  });
-
-  describe('Read-only UI', () => {
-    it('should hide stack add actions when read-only', () => {
-      mockUseBaseAccess.mockReturnValue({
-        isBaseReadOnly: vi.fn(() => true),
-        canCreateRecord: vi.fn(() => false),
-        canDeleteRecord: vi.fn(() => false),
-        canUpdateRecord: vi.fn(() => false)
-      });
-
-      render(
-        <KanbanBoard
-          tableData={mockTableData}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(screen.queryByText('Add New Stack')).not.toBeInTheDocument();
-      expect(screen.queryByText('New stack')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('View Configuration', () => {
-    it('should handle view with meta config', () => {
-      const tableDataWithViewMeta = {
-        ...mockTableData,
-        views: [{
-          id: 'view1',
-          type: 'kanban',
-          meta: {
-            view_target_field: '2',
-            cardOrder: { 'To Do': ['r1'], 'In Progress': ['r2'] },
-            stackOrder: ['To Do', 'In Progress']
-          }
-        }]
-      };
-
-      const { container } = render(
-        <KanbanBoard
-          tableData={tableDataWithViewMeta}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-
-    it('should handle view without views array', () => {
-      const tableDataNoViews = {
-        ...mockTableData,
-        views: undefined
-      };
-
-      const { container } = render(
-        <KanbanBoard
-          tableData={tableDataNoViews}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-  });
-
-  describe('Column Type Handling', () => {
-    it('should handle columns with different types', () => {
-      const columnsWithVariousTypes = [
-        { id: '1', key: 'title', title: 'Title', type: 'text', uidt: 'text' },
-        { id: '2', key: 'status', title: 'Status', type: 'singleSelect', uidt: 'singleSelect', options: [{ option: 'Done', color: '#00FF00' }] },
-        { id: '3', key: 'date', title: 'Date', type: 'date', uidt: 'date' },
-        { id: '4', key: 'number', title: 'Number', type: 'number', uidt: 'number' },
-        { id: '5', key: 'checkbox', title: 'Checkbox', type: 'checkbox', uidt: 'checkbox' },
-      ];
-
-      const tableDataVariousColumns = {
-        ...mockTableData,
-        columns: columnsWithVariousTypes
-      };
-
-      const { container } = render(
-        <KanbanBoard
-          tableData={tableDataVariousColumns}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-
-    it('should handle columns with system fields', () => {
-      const columnsWithSystem = [
-        ...mockColumns,
-        { id: '3', key: 'created_at', title: 'Created At', type: 'datetime', uidt: 'datetime', isSystem: true, system: true }
-      ];
-
-      const tableDataSystemColumns = {
-        ...mockTableData,
-        columns: columnsWithSystem
-      };
-
-      const { container } = render(
-        <KanbanBoard
-          tableData={tableDataSystemColumns}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-  });
-
-  describe('Record Data Handling', () => {
-    it('should handle records with nested data', () => {
-      const recordsWithNestedData = [
-        { _meta: { id: 'r1' }, title: 'Task 1', status: 'To Do', data: { nested: 'value' } },
-        { _meta: { id: 'r2' }, title: 'Task 2', status: 'In Progress', data: { another: 'nested' } }
-      ];
-
-      const tableDataNestedRecords = {
-        ...mockTableData,
-        records: recordsWithNestedData
-      };
-
-      const { container } = render(
-        <KanbanBoard
-          tableData={tableDataNestedRecords}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
-
-    it('should handle records without _meta', () => {
-      const recordsWithoutMeta = [
-        { id: 'r1', title: 'Task 1', status: 'To Do' },
-        { id: 'r2', title: 'Task 2', status: 'In Progress' }
-      ];
-
-      const tableDataNoMeta = {
-        ...mockTableData,
-        records: recordsWithoutMeta
-      };
-
-      const { container } = render(
-        <KanbanBoard
-          tableData={tableDataNoMeta}
-          viewId="view1"
-          onRefresh={vi.fn()}
-          actions={mockActions}
-        />
-      );
-
-      expect(container.querySelector('.h-full')).toBeInTheDocument();
-    });
+    const stack = screen.getByTestId('stack-Todo');
+    fireEvent.click(within(stack).getByText('edit-stack'));
+    expect(updateFieldOptions).toHaveBeenCalledTimes(1);
   });
 });

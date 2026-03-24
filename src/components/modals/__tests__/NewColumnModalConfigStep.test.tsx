@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { renderNewColumnConfigStep } from '../NewColumnModalConfigStep';
+import { renderNewColumnConfigStep, renderDescriptionToggle } from '../NewColumnModalConfigStep';
 
 const renderBasicConfigStepMock = vi.fn();
 const renderDateTimeConfigStepMock = vi.fn();
@@ -195,6 +195,32 @@ describe('renderNewColumnConfigStep', () => {
     expect(setCheckboxDefault).toHaveBeenCalledWith(true);
   });
 
+  it('renders boolean dropdown options and applies selections', () => {
+    const setShowIconDropdown = vi.fn();
+    const setShowColorDropdown = vi.fn();
+    const setCheckboxIcon = vi.fn();
+    const setCheckboxColor = vi.fn();
+
+    renderStep('boolean', {
+      showIconDropdown: true,
+      showColorDropdown: true,
+      setShowIconDropdown,
+      setShowColorDropdown,
+      setCheckboxIcon,
+      setCheckboxColor,
+      checkboxIcon: 'check',
+      checkboxColor: 'green',
+    });
+
+    fireEvent.click(screen.getByText('Star'));
+    expect(setCheckboxIcon).toHaveBeenCalledWith('star');
+    expect(setShowIconDropdown).toHaveBeenCalledWith(false);
+
+    fireEvent.click(screen.getByText('Blue'));
+    expect(setCheckboxColor).toHaveBeenCalledWith('blue');
+    expect(setShowColorDropdown).toHaveBeenCalledWith(false);
+  });
+
   it('renders datetime config path and supports timezone/default toggles', () => {
     const setShowDateTimeDefault = vi.fn();
     const setDisplayTimeZone = vi.fn();
@@ -328,6 +354,25 @@ describe('renderNewColumnConfigStep', () => {
     expect(setOptionError).toHaveBeenCalledWith('Option already exists');
   });
 
+  it('select: skips adding empty options', () => {
+    const setSelectOptions = vi.fn();
+    const setNewOption = vi.fn();
+    const setOptionError = vi.fn();
+
+    renderStep('select', {
+      newOption: '   ',
+      color: '',
+      setSelectOptions,
+      setNewOption,
+      setOptionError,
+      getOptionColor: vi.fn(() => '#123456'),
+      selectOptions: [{ id: 1, option: 'Open', color: 'blue' }],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /add option/i }));
+    expect(setSelectOptions).not.toHaveBeenCalled();
+  });
+
   it('multiSelect: updates defaults on checkbox and remove', () => {
     const setMultiDefault = vi.fn();
     const setSelectOptions = vi.fn();
@@ -362,6 +407,51 @@ describe('renderNewColumnConfigStep', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '' }));
     expect(setSelectOptions).toHaveBeenCalled();
+  });
+
+  it('select: edits option value on blur and cancels on escape', () => {
+    const setSelectOptions = vi.fn();
+    const setEditingOptionIndex = vi.fn();
+    const setEditingOptionValue = vi.fn();
+    const setSingleDefault = vi.fn();
+    const editInputRef = { current: null } as React.MutableRefObject<HTMLInputElement | null>;
+
+    const { rerender } = renderStep('select', {
+      selectOptions: [{ id: 1, option: 'Open', color: '#111111' }],
+      editingOptionIndex: 0,
+      editingOptionValue: 'Closed',
+      setSelectOptions,
+      setEditingOptionIndex,
+      setEditingOptionValue,
+      setSingleDefault,
+      singleDefault: 'Open',
+      editInputRef,
+    });
+
+    const editInput = screen.getByDisplayValue('Closed');
+    fireEvent.blur(editInput);
+    expect(setSelectOptions).toHaveBeenCalled();
+    expect(setEditingOptionIndex).toHaveBeenCalledWith(null);
+    expect(setEditingOptionValue).toHaveBeenCalledWith('');
+
+    rerender(
+      <div>
+        {renderNewColumnConfigStep(makeProps('select', {
+          selectOptions: [{ id: 1, option: 'Open', color: '#111111' }],
+          editingOptionIndex: 0,
+          editingOptionValue: 'Open',
+          setSelectOptions,
+          setEditingOptionIndex,
+          setEditingOptionValue,
+          setSingleDefault,
+          singleDefault: 'Open',
+          editInputRef,
+        }))}
+      </div>
+    );
+    fireEvent.keyDown(screen.getByDisplayValue('Open'), { key: 'Escape' });
+    expect(setEditingOptionIndex).toHaveBeenCalledWith(null);
+    expect(setEditingOptionValue).toHaveBeenCalledWith('');
   });
 
   it('percent: toggles progress and validates default value', () => {
@@ -464,5 +554,38 @@ describe('renderNewColumnConfigStep', () => {
 
     fireEvent.change(screen.getByTestId('json-field'), { target: { value: '{"a":1}' } });
     expect(setDefaultValue).toHaveBeenCalledWith('"{\\"a\\":1}"');
+  });
+});
+
+describe('renderDescriptionToggle', () => {
+  it('toggles and clears description', () => {
+    const setShowDescription = vi.fn();
+    const setDescription = vi.fn();
+
+    const { rerender } = render(
+      renderDescriptionToggle({
+        showDescription: false,
+        setShowDescription,
+        description: '',
+        setDescription,
+      })
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /add description/i }));
+    expect(setShowDescription).toHaveBeenCalled();
+
+    rerender(
+      renderDescriptionToggle({
+        showDescription: true,
+        setShowDescription,
+        description: 'Hello',
+        setDescription,
+      })
+    );
+
+    fireEvent.change(screen.getByTestId('multiline'), { target: { value: 'Updated' } });
+    expect(setDescription).toHaveBeenCalledWith('Updated');
+    fireEvent.click(screen.getByRole('button', { name: '' }));
+    expect(setDescription).toHaveBeenCalledWith('');
   });
 });
