@@ -489,6 +489,59 @@ describe('PluginFrameworkContext', () => {
 
       expect(getExtensionsRefs[0]).toBe(getExtensionsRefs[1]);
     });
+
+    it('should return extensions from getExtensions function', async () => {
+      let getExtensionsFunc: ((pointId: string) => any[]) | null = null;
+      const plugin = createMockPlugin('test-plugin');
+      plugin.initialize = vi.fn().mockImplementation((api: PluginAPI) => {
+        api.registerExtension('test:point', { id: 'test-ext', data: 'test-data' });
+      });
+
+      const TestComponent = () => {
+        const { getExtensions } = usePluginFramework();
+        getExtensionsFunc = getExtensions;
+        return <div data-testid="test">Test</div>;
+      };
+
+      render(
+        <PluginFrameworkProvider plugins={[plugin]}>
+          <TestComponent />
+        </PluginFrameworkProvider>
+      );
+
+      await waitFor(() => {
+        expect(getExtensionsFunc).not.toBeNull();
+      });
+
+      const extensions = getExtensionsFunc!('test:point');
+      expect(extensions).toBeDefined();
+      expect(Array.isArray(extensions)).toBe(true);
+    });
+
+    it('should handle getExtensions with non-existent point', async () => {
+      let getExtensionsFunc: ((pointId: string) => any[]) | null = null;
+
+      const TestComponent = () => {
+        const { getExtensions } = usePluginFramework();
+        getExtensionsFunc = getExtensions;
+        return <div data-testid="test">Test</div>;
+      };
+
+      render(
+        <PluginFrameworkProvider plugins={[]}>
+          <TestComponent />
+        </PluginFrameworkProvider>
+      );
+
+      await waitFor(() => {
+        expect(getExtensionsFunc).not.toBeNull();
+      });
+
+      const extensions = getExtensionsFunc!('non-existent:point');
+      expect(extensions).toBeDefined();
+      expect(Array.isArray(extensions)).toBe(true);
+      expect(extensions.length).toBe(0);
+    });
   });
 
   describe('Plugin API Integration', () => {

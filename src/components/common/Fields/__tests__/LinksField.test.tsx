@@ -331,4 +331,37 @@ describe('LinksField', () => {
 
     await waitFor(() => expect(toastError).toHaveBeenCalled());
   });
+
+  it('shows loading indicators when table data is loading', async () => {
+    mockIsLoading = true;
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'one-to-one' } } }}
+        value={[]}
+        onChange={vi.fn()}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /rel/i }));
+    expect(screen.getByText('Loading records...')).toBeInTheDocument();
+  });
+
+  it('opens dropdown from the +count pill when more than two records are selected', async () => {
+    const user = userEvent.setup();
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'one-to-one' } } }}
+        value={[{ id: 1, title: 'Record One' }, { id: 2, title: 'Record Two' }, { id: 3, title: 'Record Three' }]}
+        onChange={vi.fn()}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /\+1/i }));
+    expect(screen.getByText('One to One')).toBeInTheDocument();
+  });
 });

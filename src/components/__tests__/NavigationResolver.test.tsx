@@ -229,6 +229,43 @@ describe('NavigationResolver', () => {
     expect(navigateToViewSpy).toHaveBeenCalledWith('ws1', 'b1', 't1', 'v1');
   });
 
+  it('navigates to saved view when api hooks return arrays', async () => {
+    mockPathname = '/app';
+    selectedWorkspaceId = 'ws1';
+    selectedBaseId = 'b1';
+    selectedTableId = 't1';
+    selectedViewId = 'v1';
+    workspaceBasesData = [{ id: 'b1' }];
+    baseTablesData = [{ id: 't1' }];
+    tableViewsData = [{ id: 'v1' }];
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).toHaveBeenCalledWith(
+        navigateSpy,
+        '/workspace/ws1/base/b1/table/t1/v1'
+      );
+    });
+  });
+
+  it('does not navigate when already on expected path', async () => {
+    selectedWorkspaceId = 'ws1';
+    selectedBaseId = 'b1';
+    selectedTableId = 't1';
+    selectedViewId = 'v1';
+    mockPathname = '/workspace/ws1/base/b1/table/t1/v1';
+    workspaceBasesData = { data: [{ id: 'b1' }] };
+    baseTablesData = { data: [{ id: 't1' }] };
+    tableViewsData = { data: [{ id: 'v1' }] };
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).not.toHaveBeenCalled();
+    });
+  });
+
   it('does not navigate to saved view while data is pending', async () => {
     mockPathname = '/app';
     selectedWorkspaceId = 'ws1';
