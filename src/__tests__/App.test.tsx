@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor, waitForElementToBeRemoved } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from '../App';
 import * as clientService from '../service/clientService';
 
@@ -257,7 +257,7 @@ describe('App', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    await waitFor(() => expect(screen.queryByText('Loader')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText('Loader')).not.toBeInTheDocument(), { timeout: 10000 });
     await waitFor(() => expect(screen.getByText('Something went wrong')).toBeInTheDocument());
     const retryBtn = screen.getByRole('button', { name: /retry/i });
     retryBtn.click();

@@ -8,6 +8,8 @@ const mockUseKanbanViewConfig = vi.fn();
 const mockUseKanbanModals = vi.fn();
 const mockUseKanbanStacks = vi.fn();
 const mockUseBaseAccess = vi.fn();
+let lastCreateRecordProps: any = null;
+let lastEditRecordProps: any = null;
 
 vi.mock('../../../../../hooks/useBaseAccess', () => ({
   useBaseAccess: mockUseBaseAccess,
@@ -79,12 +81,18 @@ vi.mock('../KanbanStack', () => ({
 
 vi.mock('../../../../../components/modals/CreateRecordModal', () => ({
   __esModule: true,
-  default: () => <div data-testid="create-record-modal" />,
+  default: (props: any) => {
+    lastCreateRecordProps = props;
+    return <div data-testid="create-record-modal" />;
+  },
 }));
 
 vi.mock('../../../../../components/modals/EditRecordModal', () => ({
   __esModule: true,
-  default: () => <div data-testid="edit-record-modal" />,
+  default: (props: any) => {
+    lastEditRecordProps = props;
+    return <div data-testid="edit-record-modal" />;
+  },
 }));
 
 vi.mock('../../../../../components/modals/DeleteConfirmModal', () => ({
@@ -159,6 +167,8 @@ const setupDefaultMocks = () => {
 describe('KanbanBoard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    lastCreateRecordProps = null;
+    lastEditRecordProps = null;
     setupDefaultMocks();
   });
 
@@ -415,5 +425,113 @@ describe('KanbanBoard', () => {
     const stack = screen.getByTestId('stack-Todo');
     fireEvent.click(within(stack).getByText('edit-stack'));
     expect(updateFieldOptions).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders create modal with stack initial values', () => {
+    mockUseKanbanModals.mockReturnValue({
+      modalState: {
+        create: { isOpen: true, stackId: 'Todo' },
+        edit: { isOpen: false, recordId: null },
+        delete: { isOpen: false, recordId: null },
+      },
+      handleOpenCreateRecord: vi.fn(),
+      handleOpenEditRecord: vi.fn(),
+      handleOpenDeleteRecord: vi.fn(),
+      handleCloseCreateModal: vi.fn(),
+      handleCloseEditModal: vi.fn(),
+      handleCloseDeleteModal: vi.fn(),
+      handleCreateSuccess: vi.fn(),
+      handleEditSuccess: vi.fn(),
+    });
+
+    render(
+      <ToastProvider>
+        <KanbanBoard tableData={baseTableData as any} onRefresh={vi.fn()} />
+      </ToastProvider>
+    );
+
+    expect(screen.getByTestId('create-record-modal')).toBeInTheDocument();
+    expect(lastCreateRecordProps?.initialValues?.['col-1']).toBe('Todo');
+  });
+
+  it('renders create modal with empty initial values for Uncategorized', () => {
+    mockUseKanbanModals.mockReturnValue({
+      modalState: {
+        create: { isOpen: true, stackId: 'Uncategorized' },
+        edit: { isOpen: false, recordId: null },
+        delete: { isOpen: false, recordId: null },
+      },
+      handleOpenCreateRecord: vi.fn(),
+      handleOpenEditRecord: vi.fn(),
+      handleOpenDeleteRecord: vi.fn(),
+      handleCloseCreateModal: vi.fn(),
+      handleCloseEditModal: vi.fn(),
+      handleCloseDeleteModal: vi.fn(),
+      handleCreateSuccess: vi.fn(),
+      handleEditSuccess: vi.fn(),
+    });
+
+    render(
+      <ToastProvider>
+        <KanbanBoard tableData={baseTableData as any} onRefresh={vi.fn()} />
+      </ToastProvider>
+    );
+
+    expect(screen.getByTestId('create-record-modal')).toBeInTheDocument();
+    expect(lastCreateRecordProps?.initialValues?.['col-1']).toBe('');
+  });
+
+  it('renders edit and delete modals when open', () => {
+    mockUseKanbanModals.mockReturnValue({
+      modalState: {
+        create: { isOpen: false, stackId: null },
+        edit: { isOpen: true, recordId: 'r1' },
+        delete: { isOpen: true, recordId: 'r1' },
+      },
+      handleOpenCreateRecord: vi.fn(),
+      handleOpenEditRecord: vi.fn(),
+      handleOpenDeleteRecord: vi.fn(),
+      handleCloseCreateModal: vi.fn(),
+      handleCloseEditModal: vi.fn(),
+      handleCloseDeleteModal: vi.fn(),
+      handleCreateSuccess: vi.fn(),
+      handleEditSuccess: vi.fn(),
+    });
+
+    render(
+      <ToastProvider>
+        <KanbanBoard tableData={baseTableData as any} onRefresh={vi.fn()} />
+      </ToastProvider>
+    );
+
+    expect(screen.getByTestId('edit-record-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('delete-confirm-modal')).toBeInTheDocument();
+  });
+
+  it('calls handleSearch when using the search control', () => {
+    const handleSearch = vi.fn();
+    mockUseKanbanViewConfig.mockReturnValue({
+      searchTerm: '',
+      selectedSearchField: null,
+      filters: [],
+      sorts: [],
+      draftFilter: null,
+      localFieldConfig: {},
+      handleSearch,
+      handleAddFilter: vi.fn(),
+      handleRemoveFilter: vi.fn(),
+      handleUpdateFilter: vi.fn(),
+      handleSortChange: vi.fn(),
+      handleFieldToggle: vi.fn(),
+    });
+
+    render(
+      <ToastProvider>
+        <KanbanBoard tableData={baseTableData as any} onRefresh={vi.fn()} />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getAllByText('Search')[0]);
+    expect(handleSearch).toHaveBeenCalled();
   });
 });

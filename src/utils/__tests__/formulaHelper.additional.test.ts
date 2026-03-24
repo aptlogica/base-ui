@@ -10,6 +10,8 @@ import {
   getFunctionSyntax,
   formulaUsesToday,
   validateFormula,
+  normalizeForComparison,
+  convertResultToValue,
   type FormulaContext,
 } from '../formulaHelper';
 
@@ -95,5 +97,20 @@ describe('formulaHelper additional branches', () => {
     expect(validateFormula('(1 > 0)', ctx)).toBeNull();
     expect(validateFormula('1 < SUM(1, 2)', ctx)).toBeNull();
     expect(validateFormula('SUM(1, 2) > 1', ctx)).toBeNull();
+  });
+
+  it('normalizes values for comparison and converts results', () => {
+    expect(normalizeForComparison(null)).toBeNull();
+    expect(normalizeForComparison('')).toBeNull();
+    expect(normalizeForComparison('42')).toBe(42);
+    expect(normalizeForComparison(' 42 ')).toBe(42);
+    expect(normalizeForComparison(true)).toBe(true);
+
+    const date = new Date('2026-02-03T10:20:30.000Z');
+    expect(convertResultToValue(5, 'number')).toBe(5);
+    expect(convertResultToValue(true, 'boolean')).toBe(true);
+    expect(convertResultToValue(date, 'date')).toBe('2026-02-03');
+    expect(convertResultToValue(date, 'datetime')).toBe('2026-02-03T10:20:30.000Z');
+    expect(convertResultToValue('ok', 'text')).toBe('ok');
   });
 });
