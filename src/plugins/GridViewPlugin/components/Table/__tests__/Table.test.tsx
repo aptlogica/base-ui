@@ -545,6 +545,25 @@ describe('Table', () => {
     expect(header.className).toContain('bg-yellow-50');
   });
 
+  it('sets header checkbox indeterminate when some rows are selected', () => {
+    mockUseFrontendPagination.mockReturnValue({
+      allLoadedData: [
+        { id: '1', _meta: { id: '1' }, data: { name: 'Row 1', value: 10 } },
+        { id: '2', _meta: { id: '2' }, data: { name: 'Row 2', value: 20 } },
+      ],
+      loadNextPage: vi.fn(),
+      hasMore: false,
+      isLoadingMore: false,
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /select row/i }));
+
+    const headerCheckbox = screen.getByRole('checkbox') as HTMLInputElement;
+    expect(headerCheckbox.indeterminate).toBe(true);
+  });
+
   it('toggles add column modal when clicking add column button', () => {
     const setIsColumnModalOpen = vi.fn();
     mockUseColumnManagement.mockReturnValue({

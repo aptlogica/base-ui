@@ -67,7 +67,7 @@ vi.mock('../../KanbanFieldSelector', () => ({
 
 vi.mock('../KanbanStack', () => ({
   __esModule: true,
-  default: ({ stack, onCardCreate, onCardEdit, onCardDelete, onStackDrop, onStackEdit, onStackDelete }: any) => (
+  default: ({ stack, onCardCreate, onCardEdit, onCardDelete, onCardMove, onStackDrop, onStackEdit, onStackDelete }: any) => (
     <div data-testid={`stack-${stack.id}`}>
       <span>{stack.name}</span>
       <div data-testid={`stack-color-${stack.id}`}>{stack.color}</div>
@@ -77,6 +77,7 @@ vi.mock('../KanbanStack', () => ({
       <button type="button" onClick={() => onCardCreate?.(stack.id)}>create-card</button>
       <button type="button" onClick={() => onCardEdit?.(stack.id)}>edit-card</button>
       <button type="button" onClick={() => onCardDelete?.(stack.id)}>delete-card</button>
+      <button type="button" onClick={() => onCardMove?.('r1', 'Done', 1)}>move-card</button>
       <button
         type="button"
         onClick={() => {
@@ -722,5 +723,69 @@ describe('KanbanBoard', () => {
     );
 
     expect(screen.getByTestId('stack-color-Todo')).toHaveTextContent('#ff0000');
+  });
+
+  it('builds edit modal initial values from the selected card', () => {
+    mockUseKanbanModals.mockReturnValue({
+      modalState: {
+        create: { isOpen: false, stackId: null },
+        edit: { isOpen: true, recordId: 'r1' },
+        delete: { isOpen: false, recordId: null },
+      },
+      handleOpenCreateRecord: vi.fn(),
+      handleOpenEditRecord: vi.fn(),
+      handleOpenDeleteRecord: vi.fn(),
+      handleCloseCreateModal: vi.fn(),
+      handleCloseEditModal: vi.fn(),
+      handleCloseDeleteModal: vi.fn(),
+      handleCreateSuccess: vi.fn(),
+      handleEditSuccess: vi.fn(),
+    });
+
+    render(
+      <ToastProvider>
+        <KanbanBoard tableData={baseTableData as any} onRefresh={vi.fn()} />
+      </ToastProvider>
+    );
+
+    expect(lastEditRecordProps?.initialValues?.['col-1']).toBe('Todo');
+    expect(lastEditRecordProps?.initialValues?.['col-2']).toBe('Task 1');
+  });
+
+  it('moves a card and persists card order', async () => {
+    const insertRowData = { mutateAsync: vi.fn().mockResolvedValue(undefined) };
+    const updateViewMeta = { mutateAsync: vi.fn().mockResolvedValue(undefined) };
+
+    render(
+      <ToastProvider>
+        <KanbanBoard
+          tableData={baseTableData as any}
+          onRefresh={vi.fn()}
+          actions={{
+            updateFieldOptions: vi.fn(),
+            changeGroupByColumn: vi.fn(),
+            updateViewConfig: vi.fn(),
+            deleteCard: vi.fn(),
+            duplicateCard: vi.fn(),
+            addRow: {} as any,
+            insertRowData,
+            deleteRecord: {} as any,
+            updateField: {} as any,
+            updateView: {} as any,
+            updateViewMeta,
+          }}
+        />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getAllByText('move-card')[0]);
+
+    await waitFor(() => {
+      expect(insertRowData.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({
+        column_id: 'col-1',
+        value: 'Done',
+      }));
+      expect(updateViewMeta.mutateAsync).toHaveBeenCalled();
+    });
   });
 });
