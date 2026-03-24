@@ -156,6 +156,32 @@ describe('FieldsPopover', () => {
       await userEvent.click(button);
       expect(screen.getByText('System fields')).toBeInTheDocument();
     });
+
+    it('should reveal system fields when toggled', async () => {
+      const columnsWithSystem = [
+        ...defaultColumns,
+        { id: 'sys1', title: 'Created At', column_name: 'created_at', uidt: 'createdTime', system: true },
+      ];
+      const configWithSystem = [
+        ...defaultFieldConfig,
+        { id: 'sys1', isHidden: false, position: 2 },
+      ];
+
+      render(
+        <FieldsPopover
+          columns={columnsWithSystem as any}
+          fieldConfig={configWithSystem}
+          onFieldToggle={mockOnFieldToggle}
+        />
+      );
+
+      const button = screen.getByRole('button', { name: /Fields/i });
+      await userEvent.click(button);
+      expect(screen.queryByText('Created At')).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByText('System fields'));
+      expect(screen.getByText('Created At')).toBeInTheDocument();
+    });
   });
 
   describe('Visible count', () => {

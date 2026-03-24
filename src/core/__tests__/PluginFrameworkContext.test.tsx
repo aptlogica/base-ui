@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import {
   PluginFrameworkProvider,
@@ -6,6 +7,7 @@ import {
   useExtensions,
 } from '../PluginFrameworkContext';
 import type { Plugin, PluginAPI } from '../types';
+import { registerCoreLayoutComponents } from '../coreLayoutRegistrations';
 
 vi.mock('../coreLayoutRegistrations', () => ({
   registerCoreLayoutComponents: vi.fn(),
@@ -238,6 +240,50 @@ describe('PluginFrameworkContext', () => {
       });
 
       consoleErrorSpy.mockRestore();
+    });
+
+    it('should set error when core layout registration fails', async () => {
+      const mockRegister = vi.mocked(registerCoreLayoutComponents);
+      mockRegister.mockImplementationOnce(() => {
+        throw new Error('core failed');
+      });
+
+      const TestComponent = () => {
+        const { error, loading } = usePluginFramework();
+        return (
+          <div>
+            <span data-testid="loading">{loading ? 'loading' : 'done'}</span>
+            <span data-testid="error">{error?.message || 'none'}</span>
+          </div>
+        );
+      };
+
+      render(
+        <PluginFrameworkProvider plugins={[]}>
+          <TestComponent />
+        </PluginFrameworkProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('loading').textContent).toBe('done');
+        expect(screen.getByTestId('error').textContent).toBe('core failed');
+      });
+    });
+
+    it('prevents duplicate initialization in StrictMode', async () => {
+      const plugin = createMockPlugin('strict-plugin');
+
+      render(
+        <React.StrictMode>
+          <PluginFrameworkProvider plugins={[plugin]}>
+            <div>Content</div>
+          </PluginFrameworkProvider>
+        </React.StrictMode>
+      );
+
+      await waitFor(() => {
+        expect(plugin.initialize).toHaveBeenCalledTimes(1);
+      });
     });
   });
 

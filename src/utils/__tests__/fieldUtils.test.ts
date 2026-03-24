@@ -334,6 +334,24 @@ describe('fieldUtils', () => {
         defaultValue: '01:00:00',
       });
     });
+
+    it('should map text defaults using field.defaultValue', () => {
+      const meta = mapFieldConfig({
+        type: 'text',
+        defaultValue: 'hello',
+        meta: { defaultValue: 'fallback' },
+      });
+      expect(meta).toMatchObject({ defaultValue: 'hello' });
+    });
+
+    it('should preserve meta defaultValue when field default is empty', () => {
+      const meta = mapFieldConfig({
+        type: 'text',
+        defaultValue: '',
+        meta: { defaultValue: 'fallback' },
+      });
+      expect(meta).toMatchObject({ defaultValue: 'fallback' });
+    });
   });
 
   describe('validateRequiredFields', () => {

@@ -24,6 +24,7 @@ vi.mock('../../modals/AccountSettingsModal', () => ({
 }));
 
 const matchMediaMock = vi.fn();
+let matchMediaListeners: Array<(event?: MediaQueryListEvent) => void> = [];
 
 describe('UserDropdown', () => {
   beforeEach(() => {
@@ -36,7 +37,11 @@ describe('UserDropdown', () => {
 
     matchMediaMock.mockReturnValue({
       matches: false,
-      addEventListener: vi.fn(),
+      addEventListener: (event: string, cb: (e?: MediaQueryListEvent) => void) => {
+        if (event === 'change') {
+          matchMediaListeners.push(cb);
+        }
+      },
       removeEventListener: vi.fn(),
     });
 
@@ -48,6 +53,7 @@ describe('UserDropdown', () => {
     localStorage.clear();
     document.documentElement.classList.remove('dark');
     document.documentElement.dataset.theme = '';
+    matchMediaListeners = [];
   });
 
   afterEach(() => {
@@ -95,6 +101,79 @@ describe('UserDropdown', () => {
       fireEvent.click(screen.getByText('Sign out'));
     });
     expect(logoutMock).toHaveBeenCalledTimes(1);
+    expect(navigateMock).toHaveBeenCalledWith('/login');
+  });
+
+  it('shows loading skeleton when profile is loading', () => {
+    useUserProfileMock.mockReturnValue({
+      data: null,
+      isLoading: true,
+    });
+
+    render(<UserDropdown />);
+
+    expect(screen.queryByText('Jane Doe')).not.toBeInTheDocument();
+    expect(document.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+  });
+
+  it('uses avatar when available', () => {
+    useUserProfileMock.mockReturnValue({
+      data: { data: { display_name: 'Jane Doe', email: 'jane@example.com', avatar: 'https://img' } },
+      isLoading: false,
+    });
+
+    render(<UserDropdown />);
+
+    const avatar = screen.getByAltText('Jane Doe') as HTMLImageElement;
+    expect(avatar).toBeInTheDocument();
+    expect(avatar.src).toContain('https://img');
+  });
+
+  it('derives display name from first and last name', () => {
+    useUserProfileMock.mockReturnValue({
+      data: { data: { first_name: 'Jane', last_name: 'Smith', email: 'jane@example.com' } },
+      isLoading: false,
+    });
+
+    render(<UserDropdown />);
+
+    expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+  });
+
+  it('initializes theme from saved preference', () => {
+    localStorage.setItem('theme', 'dark');
+    render(<UserDropdown />);
+
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    expect(document.documentElement.dataset.theme).toBe('dark');
+  });
+
+  it('uses system preference when no saved theme', () => {
+    matchMediaMock.mockReturnValue({
+      matches: true,
+      addEventListener: (event: string, cb: (e?: MediaQueryListEvent) => void) => {
+        if (event === 'change') {
+          matchMediaListeners.push(cb);
+        }
+      },
+      removeEventListener: vi.fn(),
+    });
+
+    render(<UserDropdown />);
+
+    expect(localStorage.getItem('theme')).toBe('dark');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
+
+  it('navigates to login when logout fails', async () => {
+    logoutMock.mockRejectedValueOnce(new Error('fail'));
+
+    render(<UserDropdown />);
+    fireEvent.click(screen.getByTitle(/user menu/i));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Sign out'));
+    });
+
     expect(navigateMock).toHaveBeenCalledWith('/login');
   });
 
