@@ -70,6 +70,10 @@ vi.mock('../KanbanStack', () => ({
   default: ({ stack, onCardCreate, onCardEdit, onCardDelete, onStackDrop, onStackEdit, onStackDelete }: any) => (
     <div data-testid={`stack-${stack.id}`}>
       <span>{stack.name}</span>
+      <div data-testid={`stack-color-${stack.id}`}>{stack.color}</div>
+      <div data-testid={`stack-cards-${stack.id}`}>
+        {(stack.cards || []).map((card: any) => card.id ?? card._meta?.id).join(',')}
+      </div>
       <button type="button" onClick={() => onCardCreate?.(stack.id)}>create-card</button>
       <button type="button" onClick={() => onCardEdit?.(stack.id)}>edit-card</button>
       <button type="button" onClick={() => onCardDelete?.(stack.id)}>delete-card</button>
@@ -654,5 +658,69 @@ describe('KanbanBoard', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(mockToastError).toHaveBeenCalled();
+  });
+
+  it('filters stacks based on search term and selected field', () => {
+    mockUseKanbanViewConfig.mockReturnValue({
+      searchTerm: 'Task 1',
+      selectedSearchField: { key: 'title' },
+      filters: [],
+      sorts: [],
+      draftFilter: null,
+      localFieldConfig: {},
+      handleSearch: vi.fn(),
+      handleAddFilter: vi.fn(),
+      handleRemoveFilter: vi.fn(),
+      handleUpdateFilter: vi.fn(),
+      handleSortChange: vi.fn(),
+      handleFieldToggle: vi.fn(),
+    });
+
+    render(
+      <ToastProvider>
+        <KanbanBoard tableData={baseTableData as any} onRefresh={vi.fn()} />
+      </ToastProvider>
+    );
+
+    expect(screen.getByTestId('stack-cards-Todo')).toHaveTextContent('r1');
+    expect(screen.getByTestId('stack-cards-Done')).toHaveTextContent('');
+  });
+
+  it('applies card order from view meta', () => {
+    const orderedData = {
+      ...baseTableData,
+      records: [
+        { id: 'a1', status: 'Todo', title: 'Task A' },
+        { id: 'a2', status: 'Todo', title: 'Task B' },
+      ],
+      views: [{ id: 'v1', type: 'kanban', meta: { view_target_field: 'col-1', cardOrder: { Todo: ['a2', 'a1'] } } }],
+    };
+
+    render(
+      <ToastProvider>
+        <KanbanBoard tableData={orderedData as any} onRefresh={vi.fn()} />
+      </ToastProvider>
+    );
+
+    expect(screen.getByTestId('stack-cards-Todo')).toHaveTextContent('a2,a1');
+  });
+
+  it('uses option colors when provided', () => {
+    const coloredData = {
+      ...baseTableData,
+      columns: [
+        { id: 'col-1', title: 'Status', column_name: 'status', uidt: 'select', meta: { options: [{ option: 'Todo', color: '#ff0000' }] } },
+      ],
+      records: [{ id: 'r1', status: 'Todo', title: 'Task 1' }],
+      views: [{ id: 'v1', type: 'kanban', meta: { view_target_field: 'col-1' } }],
+    };
+
+    render(
+      <ToastProvider>
+        <KanbanBoard tableData={coloredData as any} onRefresh={vi.fn()} />
+      </ToastProvider>
+    );
+
+    expect(screen.getByTestId('stack-color-Todo')).toHaveTextContent('#ff0000');
   });
 });

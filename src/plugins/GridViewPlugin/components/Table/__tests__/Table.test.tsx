@@ -475,6 +475,76 @@ describe('Table', () => {
     expect(screen.queryByTestId('column-dropdown')).not.toBeInTheDocument();
   });
 
+  it('hides column dropdown when read-only or no column permissions', () => {
+    mockUseBaseAccess.mockReturnValue({
+      isBaseReadOnly: () => true,
+      canCreateColumn: () => false,
+      canDeleteRecord: () => false,
+      canUpdateRecord: () => false,
+      canCreateRecord: () => false,
+      canUpdateColumn: () => false,
+      canDeleteColumn: () => false,
+    });
+
+    mockUseTableViewConfig.mockReturnValue({
+      viewConfigState: { filters: [], sorts: [], groupBy: [], columnWidths: {} },
+      setViewConfigState: vi.fn(),
+      searchTerm: '',
+      setSearchTerm: vi.fn(),
+      selectedSearchField: null,
+      setSelectedSearchField: vi.fn(),
+      realTimeFilter: null,
+      localFieldConfig: {},
+      visibleColumns: [
+        { id: 'col-1', key: 'name', column_name: 'name', title: 'Name', type: 'text', isSystem: false, system: false },
+      ],
+      handleAddFilter: vi.fn(),
+      handleRemoveFilter: vi.fn(),
+      handleUpdateFilter: vi.fn(),
+      handleGroupByChange: vi.fn(),
+      handleSortChange: vi.fn(),
+      handleEnsureAllFieldsRegistered: vi.fn(),
+      handleFieldToggle: vi.fn(),
+      handleFieldOrderChange: vi.fn(),
+      updateViewConfigBackend: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.queryByTestId('column-dropdown')).not.toBeInTheDocument();
+  });
+
+  it('renders new column highlight when column is marked as new', () => {
+    mockUseTableViewConfig.mockReturnValue({
+      viewConfigState: { filters: [], sorts: [], groupBy: [], columnWidths: {} },
+      setViewConfigState: vi.fn(),
+      searchTerm: '',
+      setSearchTerm: vi.fn(),
+      selectedSearchField: null,
+      setSelectedSearchField: vi.fn(),
+      realTimeFilter: null,
+      localFieldConfig: {},
+      visibleColumns: [
+        { id: 'col-1', key: 'name', column_name: 'name', title: 'Name', type: 'text', isSystem: false, system: false, isNew: true },
+      ],
+      handleAddFilter: vi.fn(),
+      handleRemoveFilter: vi.fn(),
+      handleUpdateFilter: vi.fn(),
+      handleGroupByChange: vi.fn(),
+      handleSortChange: vi.fn(),
+      handleEnsureAllFieldsRegistered: vi.fn(),
+      handleFieldToggle: vi.fn(),
+      handleFieldOrderChange: vi.fn(),
+      updateViewConfigBackend: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    const header = screen.getByRole('columnheader');
+    expect(header.className).toContain('ring-2');
+    expect(header.className).toContain('bg-yellow-50');
+  });
+
   it('toggles add column modal when clicking add column button', () => {
     const setIsColumnModalOpen = vi.fn();
     mockUseColumnManagement.mockReturnValue({
