@@ -10,11 +10,24 @@ const mockUseKanbanStacks = vi.fn();
 const mockUseBaseAccess = vi.fn();
 let lastCreateRecordProps: any = null;
 let lastEditRecordProps: any = null;
+const mockToastError = vi.fn();
 
 vi.mock('../../../../../hooks/useBaseAccess', () => ({
   useBaseAccess: mockUseBaseAccess,
 }));
 
+vi.mock('../../../../../components/common/Toast', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../../components/common/Toast')>();
+  return {
+    ...actual,
+    useToast: () => ({
+      success: vi.fn(),
+      error: mockToastError,
+      info: vi.fn(),
+      warning: vi.fn(),
+    }),
+  };
+});
 
 vi.mock('../../../hooks/useKanbanViewConfig', () => ({
   useKanbanViewConfig: mockUseKanbanViewConfig,
@@ -73,8 +86,21 @@ vi.mock('../KanbanStack', () => ({
       >
         drop-stack
       </button>
-      <button type="button" onClick={() => onStackEdit?.('Todo', 'Done')}>edit-stack</button>
-      <button type="button" onClick={() => onStackDelete?.('Todo')}>delete-stack</button>
+      <button
+        type="button"
+        onClick={() => {
+          const e = {
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+            dataTransfer: { getData: () => 'Uncategorized' },
+          } as any;
+          onStackDrop?.(stack.id, e);
+        }}
+      >
+        drop-uncat
+      </button>
+      <button type="button" onClick={() => onStackEdit?.(stack.id, 'Done')}>edit-stack</button>
+      <button type="button" onClick={() => onStackDelete?.(stack.id)}>delete-stack</button>
     </div>
   ),
 }));
@@ -169,6 +195,7 @@ describe('KanbanBoard', () => {
     vi.clearAllMocks();
     lastCreateRecordProps = null;
     lastEditRecordProps = null;
+    mockToastError.mockClear();
     setupDefaultMocks();
   });
 
@@ -533,5 +560,99 @@ describe('KanbanBoard', () => {
 
     fireEvent.click(screen.getAllByText('Search')[0]);
     expect(handleSearch).toHaveBeenCalled();
+  });
+
+  it('closes stack input on Escape and clears pending name', () => {
+    const setUiState = vi.fn();
+    mockUseKanbanStacks.mockReturnValue({
+      uiState: { isCreateStack: false, newOption: 'Temp' },
+      collapsedStacks: new Set<string>(),
+      setUiState,
+      handleStackCollapse: vi.fn(),
+      handleCreateStackClick: vi.fn(),
+      handleNewOptionChange: vi.fn(),
+      handleStackDragStart: vi.fn(),
+    });
+
+    render(
+      <ToastProvider>
+        <KanbanBoard tableData={baseTableData as any} onRefresh={vi.fn()} />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /add new stack/i }));
+    const input = screen.getByPlaceholderText('Enter Stack Name');
+    fireEvent.keyDown(input, { key: 'Escape' });
+
+    expect(setUiState).toHaveBeenCalled();
+    expect(screen.queryByPlaceholderText('Enter Stack Name')).not.toBeInTheDocument();
+  });
+
+  it('does not persist stack order when dropping Uncategorized', async () => {
+    const updateViewMeta = { mutateAsync: vi.fn().mockResolvedValue(undefined) };
+    render(
+      <ToastProvider>
+        <KanbanBoard
+          tableData={baseTableData as any}
+          onRefresh={vi.fn()}
+          actions={{
+            updateFieldOptions: vi.fn(),
+            changeGroupByColumn: vi.fn(),
+            updateViewConfig: vi.fn(),
+            deleteCard: vi.fn(),
+            duplicateCard: vi.fn(),
+            addRow: {} as any,
+            insertRowData: { mutateAsync: vi.fn() } as any,
+            deleteRecord: {} as any,
+            updateField: {} as any,
+            updateView: {} as any,
+            updateViewMeta,
+          }}
+        />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getAllByText('drop-uncat')[0]);
+    await waitFor(() => {
+      expect(updateViewMeta.mutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  it('shows toast when creating duplicate stack name', () => {
+    const updateFieldOptions = vi.fn().mockResolvedValue(undefined);
+    const duplicateData = {
+      ...baseTableData,
+      columns: [
+        { id: 'col-1', title: 'Status', column_name: 'status', uidt: 'select', meta: { options: ['New Stack'] } },
+      ],
+    };
+
+    render(
+      <ToastProvider>
+        <KanbanBoard
+          tableData={duplicateData as any}
+          onRefresh={vi.fn()}
+          actions={{
+            updateFieldOptions,
+            changeGroupByColumn: vi.fn(),
+            updateViewConfig: vi.fn(),
+            deleteCard: vi.fn(),
+            duplicateCard: vi.fn(),
+            addRow: {} as any,
+            insertRowData: { mutateAsync: vi.fn() } as any,
+            deleteRecord: {} as any,
+            updateField: {} as any,
+            updateView: {} as any,
+            updateViewMeta: { mutateAsync: vi.fn() } as any,
+          }}
+        />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /add new stack/i }));
+    const input = screen.getByPlaceholderText('Enter Stack Name');
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(mockToastError).toHaveBeenCalled();
   });
 });

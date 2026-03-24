@@ -1,10 +1,11 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ToastProvider } from '../../../../../components/common/Toast';
 import { applyFilters } from '../../../../../utils/filterUtils';
 import { sortRowsByDataKey } from '../../../../../utils/sortUtils';
 let Table: typeof import('../Table').Table;
+const mockToastError = vi.fn();
 
 const mockUseAllViews = vi.fn();
 const mockUseTableViewConfig = vi.fn();
@@ -67,7 +68,11 @@ vi.mock('../../../../../components/shared/table/SortPopover', () => ({
 }));
 
 vi.mock('../../../../../components/shared/table/Search', () => ({
-  Search: () => <div data-testid="search" />,
+  Search: ({ onSearch }: any) => (
+    <button type="button" onClick={() => onSearch?.('Row', { key: 'name' })}>
+      Search
+    </button>
+  ),
 }));
 
 vi.mock('../components/ContextMenu', () => ({
@@ -146,7 +151,7 @@ vi.mock('../../../../../components/common/Toast', async (importOriginal) => {
     ...actual,
     useToast: () => ({
       success: vi.fn(),
-      error: vi.fn(),
+      error: mockToastError,
       info: vi.fn(),
       warning: vi.fn(),
     }),
@@ -265,6 +270,7 @@ const renderWithToast = (ui: React.ReactElement) =>
 describe('Table', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockToastError.mockClear();
     setupDefaultMocks();
     (globalThis as any).ResizeObserver = class {
       observe() {}
@@ -713,5 +719,54 @@ describe('Table', () => {
     fireEvent.click(addButtons[0]);
 
     expect(mutateAsync).toHaveBeenCalledWith({ model_id: 'tbl-1' });
+  });
+
+  it('invokes search handler to update search state', () => {
+    const setSearchTerm = vi.fn();
+    const setSelectedSearchField = vi.fn();
+    mockUseTableViewConfig.mockReturnValue({
+      viewConfigState: { filters: [], sorts: [], groupBy: [], columnWidths: {} },
+      setViewConfigState: vi.fn(),
+      searchTerm: '',
+      setSearchTerm,
+      selectedSearchField: null,
+      setSelectedSearchField,
+      realTimeFilter: null,
+      localFieldConfig: {},
+      visibleColumns: [
+        { id: 'col-1', key: 'name', column_name: 'name', title: 'Name', type: 'text', isSystem: false, system: false },
+        { id: 'col-2', key: 'value', column_name: 'value', title: 'Value', type: 'number', isSystem: false, system: false },
+      ],
+      handleAddFilter: vi.fn(),
+      handleRemoveFilter: vi.fn(),
+      handleUpdateFilter: vi.fn(),
+      handleGroupByChange: vi.fn(),
+      handleSortChange: vi.fn(),
+      handleEnsureAllFieldsRegistered: vi.fn(),
+      handleFieldToggle: vi.fn(),
+      handleFieldOrderChange: vi.fn(),
+      updateViewConfigBackend: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: /search/i })[0]);
+    expect(setSearchTerm).toHaveBeenCalledWith('Row');
+    expect(setSelectedSearchField).toHaveBeenCalledWith({ key: 'name' });
+  });
+
+  it('shows error toast when add row mutation fails', async () => {
+    const mutateAsync = vi.fn().mockRejectedValue(new Error('fail'));
+
+    renderWithToast(
+      <Table
+        tableData={tableData as any}
+        onRefresh={vi.fn()}
+        actions={{ addRow: { mutateAsync } } as any}
+      />
+    );
+
+    fireEvent.click(screen.getAllByRole('button', { name: /add row/i })[0]);
+    await waitFor(() => expect(mockToastError).toHaveBeenCalled());
   });
 });
