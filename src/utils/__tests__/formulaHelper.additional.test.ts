@@ -13,6 +13,10 @@ import {
   normalizeForComparison,
   convertResultToValue,
   type FormulaContext,
+  parseFieldReference,
+  getColumnIdentifier,
+  getFieldType,
+  evaluateTextArgument,
 } from '../formulaHelper';
 
 describe('formulaHelper additional branches', () => {
@@ -112,5 +116,27 @@ describe('formulaHelper additional branches', () => {
     expect(convertResultToValue(date, 'date')).toBe('2026-02-03');
     expect(convertResultToValue(date, 'datetime')).toBe('2026-02-03T10:20:30.000Z');
     expect(convertResultToValue('ok', 'text')).toBe('ok');
+  });
+
+  it('handles field reference parsing and column lookups across column sources', () => {
+    const ctx: FormulaContext = {
+      columns: [
+        { title: 'Local', key: 'local_key', type: 'text' },
+      ],
+      allColumns: [
+        { title: 'Global', column_name: 'global_name', uidt: 'number', key: 'global_key' },
+      ],
+    };
+
+    expect(parseFieldReference('{Global}')).toBe('Global');
+    expect(parseFieldReference('Global')).toBe('');
+    expect(getColumnIdentifier('Global', ctx)).toBe('global_key');
+    expect(getFieldType('Global', ctx)).toBe('number');
+  });
+
+  it('unescapes quoted text arguments and preserves non-numeric strings', () => {
+    const ctx: FormulaContext = { columns: [], allColumns: [] };
+    expect(evaluateTextArgument('"He said \\"hi\\""', ctx)).toBe('He said "hi"');
+    expect(normalizeForComparison('01')).toBe('01');
   });
 });

@@ -364,4 +364,26 @@ describe('LinksField', () => {
     await user.click(screen.getByRole('button', { name: /\+1/i }));
     expect(screen.getByText('One to One')).toBeInTheDocument();
   });
+
+  it('loads more when arrowing past the last record with hasMore', async () => {
+    const user = userEvent.setup();
+    mockHasMore = true;
+
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'one-to-one' } } }}
+        value={[]}
+        onChange={vi.fn()}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+
+    expect(loadNextPage).toHaveBeenCalled();
+  });
 });
