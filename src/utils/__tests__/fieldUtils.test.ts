@@ -184,6 +184,14 @@ describe('fieldUtils', () => {
       expect(getFieldDefaultValue(field)).toBe('');
     });
 
+    it('should return zero defaultValue when explicitly provided', () => {
+      const field = {
+        type: 'number',
+        meta: { defaultValue: 0 },
+      };
+      expect(getFieldDefaultValue(field)).toBe(0);
+    });
+
     it('should prioritize defaultValue over type-specific defaults', () => {
       const field = {
         type: 'checkbox',

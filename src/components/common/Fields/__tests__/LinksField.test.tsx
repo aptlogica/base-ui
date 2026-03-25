@@ -386,4 +386,52 @@ describe('LinksField', () => {
 
     expect(loadNextPage).toHaveBeenCalled();
   });
+
+  it('reverts optimistic add when linking fails', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    mutateAsyncMock.mockRejectedValueOnce(new Error('fail'));
+
+    const initialValue: any[] = [];
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'one-to-one' } } }}
+        value={initialValue}
+        onChange={onChange}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    await user.click(screen.getByText('Record One'));
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+    expect(onChange).toHaveBeenLastCalledWith(initialValue);
+  });
+
+  it('reverts optimistic remove when unlink fails', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    mutateAsyncMock.mockRejectedValueOnce(new Error('fail'));
+
+    const originalValue = [{ id: 1, title: 'Record One' }];
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'one-to-one' } } }}
+        value={originalValue}
+        onChange={onChange}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    await user.click(screen.getByRole('button', { name: /unlink record one/i }));
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+    expect(onChange).toHaveBeenLastCalledWith(originalValue);
+  });
 });

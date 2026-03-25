@@ -129,9 +129,20 @@ describe('formulaHelper additional branches', () => {
     };
 
     expect(parseFieldReference('{Global}')).toBe('Global');
+    expect(parseFieldReference('{}')).toBe('');
     expect(parseFieldReference('Global')).toBe('');
     expect(getColumnIdentifier('Global', ctx)).toBe('global_key');
     expect(getFieldType('Global', ctx)).toBe('number');
+  });
+
+  it('prefers columns when allColumns is empty', () => {
+    const ctx: FormulaContext = {
+      columns: [{ title: 'Local', column_name: 'local_name', uidt: 'text' }],
+      allColumns: [],
+    };
+
+    expect(getColumnIdentifier('Local', ctx)).toBe('local_name');
+    expect(getFieldType('Local', ctx)).toBe('text');
   });
 
   it('unescapes quoted text arguments and preserves non-numeric strings', () => {

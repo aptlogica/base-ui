@@ -564,6 +564,60 @@ describe('Table', () => {
     expect(headerCheckbox.indeterminate).toBe(true);
   });
 
+  it('shows column dropdown when delete permission is allowed', () => {
+    mockUseBaseAccess.mockReturnValue({
+      isBaseReadOnly: () => false,
+      canCreateColumn: () => false,
+      canDeleteRecord: () => false,
+      canUpdateRecord: () => false,
+      canCreateRecord: () => false,
+      canUpdateColumn: () => false,
+      canDeleteColumn: () => true,
+    });
+
+    mockUseTableViewConfig.mockReturnValue({
+      viewConfigState: { filters: [], sorts: [], groupBy: [], columnWidths: {} },
+      setViewConfigState: vi.fn(),
+      searchTerm: '',
+      setSearchTerm: vi.fn(),
+      selectedSearchField: null,
+      setSelectedSearchField: vi.fn(),
+      realTimeFilter: null,
+      localFieldConfig: {},
+      visibleColumns: [
+        { id: 'col-1', key: 'name', column_name: 'name', title: 'Name', type: 'text', isSystem: false, system: false },
+      ],
+      handleAddFilter: vi.fn(),
+      handleRemoveFilter: vi.fn(),
+      handleUpdateFilter: vi.fn(),
+      handleGroupByChange: vi.fn(),
+      handleSortChange: vi.fn(),
+      handleEnsureAllFieldsRegistered: vi.fn(),
+      handleFieldToggle: vi.fn(),
+      handleFieldOrderChange: vi.fn(),
+      updateViewConfigBackend: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('column-dropdown')).toBeInTheDocument();
+  });
+
+  it('shows singular row count when only one row and no paging', () => {
+    mockUseFrontendPagination.mockReturnValue({
+      allLoadedData: [
+        { id: '1', _meta: { id: '1' }, data: { name: 'Row 1', value: 10 } },
+      ],
+      loadNextPage: vi.fn(),
+      hasMore: false,
+      isLoadingMore: false,
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByText(/1 row/i)).toBeInTheDocument();
+  });
+
   it('toggles add column modal when clicking add column button', () => {
     const setIsColumnModalOpen = vi.fn();
     mockUseColumnManagement.mockReturnValue({

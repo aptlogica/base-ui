@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -227,6 +227,45 @@ describe('HeaderWorkspaceDropdown', () => {
     await user.click(triggerButtons[0]);
 
     expect(screen.getByText('Workspace Maintainer')).toBeInTheDocument();
+  });
+
+  it('selects the first workspace when no selection exists', async () => {
+    workspaceBusinessLogicState.workspaces = [
+      { id: 'w1', title: 'Alpha Workspace', access_level: 'owner' },
+      { id: 'w2', title: 'Beta Workspace', access_level: 'maintainer' },
+    ];
+    workspaceBusinessLogicState.selectedWorkspaceId = null;
+    workspaceBusinessLogicState.selectedWorkspace = null;
+    workspaceBusinessLogicState.setSelectedWorkspace = vi.fn();
+    navigationStoreState.setWorkspace = vi.fn();
+
+    renderWithPath('/homepage');
+
+    await waitFor(() => {
+      expect(workspaceBusinessLogicState.setSelectedWorkspace).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'w1' })
+      );
+      expect(navigationStoreState.setWorkspace).toHaveBeenCalledWith('w1');
+    });
+  });
+
+  it('falls back to first workspace when selected id is missing', async () => {
+    workspaceBusinessLogicState.workspaces = [
+      { id: 'w1', title: 'Alpha Workspace', access_level: 'owner' },
+    ];
+    workspaceBusinessLogicState.selectedWorkspaceId = 'missing';
+    workspaceBusinessLogicState.selectedWorkspace = null;
+    workspaceBusinessLogicState.setSelectedWorkspace = vi.fn();
+    navigationStoreState.setWorkspace = vi.fn();
+
+    renderWithPath('/homepage');
+
+    await waitFor(() => {
+      expect(workspaceBusinessLogicState.setSelectedWorkspace).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'w1' })
+      );
+      expect(navigationStoreState.setWorkspace).toHaveBeenCalledWith('w1');
+    });
   });
 });
 

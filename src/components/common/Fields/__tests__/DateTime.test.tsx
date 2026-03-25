@@ -201,7 +201,7 @@ describe('DateTime', () => {
       <DateTime
         value=""
         onChange={onChange}
-        config={{ dateFormat: 'YYYY-MM-DD', timeFormat: 'HH:mm:ss', hourFormat: '24' }}
+        config={{ dateFormat: 'YYYY-MM-DD', timeFormat: 'HH:mm', hourFormat: '24' }}
       />
     );
 

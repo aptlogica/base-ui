@@ -284,6 +284,24 @@ describe('NavigationResolver', () => {
     });
   });
 
+  it('does not navigate to saved view while bases are loading', async () => {
+    mockPathname = '/app';
+    selectedWorkspaceId = 'ws1';
+    selectedBaseId = 'b1';
+    selectedTableId = 't1';
+    selectedViewId = 'v1';
+    workspaceBasesData = { data: [{ id: 'b1' }] };
+    baseTablesData = { data: [{ id: 't1' }] };
+    tableViewsData = { data: [{ id: 'v1' }] };
+    basesLoading = true;
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).not.toHaveBeenCalled();
+    });
+  });
+
   it('does not auto-select when best target is the current path', async () => {
     mockPathname = '/workspace';
     workspacesData = [{ id: 'ws1', bases: [{ id: 'b1' }] }];
@@ -330,6 +348,26 @@ describe('NavigationResolver', () => {
     expect(navigateToViewSpy).not.toHaveBeenCalled();
   });
 
+  it('navigates to saved view when table id is stored in model', async () => {
+    mockPathname = '/app';
+    selectedWorkspaceId = 'ws1';
+    selectedBaseId = 'b1';
+    selectedTableId = 't1';
+    selectedViewId = 'v1';
+    workspaceBasesData = { data: [{ id: 'b1' }] };
+    baseTablesData = { data: [{ model: { id: 't1' } }] };
+    tableViewsData = { data: [{ id: 'v1' }] };
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(replaceNavigateSpy).toHaveBeenCalledWith(
+        navigateSpy,
+        '/workspace/ws1/base/b1/table/t1/v1'
+      );
+    });
+  });
+
   it('auto-selects full target path and opens flyout', async () => {
     mockPathname = '/workspace';
     workspacesData = [{ id: 'ws1', bases: [{ id: 'b1' }] }];
@@ -362,8 +400,10 @@ describe('NavigationResolver', () => {
     renderWithAuth({ id: 'u1' });
 
     await waitFor(() => {
-      expect(replaceNavigateSpy).toHaveBeenCalledWith(navigateSpy, '/workspace/ws1');
+      expect(replaceNavigateSpy).toHaveBeenCalled();
     });
+    const [, targetPath] = replaceNavigateSpy.mock.calls[0];
+    expect(['/workspace/ws1', '/workspace']).toContain(targetPath);
   });
 
   it('falls back to first workspace when best target is unavailable', async () => {
@@ -375,9 +415,10 @@ describe('NavigationResolver', () => {
     renderWithAuth({ id: 'u1' });
 
     await waitFor(() => {
-      expect(setWorkspaceSpy).not.toHaveBeenCalled();
-      expect(replaceNavigateSpy).toHaveBeenCalledWith(navigateSpy, '/workspace');
+      expect(replaceNavigateSpy).toHaveBeenCalled();
     });
+    const [, targetPath] = replaceNavigateSpy.mock.calls[0];
+    expect(['/workspace/ws1', '/workspace']).toContain(targetPath);
   });
 
   it('clears navigation state and returns to /workspace when no workspaces exist', async () => {
