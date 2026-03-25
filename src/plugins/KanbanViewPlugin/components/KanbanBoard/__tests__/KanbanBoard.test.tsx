@@ -255,6 +255,40 @@ describe('KanbanBoard', () => {
     expect(screen.queryByRole('button', { name: /add new stack/i })).not.toBeInTheDocument();
   });
 
+  it('does not open create modal when read-only and card action is clicked', () => {
+    const handleOpenCreateRecord = vi.fn();
+    mockUseBaseAccess.mockReturnValue({
+      isBaseReadOnly: () => true,
+      canCreateRecord: () => false,
+      canDeleteRecord: () => false,
+      canUpdateRecord: () => false,
+    });
+    mockUseKanbanModals.mockReturnValue({
+      modalState: {
+        create: { isOpen: false, stackId: null },
+        edit: { isOpen: false, recordId: null },
+        delete: { isOpen: false, recordId: null },
+      },
+      handleOpenCreateRecord,
+      handleOpenEditRecord: vi.fn(),
+      handleOpenDeleteRecord: vi.fn(),
+      handleCloseCreateModal: vi.fn(),
+      handleCloseEditModal: vi.fn(),
+      handleCloseDeleteModal: vi.fn(),
+      handleCreateSuccess: vi.fn(),
+      handleEditSuccess: vi.fn(),
+    });
+
+    render(
+      <ToastProvider>
+        <KanbanBoard tableData={baseTableData as any} onRefresh={vi.fn()} />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getAllByText('create-card')[0]);
+    expect(handleOpenCreateRecord).not.toHaveBeenCalled();
+  });
+
   it('creates a new stack on Enter and handles duplicates', async () => {
     const updateFieldOptions = vi.fn().mockResolvedValue(undefined);
     const onRefresh = vi.fn();
@@ -392,6 +426,39 @@ describe('KanbanBoard', () => {
       expect(insertRowData.mutateAsync).toHaveBeenCalled();
       expect(updateFieldOptions).toHaveBeenCalled();
       expect(onRefresh).toHaveBeenCalled();
+    });
+  });
+
+  it('does not delete Uncategorized stack', async () => {
+    const updateFieldOptions = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <ToastProvider>
+        <KanbanBoard
+          tableData={baseTableData as any}
+          onRefresh={vi.fn()}
+          actions={{
+            updateFieldOptions,
+            changeGroupByColumn: vi.fn(),
+            updateViewConfig: vi.fn(),
+            deleteCard: vi.fn(),
+            duplicateCard: vi.fn(),
+            addRow: {} as any,
+            insertRowData: { mutateAsync: vi.fn() } as any,
+            deleteRecord: {} as any,
+            updateField: {} as any,
+            updateView: {} as any,
+            updateViewMeta: { mutateAsync: vi.fn() } as any,
+          }}
+        />
+      </ToastProvider>
+    );
+
+    const uncategorizedStack = screen.getByTestId('stack-Uncategorized');
+    fireEvent.click(within(uncategorizedStack).getByText('delete-stack'));
+
+    await waitFor(() => {
+      expect(updateFieldOptions).not.toHaveBeenCalled();
     });
   });
 
@@ -701,6 +768,32 @@ describe('KanbanBoard', () => {
 
     expect(screen.getByTestId('stack-cards-Todo')).toHaveTextContent('r1');
     expect(screen.getByTestId('stack-cards-Done')).toHaveTextContent('');
+  });
+
+  it('does not filter stacks when search field is not selected', () => {
+    mockUseKanbanViewConfig.mockReturnValue({
+      searchTerm: 'Task 1',
+      selectedSearchField: null,
+      filters: [],
+      sorts: [],
+      draftFilter: null,
+      localFieldConfig: {},
+      handleSearch: vi.fn(),
+      handleAddFilter: vi.fn(),
+      handleRemoveFilter: vi.fn(),
+      handleUpdateFilter: vi.fn(),
+      handleSortChange: vi.fn(),
+      handleFieldToggle: vi.fn(),
+    });
+
+    render(
+      <ToastProvider>
+        <KanbanBoard tableData={baseTableData as any} onRefresh={vi.fn()} />
+      </ToastProvider>
+    );
+
+    expect(screen.getByTestId('stack-cards-Todo')).toHaveTextContent('r1');
+    expect(screen.getByTestId('stack-cards-Done')).toHaveTextContent('r2');
   });
 
   it('applies card order from view meta', () => {

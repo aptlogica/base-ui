@@ -7,6 +7,9 @@ import { ToastProvider } from '../../../../../components/common/Toast';
 import type { TableData } from '../../../../../types/api.types';
 import { checkCriticalFieldUsageInViews, checkFieldUsageInViews } from '../../../../../utils/fieldUsageUtils';
 
+const mockToastSuccess = vi.fn();
+const mockToastError = vi.fn();
+
 vi.mock('../../../../../hooks/useApi', () => ({
   useAllViews: () => ({ data: [] }),
 }));
@@ -15,6 +18,20 @@ vi.mock('../../../../../utils/fieldUsageUtils', () => ({
   checkCriticalFieldUsageInViews: vi.fn(() => ({ isUsedInViews: false, usedInViews: [] })),
   checkFieldUsageInViews: vi.fn(() => ({ isUsedInViews: false, usedInViews: [] })),
 }));
+
+vi.mock('../../../../../components/common/Toast', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../../components/common/Toast')>();
+  return {
+    ...actual,
+    useToast: () => ({
+      success: mockToastSuccess,
+      error: mockToastError,
+      info: vi.fn(),
+      warning: vi.fn(),
+      show: vi.fn(),
+    }),
+  };
+});
 
 let isReadOnlyState = false;
 vi.mock('../../../../../hooks/useBaseAccess', () => ({
@@ -156,7 +173,17 @@ vi.mock('../../../../../components/modals/NewColumnModal', () => ({
 }));
 
 vi.mock('../../../../../components/modals/DeleteConfirmModal', () => ({
-  default: () => <div data-testid="delete-confirm-modal">DeleteConfirmModal</div>,
+  default: (props: { onConfirm?: () => void; onClose?: () => void }) => (
+    <div data-testid="delete-confirm-modal">
+      DeleteConfirmModal
+      <button data-testid="confirm-delete" onClick={() => props.onConfirm?.()}>
+        Confirm
+      </button>
+      <button data-testid="close-delete" onClick={() => props.onClose?.()}>
+        Close
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock('../../../../../components/modals/UpdateFieldConfirmModal', () => ({
@@ -591,6 +618,23 @@ describe('FormView', () => {
       expect(formModalsState.handleFieldEdit).not.toHaveBeenCalled();
     });
 
+    it('blocks delete for system fields and shows toast', () => {
+      render(
+        <FormView
+          tableData={defaultTableData}
+          viewId="v1"
+          onRefresh={mockOnRefresh}
+          actions={mockActions}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(screen.getByTestId('delete-system-btn'));
+
+      expect(formModalsState.handleDeleteField).not.toHaveBeenCalled();
+      expect(mockToastError).toHaveBeenCalled();
+    });
+
     it('blocks delete when field is used in other views', () => {
       const criticalUsage = vi.mocked(checkCriticalFieldUsageInViews);
       criticalUsage.mockReturnValueOnce({
@@ -611,6 +655,31 @@ describe('FormView', () => {
       fireEvent.click(screen.getByTestId('delete-field-btn'));
 
       expect(formModalsState.handleDeleteField).not.toHaveBeenCalled();
+    });
+
+    it('blocks delete when field is referenced in other views (non-critical)', () => {
+      const criticalUsage = vi.mocked(checkCriticalFieldUsageInViews);
+      const usage = vi.mocked(checkFieldUsageInViews);
+      criticalUsage.mockReturnValueOnce({ isUsedInViews: false, usedInViews: [] });
+      usage.mockReturnValueOnce({
+        isUsedInViews: true,
+        usedInViews: [{ viewName: 'Grid' }],
+      } as any);
+
+      render(
+        <FormView
+          tableData={defaultTableData}
+          viewId="v1"
+          onRefresh={mockOnRefresh}
+          actions={mockActions}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(screen.getByTestId('delete-field-btn'));
+
+      expect(formModalsState.handleDeleteField).not.toHaveBeenCalled();
+      expect(mockToastError).toHaveBeenCalled();
     });
 
     it('updates field when edit modal saves with same type', async () => {
@@ -732,6 +801,74 @@ describe('FormView', () => {
       expect(formModalsState.setEditModalOpen).toHaveBeenCalledWith(false);
       expect(formModalsState.setEditColumn).toHaveBeenCalledWith(null);
       expect(mockOnRefresh).toHaveBeenCalled();
+    });
+
+    it('closes edit modal when no changes detected', async () => {
+      formModalsState.editModalOpen = true;
+      formModalsState.editColumn = {
+        id: 'c2',
+        uidt: 'longText',
+        title: 'Description',
+        description: '',
+        required: false,
+        meta: {},
+        config: {},
+      };
+
+      newColumnSavePayload = {
+        title: 'Description',
+        description: '',
+        type: 'longText',
+        meta: {},
+        required: false,
+        config: {},
+        column_name: 'description',
+        order_index: 1,
+      };
+
+      render(
+        <FormView
+          tableData={defaultTableData}
+          viewId="v1"
+          onRefresh={mockOnRefresh}
+          actions={mockActions}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      const saveButton = await screen.findByTestId('save-new-column');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(formModalsState.setEditModalOpen).toHaveBeenCalledWith(false);
+        expect(formModalsState.setEditColumn).toHaveBeenCalledWith(null);
+      });
+      expect(mockActions.updateField.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('confirms delete and clears selected field', async () => {
+      formModalsState.deleteConfirmModalOpen = true;
+      formModalsState.fieldToDelete = 'c2';
+      formPanelState.selectedFieldId = 'c2';
+      (mockActions.deleteFieldData as Mock).mockResolvedValueOnce(undefined);
+
+      render(
+        <FormView
+          tableData={defaultTableData}
+          viewId="v1"
+          onRefresh={mockOnRefresh}
+          actions={mockActions}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(screen.getByTestId('confirm-delete'));
+
+      await waitFor(() => {
+        expect(mockActions.deleteFieldData).toHaveBeenCalledWith('c2');
+      });
+      expect(formPanelState.setSelectedFieldId).toHaveBeenCalledWith(null);
+      expect(formModalsState.handleCloseDeleteConfirmModal).toHaveBeenCalled();
     });
 
     it('executes right panel actions when sidebar is open', async () => {

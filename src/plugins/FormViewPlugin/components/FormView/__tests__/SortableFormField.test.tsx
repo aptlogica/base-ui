@@ -89,6 +89,23 @@ describe('SortableFormField', () => {
 
       expect(screen.getByText('Enter the title')).toBeInTheDocument();
     });
+
+    it('shows See more toggle for long description', () => {
+      const longDescription = 'A'.repeat(200);
+      const fieldWithDesc: FormField = { ...mockField, description: longDescription };
+
+      render(
+        <SortableFormField
+          field={fieldWithDesc}
+          value=""
+          onChange={mockOnChange}
+        />
+      );
+
+      expect(screen.getByText('See more')).toBeInTheDocument();
+      fireEvent.click(screen.getByText('See more'));
+      expect(screen.getByText('See less')).toBeInTheDocument();
+    });
   });
 
   describe('Value and onChange', () => {
@@ -230,6 +247,20 @@ describe('SortableFormField', () => {
 
       expect(screen.getByLabelText('Drag to reorder field')).toBeInTheDocument();
     });
+
+    it('renders drag/drop zone when onDragOver or onDrop provided', () => {
+      render(
+        <SortableFormField
+          field={mockField}
+          value=""
+          onChange={mockOnChange}
+          onDragOver={vi.fn()}
+          onDrop={vi.fn()}
+        />
+      );
+
+      expect(screen.getByLabelText('Drag and drop zone')).toBeInTheDocument();
+    });
   });
 
   describe('Edge cases', () => {
@@ -249,6 +280,53 @@ describe('SortableFormField', () => {
       render(
         <SortableFormField
           field={mockField}
+          onChange={mockOnChange}
+        />
+      );
+
+      const input = screen.getByTestId('field-input');
+      expect(input).toHaveValue('');
+    });
+
+    it('uses default duration value when value is undefined', () => {
+      const durationField: FormField = {
+        ...mockField,
+        type: 'duration',
+        uidt: 'duration',
+        config: { durationDefault: 15 },
+      };
+
+      render(
+        <SortableFormField
+          field={durationField}
+          onChange={mockOnChange}
+        />
+      );
+
+      const input = screen.getByTestId('field-input');
+      expect(input).toHaveValue('15');
+    });
+
+    it('keeps boolean false value instead of default', () => {
+      const booleanField: FormField = { ...mockField, type: 'boolean', uidt: 'boolean' };
+      render(
+        <SortableFormField
+          field={booleanField}
+          value={false}
+          onChange={mockOnChange}
+        />
+      );
+
+      const input = screen.getByTestId('field-input');
+      expect(input).toHaveValue('false');
+    });
+
+    it('normalizes link values to empty list when object provided', () => {
+      const linksField: FormField = { ...mockField, type: 'links', uidt: 'links' };
+      render(
+        <SortableFormField
+          field={linksField}
+          value={{}}
           onChange={mockOnChange}
         />
       );

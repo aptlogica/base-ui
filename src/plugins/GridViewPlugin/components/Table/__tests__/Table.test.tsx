@@ -1014,6 +1014,25 @@ describe('Table', () => {
     expect(screen.getByTestId('column-context-menu')).toBeInTheDocument();
   });
 
+  it('closes column context menu when overlay is clicked', () => {
+    const handleCloseColMenu = vi.fn();
+    mockUseTableModals.mockReturnValue({
+      contextMenu: { open: false, rowId: null, x: 0, y: 0 },
+      handleContextMenu: vi.fn(),
+      handleCloseContextMenu: vi.fn(),
+      colMenu: { open: true, colIndex: 0, x: 10, y: 10 },
+      handleColContextMenu: vi.fn(),
+      handleCloseColMenu,
+    });
+
+    const { container } = renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    const overlay = container.querySelector('div[style*="position: fixed"]');
+    expect(overlay).toBeInTheDocument();
+    fireEvent.mouseDown(overlay as HTMLElement);
+    expect(handleCloseColMenu).toHaveBeenCalled();
+  });
+
   it('shows loader at bottom when loading more', () => {
     mockUseFrontendPagination.mockReturnValue({
       allLoadedData: [

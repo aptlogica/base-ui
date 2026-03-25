@@ -284,4 +284,5 @@ describe('CreateBaseModal', () => {
 
     expect(screen.queryByAltText('Preview')).not.toBeInTheDocument();
   });
+
 });

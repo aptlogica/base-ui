@@ -173,6 +173,31 @@ describe('AddBaseMembersModal', () => {
     });
   });
 
+  it('saves pending role changes via Save Changes button', async () => {
+    render(
+      <AddBaseMembersModal
+        isOpen={true}
+        onClose={vi.fn()}
+        workspaceId="ws1"
+        baseId="b1"
+      />
+    );
+
+    // Toggle role for existing member to create pending changes
+    fireEvent.click(screen.getAllByRole('button', { name: 'base-member' })[0]);
+
+    const saveButton = screen.getByRole('button', { name: 'Update' });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(bulkAddMutateAsync).toHaveBeenCalledWith({
+        baseId: 'b1',
+        workspaceId: 'ws1',
+        members: [{ user_id: 'u1', role: 'base-read' }],
+      });
+    });
+  });
+
   it('removes a member when remove button is clicked', async () => {
     render(
       <AddBaseMembersModal

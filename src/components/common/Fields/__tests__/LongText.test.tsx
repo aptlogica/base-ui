@@ -123,6 +123,18 @@ describe('LongText Component', () => {
       );
       expect(screen.getByText('Max 1000 characters')).toBeInTheDocument();
     });
+
+    it('does not show helper text when allowEdit is false', () => {
+      render(
+        <LongText
+          value=""
+          onChange={mockOnChange}
+          helperText="Hidden helper"
+          allowEdit={false}
+        />
+      );
+      expect(screen.queryByText('Hidden helper')).not.toBeInTheDocument();
+    });
   });
 
   describe('Edit Mode', () => {

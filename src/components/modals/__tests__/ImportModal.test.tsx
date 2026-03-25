@@ -229,6 +229,22 @@ describe('ImportModal', () => {
     });
   });
 
+  describe('file validation', () => {
+    it('shows error when SQL file type is invalid', async () => {
+      const user = userEvent.setup({ applyAccept: false });
+      renderWithQueryClient(<ImportModal {...defaultProps} importType="sql" />);
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const invalidFile = new File(['content'], 'file.txt', { type: 'text/plain' });
+
+      await user.upload(fileInput, invalidFile);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Please select a SQL file/i)).toBeInTheDocument();
+      });
+    });
+  });
+
   describe('state reset', () => {
     it('resets form when modal reopens', async () => {
       const user = userEvent.setup();

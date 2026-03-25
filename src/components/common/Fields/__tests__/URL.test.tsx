@@ -105,6 +105,12 @@ describe('URL Component', () => {
       expect(link).toBeInTheDocument();
     });
 
+    it('should not render link for unsafe protocol values', () => {
+      render(<URL value="javascript:alert(1)" onChange={mockOnChange} />);
+      expect(screen.queryByRole('link')).not.toBeInTheDocument();
+      expect(screen.getByText('javascript:alert(1)')).toBeInTheDocument();
+    });
+
     it('should not render URL as link when value is empty', () => {
       render(<URL value="" onChange={mockOnChange} />);
       expect(screen.queryByRole('link')).not.toBeInTheDocument();

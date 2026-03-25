@@ -189,6 +189,18 @@ describe('User Component', () => {
       expect(document.body).toBeInTheDocument();
     });
 
+    it('should use defaultUser when value is empty', () => {
+      renderWithProviders(
+        <User
+          value={null}
+          onChange={mockOnChange}
+          config={{ defaultUser: '1' }}
+        />
+      );
+
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
+
     it('should show loading placeholder when users are loading', () => {
       mockUseGetTenantUsers.mockReturnValue({
         data: [],
