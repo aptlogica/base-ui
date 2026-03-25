@@ -267,5 +267,32 @@ describe('HeaderWorkspaceDropdown', () => {
       expect(navigationStoreState.setWorkspace).toHaveBeenCalledWith('w1');
     });
   });
+
+  it('renders base access badge styling in dropdown list', async () => {
+    const user = userEvent.setup();
+    workspaceBusinessLogicState.workspaces = [
+      { id: 'w1', title: 'Alpha Workspace', access_level: 'base' },
+    ];
+    workspaceBusinessLogicState.selectedWorkspaceId = 'w1';
+    workspaceBusinessLogicState.selectedWorkspace = workspaceBusinessLogicState.workspaces[0];
+
+    renderWithPath('/homepage');
+
+    const triggerButtons = screen.getAllByRole('button', { name: /alpha workspace/i });
+    await user.click(triggerButtons[0]);
+
+    const badge = screen.getByText('Base Access');
+    expect(badge.className).toContain('bg-blue-50');
+    expect(badge.className).toContain('text-blue-700');
+  });
+
+  it('shows Read only tag when workspace is read-only', () => {
+    workspaceAccessState.isWorkspaceReadOnly = () => true;
+    baseAccessState.isBaseReadOnly = () => false;
+
+    renderWithPath('/homepage');
+
+    expect(screen.getByText('Read only')).toBeInTheDocument();
+  });
 });
 

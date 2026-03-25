@@ -150,4 +150,9 @@ describe('formulaHelper additional branches', () => {
     expect(evaluateTextArgument('"He said \\"hi\\""', ctx)).toBe('He said "hi"');
     expect(normalizeForComparison('01')).toBe('01');
   });
+
+  it('formats percent and currency results with precision', () => {
+    expect(formatResult(1.236, 'percent', 2, {}, '')).toBe('1.24%');
+    expect(formatResult(12, 'currency', 0, { formatting: { currency: 'USD' } }, '')).toBe('$12');
+  });
 });

@@ -307,6 +307,22 @@ describe('Table', () => {
     expect(screen.queryByRole('button', { name: /add row/i })).not.toBeInTheDocument();
   });
 
+  it('hides add row button when create record permission is false', () => {
+    mockUseBaseAccess.mockReturnValue({
+      isBaseReadOnly: () => false,
+      canCreateColumn: () => true,
+      canDeleteRecord: () => true,
+      canUpdateRecord: () => true,
+      canCreateRecord: () => false,
+      canUpdateColumn: () => true,
+      canDeleteColumn: () => true,
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.queryByRole('button', { name: /add row/i })).not.toBeInTheDocument();
+  });
+
   it('renders context menu when open and allowed', () => {
     mockUseTableModals.mockReturnValue({
       contextMenu: { open: true, rowId: '1', x: 10, y: 10 },

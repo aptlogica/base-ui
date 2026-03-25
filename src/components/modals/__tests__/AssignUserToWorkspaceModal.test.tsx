@@ -421,6 +421,33 @@ describe('AssignUserToWorkspaceModal', () => {
     );
   });
 
+  it('does not remove workspace access when confirmation is cancelled', async () => {
+    (globalThis.confirm as unknown as vi.Mock).mockReturnValueOnce(false);
+    userRolesAndAccessData = [
+      {
+        workspace_id: 'ws-123',
+        workspace_name: 'Workspace A',
+        access: 'maintainer',
+        bases: [],
+      },
+    ];
+    const user = userEvent.setup();
+    renderWithQueryClient(
+      <AssignUserToWorkspaceModal
+        {...defaultProps}
+        editMode={true}
+        memberToEdit="user-1"
+      />
+    );
+
+    const removeButton = screen.getByTitle(/remove workspace access/i);
+    await user.click(removeButton);
+
+    await waitFor(() => {
+      expect(removeUserFromWorkspaceMutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
   it('removes base access in edit mode when confirmed', async () => {
     userRolesAndAccessData = [
       {

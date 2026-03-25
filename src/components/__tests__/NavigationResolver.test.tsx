@@ -437,6 +437,29 @@ describe('NavigationResolver', () => {
     });
   });
 
+  it('selects first workspace/base for new users and closes flyout', async () => {
+    mockPathname = '/';
+    selectedWorkspaceId = null;
+    selectedBaseId = null;
+    selectedTableId = null;
+    selectedViewId = null;
+    workspacesData = [
+      {
+        id: 'ws1',
+        bases: [{ id: 'b1' }],
+      },
+    ];
+
+    renderWithAuth({ id: 'u1' });
+
+    await waitFor(() => {
+      expect(closeFlyoutSpy).toHaveBeenCalled();
+      expect(setWorkspaceSpy).toHaveBeenCalledWith('ws1');
+      expect(setBaseSpy).toHaveBeenCalledWith('b1');
+      expect(replaceNavigateSpy).toHaveBeenCalledWith(navigateSpy, '/workspace/ws1');
+    });
+  });
+
   it('skips validation redirect on excluded workspace routes', async () => {
     mockPathname = '/workspace/ws1/settings';
     selectedWorkspaceId = 'ws1';

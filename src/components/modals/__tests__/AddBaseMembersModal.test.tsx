@@ -104,6 +104,22 @@ describe('AddBaseMembersModal', () => {
     expect(screen.getByText('User One')).toBeInTheDocument();
   });
 
+  it('hides access list while members are loading', () => {
+    baseMembersLoading = true;
+    baseMembersData = { data: [{ user_id: 'u1', display_name: 'User One' }] };
+
+    render(
+      <AddBaseMembersModal
+        isOpen={true}
+        onClose={vi.fn()}
+        workspaceId="ws1"
+        baseId="b1"
+      />
+    );
+
+    expect(screen.queryByText('People with access')).not.toBeInTheDocument();
+  });
+
   it('calls onClose when backdrop is clicked', () => {
     const onClose = vi.fn();
     render(

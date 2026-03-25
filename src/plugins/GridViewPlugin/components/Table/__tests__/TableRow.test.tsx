@@ -103,6 +103,13 @@ describe('TableRow', () => {
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
+  it('keeps row number visible when selection is disabled', () => {
+    const { container } = render(<TableRow {...defaultProps} canSelectRows={false} />);
+
+    const rowNumber = container.querySelector('span');
+    expect(rowNumber?.className).not.toContain('group-hover:opacity-0');
+  });
+
     it('should show checkbox checked when row is selected', () => {
       render(<TableRow {...defaultProps} isSelected={true} />);
 

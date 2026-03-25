@@ -207,6 +207,14 @@ describe('CreateViewModal', () => {
       expect(screen.queryByTestId('field-dropdown')).not.toBeInTheDocument();
     });
 
+    it('does not show field dropdown for form view', () => {
+      renderWithQueryClient(
+        <CreateViewModal {...defaultProps} viewType="form" fields={mockFields} />
+      );
+
+      expect(screen.queryByTestId('field-dropdown')).not.toBeInTheDocument();
+    });
+
     it('shows dual field dropdowns for gantt view', () => {
       renderWithQueryClient(
         <CreateViewModal {...defaultProps} viewType="ganttChart" fields={mockFields} />

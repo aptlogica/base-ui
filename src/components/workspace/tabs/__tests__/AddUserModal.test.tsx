@@ -505,6 +505,24 @@ describe('AddUserModal', () => {
       expect(screen.queryByText(/Set as Co-owner/i)).not.toBeInTheDocument();
     });
 
+    it('hides co-owner toggle when editing self', () => {
+      mockUseCurrentUser.mockReturnValue({ id: 'user-1', email: 'self@example.com' });
+      render(
+        <AddUserModal
+          {...defaultProps}
+          editUser={{
+            id: 'user-1',
+            first_name: 'Self',
+            last_name: 'User',
+            email: 'self@example.com',
+            roles: [{ name: 'co-owner', scope_level: 'system' }],
+          }}
+        />
+      );
+
+      expect(screen.queryByText(/Set as Co-owner/i)).not.toBeInTheDocument();
+    });
+
     it('shows co-owner toggle when owner edits a co-owner', () => {
       mockUseUserRole.mockReturnValue({ isOwner: () => true });
       render(

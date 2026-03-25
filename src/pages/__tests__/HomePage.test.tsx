@@ -906,6 +906,26 @@ describe('HomePage', () => {
         expect(screen.queryByRole('button', { name: /^A-Z$/i })).not.toBeInTheDocument();
       });
     });
+
+    it('closes sort dropdown on outside click', async () => {
+      const user = userEvent.setup();
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: [] },
+        isLoading: false,
+      });
+
+      renderWithProviders(<HomePage />);
+
+      await user.click(screen.getByRole('button', { name: /recents/i }));
+      expect(screen.getByText('A-Z')).toBeInTheDocument();
+
+      fireEvent.mouseDown(document.body);
+
+      await waitFor(() => {
+        expect(screen.queryByText('A-Z')).not.toBeInTheDocument();
+      });
+    });
   });
 
   // ========================================

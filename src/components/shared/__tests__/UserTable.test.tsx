@@ -505,6 +505,17 @@ describe('UserTable', () => {
       renderWithQueryClient(<UserTable users={[user]} />);
       expect(screen.getByText(/America\/Los_Angeles/)).toBeInTheDocument();
     });
+
+    it('defaults to UTC when timezone and country are empty', () => {
+      const user = createUser({
+        timezone: '',
+        country: '',
+        locale: '',
+      });
+
+      renderWithQueryClient(<UserTable users={[user]} />);
+      expect(screen.getByText(/Etc\/UTC/)).toBeInTheDocument();
+    });
   });
 
   describe('Admin action variants', () => {

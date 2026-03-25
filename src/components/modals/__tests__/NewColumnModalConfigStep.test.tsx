@@ -588,4 +588,21 @@ describe('renderDescriptionToggle', () => {
     fireEvent.click(screen.getByRole('button', { name: '' }));
     expect(setDescription).toHaveBeenCalledWith('');
   });
+
+  it('hides description input when toggle is off', () => {
+    const setShowDescription = vi.fn();
+    const setDescription = vi.fn();
+
+    render(
+      renderDescriptionToggle({
+        showDescription: false,
+        setShowDescription,
+        description: '',
+        setDescription,
+      })
+    );
+
+    expect(screen.queryByTestId('multiline')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add description/i })).toBeInTheDocument();
+  });
 });

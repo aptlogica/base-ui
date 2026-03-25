@@ -222,6 +222,22 @@ describe('KanbanBoard', () => {
     expect(screen.getByRole('button', { name: /add new stack/i })).toBeInTheDocument();
   });
 
+  it('falls back to first select column when view target field is missing', () => {
+    const fallbackData = {
+      ...baseTableData,
+      views: [{ id: 'v1', type: 'kanban', meta: {} }],
+    };
+
+    render(
+      <ToastProvider>
+        <KanbanBoard tableData={fallbackData as any} onRefresh={vi.fn()} />
+      </ToastProvider>
+    );
+
+    expect(screen.getByTestId('stack-Todo')).toBeInTheDocument();
+    expect(screen.getByTestId('stack-Done')).toBeInTheDocument();
+  });
+
   it('hides add stack and card actions when read-only', () => {
     mockUseBaseAccess.mockReturnValue({
       isBaseReadOnly: () => true,
