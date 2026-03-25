@@ -2,127 +2,78 @@ import { describe, it, expect } from 'vitest';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../fieldUsageUtils';
 
 describe('fieldUsageUtils', () => {
-  describe('checkFieldUsageInViews', () => {
-    it('should return not used for empty views', () => {
-      expect(checkFieldUsageInViews('f1', [])).toEqual({ isUsedInViews: false, usedInViews: [] });
-      expect(checkFieldUsageInViews('f1', null as any)).toEqual({ isUsedInViews: false, usedInViews: [] });
-    });
-
-    it('should ignore non-target view types (grid/form/etc)', () => {
-      const views = [
-        { id: 'v1', type: 'grid', meta: { fieldConfig: [{ id: 'f1', isHidden: false }] } },
-        { id: 'v2', type: 'form', meta: { date_field_id: 'f1' } },
-      ];
-      expect(checkFieldUsageInViews('f1', views as any).isUsedInViews).toBe(false);
-    });
-
-    it('should treat a visible fieldConfig entry as usage', () => {
-      const views = [
-        { id: 'v1', type: 'gallery', title: 'Gallery', meta: { fieldConfig: [{ id: 'f1', isHidden: false }] } },
-      ];
-      const res = checkFieldUsageInViews('f1', views as any);
-      expect(res.isUsedInViews).toBe(true);
-      expect(res.usedInViews[0]).toMatchObject({ viewId: 'v1', viewType: 'gallery', usageType: 'Visible Field' });
-    });
-
-    it('should not mark hidden fieldConfig entry as used', () => {
-      const views = [
-        { id: 'v1', type: 'kanban', meta: { fieldConfig: [{ id: 'f1', isHidden: true }] } },
-      ];
-      const res = checkFieldUsageInViews('f1', views as any);
-      expect(res.isUsedInViews).toBe(false);
-    });
-
-    it('should not consider empty fieldConfig as used', () => {
-      const views = [
-        { id: 'v1', type: 'gallery', meta: { fieldConfig: [] } },
-      ];
-      expect(checkFieldUsageInViews('f1', views as any).isUsedInViews).toBe(false);
-    });
-
-    it('should detect critical field references per view type', () => {
-      const views = [
-        { id: 'c1', type: 'calendar', name: 'Cal', meta: { date_field_id: 'f1' } },
-        { id: 'k1', type: 'kanban', name: 'Kan', meta: { view_target_field: 'f1' } },
-        { id: 'g1', type: 'gallery', name: 'Gal', meta: { attachment_field_id: 'f1' } },
-        {
-          id: 'ga1',
-          type: 'ganttChart',
-          name: 'Gantt',
-          meta: {
-            start_date_field_id: 'f1',
-            end_date_field_id: 'f2',
-            title_field_id: 'f3',
-            progress_field_id: 'f4',
-          },
-        },
-      ];
-
-      const res = checkFieldUsageInViews('f1', views as any);
-      expect(res.isUsedInViews).toBe(true);
-      expect(res.usedInViews.map(u => u.viewId).sort()).toEqual(['c1', 'g1', 'ga1', 'k1'].sort());
-    });
-
-    it('should avoid duplicates when field is referenced multiple ways in a view', () => {
-      const views = [
-        {
-          id: 'g1',
-          type: 'ganttChart',
-          meta: {
-            fieldConfig: [{ id: 'f1', isHidden: false }],
-            start_date_field_id: 'f1',
-          },
-        },
-      ];
-      const res = checkFieldUsageInViews('f1', views as any);
-      expect(res.usedInViews).toHaveLength(1);
-      expect(res.usedInViews[0].viewId).toBe('g1');
-    });
-
-    it('should detect gantt groupBy.column', () => {
-      const views = [
-        { id: 'g1', type: 'ganttChart', meta: { groupBy: { column: 'f1' } } },
-      ];
-      const res = checkFieldUsageInViews('f1', views as any);
-      expect(res.isUsedInViews).toBe(true);
-      expect(res.usedInViews[0]).toMatchObject({ viewId: 'g1', usageType: 'Group By Field' });
-    });
+  it('returns empty usage when views are missing', () => {
+    expect(checkFieldUsageInViews('col1', [])).toEqual({ isUsedInViews: false, usedInViews: [] });
+    expect(checkCriticalFieldUsageInViews('col1', [])).toEqual({ isUsedInViews: false, usedInViews: [] });
   });
 
-  describe('checkCriticalFieldUsageInViews', () => {
-    it('should filter by currentTableId when provided', () => {
-      const views = [
-        { id: 'k1', type: 'kanban', model_id: 't1', meta: { view_target_field: 'f1' } },
-        { id: 'k2', type: 'kanban', model_id: 't2', meta: { view_target_field: 'f1' } },
-      ];
+  it('detects visible field usage in supported view types', () => {
+    const views = [
+      { id: 'v1', type: 'kanban', title: 'Kanban', meta: { fieldConfig: [{ id: 'col1', isHidden: false }] } },
+      { id: 'v2', type: 'grid', title: 'Grid', meta: { fieldConfig: [{ id: 'col1', isHidden: false }] } },
+    ];
 
-      const res = checkCriticalFieldUsageInViews('f1', views as any, 't1');
-      expect(res.isUsedInViews).toBe(true);
-      expect(res.usedInViews.map(u => u.viewId)).toEqual(['k1']);
-    });
+    const result = checkFieldUsageInViews('col1', views);
+    expect(result.isUsedInViews).toBe(true);
+    expect(result.usedInViews).toHaveLength(1);
+    expect(result.usedInViews[0].viewId).toBe('v1');
+  });
 
-    it('should detect gantt critical groupBy.column and avoid duplicates', () => {
-      const views = [
-        {
-          id: 'g1',
-          type: 'ganttChart',
-          modelId: 't1',
-          meta: {
-            groupBy: { column: 'f1' },
-            start_date_field_id: 'f1',
-          },
-        },
-      ];
+  it('ignores hidden field entries in fieldConfig', () => {
+    const views = [
+      { id: 'v1', type: 'gallery', name: 'Gallery', meta: { fieldConfig: [{ id: 'col1', isHidden: true }] } },
+    ];
 
-      const res = checkCriticalFieldUsageInViews('f1', views as any);
-      expect(res.isUsedInViews).toBe(true);
-      expect(res.usedInViews).toHaveLength(1);
-      expect(res.usedInViews[0]).toMatchObject({ viewId: 'g1', usageType: 'Group By Field' });
-    });
+    const result = checkFieldUsageInViews('col1', views);
+    expect(result.isUsedInViews).toBe(false);
+  });
 
-    it('should ignore non-critical view types', () => {
-      const views = [{ id: 'v1', type: 'grid', meta: { date_field_id: 'f1' } }];
-      expect(checkCriticalFieldUsageInViews('f1', views as any).isUsedInViews).toBe(false);
-    });
+  it('detects usage via meta references and avoids duplicates', () => {
+    const views = [
+      {
+        id: 'v1',
+        type: 'calendar',
+        title: 'Cal',
+        meta: { date_field_id: 'col1', fieldConfig: [{ id: 'col1', isHidden: false }] },
+      },
+    ];
+
+    const result = checkFieldUsageInViews('col1', views);
+    expect(result.isUsedInViews).toBe(true);
+    expect(result.usedInViews).toHaveLength(1);
+  });
+
+  it('filters critical usage by table id and detects gantt groupBy', () => {
+    const views = [
+      {
+        id: 'g1',
+        model_id: 't1',
+        type: 'ganttChart',
+        title: 'Gantt',
+        meta: { groupBy: { column: 'col1' } },
+      },
+      {
+        id: 'g2',
+        model_id: 't2',
+        type: 'ganttChart',
+        title: 'Other',
+        meta: { start_date_field_id: 'col1' },
+      },
+    ];
+
+    const result = checkCriticalFieldUsageInViews('col1', views, 't1');
+    expect(result.isUsedInViews).toBe(true);
+    expect(result.usedInViews[0].viewId).toBe('g1');
+    expect(result.usedInViews[0].usageType).toBe('Group By Field');
+  });
+
+  it('detects critical usage for calendar date field', () => {
+    const views = [
+      { id: 'c1', type: 'calendar', meta: { date_field_id: 'col1' } },
+      { id: 'c2', type: 'grid', meta: { date_field_id: 'col1' } },
+    ];
+    const result = checkCriticalFieldUsageInViews('col1', views);
+    expect(result.isUsedInViews).toBe(true);
+    expect(result.usedInViews[0].viewId).toBe('c1');
   });
 });

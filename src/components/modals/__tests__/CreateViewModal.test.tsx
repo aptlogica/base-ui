@@ -313,6 +313,23 @@ describe('CreateViewModal', () => {
         );
       });
     });
+
+    it('shows error when onCreate throws', async () => {
+      const user = userEvent.setup();
+      const onCreate = vi.fn(() => {
+        throw new Error('Create failed');
+      });
+
+      renderWithQueryClient(
+        <CreateViewModal {...defaultProps} onCreate={onCreate} viewType="grid" />
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Create View' }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/Create failed/i)).toBeInTheDocument();
+      });
+    });
   });
 
   describe('gantt validation', () => {
@@ -328,6 +345,34 @@ describe('CreateViewModal', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/must be different/i)).toBeInTheDocument();
+      });
+    });
+
+    it('submits gantt payload with start and end fields', async () => {
+      const user = userEvent.setup();
+      const onCreate = vi.fn();
+      const ganttFields = [
+        { id: 'col-3', title: 'Start', uidt: 'Date' },
+        { id: 'col-5', title: 'End', uidt: 'Date' },
+      ];
+      renderWithQueryClient(
+        <CreateViewModal {...defaultProps} onCreate={onCreate} viewType="ganttChart" fields={ganttFields} />
+      );
+
+      const dropdowns = screen.getAllByTestId('field-dropdown');
+      await user.selectOptions(dropdowns[0], 'col-3');
+      await user.selectOptions(dropdowns[1], 'col-5');
+
+      await user.click(screen.getByRole('button', { name: 'Create View' }));
+
+      await waitFor(() => {
+        expect(onCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'ganttChart',
+            startDateFieldId: 'col-3',
+            endDateFieldId: 'col-5',
+          })
+        );
       });
     });
   });

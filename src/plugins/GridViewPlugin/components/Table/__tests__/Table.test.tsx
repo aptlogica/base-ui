@@ -912,4 +912,104 @@ describe('Table', () => {
     fireEvent.click(screen.getAllByRole('button', { name: /add row/i })[0]);
     await waitFor(() => expect(mockToastError).toHaveBeenCalled());
   });
+
+  it('renders delete confirm modal when column delete is pending', () => {
+    mockUseColumnManagement.mockReturnValue({
+      isColumnModalOpen: false,
+      setIsColumnModalOpen: vi.fn(),
+      editColumn: null,
+      editColumnIndex: null,
+      editModalOpen: false,
+      setEditModalOpen: vi.fn(),
+      editModalPosition: null,
+      deleteConfirmModalOpen: true,
+      setDeleteConfirmModalOpen: vi.fn(),
+      columnToDelete: 'col-1',
+      updateFieldConfirmModalOpen: false,
+      setUpdateFieldConfirmModalOpen: vi.fn(),
+      setPendingEditColumnChanges: vi.fn(),
+      dragColumnIndex: null,
+      hoverColumnIndex: null,
+      handleAddColumn: vi.fn(),
+      handleEditColumn: vi.fn(),
+      handleSaveEditColumn: vi.fn(),
+      handleConfirmUpdateField: vi.fn(),
+      handleDeleteColumn: vi.fn(),
+      handleConfirmDeleteColumn: vi.fn(),
+      handleColumnDragStart: vi.fn(),
+      handleColumnDragEnter: vi.fn(),
+      handleColumnDragEnd: vi.fn(),
+      setEditColumn: vi.fn(),
+      setEditColumnIndex: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('delete-confirm-modal')).toBeInTheDocument();
+  });
+
+  it('renders update field confirm modal when flag is set', () => {
+    mockUseColumnManagement.mockReturnValue({
+      isColumnModalOpen: false,
+      setIsColumnModalOpen: vi.fn(),
+      editColumn: null,
+      editColumnIndex: null,
+      editModalOpen: false,
+      setEditModalOpen: vi.fn(),
+      editModalPosition: null,
+      deleteConfirmModalOpen: false,
+      setDeleteConfirmModalOpen: vi.fn(),
+      columnToDelete: null,
+      updateFieldConfirmModalOpen: true,
+      setUpdateFieldConfirmModalOpen: vi.fn(),
+      setPendingEditColumnChanges: vi.fn(),
+      dragColumnIndex: null,
+      hoverColumnIndex: null,
+      handleAddColumn: vi.fn(),
+      handleEditColumn: vi.fn(),
+      handleSaveEditColumn: vi.fn(),
+      handleConfirmUpdateField: vi.fn(),
+      handleDeleteColumn: vi.fn(),
+      handleConfirmDeleteColumn: vi.fn(),
+      handleColumnDragStart: vi.fn(),
+      handleColumnDragEnter: vi.fn(),
+      handleColumnDragEnd: vi.fn(),
+      setEditColumn: vi.fn(),
+      setEditColumnIndex: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('update-field-confirm-modal')).toBeInTheDocument();
+  });
+
+  it('renders column context menu overlay when colMenu is open', () => {
+    mockUseTableModals.mockReturnValue({
+      contextMenu: { open: false, rowId: null, x: 0, y: 0 },
+      handleContextMenu: vi.fn(),
+      handleCloseContextMenu: vi.fn(),
+      colMenu: { open: true, colIndex: 0, x: 10, y: 10 },
+      handleColContextMenu: vi.fn(),
+      handleCloseColMenu: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('column-context-menu')).toBeInTheDocument();
+  });
+
+  it('shows loader at bottom when loading more', () => {
+    mockUseFrontendPagination.mockReturnValue({
+      allLoadedData: [
+        { id: '1', _meta: { id: '1' }, data: { name: 'Row 1', value: 10 } },
+      ],
+      loadNextPage: vi.fn(),
+      hasMore: true,
+      isLoadingMore: true,
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('loader')).toBeInTheDocument();
+  });
 });

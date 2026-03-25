@@ -83,6 +83,11 @@ describe('getFieldOptions', () => {
   it('should return empty array if no options', () => {
     expect(getFieldOptions({})).toEqual([]);
   });
+
+  it('should return empty array when options are null', () => {
+    const field = { config: { options: null } };
+    expect(getFieldOptions(field as any)).toEqual([]);
+  });
 });
 
 describe('getFieldDisplayName', () => {
@@ -193,6 +198,33 @@ describe('getFieldDefaultValue', () => {
     const field = { type: 'text', config: {} };
     expect(getFieldDefaultValue(field)).toBe('');
   });
+
+  it('should return number-like defaults for numeric types', () => {
+    expect(getFieldDefaultValue({ type: 'number', config: { defaultValue: 5 } })).toBe(5);
+    expect(getFieldDefaultValue({ type: 'decimal', config: { defaultValue: 1.2 } })).toBe(1.2);
+    expect(getFieldDefaultValue({ type: 'currency', config: { defaultValue: 9 } })).toBe(9);
+    expect(getFieldDefaultValue({ type: 'percent', config: { defaultValue: 12 } })).toBe(12);
+  });
+
+  it('should return specific defaults for time-based fields', () => {
+    expect(getFieldDefaultValue({ type: 'datetime', config: { dateTimeDefault: '2026-01-01T00:00:00Z' } }))
+      .toBe('2026-01-01T00:00:00Z');
+    expect(getFieldDefaultValue({ type: 'date', config: { dateDefault: '2026-01-01' } }))
+      .toBe('2026-01-01');
+    expect(getFieldDefaultValue({ type: 'time', config: { timeDefault: '10:30' } }))
+      .toBe('10:30');
+    expect(getFieldDefaultValue({ type: 'year', config: { yearDefault: '2026' } }))
+      .toBe('2026');
+    expect(getFieldDefaultValue({ type: 'duration', config: { durationDefault: '120' } }))
+      .toBe('120');
+  });
+
+  it('should return specific defaults for email and url', () => {
+    expect(getFieldDefaultValue({ type: 'email', config: { emailDefault: 'a@b.com' } }))
+      .toBe('a@b.com');
+    expect(getFieldDefaultValue({ type: 'url', config: { urlDefault: 'https://example.com' } }))
+      .toBe('https://example.com');
+  });
 });
 
 describe('createFieldRendererProps', () => {
@@ -225,6 +257,15 @@ describe('createFieldRendererProps', () => {
     expect(props.isBorder).toBe(true);
     expect(props.className).toBe('custom-class');
     expect(props.config.customProp).toBe('test');
+  });
+
+  it('should include required and options in config', () => {
+    const field = { uidt: 'select', required: true, config: { options: ['x'] } };
+    const props = createFieldRendererProps(field, 'x', vi.fn(), { options: ['y'] });
+
+    expect(props.config.required).toBe(true);
+    // options should be derived from field via getFieldOptions
+    expect(props.config.options).toEqual(['x']);
   });
 });
 

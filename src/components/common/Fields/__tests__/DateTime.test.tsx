@@ -114,6 +114,22 @@ describe('DateTime', () => {
     expect(screen.getByPlaceholderText('YYYY-MM-DD HH:mm')).toBeInTheDocument();
   });
 
+  it('does not enter manual edit mode when readOnly is true', () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <DateTime
+        value=""
+        onChange={onChange}
+        allowEdit={false}
+        readOnly
+        config={{ dateFormat: 'YYYY-MM-DD', timeFormat: 'HH:mm', hourFormat: '24' }}
+      />
+    );
+
+    fireEvent.doubleClick(container.firstChild as HTMLElement);
+    expect(screen.queryByPlaceholderText('YYYY-MM-DD HH:mm')).not.toBeInTheDocument();
+  });
+
   it('accepts manual date-time input and calls onChange on blur', () => {
     const onChange = vi.fn();
     const { container } = render(
@@ -136,6 +152,28 @@ describe('DateTime', () => {
     expect(value.endsWith('Z')).toBe(true);
   });
 
+  it('accepts manual input in DD/MM/YYYY format', () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <DateTime
+        value=""
+        onChange={onChange}
+        allowEdit={false}
+        config={{ dateFormat: 'DD/MM/YYYY', timeFormat: 'HH:mm', hourFormat: '24' }}
+      />
+    );
+
+    fireEvent.doubleClick(container.firstChild as HTMLElement);
+    const input = screen.getByPlaceholderText('DD/MM/YYYY HH:mm');
+    fireEvent.change(input, { target: { value: '13/02/2026 13:15' } });
+    fireEvent.blur(input);
+
+    expect(onChange).toHaveBeenCalled();
+    const value = onChange.mock.calls[0][0] as string;
+    expect(value.startsWith('2026-02-13T')).toBe(true);
+    expect(value.endsWith('Z')).toBe(true);
+  });
+
   it('accepts date-only input and calls onChange', () => {
     const onChange = vi.fn();
     const { container } = render(
@@ -153,6 +191,27 @@ describe('DateTime', () => {
     fireEvent.blur(input);
 
     expect(onChange).toHaveBeenCalled();
+  });
+
+  it('accepts date-only input and fills seconds when configured', () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <DateTime
+        value=""
+        onChange={onChange}
+        allowEdit={false}
+        config={{ dateFormat: 'DD/MM/YYYY', timeFormat: 'HH:mm:ss', hourFormat: '24' }}
+      />
+    );
+
+    fireEvent.doubleClick(container.firstChild as HTMLElement);
+    const input = screen.getByPlaceholderText('DD/MM/YYYY HH:mm:ss');
+    fireEvent.change(input, { target: { value: '13/02/2026' } });
+    fireEvent.blur(input);
+
+    expect(onChange).toHaveBeenCalled();
+    const value = onChange.mock.calls[0][0] as string;
+    expect(value).toMatch(/:00\.000Z$/);
   });
 
   it('clears value when input is emptied', () => {

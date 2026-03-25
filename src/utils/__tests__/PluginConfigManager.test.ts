@@ -53,4 +53,57 @@ describe('PluginConfigManager', () => {
     manager.setPluginEnabled('navigation', false);
     expect(manager.isPluginEnabled('navigation')).toBe(false);
   });
+
+  it('returns empty config when not loaded and handles external plugin updates', async () => {
+    const manager = new PluginConfigManager('/config/test.json');
+    expect(manager.getPluginConfig('missing')).toEqual({});
+    expect(manager.isPluginEnabled('missing')).toBe(false);
+
+    const mockConfig = {
+      plugins: {
+        builtin: [],
+        external: [{ id: 'ext', enabled: false, config: { mode: 'light' } }]
+      },
+      settings: { autoLoadPlugins: true, allowExternalPlugins: true, pluginTimeout: 1, developmentMode: false }
+    };
+    globalThis.fetch = vi.fn().mockResolvedValue({ json: vi.fn().mockResolvedValue(mockConfig) }) as any;
+    await manager.loadConfig();
+
+    expect(manager.getPluginConfig('ext')).toMatchObject({ mode: 'light' });
+    manager.updatePluginConfig('ext', { mode: 'dark' });
+    expect(manager.getPluginConfig('ext')).toMatchObject({ mode: 'dark' });
+
+    expect(manager.isPluginEnabled('ext')).toBe(false);
+    manager.setPluginEnabled('ext', true);
+    expect(manager.isPluginEnabled('ext')).toBe(true);
+  });
+
+  it('swallows storage errors when saving config', async () => {
+    const mockConfig = {
+      plugins: { builtin: [{ id: 'nav', enabled: true, config: { a: 1 } }], external: [] },
+      settings: { autoLoadPlugins: true, allowExternalPlugins: true, pluginTimeout: 1, developmentMode: false }
+    };
+    globalThis.fetch = vi.fn().mockResolvedValue({ json: vi.fn().mockResolvedValue(mockConfig) }) as any;
+    const setItemSpy = vi.spyOn(globalThis.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('quota');
+    });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const manager = new PluginConfigManager('/config/test.json');
+    await manager.loadConfig();
+    manager.updatePluginConfig('nav', { b: 2 });
+
+    expect(setItemSpy).toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+    setItemSpy.mockRestore();
+  });
+
+  it('no-ops when config is not loaded', () => {
+    const manager = new PluginConfigManager('/config/test.json');
+    expect(manager.isPluginEnabled('anything')).toBe(false);
+    expect(manager.getPluginConfig('anything')).toEqual({});
+    manager.updatePluginConfig('anything', { x: 1 });
+    manager.setPluginEnabled('anything', true);
+    expect(manager.getConfig()).toBeNull();
+  });
 });
