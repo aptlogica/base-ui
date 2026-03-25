@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { Formula } from '../Formula';
 
 const evaluateFormulaMock = vi.fn();
@@ -256,6 +256,40 @@ describe('Formula', () => {
     fireEvent.click(screen.getByText('Amount'));
 
     expect((textarea as HTMLTextAreaElement).value).toContain('Amount');
+  });
+
+  it('does not notify when normalized value is unchanged', () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    const onFormulaChange = vi.fn();
+    evaluateFormulaMock.mockReturnValue({ result: 10, error: null });
+    convertResultToValueMock.mockReturnValue(10);
+    normalizeForComparisonMock.mockImplementation((value: any) => value);
+
+    try {
+      render(
+        <Formula
+          value={10}
+          onChange={onChange}
+          onFormulaChange={onFormulaChange}
+          config={{ formula: '' }}
+          columns={[]}
+          allColumns={[]}
+        />
+      );
+
+      const textarea = screen.getByPlaceholderText(/enter formula/i);
+      fireEvent.change(textarea, { target: { value: 'SUM(1,2)' } });
+
+      act(() => {
+        vi.advanceTimersByTime(350);
+      });
+
+      expect(onFormulaChange).toHaveBeenCalledWith('SUM(1,2)');
+      expect(onChange).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('hides field dropdown when typing "}"', async () => {

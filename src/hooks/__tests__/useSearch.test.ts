@@ -89,6 +89,25 @@ describe('useSearch', () => {
     expect(result.current.filteredData).toHaveLength(3);
   });
 
+  it('should search across all fields inside nested data objects', () => {
+    const nestedData = [
+      { id: 1, data: { name: 'Alpha', email: 'alpha@example.com' } },
+      { id: 2, data: { name: 'Beta', email: 'beta@example.com' } },
+    ];
+    const { result } = renderHook(() => useSearch());
+
+    act(() => {
+      result.current.handleSearch('beta', null);
+    });
+
+    act(() => {
+      result.current.filterData(nestedData, mockFields);
+    });
+
+    expect(result.current.filteredData).toHaveLength(1);
+    expect(result.current.filteredData[0].data.name).toBe('Beta');
+  });
+
   it('should filter data case-insensitively', () => {
     const { result } = renderHook(() => useSearch());
     

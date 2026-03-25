@@ -220,6 +220,13 @@ describe('ImportModal', () => {
       const fileInput = document.querySelector('input[type="file"]');
       expect(fileInput).toHaveAttribute('accept', '.json');
     });
+
+    it('renders file input with correct accept attribute for SQL', () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} importType="sql" />);
+
+      const fileInput = document.querySelector('input[type="file"]');
+      expect(fileInput).toHaveAttribute('accept', '.sql');
+    });
   });
 
   describe('state reset', () => {

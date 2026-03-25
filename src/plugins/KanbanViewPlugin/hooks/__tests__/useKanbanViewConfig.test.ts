@@ -6,8 +6,10 @@ vi.mock('../../../utils/helpers', () => ({
   useDebounce: vi.fn((fn) => fn)
 }));
 
+const mockFilterValidSorts = vi.fn((sorts) => sorts);
+
 vi.mock('../../../utils/sortUtils', () => ({
-  filterValidSorts: vi.fn((sorts) => sorts)
+  filterValidSorts: (sorts: any) => mockFilterValidSorts(sorts)
 }));
 
 vi.mock('../../../utils/viewFieldConfigUtils', () => ({
@@ -217,6 +219,7 @@ describe('useKanbanViewConfig Hook', () => {
 
       expect(result.current.sorts).toEqual(newSorts);
     });
+
 
     it('should not persist sorts when read-only', async () => {
       const { result } = renderHook(() =>

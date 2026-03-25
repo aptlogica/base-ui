@@ -196,4 +196,20 @@ describe('AttachmentModal', () => {
       expect(screen.getByText('drop.txt')).toBeInTheDocument();
     });
   });
+
+  it('opens preview when clicking the preview button', async () => {
+    render(<AttachmentModal {...baseProps} />);
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['preview'], 'preview.txt', { type: 'text/plain' });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('preview.txt')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText('Preview file'));
+
+    expect(globalThis.open).toHaveBeenCalledWith('blob:preview-url', '_blank');
+  });
 });

@@ -432,6 +432,19 @@ describe('AppearanceSettings', () => {
       const urlButtons = screen.getAllByText('Insert via URL');
       expect(urlButtons.length).toBe(1);
     });
+
+    it('hides banner URL input when banner URL looks like an uploaded file', () => {
+      render(
+        <AppearanceSettings
+          appearance={{ ...defaultAppearance, bannerUrl: 'http://localhost/assets/banner.png' }}
+          onChange={mockOnChange}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      const urlButtons = screen.getAllByText('Insert via URL');
+      expect(urlButtons.length).toBe(1);
+    });
   });
 
   describe('Image upload flows', () => {

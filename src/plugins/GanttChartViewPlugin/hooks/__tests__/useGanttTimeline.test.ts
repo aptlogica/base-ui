@@ -37,6 +37,14 @@ describe('useGanttTimeline', () => {
     expect(pos.width).toBeGreaterThan(0);
   });
 
+  it('returns empty tooltip lines when no task is focused', () => {
+    const { result } = renderHook(() =>
+      useGanttTimeline({ filteredTasks: [], columns: [] })
+    );
+
+    expect(result.current.tooltipLines).toEqual([]);
+  });
+
   it('zooms in and out', () => {
     const { result } = renderHook(() =>
       useGanttTimeline({ filteredTasks: [], columns: [] })

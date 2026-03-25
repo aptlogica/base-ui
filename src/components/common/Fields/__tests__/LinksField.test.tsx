@@ -193,6 +193,22 @@ describe('LinksField', () => {
     expect(searchInput.value).toBe('');
   });
 
+  it('defaults to One to One when relation meta is missing', async () => {
+    const user = userEvent.setup();
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel' }}
+        value={[]}
+        onChange={vi.fn()}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    expect(screen.getByText('One to One')).toBeInTheDocument();
+  });
+
   it('renders loading placeholder when records are not loaded yet', () => {
     mockRecords = [];
     mockIsLoading = false;

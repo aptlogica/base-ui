@@ -182,6 +182,22 @@ describe('navigationPersistence', () => {
     expect(getSafeNavigationTarget(workspaces)).toBe('/workspace/w1/base/b1/table/t1/grid');
   });
 
+  it('returns safe navigation target using nested table model id', () => {
+    const workspaces = [
+      {
+        id: 'w1',
+        bases: [
+          {
+            id: 'b1',
+            tables: [{ model: { id: 't1' }, views: [{ id: 'v1' }] }],
+          },
+        ],
+      },
+    ];
+
+    expect(getSafeNavigationTarget(workspaces)).toBe('/workspace/w1/base/b1/table/t1/v1');
+  });
+
   it('returns workspace path when safe target has no bases or tables', () => {
     expect(getSafeNavigationTarget([])).toBe('/workspace');
     expect(getSafeNavigationTarget([{ id: 'w1', bases: [] }])).toBe('/workspace/w1');
