@@ -245,4 +245,18 @@ describe('CreateBaseModal', () => {
 
     expect(onClose).toHaveBeenCalledTimes(2);
   });
+
+  it('does not render preview for invalid initialImage url', () => {
+    render(
+      <CreateBaseModal
+        isOpen={true}
+        onClose={onClose}
+        onCreate={onCreate}
+        workspaceId="w1"
+        initialImage="ftp://example.com/file.png"
+      />
+    );
+
+    expect(screen.queryByAltText('Preview')).not.toBeInTheDocument();
+  });
 });

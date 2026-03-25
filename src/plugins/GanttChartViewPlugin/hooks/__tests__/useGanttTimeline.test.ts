@@ -198,4 +198,33 @@ describe('useGanttTimeline', () => {
     const formatted = call.options.formatTime('13:05');
     expect(formatted).toBe('1:05 PM');
   });
+
+  it('keeps top position when no space is available', () => {
+    const tasks = [makeTask('2026-02-01', '2026-02-05')];
+    const { result } = renderHook(() =>
+      useGanttTimeline({ filteredTasks: tasks, columns: [] })
+    );
+
+    const fakeRect = {
+      bottom: 1000,
+      right: 1000,
+      left: 0,
+      top: 0,
+      width: 500,
+      height: 500,
+    };
+
+    globalThis.innerWidth = 400;
+    globalThis.innerHeight = 400;
+
+    act(() => {
+      result.current.tooltipRef.current = {
+        getBoundingClientRect: () => fakeRect,
+      } as any;
+      result.current.handleTaskMouseEnter(tasks[0]);
+    });
+
+    expect(result.current.tooltipPosition).toBe('top');
+    expect(result.current.getTooltipClasses()).toContain('bottom-full');
+  });
 });

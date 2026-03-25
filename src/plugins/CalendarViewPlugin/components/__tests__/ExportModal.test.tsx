@@ -39,6 +39,22 @@ describe('ExportModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('calls onClose when clicking close button', () => {
+    const onClose = vi.fn();
+    render(<ExportModal isOpen={true} onClose={onClose} events={events} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles keydown on modal content without closing', () => {
+    const onClose = vi.fn();
+    const { container } = render(<ExportModal isOpen={true} onClose={onClose} events={events} />);
+    const content = (container.firstChild as HTMLElement).querySelector('.bg-modal') as HTMLElement;
+    fireEvent.keyDown(content, { key: 'Enter' });
+    fireEvent.keyDown(content, { key: ' ' });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it('exports JSON and triggers download', () => {
     const onClose = vi.fn();
     const clickSpy = vi.fn();
@@ -134,5 +150,10 @@ describe('ExportModal', () => {
 
     rerender(<ExportModal isOpen={true} onClose={onClose} events={[...events, { ...events[0], id: 'e2' }]} />);
     expect(screen.getByText('2 events available for export')).toBeInTheDocument();
+  });
+
+  it('shows plural footer for zero events', () => {
+    render(<ExportModal isOpen={true} onClose={vi.fn()} events={[]} />);
+    expect(screen.getByText('0 events available for export')).toBeInTheDocument();
   });
 });

@@ -472,6 +472,20 @@ describe('useTableViewConfig', () => {
 
       expect(result.current.realTimeFilter).toBeNull();
     });
+
+    it('should update and clear realTimeFilter', () => {
+      const { result } = renderHook(() => useTableViewConfig(defaultOptions));
+
+      act(() => {
+        result.current.handleRealTimeFilter({ column: 'title', operator: 'contains', value: 'x' });
+      });
+      expect(result.current.realTimeFilter).toEqual({ column: 'title', operator: 'contains', value: 'x' });
+
+      act(() => {
+        result.current.handleRealTimeFilter(null);
+      });
+      expect(result.current.realTimeFilter).toBeNull();
+    });
   });
 
   describe('readonly mode', () => {

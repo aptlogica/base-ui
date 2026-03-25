@@ -256,6 +256,22 @@ describe('MembersTable', () => {
       expect(screen.getByText('Alice Smith')).toBeInTheDocument();
       expect(screen.getByText('Zara')).toBeInTheDocument();
     });
+
+    it('toggles sort direction for Joined Date', async () => {
+      const members = [
+        createMember({ id: '1', name: 'Old', dateJoined: '2023-01-01T00:00:00Z' }),
+        createMember({ id: '2', name: 'New', dateJoined: '2024-01-01T00:00:00Z' }),
+      ];
+      renderWithQueryClient(<MembersTable members={members} />);
+      const joinedHeader = screen.getByText('Joined Date').closest('button');
+      await userEvent.click(joinedHeader as HTMLElement);
+      const rowsAsc = screen.getAllByText(/Old|New/);
+      expect(rowsAsc[0]).toHaveTextContent('Old');
+
+      await userEvent.click(joinedHeader as HTMLElement);
+      const rowsDesc = screen.getAllByText(/Old|New/);
+      expect(rowsDesc[0]).toHaveTextContent('New');
+    });
   });
 
   describe('Actions', () => {

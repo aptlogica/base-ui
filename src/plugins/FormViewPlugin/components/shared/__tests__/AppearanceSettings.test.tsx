@@ -400,6 +400,38 @@ describe('AppearanceSettings', () => {
         expect.objectContaining({ logoUrl: 'https://example.com/logo.png' })
       );
     });
+
+    it('shows validation error for invalid banner URL', () => {
+      render(
+        <AppearanceSettings
+          appearance={defaultAppearance}
+          onChange={mockOnChange}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      const urlButtons = screen.getAllByText('Insert via URL');
+      const bannerButton = urlButtons[urlButtons.length - 1];
+      fireEvent.click(bannerButton);
+      const inputs = screen.getAllByPlaceholderText('https://...');
+      const bannerInput = inputs[inputs.length - 1];
+      fireEvent.change(bannerInput, { target: { value: 'bad-url' } });
+
+      expect(screen.getByText('Invalid URL')).toBeInTheDocument();
+    });
+
+    it('hides logo URL input when logo URL looks like an uploaded file', () => {
+      render(
+        <AppearanceSettings
+          appearance={{ ...defaultAppearance, logoUrl: 'http://localhost/assets/logo.png' }}
+          onChange={mockOnChange}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      const urlButtons = screen.getAllByText('Insert via URL');
+      expect(urlButtons.length).toBe(1);
+    });
   });
 
   describe('Image upload flows', () => {

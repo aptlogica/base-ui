@@ -121,4 +121,20 @@ describe('useUniqueTwoDigit', () => {
     // All numbers should be unique
     expect(new Set(numbers).size).toBe(3);
   });
+
+  it('uses crypto.getRandomValues for randomness', () => {
+    const getRandomValues = vi.fn((arr: Uint32Array) => {
+      arr[0] = 0;
+      return arr;
+    });
+    vi.stubGlobal('crypto', { getRandomValues });
+
+    const { result } = renderHook(() => useUniqueTwoDigit());
+    act(() => {
+      result.current.getNextNumber();
+    });
+
+    expect(getRandomValues).toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
 });

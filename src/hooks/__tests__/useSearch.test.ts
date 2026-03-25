@@ -185,6 +185,18 @@ describe('useSearch', () => {
     expect(result.current.filteredData).toEqual(mockData);
   });
 
+  it('should return all data when search term is whitespace even with selected field', () => {
+    const { result } = renderHook(() => useSearch());
+
+    act(() => {
+      result.current.setSelectedField(mockFields[0]);
+      result.current.setSearchTerm('   ');
+      result.current.filterData(mockData, mockFields);
+    });
+
+    expect(result.current.filteredData).toEqual(mockData);
+  });
+
   it('should exclude items when selected field value is missing', () => {
     const dataWithMissing = [
       { id: 1, name: 'Alice' },

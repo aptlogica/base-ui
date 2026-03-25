@@ -21,6 +21,7 @@ let canUpdateBaseFromBaseValue = false;
 let canDeleteBaseFromBaseValue = false;
 let canManageBaseMembersValue = false;
 let baseAccessValue: string = 'base-read';
+let isBaseLevelAccessValue = false;
 let editItemModalSavePayload: { name: string; description: string; image?: File | null; removeImage?: boolean } = {
   name: base.title,
   description: '',
@@ -85,7 +86,7 @@ vi.mock('../../../hooks/useNavigateToBaseFirstView', () => ({
 vi.mock('../../../hooks/useWorkspaceAccess', () => ({
   useWorkspaceAccess: () => ({
     canCreateBase: () => canCreateBaseValue,
-    isBaseLevelAccess: () => false,
+    isBaseLevelAccess: () => isBaseLevelAccessValue,
     canAssignUsers: () => canAssignUsersValue,
     canUpdateBase: () => canUpdateBaseFromWorkspaceValue,
     canDeleteBase: () => canDeleteBaseFromWorkspaceValue,
@@ -208,6 +209,7 @@ describe('Breadcrumb', () => {
     canDeleteBaseFromBaseValue = false;
     canManageBaseMembersValue = false;
     baseAccessValue = 'base-read';
+    isBaseLevelAccessValue = false;
     editItemModalSavePayload = {
       name: base.title,
       description: '',
@@ -329,6 +331,27 @@ describe('Breadcrumb', () => {
     expect(screen.getByText('No items found.')).toBeInTheDocument();
   });
 
+  it('filters bases when base-level access is enabled', async () => {
+    const user = userEvent.setup();
+    isBaseLevelAccessValue = true;
+    workspaceBasesData = {
+      data: [
+        { id: 'b1', title: 'Allowed', workspace_id: 'ws1', access_level: 'owner' },
+        { id: 'b2', title: 'Hidden', workspace_id: 'ws1', access_level: 'none' },
+      ],
+    };
+
+    render(<Breadcrumb />);
+
+    const baseButton = screen.getByRole('button', { name: /base one/i });
+    await user.click(baseButton);
+
+    const portal = document.querySelector('.breadcrumb-dropdown-portal') as HTMLElement;
+    const portalUtils = within(portal);
+    expect(portalUtils.getByText('Allowed')).toBeInTheDocument();
+    expect(portalUtils.queryByText('Hidden')).not.toBeInTheDocument();
+  });
+
   it('renders base menu when user has permissions', async () => {
     const user = userEvent.setup();
     canUpdateBaseFromBaseValue = true;
@@ -377,6 +400,22 @@ describe('Breadcrumb', () => {
     });
     expect(invalidateQueriesSpy).toHaveBeenCalled();
     expect(toastSuccessSpy).toHaveBeenCalledWith('Base updated successfully');
+  });
+
+  it('shows error toast when base update fails', async () => {
+    const user = userEvent.setup();
+    canUpdateBaseFromBaseValue = true;
+    editItemModalSavePayload = { name: 'Base One Updated', description: 'New desc' };
+    updateBaseMutationSpy.mockRejectedValueOnce(new Error('boom'));
+
+    render(<Breadcrumb />);
+
+    const baseButton = screen.getByRole('button', { name: /base one/i });
+    await user.click(baseButton);
+    await user.click(screen.getByText('Edit Base'));
+    await user.click(screen.getByText('Save Edit'));
+
+    expect(toastErrorSpy).toHaveBeenCalledWith('boom');
   });
 
   it('opens add members modal from base menu', async () => {

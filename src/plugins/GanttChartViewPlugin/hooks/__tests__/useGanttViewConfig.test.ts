@@ -317,4 +317,28 @@ describe('useGanttViewConfig', () => {
     });
     expect(result.current.visibleColumns[0].id).toBe('col-1');
   });
+
+  it('returns all columns when no local field config is available', () => {
+    extractFieldConfigFromMetaMock.mockReturnValue([]);
+    generateDefaultFieldConfigMock.mockReturnValue([]);
+    mergeFieldConfigWithColumnsMock.mockReturnValue([]);
+    const columns = [createColumn({ id: 'col-1' }), createColumn({ id: 'col-2' })];
+    const { result } = renderViewConfig({ columns });
+
+    expect(result.current.visibleColumns).toEqual(columns);
+  });
+
+  it('returns filtered tasks when no sorts are applied', () => {
+    const view = {
+      id: 'view-1',
+      meta: {
+        filters: [],
+        sorts: [],
+        fieldConfig: [],
+      },
+    };
+    const { result } = renderViewConfig({ view, tasks: baseTasks });
+
+    expect(result.current.sortedTasksForSidebar).toEqual(result.current.filteredTasks);
+  });
 });
