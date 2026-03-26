@@ -62,4 +62,76 @@ describe('CreateTableModal', () => {
     expect(validateTableNameMock).toHaveBeenCalled();
     expect(onCreate).not.toHaveBeenCalled();
   });
+
+  it('uses provided default name when supplied', async () => {
+    render(
+      <CreateTableModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onCreate={vi.fn()}
+        baseId="b1"
+        defaultName="Preset"
+      />
+    );
+
+    await screen.findByDisplayValue('Preset');
+  });
+
+  it('shows required error when submitting with empty name', () => {
+    const onCreate = vi.fn();
+    render(
+      <CreateTableModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onCreate={onCreate}
+        baseId="b1"
+        existingTables={[]}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText(/table name/i), { target: { value: '' } });
+    const form = document.getElementById('create-table-form');
+    if (form) {
+      fireEvent.submit(form);
+    }
+    expect(screen.getByText('Table name is required')).toBeInTheDocument();
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it('closes on Escape key press', () => {
+    const onClose = vi.fn();
+    render(
+      <CreateTableModal
+        isOpen={true}
+        onClose={onClose}
+        onCreate={vi.fn()}
+        baseId="b1"
+      />
+    );
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows error when onCreate throws', async () => {
+    const onCreate = vi.fn(() => {
+      throw new Error('Boom');
+    });
+    render(
+      <CreateTableModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onCreate={onCreate}
+        baseId="b1"
+        existingTables={[]}
+      />
+    );
+
+    await screen.findByDisplayValue('Table 1');
+    const nameInput = screen.getByLabelText(/table name/i) as HTMLInputElement;
+    fireEvent.change(nameInput, { target: { value: 'Valid Name' } });
+    await screen.findByDisplayValue('Valid Name');
+    fireEvent.click(screen.getByRole('button', { name: 'Create Table' }));
+    expect(await screen.findByText('Boom')).toBeInTheDocument();
+  });
 });

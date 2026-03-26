@@ -330,6 +330,26 @@ describe('useBaseAccess', () => {
       expect(result.current.canDeleteRecord()).toBe(false);
     });
 
+    it('treats workspace-read base access as read-only', () => {
+      mockUseWorkspaceAccess.mockReturnValue({
+        wsAccess: 'base',
+        hasFullWorkspaceAccess: false,
+        isBaseLevelAccess: () => true,
+        currentWorkspace: { id: 'ws-1', name: 'Workspace 1' },
+      } as any);
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: [{ id: 'base-1', name: 'Base 1', access_level: 'workspace-read' }],
+      } as any);
+
+      const { result } = renderHook(() => useBaseAccess('base-1'));
+
+      expect(result.current.canAccessBase).toBe(true);
+      expect(result.current.isBaseReadOnly()).toBe(true);
+      expect(result.current.canCreateView()).toBe(false);
+      expect(result.current.canUpdateRecord()).toBe(false);
+    });
+
     it('returns no base access when base is not found in workspace bases list', () => {
       mockUseWorkspaceAccess.mockReturnValue({
         wsAccess: 'base',
@@ -348,6 +368,63 @@ describe('useBaseAccess', () => {
       expect(result.current.baseAccess).toBeNull();
       expect(result.current.canAccessBase).toBe(false);
       expect(result.current.hasFullBaseAccess).toBe(false);
+    });
+
+    it('supports maintainer base access level for base users', () => {
+      mockUseWorkspaceAccess.mockReturnValue({
+        wsAccess: 'base',
+        hasFullWorkspaceAccess: false,
+        isBaseLevelAccess: () => true,
+        currentWorkspace: { id: 'ws-1', name: 'Workspace 1' },
+      } as any);
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: [{ id: 'base-1', name: 'Base 1', access_level: 'maintainer' }],
+      } as any);
+
+      const { result } = renderHook(() => useBaseAccess('base-1'));
+
+      expect(result.current.baseAccess).toBe('maintainer');
+      expect(result.current.canAccessBase).toBe(true);
+      expect(result.current.canCreateTable()).toBe(true);
+      expect(result.current.canUpdateView()).toBe(true);
+      expect(result.current.isBaseReadOnly()).toBe(false);
+    });
+
+    it('returns no access when not base-level and no full workspace access', () => {
+      mockUseWorkspaceAccess.mockReturnValue({
+        wsAccess: 'base',
+        hasFullWorkspaceAccess: false,
+        isBaseLevelAccess: () => false,
+        currentWorkspace: { id: 'ws-1', name: 'Workspace 1' },
+      } as any);
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: [{ id: 'base-1', name: 'Base 1', access_level: 'base-member' }],
+      } as any);
+
+      const { result } = renderHook(() => useBaseAccess('base-1'));
+
+      expect(result.current.canAccessBase).toBe(false);
+      expect(result.current.canCreateTable()).toBe(false);
+    });
+
+    it('handles bases response object with data array', () => {
+      mockUseWorkspaceAccess.mockReturnValue({
+        wsAccess: 'base',
+        hasFullWorkspaceAccess: false,
+        isBaseLevelAccess: () => true,
+        currentWorkspace: { id: 'ws-1', name: 'Workspace 1' },
+      } as any);
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: [{ id: 'base-1', name: 'Base 1', access_level: 'owner' }] },
+      } as any);
+
+      const { result } = renderHook(() => useBaseAccess('base-1'));
+
+      expect(result.current.baseAccess).toBe('owner');
+      expect(result.current.canAccessBase).toBe(true);
     });
   });
 });

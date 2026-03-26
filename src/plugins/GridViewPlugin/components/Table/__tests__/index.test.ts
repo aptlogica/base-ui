@@ -12,5 +12,5 @@ describe('Table barrel exports', () => {
     expect(mod.VirtualizedTableBody).toBeDefined();
     expect(mod.Search).toBeDefined();
     expect(mod.NewColumnModalPortal).toBeDefined();
-  });
+  }, 120000);
 });

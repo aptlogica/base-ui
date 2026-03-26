@@ -4,6 +4,10 @@ import '@testing-library/jest-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => undefined;
+}
+
 // Mock the service function to prevent real API calls
 vi.mock('../../../../service/clientService', () => ({
   getTenantUsersService: vi.fn(() => Promise.resolve({
@@ -39,6 +43,10 @@ const { mockUseGetTenantUsers } = vi.hoisted(() => ({
 
 vi.mock('../../../../hooks/useApi', () => ({
   useGetTenantUsers: mockUseGetTenantUsers,
+}));
+
+vi.mock('../../../../utils/dropdownPosition', () => ({
+  calculateDropdownPosition: () => ({ top: 0, left: 0, width: 240 }),
 }));
 
 import { User } from '../User';
@@ -181,6 +189,18 @@ describe('User Component', () => {
       expect(document.body).toBeInTheDocument();
     });
 
+    it('should use defaultUser when value is empty', () => {
+      renderWithProviders(
+        <User
+          value={null}
+          onChange={mockOnChange}
+          config={{ defaultUser: '1' }}
+        />
+      );
+
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
+
     it('should show loading placeholder when users are loading', () => {
       mockUseGetTenantUsers.mockReturnValue({
         data: [],
@@ -239,6 +259,30 @@ describe('User Component', () => {
       expect(button).toBeInTheDocument();
     });
 
+    it('should select and toggle a single user', () => {
+      renderWithProviders(
+        <User
+          value={null}
+          onChange={mockOnChange}
+          config={{}}
+        />
+      );
+
+      const button = screen.getByRole('button', { name: /select user/i });
+      fireEvent.click(button);
+
+      const johnOption = screen.getByRole('button', { name: /select john doe/i });
+      fireEvent.click(johnOption);
+
+      expect(mockOnChange).toHaveBeenCalledWith('1');
+
+      // Reopen and deselect
+      fireEvent.click(screen.getByRole('button', { name: /john doe john doe/i }));
+      fireEvent.click(screen.getByRole('button', { name: /select john doe/i }));
+
+      expect(mockOnChange).toHaveBeenCalledWith(null);
+    });
+
     it('should select single user from dropdown', () => {
       renderWithProviders(
         <User
@@ -265,6 +309,28 @@ describe('User Component', () => {
       expect(document.body).toBeInTheDocument();
     });
 
+    it('should add and remove users in multiple selection', () => {
+      renderWithProviders(
+        <User
+          value={null}
+          onChange={mockOnChange}
+          config={{ allowMultiple: true }}
+        />
+      );
+
+      const button = screen.getByRole('button', { name: /select user/i });
+      fireEvent.click(button);
+
+      fireEvent.click(screen.getByRole('button', { name: /select john doe/i }));
+      fireEvent.click(screen.getByRole('button', { name: /select jane smith/i }));
+
+      expect(mockOnChange).toHaveBeenCalledWith(['1']);
+      expect(mockOnChange).toHaveBeenCalledWith(['1', '2']);
+
+      fireEvent.click(screen.getByRole('button', { name: /select john doe/i }));
+      expect(mockOnChange).toHaveBeenCalledWith(['2']);
+    });
+
     it('should filter users by search text', () => {
       renderWithProviders(
         <User
@@ -275,6 +341,27 @@ describe('User Component', () => {
       );
 
       expect(document.body).toBeInTheDocument();
+    });
+
+    it('clears search input when clear icon is clicked', () => {
+      renderWithProviders(
+        <User
+          value={null}
+          onChange={mockOnChange}
+          config={{}}
+        />
+      );
+
+      const button = screen.getByRole('button', { name: /select user/i });
+      fireEvent.click(button);
+
+      const searchInput = screen.getByLabelText('Search users') as HTMLInputElement;
+      fireEvent.change(searchInput, { target: { value: 'john' } });
+      expect(searchInput.value).toBe('john');
+
+      const clearBtn = searchInput.parentElement?.querySelector('button');
+      fireEvent.click(clearBtn as HTMLElement);
+      expect(searchInput.value).toBe('');
     });
 
     it('should display user avatars in dropdown', () => {
@@ -591,6 +678,32 @@ describe('User Component', () => {
       );
 
       expect(screen.queryByLabelText('Remove John Doe')).not.toBeInTheDocument();
+    });
+
+    it('closes dropdown when readOnly becomes true', () => {
+      const { rerender } = renderWithProviders(
+        <User
+          value={null}
+          onChange={mockOnChange}
+          config={{}}
+        />
+      );
+
+      const button = screen.getByRole('button', { name: /select user/i });
+      fireEvent.click(button);
+      expect(screen.getByLabelText('Search users')).toBeInTheDocument();
+
+      rerenderWithProviders(
+        <User
+          value={null}
+          onChange={mockOnChange}
+          config={{}}
+          readOnly
+        />,
+        { rerender }
+      );
+
+      expect(screen.queryByLabelText('Search users')).not.toBeInTheDocument();
     });
   });
 

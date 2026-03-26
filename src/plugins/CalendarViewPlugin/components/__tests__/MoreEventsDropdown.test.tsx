@@ -1,13 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MoreEventsDropdown from '../MoreEventsDropdown';
 import type { GridColumn } from '../../../../plugins/GridViewPlugin/types/grid.types';
 
-vi.mock('../../../hooks/useFrontendPagination', () => ({
+const loadNextPageMock = vi.fn();
+
+vi.mock('react-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-dom')>('react-dom');
+  return {
+    ...actual,
+    createPortal: (node: React.ReactNode) => node,
+  };
+});
+
+vi.mock('../../../../hooks/useFrontendPagination', () => ({
   useFrontendPagination: ({ data }: any) => ({
     allLoadedData: data.slice(0, 30),
-    loadNextPage: vi.fn(),
+    loadNextPage: loadNextPageMock,
     hasMore: data.length > 30,
     totalItems: data.length
   })
@@ -48,6 +58,7 @@ describe('MoreEventsDropdown', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    loadNextPageMock.mockClear();
   });
 
   describe('rendering', () => {
@@ -138,6 +149,22 @@ describe('MoreEventsDropdown', () => {
 
       await waitFor(() => {
         expect(screen.queryByText('5 more events')).not.toBeInTheDocument();
+      });
+    });
+
+    it('opens dropdown on Enter key', async () => {
+      render(
+        <MoreEventsDropdown events={mockEvents}>
+          <span>+5 more</span>
+        </MoreEventsDropdown>
+      );
+
+      const trigger = screen.getByRole('button', { name: /show more events/i });
+      trigger.focus();
+      trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      await waitFor(() => {
+        expect(screen.getByText('5 more events')).toBeInTheDocument();
       });
     });
 
@@ -381,6 +408,36 @@ describe('MoreEventsDropdown', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/30 loaded/i)).toBeInTheDocument();
+      });
+    });
+
+    it('loads more when clicking the load more button', async () => {
+      const manyEvents = Array.from({ length: 50 }, (_, i) => ({
+        id: `event-${i}`,
+        title: `Event ${i}`,
+        date: '2026-01-30',
+        dateTime: new Date('2026-01-30T14:30:00'),
+        data: {},
+        color: 'blue'
+      }));
+
+      render(
+        <MoreEventsDropdown events={manyEvents}>
+          <span>+50 more</span>
+        </MoreEventsDropdown>
+      );
+
+      const trigger = screen.getByText('+50 more');
+      await userEvent.click(trigger);
+
+      await waitFor(() => {
+        expect(screen.getByText(/50 more events/i)).toBeInTheDocument();
+      });
+
+      const loadMoreButton = screen.getByRole('button', { name: /load more/i });
+      fireEvent.click(loadMoreButton);
+      await waitFor(() => {
+        expect(loadNextPageMock).toHaveBeenCalled();
       });
     });
   });

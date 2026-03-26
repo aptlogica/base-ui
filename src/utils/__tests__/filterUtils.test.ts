@@ -162,6 +162,29 @@ describe('matchesFilter and applyFilters', () => {
     expect(matchesFilter(card, { column: 'missing', operator: 'is equal', value: 'x' }, columns)).toBe(true);
   });
 
+  it('handles select contains any of with non-array value', () => {
+    expect(matchesFilter(card, { column: 'status', operator: 'contains any of', value: 123 }, columns)).toBe(false);
+  });
+
+  it('handles boolean not checked', () => {
+    const localColumns = [{ key: 'done', uidt: 'boolean' }];
+    const localCard = { data: { done: false } };
+    expect(matchesFilter(localCard, { column: 'done', operator: 'is not checked', value: '' }, localColumns)).toBe(true);
+  });
+
+  it('handles date equality and inequality', () => {
+    const localColumns = [{ key: 'due', uidt: 'date' }];
+    const localCard = { data: { due: '2026-01-10' } };
+    expect(matchesFilter(localCard, { column: 'due', operator: 'is equal', value: '2026-01-10' }, localColumns)).toBe(true);
+    expect(matchesFilter(localCard, { column: 'due', operator: 'is not equal', value: '2026-01-11' }, localColumns)).toBe(true);
+  });
+
+  it('falls back to string comparison for unknown types', () => {
+    const localColumns = [{ key: 'misc', uidt: 'unknown' }];
+    const localCard = { data: { misc: 'Alpha' } };
+    expect(matchesFilter(localCard, { column: 'misc', operator: 'contains', value: 'alp' }, localColumns)).toBe(true);
+  });
+
   it('applies filters with AND/OR logic correctly', () => {
     const cards = [
       { data: { name: 'Alpha', score: 10 } },
@@ -189,6 +212,7 @@ describe('filter helper utilities', () => {
   it('checks operator value requirements and filter completeness', () => {
     expect(operatorRequiresValue('is empty')).toBe(false);
     expect(operatorRequiresValue('is equal')).toBe(true);
+    expect(operatorRequiresValue('is not checked')).toBe(false);
 
     expect(isFilterComplete({ column: 'name', operator: 'is equal', value: 'x' })).toBe(true);
     expect(isFilterComplete({ column: 'name', operator: 'is empty', value: '' })).toBe(true);
@@ -201,6 +225,12 @@ describe('filter helper utilities', () => {
 
     expect(normalizeFilterValue({ operator: 'is empty', value: 'abc' }, 'abc')).toBe('');
     expect(normalizeFilterValue({ operator: 'is equal', value: ' abc ' }, undefined)).toBe('abc');
+    expect(normalizeFilterValue({ operator: 'is equal', value: 'abc' }, '   ')).toBe('');
+  });
+
+  it('handles incomplete filters and input overrides', () => {
+    expect(isFilterComplete({ column: 'name', operator: 'is equal', value: '' })).toBe(false);
+    expect(isFilterComplete({ column: 'name', operator: 'is equal', value: '' }, 'x')).toBe(true);
   });
 
   it('formats duration values across supported formats', () => {

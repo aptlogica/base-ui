@@ -370,4 +370,186 @@ describe('NewColumnModal.logic', () => {
     expect(formulaMeta.meta.formula).toBe('ADD(1,2)');
     expect(formulaMeta.meta.formatting.precision).toBe(3);
   });
+
+  it('applies defaults for numeric, boolean, rating, year, select and contact types', () => {
+    const base = {
+      defaultValue: '',
+      richText: false,
+      showThousands: false,
+      precision: '1.0',
+      checkboxIcon: 'check',
+      checkboxColor: 'green',
+      checkboxDefault: false,
+      selectOptions: [{ option: 'Open', color: '#111111' }],
+      singleDefault: '',
+      multiDefault: [],
+      ratingIcon: 'star',
+      ratingColor: 'yellow',
+      ratingMax: 5,
+      ratingDefault: 0,
+      description: '',
+      dateFormat: 'YYYY-MM-DD',
+      timeFormat: 'HH:mm',
+      hourFormat: '24' as const,
+      displayTimeZone: false,
+      sameTimezone: false,
+      timeZone: '',
+      timeZoneOptions: [],
+      dateTimeDefault: '',
+      currencyType: 'USD',
+      currencyLocale: 'en-US',
+      displayAsProgress: false,
+      progressColor: 'blue',
+      percentDefault: null,
+      durationFormat: 'h:mm',
+      durationDefault: 0,
+      yearDefault: null,
+      dateDefault: '',
+      timeDefault: '',
+      phoneValid: true,
+      phoneDefault: '123',
+      emailValid: true,
+      emailDefault: 'a@b.com',
+      urlValid: true,
+      urlDefault: 'https://x.dev',
+      allowMultipleUsers: false,
+      selectedUsers: null,
+      selectedTableId: '',
+      selectedTable: null,
+      relationType: 'one-to-one' as const,
+      selectedRelationId: '',
+      selectedLookupColumnId: '',
+      linkFields: [],
+      buttonStyle: 'primary',
+      buttonAction: 'url',
+      openButtonInNewTab: true,
+      formulaText: '',
+      formulaFormatting: { type: 'text' as const, precision: 2, currency: 'USD', dateFormat: 'YYYY-MM-DD' },
+      getBrowserTimeZone: () => 'UTC',
+    };
+
+    const numberMeta = buildFieldMeta({ ...base, selectedTypeKey: 'number', defaultValue: '42' });
+    expect(numberMeta.meta.defaultValue).toBe(42);
+
+    const booleanMeta = buildFieldMeta({ ...base, selectedTypeKey: 'boolean', checkboxDefault: true });
+    expect(booleanMeta.meta.defaultValue).toBe(true);
+
+    const ratingMeta = buildFieldMeta({ ...base, selectedTypeKey: 'rating', defaultValue: '3' });
+    expect(ratingMeta.meta.defaultValue).toBe(3);
+
+    const yearMeta = buildFieldMeta({ ...base, selectedTypeKey: 'year', defaultValue: '2026' });
+    expect(yearMeta.meta.defaultValue).toBe(2026);
+
+    const selectMeta = buildFieldMeta({ ...base, selectedTypeKey: 'select', singleDefault: 'Open' });
+    expect(selectMeta.meta.defaultValue).toBe('Open');
+
+    const multiMeta = buildFieldMeta({ ...base, selectedTypeKey: 'multiSelect', multiDefault: ['Open'] });
+    expect(multiMeta.meta.defaultValue).toEqual(['Open']);
+
+    const phoneMeta = buildFieldMeta({ ...base, selectedTypeKey: 'phoneNumber' });
+    expect(phoneMeta.meta.defaultValue).toBe('123');
+    expect(phoneMeta.meta.phoneValid).toBe(true);
+  });
+
+  it('applies date, currency, percent, duration and timezone defaults', () => {
+    const baseParams = {
+      defaultValue: '',
+      richText: false,
+      showThousands: false,
+      precision: '1.0',
+      checkboxIcon: 'check',
+      checkboxColor: 'green',
+      checkboxDefault: false,
+      selectOptions: [],
+      singleDefault: '',
+      multiDefault: [],
+      ratingIcon: 'star',
+      ratingColor: 'yellow',
+      ratingMax: 5,
+      ratingDefault: 0,
+      description: '',
+      dateFormat: 'YYYY-MM-DD',
+      timeFormat: 'HH:mm',
+      hourFormat: '24' as const,
+      displayTimeZone: false,
+      sameTimezone: true,
+      timeZone: 'UTC',
+      timeZoneOptions: [{ label: 'UTC', value: 'utc' }],
+      dateTimeDefault: '12:30',
+      currencyType: 'USD',
+      currencyLocale: 'en-US',
+      displayAsProgress: false,
+      progressColor: 'blue',
+      percentDefault: null,
+      durationFormat: 'h:mm',
+      durationDefault: 0,
+      yearDefault: null,
+      dateDefault: '',
+      timeDefault: '',
+      phoneValid: false,
+      phoneDefault: '',
+      emailValid: false,
+      emailDefault: '',
+      urlValid: false,
+      urlDefault: '',
+      allowMultipleUsers: false,
+      selectedUsers: null,
+      selectedTableId: '',
+      selectedTable: null,
+      relationType: 'one-to-one' as const,
+      selectedRelationId: '',
+      selectedLookupColumnId: '',
+      linkFields: [],
+      buttonStyle: 'primary',
+      buttonAction: 'url',
+      openButtonInNewTab: true,
+      formulaText: '',
+      formulaFormatting: { type: 'text' as const, precision: 2, currency: 'USD', dateFormat: 'YYYY-MM-DD' },
+      getBrowserTimeZone: () => 'UTC',
+    };
+
+    const result = buildFieldMeta({
+      ...baseParams,
+      selectedTypeKey: 'datetime',
+    });
+    expect(result.meta.timeZone).toBe('utc');
+    expect(result.meta.defaultValue).toMatch(/T12:30$/);
+
+    const dateMeta = buildFieldMeta({
+      ...baseParams,
+      selectedTypeKey: 'date',
+      dateDefault: '2026-03-01',
+      sameTimezone: false,
+      displayTimeZone: false,
+    });
+    expect(dateMeta.meta.defaultValue).toBe('2026-03-01');
+
+    const currencyMeta = buildFieldMeta({
+      ...baseParams,
+      selectedTypeKey: 'currency',
+      currencyDefault: 100,
+      precision: '0.00',
+      sameTimezone: false,
+      displayTimeZone: false,
+    });
+    expect(currencyMeta.meta.defaultValue).toBe(100);
+
+    const percentMeta = buildFieldMeta({
+      ...baseParams,
+      selectedTypeKey: 'percent',
+      percentDefault: 55,
+      sameTimezone: false,
+      displayTimeZone: false,
+    });
+    expect(percentMeta.meta.defaultValue).toBe(55);
+
+    const durationMeta = buildFieldMeta({
+      ...baseParams,
+      selectedTypeKey: 'duration',
+      durationDefault: 90,
+      sameTimezone: false,
+      displayTimeZone: false,
+    });
+    expect(durationMeta.meta.defaultValue).toBe(90);
+  });
 });

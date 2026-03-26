@@ -89,6 +89,25 @@ describe('useSearch', () => {
     expect(result.current.filteredData).toHaveLength(3);
   });
 
+  it('should search across all fields inside nested data objects', () => {
+    const nestedData = [
+      { id: 1, data: { name: 'Alpha', email: 'alpha@example.com' } },
+      { id: 2, data: { name: 'Beta', email: 'beta@example.com' } },
+    ];
+    const { result } = renderHook(() => useSearch());
+
+    act(() => {
+      result.current.handleSearch('beta', null);
+    });
+
+    act(() => {
+      result.current.filterData(nestedData, mockFields);
+    });
+
+    expect(result.current.filteredData).toHaveLength(1);
+    expect(result.current.filteredData[0].data.name).toBe('Beta');
+  });
+
   it('should filter data case-insensitively', () => {
     const { result } = renderHook(() => useSearch());
     
@@ -183,5 +202,36 @@ describe('useSearch', () => {
     });
     
     expect(result.current.filteredData).toEqual(mockData);
+  });
+
+  it('should return all data when search term is whitespace even with selected field', () => {
+    const { result } = renderHook(() => useSearch());
+
+    act(() => {
+      result.current.setSelectedField(mockFields[0]);
+      result.current.setSearchTerm('   ');
+      result.current.filterData(mockData, mockFields);
+    });
+
+    expect(result.current.filteredData).toEqual(mockData);
+  });
+
+  it('should exclude items when selected field value is missing', () => {
+    const dataWithMissing = [
+      { id: 1, name: 'Alice' },
+      { id: 2, data: {} },
+    ];
+    const { result } = renderHook(() => useSearch());
+
+    act(() => {
+      result.current.handleSearch('alice', mockFields[0]);
+    });
+
+    act(() => {
+      result.current.filterData(dataWithMissing, mockFields);
+    });
+
+    expect(result.current.filteredData).toHaveLength(1);
+    expect(result.current.filteredData[0].name).toBe('Alice');
   });
 });

@@ -328,6 +328,29 @@ describe('handleBaseDeletion', () => {
     expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1/base/base-2/table/table-2/view-2', { replace: true });
   });
 
+  it('falls back to workspace when first remaining base has table without id', () => {
+    const ws = [
+      {
+        id: 'ws-1',
+        bases: [
+          { id: 'base-1', tables: [] },
+          {
+            id: 'base-2',
+            tables: [{ model: {}, views: [{ id: 'view-2' }] }],
+          },
+        ],
+      },
+    ];
+    vi.mocked(useWorkspaceDataModule.default).mockReturnValue({ workspaces: ws } as any);
+    resetStoreState({ selectedWorkspaceId: 'ws-1', selectedBaseId: 'base-1' });
+    const { result } = renderHook(() => useNavigationActions(), { wrapper });
+
+    result.current.handleBaseDeletion('base-1');
+
+    expect(navigateToBase).toHaveBeenCalledWith('ws-1', 'base-2');
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1', { replace: true });
+  });
+
   it('navigates to first remaining table grid when no views are available', () => {
     const ws = [
       {
@@ -419,6 +442,32 @@ describe('handleTableDeletion', () => {
 
     expect(navigateToView).toHaveBeenCalledWith('ws-1', 'base-1', 'table-2', 'view-2');
     expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1/base/base-1/table/table-2/view-2', { replace: true });
+  });
+
+  it('navigates to workspace when remaining table lacks id', () => {
+    const ws = [
+      {
+        id: 'ws-1',
+        bases: [
+          {
+            id: 'base-1',
+            tables: [
+              { id: 'table-1', views: [] },
+              { model: {}, views: [{ id: 'view-2' }] },
+            ],
+          },
+        ],
+      },
+    ];
+    vi.mocked(useWorkspaceDataModule.default).mockReturnValue({ workspaces: ws } as any);
+    resetStoreState({ selectedWorkspaceId: 'ws-1', selectedBaseId: 'base-1', selectedTableId: 'table-1' });
+    const { result } = renderHook(() => useNavigationActions(), { wrapper });
+
+    result.current.handleTableDeletion('table-1');
+
+    expect(setTable).toHaveBeenCalledWith(null);
+    expect(setView).toHaveBeenCalledWith(null);
+    expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws-1', { replace: true });
   });
 
   it('navigates to workspace when selected workspace/base ids are missing', () => {

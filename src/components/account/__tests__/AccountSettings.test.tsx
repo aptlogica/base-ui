@@ -1,6 +1,8 @@
+import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AccountSettings, useFooterButtons } from '../AccountSettings';
+import { ProfileSection } from '../ProfileSection';
 
 // Mock ProfileSection and SecuritySection
 vi.mock('../ProfileSection', () => ({
@@ -13,6 +15,9 @@ vi.mock('../SecuritySection', () => ({
 describe('AccountSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(ProfileSection).mockImplementation(() => (
+      <div data-testid="profile-section">ProfileSection</div>
+    ));
   });
 
   describe('Navigation', () => {
@@ -71,6 +76,35 @@ describe('AccountSettings', () => {
       
       const footer = document.querySelector('.border-t.border-gray-200');
       expect(footer).toBeInTheDocument();
+    });
+
+    it('registers footer content and renders it for active section', () => {
+      vi.mocked(ProfileSection).mockImplementation(() => {
+        const { registerFooter, currentSection } = useFooterButtons();
+        React.useEffect(() => {
+          registerFooter(<div data-testid="custom-footer">Custom Footer</div>, currentSection);
+        }, [registerFooter, currentSection]);
+        return <div data-testid="profile-section">ProfileSection</div>;
+      });
+
+      render(<AccountSettings />);
+
+      expect(screen.getByTestId('custom-footer')).toBeInTheDocument();
+    });
+
+    it('clears footer content for active section', () => {
+      vi.mocked(ProfileSection).mockImplementation(() => {
+        const { registerFooter, clearFooter, currentSection } = useFooterButtons();
+        React.useEffect(() => {
+          registerFooter(<div data-testid="custom-footer">Custom Footer</div>, currentSection);
+          clearFooter(currentSection);
+        }, [registerFooter, clearFooter, currentSection]);
+        return <div data-testid="profile-section">ProfileSection</div>;
+      });
+
+      render(<AccountSettings />);
+
+      expect(screen.queryByTestId('custom-footer')).not.toBeInTheDocument();
     });
   });
 

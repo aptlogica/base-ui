@@ -206,6 +206,21 @@ describe('AssignUserToWorkspaceModal', () => {
     await waitFor(() => expect(bulkAddMembersMutateAsync).not.toHaveBeenCalled());
   });
 
+  it('blocks submit when specific base is selected without bases', async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(<AssignUserToWorkspaceModal {...defaultProps} />);
+
+    await user.selectOptions(screen.getByLabelText(/select users to assign/i), 'user-1');
+    await user.selectOptions(screen.getByLabelText(/select role/i), 'base-member');
+    await user.selectOptions(screen.getByLabelText(/select base/i), 'specific_base');
+    const addButton = screen.getByRole('button', { name: /^add$/i });
+    expect(addButton).toBeDisabled();
+    await waitFor(() => {
+      expect(toastError).not.toHaveBeenCalled();
+      expect(bulkAddMembersMutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
   it('shows partial failure toast when api returns failures', async () => {
     bulkAddMembersMutateAsync.mockResolvedValue({
       data: {
@@ -221,6 +236,67 @@ describe('AssignUserToWorkspaceModal', () => {
     await user.click(screen.getByRole('button', { name: /^add$/i }));
 
     await waitFor(() => expect(toastError).toHaveBeenCalled());
+  });
+
+  it('shows failure toast when all assignments fail', async () => {
+    bulkAddMembersMutateAsync.mockResolvedValue({
+      data: {
+        success_count: 0,
+        failure_count: 2,
+        failures: [
+          { user_id: 'user-1', error: 'Invalid role' },
+          { user_id: 'user-2', error: 'Blocked' },
+        ],
+      },
+    });
+    const user = userEvent.setup();
+    renderWithQueryClient(<AssignUserToWorkspaceModal {...defaultProps} />);
+
+    await user.selectOptions(screen.getByLabelText(/select users to assign/i), ['user-1', 'user-2']);
+    await user.click(screen.getByRole('button', { name: /^add$/i }));
+
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to assign users.')
+      );
+    });
+  });
+
+  it('assigns all base roles when base member role and all bases selected', async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(<AssignUserToWorkspaceModal {...defaultProps} />);
+
+    await user.selectOptions(screen.getByLabelText(/select users to assign/i), 'user-1');
+    await user.selectOptions(screen.getByLabelText(/select role/i), 'base-member');
+    await user.click(screen.getByRole('button', { name: /^add$/i }));
+
+    await waitFor(() => expect(bulkAddMembersMutateAsync).toHaveBeenCalled());
+    const payload = bulkAddMembersMutateAsync.mock.calls[0][0];
+    expect(payload.members[0].memberships[0].bases).toEqual([
+      { base_id: 'base-1', role: 'base-member' },
+      { base_id: 'base-2', role: 'base-member' },
+    ]);
+  });
+
+  it('shows base-only role options for maintainer-only users', async () => {
+    hasAdminRole.mockReturnValue(false);
+    userRolesAndAccessData = [
+      {
+        workspace_id: 'ws-123',
+        workspace_name: 'Workspace A',
+        access: 'maintainer',
+        bases: [],
+      },
+    ];
+    const user = userEvent.setup();
+    renderWithQueryClient(<AssignUserToWorkspaceModal {...defaultProps} />);
+
+    await user.selectOptions(screen.getByLabelText(/select users to assign/i), 'user-1');
+
+    expect(screen.queryByText('Workspace Maintainer')).not.toBeInTheDocument();
+    expect(screen.queryByText('Workspace Read Only')).not.toBeInTheDocument();
+    expect(screen.getByText('Base Member')).toBeInTheDocument();
+    expect(screen.getByText('Base Read Only')).toBeInTheDocument();
   });
 
   it('updates workspace role in edit mode', async () => {
@@ -253,6 +329,69 @@ describe('AssignUserToWorkspaceModal', () => {
     });
   });
 
+  it('updates base roles in edit mode when workspace access is empty', async () => {
+    userRolesAndAccessData = [
+      {
+        workspace_id: 'ws-123',
+        workspace_name: 'Workspace A',
+        access: '',
+        bases: [
+          { base_id: 'base-1', base_name: 'Base A', access: 'base-read' },
+          { base_id: 'base-2', base_name: 'Base B', access: 'base-member' },
+        ],
+      },
+    ];
+
+    const user = userEvent.setup();
+    renderWithQueryClient(
+      <AssignUserToWorkspaceModal
+        {...defaultProps}
+        editMode={true}
+        memberToEdit="user-1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /update/i }));
+
+    await waitFor(() => expect(bulkAddMembersMutateAsync).toHaveBeenCalled());
+    const payload = bulkAddMembersMutateAsync.mock.calls[0][0];
+    expect(payload.members[0].memberships[0]).toEqual({
+      workspace_id: 'ws-123',
+      role: '',
+      bases: [
+        { base_id: 'base-1', role: 'base-read' },
+        { base_id: 'base-2', role: 'base-member' },
+      ],
+    });
+  });
+
+  it('shows error when workspace is not found during update', async () => {
+    userRolesAndAccessData = [
+      {
+        workspace_id: 'other-workspace',
+        workspace_name: 'Other',
+        access: 'maintainer',
+        bases: [],
+      },
+    ];
+
+    const user = userEvent.setup();
+    renderWithQueryClient(
+      <AssignUserToWorkspaceModal
+        {...defaultProps}
+        editMode={true}
+        memberToEdit="user-1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /update/i }));
+
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalledWith('Workspace not found');
+      expect(bulkAddMembersMutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
   it('removes workspace access in edit mode', async () => {
     userRolesAndAccessData = [
       {
@@ -280,5 +419,90 @@ describe('AssignUserToWorkspaceModal', () => {
         user_id: 'user-1',
       })
     );
+  });
+
+  it('does not remove workspace access when confirmation is cancelled', async () => {
+    (globalThis.confirm as unknown as vi.Mock).mockReturnValueOnce(false);
+    userRolesAndAccessData = [
+      {
+        workspace_id: 'ws-123',
+        workspace_name: 'Workspace A',
+        access: 'maintainer',
+        bases: [],
+      },
+    ];
+    const user = userEvent.setup();
+    renderWithQueryClient(
+      <AssignUserToWorkspaceModal
+        {...defaultProps}
+        editMode={true}
+        memberToEdit="user-1"
+      />
+    );
+
+    const removeButton = screen.getByTitle(/remove workspace access/i);
+    await user.click(removeButton);
+
+    await waitFor(() => {
+      expect(removeUserFromWorkspaceMutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  it('removes base access in edit mode when confirmed', async () => {
+    userRolesAndAccessData = [
+      {
+        workspace_id: 'ws-123',
+        workspace_name: 'Workspace A',
+        access: '',
+        bases: [{ base_id: 'base-1', base_name: 'Base A', access: 'base-member' }],
+      },
+    ];
+
+    const user = userEvent.setup();
+    renderWithQueryClient(
+      <AssignUserToWorkspaceModal
+        {...defaultProps}
+        editMode={true}
+        memberToEdit="user-1"
+      />
+    );
+
+    const removeButton = screen.getByTitle('Remove base access');
+    await user.click(removeButton);
+
+    await waitFor(() => {
+      expect(removeUserFromBaseMutateAsync).toHaveBeenCalledWith({
+        baseId: 'base-1',
+        user_id: 'user-1',
+      });
+    });
+  });
+
+  it('does not remove base access when confirmation is cancelled', async () => {
+    (globalThis.confirm as unknown as vi.Mock).mockReturnValueOnce(false);
+    userRolesAndAccessData = [
+      {
+        workspace_id: 'ws-123',
+        workspace_name: 'Workspace A',
+        access: '',
+        bases: [{ base_id: 'base-1', base_name: 'Base A', access: 'base-member' }],
+      },
+    ];
+
+    const user = userEvent.setup();
+    renderWithQueryClient(
+      <AssignUserToWorkspaceModal
+        {...defaultProps}
+        editMode={true}
+        memberToEdit="user-1"
+      />
+    );
+
+    const removeButton = screen.getByTitle('Remove base access');
+    await user.click(removeButton);
+
+    await waitFor(() => {
+      expect(removeUserFromBaseMutateAsync).not.toHaveBeenCalled();
+    });
   });
 });

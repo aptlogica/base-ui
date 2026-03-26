@@ -6,8 +6,10 @@ vi.mock('../../../utils/helpers', () => ({
   useDebounce: vi.fn((fn) => fn)
 }));
 
+const mockFilterValidSorts = vi.fn((sorts) => sorts);
+
 vi.mock('../../../utils/sortUtils', () => ({
-  filterValidSorts: vi.fn((sorts) => sorts)
+  filterValidSorts: (sorts: any) => mockFilterValidSorts(sorts)
 }));
 
 vi.mock('../../../utils/viewFieldConfigUtils', () => ({
@@ -217,6 +219,7 @@ describe('useKanbanViewConfig Hook', () => {
 
       expect(result.current.sorts).toEqual(newSorts);
     });
+
 
     it('should not persist sorts when read-only', async () => {
       const { result } = renderHook(() =>
@@ -435,6 +438,30 @@ describe('useKanbanViewConfig Hook', () => {
       });
 
       expect(result.current.localFieldConfig).toBeDefined();
+    });
+
+    it('handles updateViewConfig errors without throwing', async () => {
+      const failingUpdate = vi.fn().mockRejectedValue(new Error('boom'));
+      const viewWithFieldConfig = {
+        ...mockView,
+        meta: {
+          ...mockView.meta,
+          fieldConfig: [
+            { id: '1', position: 0, isHidden: false },
+          ],
+        },
+      };
+
+      const { result } = renderHook(() =>
+        useKanbanViewConfig({ view: viewWithFieldConfig, columns: mockColumns, updateViewConfig: failingUpdate })
+      );
+
+      await act(async () => {});
+      await act(async () => {
+        await result.current.handleFieldToggle('1');
+      });
+
+      expect(result.current.localFieldConfig.length).toBeGreaterThan(0);
     });
   });
 

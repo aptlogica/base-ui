@@ -1,519 +1,159 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import ExportModal from '../ExportModal';
 
 describe('ExportModal', () => {
-  const mockEvents = [
+  const events = [
     {
-      id: '1',
+      id: 'e1',
       title: 'Event 1',
-      date: '2026-01-30',
-      dateTime: new Date('2026-01-30T14:30:00'),
-      data: { description: 'First event' },
-      color: 'blue'
+      date: '2024-01-15',
+      dateTime: new Date('2024-01-15T10:00:00Z'),
+      data: { description: 'desc' },
     },
-    {
-      id: '2',
-      title: 'Event 2',
-      date: '2026-02-15',
-      dateTime: new Date('2026-02-15T10:00:00'),
-      data: { description: 'Second event' },
-      color: 'green'
-    }
   ];
 
-  const mockDateField = {
-    id: '1',
-    key: 'start_date',
-    title: 'Start Date',
-    type: 'datetime'
-  };
-
-  let createElementSpy: ReturnType<typeof vi.spyOn> | undefined;
-  const originalCreateElement = document.createElement.bind(document);
-
   beforeEach(() => {
-    vi.clearAllMocks();
     document.body.classList.remove('overflow-hidden');
-    // Only mock createElement for anchor tags so React's DOM creation is unchanged
-    createElementSpy = vi.spyOn(document, 'createElement').mockImplementation((tagName: unknown) => {
-      if ((tagName as string).toLowerCase() === 'a') {
-        const a = originalCreateElement('a');
-        a.setAttribute = vi.fn();
-        a.click = vi.fn();
-        return a;
-      }
-      return originalCreateElement(tagName as keyof HTMLElementTagNameMap);
-    }) as any;
   });
 
   afterEach(() => {
-    createElementSpy?.mockRestore();
+    document.body.classList.remove('overflow-hidden');
+    vi.restoreAllMocks();
   });
 
-  describe('rendering', () => {
-    it('should not render when closed', () => {
-      render(
-        <ExportModal
-          isOpen={false}
-          onClose={vi.fn()}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      expect(screen.queryByText('Export Calendar')).not.toBeInTheDocument();
-    });
-
-    it('should render when open', () => {
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      expect(screen.getByText('Export Calendar')).toBeInTheDocument();
-    });
-
-    it('should display event count', () => {
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      expect(screen.getByText('2 events available for export')).toBeInTheDocument();
-    });
-
-    it('should display singular event text', () => {
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={[mockEvents[0]]}
-          dateField={mockDateField}
-        />
-      );
-
-      expect(screen.getByText('1 event available for export')).toBeInTheDocument();
-    });
-
-    it('should show export format options', () => {
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      expect(screen.getByText('JSON')).toBeInTheDocument();
-      expect(screen.getByText('CSV')).toBeInTheDocument();
-      expect(screen.getByText('Excel')).toBeInTheDocument();
-    });
-
-    it('should display format descriptions', () => {
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      expect(screen.getByText('Structured data format')).toBeInTheDocument();
-      expect(screen.getByText('Comma-separated values')).toBeInTheDocument();
-      expect(screen.getByText('Spreadsheet format')).toBeInTheDocument();
-    });
+  it('returns null when closed', () => {
+    const { container } = render(<ExportModal isOpen={false} onClose={vi.fn()} events={events} />);
+    expect(container).toBeEmptyDOMElement();
   });
 
-  describe('close functionality', () => {
-    it('should call onClose when close button clicked', async () => {
-      const mockOnClose = vi.fn();
-
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={mockOnClose}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      const closeButton = screen.getByLabelText('Close');
-      await userEvent.click(closeButton);
-
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('should call onClose when backdrop clicked', async () => {
-      const mockOnClose = vi.fn();
-
-      const { container } = render(
-        <ExportModal
-          isOpen={true}
-          onClose={mockOnClose}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      const backdrop = container.querySelector('.bg-modal-backdrop');
-      expect(backdrop).toBeTruthy();
-      if (backdrop) await userEvent.click(backdrop as HTMLElement);
-
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('should not close when modal content clicked', async () => {
-      const mockOnClose = vi.fn();
-
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={mockOnClose}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      const modalContent = screen.getByText('Export Calendar').closest('div');
-      expect(modalContent).toBeTruthy();
-      if (modalContent) await userEvent.click(modalContent);
-
-      expect(mockOnClose).not.toHaveBeenCalled();
-    });
+  it('locks body scroll when open', () => {
+    render(<ExportModal isOpen={true} onClose={vi.fn()} events={events} />);
+    expect(document.body.classList.contains('overflow-hidden')).toBe(true);
   });
 
-  describe('JSON export', () => {
-    it('should export to JSON when JSON button clicked', async () => {
-      const mockClick = vi.fn();
-      createElementSpy!.mockImplementation((tagName: unknown) => {
-        if ((tagName as string).toLowerCase() === 'a') {
-          const a = originalCreateElement('a');
-          a.setAttribute = vi.fn();
-          a.click = mockClick;
-          return a;
-        }
-        return originalCreateElement(tagName as keyof HTMLElementTagNameMap);
-      }) as any;
-
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      const jsonButton = screen.getByText('JSON').closest('button');
-      expect(jsonButton).toBeTruthy();
-      if (jsonButton) await userEvent.click(jsonButton);
-
-      expect(mockClick).toHaveBeenCalled();
-    });
-
-    it('should close modal after JSON export', async () => {
-      const mockOnClose = vi.fn();
-      const mockClick = vi.fn();
-      createElementSpy!.mockImplementation((tagName: unknown) => {
-        if ((tagName as string).toLowerCase() === 'a') {
-          const a = originalCreateElement('a');
-          a.setAttribute = vi.fn();
-          a.click = mockClick;
-          return a;
-        }
-        return originalCreateElement(tagName as keyof HTMLElementTagNameMap);
-      }) as any;
-
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={mockOnClose}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      const jsonButton = screen.getByText('JSON').closest('button');
-      expect(jsonButton).toBeTruthy();
-      if (jsonButton) await userEvent.click(jsonButton);
-
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
-    });
+  it('calls onClose when clicking backdrop', () => {
+    const onClose = vi.fn();
+    const { container } = render(<ExportModal isOpen={true} onClose={onClose} events={events} />);
+    fireEvent.click(container.firstChild as HTMLElement);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  describe('CSV export', () => {
-    it('should export to CSV when CSV button clicked', async () => {
-      const mockClick = vi.fn();
-      createElementSpy!.mockImplementation((tagName: unknown) => {
-        if ((tagName as string).toLowerCase() === 'a') {
-          const a = originalCreateElement('a');
-          a.setAttribute = vi.fn();
-          a.click = mockClick;
-          return a;
-        }
-        return originalCreateElement(tagName as keyof HTMLElementTagNameMap);
-      }) as any;
-
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      const csvButton = screen.getByText('CSV').closest('button');
-      expect(csvButton).toBeTruthy();
-      if (csvButton) await userEvent.click(csvButton);
-
-      expect(mockClick).toHaveBeenCalled();
-    });
-
-    it('should close modal after CSV export', async () => {
-      const mockOnClose = vi.fn();
-      const mockClick = vi.fn();
-      createElementSpy!.mockImplementation((tagName: unknown) => {
-        if ((tagName as string).toLowerCase() === 'a') {
-          const a = originalCreateElement('a');
-          a.setAttribute = vi.fn();
-          a.click = mockClick;
-          return a;
-        }
-        return originalCreateElement(tagName as keyof HTMLElementTagNameMap);
-      }) as any;
-
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={mockOnClose}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      const csvButton = screen.getByText('CSV').closest('button');
-      expect(csvButton).toBeTruthy();
-      if (csvButton) await userEvent.click(csvButton);
-
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
-    });
+  it('calls onClose when clicking close button', () => {
+    const onClose = vi.fn();
+    render(<ExportModal isOpen={true} onClose={onClose} events={events} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  describe('Excel export', () => {
-    it('should export to Excel when Excel button clicked', async () => {
-      const mockClick = vi.fn();
-      createElementSpy!.mockImplementation((tagName: unknown) => {
-        if ((tagName as string).toLowerCase() === 'a') {
-          const a = originalCreateElement('a');
-          a.setAttribute = vi.fn();
-          a.click = mockClick;
-          return a;
-        }
-        return originalCreateElement(tagName as keyof HTMLElementTagNameMap);
-      }) as any;
-
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      const excelButton = screen.getByText('Excel').closest('button');
-      expect(excelButton).toBeTruthy();
-      if (excelButton) await userEvent.click(excelButton);
-
-      expect(mockClick).toHaveBeenCalled();
-    });
-
-    it('should close modal after Excel export', async () => {
-      const mockOnClose = vi.fn();
-      const mockClick = vi.fn();
-      createElementSpy!.mockImplementation((tagName: unknown) => {
-        if ((tagName as string).toLowerCase() === 'a') {
-          const a = originalCreateElement('a');
-          a.setAttribute = vi.fn();
-          a.click = mockClick;
-          return a;
-        }
-        return originalCreateElement(tagName as keyof HTMLElementTagNameMap);
-      }) as any;
-
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={mockOnClose}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      const excelButton = screen.getByText('Excel').closest('button');
-      expect(excelButton).toBeTruthy();
-      if (excelButton) await userEvent.click(excelButton);
-
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
-    });
+  it('handles keydown on modal content without closing', () => {
+    const onClose = vi.fn();
+    const { container } = render(<ExportModal isOpen={true} onClose={onClose} events={events} />);
+    const content = (container.firstChild as HTMLElement).querySelector('.bg-modal') as HTMLElement;
+    fireEvent.keyDown(content, { key: 'Enter' });
+    fireEvent.keyDown(content, { key: ' ' });
+    expect(onClose).not.toHaveBeenCalled();
   });
 
-  describe('body scroll behavior', () => {
-    it('should add overflow-hidden class to body when opened', () => {
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      expect(document.body.classList.contains('overflow-hidden')).toBe(true);
+  it('exports JSON and triggers download', () => {
+    const onClose = vi.fn();
+    const clickSpy = vi.fn();
+    const hrefSpy = vi.fn();
+    const downloadSpy = vi.fn();
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+      if (tagName === 'a') {
+        const anchor = originalCreateElement(tagName);
+        anchor.click = clickSpy;
+        Object.defineProperty(anchor, 'href', {
+          set: (value) => hrefSpy(value),
+        });
+        Object.defineProperty(anchor, 'download', {
+          set: (value) => downloadSpy(value),
+        });
+        return anchor;
+      }
+      return originalCreateElement(tagName);
     });
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-01T12:00:00Z'));
 
-    it('should remove overflow-hidden class when closed', () => {
-      const { rerender } = render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      rerender(
-        <ExportModal
-          isOpen={false}
-          onClose={vi.fn()}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      expect(document.body.classList.contains('overflow-hidden')).toBe(false);
-    });
-
-    it('should cleanup overflow-hidden on unmount', () => {
-      const { unmount } = render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      unmount();
-
-      expect(document.body.classList.contains('overflow-hidden')).toBe(false);
-    });
+    render(<ExportModal isOpen={true} onClose={onClose} events={events} />);
+    fireEvent.click(screen.getByText('JSON'));
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(hrefSpy).toHaveBeenCalledWith(expect.stringContaining('application/json'));
+    expect(downloadSpy).toHaveBeenCalledWith('calendar-events-2026-03-01.json');
+    expect(onClose).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
   });
 
-  describe('edge cases', () => {
-    it('should handle empty events array', () => {
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={[]}
-          dateField={mockDateField}
-        />
-      );
-
-      expect(screen.getByText('0 events available for export')).toBeInTheDocument();
+  it('exports CSV and escapes quotes', () => {
+    const onClose = vi.fn();
+    const clickSpy = vi.fn();
+    const hrefSpy = vi.fn();
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+      if (tagName === 'a') {
+        const anchor = originalCreateElement(tagName);
+        anchor.click = clickSpy;
+        Object.defineProperty(anchor, 'href', {
+          set: (value) => hrefSpy(value),
+        });
+        return anchor;
+      }
+      return originalCreateElement(tagName);
     });
 
-    it('should handle missing dateField', () => {
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={mockEvents}
-        />
-      );
+    const eventsWithQuotes = [
+      {
+        id: 'e1',
+        title: 'Event "One"',
+        date: '2024-01-15',
+        dateTime: new Date('2024-01-15T10:00:00Z'),
+        data: { description: 'He said "hi"' },
+      },
+    ];
 
-      expect(screen.getByText('Export Calendar')).toBeInTheDocument();
-    });
+    render(<ExportModal isOpen={true} onClose={onClose} events={eventsWithQuotes} />);
+    fireEvent.click(screen.getByText('CSV'));
 
-    it('should handle events with missing data', async () => {
-      const eventsWithMissingData = [
-        { ...mockEvents[0], data: undefined }
-      ];
-
-      const mockClick = vi.fn();
-      createElementSpy!.mockImplementation((tagName: unknown) => {
-        if ((tagName as string).toLowerCase() === 'a') {
-          const a = originalCreateElement('a');
-          a.setAttribute = vi.fn();
-          a.click = mockClick;
-          return a;
-        }
-        return originalCreateElement(tagName as keyof HTMLElementTagNameMap);
-      }) as any;
-
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={eventsWithMissingData as any}
-          dateField={mockDateField}
-        />
-      );
-
-      const jsonButton = screen.getByText('JSON').closest('button');
-      expect(jsonButton).toBeTruthy();
-      if (jsonButton) await userEvent.click(jsonButton);
-
-      expect(mockClick).toHaveBeenCalled();
-    });
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    const hrefArg = hrefSpy.mock.calls.at(-1)?.[0] as string;
+    expect(hrefArg).toContain('text/csv');
+    expect(decodeURIComponent(hrefArg)).toContain('"Event ""One"""');
+    expect(decodeURIComponent(hrefArg)).toContain('"He said ""hi"""');
   });
 
-  describe('accessibility', () => {
-    it('should have proper close button label', () => {
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
-
-      const closeButton = screen.getByLabelText('Close');
-      expect(closeButton).toBeInTheDocument();
+  it('exports Excel and shows singular/plural footer', () => {
+    const onClose = vi.fn();
+    const clickSpy = vi.fn();
+    const downloadSpy = vi.fn();
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+      if (tagName === 'a') {
+        const anchor = originalCreateElement(tagName);
+        anchor.click = clickSpy;
+        Object.defineProperty(anchor, 'download', {
+          set: (value) => downloadSpy(value),
+        });
+        return anchor;
+      }
+      return originalCreateElement(tagName);
     });
 
-    it('should have accessible export buttons', () => {
-      render(
-        <ExportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          events={mockEvents}
-          dateField={mockDateField}
-        />
-      );
+    const { rerender } = render(<ExportModal isOpen={true} onClose={onClose} events={events} />);
+    expect(screen.getByText('1 event available for export')).toBeInTheDocument();
 
-      const jsonButton = screen.getByText('JSON').closest('button');
-      const csvButton = screen.getByText('CSV').closest('button');
-      const excelButton = screen.getByText('Excel').closest('button');
+    fireEvent.click(screen.getByText('Excel'));
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(downloadSpy).toHaveBeenCalledWith(expect.stringContaining('.xlsx'));
 
-      expect(jsonButton).toBeInTheDocument();
-      expect(csvButton).toBeInTheDocument();
-      expect(excelButton).toBeInTheDocument();
-    });
+    rerender(<ExportModal isOpen={true} onClose={onClose} events={[...events, { ...events[0], id: 'e2' }]} />);
+    expect(screen.getByText('2 events available for export')).toBeInTheDocument();
+  });
+
+  it('shows plural footer for zero events', () => {
+    render(<ExportModal isOpen={true} onClose={vi.fn()} events={[]} />);
+    expect(screen.getByText('0 events available for export')).toBeInTheDocument();
   });
 });

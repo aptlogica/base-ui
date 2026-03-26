@@ -76,6 +76,136 @@ vi.mock('../../hooks/useNavigateToBaseFirstView', () => ({
   useNavigateToBaseFirstView: mockUseNavigateToBaseFirstView,
 }));
 
+vi.mock('../../components/common/BaseMenu', () => ({
+  BaseMenu: ({ base, onEdit, onAddMembers, onDelete, canEdit, canAddMembers, canDelete }: any) => (
+    <div data-testid="base-menu">
+      {canEdit && (
+        <button type="button" onClick={() => onEdit?.(base)}>
+          Edit Base
+        </button>
+      )}
+      {canAddMembers && (
+        <button type="button" onClick={() => onAddMembers?.(base)}>
+          Add Members
+        </button>
+      )}
+      {canDelete && (
+        <button type="button" onClick={() => onDelete?.(base)}>
+          Delete Base
+        </button>
+      )}
+    </div>
+  ),
+}));
+
+vi.mock('../../components/modals/CreateBaseModal', () => ({
+  CreateBaseModal: ({ isOpen, onClose, onCreate }: any) =>
+    isOpen ? (
+      <div data-testid="create-base-modal">
+        <button type="button" onClick={onClose}>
+          Close Create Base
+        </button>
+        <button type="button" onClick={() => onCreate?.({ name: 'New Base', description: 'Desc' })}>
+          Confirm Create Base
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock('../../components/modals/ImportDataModal', () => ({
+  ImportDataModal: ({ isOpen, onClose, onSelectImportType }: any) =>
+    isOpen ? (
+      <div data-testid="import-data-modal">
+        <button type="button" onClick={() => onSelectImportType?.('csv')}>
+          Import CSV
+        </button>
+        <button type="button" onClick={() => onSelectImportType?.('sql')}>
+          Import SQL
+        </button>
+        <button type="button" onClick={onClose}>
+          Close Import Data
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock('../../components/modals/ImportModal', () => ({
+  ImportModal: ({ isOpen, onClose, onSuccess }: any) =>
+    isOpen ? (
+      <div data-testid="import-modal">
+        <button type="button" onClick={onClose}>
+          Close Import Modal
+        </button>
+        <button type="button" onClick={onSuccess}>
+          Import Success
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock('../../components/modals/EditItemModal', () => ({
+  EditItemModal: ({ isOpen, onClose, onSave, initialName, initialDescription }: any) =>
+    isOpen ? (
+      <div data-testid="edit-item-modal">
+        <button type="button" onClick={onClose}>
+          Close Edit
+        </button>
+        <button
+          type="button"
+          onClick={() => onSave?.({ name: initialName, description: initialDescription })}
+        >
+          Save Edit
+        </button>
+        <button
+          type="button"
+          onClick={() => onSave?.({ name: initialName, description: initialDescription, removeImage: true })}
+        >
+          Remove Image
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            onSave?.({
+              name: initialName,
+              description: initialDescription,
+              image: new File(['img'], 'base.png', { type: 'image/png' }),
+            })
+          }
+        >
+          Upload Image
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock('../../components/modals/AddBaseMembersModal', () => ({
+  AddBaseMembersModal: ({ isOpen, onClose, onSuccess }: any) =>
+    isOpen ? (
+      <div data-testid="add-members-modal">
+        <button type="button" onClick={onClose}>
+          Close Add Members
+        </button>
+        <button type="button" onClick={onSuccess}>
+          Add Members Success
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock('../../components/modals/DeleteBaseModal', () => ({
+  DeleteBaseModal: ({ isOpen, onClose, onConfirm, base }: any) =>
+    isOpen ? (
+      <div data-testid="delete-base-modal">
+        <button type="button" onClick={onClose}>
+          Close Delete
+        </button>
+        <button type="button" onClick={() => onConfirm?.(base?.id)}>
+          Confirm Delete
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock('@tanstack/react-query', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-query')>();
   return {
@@ -86,13 +216,16 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
 
 // Lazy component mock
 vi.mock('../../components/modals/CreateTableModal', () => ({
-  CreateTableModal: ({ isOpen, onClose }: any) =>
+  CreateTableModal: ({ isOpen, onClose, onCreate }: any) =>
     isOpen ? (
       <div data-testid="create-table-modal">
         Create Table Modal
         {/* eslint-disable-next-line jsx-a11y/control-has-associated-label */}
         <button type="button" onClick={onClose}>
           Close
+        </button>
+        <button type="button" onClick={() => onCreate?.({ name: 'New Table', description: 'Desc' })}>
+          Create Table
         </button>
       </div>
     ) : null,
@@ -773,6 +906,26 @@ describe('HomePage', () => {
         expect(screen.queryByRole('button', { name: /^A-Z$/i })).not.toBeInTheDocument();
       });
     });
+
+    it('closes sort dropdown on outside click', async () => {
+      const user = userEvent.setup();
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: [] },
+        isLoading: false,
+      });
+
+      renderWithProviders(<HomePage />);
+
+      await user.click(screen.getByRole('button', { name: /recents/i }));
+      expect(screen.getByText('A-Z')).toBeInTheDocument();
+
+      fireEvent.mouseDown(document.body);
+
+      await waitFor(() => {
+        expect(screen.queryByText('A-Z')).not.toBeInTheDocument();
+      });
+    });
   });
 
   // ========================================
@@ -1399,6 +1552,50 @@ describe('HomePage', () => {
 
       expect(screen.getByText(/Base & <Script> "Quoted"/)).toBeInTheDocument();
     });
+
+    it('renders fallback last modified text when no date is available', () => {
+      const mockBases = [
+        createMockBase({
+          id: 'base-1',
+          title: 'No Date Base',
+          updated_time: undefined,
+          created_time: undefined,
+        }),
+      ];
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: mockBases },
+        isLoading: false,
+      });
+
+      renderWithProviders(<HomePage />);
+
+      expect(screen.getByText(/last modified/i)).toBeInTheDocument();
+      expect(screen.getByText('Unknown')).toBeInTheDocument();
+    });
+
+    it('uses color map for base initials when no image is set', () => {
+      const mockBases = [
+        createMockBase({
+          id: 'base-1',
+          title: 'General',
+          image: undefined,
+        }),
+      ];
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: mockBases },
+        isLoading: false,
+      });
+
+      const { container } = renderWithProviders(<HomePage />);
+
+      const initial = screen.getByText('GE');
+      expect(initial).toBeInTheDocument();
+      const iconContainer = initial.closest('div');
+      expect(iconContainer?.className).toContain('bg-green-400');
+      expect(container.querySelector('img')).not.toBeInTheDocument();
+    });
   });
 
   // ========================================
@@ -1516,6 +1713,221 @@ describe('HomePage', () => {
 
       const actionButtons = container.querySelector(String.raw`.sm\:flex-row`);
       expect(actionButtons).toBeInTheDocument();
+    });
+  });
+
+  // ========================================
+  // Base Click / Create Table Flow
+  // ========================================
+  describe('Base click flow', () => {
+    it('opens create table modal when base has no tables', async () => {
+      const user = userEvent.setup();
+      const mockBases = [createMockBase({ id: 'base-1', title: 'Empty Base' })];
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: mockBases },
+        isLoading: false,
+      });
+      mockUseBaseTables.mockReturnValue({ data: [], isLoading: false });
+
+      const mockToastObj = {
+        success: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+      };
+      mockUseToast.mockReturnValue(mockToastObj);
+
+      renderWithProviders(<HomePage />);
+
+      const baseCard = screen.getByText('Empty Base').closest('div');
+      await user.click(baseCard!);
+
+      await waitFor(() => {
+        expect(mockToastObj.info).toHaveBeenCalledWith('This base has no tables yet. Create your first table to get started!');
+        expect(screen.getByTestId('create-table-modal')).toBeInTheDocument();
+      });
+    });
+
+    it('creates table and navigates to it', async () => {
+      const user = userEvent.setup();
+      const mockBases = [createMockBase({ id: 'base-1', title: 'Base With Create' })];
+
+      const navigateToTable = vi.fn();
+      mockUseNavigationStore.mockReturnValue({
+        selectedWorkspaceId: 'ws-1',
+        navigateToTable,
+      });
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: mockBases },
+        isLoading: false,
+      });
+      mockUseBaseTables.mockReturnValue({ data: [], isLoading: false });
+
+      const mockCreateTable = {
+        mutateAsync: vi.fn().mockResolvedValue({ data: { id: 'table-1' } }),
+        isPending: false,
+      };
+      mockUseCreateTable.mockReturnValue(mockCreateTable);
+
+      renderWithProviders(<HomePage />);
+
+      const baseCard = screen.getByText('Base With Create').closest('div');
+      await user.click(baseCard!);
+      await waitFor(() => expect(screen.getByTestId('create-table-modal')).toBeInTheDocument());
+
+      await user.click(screen.getByRole('button', { name: 'Create Table' }));
+
+      await waitFor(() => {
+        expect(mockCreateTable.mutateAsync).toHaveBeenCalled();
+        expect(navigateToTable).toHaveBeenCalledWith('ws-1', 'base-1', 'table-1');
+      });
+    });
+
+    it('navigates to first view when base has tables', async () => {
+      const user = userEvent.setup();
+      const mockBases = [createMockBase({ id: 'base-1', title: 'Has Tables' })];
+
+      const navigateToFirstView = vi.fn().mockResolvedValue(undefined);
+      mockUseNavigateToBaseFirstView.mockReturnValue({ navigateToFirstView });
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: mockBases },
+        isLoading: false,
+      });
+      mockUseBaseTables.mockReturnValue({ data: [{ id: 't1' }], isLoading: false });
+
+      renderWithProviders(<HomePage />);
+
+      const baseCard = screen.getByText('Has Tables').closest('div');
+      await user.click(baseCard!);
+
+      await waitFor(() => {
+        expect(navigateToFirstView).toHaveBeenCalledWith('base-1');
+        expect(screen.queryByTestId('create-table-modal')).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Additional branches', () => {
+    it('hides base menu when no actions are available', () => {
+      const mockBases = [
+        createMockBase({
+          id: 'base-1',
+          title: 'No Actions Base',
+          access_level: 'owner',
+        }),
+      ];
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: mockBases },
+        isLoading: false,
+      });
+
+      mockUseWorkspaceAccess.mockReturnValue({
+        canCreateBase: vi.fn().mockReturnValue(false),
+        canUpdateBase: vi.fn().mockReturnValue(false),
+        canDeleteBase: vi.fn().mockReturnValue(false),
+        canAssignUsers: vi.fn().mockReturnValue(false),
+        accessLevel: 'limited_access',
+        isBaseLevelAccess: vi.fn().mockReturnValue(false),
+      });
+
+      mockUseBaseAccess.mockReturnValue({
+        canUpdateBase: vi.fn().mockReturnValue(false),
+        canDeleteBase: vi.fn().mockReturnValue(false),
+        canManageBaseMembers: vi.fn().mockReturnValue(false),
+        baseAccess: 'base-read',
+      });
+
+      renderWithProviders(<HomePage />);
+
+      expect(screen.queryByTestId('base-menu')).not.toBeInTheDocument();
+    });
+
+    it('shows info toast when saving without changes', async () => {
+      const mockBases = [createMockBase({ id: 'base-1', title: 'Edit Base' })];
+      const mockToastObj = {
+        success: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+      };
+      mockUseToast.mockReturnValue(mockToastObj);
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: mockBases },
+        isLoading: false,
+      });
+
+      renderWithProviders(<HomePage />);
+
+      fireEvent.click(screen.getByRole('button', { name: /edit base/i }));
+      fireEvent.click(screen.getByRole('button', { name: /save edit/i }));
+
+      expect(mockToastObj.info).toHaveBeenCalledWith('No changes to save');
+    });
+
+    it('updates base when image is removed or uploaded', async () => {
+      const mockBases = [createMockBase({ id: 'base-1', title: 'Edit Base' })];
+      const mockUpdateMutation = {
+        mutateAsync: vi.fn().mockResolvedValue({ data: { id: 'base-1' } }),
+        isPending: false,
+      };
+      mockUseUpdateBase.mockReturnValue(mockUpdateMutation);
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: mockBases },
+        isLoading: false,
+      });
+
+      renderWithProviders(<HomePage />);
+
+      fireEvent.click(screen.getByRole('button', { name: /edit base/i }));
+      fireEvent.click(screen.getByRole('button', { name: /remove image/i }));
+
+      await waitFor(() => {
+        expect(mockUpdateMutation.mutateAsync).toHaveBeenCalledWith({
+          baseId: 'base-1',
+          updates: { removeImage: true },
+        });
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /edit base/i }));
+      fireEvent.click(screen.getByRole('button', { name: /upload image/i }));
+
+      await waitFor(() => {
+        const call = mockUpdateMutation.mutateAsync.mock.calls.at(-1)?.[0];
+        expect(call.baseId).toBe('base-1');
+        expect(call.updates.image).toBeInstanceOf(File);
+      });
+    });
+
+    it('handles import type selection branches', async () => {
+      const user = userEvent.setup();
+      const mockToastObj = {
+        success: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+      };
+      mockUseToast.mockReturnValue(mockToastObj);
+
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: [] },
+        isLoading: false,
+      });
+
+      renderWithProviders(<HomePage />);
+
+      await user.click(screen.getByRole('button', { name: /import data/i }));
+      await user.click(screen.getByRole('button', { name: /import sql/i }));
+      expect(mockToastObj.info).toHaveBeenCalledWith('SQL import will be available soon');
+
+      await user.click(screen.getByRole('button', { name: /import csv/i }));
+      expect(screen.getByTestId('import-modal')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /import success/i }));
+      await waitFor(() => {
+        expect(screen.queryByTestId('import-modal')).not.toBeInTheDocument();
+      });
     });
   });
 });

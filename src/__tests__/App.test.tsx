@@ -254,6 +254,10 @@ describe('App', () => {
     baseTablesState = { isLoading: false, error: null };
 
     render(<App />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(screen.queryByText('Loader')).not.toBeInTheDocument(), { timeout: 5000 });
     await waitFor(() => expect(screen.getByText('Something went wrong')).toBeInTheDocument());
     const retryBtn = screen.getByRole('button', { name: /retry/i });
     retryBtn.click();

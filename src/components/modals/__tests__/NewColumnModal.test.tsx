@@ -2,6 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { NewColumnModal } from '../NewColumnModal';
+import * as fieldUsageUtils from '../../../utils/fieldUsageUtils';
 
 const toast = { error: vi.fn(), success: vi.fn() };
 const mockUseBaseTables = vi.fn(() => ({ data: null }));
@@ -22,8 +23,8 @@ vi.mock('../../../stores/navigationStore', () => ({
 }));
 
 vi.mock('../../../utils/fieldUsageUtils', () => ({
-  checkFieldUsageInViews: () => ({ isUsedInViews: false }),
-  checkCriticalFieldUsageInViews: () => ({ isUsedInViews: false, usedInViews: [] }),
+  checkFieldUsageInViews: vi.fn(() => ({ isUsedInViews: false })),
+  checkCriticalFieldUsageInViews: vi.fn(() => ({ isUsedInViews: false, usedInViews: [] })),
 }));
 
 vi.mock('../../../types/fieldTypes', () => {
@@ -65,8 +66,23 @@ vi.mock('../../common/dropdown/AdvancedDropdown', () => ({
 }));
 
 vi.mock('../../common/dropdown/fieldDropdown/FieldTypeDropdown', () => ({
-  FieldTypeDropdown: ({ selectedType }: { selectedType: any }) => (
-    <div data-testid="field-type-dropdown">{selectedType?.label || 'Select type'}</div>
+  FieldTypeDropdown: ({
+    selectedType,
+    setSelectedType,
+    fieldTypes,
+  }: {
+    selectedType: any;
+    setSelectedType: (type: any) => void;
+    fieldTypes: any[];
+  }) => (
+    <div>
+      <div data-testid="field-type-dropdown">{selectedType?.label || 'Select type'}</div>
+      {fieldTypes.map((type) => (
+        <button key={type.key} type="button" onClick={() => setSelectedType(type)}>
+          {type.label}
+        </button>
+      ))}
+    </div>
   ),
 }));
 
@@ -235,6 +251,26 @@ describe('NewColumnModal', () => {
     const payload = onSave.mock.calls[0][0];
     expect(payload.name).toBe('Text 1');
     expect(payload.title).toBe('Text 1');
+  });
+
+  it('blocks type change when field is used in critical views', () => {
+    vi.mocked(fieldUsageUtils.checkCriticalFieldUsageInViews).mockReturnValue({
+      isUsedInViews: true,
+      usedInViews: [{ viewName: 'Calendar', usageType: 'Date Field' }],
+    } as any);
+
+    render(
+      <NewColumnModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+        initialValues={{ id: 'c1', title: 'Field', type: 'text' }}
+      />
+    );
+
+    fireEvent.click(screen.getByText('number'));
+    expect(toast.error).toHaveBeenCalled();
+    expect(screen.getByTestId('field-type-dropdown')).toHaveTextContent('text');
   });
 
   it.each([

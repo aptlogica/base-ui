@@ -104,6 +104,17 @@ describe('Checkbox Component', () => {
 
       expect(mockOnChange).not.toHaveBeenCalled();
     });
+
+    it('should not call onChange when readOnly', () => {
+      const { container } = render(
+        <Checkbox value={false} onChange={mockOnChange} readOnly />
+      );
+      const button = container.querySelector('button');
+
+      fireEvent.click(button!);
+
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
   });
 
   describe('Config Props', () => {
@@ -187,6 +198,21 @@ describe('Checkbox Component', () => {
       );
       expect(container.querySelector('.w-5')).toBeInTheDocument();
     });
+
+    it('should normalize string values using defaultValue', () => {
+      const { container } = render(
+        <Checkbox
+          value={('0' as unknown) as boolean}
+          onChange={mockOnChange}
+          config={{ defaultValue: true }}
+        />
+      );
+      const button = container.querySelector('button');
+
+      fireEvent.click(button!);
+
+      expect(mockOnChange).toHaveBeenCalledWith(false);
+    });
   });
 
   describe('Value Synchronization', () => {
@@ -202,6 +228,14 @@ describe('Checkbox Component', () => {
       );
 
       expect(container.querySelector('.text-gray-400')).not.toBeInTheDocument();
+    });
+
+    it('renders thumb icon when configured', () => {
+      const { container } = render(
+        <Checkbox value={true} onChange={mockOnChange} icon="thumb" />
+      );
+
+      expect(container.querySelector('.fill-current')).toBeInTheDocument();
     });
   });
 });

@@ -172,4 +172,44 @@ describe('AttachmentModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('closes on Escape key press', () => {
+    const onClose = vi.fn();
+    render(<AttachmentModal {...baseProps} onClose={onClose} />);
+
+    const backdrop = document.querySelector('.bg-modal-backdrop') as HTMLElement;
+    fireEvent.keyDown(backdrop, { key: 'Escape' });
+
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('accepts dropped files into the upload area', async () => {
+    render(<AttachmentModal {...baseProps} />);
+
+    const uploadArea = screen.getByRole('button', { name: /upload files/i });
+    const file = new File(['drop'], 'drop.txt', { type: 'text/plain' });
+
+    fireEvent.dragOver(uploadArea);
+    fireEvent.drop(uploadArea, { dataTransfer: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('drop.txt')).toBeInTheDocument();
+    });
+  });
+
+  it('opens preview when clicking the preview button', async () => {
+    render(<AttachmentModal {...baseProps} />);
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['preview'], 'preview.txt', { type: 'text/plain' });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('preview.txt')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText('Preview file'));
+
+    expect(globalThis.open).toHaveBeenCalledWith('blob:preview-url', '_blank');
+  });
 });

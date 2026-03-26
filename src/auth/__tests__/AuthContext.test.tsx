@@ -502,6 +502,78 @@ describe('AuthContext', () => {
       expect(mockStore.setView).toHaveBeenCalledWith('view-123');
     });
 
+    it('should load navigation from nested activity_data in login response', async () => {
+      const useNavigationStoreModule = vi.mocked(useNavigationStore);
+      const mockStore = {
+        loadUserNavigation: vi.fn(),
+        saveUserNavigation: vi.fn(),
+        clearUserNavigation: vi.fn(),
+        updateActivityData: vi.fn().mockResolvedValue(undefined),
+        loadFromActivityData: vi.fn().mockResolvedValue(false),
+        setWorkspace: vi.fn(),
+        setBase: vi.fn(),
+        setTable: vi.fn(),
+        setView: vi.fn(),
+        reset: vi.fn(),
+        selectedWorkspaceId: null,
+        selectedBaseId: null,
+        selectedTableId: null,
+        selectedViewId: null,
+      };
+
+      useNavigationStoreModule.mockImplementation((selector?: any) => {
+        if (typeof selector === 'function') {
+          return selector(mockStore);
+        }
+        return mockStore;
+      });
+      (useNavigationStoreModule.getState as any) = vi.fn(() => mockStore);
+
+      const TestComponent = () => {
+        const { login } = useAuth();
+        return (
+          <button
+            onClick={() =>
+              login({
+                id: 'user-123',
+                data: {
+                  user: {
+                    activity_data: {
+                      last_workspace_id: 'ws-nested',
+                      last_base_id: 'base-nested',
+                      last_table_id: 'table-nested',
+                      last_view_id: 'view-nested',
+                    },
+                  },
+                },
+              })
+            }
+          >
+            Login
+          </button>
+        );
+      };
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <DefaultAuthProvider>
+            <TestComponent />
+          </DefaultAuthProvider>
+        </QueryClientProvider>
+      );
+
+      const loginButton = screen.getByText('Login');
+      await act(async () => {
+        loginButton.click();
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+      expect(mockStore.setWorkspace).toHaveBeenCalledWith('ws-nested');
+      expect(mockStore.setBase).toHaveBeenCalledWith('base-nested');
+      expect(mockStore.setTable).toHaveBeenCalledWith('table-nested');
+      expect(mockStore.setView).toHaveBeenCalledWith('view-nested');
+    });
+
     it('should fallback to loadFromActivityData when activity_data not in response', async () => {
       vi.mocked(getMockStore().loadFromActivityData).mockResolvedValue(true);
 
@@ -529,6 +601,36 @@ describe('AuthContext', () => {
 
       await waitFor(() => {
         expect(getMockStore().loadFromActivityData).toHaveBeenCalledWith('user-123');
+      });
+    });
+
+    it('should fallback to loadUserNavigation when loadFromActivityData returns false', async () => {
+      vi.mocked(getMockStore().loadFromActivityData).mockResolvedValue(false);
+
+      const TestComponent = () => {
+        const { login } = useAuth();
+        return (
+          <button onClick={() => login({ id: 'user-123' })}>
+            Login
+          </button>
+        );
+      };
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <DefaultAuthProvider>
+            <TestComponent />
+          </DefaultAuthProvider>
+        </QueryClientProvider>
+      );
+
+      const loginButton = screen.getByText('Login');
+      await act(async () => {
+        loginButton.click();
+      });
+
+      await waitFor(() => {
+        expect(getMockStore().loadUserNavigation).toHaveBeenCalledWith('user-123');
       });
     });
 
@@ -562,6 +664,32 @@ describe('AuthContext', () => {
       await waitFor(() => {
         expect(getMockStore().loadUserNavigation).toHaveBeenCalledWith('user-123');
       });
+    });
+
+    it('should clear tab locked flag on login', async () => {
+      const TestComponent = () => {
+        const { login } = useAuth();
+        return (
+          <button onClick={() => login({ id: 'user-123' })}>
+            Login
+          </button>
+        );
+      };
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <DefaultAuthProvider>
+            <TestComponent />
+          </DefaultAuthProvider>
+        </QueryClientProvider>
+      );
+
+      const loginButton = screen.getByText('Login');
+      await act(async () => {
+        loginButton.click();
+      });
+
+      expect(sessionStorage.removeItem).toHaveBeenCalledWith('sb_tab_locked');
     });
 
     it('should set restoreCompleted to true after login', async () => {
@@ -637,6 +765,57 @@ describe('AuthContext', () => {
 
       // Reset should be called when user changes
       expect(resetQueriesSpy).toHaveBeenCalled();
+    });
+  });
+
+  // ============================================================================
+  // Single-tab Lock Enforcement
+  // ============================================================================
+
+  describe('single-tab lock enforcement', () => {
+    it('should lock the current tab if another tab takes over the auth lock', async () => {
+      vi.mocked(clientService.isAuthenticated).mockResolvedValue(true);
+      (sessionStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) => {
+        if (key === 'user_id') return 'user-123';
+        if (key === 'sb_tab_id') return 'tab-1';
+        return null;
+      });
+
+      const TestComponent = () => {
+        const { user } = useAuth();
+        return <div data-testid="user">{user ? 'authenticated' : 'not-authenticated'}</div>;
+      };
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <DefaultAuthProvider>
+            <TestComponent />
+          </DefaultAuthProvider>
+        </QueryClientProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('user')).toHaveTextContent('authenticated');
+      });
+
+      // Allow the single-tab lock listener effect to attach
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+      const event = new StorageEvent('storage', {
+        key: 'sb_auth_lock',
+        newValue: JSON.stringify({ user_id: 'user-123', tab_id: 'tab-2', ts: Date.now() }),
+      });
+
+      await act(async () => {
+        globalThis.dispatchEvent(event);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('user')).toHaveTextContent('not-authenticated');
+      });
+      expect(sessionStorage.setItem).toHaveBeenCalledWith('sb_tab_locked', '1');
     });
   });
 
@@ -886,6 +1065,42 @@ describe('AuthContext', () => {
           expect.any(String)
         );
         expect(localStorage.removeItem).toHaveBeenCalledWith('sb_signout');
+      });
+    });
+
+    it('should clear auth lock if current tab owns it on logout', async () => {
+      (sessionStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) => {
+        if (key === 'sb_tab_id') return 'tab-1';
+        if (key === 'user_id') return 'user-123';
+        return null;
+      });
+      (localStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) => {
+        if (key === 'sb_auth_lock') {
+          return JSON.stringify({ user_id: 'user-123', tab_id: 'tab-1', ts: Date.now() });
+        }
+        return null;
+      });
+
+      const TestComponent = () => {
+        const { logout } = useAuth();
+        return <button onClick={logout}>Logout</button>;
+      };
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <DefaultAuthProvider>
+            <TestComponent />
+          </DefaultAuthProvider>
+        </QueryClientProvider>
+      );
+
+      const logoutButton = screen.getByText('Logout');
+      await act(async () => {
+        logoutButton.click();
+      });
+
+      await waitFor(() => {
+        expect(localStorage.removeItem).toHaveBeenCalledWith('sb_auth_lock');
       });
     });
 

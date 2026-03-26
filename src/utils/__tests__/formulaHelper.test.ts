@@ -1,18 +1,20 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
 import { describe, it, expect } from 'vitest';
 import {
   parseFieldReference,
   getColumnIdentifier,
   getFieldType,
-  isNumericType,
-  isTextType,
-  isDateType,
-  isBooleanType,
   getFieldValue,
   getTextFieldValue,
   getBooleanValue,
   getDateValue,
   getFieldValueByType,
   parseFunctionArguments,
+  evaluateArgument,
+  evaluateTextArgument,
   evaluateFormula,
   validateFormula,
   formatResult,
@@ -24,221 +26,291 @@ import {
   getCompatibleFieldTypes,
   normalizeForComparison,
   convertResultToValue,
-  type FormulaContext,
+  evaluateComparison
 } from '../formulaHelper';
 
-const context: FormulaContext = {
+const context = {
   columns: [
-    { id: 'c1', title: 'Price', column_name: 'price', uidt: 'number', key: 'price' },
-    { id: 'c2', title: 'Qty', column_name: 'qty', uidt: 'number', key: 'qty' },
-    { id: 'c3', title: 'Name', column_name: 'name', uidt: 'text', key: 'name' },
-    { id: 'c4', title: 'Date', column_name: 'date', uidt: 'date', key: 'date' },
-    { id: 'c5', title: 'Flag', column_name: 'flag', uidt: 'boolean', key: 'flag' },
-    { id: 'c6', title: 'Empty', column_name: 'empty', uidt: 'text', key: 'empty' },
+    { title: 'Price', key: 'price', type: 'number' },
+    { title: 'Name', key: 'name', type: 'text' },
+    { title: 'Active', key: 'active', type: 'boolean' },
+    { title: 'Due', key: 'due', type: 'date' }
   ],
   allColumns: [],
   rowData: {
-    price: 8,
-    qty: 2,
-    name: 'Alice',
-    date: '2024-01-02',
-    flag: false,
-    empty: '',
-    data: {
-      nested: 4,
-    },
-  },
+    price: '12.5',
+    name: 'Alpha',
+    active: 0,
+    due: '2025-01-02'
+  }
 };
 
-const validateNone = () => null;
+const getErrorText = (value: unknown) => {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object' && 'message' in value) {
+    return String((value as { message: unknown }).message);
+  }
+  return JSON.stringify(value);
+};
 
-describe('formulaHelper basics', () => {
-  it('parses field references and resolves types', () => {
+describe('formulaHelper core helpers', () => {
+  it('parses field references and identifies columns', () => {
     expect(parseFieldReference('{Price}')).toBe('Price');
     expect(parseFieldReference('Price')).toBe('');
     expect(getColumnIdentifier('Price', context)).toBe('price');
     expect(getFieldType('Price', context)).toBe('number');
-    expect(isNumericType('Number')).toBe(true);
-    expect(isTextType('TEXT')).toBe(true);
-    expect(isDateType('date')).toBe(true);
-    expect(isBooleanType('boolean')).toBe(true);
   });
 
-  it('gets field values by type', () => {
-    expect(getFieldValue('Price', context)).toBe(8);
-    expect(getTextFieldValue('Name', context)).toBe('Alice');
-    expect(getBooleanValue('Flag', context)).toBe(false);
-    expect(getDateValue('Date', context)).toBeInstanceOf(Date);
-    expect(getFieldValueByType('Price', context)).toBe(8);
-    expect(getFieldValueByType('Name', context)).toBe('Alice');
-    expect(getFieldValueByType('Date', context)).toBeInstanceOf(Date);
+  it('reads values by type from row data', () => {
+    expect(getFieldValue('Price', context)).toBe(12.5);
+    expect(getTextFieldValue('Name', context)).toBe('Alpha');
+    expect(getBooleanValue('Active', context)).toBe(false);
+    const dateValue = getDateValue('Due', context);
+    expect(dateValue).toBeInstanceOf(Date);
+    expect(dateValue?.getFullYear()).toBe(2025);
   });
 
-  it('parses function arguments safely', () => {
-    expect(parseFunctionArguments('1, 2, 3')).toEqual(['1', '2', '3']);
-    expect(parseFunctionArguments('"a, b", {Price}, 4')).toEqual(['"a, b"', '{Price}', '4']);
+  it('returns field value by inferred type', () => {
+    expect(getFieldValueByType('Price', context)).toBe(12.5);
+    expect(getFieldValueByType('Name', context)).toBe('Alpha');
+    expect(getFieldValueByType('Active', context)).toBe(false);
+    expect(getFieldValueByType('Due', context)).toBeInstanceOf(Date);
   });
 });
 
-describe('formulaHelper evaluation', () => {
-  it('evaluates math and text functions', () => {
-    expect(evaluateFormula('ADD({Price}, {Qty})', context, validateNone).result).toBe(10);
-    expect(evaluateFormula('SUBTRACT(10, 3)', context, validateNone).result).toBe(7);
-    expect(evaluateFormula('MULTIPLY({Qty}, 3)', context, validateNone).result).toBe(6);
-    expect(evaluateFormula('DIVIDE(10, 2)', context, validateNone).result).toBe(5);
-    expect(evaluateFormula('SUM(1, 2, 3)', context, validateNone).result).toBe(6);
-    expect(evaluateFormula('AVERAGE(2, 4)', context, validateNone).result).toBe(3);
-    expect(evaluateFormula('MAX(1, 9, 3)', context, validateNone).result).toBe(9);
-    expect(evaluateFormula('MIN(1, 9, 3)', context, validateNone).result).toBe(1);
-    expect(evaluateFormula('ROUND(1.234, 2)', context, validateNone).result).toBe(1.23);
-    expect(evaluateFormula('CEILING(1.1)', context, validateNone).result).toBe(2);
-    expect(evaluateFormula('FLOOR(1.9)', context, validateNone).result).toBe(1);
-    expect(evaluateFormula('ABS(-3)', context, validateNone).result).toBe(3);
-    expect(evaluateFormula('POWER(2, 3)', context, validateNone).result).toBe(8);
-    expect(evaluateFormula('SQRT(9)', context, validateNone).result).toBe(3);
-    expect(evaluateFormula('MOD(10, 3)', context, validateNone).result).toBe(1);
-    expect(evaluateFormula('CONCAT("A", "B")', context, validateNone).result).toBe('AB');
-    expect(evaluateFormula('LEN("test")', context, validateNone).result).toBe(4);
-    expect(evaluateFormula('UPPER("a")', context, validateNone).result).toBe('A');
-    expect(evaluateFormula('LOWER("A")', context, validateNone).result).toBe('a');
-    expect(evaluateFormula('TRIM(" a ")', context, validateNone).result).toBe('a');
-    expect(evaluateFormula('LEFT("hello", 2)', context, validateNone).result).toBe('he');
-    expect(evaluateFormula('RIGHT("hello", 2)', context, validateNone).result).toBe('lo');
-    expect(evaluateFormula('MID("hello", 2, 3)', context, validateNone).result).toBe('ell');
-    expect(evaluateFormula('FIND("e", "hello")', context, validateNone).result).toBe(2);
-    expect(evaluateFormula('REPLACE("hello", "l", "x")', context, validateNone).result).toBe('hexxo');
+describe('formulaHelper argument parsing', () => {
+  it('parses function arguments with quotes and braces', () => {
+    const args = parseFunctionArguments('1, {Price}, \"Hello, world\", CONCATENATE(\"a,b\", {Name})');
+    expect(args).toHaveLength(4);
+    expect(args[0]).toBe('1');
+    expect(args[1]).toBe('{Price}');
+    expect(args[2]).toBe('"Hello, world"');
+    expect(args[3]).toBe('CONCATENATE(\"a,b\", {Name})');
   });
 
-  it('evaluates date and logical functions', () => {
-    expect(evaluateFormula('DATE(2024, 1, 2)', context, validateNone).result).toBeInstanceOf(Date);
-    expect(evaluateFormula('YEAR("2024-01-02")', context, validateNone).result).toBe(2024);
-    expect(evaluateFormula('MONTH("2024-01-02")', context, validateNone).result).toBe(1);
-    expect(evaluateFormula('DAY("2024-01-02")', context, validateNone).result).toBe(2);
-    expect(evaluateFormula('WEEKDAY("2024-01-02")', context, validateNone).result).toBeTypeOf('number');
-    expect(evaluateFormula('DATEADD("2024-01-02", 2, "days")', context, validateNone).result).toBeInstanceOf(Date);
-    expect(evaluateFormula('DATEDIFF("2024-01-02", "2024-01-05", "days")', context, validateNone).result).toBe(3);
-    expect(evaluateFormula('ISBLANK({Empty})', context, validateNone).result).toBe(true);
-    expect(evaluateFormula('ISNUMBER({Price})', context, validateNone).result).toBe(true);
-    expect(evaluateFormula('ISTEXT({Name})', context, validateNone).result).toBe(true);
-    expect(evaluateFormula('ISDATE({Date})', context, validateNone).result).toBe(true);
-    expect(evaluateFormula('AND({Price} > 1, {Qty} < 5)', context, validateNone).result).toBe(true);
-    expect(evaluateFormula('OR({Price} < 1, {Qty} > 1)', context, validateNone).result).toBe(true);
-    expect(evaluateFormula('NOT({Flag})', context, validateNone).result).toBe(true);
-    expect(evaluateFormula('IF({Price} > 5, "Yes", "No")', context, validateNone).result).toBe('Yes');
-    expect(evaluateFormula('{Price} + 2', context, validateNone).result).toBe(10);
-    expect(evaluateFormula('{Price} > 5', context, validateNone).result).toBe(true);
-  });
-
-  it('validates formulas and formats results', () => {
-    expect(validateFormula('ADD({Price}, 2)', context)).toBeNull();
-    expect(validateFormula('ADD({Missing}, 2)', context)).not.toBeNull();
-    expect(formatResult(true, 'boolean', 0, {}, '')).toBe('TRUE');
-    expect(formatResult(1.234, 'number', 2, {}, '')).toBe('1.23');
-    expect(formatResult(0.5, 'percent', 2, {}, '')).toBe('0.50%');
-    expect(formatResult(10, 'currency', 0, { formatting: { currency: 'USD' } }, '')).toBe('$10');
-    expect(formatResult(new Date('2024-01-02T10:20:30Z'), 'date', 0, { formatting: { dateFormat: 'MM/DD/YYYY' } }, '')).toContain('/');
+  it('evaluates numeric and text arguments', () => {
+    expect(evaluateArgument('{Price}', context)).toBe(12.5);
+    expect(evaluateArgument('3.5', context)).toBe(3.5);
+    expect(evaluateArgument('SUM(1,2)', context)).toBeNull();
+    expect(evaluateTextArgument('{Name}', context)).toBe('Alpha');
+    expect(evaluateTextArgument('"Hi"', context)).toBe('Hi');
+    expect(evaluateTextArgument('Plain', context)).toBe('Plain');
   });
 });
 
-describe('formulaHelper helpers', () => {
-  it('detects row data usage and function hints', () => {
-    expect(formulaDependsOnRowData('{Price} + 1')).toBe(true);
-    expect(formulaDependsOnRowData('1 + 2')).toBe(false);
+describe('formulaHelper evaluation and formatting', () => {
+  it('evaluates formulas and reports errors', () => {
+    const sum = evaluateFormula('SUM({Price}, 7)', context, validateFormula);
+    expect(sum.error).toBeNull();
+    expect(sum.result).toBe(19.5);
+
+    const condition = evaluateFormula('IF(TRUE, \"no\", \"yes\")', context, validateFormula);
+    expect(condition.error).toBeNull();
+    expect(condition.result).toBe('no');
+
+    const invalid = evaluateFormula('IF()', context, validateFormula);
+    expect(invalid.error).toMatch(/requires at least 2 arguments/i);
+
+    const datediff = evaluateFormula('DATEDIFF(\"2025-01-01\", \"2025-01-11\", \"day\")', context, validateFormula);
+    expect(datediff.error).toBeNull();
+    expect(datediff.result).toBe(10);
+
+    const dateValue = evaluateFormula('DATE(2025, 3, 15)', context, validateFormula);
+    expect(dateValue.error).toBeNull();
+    expect(dateValue.result).toBeInstanceOf(Date);
+    expect(dateValue.result.getFullYear()).toBe(2025);
+  });
+
+  it('evaluates common text and logical helpers', () => {
+    const concat = evaluateFormula('CONCATENATE(\"A\", \"B\")', context, validateFormula);
+    expect(concat.result).toBe('AB');
+    const len = evaluateFormula('LEN(\"abc\")', context, validateFormula);
+    expect(len.result).toBe(3);
+    const left = evaluateFormula('LEFT(\"abcd\", 2)', context, validateFormula);
+    expect(left.result).toBe('ab');
+    const right = evaluateFormula('RIGHT(\"abcd\", 2)', context, validateFormula);
+    expect(right.result).toBe('cd');
+    const mid = evaluateFormula('MID(\"abcd\", 2, 2)', context, validateFormula);
+    expect(mid.result).toBe('bc');
+    const andResult = evaluateFormula('AND(TRUE, FALSE)', context, validateFormula);
+    expect(andResult.result).toBe(false);
+    const orResult = evaluateFormula('OR(FALSE, TRUE)', context, validateFormula);
+    expect(orResult.result).toBe(true);
+    const notResult = evaluateFormula('NOT(FALSE)', context, validateFormula);
+    expect(notResult.result).toBe(true);
+  });
+
+  it('evaluates math helpers', () => {
+    expect(evaluateFormula('ADD(1, 2)', context, validateFormula).result).toBe(3);
+    expect(evaluateFormula('SUBTRACT(5, 2)', context, validateFormula).result).toBe(3);
+    expect(evaluateFormula('MULTIPLY(2, 3)', context, validateFormula).result).toBe(6);
+    expect(evaluateFormula('SUM(1, 2, 3)', context, validateFormula).result).toBe(6);
+    expect(evaluateFormula('AVERAGE(1, 2, 3)', context, validateFormula).result).toBe(2);
+    expect(evaluateFormula('MAX(1, 5, 3)', context, validateFormula).result).toBe(5);
+    expect(evaluateFormula('MIN(1, 5, 3)', context, validateFormula).result).toBe(1);
+    expect(evaluateFormula('ROUND(1.236, 2)', context, validateFormula).result).toBe(1.24);
+    expect(evaluateFormula('CEILING(1.2)', context, validateFormula).result).toBe(2);
+    expect(evaluateFormula('FLOOR(1.8)', context, validateFormula).result).toBe(1);
+    expect(evaluateFormula('POWER(2, 3)', context, validateFormula).result).toBe(8);
+    expect(evaluateFormula('SQRT(9)', context, validateFormula).result).toBe(3);
+    expect(evaluateFormula('ABS(-5)', context, validateFormula).result).toBe(5);
+    expect(evaluateFormula('MOD(10, 3)', context, validateFormula).result).toBe(1);
+    expect(evaluateFormula('DIVIDE(10, 2)', context, validateFormula).result).toBe(5);
+    expect(evaluateFormula('{Price} + 2', context, validateFormula).result).toBe(14.5);
+    expect(evaluateFormula('{Price} / 0', context, validateFormula).result).toBeNull();
+  });
+
+  it('evaluates date, comparison, and text helpers', () => {
+    const dateAdd = evaluateFormula('DATEADD(\"2025-01-01\", 2, \"day\")', context, validateFormula);
+    expect(dateAdd.result).toBeInstanceOf(Date);
+    expect(dateAdd.result.getDate()).toBe(3);
+    const dateAddMonth = evaluateFormula('DATEADD(\"2025-01-01\", 1, \"month\")', context, validateFormula);
+    expect(dateAddMonth.result).toBeInstanceOf(Date);
+    expect(dateAddMonth.result.getMonth()).toBe(1);
+
+    expect(evaluateFormula('YEAR(\"2025-03-15\")', context, validateFormula).result).toBe(2025);
+    expect(evaluateFormula('MONTH(\"2025-03-15\")', context, validateFormula).result).toBe(3);
+    expect(evaluateFormula('DAY(\"2025-03-15\")', context, validateFormula).result).toBe(15);
+    expect(evaluateFormula('WEEKDAY(\"2025-03-15\")', context, validateFormula).result).toBe(6);
+
+    expect(evaluateFormula('{Price} > 10', context, validateFormula).result).toBe(true);
+    expect(evaluateFormula('{Price} <= 10', context, validateFormula).result).toBe(false);
+    expect(evaluateFormula('ISNUMBER({Price})', context, validateFormula).result).toBe(true);
+    expect(evaluateFormula('ISTEXT({Name})', context, validateFormula).result).toBe(true);
+    expect(evaluateFormula('ISDATE({Due})', context, validateFormula).result).toBe(true);
+    expect(evaluateFormula('ISDATE(\"2025-01-01\")', context, validateFormula).result).toBe(true);
+    expect(evaluateFormula('ISDATE(\"not-a-date\")', context, validateFormula).result).toBe(false);
+    expect(evaluateFormula('ISBLANK(\"\")', context, validateFormula).result).toBe(false);
+
+    expect(evaluateFormula('{Price} >= 12.5', context, validateFormula).result).toBe(true);
+    expect(evaluateFormula('{Price} < 20', context, validateFormula).result).toBe(true);
+
+    expect(evaluateFormula('UPPER(\"ab\")', context, validateFormula).result).toBe('AB');
+    expect(evaluateFormula('LOWER(\"AB\")', context, validateFormula).result).toBe('ab');
+    expect(evaluateFormula('TRIM(\"  a b  \")', context, validateFormula).result).toBe('a b');
+    expect(evaluateFormula('REPLACE(\"abcd\", \"bc\", \"zz\")', context, validateFormula).result).toBe('azzd');
+    expect(evaluateFormula('FIND(\"b\", \"abc\")', context, validateFormula).result).toBe(2);
+    const today = evaluateFormula('TODAY()', context, validateFormula).result;
+    expect(today).toBeInstanceOf(Date);
+    expect(today.getHours()).toBe(0);
+    const now = evaluateFormula('NOW()', context, validateFormula).result;
+    expect(now).toBeInstanceOf(Date);
+  });
+
+  it('formats numeric results', () => {
+    expect(formatResult(12.345, 'number', 2, {}, '')).toBe('12.35');
+    expect(formatResult(12.345, 'percent', 2, {}, '')).toBe('12.35%');
+    expect(formatResult(12.345, 'currency', 2, { formatting: { currency: 'USD' } }, '')).toBe('$12.35');
+    const dateValue = new Date('2025-01-02T03:04:05.000Z');
+    expect(formatResult(dateValue, 'date', 2, { formatting: { dateFormat: 'YYYY-MM-DD' } }, '')).not.toBe('');
+    expect(formatResult(dateValue, 'date', 2, {}, 'NOW()')).toMatch(/\d/);
+    expect(formatResult(true, 'text', 2, {}, '')).toBe('TRUE');
+    expect(formatResult('plain', 'text', 2, {}, '')).toBe('plain');
+  });
+});
+
+describe('formulaHelper comparison evaluation', () => {
+  it('evaluates comparisons for strings, booleans, numbers, and dates', () => {
+    expect(evaluateComparison('"A" != "B"', context)).toBe(true);
+    expect(evaluateComparison('true != false', context)).toBe(true);
+    expect(evaluateComparison('10 < 12', context)).toBe(true);
+    expect(evaluateComparison('2025-01-02 > 2025-01-01', context)).toBe(true);
+  });
+});
+
+describe('formulaHelper dependencies', () => {
+  it('detects row dependencies and TODAY usage', () => {
+    expect(formulaDependsOnRowData('{Price}')).toBe(true);
+    expect(formulaDependsOnRowData('SUM(1,2)')).toBe(false);
     expect(formulaUsesToday('TODAY()')).toBe(true);
-    expect(getFunctionSyntax('SUM()', 'SUM({Price}, {Qty})')).toContain('SUM(');
-    expect(detectCurrentFunction('ADD({Price}, 1)')?.name).toBe('ADD()');
-    expect(getFunctionAtCursor('ADD({Price}, {Qty})', 6)).toBe('ADD');
-    expect(getFunctionAtCursor('{Price} + {Qty}', 10)).toBe('MATH_OPERATOR');
-    expect(getCompatibleFieldTypes('ADD')).not.toBeNull();
-    expect(getCompatibleFieldTypes('TEXT')).toBeNull();
+    expect(formulaUsesToday('NOW()')).toBe(false);
+  });
+});
+
+describe('formulaHelper validation', () => {
+  it('flags invalid operator usage and unknown fields', () => {
+    expect(validateFormula('\"bad', context)).toMatch(/Unclosed double-quoted/i);
+    expect(validateFormula("'{bad", context)).toMatch(/Unclosed single-quoted/i);
+    expect(validateFormula('SUM(1) SUM(2)', context)).toMatch(/Compound expressions are not supported/i);
+    expect(validateFormula('{123}', context)).toBeNull();
+    expect(validateFormula('{Price} ++ {Price}', context)).toMatch(/invalid operator usage/i);
+    expect(validateFormula('* {Price}', context)).toMatch(/cannot start with/i);
+    expect(validateFormula('{Price} +', context)).toMatch(/cannot end with/i);
+    expect(validateFormula('{Missing} + 1', context)).toMatch(/unknown field/i);
+    expect(validateFormula('SUM({Name})', context)).toMatch(/numeric/i);
+    expect(validateFormula('DATEADD(\"2025-01-01\", 1, \"century\")', context)).toMatch(/valid time unit/i);
+    expect(validateFormula('DATE(2025, 13, 10)', context)).toMatch(/between 1 and 12/i);
+    expect(validateFormula('{Name} + 1', context)).toMatch(/numeric fields/i);
+    expect(validateFormula('IF(1)', context)).toMatch(/requires at least 2 arguments/i);
+    expect(validateFormula('IF(1,2,3,4)', context)).toMatch(/at most 3 arguments/i);
+    expect(validateFormula('NOT(1,2)', context)).toMatch(/only 1 argument/i);
+    expect(validateFormula('AND()', context)).toMatch(/requires at least 1 argument/i);
+    expect(validateFormula('ISBLANK(1,2)', context)).toMatch(/accepts only 1 argument/i);
+    expect(validateFormula('CONCATENATE()', context)).toMatch(/requires at least 1 argument/i);
+    expect(validateFormula('LEN(\"a\", \"b\")', context)).toMatch(/accepts only 1 argument/i);
+    expect(validateFormula('FIND(\"a\")', context)).toMatch(/requires 2 arguments/i);
+    expect(validateFormula('REPLACE(\"a\", \"b\", \"c\", \"d\")', context)).toMatch(/accepts only 3 arguments/i);
+    expect(validateFormula('REPLACE(\"a\", \"b\")', context)).toMatch(/requires 3 arguments/i);
+    expect(validateFormula('LEFT(\"abc\", \"x\")', context)).toMatch(/second argument must be a number/i);
+    expect(validateFormula('LEFT(\"abc\", {Name})', context)).toMatch(/second argument must be numeric or numeric field reference/i);
+    expect(validateFormula('RIGHT(\"abc\")', context)).toMatch(/requires 2 arguments/i);
+    expect(validateFormula('MID(\"abc\", \"x\", 2)', context)).toMatch(/second argument \(start\) must be numeric/i);
+    expect(validateFormula('MID(\"abc\", 1, {Name})', context)).toMatch(/third argument \(length\) must be numeric/i);
+    expect(validateFormula('MID(\"abc\", 1, 2, 3)', context)).toMatch(/accepts only 3 arguments/i);
+    expect(validateFormula('LEN()', context)).toMatch(/requires 1 argument/i);
+    expect(validateFormula('UPPER(\"a\", \"b\")', context)).toMatch(/accepts only 1 argument/i);
+    expect(validateFormula('FIND(\"a\", \"b\", \"c\")', context)).toMatch(/accepts only 2 arguments/i);
+    expect(validateFormula('TODAY(1)', context)).toMatch(/accepts no arguments/i);
+    expect(validateFormula('NOW(1)', context)).toMatch(/accepts no arguments/i);
+    expect(validateFormula('YEAR({Name})', context)).toMatch(/requires a date field/i);
+    expect(validateFormula('YEAR({5})', context)).toMatch(/numeric literal/i);
+    expect(validateFormula('MONTH({Due}, {Price})', context)).toMatch(/accepts only 1 argument/i);
+    expect(validateFormula('WEEKDAY(\"not-a-date\")', context)).toMatch(/valid date string/i);
+    expect(validateFormula('DATEADD({Due}, {Name}, \"day\")', context)).toMatch(/second argument must be numeric/i);
+    expect(validateFormula('DATEADD({Due}, 1, day)', context)).toMatch(/third argument must be a quoted string/i);
+    expect(validateFormula('DATEDIFF({Due}, {Due})', context)).toMatch(/requires 3 arguments/i);
+    expect(validateFormula('DATEDIFF({Due}, {Due}, day)', context)).toMatch(/third argument must be a quoted string/i);
+    expect(validateFormula('DATE({Name}, 1, 1)', context)).toMatch(/argument 1 must be numeric/i);
+    expect(getErrorText(validateFormula('foo == 1', context))).toMatch(/invalid left side/i);
+    expect(getErrorText(validateFormula('{Missing} == 1', context))).toMatch(/unknown field/i);
+    expect(getErrorText(validateFormula('{Price} == foo', context))).toMatch(/invalid right side/i);
+    expect(getErrorText(validateFormula('IF(abc, 1)', context))).toMatch(/first argument must be a condition/i);
+    expect(getErrorText(validateFormula('AND(foo)', context))).toMatch(/argument 1 must be a condition/i);
+    expect(getErrorText(validateFormula('NOT(foo)', context))).toMatch(/argument must be a condition/i);
+    expect(getErrorText(validateFormula('ISNUMBER(foo)', context))).toMatch(/argument must be a field reference/i);
+  });
+});
+
+describe('formulaHelper helper utilities', () => {
+  it('describes functions and cursor detection', () => {
+    const syntax = getFunctionSyntax('SUM', 'SUM({Price}, {Tax})');
+    expect(syntax).toMatch(/^SUM\(/);
+    expect(syntax).toContain('number1');
+    const detected = detectCurrentFunction('SUM({Price}, {Tax})');
+    expect(detected?.name).toMatch(/^SUM/);
+    expect(detected?.example).toContain('SUM');
+    expect(getFunctionAtCursor('SUM({Price}, {Tax})', 2)).toBeNull();
+    expect(getFunctionAtCursor('SUM({Price}, {Tax})', 6)).toBe('SUM');
+    expect(getFunctionAtCursor('{Price} + 2', 10)).toBe('MATH_OPERATOR');
+    expect(getFunctionAtCursor('SUM({Price})', -1)).toBeNull();
+    expect(getFunctionAtCursor('SUM({Price})', 999)).toBeNull();
+    expect(getCompatibleFieldTypes('SUM')).toContain('number');
+    expect(getCompatibleFieldTypes('MATH_OPERATOR')).toContain('number');
+    expect(getCompatibleFieldTypes('YEAR')).toContain('date');
+    expect(getFunctionSyntax('UNKNOWN()', '')).toBe('UNKNOWN(...)');
+    expect(getFunctionSyntax('ADD', 'ADD({Price},{Price})')).toBe('ADD(number1, number2, ...)');
   });
 
-  it('normalizes and converts results', () => {
+  it('normalizes comparison values and converts results', () => {
     expect(normalizeForComparison('')).toBeNull();
     expect(normalizeForComparison('12')).toBe(12);
+    expect(normalizeForComparison('12.5')).toBe(12.5);
+    expect(normalizeForComparison('12.50')).toBe('12.50');
     expect(normalizeForComparison(true)).toBe(true);
-    expect(convertResultToValue(new Date('2024-01-02T00:00:00Z'), 'date')).toBe('2024-01-02');
     expect(convertResultToValue(5, 'number')).toBe(5);
-  });
-});
-
-describe('formulaHelper edge coverage', () => {
-  it('handles evaluateFormula guard and fallback paths', () => {
-    expect(evaluateFormula('   ', context, validateNone)).toEqual({ result: null, error: null });
-
-    const validationError = evaluateFormula('ADD(1,2)', context, () => 'forced error');
-    expect(validationError.result).toBeNull();
-    expect(validationError.error).toBe('forced error');
-
-    const unknown = evaluateFormula('UNKNOWN_FN(1)', context, validateNone);
-    expect(unknown).toEqual({ result: null, error: null });
-  });
-
-  it('covers formatResult date/number fallback branches', () => {
-    const nowText = formatResult(new Date('2024-01-02T10:20:30Z'), 'date', 0, {}, 'NOW()');
-    expect(nowText.length).toBeGreaterThan(0);
-
-    expect(formatResult(42, 'text', 2, {}, '')).toBe('42');
-    expect(formatResult('abc', 'text', 2, {}, '')).toBe('abc');
-  });
-
-  it('covers helper fallbacks for column resolution and values', () => {
-    const allColumnsContext: FormulaContext = {
-      columns: [],
-      allColumns: [{ id: 'x1', title: 'Amount', column_name: 'amount', uidt: 'number', key: 'amount_key' }],
-      rowData: { data: { amount_key: '12.5' } },
-    };
-
-    expect(getColumnIdentifier('Amount', allColumnsContext)).toBe('amount_key');
-    expect(getFieldType('Amount', allColumnsContext)).toBe('number');
-    expect(getFieldValue('Amount', allColumnsContext)).toBe(12.5);
-
-    const previewContext: FormulaContext = {
-      columns: [{ id: 'b1', title: 'IsActive', column_name: 'is_active', uidt: 'boolean', key: 'is_active' }],
-      allColumns: [],
-    };
-
-    expect(getBooleanValue('IsActive', previewContext)).toBe(false);
-    expect(getTextFieldValue('Missing', previewContext)).toBe('');
-  });
-
-  it('covers getFieldValueByType unknown-type fallback ordering \(boolean-first\)', () => {
-    const unknownTypeContext: FormulaContext = {
-      columns: [{ id: 'u1', title: 'Score', column_name: 'score', uidt: 'unknown', key: 'score' }],
-      allColumns: [],
-      rowData: { score: '9' },
-    };
-
-    expect(getFieldValueByType('Score', unknownTypeContext)).toBe(true);
-  });
-
-  it('covers function hint helpers and cursor guards', () => {
-    expect(getFunctionSyntax('CUSTOM()', 'CUSTOM({A}, {B})')).toBe('CUSTOM(number1, number2)');
-    expect(getFunctionSyntax('X()', '')).toBe('X(...)');
-
-    expect(detectCurrentFunction('{Price} >= {Qty}')?.name).toBe('>=');
-    expect(getFunctionAtCursor('ADD({Price}, 1)', -1)).toBeNull();
-    expect(getFunctionAtCursor('ADD({Price}, 1)', 999)).toBeNull();
-  });
-
-  it('covers normalize and convert edge paths', () => {
-    expect(normalizeForComparison('1e3')).toBe('1e3');
-    expect(normalizeForComparison(' 12 ')).toBe(12);
-    expect(normalizeForComparison(null)).toBeNull();
-
     expect(convertResultToValue(false, 'boolean')).toBe(false);
-    expect(convertResultToValue('hello', 'text')).toBe('hello');
-  });
-
-  it('covers validation error paths for operator usage', () => {
-    const invalidPair = validateFormula('{Price} ++ {Qty}', context);
-    expect(invalidPair).toContain('Invalid operator usage');
-
-    const invalidStart = validateFormula('* {Price}', context);
-    expect(invalidStart).toContain('cannot start with * or /');
-
-    const invalidEnd = validateFormula('{Price} +', context);
-    expect(invalidEnd).toContain('cannot end with an operator');
+    const dateValue = new Date('2025-01-02T00:00:00.000Z');
+    expect(convertResultToValue(dateValue, 'date')).toBe('2025-01-02');
+    expect(convertResultToValue(null, 'text')).toBe('null');
   });
 });
-

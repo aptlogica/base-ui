@@ -22,7 +22,7 @@ vi.mock('axios', () => ({
   },
 }));
 
-vi.mock('../../hooks/useUserRole', () => ({
+vi.mock('../../../hooks/useUserRole', () => ({
   useUserRole: vi.fn(() => ({
     isAdmin: vi.fn(() => mockIsAdmin),
     isOwner: vi.fn(() => mockIsOwner),
@@ -30,12 +30,12 @@ vi.mock('../../hooks/useUserRole', () => ({
   })),
 }));
 
-vi.mock('../../hooks/useApi', () => ({
+vi.mock('../../../hooks/useApi', () => ({
   useUserRolesAndAccess: (...args: any[]) => useUserRolesAndAccessMock(...args),
   useTenantUsers: vi.fn(() => ({ data: [], isLoading: false, error: null })),
 }));
 
-vi.mock('../../service/clientService', () => ({
+vi.mock('../../../service/clientService', () => ({
   getTenantUsersService: vi.fn().mockResolvedValue([]),
   getUserRolesService: vi.fn().mockResolvedValue([]),
 }));
@@ -165,6 +165,21 @@ describe('UserTable', () => {
     it('should render Active status badge for active verified user', () => {
       renderWithQueryClient(<UserTable users={[createUser({ status: 'active', email_verified: true })]} />);
       expect(screen.getByText('Active')).toBeInTheDocument();
+    });
+
+    it('should render Inactive status badge for inactive user', () => {
+      renderWithQueryClient(<UserTable users={[createUser({ status: 'inactive', email_verified: true })]} />);
+      expect(screen.getByText('Inactive')).toBeInTheDocument();
+    });
+
+    it('should render Deactivated status badge for deactivated user', () => {
+      renderWithQueryClient(<UserTable users={[createUser({ status: 'deactivated', email_verified: true })]} />);
+      expect(screen.getByText('Deactivated')).toBeInTheDocument();
+    });
+
+    it('should render custom status label for unknown status', () => {
+      renderWithQueryClient(<UserTable users={[createUser({ status: 'custom-status', email_verified: true })]} />);
+      expect(screen.getByText('custom-status')).toBeInTheDocument();
     });
 
     it('should render Pending status for unverified user', () => {
@@ -391,6 +406,155 @@ describe('UserTable', () => {
 
       renderWithQueryClient(<UserTable users={[user]} />);
       expect(screen.getByText('Japanese')).toBeInTheDocument();
+    });
+
+    it('falls back to locale when activity data is missing', () => {
+      const user = createUser({
+        locale: 'fr-FR',
+        activity_data: undefined
+      });
+
+      renderWithQueryClient(<UserTable users={[user]} />);
+      expect(screen.getByText('fr-FR')).toBeInTheDocument();
+    });
+
+    it('shows timezone label with country for known region', () => {
+      const user = createUser({
+        timezone: 'America/Los_Angeles',
+        country: 'United States',
+        locale: 'en-US'
+      });
+
+      renderWithQueryClient(<UserTable users={[user]} />);
+      expect(screen.getByText('America/Los_Angeles (United States)')).toBeInTheDocument();
+    });
+
+    it('falls back to country-based timezone when timezone is empty', () => {
+      const user = createUser({
+        timezone: '',
+        country: 'United States',
+        locale: 'en-US'
+      });
+
+      renderWithQueryClient(<UserTable users={[user]} />);
+      expect(screen.getByText(/America\/Chicago \(United States\)/)).toBeInTheDocument();
+    });
+
+    it('uses login session timezone when timezone value matches multiple entries', () => {
+      const user = createUser({
+        timezone: 'PST',
+        country: '',
+        locale: 'fr-FR',
+        activity_data: {
+          login_sessions: [
+            {
+              browser: 'Chrome',
+              language: 'en-US',
+              login_at: '2024-01-01T00:00:00Z',
+              timezone: 'America/Vancouver',
+            },
+          ],
+        },
+      });
+
+      renderWithQueryClient(<UserTable users={[user]} />);
+      expect(screen.getByText('America/Vancouver (Canada)')).toBeInTheDocument();
+    });
+
+    it('uses locale country when timezone value matches multiple entries', () => {
+      const originalDisplayNames = (Intl as any).DisplayNames;
+      (Intl as any).DisplayNames = class MockDisplayNames {
+        constructor() {}
+        of(region: string) {
+          if (region === 'US') return 'United States';
+          return '';
+        }
+      };
+
+      try {
+        const user = createUser({
+          timezone: 'PST',
+          country: '',
+          locale: 'en-US',
+        });
+
+        renderWithQueryClient(<UserTable users={[user]} />);
+        expect(screen.getByText('America/Los_Angeles (United States)')).toBeInTheDocument();
+      } finally {
+        (Intl as any).DisplayNames = originalDisplayNames;
+      }
+    });
+
+    it('falls back to first timezone match when no country or locale matches', () => {
+      const user = createUser({
+        timezone: 'PST',
+        country: 'Atlantis',
+        locale: 'xx-YY',
+        activity_data: {
+          login_sessions: [
+            {
+              browser: 'Chrome',
+              language: 'en-US',
+              login_at: '2024-01-01T00:00:00Z',
+              timezone: 'Unknown/Zone',
+            },
+          ],
+        },
+      });
+
+      renderWithQueryClient(<UserTable users={[user]} />);
+      expect(screen.getByText(/America\/Los_Angeles/)).toBeInTheDocument();
+    });
+
+    it('defaults to UTC when timezone and country are empty', () => {
+      const user = createUser({
+        timezone: '',
+        country: '',
+        locale: '',
+      });
+
+      renderWithQueryClient(<UserTable users={[user]} />);
+      expect(screen.getByText(/Etc\/UTC/)).toBeInTheDocument();
+    });
+  });
+
+  describe('Admin action variants', () => {
+    it('shows Deactivate action for active verified user', async () => {
+      const onDeactivate = vi.fn();
+      const user = createUser({ status: 'active', email_verified: true });
+      renderWithQueryClient(<UserTable users={[user]} onDeactivateUser={onDeactivate} />);
+
+      await userEvent.click(screen.getByLabelText('More actions'));
+      const deactivate = await screen.findByText('Deactivate User');
+      expect(deactivate).toBeInTheDocument();
+      fireEvent.click(deactivate);
+      expect(onDeactivate).toHaveBeenCalledWith(user.id);
+    });
+
+    it('shows Activate action for deactivated user', async () => {
+      const onActivate = vi.fn();
+      const user = createUser({ status: 'deactivated', email_verified: true });
+      renderWithQueryClient(<UserTable users={[user]} onActivateUser={onActivate} />);
+
+      await userEvent.click(screen.getByLabelText('More actions'));
+      const activate = await screen.findByText('Activate User');
+      expect(activate).toBeInTheDocument();
+      fireEvent.click(activate);
+      expect(onActivate).toHaveBeenCalledWith(user.id);
+    });
+
+    it('does not show Remove User for pending owner when current user is not owner', async () => {
+      mockIsOwner = false;
+      const onRemove = vi.fn();
+      const ownerUser = createUser({
+        id: 'owner',
+        status: 'pending',
+        roles: [{ id: 'r1', name: 'owner', scope_level: 'system' }]
+      });
+
+      renderWithQueryClient(<UserTable users={[ownerUser]} onRemoveUser={onRemove} />);
+      await userEvent.click(screen.getByLabelText('More actions'));
+      expect(screen.queryByText('Remove User')).not.toBeInTheDocument();
     });
   });
 });

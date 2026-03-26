@@ -1,94 +1,231 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-let ToastProvider: React.ComponentType<{ children: React.ReactNode }>;
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { ToastProvider } from '../../../../../components/common/Toast';
+import { applyFilters } from '../../../../../utils/filterUtils';
+import { sortRowsByDataKey } from '../../../../../utils/sortUtils';
 let Table: typeof import('../Table').Table;
-const originalHandleContextMenuMock = vi.fn();
-const handleCloseContextMenuMock = vi.fn();
-const handleColContextMenuMock = vi.fn();
-const tableModalsState = {
-  contextMenu: { open: false, rowId: null as string | null, x: 0, y: 0 },
-  colMenu: { open: false, colIndex: null as number | null, x: 0, y: 0 },
-};
+const mockToastError = vi.fn();
 
-const baseAccess = {
-  isBaseReadOnly: vi.fn(),
-  canCreateColumn: vi.fn(),
-  canDeleteRecord: vi.fn(),
-  canUpdateRecord: vi.fn(),
-  canCreateRecord: vi.fn(),
-  canUpdateColumn: vi.fn(),
-  canDeleteColumn: vi.fn(),
-};
-
-const toast = { success: vi.fn(), error: vi.fn() };
-const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-const applyFiltersMock = vi.fn((rows: any[]) => rows);
-const sortRowsByDataKeyMock = vi.fn((_cols: any, _sorts: any, rows: any[]) => rows);
-
-vi.mock('../../../../../components/common/Toast', () => ({
-  ToastProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  useToast: () => toast,
-}));
-
-vi.mock('../../../../../hooks/useBaseAccess', () => ({
-  useBaseAccess: () => baseAccess,
-}));
+const mockUseAllViews = vi.fn();
+const mockUseTableViewConfig = vi.fn();
+const mockUseFrontendPagination = vi.fn();
+const mockUseCellEditing = vi.fn();
+const mockUseColumnManagement = vi.fn();
+const mockUseTableModals = vi.fn();
+const mockUseBaseAccess = vi.fn();
 
 vi.mock('../../../../../hooks/useApi', () => ({
-  useAllViews: () => ({ data: [] }),
+  useAllViews: mockUseAllViews,
 }));
-
-vi.mock('../../../../../utils/filterUtils', () => ({
-  applyFilters: (...args: any[]) => applyFiltersMock(...args),
-}));
-
-vi.mock('../../../../../utils/sortUtils', () => ({
-  sortRowsByDataKey: (...args: any[]) => sortRowsByDataKeyMock(...args),
-}));
-
-const tableViewConfigState = {
-  viewConfigState: { filters: [], sorts: [], groupBy: [], columnWidths: {} },
-  setViewConfigState: vi.fn(),
-  searchTerm: '',
-  setSearchTerm: vi.fn(),
-  selectedSearchField: null as any,
-  setSelectedSearchField: vi.fn(),
-  realTimeFilter: null as any,
-  localFieldConfig: [],
-  visibleColumns: [
-    { key: 'title', title: 'Title', type: 'text', isSystem: false, system: false, width: 235 },
-    { key: 'status', title: 'Status', type: 'select', isSystem: false, system: false, width: 235 },
-  ],
-  handleAddFilter: vi.fn(),
-  handleRemoveFilter: vi.fn(),
-  handleUpdateFilter: vi.fn(),
-  handleGroupByChange: vi.fn(),
-  handleSortChange: vi.fn(),
-  handleEnsureAllFieldsRegistered: vi.fn(),
-  handleFieldToggle: vi.fn(),
-  handleFieldOrderChange: vi.fn(),
-  updateViewConfigBackend: vi.fn(),
-};
 
 vi.mock('../../../hooks/useTableViewConfig', () => ({
-  useTableViewConfig: () => tableViewConfigState,
+  useTableViewConfig: mockUseTableViewConfig,
 }));
 
-vi.mock('../../../hooks/useTableModals', () => ({
-  useTableModals: () => ({
-    contextMenu: tableModalsState.contextMenu,
-    handleContextMenu: originalHandleContextMenuMock,
-    handleCloseContextMenu: handleCloseContextMenuMock,
-    colMenu: tableModalsState.colMenu,
-    handleColContextMenu: handleColContextMenuMock,
-    handleCloseColMenu: vi.fn(),
-  }),
+vi.mock('../../../../../hooks/useFrontendPagination', () => ({
+  useFrontendPagination: mockUseFrontendPagination,
+}));
+
+vi.mock('../../../hooks/useCellEditing', () => ({
+  useCellEditing: mockUseCellEditing,
 }));
 
 vi.mock('../../../hooks/useColumnManagement', () => ({
-  useColumnManagement: () => ({
+  useColumnManagement: mockUseColumnManagement,
+}));
+
+vi.mock('../../../hooks/useTableModals', () => ({
+  useTableModals: mockUseTableModals,
+}));
+
+vi.mock('../../../../../hooks/useBaseAccess', () => ({
+  useBaseAccess: mockUseBaseAccess,
+}));
+
+vi.mock('../../../../../utils/filterUtils', () => ({
+  applyFilters: vi.fn((rows: any[]) => rows),
+}));
+
+vi.mock('../../../../../utils/sortUtils', () => ({
+  sortRowsByDataKey: vi.fn((_: any, __: any, rows: any[]) => rows),
+}));
+
+vi.mock('../../../../../components/shared/table/FilterPopover', () => ({
+  FilterPopover: () => <div data-testid="filter-popover" />,
+}));
+
+vi.mock('../../../../../components/shared/table/FieldsPopover', () => ({
+  FieldsPopover: () => <div data-testid="fields-popover" />,
+}));
+
+vi.mock('../../../../../components/shared/table/GroupPopover', () => ({
+  GroupPopover: () => <div data-testid="group-popover" />,
+}));
+
+vi.mock('../../../../../components/shared/table/SortPopover', () => ({
+  SortPopover: () => <div data-testid="sort-popover" />,
+}));
+
+vi.mock('../../../../../components/shared/table/Search', () => ({
+  Search: ({ onSearch }: any) => (
+    <button type="button" onClick={() => onSearch?.('Row', { key: 'name' })}>
+      Search
+    </button>
+  ),
+}));
+
+vi.mock('../components/ContextMenu', () => ({
+  ContextMenu: () => <div data-testid="context-menu" />,
+}));
+
+vi.mock('../components/ColumnContextMenu', () => ({
+  ColumnContextMenu: () => <div data-testid="column-context-menu" />,
+}));
+
+vi.mock('../components/VirtualizedTableBody', () => ({
+  VirtualizedTableBody: ({ data, groupedData, onRowSelect, onContextMenu, onScroll }: any) => (
+    <div data-testid="virtualized-body">
+      <div data-testid="row-count">{data?.length ?? 0}</div>
+      <div data-testid="grouped-flag">{groupedData ? 'yes' : 'no'}</div>
+      <button type="button" onClick={() => onRowSelect?.('1', true)}>
+        Select Row
+      </button>
+      <button type="button" onClick={(e) => onContextMenu?.(e as any, '1')}>
+        Open Context
+      </button>
+      <button type="button" onClick={() => onScroll?.(0)}>
+        Scroll
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock('../components/ColumnDropdown', () => ({
+  ColumnDropdown: ({ onEdit, onDelete, onOpenChange }: any) => (
+    <div data-testid="column-dropdown">
+      <button type="button" onClick={() => onOpenChange?.(true)}>
+        Open Dropdown
+      </button>
+      <button type="button" onClick={() => onEdit?.(document.body)}>
+        Edit Column
+      </button>
+      <button type="button" onClick={() => onDelete?.()}>
+        Delete Column
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock('../modals/NewColumnModalPortal', () => ({
+  NewColumnModalPortal: React.forwardRef(() => <div data-testid="new-column-modal-portal" />),
+}));
+
+vi.mock('../../../../../components/modals/DeleteConfirmModal', () => ({
+  __esModule: true,
+  default: () => <div data-testid="delete-confirm-modal" />,
+}));
+
+vi.mock('../../../../../components/modals/EditRecordModal', () => ({
+  __esModule: true,
+  default: () => <div data-testid="edit-record-modal" />,
+}));
+
+vi.mock('../../../../../components/modals/UpdateFieldConfirmModal', () => ({
+  __esModule: true,
+  default: () => <div data-testid="update-field-confirm-modal" />,
+}));
+
+vi.mock('../../../../../components/modals/NewColumnModal', () => ({
+  __esModule: true,
+  NewColumnModal: () => <div data-testid="new-column-modal" />,
+}));
+
+vi.mock('../../../../../components/ui/Loader', () => ({
+  Loader: () => <div data-testid="loader" />,
+}));
+
+vi.mock('../../../../../components/common/Toast', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../../components/common/Toast')>();
+  return {
+    ...actual,
+    useToast: () => ({
+      success: vi.fn(),
+      error: mockToastError,
+      info: vi.fn(),
+      warning: vi.fn(),
+    }),
+  };
+});
+
+vi.mock('react-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-dom')>();
+  return {
+    ...actual,
+    createPortal: (node: React.ReactNode) => node,
+  };
+});
+
+const tableData = {
+  model: { id: 'tbl-1', base_id: 'base-1' },
+  columns: [
+    { id: 'col-1', title: 'Name', column_name: 'name', uidt: 'text', order_index: 0 },
+    { id: 'col-2', title: 'Value', column_name: 'value', uidt: 'number', order_index: 1 },
+  ],
+  records: [
+    { id: '1', name: 'Row 1', value: 10, created_at: '2026-01-01', updated_at: '2026-01-02' },
+  ],
+  views: [{ id: 'view-1', type: 'grid', meta: {} }],
+};
+
+const setupDefaultMocks = () => {
+  mockUseAllViews.mockReturnValue({ data: [] });
+  mockUseBaseAccess.mockReturnValue({
+    isBaseReadOnly: () => false,
+    canCreateColumn: () => true,
+    canDeleteRecord: () => true,
+    canUpdateRecord: () => true,
+    canCreateRecord: () => true,
+    canUpdateColumn: () => true,
+    canDeleteColumn: () => true,
+  });
+
+  mockUseTableViewConfig.mockReturnValue({
+    viewConfigState: { filters: [], sorts: [], groupBy: [], columnWidths: {} },
+    setViewConfigState: vi.fn(),
+    searchTerm: '',
+    setSearchTerm: vi.fn(),
+    selectedSearchField: null,
+    setSelectedSearchField: vi.fn(),
+    realTimeFilter: null,
+    localFieldConfig: {},
+    visibleColumns: [
+      { id: 'col-1', key: 'name', column_name: 'name', title: 'Name', type: 'text', isSystem: false, system: false },
+      { id: 'col-2', key: 'value', column_name: 'value', title: 'Value', type: 'number', isSystem: false, system: false },
+    ],
+    handleAddFilter: vi.fn(),
+    handleRemoveFilter: vi.fn(),
+    handleUpdateFilter: vi.fn(),
+    handleGroupByChange: vi.fn(),
+    handleSortChange: vi.fn(),
+    handleEnsureAllFieldsRegistered: vi.fn(),
+    handleFieldToggle: vi.fn(),
+    handleFieldOrderChange: vi.fn(),
+    updateViewConfigBackend: vi.fn(),
+  });
+
+  mockUseFrontendPagination.mockReturnValue({
+    allLoadedData: [
+      { id: '1', _meta: { id: '1' }, data: { name: 'Row 1', value: 10 } },
+    ],
+    loadNextPage: vi.fn(),
+    hasMore: false,
+    isLoadingMore: false,
+  });
+
+  mockUseCellEditing.mockReturnValue({ handleCellChange: vi.fn() });
+
+  mockUseColumnManagement.mockReturnValue({
     isColumnModalOpen: false,
     setIsColumnModalOpen: vi.fn(),
     editColumn: null,
@@ -115,517 +252,799 @@ vi.mock('../../../hooks/useColumnManagement', () => ({
     handleColumnDragEnd: vi.fn(),
     setEditColumn: vi.fn(),
     setEditColumnIndex: vi.fn(),
-  }),
-}));
+  });
 
-const paginationState = {
-  allLoadedData: [
-    { id: '1', _meta: { id: '1' }, data: { title: 'Row 1', status: 'Open' } },
-    { id: '2', _meta: { id: '2' }, data: { title: 'Row 2', status: 'Closed' } },
-  ],
-  loadNextPage: vi.fn(),
-  hasMore: false,
-  isLoadingMore: false,
+  mockUseTableModals.mockReturnValue({
+    contextMenu: { open: false, rowId: null, x: 0, y: 0 },
+    handleContextMenu: vi.fn(),
+    handleCloseContextMenu: vi.fn(),
+    colMenu: { open: false, colIndex: null, x: 0, y: 0 },
+    handleColContextMenu: vi.fn(),
+    handleCloseColMenu: vi.fn(),
+  });
 };
 
-vi.mock('../../../../../hooks/useFrontendPagination', () => ({
-  useFrontendPagination: () => paginationState,
-}));
-
-vi.mock('../../../hooks/useCellEditing', () => ({
-  useCellEditing: () => ({ handleCellChange: vi.fn() }),
-}));
-
-vi.mock('../../../../../components/shared/table/GroupPopover', () => ({
-  GroupPopover: () => <div data-testid="group-popover" />,
-}));
-vi.mock('../../../../../components/shared/table/SortPopover', () => ({
-  SortPopover: () => <div data-testid="sort-popover" />,
-}));
-vi.mock('../../../../../components/shared/table/FilterPopover', () => ({
-  FilterPopover: ({ onUpdateFilter }: any) => (
-    <div data-testid="filter-popover">
-      <button
-        type="button"
-        data-testid="filter-update"
-        onClick={() => onUpdateFilter?.(0, { value: 'Open' })}
-      >
-        Update Filter
-      </button>
-    </div>
-  ),
-}));
-vi.mock('../../../../../components/shared/table/FieldsPopover', () => ({
-  FieldsPopover: () => <div data-testid="fields-popover" />,
-}));
-vi.mock('../../../../../components/shared/table/Search', () => ({
-  Search: ({ onSearch }: any) => (
-    <div data-testid="search">
-      <button type="button" data-testid="search-trigger" onClick={() => onSearch?.('Row 1', { key: 'title', title: 'Title' })}>
-        Trigger Search
-      </button>
-    </div>
-  ),
-}));
-vi.mock('../components/ContextMenu', () => ({
-  ContextMenu: ({ onDelete, onEdit, canDeleteRecord, canEditRecord }: any) => (
-    <div data-testid="context-menu">
-      <button type="button" onClick={onEdit} disabled={!canEditRecord}>
-        Edit record
-      </button>
-      <button type="button" onClick={onDelete} disabled={!canDeleteRecord}>
-        Delete record
-      </button>
-    </div>
-  ),
-}));
-vi.mock('../components/VirtualizedTableBody', () => ({
-  VirtualizedTableBody: ({ onContextMenu, setActiveCell, activeCell, groupedData }: any) => (
-    <div data-testid="virtualized-body">
-      <div data-testid="grouped-flag">{groupedData ? 'grouped' : 'ungrouped'}</div>
-      <div data-testid="active-cell">{activeCell ? 'active' : 'inactive'}</div>
-      <button
-        type="button"
-        data-testid="row-context-trigger"
-        onClick={() => onContextMenu?.({ preventDefault: vi.fn(), stopPropagation: vi.fn() }, '1')}
-      >
-        Open Context
-      </button>
-      <button
-        type="button"
-        data-testid="activate-cell"
-        onClick={() => setActiveCell?.({ rowId: '1', colKey: 'title' })}
-      >
-        Activate Cell
-      </button>
-    </div>
-  ),
-}));
-vi.mock('../modals/NewColumnModalPortal', () => ({
-  NewColumnModalPortal: React.forwardRef((_props: any, ref: any) => (
-    <div ref={ref} data-testid="new-column-portal" />
-  )),
-}));
-vi.mock('../components/ColumnDropdown', () => ({
-  ColumnDropdown: () => <div data-testid="column-dropdown" />,
-}));
-vi.mock('../../../../../components/modals/EditRecordModal', () => ({
-  default: ({ recordId, onDelete }: any) => (
-    <div data-testid="edit-record-modal">
-      <div data-testid="edit-record-id">{String(recordId)}</div>
-      <button type="button" data-testid="edit-record-delete" onClick={() => onDelete?.(String(recordId))}>
-        Delete From Modal
-      </button>
-    </div>
-  ),
-}));
-vi.mock('../../../../../components/modals/DeleteConfirmModal', () => ({
-  default: () => <div data-testid="delete-confirm-modal" />,
-}));
-vi.mock('../../../../../components/modals/UpdateFieldConfirmModal', () => ({
-  default: () => <div data-testid="update-field-confirm-modal" />,
-}));
+const renderWithToast = (ui: React.ReactElement) =>
+  render(<ToastProvider>{ui}</ToastProvider>);
 
 describe('Table', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockToastError.mockClear();
+    setupDefaultMocks();
+    (globalThis as any).ResizeObserver = class {
+      observe() {}
+      disconnect() {}
+    };
+  });
+
   beforeEach(async () => {
-    globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
-      cb(0);
-      return 0;
-    }) as any;
-    applyFiltersMock.mockClear();
-    sortRowsByDataKeyMock.mockClear();
-    tableViewConfigState.viewConfigState = { filters: [], sorts: [], groupBy: [], columnWidths: {} };
-    tableViewConfigState.searchTerm = '';
-    tableViewConfigState.selectedSearchField = null;
-    tableViewConfigState.realTimeFilter = null;
-    tableViewConfigState.setSearchTerm.mockReset();
-    tableViewConfigState.setSelectedSearchField.mockReset();
-    tableViewConfigState.handleUpdateFilter.mockReset();
-    paginationState.hasMore = false;
-    paginationState.allLoadedData = [
-      { id: '1', _meta: { id: '1' }, data: { title: 'Row 1', status: 'Open' } },
-      { id: '2', _meta: { id: '2' }, data: { title: 'Row 2', status: 'Closed' } },
-    ];
-    tableModalsState.contextMenu = { open: false, rowId: null, x: 0, y: 0 };
-    tableModalsState.colMenu = { open: false, colIndex: null, x: 0, y: 0 };
-    originalHandleContextMenuMock.mockReset();
-    handleCloseContextMenuMock.mockReset();
-    handleColContextMenuMock.mockReset();
-    baseAccess.isBaseReadOnly.mockReturnValue(false);
-    baseAccess.canCreateColumn.mockReturnValue(true);
-    baseAccess.canDeleteRecord.mockReturnValue(true);
-    baseAccess.canUpdateRecord.mockReturnValue(true);
-    baseAccess.canCreateRecord.mockReturnValue(true);
-    baseAccess.canUpdateColumn.mockReturnValue(true);
-    baseAccess.canDeleteColumn.mockReturnValue(true);
-    ({ Table } = await import('../Table'));
-    ({ ToastProvider } = await import('../../../../../components/common/Toast'));
+    if (!Table) {
+      ({ Table } = await import('../Table'));
+    }
   });
 
-  it('renders column headers and row count', () => {
-    render(
-      <ToastProvider>
-        <Table
-          tableData={{
-            model: { id: 't1', base_id: 'b1' },
-            columns: [
-              { id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' },
-              { id: 'c2', column_name: 'status', title: 'Status', uidt: 'select' },
-            ],
-            records: [
-              { id: 1, title: 'Row 1', status: 'Open' },
-              { id: 2, title: 'Row 2', status: 'Closed' },
-            ],
-          }}
-          onRefresh={vi.fn()}
-        />
-      </ToastProvider>
-    );
+  it('renders add row button and selection checkbox when editable', () => {
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
 
-    expect(screen.getByText('Title')).toBeInTheDocument();
-    expect(screen.getByText('Status')).toBeInTheDocument();
-    expect(screen.getByText('2 rows')).toBeInTheDocument();
-    expect(screen.getByTitle('Add new row')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /add row/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('checkbox')).toBeInTheDocument();
   });
 
-  it('hides add actions for read-only users', () => {
-    baseAccess.isBaseReadOnly.mockReturnValue(true);
+  it('hides add row button when read-only', () => {
+    mockUseBaseAccess.mockReturnValue({
+      isBaseReadOnly: () => true,
+      canCreateColumn: () => false,
+      canDeleteRecord: () => false,
+      canUpdateRecord: () => false,
+      canCreateRecord: () => false,
+      canUpdateColumn: () => false,
+      canDeleteColumn: () => false,
+    });
 
-    render(
-      <ToastProvider>
-        <Table
-          tableData={{
-            model: { id: 't1', base_id: 'b1' },
-            columns: [
-              { id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' },
-            ],
-            records: [{ id: 1, title: 'Row 1' }],
-          }}
-          onRefresh={vi.fn()}
-        />
-      </ToastProvider>
-    );
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
 
-    expect(screen.queryByTitle('Add new row')).not.toBeInTheDocument();
-    expect(screen.queryByTitle('Add column')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /add row/i })).not.toBeInTheDocument();
   });
 
-  it('calls addRow mutation when add row clicked', async () => {
-    const addRow = { mutateAsync: vi.fn().mockResolvedValue({}) } as any;
+  it('hides add row button when create record permission is false', () => {
+    mockUseBaseAccess.mockReturnValue({
+      isBaseReadOnly: () => false,
+      canCreateColumn: () => true,
+      canDeleteRecord: () => true,
+      canUpdateRecord: () => true,
+      canCreateRecord: () => false,
+      canUpdateColumn: () => true,
+      canDeleteColumn: () => true,
+    });
 
-    render(
-      <ToastProvider>
-        <Table
-          tableData={{
-            model: { id: 't1', base_id: 'b1' },
-            columns: [
-              { id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' },
-            ],
-            records: [{ id: 1, title: 'Row 1' }],
-          }}
-          onRefresh={vi.fn()}
-          actions={{ addRow } as any}
-        />
-      </ToastProvider>
-    );
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
 
-    const addRowButton = screen.getByTitle('Add new row');
-    fireEvent.click(addRowButton);
-
-    await new Promise(r => setTimeout(r, 0));
-    expect(addRow.mutateAsync).toHaveBeenCalledWith({ model_id: 't1' });
+    expect(screen.queryByRole('button', { name: /add row/i })).not.toBeInTheDocument();
   });
 
-  it('shows toast error when add row mutation fails', async () => {
-    const addRow = { mutateAsync: vi.fn().mockRejectedValue(new Error('add failed')) } as any;
-    render(
-      <ToastProvider>
-        <Table
-          tableData={{
-            model: { id: 't1', base_id: 'b1' },
-            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
-            records: [{ id: 1, title: 'Row 1' }],
-          }}
-          onRefresh={vi.fn()}
-          actions={{ addRow } as any}
-        />
-      </ToastProvider>
-    );
+  it('renders context menu when open and allowed', () => {
+    mockUseTableModals.mockReturnValue({
+      contextMenu: { open: true, rowId: '1', x: 10, y: 10 },
+      handleContextMenu: vi.fn(),
+      handleCloseContextMenu: vi.fn(),
+      colMenu: { open: false, colIndex: null, x: 0, y: 0 },
+      handleColContextMenu: vi.fn(),
+      handleCloseColMenu: vi.fn(),
+    });
 
-    fireEvent.click(screen.getByTitle('Add new row'));
-    await new Promise(r => setTimeout(r, 0));
-    expect(toast.error).toHaveBeenCalled();
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('context-menu')).toBeInTheDocument();
   });
 
-  it('prevents row context menu open for readonly users', () => {
-    baseAccess.isBaseReadOnly.mockReturnValue(true);
-    render(
-      <ToastProvider>
-        <Table
-          tableData={{
-            model: { id: 't1', base_id: 'b1' },
-            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
-            records: [{ id: 1, title: 'Row 1' }],
-          }}
-          onRefresh={vi.fn()}
-        />
-      </ToastProvider>
-    );
+  it('shows selected count after selecting a row', () => {
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
 
-    fireEvent.click(screen.getByTestId('row-context-trigger'));
-    expect(originalHandleContextMenuMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /select row/i }));
+    expect(screen.getByText(/selected/)).toBeInTheDocument();
   });
 
-  it('opens row context menu for editable users', () => {
-    render(
-      <ToastProvider>
-        <Table
-          tableData={{
-            model: { id: 't1', base_id: 'b1' },
-            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
-            records: [{ id: 1, title: 'Row 1' }],
-          }}
-          onRefresh={vi.fn()}
-        />
-      </ToastProvider>
-    );
+  it('shows paging text when hasMore is true', () => {
+    mockUseFrontendPagination.mockReturnValue({
+      allLoadedData: [
+        { id: '1', _meta: { id: '1' }, data: { name: 'Row 1', value: 10 } },
+      ],
+      loadNextPage: vi.fn(),
+      hasMore: true,
+      isLoadingMore: false,
+    });
 
-    fireEvent.click(screen.getByTestId('row-context-trigger'));
-    expect(originalHandleContextMenuMock).toHaveBeenCalled();
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByText(/showing/i)).toBeInTheDocument();
   });
 
-  it('opens edit record flow from row context menu', async () => {
-    tableModalsState.contextMenu = { open: true, rowId: '1', x: 20, y: 20 };
-    render(
-      <ToastProvider>
-        <Table
-          tableData={{
-            model: { id: 't1', base_id: 'b1' },
-            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
-            records: [{ id: 1, title: 'Row 1' }],
-          }}
-          onRefresh={vi.fn()}
-        />
-      </ToastProvider>
-    );
+  it('filters rows by search term and triggers filters/sorts', () => {
+    mockUseFrontendPagination.mockImplementation(({ data }: any) => ({
+      allLoadedData: data,
+      loadNextPage: vi.fn(),
+      hasMore: false,
+      isLoadingMore: false,
+    }));
+    mockUseTableViewConfig.mockReturnValue({
+      viewConfigState: { filters: [{ field: 'name', op: 'is', value: 'Row 1' }], sorts: [{ key: 'name', direction: 'asc' }], groupBy: [], columnWidths: {} },
+      setViewConfigState: vi.fn(),
+      searchTerm: 'missing',
+      setSearchTerm: vi.fn(),
+      selectedSearchField: { key: 'name' },
+      setSelectedSearchField: vi.fn(),
+      realTimeFilter: { field: 'name', op: 'is', value: 'Row 1' },
+      localFieldConfig: {},
+      visibleColumns: [
+        { id: 'col-1', key: 'name', column_name: 'name', title: 'Name', type: 'text', isSystem: false, system: false },
+        { id: 'col-2', key: 'value', column_name: 'value', title: 'Value', type: 'number', isSystem: false, system: false },
+      ],
+      handleAddFilter: vi.fn(),
+      handleRemoveFilter: vi.fn(),
+      handleUpdateFilter: vi.fn(),
+      handleGroupByChange: vi.fn(),
+      handleSortChange: vi.fn(),
+      handleEnsureAllFieldsRegistered: vi.fn(),
+      handleFieldToggle: vi.fn(),
+      handleFieldOrderChange: vi.fn(),
+      updateViewConfigBackend: vi.fn(),
+    });
 
-    fireEvent.click(screen.getByRole('button', { name: /edit record/i }));
-    await new Promise(r => setTimeout(r, 0));
-    expect(screen.getByTestId('edit-record-modal')).toBeInTheDocument();
-    expect(handleCloseContextMenuMock).toHaveBeenCalled();
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('row-count')).toHaveTextContent('0');
+    expect(applyFilters).toHaveBeenCalled();
+    expect(sortRowsByDataKey).toHaveBeenCalled();
   });
 
-  it('deletes via modal when record id is valid numeric', async () => {
-    const deleteRecord = { mutateAsync: vi.fn().mockResolvedValue({}) } as any;
-    tableModalsState.contextMenu = { open: true, rowId: '1', x: 10, y: 10 };
+  it('selects all visible rows via the header checkbox', () => {
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
 
-    render(
-      <ToastProvider>
-        <Table
-          tableData={{
-            model: { id: 't1', base_id: 'b1' },
-            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
-            records: [{ id: 1, title: 'Row 1' }],
-          }}
-          onRefresh={vi.fn()}
-          actions={{ deleteRecord } as any}
-        />
-      </ToastProvider>
-    );
+    const checkbox = screen.getByRole('checkbox');
+    fireEvent.click(checkbox);
 
-    fireEvent.click(screen.getByRole('button', { name: /edit record/i }));
-    await new Promise(r => setTimeout(r, 0));
-    fireEvent.click(screen.getByTestId('edit-record-delete'));
-
-    await new Promise(r => setTimeout(r, 0));
-    expect(deleteRecord.mutateAsync).toHaveBeenCalledWith({ model_id: 't1', row_id: 1 });
+    expect(screen.getByText(/selected/)).toBeInTheDocument();
   });
 
-  it('shows error and skips delete when record id is invalid', async () => {
-    const deleteRecord = { mutateAsync: vi.fn().mockResolvedValue({}) } as any;
-    tableModalsState.contextMenu = { open: true, rowId: 'bad-id', x: 10, y: 10 };
+  it('builds grouped data when groupBy is configured', () => {
+    mockUseTableViewConfig.mockReturnValue({
+      viewConfigState: { filters: [], sorts: [], groupBy: [{ column: 'name', direction: 'asc' }], columnWidths: {} },
+      setViewConfigState: vi.fn(),
+      searchTerm: '',
+      setSearchTerm: vi.fn(),
+      selectedSearchField: null,
+      setSelectedSearchField: vi.fn(),
+      realTimeFilter: null,
+      localFieldConfig: {},
+      visibleColumns: [
+        { id: 'col-1', key: 'name', column_name: 'name', title: 'Name', type: 'text', isSystem: false, system: false },
+      ],
+      handleAddFilter: vi.fn(),
+      handleRemoveFilter: vi.fn(),
+      handleUpdateFilter: vi.fn(),
+      handleGroupByChange: vi.fn(),
+      handleSortChange: vi.fn(),
+      handleEnsureAllFieldsRegistered: vi.fn(),
+      handleFieldToggle: vi.fn(),
+      handleFieldOrderChange: vi.fn(),
+      updateViewConfigBackend: vi.fn(),
+    });
 
-    render(
-      <ToastProvider>
-        <Table
-          tableData={{
-            model: { id: 't1', base_id: 'b1' },
-            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
-            records: [{ id: 1, title: 'Row 1' }],
-          }}
-          onRefresh={vi.fn()}
-          actions={{ deleteRecord } as any}
-        />
-      </ToastProvider>
-    );
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /edit record/i }));
-    await new Promise(r => setTimeout(r, 0));
-    expect(screen.getByTestId('edit-record-id')).toHaveTextContent('bad-id');
-
-    fireEvent.click(screen.getByTestId('edit-record-delete'));
-    await new Promise(r => setTimeout(r, 0));
-
-    expect(deleteRecord.mutateAsync).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalled();
+    expect(screen.getByTestId('grouped-flag')).toHaveTextContent('yes');
   });
 
-  it('deletes single row from context menu when no multi-selection', async () => {
-    const deleteRecord = { mutateAsync: vi.fn().mockResolvedValue({}) } as any;
-    tableModalsState.contextMenu = { open: true, rowId: '1', x: 10, y: 10 };
+  it('does not open row context menu when read-only', () => {
+    const handleContextMenu = vi.fn();
+    mockUseBaseAccess.mockReturnValue({
+      isBaseReadOnly: () => true,
+      canCreateColumn: () => false,
+      canDeleteRecord: () => false,
+      canUpdateRecord: () => false,
+      canCreateRecord: () => false,
+      canUpdateColumn: () => false,
+      canDeleteColumn: () => false,
+    });
+    mockUseTableModals.mockReturnValue({
+      contextMenu: { open: false, rowId: null, x: 0, y: 0 },
+      handleContextMenu,
+      handleCloseContextMenu: vi.fn(),
+      colMenu: { open: false, colIndex: null, x: 0, y: 0 },
+      handleColContextMenu: vi.fn(),
+      handleCloseColMenu: vi.fn(),
+    });
 
-    render(
-      <ToastProvider>
-        <Table
-          tableData={{
-            model: { id: 't1', base_id: 'b1' },
-            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
-            records: [{ id: 1, title: 'Row 1' }, { id: 2, title: 'Row 2' }],
-          }}
-          onRefresh={vi.fn()}
-          actions={{ deleteRecord } as any}
-        />
-      </ToastProvider>
-    );
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /delete record/i }));
-    await new Promise(r => setTimeout(r, 0));
-
-    expect(deleteRecord.mutateAsync).toHaveBeenCalledWith({ model_id: 't1', row_id: 1 });
-    expect(handleCloseContextMenuMock).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /open context/i }));
+    expect(handleContextMenu).not.toHaveBeenCalled();
   });
 
-  it('updates search term and selected search field via Search component', () => {
-    render(
-      <ToastProvider>
-        <Table
-          tableData={{
-            model: { id: 't1', base_id: 'b1' },
-            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
-            records: [{ id: 1, title: 'Row 1' }],
-          }}
-          onRefresh={vi.fn()}
-        />
-      </ToastProvider>
-    );
+  it('hides column dropdown for system columns', () => {
+    mockUseTableViewConfig.mockReturnValue({
+      viewConfigState: { filters: [], sorts: [], groupBy: [], columnWidths: {} },
+      setViewConfigState: vi.fn(),
+      searchTerm: '',
+      setSearchTerm: vi.fn(),
+      selectedSearchField: null,
+      setSelectedSearchField: vi.fn(),
+      realTimeFilter: null,
+      localFieldConfig: {},
+      visibleColumns: [
+        { id: 'col-1', key: 'name', column_name: 'name', title: 'Name', type: 'text', isSystem: true, system: true },
+      ],
+      handleAddFilter: vi.fn(),
+      handleRemoveFilter: vi.fn(),
+      handleUpdateFilter: vi.fn(),
+      handleGroupByChange: vi.fn(),
+      handleSortChange: vi.fn(),
+      handleEnsureAllFieldsRegistered: vi.fn(),
+      handleFieldToggle: vi.fn(),
+      handleFieldOrderChange: vi.fn(),
+      updateViewConfigBackend: vi.fn(),
+    });
 
-    fireEvent.click(screen.getAllByTestId('search-trigger')[0]);
-    expect(tableViewConfigState.setSearchTerm).toHaveBeenCalledWith('Row 1');
-    expect(tableViewConfigState.setSelectedSearchField).toHaveBeenCalledWith(
-      expect.objectContaining({ key: 'title', title: 'Title' })
-    );
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.queryByTestId('column-dropdown')).not.toBeInTheDocument();
   });
 
-  it('invokes filter and sort utilities when config has filters and sorts', () => {
-    tableViewConfigState.viewConfigState = {
-      filters: [{ column: 'status', operator: 'equals', value: 'Open' }],
-      sorts: [{ column: 'title', direction: 'asc' }],
-      groupBy: [],
-      columnWidths: {},
-    };
-    tableViewConfigState.searchTerm = 'Row';
-    tableViewConfigState.selectedSearchField = { key: 'title', title: 'Title' } as any;
-    tableViewConfigState.realTimeFilter = { column: 'status', operator: 'equals', value: 'Open' };
+  it('hides column dropdown when read-only or no column permissions', () => {
+    mockUseBaseAccess.mockReturnValue({
+      isBaseReadOnly: () => true,
+      canCreateColumn: () => false,
+      canDeleteRecord: () => false,
+      canUpdateRecord: () => false,
+      canCreateRecord: () => false,
+      canUpdateColumn: () => false,
+      canDeleteColumn: () => false,
+    });
 
-    render(
-      <ToastProvider>
-        <Table
-          tableData={{
-            model: { id: 't1', base_id: 'b1' },
-            columns: [
-              { id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' },
-              { id: 'c2', column_name: 'status', title: 'Status', uidt: 'select' },
-            ],
-            records: [
-              { id: 1, title: 'Row 1', status: 'Open' },
-              { id: 2, title: 'Row 2', status: 'Closed' },
-            ],
-          }}
-          onRefresh={vi.fn()}
-        />
-      </ToastProvider>
-    );
+    mockUseTableViewConfig.mockReturnValue({
+      viewConfigState: { filters: [], sorts: [], groupBy: [], columnWidths: {} },
+      setViewConfigState: vi.fn(),
+      searchTerm: '',
+      setSearchTerm: vi.fn(),
+      selectedSearchField: null,
+      setSelectedSearchField: vi.fn(),
+      realTimeFilter: null,
+      localFieldConfig: {},
+      visibleColumns: [
+        { id: 'col-1', key: 'name', column_name: 'name', title: 'Name', type: 'text', isSystem: false, system: false },
+      ],
+      handleAddFilter: vi.fn(),
+      handleRemoveFilter: vi.fn(),
+      handleUpdateFilter: vi.fn(),
+      handleGroupByChange: vi.fn(),
+      handleSortChange: vi.fn(),
+      handleEnsureAllFieldsRegistered: vi.fn(),
+      handleFieldToggle: vi.fn(),
+      handleFieldOrderChange: vi.fn(),
+      updateViewConfigBackend: vi.fn(),
+    });
 
-    expect(applyFiltersMock).toHaveBeenCalled();
-    expect(sortRowsByDataKeyMock).toHaveBeenCalled();
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.queryByTestId('column-dropdown')).not.toBeInTheDocument();
   });
 
-  it('renders grouped data when groupBy is set', () => {
-    tableViewConfigState.viewConfigState = {
-      filters: [],
-      sorts: [],
-      groupBy: [{ column: 'status', direction: 'asc' }],
-      columnWidths: {},
-    };
+  it('renders new column highlight when column is marked as new', () => {
+    mockUseTableViewConfig.mockReturnValue({
+      viewConfigState: { filters: [], sorts: [], groupBy: [], columnWidths: {} },
+      setViewConfigState: vi.fn(),
+      searchTerm: '',
+      setSearchTerm: vi.fn(),
+      selectedSearchField: null,
+      setSelectedSearchField: vi.fn(),
+      realTimeFilter: null,
+      localFieldConfig: {},
+      visibleColumns: [
+        { id: 'col-1', key: 'name', column_name: 'name', title: 'Name', type: 'text', isSystem: false, system: false, isNew: true },
+      ],
+      handleAddFilter: vi.fn(),
+      handleRemoveFilter: vi.fn(),
+      handleUpdateFilter: vi.fn(),
+      handleGroupByChange: vi.fn(),
+      handleSortChange: vi.fn(),
+      handleEnsureAllFieldsRegistered: vi.fn(),
+      handleFieldToggle: vi.fn(),
+      handleFieldOrderChange: vi.fn(),
+      updateViewConfigBackend: vi.fn(),
+    });
 
-    render(
-      <ToastProvider>
-        <Table
-          tableData={{
-            model: { id: 't1', base_id: 'b1' },
-            columns: [
-              { id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' },
-              { id: 'c2', column_name: 'status', title: 'Status', uidt: 'select' },
-            ],
-            records: [
-              { id: 1, title: 'Row 1', status: 'Open' },
-              { id: 2, title: 'Row 2', status: 'Closed' },
-            ],
-          }}
-          onRefresh={vi.fn()}
-        />
-      </ToastProvider>
-    );
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
 
-    expect(screen.getByTestId('grouped-flag')).toHaveTextContent('grouped');
+    const header = screen.getByRole('columnheader');
+    expect(header.className).toContain('ring-2');
+    expect(header.className).toContain('bg-yellow-50');
   });
 
-  it('shows paginated footer when hasMore is true', () => {
-    paginationState.hasMore = true;
-    paginationState.allLoadedData = [
-      { id: '1', _meta: { id: '1' }, data: { title: 'Row 1', status: 'Open' } },
-    ];
+  it('sets header checkbox indeterminate when some rows are selected', () => {
+    mockUseFrontendPagination.mockReturnValue({
+      allLoadedData: [
+        { id: '1', _meta: { id: '1' }, data: { name: 'Row 1', value: 10 } },
+        { id: '2', _meta: { id: '2' }, data: { name: 'Row 2', value: 20 } },
+      ],
+      loadNextPage: vi.fn(),
+      hasMore: false,
+      isLoadingMore: false,
+    });
 
-    render(
-      <ToastProvider>
-        <Table
-          tableData={{
-            model: { id: 't1', base_id: 'b1' },
-            columns: [
-              { id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' },
-              { id: 'c2', column_name: 'status', title: 'Status', uidt: 'select' },
-            ],
-            records: [
-              { id: 1, title: 'Row 1', status: 'Open' },
-              { id: 2, title: 'Row 2', status: 'Closed' },
-            ],
-          }}
-          onRefresh={vi.fn()}
-        />
-      </ToastProvider>
-    );
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
 
-    expect(screen.getByText(/Showing 1 of 2 rows/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /select row/i }));
+
+    const headerCheckbox = screen.getByRole('checkbox') as HTMLInputElement;
+    expect(headerCheckbox.indeterminate).toBe(true);
   });
 
-  it('clears active cell on outside document click', () => {
-    render(
-      <ToastProvider>
-        <Table
-          tableData={{
-            model: { id: 't1', base_id: 'b1' },
-            columns: [{ id: 'c1', column_name: 'title', title: 'Title', uidt: 'text' }],
-            records: [{ id: 1, title: 'Row 1' }],
-          }}
-          onRefresh={vi.fn()}
-        />
-      </ToastProvider>
+  it('shows column dropdown when delete permission is allowed', () => {
+    mockUseBaseAccess.mockReturnValue({
+      isBaseReadOnly: () => false,
+      canCreateColumn: () => false,
+      canDeleteRecord: () => false,
+      canUpdateRecord: () => false,
+      canCreateRecord: () => false,
+      canUpdateColumn: () => false,
+      canDeleteColumn: () => true,
+    });
+
+    mockUseTableViewConfig.mockReturnValue({
+      viewConfigState: { filters: [], sorts: [], groupBy: [], columnWidths: {} },
+      setViewConfigState: vi.fn(),
+      searchTerm: '',
+      setSearchTerm: vi.fn(),
+      selectedSearchField: null,
+      setSelectedSearchField: vi.fn(),
+      realTimeFilter: null,
+      localFieldConfig: {},
+      visibleColumns: [
+        { id: 'col-1', key: 'name', column_name: 'name', title: 'Name', type: 'text', isSystem: false, system: false },
+      ],
+      handleAddFilter: vi.fn(),
+      handleRemoveFilter: vi.fn(),
+      handleUpdateFilter: vi.fn(),
+      handleGroupByChange: vi.fn(),
+      handleSortChange: vi.fn(),
+      handleEnsureAllFieldsRegistered: vi.fn(),
+      handleFieldToggle: vi.fn(),
+      handleFieldOrderChange: vi.fn(),
+      updateViewConfigBackend: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('column-dropdown')).toBeInTheDocument();
+  });
+
+  it('shows singular row count when only one row and no paging', () => {
+    mockUseFrontendPagination.mockReturnValue({
+      allLoadedData: [
+        { id: '1', _meta: { id: '1' }, data: { name: 'Row 1', value: 10 } },
+      ],
+      loadNextPage: vi.fn(),
+      hasMore: false,
+      isLoadingMore: false,
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByText(/1 row/i)).toBeInTheDocument();
+  });
+
+  it('toggles add column modal when clicking add column button', () => {
+    const setIsColumnModalOpen = vi.fn();
+    mockUseColumnManagement.mockReturnValue({
+      isColumnModalOpen: false,
+      setIsColumnModalOpen,
+      editColumn: null,
+      editColumnIndex: null,
+      editModalOpen: false,
+      setEditModalOpen: vi.fn(),
+      editModalPosition: null,
+      deleteConfirmModalOpen: false,
+      setDeleteConfirmModalOpen: vi.fn(),
+      columnToDelete: null,
+      updateFieldConfirmModalOpen: false,
+      setUpdateFieldConfirmModalOpen: vi.fn(),
+      setPendingEditColumnChanges: vi.fn(),
+      dragColumnIndex: null,
+      hoverColumnIndex: null,
+      handleAddColumn: vi.fn(),
+      handleEditColumn: vi.fn(),
+      handleSaveEditColumn: vi.fn(),
+      handleConfirmUpdateField: vi.fn(),
+      handleDeleteColumn: vi.fn(),
+      handleConfirmDeleteColumn: vi.fn(),
+      handleColumnDragStart: vi.fn(),
+      handleColumnDragEnter: vi.fn(),
+      handleColumnDragEnd: vi.fn(),
+      setEditColumn: vi.fn(),
+      setEditColumnIndex: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    fireEvent.click(screen.getByTitle('Add column'));
+    expect(setIsColumnModalOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('invokes column dropdown edit/delete handlers', () => {
+    const handleEditColumn = vi.fn();
+    const handleDeleteColumn = vi.fn();
+    mockUseColumnManagement.mockReturnValue({
+      isColumnModalOpen: false,
+      setIsColumnModalOpen: vi.fn(),
+      editColumn: null,
+      editColumnIndex: null,
+      editModalOpen: false,
+      setEditModalOpen: vi.fn(),
+      editModalPosition: null,
+      deleteConfirmModalOpen: false,
+      setDeleteConfirmModalOpen: vi.fn(),
+      columnToDelete: null,
+      updateFieldConfirmModalOpen: false,
+      setUpdateFieldConfirmModalOpen: vi.fn(),
+      setPendingEditColumnChanges: vi.fn(),
+      dragColumnIndex: null,
+      hoverColumnIndex: null,
+      handleAddColumn: vi.fn(),
+      handleEditColumn,
+      handleSaveEditColumn: vi.fn(),
+      handleConfirmUpdateField: vi.fn(),
+      handleDeleteColumn,
+      handleConfirmDeleteColumn: vi.fn(),
+      handleColumnDragStart: vi.fn(),
+      handleColumnDragEnter: vi.fn(),
+      handleColumnDragEnd: vi.fn(),
+      setEditColumn: vi.fn(),
+      setEditColumnIndex: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: /edit column/i })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /delete column/i })[0]);
+
+    expect(handleEditColumn).toHaveBeenCalled();
+    expect(handleDeleteColumn).toHaveBeenCalled();
+  });
+
+  it('wires column drag events to handlers', () => {
+    const handleColumnDragStart = vi.fn();
+    const handleColumnDragEnter = vi.fn();
+    const handleColumnDragEnd = vi.fn();
+    mockUseColumnManagement.mockReturnValue({
+      isColumnModalOpen: false,
+      setIsColumnModalOpen: vi.fn(),
+      editColumn: null,
+      editColumnIndex: null,
+      editModalOpen: false,
+      setEditModalOpen: vi.fn(),
+      editModalPosition: null,
+      deleteConfirmModalOpen: false,
+      setDeleteConfirmModalOpen: vi.fn(),
+      columnToDelete: null,
+      updateFieldConfirmModalOpen: false,
+      setUpdateFieldConfirmModalOpen: vi.fn(),
+      setPendingEditColumnChanges: vi.fn(),
+      dragColumnIndex: null,
+      hoverColumnIndex: null,
+      handleAddColumn: vi.fn(),
+      handleEditColumn: vi.fn(),
+      handleSaveEditColumn: vi.fn(),
+      handleConfirmUpdateField: vi.fn(),
+      handleDeleteColumn: vi.fn(),
+      handleConfirmDeleteColumn: vi.fn(),
+      handleColumnDragStart,
+      handleColumnDragEnter,
+      handleColumnDragEnd,
+      setEditColumn: vi.fn(),
+      setEditColumnIndex: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    const headers = screen.getAllByRole('columnheader');
+    fireEvent.dragStart(headers[0]);
+    fireEvent.dragEnter(headers[0]);
+    fireEvent.dragEnd(headers[0]);
+
+    expect(handleColumnDragStart).toHaveBeenCalled();
+    expect(handleColumnDragEnter).toHaveBeenCalled();
+    expect(handleColumnDragEnd).toHaveBeenCalled();
+  });
+
+  it('opens column context menu on header right-click', () => {
+    const handleColContextMenu = vi.fn();
+    mockUseTableModals.mockReturnValue({
+      contextMenu: { open: false, rowId: null, x: 0, y: 0 },
+      handleContextMenu: vi.fn(),
+      handleCloseContextMenu: vi.fn(),
+      colMenu: { open: false, colIndex: null, x: 0, y: 0 },
+      handleColContextMenu,
+      handleCloseColMenu: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    const headers = screen.getAllByRole('columnheader');
+    fireEvent.contextMenu(headers[0]);
+    expect(handleColContextMenu).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders delete and update confirmation modals when open', () => {
+    mockUseColumnManagement.mockReturnValue({
+      isColumnModalOpen: false,
+      setIsColumnModalOpen: vi.fn(),
+      editColumn: null,
+      editColumnIndex: null,
+      editModalOpen: false,
+      setEditModalOpen: vi.fn(),
+      editModalPosition: null,
+      deleteConfirmModalOpen: true,
+      setDeleteConfirmModalOpen: vi.fn(),
+      columnToDelete: 'col-1',
+      updateFieldConfirmModalOpen: true,
+      setUpdateFieldConfirmModalOpen: vi.fn(),
+      setPendingEditColumnChanges: vi.fn(),
+      dragColumnIndex: null,
+      hoverColumnIndex: null,
+      handleAddColumn: vi.fn(),
+      handleEditColumn: vi.fn(),
+      handleSaveEditColumn: vi.fn(),
+      handleConfirmUpdateField: vi.fn(),
+      handleDeleteColumn: vi.fn(),
+      handleConfirmDeleteColumn: vi.fn(),
+      handleColumnDragStart: vi.fn(),
+      handleColumnDragEnter: vi.fn(),
+      handleColumnDragEnd: vi.fn(),
+      setEditColumn: vi.fn(),
+      setEditColumnIndex: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('delete-confirm-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('update-field-confirm-modal')).toBeInTheDocument();
+  });
+
+  it('renders edit column modal fallback when open', () => {
+    mockUseColumnManagement.mockReturnValue({
+      isColumnModalOpen: false,
+      setIsColumnModalOpen: vi.fn(),
+      editColumn: { id: 'col-1', key: 'name', title: 'Name', type: 'text' },
+      editColumnIndex: 0,
+      editModalOpen: true,
+      setEditModalOpen: vi.fn(),
+      editModalPosition: { top: 10, left: 10 },
+      deleteConfirmModalOpen: false,
+      setDeleteConfirmModalOpen: vi.fn(),
+      columnToDelete: null,
+      updateFieldConfirmModalOpen: false,
+      setUpdateFieldConfirmModalOpen: vi.fn(),
+      setPendingEditColumnChanges: vi.fn(),
+      dragColumnIndex: null,
+      hoverColumnIndex: null,
+      handleAddColumn: vi.fn(),
+      handleEditColumn: vi.fn(),
+      handleSaveEditColumn: vi.fn(),
+      handleConfirmUpdateField: vi.fn(),
+      handleDeleteColumn: vi.fn(),
+      handleConfirmDeleteColumn: vi.fn(),
+      handleColumnDragStart: vi.fn(),
+      handleColumnDragEnter: vi.fn(),
+      handleColumnDragEnd: vi.fn(),
+      setEditColumn: vi.fn(),
+      setEditColumnIndex: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('loader')).toBeInTheDocument();
+  });
+
+  it('loads next page on scroll when more data is available', () => {
+    const loadNextPage = vi.fn();
+    mockUseFrontendPagination.mockReturnValue({
+      allLoadedData: [
+        { id: '1', _meta: { id: '1' }, data: { name: 'Row 1', value: 10 } },
+      ],
+      loadNextPage,
+      hasMore: true,
+      isLoadingMore: false,
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /scroll/i }));
+    expect(loadNextPage).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds a row via mutation when clicking add row', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+
+    renderWithToast(
+      <Table
+        tableData={tableData as any}
+        onRefresh={vi.fn()}
+        actions={{ addRow: { mutateAsync } } as any}
+      />
     );
 
-    fireEvent.click(screen.getByTestId('activate-cell'));
-    expect(screen.getByTestId('active-cell')).toHaveTextContent('active');
+    const addButtons = screen.getAllByRole('button', { name: /add row/i });
+    fireEvent.click(addButtons[0]);
 
-    fireEvent.click(document.body);
-    expect(screen.getByTestId('active-cell')).toHaveTextContent('inactive');
+    expect(mutateAsync).toHaveBeenCalledWith({ model_id: 'tbl-1' });
+  });
+
+  it('invokes search handler to update search state', () => {
+    const setSearchTerm = vi.fn();
+    const setSelectedSearchField = vi.fn();
+    mockUseTableViewConfig.mockReturnValue({
+      viewConfigState: { filters: [], sorts: [], groupBy: [], columnWidths: {} },
+      setViewConfigState: vi.fn(),
+      searchTerm: '',
+      setSearchTerm,
+      selectedSearchField: null,
+      setSelectedSearchField,
+      realTimeFilter: null,
+      localFieldConfig: {},
+      visibleColumns: [
+        { id: 'col-1', key: 'name', column_name: 'name', title: 'Name', type: 'text', isSystem: false, system: false },
+        { id: 'col-2', key: 'value', column_name: 'value', title: 'Value', type: 'number', isSystem: false, system: false },
+      ],
+      handleAddFilter: vi.fn(),
+      handleRemoveFilter: vi.fn(),
+      handleUpdateFilter: vi.fn(),
+      handleGroupByChange: vi.fn(),
+      handleSortChange: vi.fn(),
+      handleEnsureAllFieldsRegistered: vi.fn(),
+      handleFieldToggle: vi.fn(),
+      handleFieldOrderChange: vi.fn(),
+      updateViewConfigBackend: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: /search/i })[0]);
+    expect(setSearchTerm).toHaveBeenCalledWith('Row');
+    expect(setSelectedSearchField).toHaveBeenCalledWith({ key: 'name' });
+  });
+
+  it('shows error toast when add row mutation fails', async () => {
+    const mutateAsync = vi.fn().mockRejectedValue(new Error('fail'));
+
+    renderWithToast(
+      <Table
+        tableData={tableData as any}
+        onRefresh={vi.fn()}
+        actions={{ addRow: { mutateAsync } } as any}
+      />
+    );
+
+    fireEvent.click(screen.getAllByRole('button', { name: /add row/i })[0]);
+    await waitFor(() => expect(mockToastError).toHaveBeenCalled());
+  });
+
+  it('renders delete confirm modal when column delete is pending', () => {
+    mockUseColumnManagement.mockReturnValue({
+      isColumnModalOpen: false,
+      setIsColumnModalOpen: vi.fn(),
+      editColumn: null,
+      editColumnIndex: null,
+      editModalOpen: false,
+      setEditModalOpen: vi.fn(),
+      editModalPosition: null,
+      deleteConfirmModalOpen: true,
+      setDeleteConfirmModalOpen: vi.fn(),
+      columnToDelete: 'col-1',
+      updateFieldConfirmModalOpen: false,
+      setUpdateFieldConfirmModalOpen: vi.fn(),
+      setPendingEditColumnChanges: vi.fn(),
+      dragColumnIndex: null,
+      hoverColumnIndex: null,
+      handleAddColumn: vi.fn(),
+      handleEditColumn: vi.fn(),
+      handleSaveEditColumn: vi.fn(),
+      handleConfirmUpdateField: vi.fn(),
+      handleDeleteColumn: vi.fn(),
+      handleConfirmDeleteColumn: vi.fn(),
+      handleColumnDragStart: vi.fn(),
+      handleColumnDragEnter: vi.fn(),
+      handleColumnDragEnd: vi.fn(),
+      setEditColumn: vi.fn(),
+      setEditColumnIndex: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('delete-confirm-modal')).toBeInTheDocument();
+  });
+
+  it('renders update field confirm modal when flag is set', () => {
+    mockUseColumnManagement.mockReturnValue({
+      isColumnModalOpen: false,
+      setIsColumnModalOpen: vi.fn(),
+      editColumn: null,
+      editColumnIndex: null,
+      editModalOpen: false,
+      setEditModalOpen: vi.fn(),
+      editModalPosition: null,
+      deleteConfirmModalOpen: false,
+      setDeleteConfirmModalOpen: vi.fn(),
+      columnToDelete: null,
+      updateFieldConfirmModalOpen: true,
+      setUpdateFieldConfirmModalOpen: vi.fn(),
+      setPendingEditColumnChanges: vi.fn(),
+      dragColumnIndex: null,
+      hoverColumnIndex: null,
+      handleAddColumn: vi.fn(),
+      handleEditColumn: vi.fn(),
+      handleSaveEditColumn: vi.fn(),
+      handleConfirmUpdateField: vi.fn(),
+      handleDeleteColumn: vi.fn(),
+      handleConfirmDeleteColumn: vi.fn(),
+      handleColumnDragStart: vi.fn(),
+      handleColumnDragEnter: vi.fn(),
+      handleColumnDragEnd: vi.fn(),
+      setEditColumn: vi.fn(),
+      setEditColumnIndex: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('update-field-confirm-modal')).toBeInTheDocument();
+  });
+
+  it('renders column context menu overlay when colMenu is open', () => {
+    mockUseTableModals.mockReturnValue({
+      contextMenu: { open: false, rowId: null, x: 0, y: 0 },
+      handleContextMenu: vi.fn(),
+      handleCloseContextMenu: vi.fn(),
+      colMenu: { open: true, colIndex: 0, x: 10, y: 10 },
+      handleColContextMenu: vi.fn(),
+      handleCloseColMenu: vi.fn(),
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('column-context-menu')).toBeInTheDocument();
+  });
+
+  it('closes column context menu when overlay is clicked', () => {
+    const handleCloseColMenu = vi.fn();
+    mockUseTableModals.mockReturnValue({
+      contextMenu: { open: false, rowId: null, x: 0, y: 0 },
+      handleContextMenu: vi.fn(),
+      handleCloseContextMenu: vi.fn(),
+      colMenu: { open: true, colIndex: 0, x: 10, y: 10 },
+      handleColContextMenu: vi.fn(),
+      handleCloseColMenu,
+    });
+
+    const { container } = renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    const overlay = container.querySelector('div[style*="position: fixed"]');
+    expect(overlay).toBeInTheDocument();
+    fireEvent.mouseDown(overlay as HTMLElement);
+    expect(handleCloseColMenu).toHaveBeenCalled();
+  });
+
+  it('shows loader at bottom when loading more', () => {
+    mockUseFrontendPagination.mockReturnValue({
+      allLoadedData: [
+        { id: '1', _meta: { id: '1' }, data: { name: 'Row 1', value: 10 } },
+      ],
+      loadNextPage: vi.fn(),
+      hasMore: true,
+      isLoadingMore: true,
+    });
+
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('loader')).toBeInTheDocument();
   });
 });

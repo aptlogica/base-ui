@@ -1,4 +1,4 @@
-import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   getLastNavigation,
   saveLastNavigation,
@@ -15,91 +15,70 @@ import {
   cleanupViewNavigation,
 } from '../navigationPersistence';
 
-function createMemoryStorage() {
-  let store = new Map<string, string>();
-  return {
-    get length() {
-      return store.size;
-    },
-    clear() {
-      store = new Map();
-    },
-    getItem(key: string) {
-      return store.has(key) ? store.get(key)! : null;
-    },
-    key(i: number) {
-      return Array.from(store.keys())[i] ?? null;
-    },
-    removeItem(key: string) {
-      store.delete(key);
-    },
-    setItem(key: string, value: string) {
-      store.set(key, String(value));
-    },
-  } as Storage;
-}
-
 describe('navigationPersistence', () => {
   beforeEach(() => {
-    // Overwrite any prior test stubs with a spec-compliant storage.
-    Object.defineProperty(globalThis, 'sessionStorage', {
-      value: createMemoryStorage(),
-      writable: true,
-      configurable: true,
-    });
-    Object.defineProperty(globalThis, 'localStorage', {
-      value: createMemoryStorage(),
-      writable: true,
-      configurable: true,
-    });
-    vi.restoreAllMocks();
+    sessionStorage.clear();
+    localStorage.clear();
   });
 
-  it('should save/get/has/clear navigation state (user-scoped)', () => {
-    const state = { workspaceId: 'w1', baseId: 'b1', tableId: 't1', viewId: 'v1' };
-
-    expect(hasLastNavigation('u1')).toBe(false);
-    saveLastNavigation(state, 'u1');
+  it('saves and retrieves last navigation', () => {
+    saveLastNavigation({ workspaceId: 'w1', baseId: 'b1', tableId: 't1', viewId: 'v1' }, 'u1');
     expect(hasLastNavigation('u1')).toBe(true);
+    expect(getLastNavigation('u1')).toEqual({
+      workspaceId: 'w1',
+      baseId: 'b1',
+      tableId: 't1',
+      viewId: 'v1',
+    });
+  });
 
-    expect(getLastNavigation('u1')).toEqual(state);
+  it('handles missing data gracefully', () => {
+    expect(getLastNavigation('u-missing')).toEqual({
+      workspaceId: null,
+      baseId: null,
+      tableId: null,
+      viewId: null,
+    });
+    expect(hasLastNavigation('u-missing')).toBe(false);
+  });
 
+  it('returns empty navigation on invalid JSON and handles storage errors', () => {
+    sessionStorage.setItem('serenibase_session_nav_u1', '{bad json');
+    expect(getLastNavigation('u1')).toEqual({
+      workspaceId: null,
+      baseId: null,
+      tableId: null,
+      viewId: null,
+    });
+
+    const getItemSpy = vi.spyOn(sessionStorage, 'getItem').mockImplementation(() => {
+      throw new Error('boom');
+    });
+    expect(hasLastNavigation('u1')).toBe(false);
+    getItemSpy.mockRestore();
+  });
+
+  it('clears navigation for a user and all users', () => {
+    saveLastNavigation({ workspaceId: 'w1', baseId: 'b1', tableId: 't1', viewId: 'v1' }, 'u1');
     clearLastNavigation('u1');
     expect(hasLastNavigation('u1')).toBe(false);
-    expect(getLastNavigation('u1')).toEqual({ workspaceId: null, baseId: null, tableId: null, viewId: null });
-  });
 
-  it('clearAllLastNavigation should remove all prefixed session keys and legacy localStorage keys', () => {
-    sessionStorage.setItem('serenibase_session_nav', 'x');
-    sessionStorage.setItem('serenibase_session_nav_u1', 'x');
-    sessionStorage.setItem('other', 'y');
-
-    localStorage.setItem('serenibase_last_navigation', 'x');
-    localStorage.setItem('serenibase_last_navigation_u1', 'x');
-    localStorage.setItem('other', 'y');
-
+    sessionStorage.setItem('serenibase_session_nav_u2', JSON.stringify({ workspaceId: 'w2' }));
+    localStorage.setItem('serenibase_last_navigation_u2', JSON.stringify({ workspaceId: 'w2' }));
     clearAllLastNavigation();
-
-    expect(sessionStorage.getItem('serenibase_session_nav')).toBeNull();
-    expect(sessionStorage.getItem('serenibase_session_nav_u1')).toBeNull();
-    expect(sessionStorage.getItem('other')).toBe('y');
-
-    expect(localStorage.getItem('serenibase_last_navigation')).toBeNull();
-    expect(localStorage.getItem('serenibase_last_navigation_u1')).toBeNull();
-    expect(localStorage.getItem('other')).toBe('y');
+    expect(sessionStorage.getItem('serenibase_session_nav_u2')).toBeNull();
+    expect(localStorage.getItem('serenibase_last_navigation_u2')).toBeNull();
   });
 
-  it('cleanupOldTokenKeys should remove known legacy token keys', () => {
+  it('cleans up old token keys', () => {
     sessionStorage.setItem('_st_exp', '1');
-    sessionStorage.setItem('_rt_exp', '2');
-
+    sessionStorage.setItem('_rt_exp', '1');
     cleanupOldTokenKeys();
-
     expect(sessionStorage.getItem('_st_exp')).toBeNull();
     expect(sessionStorage.getItem('_rt_exp')).toBeNull();
   });
 
-  it('getBestNavigationTarget should use lastNav if valid and present', () => {
+  it('builds best navigation target from lastNav when valid', () => {
     const workspaces = [
       {
         id: 'w1',
@@ -107,47 +86,22 @@ describe('navigationPersistence', () => {
           {
             id: 'b1',
             tables: [
-              { id: 't1', views: [{ id: 'v1' }, { id: 'v2' }] },
+              { id: 't1', views: [{ id: 'v1' }] },
             ],
           },
         ],
       },
     ];
-
-    const path = getBestNavigationTarget(workspaces as any, {
+    const target = getBestNavigationTarget(workspaces, {
       workspaceId: 'w1',
       baseId: 'b1',
       tableId: 't1',
-      viewId: 'v2',
+      viewId: 'v1',
     });
-
-    expect(path).toBe('/workspace/w1/base/b1/table/t1/v2');
+    expect(target).toBe('/workspace/w1/base/b1/table/t1/v1');
   });
 
-  it('getBestNavigationTarget should fall back to first items and grid when no views', () => {
-    const workspaces = [
-      {
-        id: 'w1',
-        bases: [
-          {
-            id: 'b1',
-            tables: [
-              { id: 't1', views: [] },
-            ],
-          },
-        ],
-      },
-    ];
-
-    expect(getBestNavigationTarget(workspaces as any)).toBe('/workspace/w1/base/b1/table/t1/grid');
-  });
-
-  it('getBestNavigationTarget should fall back to workspace path when bases or tables are missing', () => {
-    expect(getBestNavigationTarget([{ id: 'w1', bases: [] }] as any)).toBe('/workspace/w1');
-    expect(getBestNavigationTarget([{ id: 'w1', bases: [{ id: 'b1', tables: [] }] }] as any)).toBe('/workspace/w1');
-  });
-
-  it('getBestNavigationTarget should handle nested table model ids', () => {
+  it('builds best navigation target using nested model id', () => {
     const workspaces = [
       {
         id: 'w1',
@@ -161,97 +115,117 @@ describe('navigationPersistence', () => {
         ],
       },
     ];
-
-    expect(getBestNavigationTarget(workspaces as any)).toBe('/workspace/w1/base/b1/table/t1/v1');
+    const target = getBestNavigationTarget(workspaces, {
+      workspaceId: 'w1',
+      baseId: 'b1',
+      tableId: 't1',
+      viewId: 'v1',
+    });
+    expect(target).toBe('/workspace/w1/base/b1/table/t1/v1');
   });
 
-  it('resolveWorkspaceIdFromBaseId should find workspace id or null', () => {
-    const workspaces = [{ id: 'w1', bases: [{ id: 'b1' }] }, { id: 'w2', bases: [] }];
-    expect(resolveWorkspaceIdFromBaseId('b1', workspaces as any)).toBe('w1');
-    expect(resolveWorkspaceIdFromBaseId('missing', workspaces as any)).toBeNull();
-    expect(resolveWorkspaceIdFromBaseId('', workspaces as any)).toBeNull();
+  it('returns null when workspaces is null and /workspace when empty', () => {
+    expect(getBestNavigationTarget(null)).toBeNull();
+    expect(getBestNavigationTarget([])).toBe('/workspace');
   });
 
-  it('getSafeNavigationTarget should return first valid path or /workspace', () => {
-    expect(getSafeNavigationTarget(null as any)).toBe('/workspace');
+  it('falls back to first available path when lastNav is invalid', () => {
+    const workspaces = [
+      { id: 'w1', bases: [{ id: 'b1', tables: [{ id: 't1', views: [{ id: 'v1' }] }] }] },
+    ];
+    const target = getBestNavigationTarget(workspaces, {
+      workspaceId: 'w1',
+      baseId: 'missing',
+      tableId: 't1',
+      viewId: 'v1',
+    });
+    expect(target).toBe('/workspace/w1/base/b1/table/t1/v1');
+  });
 
+  it('falls back to first workspace path when no lastNav', () => {
+    const workspaces = [{ id: 'w1', bases: [] }];
+    expect(getBestNavigationTarget(workspaces)).toBe('/workspace/w1');
+  });
+
+  it('returns grid path when table has no views', () => {
+    const workspaces = [
+      { id: 'w1', bases: [{ id: 'b1', tables: [{ id: 't1', views: [] }] }] },
+    ];
+    expect(getBestNavigationTarget(workspaces)).toBe('/workspace/w1/base/b1/table/t1/grid');
+  });
+
+  it('returns workspace path when base has no tables', () => {
+    const workspaces = [
+      { id: 'w1', bases: [{ id: 'b1', tables: [] }] },
+    ];
+    expect(getBestNavigationTarget(workspaces)).toBe('/workspace/w1');
+  });
+
+  it('resolves workspace id from base id', () => {
+    const workspaces = [{ id: 'w1', bases: [{ id: 'b1' }] }];
+    expect(resolveWorkspaceIdFromBaseId('b1', workspaces)).toBe('w1');
+    expect(resolveWorkspaceIdFromBaseId('missing', workspaces)).toBeNull();
+  });
+
+  it('returns null when baseId is missing or workspaces empty', () => {
+    expect(resolveWorkspaceIdFromBaseId('', [])).toBeNull();
+    expect(resolveWorkspaceIdFromBaseId('b1', [])).toBeNull();
+  });
+
+  it('returns safe navigation target from available workspaces', () => {
+    const workspaces = [
+      {
+        id: 'w1',
+        bases: [{ id: 'b1', tables: [{ id: 't1', views: [] }] }],
+      },
+    ];
+    expect(getSafeNavigationTarget(workspaces)).toBe('/workspace/w1/base/b1/table/t1/grid');
+  });
+
+  it('returns safe navigation target using nested table model id', () => {
     const workspaces = [
       {
         id: 'w1',
         bases: [
           {
             id: 'b1',
-            tables: [{ id: 't1', views: [{ id: 'v1' }] }],
+            tables: [{ model: { id: 't1' }, views: [{ id: 'v1' }] }],
           },
         ],
       },
     ];
 
-    expect(getSafeNavigationTarget(workspaces as any)).toBe('/workspace/w1/base/b1/table/t1/v1');
+    expect(getSafeNavigationTarget(workspaces)).toBe('/workspace/w1/base/b1/table/t1/v1');
   });
 
-  it('getSafeNavigationTarget should return grid or workspace when views/tables are missing', () => {
-    expect(
-      getSafeNavigationTarget([
-        { id: 'w1', bases: [{ id: 'b1', tables: [{ id: 't1', views: [] }] }] },
-      ] as any)
-    ).toBe('/workspace/w1/base/b1/table/t1/grid');
-
-    expect(
-      getSafeNavigationTarget([
-        { id: 'w1', bases: [{ id: 'b1', tables: [] }] },
-      ] as any)
-    ).toBe('/workspace/w1');
+  it('returns workspace path when safe target has no bases or tables', () => {
+    expect(getSafeNavigationTarget([])).toBe('/workspace');
+    expect(getSafeNavigationTarget([{ id: 'w1', bases: [] }])).toBe('/workspace/w1');
   });
 
-  it('cleanup*Navigation helpers should clear matching scoped ids and report match status', () => {
+  it('cleans up navigation when items are deleted', () => {
     saveLastNavigation({ workspaceId: 'w1', baseId: 'b1', tableId: 't1', viewId: 'v1' }, 'u1');
-
-    expect(cleanupViewNavigation('v1', 'u1')).toBe(true);
-    expect(getLastNavigation('u1')).toEqual({ workspaceId: 'w1', baseId: 'b1', tableId: 't1', viewId: null });
-
-    saveLastNavigation({ workspaceId: 'w1', baseId: 'b1', tableId: 't1', viewId: 'v2' }, 'u1');
-    expect(cleanupTableNavigation('t1', 'u1')).toBe(true);
-    expect(getLastNavigation('u1')).toEqual({ workspaceId: 'w1', baseId: 'b1', tableId: null, viewId: null });
-
-    saveLastNavigation({ workspaceId: 'w1', baseId: 'b1', tableId: null, viewId: null }, 'u1');
-    expect(cleanupBaseNavigation('b1', 'u1')).toBe(true);
-    expect(getLastNavigation('u1')).toEqual({ workspaceId: 'w1', baseId: null, tableId: null, viewId: null });
-
-    saveLastNavigation({ workspaceId: 'w1', baseId: 'b2', tableId: 't2', viewId: 'v2' }, 'u1');
     expect(cleanupWorkspaceNavigation('w1', 'u1')).toBe(true);
-    expect(getLastNavigation('u1')).toEqual({ workspaceId: null, baseId: null, tableId: null, viewId: null });
+    expect(getLastNavigation('u1').workspaceId).toBeNull();
+
+    saveLastNavigation({ workspaceId: 'w1', baseId: 'b1', tableId: 't1', viewId: 'v1' }, 'u1');
+    expect(cleanupBaseNavigation('b1', 'u1')).toBe(true);
+    expect(getLastNavigation('u1').baseId).toBeNull();
+
+    saveLastNavigation({ workspaceId: 'w1', baseId: 'b1', tableId: 't1', viewId: 'v1' }, 'u1');
+    expect(cleanupTableNavigation('t1', 'u1')).toBe(true);
+    expect(getLastNavigation('u1').tableId).toBeNull();
+
+    saveLastNavigation({ workspaceId: 'w1', baseId: 'b1', tableId: 't1', viewId: 'v1' }, 'u1');
+    expect(cleanupViewNavigation('v1', 'u1')).toBe(true);
+    expect(getLastNavigation('u1').viewId).toBeNull();
   });
 
-  it('cleanup helpers should return false when deleted id is not current', () => {
-    saveLastNavigation({ workspaceId: 'w2', baseId: 'b2', tableId: 't2', viewId: 'v2' }, 'u1');
-    expect(cleanupWorkspaceNavigation('w1', 'u1')).toBe(false);
-    expect(cleanupBaseNavigation('b1', 'u1')).toBe(false);
-    expect(cleanupTableNavigation('t1', 'u1')).toBe(false);
-    expect(cleanupViewNavigation('v1', 'u1')).toBe(false);
-  });
-
-  it('handles parse and storage failures safely', () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    sessionStorage.setItem('serenibase_session_nav_u1', '{invalid-json');
-    const parseResult = getLastNavigation('u1');
-    expect(parseResult).toEqual({ workspaceId: null, baseId: null, tableId: null, viewId: null });
-
-    const getItemSpy = vi.spyOn(sessionStorage, 'getItem').mockImplementation(() => {
-      throw new Error('storage-read-fail');
-    });
-    expect(hasLastNavigation('u1')).toBe(false);
-    getItemSpy.mockRestore();
-
-    const setItemSpy = vi.spyOn(sessionStorage, 'setItem').mockImplementation(() => {
-      throw new Error('storage-write-fail');
-    });
-    expect(() =>
-      saveLastNavigation({ workspaceId: 'w1', baseId: null, tableId: null, viewId: null }, 'u1')
-    ).not.toThrow();
-    setItemSpy.mockRestore();
-    consoleErrorSpy.mockRestore();
-    consoleWarnSpy.mockRestore();
+  it('returns false when cleanup is not needed', () => {
+    saveLastNavigation({ workspaceId: 'w1', baseId: 'b1', tableId: 't1', viewId: 'v1' }, 'u1');
+    expect(cleanupWorkspaceNavigation('w2', 'u1')).toBe(false);
+    expect(cleanupBaseNavigation('b2', 'u1')).toBe(false);
+    expect(cleanupTableNavigation('t2', 'u1')).toBe(false);
+    expect(cleanupViewNavigation('v2', 'u1')).toBe(false);
   });
 });

@@ -114,6 +114,31 @@ describe('CreateBaseModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('prefills default name and submits in update mode', async () => {
+    render(
+      <CreateBaseModal
+        isOpen={true}
+        onClose={onClose}
+        onCreate={onCreate}
+        workspaceId="w1"
+        isUpdate={true}
+        defaultName="Existing Base"
+      />
+    );
+
+    expect(screen.getByPlaceholderText('Enter base name')).toHaveValue('Existing Base');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+
+    await waitFor(() =>
+      expect(onCreate).toHaveBeenCalledWith({
+        name: 'Existing Base',
+        description: '',
+        image: null,
+      })
+    );
+  });
+
   it('shows duplicate name validation using existing bases', () => {
     render(
       <CreateBaseModal
@@ -245,4 +270,19 @@ describe('CreateBaseModal', () => {
 
     expect(onClose).toHaveBeenCalledTimes(2);
   });
+
+  it('does not render preview for invalid initialImage url', () => {
+    render(
+      <CreateBaseModal
+        isOpen={true}
+        onClose={onClose}
+        onCreate={onCreate}
+        workspaceId="w1"
+        initialImage="ftp://example.com/file.png"
+      />
+    );
+
+    expect(screen.queryByAltText('Preview')).not.toBeInTheDocument();
+  });
+
 });

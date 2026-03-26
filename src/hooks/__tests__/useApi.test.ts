@@ -249,6 +249,35 @@ describe("useApi hooks", () => {
     );
   });
 
+  it("useWorkspaces handles auth errors", async () => {
+    let opts: any;
+    mockUseQuery.mockImplementation((o: any) => {
+      opts = o;
+      return { data: [] };
+    });
+    vi.mocked(getWorkspacesByUser).mockRejectedValue({
+      response: { status: 401 },
+    });
+
+    renderHook(() => useWorkspaces());
+    await expect(opts.queryFn()).rejects.toBeTruthy();
+    expect(getWorkspacesByUser).toHaveBeenCalled();
+  });
+
+  it("useWorkspaces retry skips auth and schema errors", () => {
+    let opts: any;
+    mockUseQuery.mockImplementation((o: any) => {
+      opts = o;
+      return { data: [] };
+    });
+
+    renderHook(() => useWorkspaces());
+    expect(opts.retry(0, { message: "authentication failed" })).toBe(false);
+    expect(opts.retry(0, { message: "schema mismatch" })).toBe(false);
+    expect(opts.retry(1, { message: "other" })).toBe(true);
+    expect(opts.retry(2, { message: "other" })).toBe(false);
+  });
+
   it("useAddRow invalidates record and table queries", async () => {
     let opts: any;
     mockUseMutation.mockImplementation((o: any) => {

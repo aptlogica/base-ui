@@ -155,6 +155,20 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
     return false;
   }, [isEditMode, editUser]);
 
+  const editedUserIsOwner = useMemo(() => {
+    if (!isEditMode || !editUser) return false;
+
+    if (Array.isArray(editUser.roles)) {
+      return editUser.roles.some(
+        (role) => role.scope_level === 'system' && role.name === 'owner'
+      );
+    }
+    if (typeof editUser.roles === 'string') {
+      return editUser.roles === 'owner';
+    }
+    return false;
+  }, [isEditMode, editUser]);
+
   // Check if current user is editing themselves
   const isEditingSelf = useMemo(() => {
     return isEditMode && editUser?.id === currentUser?.id;
@@ -484,7 +498,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
   const isValid = firstName.trim() && lastName.trim() && email.trim() && isEmailValid && Object.keys(errors).length === 0;
 
   const showCoOwnerToggle =
-    !isEditMode || (currentUserIsOwner() && !editedUserIsOwnerOrCoOwner && !isEditingSelf);
+    !isEditMode || (currentUserIsOwner() && !editedUserIsOwner && !isEditingSelf);
 
   // Hide workspace/base panel for owners since they already have access to everything
   const showWorkspaceBasePanel =

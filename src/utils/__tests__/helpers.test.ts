@@ -31,6 +31,11 @@ describe('formatCompactNumber', () => {
     expect(formatCompactNumber(999999)).toBe('1000K');
     expect(formatCompactNumber(999999999)).toBe('1000M');
   });
+
+  it('should handle negative numbers', () => {
+    expect(formatCompactNumber(-50)).toBe('-50');
+    expect(formatCompactNumber(-1500)).toBe('-1500');
+  });
 });
 
 describe('debounce', () => {
@@ -80,6 +85,10 @@ describe('convertDateFormat', () => {
     const result = convertDateFormat('invalid', 'YYYY-MM-DD', 'DD-MM-YYYY');
     // The function will attempt to split and format, resulting in undefined values
     expect(result).toBeTruthy(); // Just verify it doesn't crash
+  });
+
+  it('should convert YYYY/MM/DD to DD/MM/YYYY', () => {
+    expect(convertDateFormat('2024/01/15', 'YYYY/MM/DD', 'DD/MM/YYYY')).toBe('15/01/2024');
   });
 });
 

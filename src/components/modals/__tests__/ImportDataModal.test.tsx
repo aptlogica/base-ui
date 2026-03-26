@@ -170,6 +170,18 @@ describe('ImportDataModal', () => {
 
       expect(onClose).not.toHaveBeenCalled();
     });
+
+    it('stops propagation on modal content keydown', () => {
+      const onClose = vi.fn();
+      const { container } = render(
+        <ImportDataModal {...defaultProps} onClose={onClose} />
+      );
+
+      const modal = container.querySelector('.bg-modal');
+      fireEvent.keyDown(modal!, { key: 'Escape' });
+
+      expect(onClose).not.toHaveBeenCalled();
+    });
   });
 
   describe('styling', () => {

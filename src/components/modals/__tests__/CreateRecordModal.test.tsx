@@ -199,6 +199,21 @@ describe('CreateRecordModal', () => {
 
       expect(screen.getByText(/hidden field/i)).toBeInTheDocument();
     });
+
+    it('shows hidden fields when toggle is clicked', async () => {
+      const user = userEvent.setup();
+      const fieldsWithHidden = [
+        ...mockFields,
+        { id: 'field-4', name: 'hidden_field', title: 'Hidden Field', uidt: 'SingleLineText', is_hidden: true },
+      ];
+
+      renderWithQueryClient(
+        <CreateRecordModal {...defaultProps} fields={fieldsWithHidden} />
+      );
+
+      await user.click(screen.getByRole('button', { name: /show 1 hidden fields/i }));
+      expect(screen.getByTestId('field-renderer-field-4')).toBeInTheDocument();
+    });
   });
 
   describe('initial values', () => {
@@ -394,6 +409,31 @@ describe('CreateRecordModal', () => {
 
       await user.type(screen.getByTestId('field-input-field-1'), 'New Title');
       expect(submitButton).not.toBeDisabled();
+    });
+  });
+
+  describe('required validation', () => {
+    it('shows required field error when required value is empty', async () => {
+      const user = userEvent.setup();
+      const requiredFields = [
+        { id: 'field-req', name: 'required', title: 'Required', uidt: 'SingleLineText', required: true },
+        { id: 'field-1', name: 'title', title: 'Title', uidt: 'SingleLineText' },
+      ];
+
+      renderWithQueryClient(
+        <CreateRecordModal
+          {...defaultProps}
+          fields={requiredFields}
+        />
+      );
+
+      await user.type(screen.getByTestId('field-input-field-1'), 'Some title');
+      await user.click(screen.getByRole('button', { name: 'Save record' }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/Required field\(s\) must not be left empty/i)).toBeInTheDocument();
+      });
+      expect(addRowMutateAsyncMock).not.toHaveBeenCalled();
     });
   });
 

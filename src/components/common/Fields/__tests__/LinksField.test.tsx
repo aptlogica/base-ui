@@ -169,6 +169,46 @@ describe('LinksField', () => {
     expect(loadNextPage).toHaveBeenCalled();
   });
 
+  it('shows many-to-many label and supports clearing search input', async () => {
+    const user = userEvent.setup();
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'many-to-many' } } }}
+        value={[]}
+        onChange={vi.fn()}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    expect(screen.getByText('Many to Many')).toBeInTheDocument();
+
+    const searchInput = screen.getByLabelText('Search records') as HTMLInputElement;
+    await user.type(searchInput, 'rec');
+    expect(searchInput.value).toBe('rec');
+
+    const clearButton = searchInput.parentElement?.querySelector('button');
+    await user.click(clearButton as HTMLElement);
+    expect(searchInput.value).toBe('');
+  });
+
+  it('defaults to One to One when relation meta is missing', async () => {
+    const user = userEvent.setup();
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel' }}
+        value={[]}
+        onChange={vi.fn()}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    expect(screen.getByText('One to One')).toBeInTheDocument();
+  });
+
   it('renders loading placeholder when records are not loaded yet', () => {
     mockRecords = [];
     mockIsLoading = false;
@@ -184,6 +224,24 @@ describe('LinksField', () => {
     );
 
     expect(screen.getByText('Loading...')).toBeInTheDocument();
+  });
+
+  it('shows empty state when no records exist', async () => {
+    mockRecords = [];
+    mockIsLoading = false;
+
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'one-to-one' } } }}
+        value={[]}
+        onChange={vi.fn()}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /rel/i }));
+    expect(screen.getByText('No records available')).toBeInTheDocument();
   });
 
   it('ignores interactions when disabled', async () => {
@@ -227,6 +285,49 @@ describe('LinksField', () => {
     await waitFor(() => expect(onChange).toHaveBeenCalled());
   });
 
+  it('closes dropdown on Escape key', async () => {
+    const user = userEvent.setup();
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'one-to-one' } } }}
+        value={[]}
+        onChange={vi.fn()}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    expect(screen.getByText('One to One')).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    await waitFor(() => {
+      expect(screen.queryByText('One to One')).not.toBeInTheDocument();
+    });
+  });
+
+  it('removes selected record from pill and persists immediately', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'one-to-one' } } }}
+        value={[{ id: 1, title: 'Record One' }, { id: 2, title: 'Record Two' }]}
+        onChange={onChange}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    const unlinkButton = screen.getByRole('button', { name: /unlink record one/i });
+    await user.click(unlinkButton);
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalled());
+  });
+
   it('shows error toast when link mutation fails', async () => {
     const user = userEvent.setup();
     mutateAsyncMock.mockRejectedValueOnce(new Error('boom'));
@@ -245,5 +346,108 @@ describe('LinksField', () => {
     await user.click(screen.getByText('Record One'));
 
     await waitFor(() => expect(toastError).toHaveBeenCalled());
+  });
+
+  it('shows loading indicators when table data is loading', async () => {
+    mockIsLoading = true;
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'one-to-one' } } }}
+        value={[]}
+        onChange={vi.fn()}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /rel/i }));
+    expect(screen.getByText('Loading records...')).toBeInTheDocument();
+  });
+
+  it('opens dropdown from the +count pill when more than two records are selected', async () => {
+    const user = userEvent.setup();
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'one-to-one' } } }}
+        value={[{ id: 1, title: 'Record One' }, { id: 2, title: 'Record Two' }, { id: 3, title: 'Record Three' }]}
+        onChange={vi.fn()}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /\+1/i }));
+    expect(screen.getByText('One to One')).toBeInTheDocument();
+  });
+
+  it('loads more when arrowing past the last record with hasMore', async () => {
+    const user = userEvent.setup();
+    mockHasMore = true;
+
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'one-to-one' } } }}
+        value={[]}
+        onChange={vi.fn()}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+
+    expect(loadNextPage).toHaveBeenCalled();
+  });
+
+  it('reverts optimistic add when linking fails', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    mutateAsyncMock.mockRejectedValueOnce(new Error('fail'));
+
+    const initialValue: any[] = [];
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'one-to-one' } } }}
+        value={initialValue}
+        onChange={onChange}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    await user.click(screen.getByText('Record One'));
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+    expect(onChange).toHaveBeenLastCalledWith(initialValue);
+  });
+
+  it('reverts optimistic remove when unlink fails', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    mutateAsyncMock.mockRejectedValueOnce(new Error('fail'));
+
+    const originalValue = [{ id: 1, title: 'Record One' }];
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'one-to-one' } } }}
+        value={originalValue}
+        onChange={onChange}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    await user.click(screen.getByRole('button', { name: /unlink record one/i }));
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+    expect(onChange).toHaveBeenLastCalledWith(originalValue);
   });
 });

@@ -6,6 +6,10 @@ const { navigateMock } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
 }));
 
+const { navigationStoreMock } = vi.hoisted(() => ({
+  navigationStoreMock: vi.fn(),
+}));
+
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>();
   return {
@@ -14,11 +18,17 @@ vi.mock('react-router-dom', async (importOriginal) => {
   };
 });
 
+vi.mock('../../../stores/navigationStore', () => ({
+  useNavigationStore: () => navigationStoreMock(),
+}));
+
 import HeaderLogo from '../HeaderLogo';
 
 describe('HeaderLogo', () => {
   beforeEach(() => {
     navigateMock.mockClear();
+    navigationStoreMock.mockReset();
+    navigationStoreMock.mockReturnValue({ selectedWorkspaceId: null });
   });
 
   it('renders the logo image by default', () => {
@@ -35,6 +45,16 @@ describe('HeaderLogo', () => {
     await user.click(screen.getByTitle('Go to Homepage'));
 
     expect(navigateMock).toHaveBeenCalledWith('/workspace');
+  });
+
+  it('navigates to selected workspace when available', async () => {
+    navigationStoreMock.mockReturnValue({ selectedWorkspaceId: 'ws-123' });
+    const user = userEvent.setup();
+    render(<HeaderLogo />);
+
+    await user.click(screen.getByTitle('Go to Homepage'));
+
+    expect(navigateMock).toHaveBeenCalledWith('/workspace/ws-123');
   });
 
   it('swaps the image out on hover', () => {

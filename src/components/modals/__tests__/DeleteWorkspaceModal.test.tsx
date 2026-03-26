@@ -5,6 +5,19 @@ import userEvent from '@testing-library/user-event';
 import { DeleteWorkspaceModal } from '../DeleteWorkspaceModal';
 
 describe('DeleteWorkspaceModal', () => {
+  it('renders nothing when closed', () => {
+    const { container } = render(
+      <DeleteWorkspaceModal
+        isOpen={false}
+        workspace={{ id: 'w1', title: 'My Workspace' }}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+      />
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it('requires exact name to enable delete', async () => {
     const user = userEvent.setup();
     const onConfirm = vi.fn().mockResolvedValue(undefined);

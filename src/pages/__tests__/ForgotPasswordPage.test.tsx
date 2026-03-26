@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 
@@ -205,15 +205,14 @@ describe('ForgotPasswordPage', () => {
     });
 
     it('rejects emails longer than 254 chars', async () => {
-      const user = userEvent.setup();
       renderWithRouter();
 
       const emailInput = screen.getByPlaceholderText('Enter your email address');
       const longLocal = 'a'.repeat(200);
       const longEmail = `${longLocal}@example.com`;
 
-      await user.type(emailInput, longEmail);
-      await user.tab();
+      fireEvent.change(emailInput, { target: { value: longEmail } });
+      fireEvent.blur(emailInput);
 
       expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
     });

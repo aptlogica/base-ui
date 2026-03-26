@@ -207,6 +207,14 @@ describe('CreateViewModal', () => {
       expect(screen.queryByTestId('field-dropdown')).not.toBeInTheDocument();
     });
 
+    it('does not show field dropdown for form view', () => {
+      renderWithQueryClient(
+        <CreateViewModal {...defaultProps} viewType="form" fields={mockFields} />
+      );
+
+      expect(screen.queryByTestId('field-dropdown')).not.toBeInTheDocument();
+    });
+
     it('shows dual field dropdowns for gantt view', () => {
       renderWithQueryClient(
         <CreateViewModal {...defaultProps} viewType="ganttChart" fields={mockFields} />
@@ -214,6 +222,14 @@ describe('CreateViewModal', () => {
 
       const dropdowns = screen.getAllByTestId('field-dropdown');
       expect(dropdowns).toHaveLength(2);
+    });
+
+    it('shows no eligible fields message when filters remove all fields', () => {
+      renderWithQueryClient(
+        <CreateViewModal {...defaultProps} viewType="gallery" fields={[{ id: 'col-1', title: 'Name', uidt: 'Text' }]} />
+      );
+
+      expect(screen.getByText(/No eligible fields found/i)).toBeInTheDocument();
     });
   });
 
@@ -305,6 +321,23 @@ describe('CreateViewModal', () => {
         );
       });
     });
+
+    it('shows error when onCreate throws', async () => {
+      const user = userEvent.setup();
+      const onCreate = vi.fn(() => {
+        throw new Error('Create failed');
+      });
+
+      renderWithQueryClient(
+        <CreateViewModal {...defaultProps} onCreate={onCreate} viewType="grid" />
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Create View' }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/Create failed/i)).toBeInTheDocument();
+      });
+    });
   });
 
   describe('gantt validation', () => {
@@ -322,6 +355,34 @@ describe('CreateViewModal', () => {
         expect(screen.getByText(/must be different/i)).toBeInTheDocument();
       });
     });
+
+    it('submits gantt payload with start and end fields', async () => {
+      const user = userEvent.setup();
+      const onCreate = vi.fn();
+      const ganttFields = [
+        { id: 'col-3', title: 'Start', uidt: 'Date' },
+        { id: 'col-5', title: 'End', uidt: 'Date' },
+      ];
+      renderWithQueryClient(
+        <CreateViewModal {...defaultProps} onCreate={onCreate} viewType="ganttChart" fields={ganttFields} />
+      );
+
+      const dropdowns = screen.getAllByTestId('field-dropdown');
+      await user.selectOptions(dropdowns[0], 'col-3');
+      await user.selectOptions(dropdowns[1], 'col-5');
+
+      await user.click(screen.getByRole('button', { name: 'Create View' }));
+
+      await waitFor(() => {
+        expect(onCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'ganttChart',
+            startDateFieldId: 'col-3',
+            endDateFieldId: 'col-5',
+          })
+        );
+      });
+    });
   });
 
   describe('field selection validation', () => {
@@ -330,6 +391,19 @@ describe('CreateViewModal', () => {
       renderWithQueryClient(
         <CreateViewModal {...defaultProps} viewType="kanban" fields={mockFields} />
       );
+
+      expect(screen.getByRole('button', { name: 'Create View' })).toBeDisabled();
+    });
+
+    it('disables submit when name is too short', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(
+        <CreateViewModal {...defaultProps} viewType="grid" />
+      );
+
+      const nameInput = screen.getByLabelText(/View Name/i);
+      await user.clear(nameInput);
+      await user.type(nameInput, 'ab');
 
       expect(screen.getByRole('button', { name: 'Create View' })).toBeDisabled();
     });
@@ -348,6 +422,20 @@ describe('CreateViewModal', () => {
       );
 
       expect(screen.getByTestId('field-dropdown')).toBeInTheDocument();
+    });
+
+    it('shows loading message when fields are loading', () => {
+      const mockUseTable = vi.mocked(useTable);
+      mockUseTable.mockReturnValue({
+        data: { data: { columns: [] } },
+        isLoading: true,
+      } as any);
+
+      renderWithQueryClient(
+        <CreateViewModal {...defaultProps} viewType="gantt" fields={[]} />
+      );
+
+      expect(screen.getByText(/Loading fields/i)).toBeInTheDocument();
     });
   });
 

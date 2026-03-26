@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MembersTable, type Member } from '../MembersTable';
@@ -18,16 +18,16 @@ vi.mock('axios', () => ({
   },
 }));
 
-vi.mock('../../hooks/useClickOutside', () => ({
+vi.mock('../../../hooks/useClickOutside', () => ({
   useClickOutside: vi.fn(() => ({ current: null })),
 }));
 
-vi.mock('../../hooks/useApi', () => ({
+vi.mock('../../../hooks/useApi', () => ({
   useUserRolesAndAccess: (...args: any[]) => useUserRolesAndAccessMock(...args),
   useTenantUsers: vi.fn(() => ({ data: [], isLoading: false, error: null })),
 }));
 
-vi.mock('../../service/clientService', () => ({
+vi.mock('../../../service/clientService', () => ({
   getTenantUsersService: vi.fn().mockResolvedValue([]),
   getUserRolesService: vi.fn().mockResolvedValue([]),
 }));
@@ -51,7 +51,7 @@ afterAll(() => {
   vi.unstubAllGlobals();
 });
 
-vi.mock('../../utils/helpers', () => ({
+vi.mock('../../../utils/helpers', () => ({
   getInitials: vi.fn((name: string) => {
     if (!name || !name.trim()) return 'U';
     const parts = name.trim().split(/\s+/);
@@ -219,6 +219,24 @@ describe('MembersTable', () => {
       expect(screen.getByText('No members found with the role')).toBeInTheDocument();
       expect(screen.getByText('"Owner"')).toBeInTheDocument();
     });
+
+    it('clears role filter when Clear filter is clicked', async () => {
+      const members = [
+        createMember({
+          id: '1',
+          roles: [{ id: 'r1', name: 'base-member', scope_level: 'workspace' }],
+        }),
+      ];
+
+      renderWithQueryClient(<MembersTable members={members} showSearch />);
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      await userEvent.click(screen.getByRole('button', { name: 'Owner' }));
+
+      expect(screen.getByText('No members found with the role')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: /Clear filter/i }));
+      expect(screen.getByText('Alice Smith')).toBeInTheDocument();
+    });
   });
 
   describe('Sort', () => {
@@ -237,6 +255,22 @@ describe('MembersTable', () => {
       }
       expect(screen.getByText('Alice Smith')).toBeInTheDocument();
       expect(screen.getByText('Zara')).toBeInTheDocument();
+    });
+
+    it('toggles sort direction for Joined Date', async () => {
+      const members = [
+        createMember({ id: '1', name: 'Old', dateJoined: '2023-01-01T00:00:00Z' }),
+        createMember({ id: '2', name: 'New', dateJoined: '2024-01-01T00:00:00Z' }),
+      ];
+      renderWithQueryClient(<MembersTable members={members} />);
+      const joinedHeader = screen.getByText('Joined Date').closest('button');
+      await userEvent.click(joinedHeader as HTMLElement);
+      const rowsAsc = screen.getAllByText(/Old|New/);
+      expect(rowsAsc[0]).toHaveTextContent('Old');
+
+      await userEvent.click(joinedHeader as HTMLElement);
+      const rowsDesc = screen.getAllByText(/Old|New/);
+      expect(rowsDesc[0]).toHaveTextContent('New');
     });
   });
 
@@ -278,6 +312,12 @@ describe('MembersTable', () => {
       expect(screen.getByRole('button', { name: /View in detail/i })).toBeInTheDocument();
     });
 
+    it('hides View in detail for owner role string', () => {
+      const member = createMember({ roles: 'owner' });
+      renderWithQueryClient(<MembersTable members={[member]} />);
+      expect(screen.queryByRole('button', { name: /View in detail/i })).not.toBeInTheDocument();
+    });
+
     it('should toggle to Collapse when View in detail is clicked', async () => {
       renderWithQueryClient(<MembersTable members={[createMember()]} />);
       const expandButton = screen.getByRole('button', { name: /View in detail/i });
@@ -289,6 +329,33 @@ describe('MembersTable', () => {
       renderWithQueryClient(<MembersTable members={[createMember()]} />);
       await userEvent.click(screen.getByRole('button', { name: /View in detail/i }));
       expect(screen.getByText(/access details/i)).toBeInTheDocument();
+    });
+
+    it('uses roles from access data when available', async () => {
+      useUserRolesAndAccessMock.mockReturnValue({
+        data: [
+          {
+            workspace_name: 'WS',
+            access: 'maintainer',
+            bases: [{ base_name: 'Base', access: 'base-member' }],
+          },
+        ],
+        isLoading: false,
+        error: null,
+      });
+
+      renderWithQueryClient(<MembersTable members={[createMember({ roles: [] })]} />);
+      await userEvent.click(screen.getByRole('button', { name: /View in detail/i }));
+      expect(await screen.findByText('Workspace Maintainer')).toBeInTheDocument();
+      expect(screen.getAllByText('Base Member').length).toBeGreaterThan(0);
+    });
+
+    it('passes workspaceId when fetching access details', async () => {
+      renderWithQueryClient(<MembersTable members={[createMember()]} workspaceId="ws-1" />);
+      await userEvent.click(screen.getByRole('button', { name: /View in detail/i }));
+      await waitFor(() => {
+        expect(useUserRolesAndAccessMock).toHaveBeenCalledWith('u1', 'ws-1');
+      });
     });
   });
 

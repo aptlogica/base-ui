@@ -348,6 +348,27 @@ describe('NewColumnModalConfigStep split modules', () => {
     expect(setTimeDefault).toHaveBeenCalledWith('11:30 PM');
   });
 
+  it('dateTime: year type clears invalid values', () => {
+    const setYearDefault = vi.fn();
+
+    renderStep(
+      renderDateTimeConfigStep({
+        selectedType: { key: 'year' },
+        showYearDefault: true,
+        setShowYearDefault: vi.fn(),
+        yearDefault: 2025,
+        setYearDefault,
+        showDescription: false,
+        setShowDescription: vi.fn(),
+        description: '',
+        setDescription: vi.fn(),
+      })
+    );
+
+    fireEvent.change(screen.getByTestId('year-field'), { target: { value: 'abc' } });
+    expect(setYearDefault).toHaveBeenCalledWith(null);
+  });
+
   it('relations: links type updates relation and target table, with validation message', () => {
     const setRelationType = vi.fn();
     const setSelectedTableId = vi.fn();
@@ -378,6 +399,38 @@ describe('NewColumnModalConfigStep split modules', () => {
     expect(setSelectedTableId).toHaveBeenCalledWith('t1');
     expect(setSelectedTable).toHaveBeenCalledWith({ id: 't1', title: 'Orders' });
     expect(screen.getByText('Target table is required for relation fields')).toBeInTheDocument();
+  });
+
+  it('relations: links type disables interactions while editing', () => {
+    const setRelationType = vi.fn();
+    const setSelectedTableId = vi.fn();
+    const setSelectedTable = vi.fn();
+
+    renderStep(
+      renderRelationsConfigStep({
+        selectedType: { key: 'links' },
+        isLinksFieldEditing: true,
+        relationType: 'one-to-one',
+        setRelationType,
+        tables: [{ id: 't1', title: 'Orders' }],
+        selectedTableId: '',
+        setSelectedTableId,
+        selectedTable: null,
+        setSelectedTable,
+        showDescription: false,
+        setShowDescription: vi.fn(),
+        description: '',
+        setDescription: vi.fn(),
+      })
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /has many/i }));
+    fireEvent.change(screen.getByTestId('Select table to link'), { target: { value: 't1' } });
+
+    expect(setRelationType).not.toHaveBeenCalled();
+    expect(setSelectedTableId).not.toHaveBeenCalled();
+    expect(setSelectedTable).not.toHaveBeenCalled();
+    expect(screen.getByTestId('Select table to link')).toBeDisabled();
   });
 
   it('relations: lookup type updates relation/lookup fields', () => {
@@ -432,5 +485,55 @@ describe('NewColumnModalConfigStep split modules', () => {
     );
 
     expect(screen.getByText('Loading fields...')).toBeInTheDocument();
+  });
+
+  it('relations: lookup shows empty state when no fields available', () => {
+    renderStep(
+      renderRelationsConfigStep({
+        selectedType: { key: 'lookup' },
+        linkFields: [{ id: 'lnk1', title: 'Customer Link' }],
+        targetTableFields: [],
+        selectedRelationId: 'lnk1',
+        setSelectedRelationId: vi.fn(),
+        selectedLookupColumnId: '',
+        setSelectedLookupColumnId: vi.fn(),
+        setHasUserModifiedLookupColumn: vi.fn(),
+        isTargetTableLoading: false,
+        showDescription: false,
+        setShowDescription: vi.fn(),
+        description: '',
+        setDescription: vi.fn(),
+      })
+    );
+
+    expect(screen.getByText('No fields available')).toBeInTheDocument();
+  });
+
+  it('contact: description trash clears value', () => {
+    const setDescription = vi.fn();
+    const setShowDescription = vi.fn();
+
+    renderStep(
+      renderContactConfigStep({
+        selectedType: { key: 'phoneNumber' },
+        phoneValid: false,
+        setPhoneValid: vi.fn(),
+        showPhoneDefault: false,
+        setShowPhoneDefault: vi.fn(),
+        phoneDefault: '',
+        setPhoneDefault: vi.fn(),
+        showDescription: true,
+        setShowDescription,
+        description: 'desc',
+        setDescription,
+      })
+    );
+
+    fireEvent.click(screen.getByText('Add description'));
+    expect(setShowDescription).toHaveBeenCalled();
+
+    const buttons = screen.getAllByRole('button');
+    fireEvent.click(buttons[buttons.length - 1]);
+    expect(setDescription).toHaveBeenCalledWith('');
   });
 });

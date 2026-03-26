@@ -480,6 +480,35 @@ describe('EditRecordModal', () => {
     });
   });
 
+  describe('required validation', () => {
+    it('shows required field error when required value is empty', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      const fieldsWithRequired = [
+        { id: 'field-req', name: 'required', title: 'Required', uidt: 'SingleLineText', required: true },
+        { id: 'field-1', name: 'title', title: 'Title', uidt: 'SingleLineText' },
+      ];
+
+      renderWithQueryClient(
+        <EditRecordModal
+          {...defaultProps}
+          onClose={onClose}
+          fields={fieldsWithRequired}
+          initialValues={{ 'field-1': 'Existing Title', 'field-req': '' }}
+        />
+      );
+
+      await user.clear(screen.getByTestId('field-input-field-1'));
+      await user.type(screen.getByTestId('field-input-field-1'), 'Updated Title');
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/Required field\(s\) must not be left empty/i)).toBeInTheDocument();
+      });
+      expect(insertRowDataMutateAsyncMock).not.toHaveBeenCalled();
+    });
+  });
+
   describe('links persistence', () => {
     it('uses relation API for links update and not insertRowData', async () => {
       const user = userEvent.setup();

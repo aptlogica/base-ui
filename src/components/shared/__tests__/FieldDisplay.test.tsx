@@ -244,6 +244,24 @@ describe('FieldDisplay', () => {
       expect(screen.getByTestId('url-field')).toBeInTheDocument();
     });
 
+    it('renders dash for empty url and datetime values', () => {
+      const { rerender } = render(
+        <FieldDisplay
+          field={{ uidt: 'url', title: 'Website' }}
+          value=""
+        />
+      );
+      expect(screen.getByText('-')).toBeInTheDocument();
+
+      rerender(
+        <FieldDisplay
+          field={{ uidt: 'datetime', title: 'When' }}
+          value=""
+        />
+      );
+      expect(screen.getByText('-')).toBeInTheDocument();
+    });
+
     it('should render links, formula, lookup and attachment fields', () => {
       const { rerender } = render(
         <FieldDisplay
@@ -331,6 +349,12 @@ describe('FieldDisplay', () => {
 
       rerender(<FieldDisplay field={{ uidt: 'duration', title: 'D' }} value={60} />);
       expect(screen.getByTestId('duration')).toBeInTheDocument();
+
+      rerender(<FieldDisplay field={{ uidt: 'duration', title: 'D' }} value="15" />);
+      expect(screen.getByTestId('duration')).toHaveTextContent('15');
+
+      rerender(<FieldDisplay field={{ uidt: 'duration', title: 'D' }} value="not-a-number" />);
+      expect(screen.getByText('-')).toBeInTheDocument();
 
       rerender(<FieldDisplay field={{ uidt: 'year', title: 'Y' }} value={2024} />);
       expect(screen.getByTestId('year')).toBeInTheDocument();

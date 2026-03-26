@@ -5,8 +5,11 @@ import { TableRow, MemoizedTableRow } from '../components/TableRow';
 import type { GridRecord, GridColumn } from '../../../types/grid.types';
 
 // Mock the EditableTableCell component
+const renderSpy = vi.fn();
 vi.mock('../../../../../components/shared/table/EditableTableCell', () => ({
-  EditableTableCell: ({ column, value, onChange, allowEdit }: any) => (
+  EditableTableCell: ({ column, value, onChange, allowEdit }: any) => {
+    renderSpy({ column, value, allowEdit });
+    return (
     <div 
       data-testid={`cell-${column.column_name}`}
       data-value={value}
@@ -19,7 +22,8 @@ vi.mock('../../../../../components/shared/table/EditableTableCell', () => ({
         readOnly={!allowEdit}
       />
     </div>
-  ),
+    );
+  },
 }));
 
 describe('TableRow', () => {
@@ -63,6 +67,7 @@ describe('TableRow', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    renderSpy.mockClear();
   });
 
   describe('rendering', () => {
@@ -96,6 +101,13 @@ describe('TableRow', () => {
     render(<TableRow {...defaultProps} canSelectRows={false} />);
 
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  });
+
+  it('keeps row number visible when selection is disabled', () => {
+    const { container } = render(<TableRow {...defaultProps} canSelectRows={false} />);
+
+    const rowNumber = container.querySelector('span');
+    expect(rowNumber?.className).not.toContain('group-hover:opacity-0');
   });
 
     it('should show checkbox checked when row is selected', () => {
@@ -149,6 +161,21 @@ describe('TableRow', () => {
       expect(mockSetActiveCell).toHaveBeenCalledWith({ rowId: 'row-1', colKey: 'title' });
     });
 
+    it('does not re-activate cell when already active', () => {
+      render(
+        <TableRow
+          {...defaultProps}
+          setActiveCell={mockSetActiveCell}
+          activeCell={{ rowId: 'row-1', colKey: 'title' }}
+        />
+      );
+
+      const cell = screen.getByTestId('cell-title').closest('[role="gridcell"]');
+      fireEvent.keyDown(cell!, { key: 'Enter' });
+
+      expect(mockSetActiveCell).not.toHaveBeenCalled();
+    });
+
     it('should call setActiveCell on Space key', () => {
       render(<TableRow {...defaultProps} setActiveCell={mockSetActiveCell} />);
 
@@ -165,6 +192,26 @@ describe('TableRow', () => {
       fireEvent.keyDown(row, { key: 'Escape' });
 
       expect(mockSetActiveCell).toHaveBeenCalledWith(null);
+    });
+
+    it('clears active cell on row click', () => {
+      render(<TableRow {...defaultProps} setActiveCell={mockSetActiveCell} />);
+
+      fireEvent.click(screen.getByRole('row'));
+      expect(mockSetActiveCell).toHaveBeenCalledWith(null);
+    });
+
+    it('does not call onCellChange when rowId is missing', async () => {
+      const rowWithoutId: GridRecord = {
+        data: { title: 'No Id' },
+      } as any;
+
+      render(<TableRow {...defaultProps} row={rowWithoutId} />);
+
+      const input = screen.getByTestId('input-title');
+      await userEvent.type(input, 'X');
+
+      expect(mockOnCellChange).not.toHaveBeenCalled();
     });
   });
 
@@ -273,6 +320,35 @@ describe('TableRow', () => {
     });
   });
 
+  describe('pinned columns', () => {
+    it('applies sticky positioning and offsets for pinned columns', () => {
+      render(
+        <TableRow
+          {...defaultProps}
+          pinnedColumnIds={['col-1']}
+          pinnedColumnOffsets={{ 'col-1': 100 }}
+        />
+      );
+
+      const cells = screen.getAllByRole('gridcell');
+      expect(cells[0]).toHaveStyle({ position: 'sticky', left: '100px' });
+    });
+
+    it('sets z-index for active pinned cells', () => {
+      render(
+        <TableRow
+          {...defaultProps}
+          pinnedColumnIds={['col-1']}
+          pinnedColumnOffsets={{ 'col-1': 48 }}
+          activeCell={{ rowId: 'row-1', colKey: 'title' }}
+        />
+      );
+
+      const cells = screen.getAllByRole('gridcell');
+      expect(cells[0]).toHaveStyle({ zIndex: '20' });
+    });
+  });
+
   describe('system columns', () => {
     it('should mark system columns correctly', () => {
       render(<TableRow {...defaultProps} />);
@@ -325,6 +401,15 @@ describe('MemoizedTableRow', () => {
     expect(screen.getByTestId('cell-title')).toBeInTheDocument();
   });
 
+  it('re-renders when column widths change', () => {
+    const { rerender } = render(<MemoizedTableRow {...defaultProps} />);
+
+    const initialCalls = renderSpy.mock.calls.length;
+    rerender(<MemoizedTableRow {...defaultProps} columnWidths={[250]} />);
+
+    expect(renderSpy.mock.calls.length).toBeGreaterThan(initialCalls);
+  });
+
   it('should re-render when row changes', () => {
     const { rerender } = render(<MemoizedTableRow {...defaultProps} />);
 
@@ -336,6 +421,36 @@ describe('MemoizedTableRow', () => {
     rerender(<MemoizedTableRow {...defaultProps} row={newRow} />);
 
     expect(screen.getByTestId('cell-title')).toHaveAttribute('data-value', 'Updated Title');
+  });
+
+  it('re-renders when pinned state changes', () => {
+    const { rerender } = render(<MemoizedTableRow {...defaultProps} />);
+
+    const initialCalls = renderSpy.mock.calls.length;
+    rerender(
+      <MemoizedTableRow
+        {...defaultProps}
+        pinnedColumnIds={['col-1']}
+        pinnedColumnOffsets={{ 'col-1': 48 }}
+      />
+    );
+
+    expect(renderSpy.mock.calls.length).toBeGreaterThan(initialCalls);
+  });
+
+  it('does not re-render when cell array value is unchanged', () => {
+    const arrayRow: GridRecord = {
+      id: 'row-1',
+      _meta: { id: 'row-1' },
+      data: { title: ['A', 'B'] },
+    };
+    const { rerender } = render(<MemoizedTableRow {...defaultProps} row={arrayRow} />);
+
+    const initialCalls = renderSpy.mock.calls.length;
+    const nextRow = { ...arrayRow, data: { title: ['A', 'B'] } };
+    rerender(<MemoizedTableRow {...defaultProps} row={nextRow} />);
+
+    expect(renderSpy.mock.calls.length).toBe(initialCalls);
   });
 
   it('should re-render when selection changes', () => {

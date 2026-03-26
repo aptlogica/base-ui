@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { Formula } from '../Formula';
 
 const evaluateFormulaMock = vi.fn();
@@ -84,6 +84,31 @@ describe('Formula', () => {
     await waitFor(() => {
       expect(screen.queryByText('Functions & Operators')).not.toBeInTheDocument();
     });
+  });
+
+  it('closes all-functions modal when clicking outside', async () => {
+    render(<Formula columns={[]} allColumns={[]} />);
+    fireEvent.click(screen.getByRole('button', { name: /view all functions/i }));
+
+    expect(screen.getByText('Functions & Operators')).toBeInTheDocument();
+    fireEvent.mouseDown(document.body);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Functions & Operators')).not.toBeInTheDocument();
+    });
+  });
+
+  it('clears function search in modal', () => {
+    render(<Formula columns={[]} allColumns={[]} />);
+    fireEvent.click(screen.getByRole('button', { name: /view all functions/i }));
+
+    const searchInput = screen.getByPlaceholderText(/search functions/i) as HTMLInputElement;
+    fireEvent.change(searchInput, { target: { value: 'sum' } });
+    expect(searchInput.value).toBe('sum');
+
+    const clearButton = searchInput.parentElement?.querySelector('button');
+    fireEvent.click(clearButton as HTMLElement);
+    expect(searchInput.value).toBe('');
   });
 
   it('shows validation error on blur and notifies parent', async () => {
@@ -233,6 +258,63 @@ describe('Formula', () => {
     expect((textarea as HTMLTextAreaElement).value).toContain('Amount');
   });
 
+  it('does not notify when normalized value is unchanged', () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    const onFormulaChange = vi.fn();
+    evaluateFormulaMock.mockReturnValue({ result: 10, error: null });
+    convertResultToValueMock.mockReturnValue(10);
+    normalizeForComparisonMock.mockImplementation((value: any) => value);
+
+    try {
+      render(
+        <Formula
+          value={10}
+          onChange={onChange}
+          onFormulaChange={onFormulaChange}
+          config={{ formula: '' }}
+          columns={[]}
+          allColumns={[]}
+        />
+      );
+
+      const textarea = screen.getByPlaceholderText(/enter formula/i);
+      fireEvent.change(textarea, { target: { value: 'SUM(1,2)' } });
+
+      act(() => {
+        vi.advanceTimersByTime(350);
+      });
+
+      expect(onFormulaChange).toHaveBeenCalledWith('SUM(1,2)');
+      expect(onChange).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('hides field dropdown when typing "}"', async () => {
+    getCompatibleFieldTypesMock.mockReturnValue(null);
+    render(
+      <Formula
+        columns={[{ id: 'c1', title: 'Amount', type: 'number' }]}
+        allColumns={[{ id: 'c1', title: 'Amount', type: 'number' }]}
+      />
+    );
+
+    const textarea = screen.getByPlaceholderText(/enter formula/i);
+    fireEvent.focus(textarea);
+    fireEvent.change(textarea, { target: { value: '{' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Amount')).toBeInTheDocument();
+    });
+
+    fireEvent.change(textarea, { target: { value: '{}' } });
+    await waitFor(() => {
+      expect(screen.queryByText('Amount')).not.toBeInTheDocument();
+    });
+  });
+
   it('closes field dropdown on Escape', async () => {
     getCompatibleFieldTypesMock.mockReturnValue(null);
     render(
@@ -255,6 +337,14 @@ describe('Formula', () => {
     await waitFor(() => {
       expect(screen.queryByText('Amount')).not.toBeInTheDocument();
     });
+  });
+
+  it('shows quick function tooltip on hover', () => {
+    render(<Formula columns={[]} allColumns={[]} />);
+    const sumButton = screen.getByRole('button', { name: 'SUM' });
+    fireEvent.mouseEnter(sumButton);
+    expect(screen.getByText(/sum values/i)).toBeInTheDocument();
+    fireEvent.mouseLeave(sumButton);
   });
 
   it('filters columns by compatible types when function at cursor', async () => {

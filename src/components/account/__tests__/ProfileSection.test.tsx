@@ -16,6 +16,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProfileSection } from '../ProfileSection';
 import type { UserProfile } from '../../../types/userProfile';
+import { validateDOB } from '../../../utils/dateValidation';
 
 // ============================================================================
 // Mock Setup
@@ -281,6 +282,7 @@ describe('ProfileSection', () => {
   beforeEach(() => {
     queryClient = createTestQueryClient();
     vi.clearAllMocks();
+    vi.mocked(validateDOB).mockReturnValue(null);
 
     // Reset auth mocks
     vi.mocked(useAuth).mockReturnValue({ user: mockAuthUser } as ReturnType<typeof useAuth>);
@@ -1066,6 +1068,78 @@ describe('ProfileSection', () => {
         expect(spinners.length).toBeGreaterThan(0);
       });
     });
+
+    it('shows error for invalid avatar file type', async () => {
+      const mockProfile = createMockUserProfile({ avatar: undefined });
+      setupMocksWithProfile(mockProfile);
+      renderProfileSection(queryClient);
+
+      const lastCall = mockRegisterFooter.mock.calls[mockRegisterFooter.mock.calls.length - 1];
+      const footerContent = lastCall[0] as React.ReactElement;
+      const { getByText: getFooterText } = render(footerContent);
+
+      await act(async () => {
+        fireEvent.click(getFooterText('Edit'));
+      });
+
+      const fileInput = document.getElementById('avatar-upload-input') as HTMLInputElement;
+      const badFile = new File(['bad'], 'bad.txt', { type: 'text/plain' });
+      await act(async () => {
+        fireEvent.change(fileInput, { target: { files: [badFile] } });
+      });
+
+      expect(mockToast.error).toHaveBeenCalledWith('Please select an image file', { title: 'Invalid File Type' });
+    });
+
+    it('shows error for oversized avatar file', async () => {
+      const mockProfile = createMockUserProfile({ avatar: undefined });
+      setupMocksWithProfile(mockProfile);
+      renderProfileSection(queryClient);
+
+      const lastCall = mockRegisterFooter.mock.calls[mockRegisterFooter.mock.calls.length - 1];
+      const footerContent = lastCall[0] as React.ReactElement;
+      const { getByText: getFooterText } = render(footerContent);
+
+      await act(async () => {
+        fireEvent.click(getFooterText('Edit'));
+      });
+
+      const fileInput = document.getElementById('avatar-upload-input') as HTMLInputElement;
+      const bigData = new Uint8Array(5 * 1024 * 1024 + 1);
+      const bigFile = new File([bigData], 'big.png', { type: 'image/png' });
+      await act(async () => {
+        fireEvent.change(fileInput, { target: { files: [bigFile] } });
+      });
+
+      expect(mockToast.error).toHaveBeenCalledWith('File size must be less than 5MB', { title: 'File Too Large' });
+    });
+
+    it('removes avatar when remove button is clicked', async () => {
+      const mockProfile = createMockUserProfile({ avatar: 'https://example.com/avatar.png' });
+      setupMocksWithProfile(mockProfile);
+      mockRemoveAvatarMutate.mockResolvedValue({});
+
+      renderProfileSection(queryClient);
+
+      const lastCall = mockRegisterFooter.mock.calls[mockRegisterFooter.mock.calls.length - 1];
+      const footerContent = lastCall[0] as React.ReactElement;
+      const { getByText: getFooterText } = render(footerContent);
+
+      await act(async () => {
+        fireEvent.click(getFooterText('Edit'));
+      });
+
+      const removeButton = document.querySelector('button.bg-red-500') as HTMLButtonElement | null;
+      expect(removeButton).not.toBeNull();
+      await act(async () => {
+        fireEvent.click(removeButton as HTMLButtonElement);
+      });
+
+      await waitFor(() => {
+        expect(mockRemoveAvatarMutate).toHaveBeenCalled();
+        expect(mockToast.success).toHaveBeenCalledWith('Avatar removed successfully!', { title: 'Success' });
+      });
+    });
   });
 
   // ==========================================================================
@@ -1097,6 +1171,69 @@ describe('ProfileSection', () => {
 
       // Assert
       expect(mockRegisterFooter).toHaveBeenCalled();
+    });
+
+    it('saves profile changes and shows success toast', async () => {
+      const mockProfile = createMockUserProfile();
+      setupMocksWithProfile(mockProfile);
+      mockUpdateProfileMutate.mockResolvedValue({ data: { id: 'user-123' } });
+
+      renderProfileSection(queryClient);
+
+      const lastCall = mockRegisterFooter.mock.calls[mockRegisterFooter.mock.calls.length - 1];
+      const footerContent = lastCall[0] as React.ReactElement;
+      const { getByText: getFooterText, rerender } = render(footerContent);
+
+      await act(async () => {
+        fireEvent.click(getFooterText('Edit'));
+      });
+
+      const firstNameInput = await screen.findByPlaceholderText('Enter first name');
+      await waitFor(() => expect(firstNameInput).not.toBeDisabled());
+      fireEvent.change(firstNameInput, { target: { value: 'Jane' } });
+
+      const updatedFooterCall = mockRegisterFooter.mock.calls[mockRegisterFooter.mock.calls.length - 1];
+      rerender(updatedFooterCall[0] as React.ReactElement);
+
+      await act(async () => {
+        fireEvent.click(getFooterText('Update'));
+      });
+
+      await waitFor(() => {
+        expect(mockUpdateProfileMutate).toHaveBeenCalled();
+        expect(mockToast.success).toHaveBeenCalledWith('Profile updated successfully!', { title: 'Success' });
+      });
+    });
+
+    it('prevents save when DOB validation fails', async () => {
+      const mockProfile = createMockUserProfile();
+      setupMocksWithProfile(mockProfile);
+      vi.mocked(validateDOB).mockReturnValue('Invalid date');
+
+      renderProfileSection(queryClient);
+
+      const lastCall = mockRegisterFooter.mock.calls[mockRegisterFooter.mock.calls.length - 1];
+      const footerContent = lastCall[0] as React.ReactElement;
+      const { getByText: getFooterText, rerender } = render(footerContent);
+
+      await act(async () => {
+        fireEvent.click(getFooterText('Edit'));
+      });
+
+      const dobInput = await screen.findByTestId('date-field');
+      fireEvent.change(dobInput, { target: { value: '32-13-2025' } });
+
+      const updatedFooterCall = mockRegisterFooter.mock.calls[mockRegisterFooter.mock.calls.length - 1];
+      rerender(updatedFooterCall[0] as React.ReactElement);
+
+      await act(async () => {
+        fireEvent.click(getFooterText('Update'));
+      });
+
+      await waitFor(() => {
+        expect(mockUpdateProfileMutate).not.toHaveBeenCalled();
+        expect(mockToast.error).toHaveBeenCalledWith('Invalid date', { title: 'Invalid Date of Birth' });
+      });
     });
   });
 
@@ -1270,6 +1407,34 @@ describe('ProfileSection', () => {
 
       // Assert - should still have the same content
       expect(screen.getByText('First Name')).toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================================
+  // Avatar URL Safety Tests
+  // ==========================================================================
+
+  describe('Avatar URL Safety', () => {
+    it('clears unsafe avatar URLs', () => {
+      const mockProfile = createMockUserProfile({ avatar: 'javascript:alert(1)' });
+      setupMocksWithProfile(mockProfile);
+      vi.mocked(useCurrentUser).mockReturnValue({ ...mockCurrentUser, avatar: undefined });
+
+      renderProfileSection(queryClient);
+
+      const avatarImg = screen.getByAltText('Profile') as HTMLImageElement;
+      expect(avatarImg.getAttribute('src')).toBeNull();
+    });
+
+    it('clears cross-origin blob avatar URLs', () => {
+      const mockProfile = createMockUserProfile({ avatar: 'blob:https://evil.com/123' });
+      setupMocksWithProfile(mockProfile);
+      vi.mocked(useCurrentUser).mockReturnValue({ ...mockCurrentUser, avatar: undefined });
+
+      renderProfileSection(queryClient);
+
+      const avatarImg = screen.getByAltText('Profile') as HTMLImageElement;
+      expect(avatarImg.getAttribute('src')).toBe('blob:https://evil.com/123');
     });
   });
 });

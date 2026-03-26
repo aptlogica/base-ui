@@ -25,7 +25,6 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.config.*',
         '**/dist/**',
-        '**/sdk/**',
         'src/coverage-vitest/**',
         'src/types/**',
         'src/**/types/**',

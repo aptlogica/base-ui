@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -159,6 +159,137 @@ describe('HeaderWorkspaceDropdown', () => {
 
   it('shows a Read only tag when workspace or base is read-only', () => {
     baseAccessState.isBaseReadOnly = () => true;
+    renderWithPath('/homepage');
+
+    expect(screen.getByText('Read only')).toBeInTheDocument();
+  });
+
+  it('shows loading state when workspaces are null', async () => {
+    const user = userEvent.setup();
+    workspaceBusinessLogicState.workspaces = null;
+    renderWithPath('/homepage');
+
+    const triggerButtons = screen.getAllByRole('button', { name: /alpha workspace/i });
+    await user.click(triggerButtons[0]);
+
+    expect(screen.getByText('Loading workspaces...')).toBeInTheDocument();
+  });
+
+  it('shows empty state and hides create button when user cannot create', async () => {
+    const user = userEvent.setup();
+    workspaceBusinessLogicState.workspaces = [];
+    workspaceAccessState.canCreateWorkspace = () => false;
+    renderWithPath('/homepage');
+
+    const triggerButtons = screen.getAllByRole('button', { name: /alpha workspace/i });
+    await user.click(triggerButtons[0]);
+
+    expect(screen.getByText('No workspaces found')).toBeInTheDocument();
+    expect(screen.queryByText(/create workspace/i)).not.toBeInTheDocument();
+  });
+
+  it('opens create workspace modal from dropdown', async () => {
+    const user = userEvent.setup();
+    workspaceBusinessLogicState.setShowCreateWorkspace = vi.fn();
+    renderWithPath('/homepage');
+
+    const triggerButtons = screen.getAllByRole('button', { name: /alpha workspace/i });
+    await user.click(triggerButtons[0]);
+    await user.click(screen.getByText(/create workspace/i));
+
+    expect(workspaceBusinessLogicState.setShowCreateWorkspace).toHaveBeenCalledWith(true);
+  });
+
+  it('closes dropdown on outside click', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithPath('/homepage');
+
+    const triggerButtons = screen.getAllByRole('button', { name: /alpha workspace/i });
+    await user.click(triggerButtons[0]);
+
+    const dropdown = container.querySelector('[data-workspace-dropdown]');
+    expect(dropdown).not.toHaveClass('pointer-events-none');
+
+    fireEvent.mouseDown(document.body);
+    expect(dropdown).toHaveClass('pointer-events-none');
+  });
+
+  it('shows access level badge for non-owner roles', async () => {
+    const user = userEvent.setup();
+    workspaceBusinessLogicState.workspaces = [
+      { id: 'w1', title: 'Alpha Workspace', access_level: 'maintainer' },
+    ];
+    workspaceBusinessLogicState.selectedWorkspaceId = 'w1';
+    workspaceBusinessLogicState.selectedWorkspace = workspaceBusinessLogicState.workspaces[0];
+
+    renderWithPath('/homepage');
+    const triggerButtons = screen.getAllByRole('button', { name: /alpha workspace/i });
+    await user.click(triggerButtons[0]);
+
+    expect(screen.getByText('Workspace Maintainer')).toBeInTheDocument();
+  });
+
+  it('selects the first workspace when no selection exists', async () => {
+    workspaceBusinessLogicState.workspaces = [
+      { id: 'w1', title: 'Alpha Workspace', access_level: 'owner' },
+      { id: 'w2', title: 'Beta Workspace', access_level: 'maintainer' },
+    ];
+    workspaceBusinessLogicState.selectedWorkspaceId = null;
+    workspaceBusinessLogicState.selectedWorkspace = null;
+    workspaceBusinessLogicState.setSelectedWorkspace = vi.fn();
+    navigationStoreState.setWorkspace = vi.fn();
+
+    renderWithPath('/homepage');
+
+    await waitFor(() => {
+      expect(workspaceBusinessLogicState.setSelectedWorkspace).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'w1' })
+      );
+      expect(navigationStoreState.setWorkspace).toHaveBeenCalledWith('w1');
+    });
+  });
+
+  it('falls back to first workspace when selected id is missing', async () => {
+    workspaceBusinessLogicState.workspaces = [
+      { id: 'w1', title: 'Alpha Workspace', access_level: 'owner' },
+    ];
+    workspaceBusinessLogicState.selectedWorkspaceId = 'missing';
+    workspaceBusinessLogicState.selectedWorkspace = null;
+    workspaceBusinessLogicState.setSelectedWorkspace = vi.fn();
+    navigationStoreState.setWorkspace = vi.fn();
+
+    renderWithPath('/homepage');
+
+    await waitFor(() => {
+      expect(workspaceBusinessLogicState.setSelectedWorkspace).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'w1' })
+      );
+      expect(navigationStoreState.setWorkspace).toHaveBeenCalledWith('w1');
+    });
+  });
+
+  it('renders base access badge styling in dropdown list', async () => {
+    const user = userEvent.setup();
+    workspaceBusinessLogicState.workspaces = [
+      { id: 'w1', title: 'Alpha Workspace', access_level: 'base' },
+    ];
+    workspaceBusinessLogicState.selectedWorkspaceId = 'w1';
+    workspaceBusinessLogicState.selectedWorkspace = workspaceBusinessLogicState.workspaces[0];
+
+    renderWithPath('/homepage');
+
+    const triggerButtons = screen.getAllByRole('button', { name: /alpha workspace/i });
+    await user.click(triggerButtons[0]);
+
+    const badge = screen.getByText('Base Access');
+    expect(badge.className).toContain('bg-blue-50');
+    expect(badge.className).toContain('text-blue-700');
+  });
+
+  it('shows Read only tag when workspace is read-only', () => {
+    workspaceAccessState.isWorkspaceReadOnly = () => true;
+    baseAccessState.isBaseReadOnly = () => false;
+
     renderWithPath('/homepage');
 
     expect(screen.getByText('Read only')).toBeInTheDocument();
