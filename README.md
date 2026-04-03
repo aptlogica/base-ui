@@ -10,7 +10,7 @@
 
 ## Overview
 
-**SereniBase UI** is a professional-grade open source web dashboard and admin UI framework built with modern web technologies. This comprehensive admin panel framework and no-code admin panel serves as an enterprise alternative to Airtable and Notion, providing intuitive data management capabilities through an open source dashboard and open source ui dashboard with advanced plugin architecture, extensive field types, and collaborative features for teams and organizations, designed as a flexible web admin interface for data-heavy teams.
+**Sereni Base UI** is an open-source UI component library built with TypeScript, designed to help developers create modern, scalable, and consistent web applications faster. It offers a collection of reusable, customizable, and developer-friendly components that simplify frontend development while maintaining flexibility for building unique design systems. With a strong emphasis on reusability and customization, Sereni Base UI allows teams to design interfaces that match their brand identity while following modern UI best practices. It supports rapid development of responsive applications, enabling smoother collaboration between designers and developers.
 
 ## Key Features
 
