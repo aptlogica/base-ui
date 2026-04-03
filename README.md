@@ -120,7 +120,7 @@ See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
 ## License
 
-MIT License. Copyright (c) 2026 Aptlogica Technologies.
+MIT License. Copyright (c) 2026 Aptlogica Technologies Private Limited.
 
 ---
 
