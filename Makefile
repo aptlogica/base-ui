@@ -14,9 +14,34 @@ NODE_VERSION := $(shell node --version 2>/dev/null || echo "unknown")
 
 ##@ Help
 help: ## Display this help message
-	@awk 'BEGIN {FS = ":.*##"; printf "\n\033[1m%s\033[0m\n", "Usage:"}' $(MAKEFILE_LIST)
-	@awk 'BEGIN {FS = ":.*?##"; printf "  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
-	@awk 'BEGIN {FS = ":.*##"; printf "\n\033[1m%s\033[0m\n", "Targets:"}' $(MAKEFILE_LIST)
+	@echo ""
+	@echo "Usage: make <target>"
+	@echo ""
+	@echo "Available Targets:"
+	@echo "  setup              - Install development dependencies"
+	@echo "  install            - Alias for setup"
+	@echo "  dev                - Start development server"
+	@echo "  dev-https          - Start development server with HTTPS"
+	@echo "  preview            - Preview production build locally"
+	@echo "  storybook          - Start Storybook development server"
+	@echo "  build              - Build for production"
+	@echo "  build-storybook    - Build Storybook for production"
+	@echo "  test               - Run tests"
+	@echo "  test-watch         - Run tests in watch mode"
+	@echo "  test-ui            - Run tests with UI"
+	@echo "  test-coverage      - Run tests with coverage report"
+	@echo "  test-e2e           - Run end-to-end tests"
+	@echo "  test-e2e-headed    - Run E2E tests with browser UI"
+	@echo "  test-e2e-debug     - Debug E2E tests"
+	@echo "  lint               - Run ESLint"
+	@echo "  lint-fix           - Run ESLint with auto-fix"
+	@echo "  format             - Format code with Prettier"
+	@echo "  format-check       - Check if code is formatted"
+	@echo "  type-check         - Run TypeScript type checking"
+	@echo "  clean              - Clean build artifacts"
+	@echo "  docker             - Build Docker image"
+	@echo "  docker-dev         - Run Docker in development mode"
+	@echo ""
 
 ##@ Development
 setup: ## Install development dependencies and setup pre-commit hooks
