@@ -695,8 +695,8 @@ describe('KanbanCard Component', () => {
         fireEvent.error(img);
       }
 
-      // Should show placeholder icon after error
-      expect(container.querySelector('.lucide-image')).toBeInTheDocument();
+      // Should not show any image after error (no placeholder)
+      expect(container.querySelector('img')).not.toBeInTheDocument();
     });
   });
 
@@ -978,7 +978,7 @@ describe('KanbanCard Component', () => {
 
       // Should render the image
       const img = container.querySelector('img');
-      expect(img || container.querySelector('.lucide-image')).toBeInTheDocument();
+      expect(img).toBeInTheDocument();
     });
 
     it('should detect images by mime type', () => {
@@ -1016,8 +1016,8 @@ describe('KanbanCard Component', () => {
         />
       );
 
-      // Should show placeholder instead of image
-      expect(container.querySelector('.lucide-image')).toBeInTheDocument();
+      // Should not render any image when attachments are non-image
+      expect(container.querySelector('img')).not.toBeInTheDocument();
     });
 
     it('should handle empty attachment array', () => {
@@ -1034,7 +1034,7 @@ describe('KanbanCard Component', () => {
         />
       );
 
-      expect(container.querySelector('.lucide-image')).toBeInTheDocument();
+      expect(container.querySelector('img')).not.toBeInTheDocument();
     });
 
     it('should use thumbnail_url when available', () => {
