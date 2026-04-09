@@ -3,7 +3,7 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { memo, useMemo, useState, useEffect } from 'react';
-import { Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getFieldTypeIconWithMargin, getRelationTypeFromField } from '../../../../types/fieldTypes';
 import { GridColumn } from '../../../GridViewPlugin/types/grid.types';
 import { FieldDisplay } from '../../../../components/shared/FieldDisplay';
@@ -246,9 +246,9 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
         />
       )}
 
-      {/* Card Image - Always show at top: images if available, otherwise placeholder */}
-      <div className="mb-3 -mx-4 border-b relative">
-        {getImageUrl && !imageError && allImages.length > 0 ? (
+      {/* Card Image - Only show if images are available */}
+      {getImageUrl && !imageError && allImages.length > 0 && (
+        <div className="mb-3 -mx-4 border-b relative">
           <div className="relative">
             <img
               src={getImageUrl}
@@ -319,15 +319,11 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
               </div>
             )}
           </div>
-        ) : (
-          <div className="w-full h-56 bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 rounded-tl-2xl rounded-tr-2xl relative overflow-hidden flex items-center justify-center">
-            <ImageIcon className="w-8 h-8 text-gray-400" />
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Card Fields - Title will now display like other fields */}
-      <div className="space-y-4">
+      <div className="space-y-4 pt-3">
         {detailCols.map(col => {
           // Include links fields - they can be displayed using FieldDisplay (like Gallery)
 
