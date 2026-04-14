@@ -19,7 +19,7 @@ COPY . .
 RUN npm run build
 
 # ---------- Runtime stage ----------
-FROM nginx:1.29.4-alpine AS runner
+FROM nginx:1.29.7-alpine AS runner
 
 # Replace default server config with SPA-friendly fallback on port 5050 and log to stdout/stderr
 RUN printf '%s\n' 'server {' '    listen 5050;' '    server_name _;' '' '    access_log /dev/stdout;' '    error_log /dev/stderr warn;' '' '    root /usr/share/nginx/html;' '    index index.html;' '' '    location / {' '        try_files $uri $uri/ /index.html;' '    }' '}' > /etc/nginx/conf.d/default.conf
