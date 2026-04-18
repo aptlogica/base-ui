@@ -254,13 +254,16 @@ export const Table: React.FC<TableProps> = ({
     handleUpdateFilter: handleUpdateFilterFromHook,
     handleGroupByChange,
     handleSortChange,
+    handleColumnWidthChange,
     handleEnsureAllFieldsRegistered,
     handleFieldToggle,
     handleFieldOrderChange,
     updateViewConfigBackend,
+    localColumnWidths,
   } = useTableViewConfig({
     baseMeta,
     effectiveViewId,
+    tableId,
     columns,
     updateViewMutation: actions?.updateView,
     searchableColumns,
@@ -376,25 +379,33 @@ export const Table: React.FC<TableProps> = ({
   const [openColumnDropdownIndex, setOpenColumnDropdownIndex] = useState<number | null>(null);
   const dragPinnedStateRef = useRef<boolean | null>(null);
 
-  // Static column widths (no resize). Prefer view meta widths, else column.width, else 235.
+  // Column resize state
+  const [resizingColumnIndex, setResizingColumnIndex] = useState<number | null>(null);
+  const [liveColumnWidths, setLiveColumnWidths] = useState<number[] | null>(null);
+  const resizeStartRef = useRef<{ x: number; width: number } | null>(null);
+  const columnWidthsRef = useRef<number[]>([]);
+
+  // Column widths: live drag preview > localStorage > view meta > column.width > 235.
   const columnWidths = useMemo(() => {
-    return (visibleColumns || []).map((c) => {
+    return (visibleColumns || []).map((c, idx) => {
       const widthKey = String(c.id || c.key);
+      // 1. Live drag preview (highest priority during resize)
+      if (liveColumnWidths && liveColumnWidths[idx] != null) return liveColumnWidths[idx];
+      // 2. localStorage (user's saved overrides)
+      const fromLocal = (localColumnWidths ?? {})[widthKey] ?? (localColumnWidths ?? {})[c.key];
+      if (typeof fromLocal === 'number') return fromLocal;
+      // 3. view meta (backend)
       const fromView = viewConfigState.columnWidths?.[widthKey] ?? viewConfigState.columnWidths?.[c.key];
-
-      let width = 235;
-
-      if (typeof c.width === 'number') {
-        width = c.width;
-      }
-
-      if (typeof fromView === 'number') {
-        width = fromView;
-      }
-
-      return width;
+      if (typeof fromView === 'number') return fromView;
+      // 4. column.width (API)
+      if (typeof c.width === 'number') return c.width;
+      // 5. default
+      return 235;
     });
-  }, [visibleColumns, viewConfigState.columnWidths]);
+  }, [visibleColumns, viewConfigState.columnWidths, localColumnWidths, liveColumnWidths]);
+
+  // Keep columnWidthsRef in sync with the computed columnWidths
+  useEffect(() => { columnWidthsRef.current = columnWidths; }, [columnWidths]);
 
   // Keep only first visible column pinned by default (Noco-like behavior)
   const pinnedColumnIds = useMemo(() => {
@@ -724,6 +735,48 @@ export const Table: React.FC<TableProps> = ({
     }
   }, [canReorderColumns, handleColumnDragEndFromHook, visibleColumns, localFieldConfig, effectiveViewId, baseMeta, actions?.updateView, handleFieldOrderChange]);
 
+  // Column resize: start drag
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent, columnIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const currentWidths = columnWidthsRef.current;
+    setResizingColumnIndex(columnIndex);
+    resizeStartRef.current = {
+      x: e.clientX,
+      width: currentWidths[columnIndex] ?? 235,
+    };
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!resizeStartRef.current) return;
+      const delta = moveEvent.clientX - resizeStartRef.current.x;
+      const newWidth = Math.max(80, resizeStartRef.current.width + delta);
+      setLiveColumnWidths(prev => {
+        const base = prev ?? currentWidths;
+        const next = [...base];
+        next[columnIndex] = newWidth;
+        return next;
+      });
+    };
+
+    const handleMouseUp = (upEvent: MouseEvent) => {
+      if (!resizeStartRef.current) return;
+      const delta = upEvent.clientX - resizeStartRef.current.x;
+      const newWidth = Math.max(80, resizeStartRef.current.width + delta);
+      const column = visibleColumns[columnIndex];
+      if (column) {
+        handleColumnWidthChange(String(column.id || column.key), newWidth);
+      }
+      resizeStartRef.current = null;
+      setResizingColumnIndex(null);
+      setLiveColumnWidths(null);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [visibleColumns, handleColumnWidthChange]);
+
   // Wrapper for handleEditColumn to use hook's version
   const handleEditColumn = useCallback((col: ColumnConfig, index: number, event?: { target: HTMLElement }) => {
     handleEditColumnFromHook(col, index, event);
@@ -857,6 +910,14 @@ export const Table: React.FC<TableProps> = ({
               onOpenChange={handleDropdownOpenChange}
             />
           )}
+          {/* Column resize handle */}
+          <div
+            className={`absolute right-0 top-0 h-full w-1 cursor-col-resize z-10 transition-colors
+              ${resizingColumnIndex === index ? 'bg-primary' : 'hover:bg-primary/60 bg-transparent'}
+            `}
+            style={{ top: 0 }}
+            onMouseDown={(e) => handleResizeMouseDown(e, index)}
+          />
         </div>
       </div>
     );
@@ -878,7 +939,9 @@ export const Table: React.FC<TableProps> = ({
     openColumnDropdownIndex,
     canShowColumnDropdown,
     getColumnHeaderClassName,
-    setOpenColumnDropdownIndex
+    setOpenColumnDropdownIndex,
+    handleResizeMouseDown,
+    resizingColumnIndex,
   ]);
 
   const getEstimatedItemCount = useCallback(() => {
