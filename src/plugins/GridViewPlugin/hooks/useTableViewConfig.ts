@@ -8,6 +8,7 @@ import { parseFieldConfig } from '../../../utils/pluginUtils';
 import { filterValidSorts } from '../../../utils/sortUtils';
 import { GridColumn as ColumnConfig } from '../types/grid.types';
 import { SearchField } from '../../../hooks/useSearch';
+import { getColumnWidths, saveColumnWidths } from '../utils/columnWidthStorage';
 
 export type FilterType = { column: string; operator: string; value: string };
 export type GroupByItem = {
@@ -27,6 +28,7 @@ export interface ViewConfigState {
 interface UseTableViewConfigOptions {
   baseMeta?: Record<string, any>;
   effectiveViewId?: string;
+  tableId?: string;
   columns: ColumnConfig[];
   updateViewMutation?: any;
   searchableColumns: ColumnConfig[];
@@ -36,6 +38,7 @@ interface UseTableViewConfigOptions {
 export function useTableViewConfig({
   baseMeta,
   effectiveViewId,
+  tableId,
   columns,
   updateViewMutation,
   searchableColumns,
@@ -63,6 +66,17 @@ export function useTableViewConfig({
 
   // Local field configuration state
   const [localFieldConfig, setLocalFieldConfig] = useState<any[]>([]);
+
+  // Local column widths from localStorage (user overrides)
+  const [localColumnWidths, setLocalColumnWidths] = useState<Record<string, number>>({});
+
+  // Load column widths from localStorage when table/view changes
+  useEffect(() => {
+    if (tableId && effectiveViewId) {
+      const stored = getColumnWidths(tableId, effectiveViewId);
+      setLocalColumnWidths(stored);
+    }
+  }, [tableId, effectiveViewId]);
 
   // Helper to parse/normalize viewConfig/meta
   const getConfigObj = useCallback((config: any) => {
@@ -257,6 +271,18 @@ export function useTableViewConfig({
     }
   }, [viewConfigState, updateViewConfigBackend, isReadOnly]);
 
+  // Update a single column width and persist to localStorage only (not backend)
+  const handleColumnWidthChange = useCallback((columnId: string, width: number) => {
+    const clampedWidth = Math.max(80, width); // enforce minimum
+    setLocalColumnWidths(prev => {
+      const next = { ...prev, [columnId]: clampedWidth };
+      if (tableId && effectiveViewId) {
+        saveColumnWidths(tableId, effectiveViewId, next);
+      }
+      return next;
+    });
+  }, [tableId, effectiveViewId]);
+
   // Ensure all fields are registered in fieldConfig when FieldsPopover opens
   const handleEnsureAllFieldsRegistered = useCallback(async () => {
     const existing = Array.isArray(baseMeta?.fieldConfig) ? baseMeta.fieldConfig : [];
@@ -392,9 +418,11 @@ export function useTableViewConfig({
     handleUpdateFilter,
     handleGroupByChange,
     handleSortChange,
+    handleColumnWidthChange,
     handleEnsureAllFieldsRegistered,
     handleFieldToggle,
     handleFieldOrderChange,
     updateViewConfigBackend,
+    localColumnWidths,
   };
 }
