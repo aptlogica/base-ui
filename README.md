@@ -16,6 +16,9 @@
 <a href="https://github.com/aptlogica/base-ui/actions/workflows/ci.yml"><img src="https://github.com/aptlogica/base-ui/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 <a href="https://github.com/aptlogica/base-ui/actions/workflows/github-code-scanning/codeql"><img src="https://github.com/aptlogica/base-ui/actions/workflows/github-code-scanning/codeql/badge.svg" alt="CodeQL"></a>
 <a href="https://sonar.aptlogica.com/dashboard?id=aptlogica_base-ui_6f26c5b2-1866-41a0-b97a-867b45ceecdb"><img src="https://sonar.aptlogica.com/api/project_badges/measure?project=aptlogica_base-ui_6f26c5b2-1866-41a0-b97a-867b45ceecdb&metric=alert_status&token=sqb_fbb5149b91736778a58c20fec7d4a1400f60ca51" alt="Quality Gate Status"></a>
+<a href="https://sonarcloud.io/dashboard?id=aptlogica_base-ui"><img src="https://sonarcloud.io/api/project_badges/measure?project=aptlogica_base-ui&metric=alert_status" alt="Quality Gate"></a>
+<a href="https://sonarcloud.io/dashboard?id=aptlogica_base-ui"><img src="https://sonarcloud.io/api/project_badges/measure?project=aptlogica_base-ui&metric=coverage" alt="Coverage"></a>
+<a href="https://sonarcloud.io/dashboard?id=aptlogica_base-ui"><img src="https://sonarcloud.io/api/project_badges/measure?project=aptlogica_base-ui&metric=security_rating" alt="Security"></a>
 </p>
 
 <p align="center">
@@ -49,10 +52,18 @@
 npm install
 ```
 
+**Note:** This repository includes a local development copy of the SereniBase SDK tarball (`serenibase-sdk-1.0.0.tgz`) which is used for local development and in the `Dockerfile`. For production or when consuming `base-ui` from other projects, prefer installing the published package from npm:
+
+```bash
+npm install serenibase-sdk
+```
+
 ## Configuration
 
 See `.env.example` for environment variables and configuration options.
 
+
+**Hosted Storybook:** There is currently no public Storybook URL linked in this README. Consider hosting Storybook (e.g., `https://storybook.serenibase.com`) and adding the link here so contributors can preview components without cloning the repo.
 ## Quick Start
 
 ```bash
@@ -131,6 +142,24 @@ npm run check-all
 ## Security
 
 See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
+
+## Plugin Architecture (Stub)
+
+base-ui exposes a plugin API to register custom field types, view layouts and toolbar actions. The API is evolving; this stub gives a minimal example of how plugin registration may look.
+
+```typescript
+// Plugin registration (API subject to change)
+import { registerPlugin } from '@serenibase/ui-plugins'
+
+registerPlugin({
+	type: 'field',
+	name: 'my-custom-field',
+	component: MyFieldComponent,
+	schema: { /* JSON schema for field config */ }
+})
+```
+
+For more information and examples, see `docs/plugin-system.md` (starter docs included in this repository).
 
 ## License
 
