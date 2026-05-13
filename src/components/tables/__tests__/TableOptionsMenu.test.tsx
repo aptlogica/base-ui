@@ -5,7 +5,7 @@ import React from 'react';
 import TableOptionsMenu from '../TableOptionsMenu';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
 
-const noop = (): void => {};
+const noop = (): void => { };
 
 const TEST_ID = {
   POPOVER_MENU: 'popover-menu',
@@ -22,17 +22,10 @@ const TEST_ID = {
 } as const;
 
 const mockMutateAsync = vi.fn();
-const mockHandleTableDeletion = vi.fn();
 
 vi.mock('../../../hooks/useApi', () => ({
   useUpdateTable: () => ({
     mutateAsync: mockMutateAsync,
-  }),
-}));
-
-vi.mock('../../../hooks/useNavigationActions', () => ({
-  useNavigationActions: () => ({
-    handleTableDeletion: mockHandleTableDeletion,
   }),
 }));
 
@@ -340,7 +333,6 @@ describe('TableOptionsMenu', () => {
       await user.click(screen.getByTestId(TEST_ID.DELETE_MODAL_CONFIRM));
 
       await waitFor(() => {
-        expect(mockHandleTableDeletion).toHaveBeenCalledWith('table-1');
         expect(onDelete).toHaveBeenCalled();
       });
     });
@@ -379,13 +371,12 @@ describe('TableOptionsMenu', () => {
       const user = userEvent.setup();
       const alertSpy = vi.spyOn(global, 'alert').mockImplementation(noop);
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(noop);
-      mockHandleTableDeletion.mockImplementation(() => {
-        throw new Error('Navigation error');
-      });
+      const onDelete = vi.fn().mockRejectedValue(new Error('Forbidden'));
 
       render(
         <TableOptionsMenu
           {...defaultProps}
+          onDelete={onDelete}
           table={{ ...defaultTable, title: 'Table Title' }}
         />
       );
@@ -446,13 +437,12 @@ describe('TableOptionsMenu', () => {
       const user = userEvent.setup();
       const alertSpy = vi.spyOn(global, 'alert').mockImplementation(noop);
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(noop);
-      mockHandleTableDeletion.mockImplementation(() => {
-        throw new Error('Err');
-      });
+      const onDelete = vi.fn().mockRejectedValue(new Error('Err'));
 
       render(
         <TableOptionsMenu
           {...defaultProps}
+          onDelete={onDelete}
           table={{ id: 't1', name: 'Fallback Name', base_id: 'b1' }}
         />
       );

@@ -163,8 +163,8 @@ describe('Percent Component', () => {
             });
         });
 
-        it('should reset to previous valid value if input is > 100', async () => {
-            const { rerender } = render(<Percent value={50} onChange={mockOnChange} />);
+        it('should allow values greater than 100 on blur', async () => {
+            render(<Percent value={50} onChange={mockOnChange} />);
 
             fireEvent.click(screen.getByRole('button', { name: /edit percent value/i }));
             const input = await screen.findByRole('textbox');
@@ -173,27 +173,12 @@ describe('Percent Component', () => {
             await userEvent.type(input, '101');
             fireEvent.blur(input);
 
-            // In Percent.tsx, it resets to prevValueRef.current if out of 0-100 range
             await waitFor(() => {
-                expect(mockOnChange).toHaveBeenCalledWith(50);
-            });
-            
-            // After onChange is called, the parent component would pass the updated value prop
-            // Simulate that by rerendering with the reset value
-            rerender(<Percent value={50} onChange={mockOnChange} />);
-            
-            // Component should show the reset value back
-            await waitFor(() => {
-                const inputAfter = screen.queryByRole('textbox') as HTMLInputElement | null;
-                if (inputAfter) {
-                    expect(inputAfter).toHaveValue('50');
-                } else {
-                    expect(screen.getByText('50%')).toBeInTheDocument();
-                }
+                expect(mockOnChange).toHaveBeenCalledWith(101);
             });
         });
 
-        it('should reset to previous valid value if input is < 0', async () => {
+        it('should allow negative values on blur', async () => {
             render(<Percent value={50} onChange={mockOnChange} />);
 
             fireEvent.click(screen.getByText('50%'));
@@ -204,7 +189,7 @@ describe('Percent Component', () => {
             fireEvent.blur(input);
 
             await waitFor(() => {
-                expect(mockOnChange).toHaveBeenCalledWith(50);
+                expect(mockOnChange).toHaveBeenCalledWith(-5);
             });
         });
 

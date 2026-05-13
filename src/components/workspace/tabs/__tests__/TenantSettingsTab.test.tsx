@@ -145,14 +145,14 @@ describe('TenantSettingsTab', () => {
       expect(screen.getByRole('button', { name: /save changes/i })).toBeDisabled();
     });
 
-    it('disables save button when description is empty', async () => {
+    it('keeps save enabled when description is empty but name is valid', async () => {
       const user = userEvent.setup();
       render(<TenantSettingsTab workspaceId="workspace-1" />);
 
       const descInput = screen.getByTestId('organization-description');
       await user.clear(descInput);
 
-      expect(screen.getByRole('button', { name: /save changes/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /save changes/i })).toBeEnabled();
     });
 
     it('resets form when cancel is clicked with changes', async () => {

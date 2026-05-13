@@ -608,7 +608,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
               type="button"
               disabled={isSaveDisabled}
               onClick={handleSave}
-              className={`px-16 py-2 rounded-xl btn-primary ${isSaveDisabled ? 'opacity-60 cursor-not-allowed' : ''
+              className={`px-16 py-2 rounded-xl btn-primary ${isSaveDisabled ? 'btn-disabled' : ''
                 }`}
             >
               {submitLabel}

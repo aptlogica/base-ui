@@ -332,7 +332,7 @@ const LogIn: React.FC = () => {
 
 
       {/* Right Panel */}
-      <div className="hidden md:block relative overflow-hidden h-full bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url(/assets/login-bg.png)' }}>
+      <div className="hidden md:block relative overflow-hidden h-full bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url(/assets/login-bg.webp)' }}>
         <div className="absolute inset-0 bg-black/5"></div>
 
         {/* Content Container - Text and Image */}

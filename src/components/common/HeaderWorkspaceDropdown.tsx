@@ -18,19 +18,19 @@ const getAccessLevelBadgeClasses = (accessLevel: string | undefined): string => 
   if (!accessLevel) {
     return 'bg-gray-50 text-gray-700 border-gray-200';
   }
-  
+
   if (accessLevel === 'workspace-read' || accessLevel === 'base-read') {
     return 'bg-green-50 text-green-700 border-green-200';
   }
-  
+
   if (accessLevel === 'base') {
     return 'bg-blue-50 text-blue-700 border-blue-200';
   }
-  
+
   if (accessLevel === 'maintainer') {
     return 'bg-purple-50 text-purple-700 border-purple-200';
   }
-  
+
   return 'bg-gray-50 text-gray-700 border-gray-200';
 };
 
@@ -44,19 +44,6 @@ const HeaderWorkspaceDropdown: React.FC = () => {
 
   // Route-based visibility check
   const isRouteVisible = useComponentVisibility(COMPONENT_IDS.WORKSPACE_DROPDOWN);
-
-  // Update dropdown positioning when it opens
-  useEffect(() => {
-    if (workspaceDropdownOpen && buttonRef.current) {
-      // The dropdown uses fixed positioning, so we need to adjust it
-      const rect = buttonRef.current.getBoundingClientRect();
-      const dropdown = document.querySelector('[data-workspace-dropdown]') as HTMLElement;
-      if (dropdown) {
-        dropdown.style.top = `${rect.bottom + 8}px`;
-        dropdown.style.left = `${rect.left}px`;
-      }
-    }
-  }, [workspaceDropdownOpen]);
 
   // Outside click handler - exclude logo button
   useEffect(() => {
@@ -255,122 +242,125 @@ const HeaderWorkspaceDropdown: React.FC = () => {
         </button>
 
         {/* Workspace Dropdown */}
-        <div
-          ref={dropdownRef}
-          data-workspace-dropdown
-          className={`fixed top-0 left-3.5 w-96 bg-card border rounded-xl shadow-lg z-50 overflow-hidden transition-all duration-300 ease-in-out flex flex-col ${workspaceDropdownOpen
-            ? 'opacity-100 max-h-96 scale-100'
-            : 'opacity-0 max-h-0 scale-95 pointer-events-none'
-            }`}
-        >
-          <div className="flex flex-col" style={{ minHeight: '200px', maxHeight: '384px' }}>
-            {/* Workspaces Header */}
-            <div className="px-4 py-2 flex-shrink-0">
-              <div className="text-xs font-semibold text-primary tracking-wide">Workspaces</div>
-            </div>
+        {workspaceDropdownOpen && (
+          <div
+            ref={dropdownRef}
+            data-workspace-dropdown
+            className="fixed top-0 left-3.5 w-96 bg-card border rounded-xl shadow-lg z-50 overflow-hidden flex flex-col"
+            style={buttonRef.current ? {
+              top: `${buttonRef.current.getBoundingClientRect().bottom + 8}px`,
+              left: `${buttonRef.current.getBoundingClientRect().left}px`,
+            } : {}}
+          >
+            <div className="flex flex-col" style={{ minHeight: '200px', maxHeight: '384px' }}>
+              {/* Workspaces Header */}
+              <div className="px-4 py-2 flex-shrink-0">
+                <div className="text-xs font-semibold text-primary tracking-wide">Workspaces</div>
+              </div>
 
-            {/* Workspaces Section - scrollable */}
-            <div className="overflow-y-auto flex-1 min-h-0 p-2" >
-              {workspaces && Array.isArray(workspaces) && workspaces.length > 0 ? (
-                workspaces.map((workspace: any, index: number) => {
-                  const isSelected = (displayWorkspace?.id || selectedWorkspaceId) === workspace.id;
-                  const workspaceInitials = getInitials(
-                    workspace.title || workspace.name || workspace.slug || 'W'
-                  );
+              {/* Workspaces Section - scrollable */}
+              <div className="overflow-y-auto flex-1 min-h-0 p-2" >
+                {workspaces && Array.isArray(workspaces) && workspaces.length > 0 ? (
+                  workspaces.map((workspace: any, index: number) => {
+                    const isSelected = (displayWorkspace?.id || selectedWorkspaceId) === workspace.id;
+                    const workspaceInitials = getInitials(
+                      workspace.title || workspace.name || workspace.slug || 'W'
+                    );
 
-                  // Color mapping for workspace icons
-                  const colors = [
-                    'bg-purple-300',
-                    'bg-red-300',
-                    'bg-orange-300',
-                    'bg-blue-300',
-                    'bg-green-300',
-                  ];
-                  const textColors = [
-                    'text-purple-800',
-                    'text-red-800',
-                    'text-orange-800',
-                    'text-blue-800',
-                    'text-green-800',
-                  ];
-                  const iconColor = colors[index % colors.length];
-                  const textColor = textColors[index % textColors.length];
-                  return (
-                    <button
-                      key={workspace.id}
-                      type="button"
-                      aria-pressed={isSelected}
-                      className="w-full rounded-lg text-left p-1.5 hover:bg-gray-100 text-sm transition-all duration-200 cursor-pointer"
-                      onClick={() => handleWorkspaceClick(workspace)}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {/* Workspace Icon */}
-                        <div className={`w-10 h-10 ${iconColor} rounded-full flex items-center justify-center flex-shrink-0`}>
-                          <span className={`${textColor} text-center font-semibold text-[10px] text-base`}>
-                            {workspaceInitials}
-                          </span>
-                        </div>
+                    // Color mapping for workspace icons
+                    const colors = [
+                      'bg-purple-300',
+                      'bg-red-300',
+                      'bg-orange-300',
+                      'bg-blue-300',
+                      'bg-green-300',
+                    ];
+                    const textColors = [
+                      'text-purple-800',
+                      'text-red-800',
+                      'text-orange-800',
+                      'text-blue-800',
+                      'text-green-800',
+                    ];
+                    const iconColor = colors[index % colors.length];
+                    const textColor = textColors[index % textColors.length];
+                    return (
+                      <button
+                        key={workspace.id}
+                        type="button"
+                        aria-pressed={isSelected}
+                        className="w-full rounded-lg text-left p-1.5 hover:bg-gray-100 text-sm transition-all duration-200 cursor-pointer"
+                        onClick={() => handleWorkspaceClick(workspace)}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {/* Workspace Icon */}
+                          <div className={`w-10 h-10 ${iconColor} rounded-full flex items-center justify-center flex-shrink-0`}>
+                            <span className={`${textColor} text-center font-semibold text-[10px] text-base`}>
+                              {workspaceInitials}
+                            </span>
+                          </div>
 
-                        {/* Workspace Name */}
-                        <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                          <span className="font-semibold text-primary truncate flex-1 min-w-0">
-                            {workspace.title || workspace.name || workspace.slug || 'Untitled Workspace'}
-                          </span>
+                          {/* Workspace Name */}
+                          <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                            <span className="font-semibold text-primary truncate flex-1 min-w-0">
+                              {workspace.title || workspace.name || workspace.slug || 'Untitled Workspace'}
+                            </span>
 
-                          {/* Right side: Badge and Status Indicator */}
-                          <div className="flex items-center gap-2 flex-shrink-0 pr-2">
-                            {/* Access Level Badge - Don't show for owner/co-owner */}
-                            {workspace.access_level && workspace.access_level !== 'owner' && workspace.access_level !== 'co-owner' && (
-                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getAccessLevelBadgeClasses(workspace.access_level)}`}>
-                                {getRoleLabel(workspace.access_level)}
-                              </span>
-                            )}
+                            {/* Right side: Badge and Status Indicator */}
+                            <div className="flex items-center gap-2 flex-shrink-0 pr-2">
+                              {/* Access Level Badge - Don't show for owner/co-owner */}
+                              {workspace.access_level && workspace.access_level !== 'owner' && workspace.access_level !== 'co-owner' && (
+                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getAccessLevelBadgeClasses(workspace.access_level)}`}>
+                                  {getRoleLabel(workspace.access_level)}
+                                </span>
+                              )}
 
-                            {/* Status Indicator - only for selected */}
-                            {isSelected && (
-                              <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100"></div>
-                            )}
+                              {/* Status Indicator - only for selected */}
+                              {isSelected && (
+                                <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100"></div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </button>
-                  );
-                })
-              ) : (
-                <div className="px-4 py-8 text-center text-secondary text-sm">
-                  {workspaces === null ? (
-                    <div>Loading workspaces...</div>
-                  ) : (
-                    <div>No workspaces found</div>
-                  )}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="px-4 py-8 text-center text-secondary text-sm">
+                    {workspaces === null ? (
+                      <div>Loading workspaces...</div>
+                    ) : (
+                      <div>No workspaces found</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Separator - only show if there are workspaces and user can create */}
+              {workspaces && workspaces.length > 0 && canCreateWorkspace() && (
+                <div className="border-t flex-shrink-0"></div>
+              )}
+
+              {/* Create Workspace Button - only show if user has permission */}
+              {canCreateWorkspace() && (
+                <div className="p-2 flex-shrink-0">
+                  <button
+                    className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-gray-100 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1"
+                    onClick={() => {
+                      setShowCreateWorkspace(true);
+                      setWorkspaceDropdownOpen(false);
+                    }}
+                  >
+                    <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
+                      <Plus className="w-5 h-5 text-primary" />
+                    </div>
+                    <span>Create Workspace</span>
+                  </button>
                 </div>
               )}
             </div>
-
-            {/* Separator - only show if there are workspaces and user can create */}
-            {workspaces && workspaces.length > 0 && canCreateWorkspace() && (
-              <div className="border-t flex-shrink-0"></div>
-            )}
-
-            {/* Create Workspace Button - only show if user has permission */}
-            {canCreateWorkspace() && (
-              <div className="p-2 flex-shrink-0">
-                <button
-                  className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-gray-100 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1"
-                  onClick={() => {
-                    setShowCreateWorkspace(true);
-                    setWorkspaceDropdownOpen(false);
-                  }}
-                >
-                  <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
-                    <Plus className="w-5 h-5 text-primary" />
-                  </div>
-                  <span>Create Workspace</span>
-                </button>
-              </div>
-            )}
           </div>
-        </div>
+        )}
 
         {/* Create Workspace Modal */}
         <CreateWorkspaceModal

@@ -113,16 +113,15 @@ describe('HeaderWorkspaceDropdown', () => {
     const { container } = renderWithPath('/homepage');
 
     const dropdown = container.querySelector('[data-workspace-dropdown]');
-    expect(dropdown).not.toBeNull();
-    expect(dropdown).toHaveClass('pointer-events-none');
+    expect(dropdown).toBeNull();
 
     const triggerButtons = screen.getAllByRole('button', { name: /alpha workspace/i });
     await user.click(triggerButtons[0]);
-    expect(dropdown).not.toHaveClass('pointer-events-none');
+    expect(container.querySelector('[data-workspace-dropdown]')).not.toBeNull();
 
     const triggerButtonsAfterOpen = screen.getAllByRole('button', { name: /alpha workspace/i });
     await user.click(triggerButtonsAfterOpen[0]);
-    expect(dropdown).toHaveClass('pointer-events-none');
+    expect(container.querySelector('[data-workspace-dropdown]')).toBeNull();
   });
 
   it('selects a workspace on the homepage without navigating', async () => {
@@ -208,10 +207,10 @@ describe('HeaderWorkspaceDropdown', () => {
     await user.click(triggerButtons[0]);
 
     const dropdown = container.querySelector('[data-workspace-dropdown]');
-    expect(dropdown).not.toHaveClass('pointer-events-none');
+    expect(container.querySelector('[data-workspace-dropdown]')).not.toBeNull();
 
     fireEvent.mouseDown(document.body);
-    expect(dropdown).toHaveClass('pointer-events-none');
+    expect(container.querySelector('[data-workspace-dropdown]')).toBeNull();
   });
 
   it('shows access level badge for non-owner roles', async () => {
@@ -295,4 +294,5 @@ describe('HeaderWorkspaceDropdown', () => {
     expect(screen.getByText('Read only')).toBeInTheDocument();
   });
 });
+
 

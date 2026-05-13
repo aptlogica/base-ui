@@ -85,8 +85,7 @@ const validatePercent = (val: string, required: boolean): string | null => {
   if (!val) return null;
 
   const numValue = Number.parseFloat(val);
-  if (Number.isNaN(numValue)) return 'Please enter a valid percentage';
-  if (numValue < 0 || numValue > 100) return 'Percentage must be between 0 and 100';
+  if (Number.isNaN(numValue)) return 'Please enter a valid number';
 
   return null;
 };
@@ -191,10 +190,7 @@ const usePercentState = ({
 
     const numValue = Number.parseFloat(localValue);
     if (Number.isFinite(numValue)) {
-      if (numValue < 0 || numValue > 100) {
-        resetToPreviousValue();
-        return;
-      }
+      // Accept any finite number (negative, >100, etc.) - no range restrictions
       handleValidInput(numValue);
     } else {
       resetToPreviousValue();
@@ -274,6 +270,7 @@ export const Percent: React.FC<PercentProps> = ({
   };
 
   const percentValue = getPercentValue(value, defaultValue);
+  // For progress display: clamp to 0-100 (values >100 show full bar, negative values show empty bar)
   const progress = Math.max(0, Math.min(100, percentValue));
   const inputClassName = getInputClassName(error, showError, disabled, readOnly);
   const displayClassName = getDisplayClassName(localValue, disabled, readOnly);
@@ -282,13 +279,14 @@ export const Percent: React.FC<PercentProps> = ({
 
   const renderProgressMode = () => {
     const progressBar = (
-      <div className="w-full p-3 flex align-center justify-center">
+      <div className="w-full p-3 flex gap-3 items-center justify-center">
         <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
           <div
             className={`h-1 rounded-full ${getProgressColorClass(progressColor)}`}
             style={{ width: `${progress}%` }}
           />
         </div>
+         <span>{localValue}</span>
       </div>
     );
 

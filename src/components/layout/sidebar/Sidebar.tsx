@@ -354,7 +354,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       );
     }
 
-    return sortedTables.map(renderTableItem);
+    return sortedTables.map((element, index) => renderTableItem(element, index));
   };
 
   const renderFlyoutContent = () => (

@@ -46,9 +46,19 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
   // Get selected workspace details from workspaces list
   const selectedWorkspace = workspaces.find((ws: any) => ws.id === selectedWorkspaceId);
 
-  // Set default selected workspace on load
+  // Keep the local tab selection valid.
+  // If the selected workspace disappears after deletion/refetch, fall back to the first remaining workspace.
   useEffect(() => {
-    if (workspaces.length > 0 && !selectedWorkspaceId) {
+    if (workspaces.length === 0) {
+      if (selectedWorkspaceId) {
+        setSelectedWorkspaceId('');
+      }
+      return;
+    }
+
+    const hasSelectedWorkspace = !!selectedWorkspaceId && workspaces.some((ws: any) => ws.id === selectedWorkspaceId);
+
+    if (!selectedWorkspaceId || !hasSelectedWorkspace) {
       setSelectedWorkspaceId(workspaces[0].id);
     }
   }, [workspaces, selectedWorkspaceId]);
@@ -263,7 +273,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
                     {workspaceIcon.initials}
                   </span>
                 </div>
-                <span className="text-sm font-medium text-primary">
+                <span title={selectedWorkspace.title || selectedWorkspace.name} className="text-sm font-medium text-primary">
                   {selectedWorkspace.title || selectedWorkspace.name || 'Untitled Workspace'}
                 </span>
               </>
@@ -272,7 +282,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
                 <div className="w-8 h-8 bg-gray-400 border justify-center flex-shrink-0">
                   <span className="text-white text-sm">W</span>
                 </div>
-                <span className="text-sm font-medium text-gray-500">Select Workspace</span>
+                <span title="Select Workspace" className="text-sm font-medium text-gray-500">Select Workspace</span>
               </>
             )}
             <ChevronsUpDown className="w-4 h-4 text-gray-400 transition-transform flex-shrink-0" />
@@ -280,7 +290,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
 
           {/* Workspace Dropdown Menu */}
           {workspaceDropdownOpen && (
-            <div className="absolute top-full left-0 mt-2 w-80 bg-card border rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-2 w-96 bg-card border rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
               <div className="p-2 space-y-1">
                 {workspaces.length === 0 ? (
                   <div className="px-4 py-8 text-center text-gray-500 text-sm">
@@ -310,14 +320,14 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
                         className={`w-full space-y-1 flex items-center gap-3 px-3 py-1 rounded-xl text-left hover:bg-gray-100 transition-colors ${isSelected ? 'bg-gray-50' : ''
                           }`}
                       >
-                        <div className={`w-10 h-10 ${icon.color} justify-center flex-shrink-0`}>
+                        <div className={`w-10 h-10 ${icon.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
                           <span className="text-white text-sm">
                             {icon.initials}
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-900 truncate">
+                            <span title={ws.title || ws.name} className="text-sm font-medium text-gray-900 truncate">
                               {ws.title || ws.name || 'Untitled Workspace'}
                             </span>
 
