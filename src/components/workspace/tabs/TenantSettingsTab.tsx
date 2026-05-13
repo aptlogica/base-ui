@@ -48,11 +48,6 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
       return;
     }
 
-    if (!organizationDescription || organizationDescription.trim() === '') {
-      toast.error('Description is required');
-      return;
-    }
-
     if (!hasChanges) {
       toast.info('No changes to save');
       return;
@@ -149,7 +144,7 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
           </button>
           <button
             onClick={handleSave}
-            disabled={updateOrganizationMutation.isPending || !hasChanges || !organizationName.trim() || !organizationDescription.trim()}
+            disabled={updateOrganizationMutation.isPending || !hasChanges || !organizationName.trim()}
             className="px-6 py-2.5 bg-[var(--color-brand-600)] text-black rounded-xl hover:bg-[var(--color-brand-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {updateOrganizationMutation.isPending ? 'Saving...' : 'Save changes'}

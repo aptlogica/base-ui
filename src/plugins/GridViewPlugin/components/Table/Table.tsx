@@ -905,7 +905,7 @@ export const Table: React.FC<TableProps> = ({
     <div ref={tableContainerRef} className="w-full h-[calc(100vh-43px)] bg-background flex flex-col relative" >
       {/* Fixed Header - Toolbar */}
       <div //NOSONAR
-        className="sticky top-0 z-30 bg-muted border-b border-border/50" 
+        className="sticky top-0 z-30 bg-muted border-b border-border/50"
         onMouseDown={() => setActiveCell(null)}>
         <div className="flex items-center bg-background gap-2 px-4 py-2">
           {/* Desktop Layout - Hidden on mobile */}
@@ -971,8 +971,8 @@ export const Table: React.FC<TableProps> = ({
           <div className="bg-background w-full">
             {/* Sticky Table Header */}
             <div //NOSONAR
-              ref={headerRef} 
-              className="sticky top-0 z-20 w-full" 
+              ref={headerRef}
+              className="sticky top-0 z-20 w-full"
               onMouseDown={() => setActiveCell(null)}>
               <div
                 className="grid bg-background"
@@ -989,26 +989,26 @@ export const Table: React.FC<TableProps> = ({
                     ? 'group-hover:hidden'
                     : '';
                   return (
-                <div
-                  className="group flex-shrink-0 bg-gray-100 border-r border-b border-border/30 flex items-center justify-center"
-                  style={{ position: 'sticky', left: 0, zIndex: 25, width: '48px', minWidth: '48px', maxWidth: '48px', height: '35px', boxShadow: 'inset 1px 0 0 var(--color-border), 2px 0 4px -2px rgba(0,0,0,0.06)' }}
-                >
-                    {!isBaseReadOnly() && canUpdateRecord() && (
-                      <input
-                        type="checkbox"
-                        ref={selectAllCheckboxRef}
-                        className={`checkbox-primary-brand w-4 h-4 text-primary rounded-xl focus:ring-primary ${isAllRowsSelected ? '!grid' : '!hidden group-hover:!grid'}`}
-                        checked={isAllRowsSelected}
-                        onChange={(e) => handleSelectAll(e.target.checked)}
-                      />
-                    )}
-                    <span className={`text-xs font-medium text-tertiary ml-2 inline-block ${(isAllRowsSelected || isSomeRowsSelected) ? 'hidden' : hideHeaderNumberClass}`}>#</span>
-                  </div>
+                    <div
+                      className="group flex-shrink-0 bg-gray-100 border-r border-b border-border/30 flex items-center justify-center"
+                      style={{ position: 'sticky', left: 0, zIndex: 25, width: '48px', minWidth: '48px', maxWidth: '48px', height: '35px', boxShadow: 'inset 1px 0 0 var(--color-border), 2px 0 4px -2px rgba(0,0,0,0.06)' }}
+                    >
+                      {!isBaseReadOnly() && canUpdateRecord() && (
+                        <input
+                          type="checkbox"
+                          ref={selectAllCheckboxRef}
+                          className={`checkbox-primary-brand w-4 h-4 text-primary rounded-xl focus:ring-primary ${isAllRowsSelected ? '!grid' : '!hidden group-hover:!grid'}`}
+                          checked={isAllRowsSelected}
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                        />
+                      )}
+                      <span className={`text-xs font-medium text-tertiary ml-2 inline-block ${(isAllRowsSelected || isSomeRowsSelected) ? 'hidden' : hideHeaderNumberClass}`}>#</span>
+                    </div>
                   );
                 })()}
 
                 {/* Column headers */}
-                {visibleColumns.map(renderColumnHeader)}
+                {visibleColumns.map((element, index) => renderColumnHeader(element, index))}
 
                 {/* Add column button - only show if user can create columns and not read-only */}
                 {canCreateColumn() && !isBaseReadOnly() && (
@@ -1173,10 +1173,10 @@ export const Table: React.FC<TableProps> = ({
         <>
           <div //NOSONAR
             ref={backdropRef} className="fixed inset-0 z-50" onMouseDown={() => {
-            setEditModalOpen(false);
-            setEditColumn(null);
-            setEditColumnIndex(null);
-          }} />
+              setEditModalOpen(false);
+              setEditColumn(null);
+              setEditColumnIndex(null);
+            }} />
           <div ref={editModalRef} className="fixed z-50" style={{ top: editModalPosition.top, left: editModalPosition.left }}>
             <Suspense fallback={
               <div className="bg-background border rounded-xl shadow-lg p-8 min-w-[400px]">
@@ -1228,18 +1228,18 @@ export const Table: React.FC<TableProps> = ({
       <EditRecordModal
         isOpen={isEditRecordModalOpen}
         onClose={closeEditRecordModal}
-        onSuccess={() => { try { onRefresh?.(); } catch {} closeEditRecordModal(); }}
+        onSuccess={() => { try { onRefresh?.(); } catch { } closeEditRecordModal(); }}
         recordId={selectedRecordApiId}
         table={tableData?.model}
         fields={tableData?.columns || []}
         initialValues={buildInitialValuesForEdit({ recordId: selectedRecordId ?? undefined, columns: tableData?.columns || [], rawRecords: tableData?.records || [] })}
-        onDelete={async (id: string) => { 
-          try { 
-            await handleDelete(id); 
-          } catch {} 
-          finally { 
-            closeEditRecordModal(); 
-          } 
+        onDelete={async (id: string) => {
+          try {
+            await handleDelete(id);
+          } catch { }
+          finally {
+            closeEditRecordModal();
+          }
         }}
         title="Edit record"
         submitLabel="Update record"

@@ -148,7 +148,7 @@ describe('UserDropdown', () => {
     expect(document.documentElement.dataset.theme).toBe('dark');
   });
 
-  it('uses system preference when no saved theme', () => {
+  it('defaults to light theme when no saved theme', () => {
     matchMediaMock.mockReturnValue({
       matches: true,
       addEventListener: (event: string, cb: (e?: MediaQueryListEvent) => void) => {
@@ -161,8 +161,8 @@ describe('UserDropdown', () => {
 
     render(<UserDropdown />);
 
-    expect(localStorage.getItem('theme')).toBe('dark');
-    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    expect(localStorage.getItem('theme')).toBe('light');
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
   });
 
   it('navigates to login when logout fails', async () => {
