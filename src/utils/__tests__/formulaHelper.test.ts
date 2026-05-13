@@ -340,6 +340,7 @@ describe('formulaHelper comparison evaluation', () => {
     expect(evaluateComparison('true != false', context)).toBe(true);
     expect(evaluateComparison('10 < 12', context)).toBe(true);
     expect(evaluateComparison('2025-01-02 > 2025-01-01', context)).toBe(true);
+    expect(evaluateComparison('{Price} == 12.5', context)).toBe(true);
   });
 });
 
@@ -425,6 +426,7 @@ describe('formulaHelper helper utilities', () => {
     expect(getFunctionAtCursor('SUM({Price})', -1)).toBeNull();
     expect(getFunctionAtCursor('SUM({Price})', 999)).toBeNull();
     expect(getCompatibleFieldTypes('SUM')).toContain('number');
+    expect(getCompatibleFieldTypes('CONCAT')).toContain('number');
     expect(getCompatibleFieldTypes('MATH_OPERATOR')).toContain('number');
     expect(getCompatibleFieldTypes('YEAR')).toContain('date');
     expect(getFunctionSyntax('UNKNOWN()', '')).toBe('UNKNOWN(...)');

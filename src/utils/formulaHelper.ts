@@ -1645,6 +1645,7 @@ const performComparison = (leftValue: any, rightValue: any, operator: string): b
   
   switch (operator) {
     case '=':
+    case '==':
       return leftValue == rightValue;
     case '!=':
       return leftValue != rightValue;
@@ -3015,6 +3016,10 @@ export const getCompatibleFieldTypes = (functionName: string | null): string[] |
   
   if (functionName === 'MATH_OPERATOR') {
     return NUMERIC_TYPES;
+  }
+
+  if (functionName === 'CONCAT' || functionName === 'CONCATENATE') {
+    return [...new Set([...TEXT_TYPES, ...NUMERIC_TYPES])];
   }
   
   if (MATH_FUNCTION_NAMES.includes(functionName)) {
