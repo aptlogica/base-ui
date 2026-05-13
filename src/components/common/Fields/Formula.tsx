@@ -43,6 +43,7 @@ interface FormulaProps {
   columns?: any[]; // Available columns for formula
   onFormulaChange?: (formula: string) => void;
   onErrorChange?: (error: string | null) => void; // Notify parent of validation errors
+  externalError?: string | null; // Parent-provided validation error (e.g., on Save click)
   rowData?: Record<string, any>; // Actual row data for formula evaluation
   allColumns?: any[]; // All columns in the table (for field name mapping)
 }
@@ -57,6 +58,7 @@ export const Formula: React.FC<FormulaProps> = ({
   columns = [],
   onFormulaChange,
   onErrorChange,
+  externalError,
   rowData,
   allColumns = []
 }) => {
@@ -94,6 +96,8 @@ export const Formula: React.FC<FormulaProps> = ({
   const previousFormulaTextRef = useRef<string>(formulaText);
   const hasEvaluatedInitialRef = useRef(false);
   const lastNotifiedValueRef = useRef<any>(null); // Track last value we sent via onChange
+  const lastAppliedExternalErrorRef = useRef<string | null>(null);
+  const lastNotifiedErrorRef = useRef<string | null | undefined>(undefined);
 
   // Update refs when values change (so evaluateAndNotify can access latest without being a dependency)
   useEffect(() => {
@@ -105,6 +109,15 @@ export const Formula: React.FC<FormulaProps> = ({
   useEffect(() => {
     lastNotifiedValueRef.current = value;
   }, [value]);
+
+  const updateFormulaError = useCallback((nextError: string | null) => {
+    setFormulaError((previousError) => previousError === nextError ? previousError : nextError);
+
+    if (lastNotifiedErrorRef.current !== nextError) {
+      lastNotifiedErrorRef.current = nextError;
+      onErrorChange?.(nextError);
+    }
+  }, [onErrorChange]);
 
   // Calculate tooltip position for fixed positioning to escape modal overflow
   const updateTooltipPosition = useCallback(() => {
@@ -399,11 +412,10 @@ export const Formula: React.FC<FormulaProps> = ({
     // This handles the initial load case, but subsequent changes are validated on blur
     if (formulaText.trim() && (columns.length > 0 || allColumns.length > 0) && !hasValidatedOnMountRef.current) {
       const error = validateFormula(formulaText, formulaContext);
-      setFormulaError(error);
-      onErrorChange?.(error);
+      updateFormulaError(error);
       hasValidatedOnMountRef.current = true;
     }
-  }, [columns, allColumns, formulaText, formulaContext]); // Only run when columns change, not on formulaText change - validation on blur handles text changes
+  }, [columns, allColumns, formulaText, formulaContext, updateFormulaError]); // Only run when columns change, not on formulaText change - validation on blur handles text changes
 
   // Validate when formula prop changes (if not blurred yet)
   useEffect(() => {
@@ -413,17 +425,34 @@ export const Formula: React.FC<FormulaProps> = ({
       const formulaToValidate = formula || formulaText;
       if (formulaToValidate.trim()) {
         const error = validateFormula(formulaToValidate, formulaContext);
-        setFormulaError(error);
-        onErrorChange?.(error);
+        updateFormulaError(error);
       }
     }
     previousFormulaRef.current = formula;
-  }, [formula, hasBlurred, onErrorChange, formulaText, formulaContext]);
+  }, [formula, hasBlurred, formulaText, formulaContext, updateFormulaError]);
 
-  // Notify parent when error changes
   useEffect(() => {
-    onErrorChange?.(formulaError);
-  }, [formulaError, onErrorChange]);
+    if (externalError === undefined) return;
+
+    if (externalError) {
+      lastAppliedExternalErrorRef.current = externalError;
+      if (externalError !== formulaError) {
+        setFormulaError(externalError);
+        lastNotifiedErrorRef.current = externalError;
+      }
+      return;
+    }
+
+    if (
+      externalError === null &&
+      lastAppliedExternalErrorRef.current &&
+      formulaError === lastAppliedExternalErrorRef.current
+    ) {
+      setFormulaError(null);
+      lastNotifiedErrorRef.current = null;
+      lastAppliedExternalErrorRef.current = null;
+    }
+  }, [externalError, formulaError]);
 
   // Initial evaluation when rowData becomes available for the first time
   // This ensures formula fields calculate their initial value when data is loaded
@@ -453,6 +482,7 @@ export const Formula: React.FC<FormulaProps> = ({
 
     // Evaluate the formula - it will use latest rowData, columns, allColumns from closure
     const { result, error } = evaluateFormula(formulaText, formulaContext, validateFormula);
+    updateFormulaError(error);
 
     if (!error && result !== null && result !== undefined) {
       // Convert result to value using utility function
@@ -477,7 +507,7 @@ export const Formula: React.FC<FormulaProps> = ({
     // Only depend on formulaText, onChange, formattingType, and value
     // rowData, columns, allColumns are accessed from closure and will be latest values
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formulaText, onChange, formattingType, value]);
+  }, [formulaText, onChange, formattingType, updateFormulaError, value]);
 
   // Store in ref for use in other effects
   useEffect(() => {
@@ -670,15 +700,12 @@ export const Formula: React.FC<FormulaProps> = ({
     onFormulaChange?.(formulaText);
 
     // Validate formula (includes both math and text function validation)
-    const error = validateFormula(formulaText, formulaContext);
-    setFormulaError(error);
-    onErrorChange?.(error); // Notify parent of validation error
-
     // Call onChange with the evaluated result, not the formula string
     // This is needed for record modals to save the calculated value to rowData
     if (onChange) {
       // Evaluate the formula and pass the result
       const { result, error: evalError } = evaluateFormula(formulaText, formulaContext, validateFormula);
+      updateFormulaError(evalError);
       if (!evalError && result !== null && result !== undefined) {
         // Use utility function to convert result to value
         const newValue = convertResultToValue(result, formattingType);
@@ -789,8 +816,7 @@ export const Formula: React.FC<FormulaProps> = ({
 
   const handleClear = () => {
     setFormulaText('');
-    setFormulaError(null);
-    onErrorChange?.(null);
+    updateFormulaError(null);
     onFormulaChange?.('');
     onChange?.(null);
     // Focus the textarea after clearing
@@ -1003,8 +1029,7 @@ export const Formula: React.FC<FormulaProps> = ({
 
                   // Clear error when user starts typing (after blur) - validation will happen on blur
                   if (hasBlurred && formulaError) {
-                    setFormulaError(null);
-                    onErrorChange?.(null);
+                    updateFormulaError(null);
                   }
                 }}
                 onFocus={handleFocus}

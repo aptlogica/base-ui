@@ -157,7 +157,9 @@ describe('formulaHelper evaluation and formatting', () => {
     expect(evaluateFormula('MOD(10, 3)', context, validateFormula).result).toBe(1);
     expect(evaluateFormula('DIVIDE(10, 2)', context, validateFormula).result).toBe(5);
     expect(evaluateFormula('{Price} + 2', context, validateFormula).result).toBe(14.5);
-    expect(evaluateFormula('{Price} / 0', context, validateFormula).result).toBeNull();
+    const divideByZero = evaluateFormula('{Price} / 0', context, validateFormula);
+    expect(divideByZero.result).toBeNull();
+    expect(divideByZero.error).toMatch(/division by zero/i);
   });
 
   it('evaluates date, comparison, and text helpers', () => {
@@ -197,6 +199,129 @@ describe('formulaHelper evaluation and formatting', () => {
     expect(now).toBeInstanceOf(Date);
   });
 
+  it('evaluates nested arithmetic expressions with percent fields and decimals', () => {
+    const percentContext = {
+      columns: [
+        { title: 'Amount', key: 'amount', type: 'number' },
+        { title: 'Rate', key: 'rate', type: 'percent' },
+        { title: 'Fee', key: 'fee', type: 'decimal' }
+      ],
+      allColumns: [],
+      rowData: {
+        amount: 3000,
+        rate: 50,
+        fee: '12.5'
+      }
+    };
+
+    expect(
+      validateFormula('{Amount} + ({Amount} * {Rate} / 100)', percentContext)
+    ).toBeNull();
+    expect(
+      evaluateFormula('{Amount} + ({Amount} * {Rate} / 100)', percentContext, validateFormula).result
+    ).toBe(4500);
+    expect(
+      evaluateFormula('({Amount} + ({Amount} * {Rate} / 100)) + {Fee}', percentContext, validateFormula).result
+    ).toBe(4512.5);
+    expect(
+      evaluateFormula('(({Amount} * 1.1) + ({Amount} * {Rate} / 100)) / 2', percentContext, validateFormula).result
+    ).toBe(2400);
+  });
+
+  it('evaluates nested function combinations across math and logical helpers', () => {
+    const nestedContext = {
+      columns: [
+        { title: 'Price', key: 'price', type: 'number' },
+        { title: 'Qty', key: 'qty', type: 'number' },
+        { title: 'Discount', key: 'discount', type: 'percent' },
+        { title: 'Flag', key: 'flag', type: 'boolean' }
+      ],
+      allColumns: [],
+      rowData: {
+        price: 3000,
+        qty: 2,
+        discount: 15,
+        flag: true
+      }
+    };
+
+    expect(
+      validateFormula('SUM({Price}, MULTIPLY({Price}, {Discount} / 100))', nestedContext)
+    ).toBeNull();
+    expect(
+      evaluateFormula('SUM({Price}, MULTIPLY({Price}, {Discount} / 100))', nestedContext, validateFormula).result
+    ).toBe(3450);
+    expect(
+      evaluateFormula('ROUND(DIVIDE(MULTIPLY({Price}, {Qty}), 3), 2)', nestedContext, validateFormula).result
+    ).toBe(2000);
+    expect(
+      evaluateFormula('IF(AND({Flag}, SUM({Qty}, 1) > 2), MULTIPLY({Price}, 2), 0)', nestedContext, validateFormula).result
+    ).toBe(6000);
+  });
+
+  it('handles nested edge cases for null propagation and date composition', () => {
+    const dateResult = evaluateFormula(
+      'DATEADD(DATE(2025, 1, 1), SUM(1, 2), "day")',
+      context,
+      validateFormula
+    );
+    expect(dateResult.error).toBeNull();
+    expect(dateResult.result).toBeInstanceOf(Date);
+    expect(dateResult.result.getDate()).toBe(4);
+
+    const nullResult = evaluateFormula(
+      'SUM(1, DIVIDE(10, 0))',
+      context,
+      validateFormula
+    );
+    expect(nullResult.error).toMatch(/division by zero/i);
+    expect(nullResult.result).toBeNull();
+  });
+
+  it('parses percent field values using raw 0-100 semantics', () => {
+    const baseColumns = [
+      { title: 'Amount', key: 'amount', type: 'number' },
+      { title: 'Rate', key: 'rate', type: 'percent' }
+    ];
+
+    const numericPercentContext = {
+      columns: baseColumns,
+      allColumns: [],
+      rowData: {
+        amount: 3000,
+        rate: 50
+      }
+    };
+
+    const stringPercentContext = {
+      columns: baseColumns,
+      allColumns: [],
+      rowData: {
+        amount: 3000,
+        rate: '50%'
+      }
+    };
+
+    const decimalPercentContext = {
+      columns: baseColumns,
+      allColumns: [],
+      rowData: {
+        amount: 3000,
+        rate: 0.5
+      }
+    };
+
+    expect(
+      evaluateFormula('{Amount} + ({Amount} * {Rate} / 100)', numericPercentContext, validateFormula).result
+    ).toBe(4500);
+    expect(
+      evaluateFormula('{Amount} + ({Amount} * {Rate} / 100)', stringPercentContext, validateFormula).result
+    ).toBe(4500);
+    expect(
+      evaluateFormula('{Amount} + ({Amount} * {Rate} / 100)', decimalPercentContext, validateFormula).result
+    ).toBe(3015);
+  });
+
   it('formats numeric results', () => {
     expect(formatResult(12.345, 'number', 2, {}, '')).toBe('12.35');
     expect(formatResult(12.345, 'percent', 2, {}, '')).toBe('12.35%');
@@ -232,6 +357,11 @@ describe('formulaHelper validation', () => {
     expect(validateFormula('\"bad', context)).toMatch(/Unclosed double-quoted/i);
     expect(validateFormula("'{bad", context)).toMatch(/Unclosed single-quoted/i);
     expect(validateFormula('SUM(1) SUM(2)', context)).toMatch(/Compound expressions are not supported/i);
+    expect(validateFormula('SUM(1,,2)', context)).toMatch(/argument 2 is missing/i);
+    expect(validateFormula('SUM(,1)', context)).toMatch(/argument 1 is missing/i);
+    expect(validateFormula('SUM(1,)', context)).toMatch(/argument 2 is missing/i);
+    expect(validateFormula('{Price', context)).toMatch(/field reference braces/i);
+    expect(validateFormula('SUM({Price}, 2', context)).toMatch(/Mismatched parentheses/i);
     expect(validateFormula('{123}', context)).toBeNull();
     expect(validateFormula('{Price} ++ {Price}', context)).toMatch(/invalid operator usage/i);
     expect(validateFormula('* {Price}', context)).toMatch(/cannot start with/i);

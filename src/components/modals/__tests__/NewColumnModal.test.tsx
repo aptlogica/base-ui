@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { NewColumnModal } from '../NewColumnModal';
 import * as fieldUsageUtils from '../../../utils/fieldUsageUtils';
+import { validateFormula } from '../../../utils/formulaHelper';
 
 const toast = { error: vi.fn(), success: vi.fn() };
 const mockUseBaseTables = vi.fn(() => ({ data: null }));
@@ -54,7 +55,11 @@ vi.mock('../../common/Fields', () => ({
   Decimal: () => <div />,
   Currency: () => <div />,
   MultiLineText: () => <div />,
-  Formula: () => <div />,
+  Formula: ({ externalError }: { externalError?: string | null }) => (
+    <div>
+      {externalError ? <div>{externalError}</div> : null}
+    </div>
+  ),
 }));
 
 vi.mock('../../../plugins/GridViewPlugin/components/shared/DropDown/DropDown', () => ({
@@ -90,6 +95,10 @@ vi.mock('../../../utils/helpers', () => ({
   convertDateFormat: (value: string) => value,
 }));
 
+vi.mock('../../../utils/formulaHelper', () => ({
+  validateFormula: vi.fn(() => null),
+}));
+
 const renderWithType = (type: string, fields: any[] = []) => {
   const onSave = vi.fn();
   render(
@@ -109,6 +118,7 @@ describe('NewColumnModal', () => {
     toast.error.mockClear();
     toast.success.mockClear();
     mockUseBaseTables.mockReturnValue({ data: null });
+    vi.mocked(validateFormula).mockReturnValue(null);
   });
 
   it('blocks save when field name is duplicate', () => {
@@ -283,5 +293,31 @@ describe('NewColumnModal', () => {
     const payload = onSave.mock.calls[0][0];
     expect(payload.type).toBe(type);
     expect(payload.meta).toBeDefined();
+  });
+
+  it('blocks save for formula field when formula is invalid at save time', () => {
+    vi.mocked(validateFormula).mockReturnValue('Division by zero is not allowed.');
+    const onSave = vi.fn();
+
+    render(
+      <NewColumnModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={onSave}
+        fields={[{ id: 'c2', title: 'Amount', type: 'number', uidt: 'number', column_name: 'amount', key: 'amount' }]}
+        initialValues={{
+          id: 'c1',
+          title: 'Total',
+          type: 'formula',
+          config: { formula: '{Amount} / 0' }
+        }}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Save Field'));
+
+    expect(validateFormula).toHaveBeenCalled();
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByText('Division by zero is not allowed.')).toBeInTheDocument();
   });
 });
