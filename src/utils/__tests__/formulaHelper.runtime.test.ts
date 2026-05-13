@@ -138,7 +138,7 @@ describe('formulaHelper runtime helpers', () => {
   });
 
   it('validates logical functions with bad arguments', () => {
-    expect(validateFormula('IF(,1,2)', context)).toBe('IF() first argument must be a condition (comparison, field reference, or boolean)');
+    expect(validateFormula('IF(,1,2)', context)).toBe('IF() argument 1 is missing. Remove extra commas or provide a value.');
     expect(validateFormula('NOT(1,2)', context)).toBe('NOT() accepts only 1 argument, but 2 provided');
   });
 });
