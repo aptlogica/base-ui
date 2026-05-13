@@ -1156,6 +1156,7 @@ export function renderNewColumnConfigStep(props: any) {
     formulaText,
     setFormulaText,
     formulaFormatting,
+    formulaError,
     showJsonDefault,
     setShowJsonDefault,
     showTextDefault,
@@ -1897,6 +1898,7 @@ export function renderNewColumnConfigStep(props: any) {
                   dateFormat: formulaFormatting.dateFormat
                 }
               }}
+              externalError={formulaError}
               columns={fields.map((field: any) => ({
                 id: field.id,
                 name: field.title || field.column_name || field.key,

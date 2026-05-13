@@ -220,6 +220,66 @@ describe('Formula', () => {
     }
   });
 
+  it('surfaces runtime evaluation errors such as division by zero', async () => {
+    const onErrorChange = vi.fn();
+    evaluateFormulaMock.mockReturnValue({ result: null, error: 'Division by zero is not allowed.' });
+
+    render(
+      <Formula
+        value={10}
+        onChange={vi.fn()}
+        onErrorChange={onErrorChange}
+        config={{ formula: '{Amount} / 0' }}
+        columns={[{ id: 'c1', title: 'Amount', type: 'number' }]}
+        allColumns={[]}
+      />
+    );
+
+    const textarea = screen.getByPlaceholderText(/enter formula/i);
+    fireEvent.blur(textarea);
+
+    await waitFor(() => {
+      expect(onErrorChange).toHaveBeenCalledWith('Division by zero is not allowed.');
+      expect(screen.getByText('Division by zero is not allowed.')).toBeInTheDocument();
+    });
+  });
+
+  it('does not repeatedly notify the parent for the same error across rerenders', async () => {
+    validateFormulaMock.mockReturnValue('Invalid formula');
+
+    const firstOnErrorChange = vi.fn();
+    const secondOnErrorChange = vi.fn();
+
+    const { rerender } = render(
+      <Formula
+        columns={[{ id: 'c1', title: 'Amount', type: 'number' }]}
+        allColumns={[]}
+        config={{ formula: 'BAD(' }}
+        onErrorChange={firstOnErrorChange}
+      />
+    );
+
+    await waitFor(() => {
+      expect(firstOnErrorChange).toHaveBeenCalledWith('Invalid formula');
+    });
+
+    rerender(
+      <Formula
+        columns={[{ id: 'c1', title: 'Amount', type: 'number' }]}
+        allColumns={[]}
+        config={{ formula: 'BAD(' }}
+        onErrorChange={secondOnErrorChange}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Invalid formula')).toBeInTheDocument();
+    });
+
+    expect(firstOnErrorChange).toHaveBeenCalledTimes(1);
+    expect(secondOnErrorChange).not.toHaveBeenCalled();
+  });
+
   it('clears formula when clear button is clicked', () => {
     const onFormulaChange = vi.fn();
     render(

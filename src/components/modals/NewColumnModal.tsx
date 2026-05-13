@@ -16,6 +16,7 @@ import { useToast } from '../../components/common/Toast';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../utils/fieldUsageUtils';
 import { renderNewColumnConfigStep } from './NewColumnModalConfigStep';
 import { buildColumnPayload, buildFieldMeta, getUniqueColumnNameByUidt, isDuplicateFieldName } from './NewColumnModal.logic';
+import { validateFormula } from '../../utils/formulaHelper';
 
 interface FieldType {
   key: string;
@@ -974,8 +975,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     // Prevent multiple clicks
     if (isSaving) return;
 
-    setIsSaving(true);
-
     // If fieldName is empty, generate a unique name using uidt
     let finalFieldName = fieldName?.trim();
     if (!finalFieldName) {
@@ -992,18 +991,38 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     });
     if (isDuplicate) {
       setNameError('Field name already exists');
-      setIsSaving(false);
       return;
     }
 
-    // Check for formula errors if field type is formula
-    if (selectedType?.key === 'formula' && formulaError) {
-      setIsSaving(false);
-      return;
+    if (selectedType?.key === 'formula') {
+      const trimmedFormula = formulaText.trim();
+      if (trimmedFormula) {
+        const formulaColumns = fields.map((field: any) => ({
+          id: field.id,
+          name: field.title || field.column_name || field.key,
+          title: field.title || field.column_name || field.key,
+          column_name: field.column_name,
+          key: field.key || field.column_name,
+          type: field.type || field.uidt,
+          uidt: field.uidt || field.type,
+        }));
+
+        const validationError = validateFormula(trimmedFormula, {
+          columns: formulaColumns,
+          allColumns: [],
+          rowData: {}
+        });
+
+        setFormulaError(validationError);
+        if (validationError) {
+          return;
+        }
+      } else if (formulaError) {
+        setFormulaError(null);
+      }
     }
 
     if (!selectedType) {
-      setIsSaving(false);
       return;
     }
 
@@ -1067,7 +1086,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
     if (error) {
       toast.error(error);
-      setIsSaving(false);
       return;
     }
 
@@ -1080,6 +1098,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       meta
     });
 
+    setIsSaving(true);
     onSave(colConfig);
     // Don't reset state here - let the parent component close the modal
     // State will be reset when the modal closes via useEffect
@@ -1227,6 +1246,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     formulaText,
     setFormulaText,
     formulaFormatting,
+    formulaError,
     setFormulaFormatting,
     showJsonDefault,
     setShowJsonDefault,

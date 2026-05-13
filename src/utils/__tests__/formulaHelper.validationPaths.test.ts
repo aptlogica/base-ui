@@ -19,6 +19,9 @@ describe('formulaHelper validateFormula branch paths', () => {
 
     expect(validateFormula('MOD(10, text)', context))
       .toBe('MOD() requires numeric values. "text" is not numeric');
+
+    expect(validateFormula('DIVIDE(10, 0)', context))
+      .toBe('Division by zero is not allowed.');
   });
 
   it('validates text-function arity and argument typing', () => {
@@ -65,6 +68,20 @@ describe('formulaHelper validateFormula branch paths', () => {
       .toBe('AND() argument 1 must be a condition (comparison, field reference, or boolean)');
   });
 
+  it('validates missing arguments and unclosed brackets', () => {
+    expect(validateFormula('SUM(1,,2)', context))
+      .toBe('SUM() argument 2 is missing. Remove extra commas or provide a value.');
+
+    expect(validateFormula('SUM(,1)', context))
+      .toBe('SUM() argument 1 is missing. Remove extra commas or provide a value.');
+
+    expect(validateFormula('SUM(1,)', context))
+      .toBe('SUM() argument 2 is missing. Remove extra commas or provide a value.');
+
+    expect(validateFormula('{Price', context))
+      .toBe('Mismatched field reference braces');
+  });
+
   it('validates comparison with unknown fields on either side', () => {
     expect(validateFormula('{Price} == {MissingField}', context))
       .toBe('Unknown field: MissingField');
@@ -73,8 +90,19 @@ describe('formulaHelper validateFormula branch paths', () => {
       .toBe('Unknown field: MissingField');
   });
 
-  it('validates compound function-statement restrictions', () => {
+  it('allows nested and combined function statements', () => {
     expect(validateFormula('ADD(1,2) + SUM(3,4)', context))
-      .toBe('Only one function call is allowed at a time. Compound expressions are not supported.');
+      .toBeNull();
+
+    expect(validateFormula('SUM({Price}, MULTIPLY({Price}, 2))', context))
+      .toBeNull();
+  });
+
+  it('validates divide-by-zero in operator expressions', () => {
+    expect(validateFormula('{Price} / 0', context))
+      .toBe('Division by zero is not allowed.');
+
+    expect(validateFormula('{Price} / (0)', context))
+      .toBe('Division by zero is not allowed.');
   });
 });

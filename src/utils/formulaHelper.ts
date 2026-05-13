@@ -68,6 +68,13 @@ const isNumericLiteral = (value: string): boolean => {
   return len === trimmed.length;
 };
 
+const isZeroLiteral = (value: string): boolean => {
+  const trimmed = value.trim();
+  if (!isNumericLiteral(trimmed)) return false;
+  const parsed = Number.parseFloat(trimmed);
+  return !Number.isNaN(parsed) && parsed === 0;
+};
+
 const containsFunctionCallToken = (value: string): boolean => {
   let cursor = 0;
 
@@ -181,6 +188,39 @@ const getFirstParenContent = (input: string): string | null => {
   return input.slice(open + 1, close);
 };
 
+const findMatchingParenIndex = (input: string, openParenIndex: number): number => {
+  if (openParenIndex < 0 || openParenIndex >= input.length || input[openParenIndex] !== '(') return -1;
+
+  let depth = 1;
+  let inQuotes = false;
+  let quoteChar = '';
+
+  for (let i = openParenIndex + 1; i < input.length; i++) {
+    const ch = input[i];
+    const prevChar = i > 0 ? input[i - 1] : '';
+
+    if ((ch === '"' || ch === "'") && prevChar !== '\\') {
+      if (!inQuotes) {
+        inQuotes = true;
+        quoteChar = ch;
+      } else if (quoteChar === ch) {
+        inQuotes = false;
+        quoteChar = '';
+      }
+      continue;
+    }
+
+    if (inQuotes) continue;
+
+    if (ch === '(') depth++;
+    else if (ch === ')') depth--;
+
+    if (depth === 0) return i;
+  }
+
+  return -1;
+};
+
 const countChar = (input: string, target: string): number => {
   let count = 0;
   for (const element of input) {
@@ -222,7 +262,7 @@ const findFunctionCalls = (
       continue;
     }
 
-    const closeParenIndex = formula.indexOf(')', openParenIndex + 1);
+    const closeParenIndex = findMatchingParenIndex(formula, openParenIndex);
     if (closeParenIndex === -1) {
       cursor = openParenIndex + 1;
       continue;
@@ -625,6 +665,104 @@ export const parseFunctionArguments = (argsString: string): string[] => {
   }
   
   return args;
+};
+
+const stripOuterParentheses = (input: string): string => {
+  let value = input.trim();
+
+  while (value.startsWith('(') && value.endsWith(')')) {
+    const closeIndex = findMatchingParenIndex(value, 0);
+    if (closeIndex !== value.length - 1) break;
+    value = value.slice(1, -1).trim();
+  }
+
+  return value;
+};
+
+const isZeroDivisorExpression = (input: string): boolean => {
+  const stripped = stripOuterParentheses(input.trim());
+  if (!stripped) return false;
+  return isZeroLiteral(stripped);
+};
+
+const isDateLiteral = (value: string): boolean => {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (!/^\d{4}-\d{2}-\d{2}(?:[T\s].*)?$/.test(trimmed)) return false;
+  const date = new Date(trimmed);
+  return !Number.isNaN(date.getTime());
+};
+
+const parseExactFunctionCall = (input: string): { name: string; args: string[] } | null => {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  let i = 0;
+  if (!isIdentStart(trimmed[i])) return null;
+
+  let nameEnd = i + 1;
+  while (nameEnd < trimmed.length && isIdentChar(trimmed[nameEnd])) nameEnd++;
+  const name = trimmed.slice(i, nameEnd).toUpperCase();
+
+  while (nameEnd < trimmed.length && isWhitespaceChar(trimmed[nameEnd])) nameEnd++;
+  if (nameEnd >= trimmed.length || trimmed[nameEnd] !== '(') return null;
+
+  const closeParenIndex = findMatchingParenIndex(trimmed, nameEnd);
+  if (closeParenIndex === -1 || closeParenIndex !== trimmed.length - 1) return null;
+
+  const argsString = trimmed.slice(nameEnd + 1, closeParenIndex);
+  return { name, args: parseFunctionArguments(argsString) };
+};
+
+const maybeParseDateValue = (value: any): Date | null => {
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (typeof value !== 'string') return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const date = new Date(trimmed);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const coerceToNumber = (value: any): number | null => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  if (typeof value === 'string') {
+    const parsed = Number.parseFloat(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
+};
+
+const coerceToDate = (value: any): Date | null => {
+  return maybeParseDateValue(value);
+};
+
+const coerceToText = (value: any): string | null => {
+  if (value === null || value === undefined) return null;
+  if (value instanceof Date) return value.toISOString();
+  return String(value);
+};
+
+const isComplexExpressionArg = (arg: string): boolean => {
+  const trimmed = arg.trim();
+  if (!trimmed) return false;
+  if (startsWithFunctionCall(trimmed)) return true;
+  if (trimmed.startsWith('(') && trimmed.endsWith(')')) return true;
+  return /[+\-*/<>=]/.test(removeFieldRefsAndQuoted(trimmed));
+};
+
+let runtimeEvaluationError: string | null = null;
+
+const resetRuntimeEvaluationError = () => {
+  runtimeEvaluationError = null;
+};
+
+const setRuntimeEvaluationError = (message: string) => {
+  if (!runtimeEvaluationError) {
+    runtimeEvaluationError = message;
+  }
 };
 
 // Helper function to evaluate a single argument (field reference or number)
@@ -1496,28 +1634,7 @@ export const evaluateDATE = (formula: string, context: FormulaContext): Date | n
 
 // Parse a comparison operand (left or right side) into its value
 const parseComparisonOperand = (operand: string, context: FormulaContext): any => {
-  if (operand.startsWith('{') && operand.endsWith('}')) {
-    const fieldName = parseFieldReference(operand);
-    return getFieldValueByType(fieldName, context);
-  } else if ((operand.startsWith('"') && operand.endsWith('"')) || (operand.startsWith("'") && operand.endsWith("'"))) {
-    return operand.slice(1, -1);
-  } else if (isNumericLiteral(operand)) {
-    return Number.parseFloat(operand);
-  } else {
-    const lowerOperand = operand.toLowerCase();
-    if (lowerOperand === 'true') {
-      return true;
-    } else if (lowerOperand === 'false') {
-      return false;
-    } else {
-      const dateVal = new Date(operand);
-      if (Number.isNaN(dateVal.getTime())) {
-        return operand;
-      } else {
-        return dateVal;
-      }
-    }
-  }
+  return evaluateExpressionValue(operand, context);
 };
 
 // Perform a comparison operation between two values
@@ -1528,6 +1645,7 @@ const performComparison = (leftValue: any, rightValue: any, operator: string): b
   
   switch (operator) {
     case '=':
+    case '==':
       return leftValue == rightValue;
     case '!=':
       return leftValue != rightValue;
@@ -1539,6 +1657,670 @@ const performComparison = (leftValue: any, rightValue: any, operator: string): b
       return leftValue >= rightValue;
     case '<=':
       return leftValue <= rightValue;
+    default:
+      return null;
+  }
+};
+
+const evaluateExpressionValue = (
+  expression: string,
+  context: FormulaContext
+): any => {
+  const trimmed = stripOuterParentheses(expression);
+  if (!trimmed) return null;
+
+  const comparisonResult = evaluateComparisonExpression(trimmed, context);
+  if (comparisonResult !== undefined) return comparisonResult;
+
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    const fieldName = parseFieldReference(trimmed);
+    return getFieldValueByType(fieldName, context);
+  }
+
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1)
+      .replaceAll(String.raw`\"`, '"')
+      .replaceAll(String.raw`\'`, "'")
+      .replaceAll(String.raw`\\`, '\\');
+  }
+
+  if (isNumericLiteral(trimmed)) {
+    return Number.parseFloat(trimmed);
+  }
+
+  if (/^(true|false)$/i.test(trimmed)) {
+    return trimmed.toLowerCase() === 'true';
+  }
+
+  const exactFunctionCall = parseExactFunctionCall(trimmed);
+  if (exactFunctionCall) {
+    return evaluateFunctionExpression(exactFunctionCall.name, exactFunctionCall.args, context);
+  }
+
+  if (isDateLiteral(trimmed)) {
+    return new Date(trimmed);
+  }
+
+  const arithmeticResult = evaluateArithmeticExpression(trimmed, context);
+  if (arithmeticResult !== null) return arithmeticResult;
+
+  if (/[+\-*/]/.test(removeFieldRefsAndQuoted(trimmed))) {
+    return null;
+  }
+
+  return trimmed;
+};
+
+const evaluateComparisonExpression = (
+  expression: string,
+  context: FormulaContext
+): boolean | null | undefined => {
+  let inQuotes = false;
+  let quoteChar = '';
+  let inFieldRef = false;
+  let parenDepth = 0;
+  const ops = COMPARISON_OPERATORS.map(item => item.op).sort((a, b) => b.length - a.length);
+
+  for (let i = 0; i < expression.length; i++) {
+    const char = expression[i];
+    const prevChar = i > 0 ? expression[i - 1] : '';
+
+    if ((char === '"' || char === "'") && prevChar !== '\\') {
+      if (!inQuotes) {
+        inQuotes = true;
+        quoteChar = char;
+      } else if (quoteChar === char) {
+        inQuotes = false;
+        quoteChar = '';
+      }
+      continue;
+    }
+
+    if (inQuotes) continue;
+
+    if (char === '{') {
+      inFieldRef = true;
+      continue;
+    }
+    if (char === '}') {
+      inFieldRef = false;
+      continue;
+    }
+    if (inFieldRef) continue;
+
+    if (char === '(') {
+      parenDepth++;
+      continue;
+    }
+    if (char === ')') {
+      parenDepth--;
+      continue;
+    }
+    if (parenDepth > 0) continue;
+
+    for (const op of ops) {
+      if (!expression.startsWith(op, i)) continue;
+      if (!isValidOperatorMatch(expression, op, i)) continue;
+
+      const leftRaw = expression.slice(0, i).trim();
+      const rightRaw = expression.slice(i + op.length).trim();
+      if (!leftRaw || !rightRaw) return null;
+
+      const leftValue = evaluateExpressionValue(leftRaw, context);
+      const rightValue = evaluateExpressionValue(rightRaw, context);
+      return performComparison(leftValue, rightValue, op);
+    }
+  }
+
+  return undefined;
+};
+
+const evaluateArithmeticExpression = (
+  expression: string,
+  context: FormulaContext
+): number | null => {
+  let index = 0;
+
+  const skipWhitespace = () => {
+    while (index < expression.length && isWhitespaceChar(expression[index])) index++;
+  };
+
+  const parsePrimary = (): number | null => {
+    skipWhitespace();
+    if (index >= expression.length) return null;
+
+    const char = expression[index];
+
+    if (char === '(') {
+      index++;
+      const value = parseAddSubtract();
+      skipWhitespace();
+      if (index >= expression.length || expression[index] !== ')') return null;
+      index++;
+      return value;
+    }
+
+    if (char === '{') {
+      const closeBrace = expression.indexOf('}', index + 1);
+      if (closeBrace === -1) return null;
+      const fieldName = expression.slice(index + 1, closeBrace);
+      index = closeBrace + 1;
+      return coerceToNumber(getFieldValueByType(fieldName, context));
+    }
+
+    if (char === '"' || char === "'") {
+      return null;
+    }
+
+    if (isDigitChar(char) || char === '.') {
+      const len = parseNumberLiteralAt(expression, index);
+      if (len <= 0) return null;
+      const value = Number.parseFloat(expression.slice(index, index + len));
+      index += len;
+      return Number.isNaN(value) ? null : value;
+    }
+
+    if (isIdentStart(char)) {
+      let nameEnd = index + 1;
+      while (nameEnd < expression.length && isIdentChar(expression[nameEnd])) nameEnd++;
+      let openParenIndex = nameEnd;
+      while (openParenIndex < expression.length && isWhitespaceChar(expression[openParenIndex])) openParenIndex++;
+      if (openParenIndex >= expression.length || expression[openParenIndex] !== '(') return null;
+
+      const closeParenIndex = findMatchingParenIndex(expression, openParenIndex);
+      if (closeParenIndex === -1) return null;
+
+      const functionSource = expression.slice(index, closeParenIndex + 1);
+      index = closeParenIndex + 1;
+      return coerceToNumber(evaluateExpressionValue(functionSource, context));
+    }
+
+    return null;
+  };
+
+  const parseUnary = (): number | null => {
+    skipWhitespace();
+    if (index < expression.length && (expression[index] === '+' || expression[index] === '-')) {
+      const operator = expression[index];
+      index++;
+      const value = parseUnary();
+      if (value === null) return null;
+      return operator === '-' ? -value : value;
+    }
+    return parsePrimary();
+  };
+
+  const parseMultiplyDivide = (): number | null => {
+    let left = parseUnary();
+    if (left === null) return null;
+
+    while (true) {
+      skipWhitespace();
+      if (index >= expression.length) break;
+      const operator = expression[index];
+      if (operator !== '*' && operator !== '/') break;
+      index++;
+      const right = parseUnary();
+      if (right === null) return null;
+      if (operator === '*') left *= right;
+      else {
+        if (right === 0) {
+          setRuntimeEvaluationError('Division by zero is not allowed.');
+          return null;
+        }
+        left /= right;
+      }
+    }
+
+    return left;
+  };
+
+  const parseAddSubtract = (): number | null => {
+    let left = parseMultiplyDivide();
+    if (left === null) return null;
+
+    while (true) {
+      skipWhitespace();
+      if (index >= expression.length) break;
+      const operator = expression[index];
+      if (operator !== '+' && operator !== '-') break;
+      index++;
+      const right = parseMultiplyDivide();
+      if (right === null) return null;
+      if (operator === '+') left += right;
+      else left -= right;
+    }
+
+    return left;
+  };
+
+  const result = parseAddSubtract();
+  skipWhitespace();
+  if (result === null || index !== expression.length) return null;
+  return result;
+};
+
+const evaluateBooleanExpression = (
+  expression: string,
+  context: FormulaContext
+): boolean | null => {
+  const trimmed = stripOuterParentheses(expression);
+  if (!trimmed) return null;
+
+  const lowerTrimmed = trimmed.toLowerCase();
+  if (lowerTrimmed === 'true') return true;
+  if (lowerTrimmed === 'false') return false;
+
+  const comparisonResult = evaluateComparisonExpression(trimmed, context);
+  if (typeof comparisonResult === 'boolean') return comparisonResult;
+
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    const fieldName = parseFieldReference(trimmed);
+    const fieldType = getFieldType(fieldName, context);
+
+    if (fieldType === 'boolean' || fieldType === 'checkbox') {
+      const columnIdentifier = getColumnIdentifier(fieldName, context);
+      if (context.rowData && columnIdentifier) {
+        const val = context.rowData[columnIdentifier] ?? context.rowData.data?.[columnIdentifier];
+        return Boolean(val);
+      }
+      return false;
+    }
+
+    const value = getFieldValueByType(fieldName, context);
+    if (typeof value === 'number') return value !== 0;
+    if (typeof value === 'string') return value.length > 0;
+    if (value instanceof Date) return true;
+    if (typeof value === 'boolean') return value;
+    return value === null ? null : Boolean(value);
+  }
+
+  const functionCall = parseExactFunctionCall(trimmed);
+  if (functionCall) {
+    const result = evaluateFunctionExpression(functionCall.name, functionCall.args, context);
+    return typeof result === 'boolean' ? result : null;
+  }
+
+  return null;
+};
+
+const evaluateFunctionExpression = (
+  name: string,
+  args: string[],
+  context: FormulaContext
+): any => {
+  const upperName = name.toUpperCase();
+  const evaluateArg = (arg: string) => evaluateExpressionValue(arg, context);
+  const evaluateNumberArg = (arg: string) => coerceToNumber(evaluateArg(arg));
+  const evaluateDateArg = (arg: string) => coerceToDate(evaluateArg(arg));
+  const evaluateTextArg = (arg: string) => coerceToText(evaluateArg(arg));
+
+  switch (upperName) {
+    case 'ADD':
+    case 'SUM': {
+      let result = 0;
+      for (const arg of args) {
+        const value = evaluateNumberArg(arg);
+        if (value === null) return null;
+        result += value;
+      }
+      return result;
+    }
+    case 'SUBTRACT': {
+      if (args.length < 2) return null;
+      const first = evaluateNumberArg(args[0]);
+      if (first === null) return null;
+      let result = first;
+      for (let i = 1; i < args.length; i++) {
+        const value = evaluateNumberArg(args[i]);
+        if (value === null) return null;
+        result -= value;
+      }
+      return result;
+    }
+    case 'MULTIPLY': {
+      if (args.length < 2) return null;
+      let result = 1;
+      for (const arg of args) {
+        const value = evaluateNumberArg(arg);
+        if (value === null) return null;
+        result *= value;
+      }
+      return result;
+    }
+    case 'DIVIDE': {
+      if (args.length < 2) return null;
+      const first = evaluateNumberArg(args[0]);
+      if (first === null) return null;
+      let result = first;
+      for (let i = 1; i < args.length; i++) {
+        const value = evaluateNumberArg(args[i]);
+        if (value === null) return null;
+        if (value === 0) {
+          setRuntimeEvaluationError('Division by zero is not allowed.');
+          return null;
+        }
+        result /= value;
+      }
+      return result;
+    }
+    case 'AVERAGE': {
+      if (args.length === 0) return null;
+      let total = 0;
+      for (const arg of args) {
+        const value = evaluateNumberArg(arg);
+        if (value === null) return null;
+        total += value;
+      }
+      return total / args.length;
+    }
+    case 'MAX': {
+      if (args.length === 0) return null;
+      const values = args.map(evaluateNumberArg);
+      if (values.some(v => v === null)) return null;
+      return Math.max(...(values as number[]));
+    }
+    case 'MIN': {
+      if (args.length === 0) return null;
+      const values = args.map(evaluateNumberArg);
+      if (values.some(v => v === null)) return null;
+      return Math.min(...(values as number[]));
+    }
+    case 'ROUND': {
+      if (args.length < 1) return null;
+      const value = evaluateNumberArg(args[0]);
+      const decimals = args.length > 1 ? evaluateNumberArg(args[1]) : 0;
+      if (value === null || decimals === null) return null;
+      return Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals);
+    }
+    case 'CEILING': {
+      const value = args[0] ? evaluateNumberArg(args[0]) : null;
+      return value === null ? null : Math.ceil(value);
+    }
+    case 'FLOOR': {
+      const value = args[0] ? evaluateNumberArg(args[0]) : null;
+      return value === null ? null : Math.floor(value);
+    }
+    case 'ABS': {
+      const value = args[0] ? evaluateNumberArg(args[0]) : null;
+      return value === null ? null : Math.abs(value);
+    }
+    case 'POWER': {
+      if (args.length < 2) return null;
+      const base = evaluateNumberArg(args[0]);
+      const exponent = evaluateNumberArg(args[1]);
+      if (base === null || exponent === null) return null;
+      return Math.pow(base, exponent);
+    }
+    case 'SQRT': {
+      const value = args[0] ? evaluateNumberArg(args[0]) : null;
+      if (value === null || value < 0) return null;
+      return Math.sqrt(value);
+    }
+    case 'MOD': {
+      if (args.length < 2) return null;
+      const dividend = evaluateNumberArg(args[0]);
+      const divisor = evaluateNumberArg(args[1]);
+      if (dividend === null || divisor === null) return null;
+      if (divisor === 0) {
+        setRuntimeEvaluationError('Division by zero is not allowed.');
+        return null;
+      }
+      return dividend % divisor;
+    }
+    case 'CONCAT':
+    case 'CONCATENATE': {
+      const parts: string[] = [];
+      for (const arg of args) {
+        const value = evaluateTextArg(arg);
+        if (value === null) return null;
+        parts.push(value);
+      }
+      return parts.join('');
+    }
+    case 'LEN': {
+      const value = args[0] ? evaluateTextArg(args[0]) : null;
+      return value === null ? null : value.length;
+    }
+    case 'UPPER': {
+      const value = args[0] ? evaluateTextArg(args[0]) : null;
+      return value === null ? null : value.toUpperCase();
+    }
+    case 'LOWER': {
+      const value = args[0] ? evaluateTextArg(args[0]) : null;
+      return value === null ? null : value.toLowerCase();
+    }
+    case 'TRIM': {
+      const value = args[0] ? evaluateTextArg(args[0]) : null;
+      return value === null ? null : value.trim();
+    }
+    case 'LEFT': {
+      if (args.length < 2) return null;
+      const textValue = evaluateTextArg(args[0]);
+      const countValue = evaluateNumberArg(args[1]);
+      if (textValue === null || countValue === null) return null;
+      const n = Math.max(0, Math.floor(countValue));
+      return n <= 0 ? '' : textValue.slice(0, n);
+    }
+    case 'RIGHT': {
+      if (args.length < 2) return null;
+      const textValue = evaluateTextArg(args[0]);
+      const countValue = evaluateNumberArg(args[1]);
+      if (textValue === null || countValue === null) return null;
+      const n = Math.max(0, Math.floor(countValue));
+      if (n <= 0) return '';
+      if (n >= textValue.length) return textValue;
+      return textValue.slice(textValue.length - n);
+    }
+    case 'MID': {
+      if (args.length < 3) return null;
+      const textValue = evaluateTextArg(args[0]);
+      const startValue = evaluateNumberArg(args[1]);
+      const lengthValue = evaluateNumberArg(args[2]);
+      if (textValue === null || startValue === null || lengthValue === null) return null;
+      const start = Math.max(1, Math.floor(startValue));
+      const len = Math.max(0, Math.floor(lengthValue));
+      if (len === 0) return '';
+      return textValue.substring(start - 1, start - 1 + len);
+    }
+    case 'FIND': {
+      if (args.length < 2) return null;
+      const searchText = evaluateTextArg(args[0]);
+      const withinText = evaluateTextArg(args[1]);
+      if (searchText === null || withinText === null) return null;
+      const position = withinText.indexOf(searchText);
+      return position >= 0 ? position + 1 : 0;
+    }
+    case 'REPLACE': {
+      if (args.length < 3) return null;
+      const textValue = evaluateTextArg(args[0]);
+      const oldText = evaluateTextArg(args[1]);
+      const newText = evaluateTextArg(args[2]);
+      if (textValue === null || oldText === null || newText === null) return null;
+      const escaped = oldText.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+      return textValue.replaceAll(new RegExp(escaped, 'g'), newText);
+    }
+    case 'TODAY': {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return today;
+    }
+    case 'NOW':
+      return new Date();
+    case 'YEAR':
+    case 'MONTH':
+    case 'DAY':
+    case 'WEEKDAY': {
+      const dateValue = args[0] ? evaluateDateArg(args[0]) : null;
+      if (dateValue === null) return null;
+      if (upperName === 'YEAR') return dateValue.getFullYear();
+      if (upperName === 'MONTH') return dateValue.getMonth() + 1;
+      if (upperName === 'DAY') return dateValue.getDate();
+      const day = dateValue.getDay();
+      return day === 0 ? 7 : day;
+    }
+    case 'DATEADD': {
+      if (args.length < 3) return null;
+      const dateValue = evaluateDateArg(args[0]);
+      const amount = evaluateNumberArg(args[1]);
+      const unitValue = evaluateTextArg(args[2]);
+      if (dateValue === null || amount === null || unitValue === null) return null;
+
+      const resultDate = new Date(dateValue);
+      switch (unitValue.toLowerCase()) {
+        case 'year':
+        case 'years':
+          resultDate.setFullYear(resultDate.getFullYear() + Math.floor(amount));
+          break;
+        case 'month':
+        case 'months':
+          resultDate.setMonth(resultDate.getMonth() + Math.floor(amount));
+          break;
+        case 'day':
+        case 'days':
+          resultDate.setDate(resultDate.getDate() + Math.floor(amount));
+          break;
+        case 'week':
+        case 'weeks':
+          resultDate.setDate(resultDate.getDate() + Math.floor(amount * 7));
+          break;
+        case 'hour':
+        case 'hours':
+          resultDate.setHours(resultDate.getHours() + Math.floor(amount));
+          break;
+        case 'minute':
+        case 'minutes':
+          resultDate.setMinutes(resultDate.getMinutes() + Math.floor(amount));
+          break;
+        case 'second':
+        case 'seconds':
+          resultDate.setSeconds(resultDate.getSeconds() + Math.floor(amount));
+          break;
+        default:
+          return null;
+      }
+      return resultDate;
+    }
+    case 'DATEDIFF': {
+      if (args.length < 3) return null;
+      const date1 = evaluateDateArg(args[0]);
+      const date2 = evaluateDateArg(args[1]);
+      const unitValue = evaluateTextArg(args[2]);
+      if (date1 === null || date2 === null || unitValue === null) return null;
+
+      const diffMs = date2.getTime() - date1.getTime();
+      switch (unitValue.toLowerCase()) {
+        case 'year':
+        case 'years':
+          return Math.floor(diffMs / (365.25 * 24 * 60 * 60 * 1000));
+        case 'month':
+        case 'months':
+          return Math.floor(diffMs / (30.44 * 24 * 60 * 60 * 1000));
+        case 'week':
+        case 'weeks':
+          return Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000));
+        case 'day':
+        case 'days':
+          return Math.floor(diffMs / (24 * 60 * 60 * 1000));
+        case 'hour':
+        case 'hours':
+          return Math.floor(diffMs / (60 * 60 * 1000));
+        case 'minute':
+        case 'minutes':
+          return Math.floor(diffMs / (60 * 1000));
+        case 'second':
+        case 'seconds':
+          return Math.floor(diffMs / 1000);
+        default:
+          return null;
+      }
+    }
+    case 'DATE': {
+      if (args.length < 3) return null;
+      const year = evaluateNumberArg(args[0]);
+      const month = evaluateNumberArg(args[1]);
+      const day = evaluateNumberArg(args[2]);
+      if (year === null || month === null || day === null) return null;
+
+      const yearInt = Math.floor(year);
+      const monthInt = Math.floor(month);
+      const dayInt = Math.floor(day);
+      if (monthInt < 1 || monthInt > 12 || dayInt < 1 || dayInt > 31) return null;
+
+      const resultDate = new Date(yearInt, monthInt - 1, dayInt);
+      if (resultDate.getFullYear() !== yearInt ||
+          resultDate.getMonth() !== monthInt - 1 ||
+          resultDate.getDate() !== dayInt) {
+        return null;
+      }
+      return resultDate;
+    }
+    case 'IF': {
+      if (args.length < 2) return null;
+      const condition = evaluateBooleanExpression(args[0], context);
+      if (condition === null) return null;
+      return condition
+        ? evaluateExpressionValue(args[1], context)
+        : args.length > 2 ? evaluateExpressionValue(args[2], context) : '';
+    }
+    case 'AND': {
+      if (args.length === 0) return null;
+      for (const arg of args) {
+        const value = evaluateBooleanExpression(arg, context);
+        if (value === null) return null;
+        if (!value) return false;
+      }
+      return true;
+    }
+    case 'OR': {
+      if (args.length === 0) return null;
+      for (const arg of args) {
+        const value = evaluateBooleanExpression(arg, context);
+        if (value === null) return null;
+        if (value) return true;
+      }
+      return false;
+    }
+    case 'NOT': {
+      if (args.length !== 1) return null;
+      const value = evaluateBooleanExpression(args[0], context);
+      return value === null ? null : !value;
+    }
+    case 'ISBLANK': {
+      if (args.length !== 1) return null;
+      const raw = args[0].trim();
+      if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+        return false;
+      }
+      const value = evaluateExpressionValue(args[0], context);
+      return value === null || value === undefined || value === '';
+    }
+    case 'ISNUMBER': {
+      if (args.length !== 1) return null;
+      const raw = args[0].trim();
+      if (raw.startsWith('{') && raw.endsWith('}')) {
+        return isNumericType(getFieldType(parseFieldReference(raw), context));
+      }
+      return coerceToNumber(evaluateExpressionValue(raw, context)) !== null;
+    }
+    case 'ISTEXT': {
+      if (args.length !== 1) return null;
+      const raw = args[0].trim();
+      if (raw.startsWith('{') && raw.endsWith('}')) {
+        return isTextType(getFieldType(parseFieldReference(raw), context));
+      }
+      const value = evaluateExpressionValue(raw, context);
+      return typeof value === 'string';
+    }
+    case 'ISDATE': {
+      if (args.length !== 1) return null;
+      const raw = args[0].trim();
+      if (raw.startsWith('{') && raw.endsWith('}')) {
+        return isDateType(getFieldType(parseFieldReference(raw), context));
+      }
+      return coerceToDate(evaluateExpressionValue(raw, context)) !== null;
+    }
     default:
       return null;
   }
@@ -1564,60 +2346,7 @@ export const evaluateCondition = (
   condition: string,
   context: FormulaContext
 ): boolean | null => {
-  const trimmed = condition.trim();
-  
-  // Use COMPARISON_OPERATORS but create non-global regex for matching
-  const operators = COMPARISON_OPERATORS.map(({ op, regex }) => ({
-    op,
-    regex: new RegExp(regex.source) // Remove global flag for single match
-  }));
-  
-  for (const { op, regex } of operators) {
-    const match = regex.exec(trimmed);
-    if (match) {
-      const index = match.index;
-      
-      if (!isValidOperatorMatch(trimmed, op, index)) {
-        continue;
-      }
-      
-      const left = trimmed.substring(0, index).trim();
-      const right = trimmed.substring(index + op.length).trim();
-      
-      const leftValue = parseComparisonOperand(left, context);
-      const rightValue = parseComparisonOperand(right, context);
-      
-      const result = performComparison(leftValue, rightValue, op);
-      if (result !== null) {
-        return result;
-      }
-    }
-  }
-  
-  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-    const fieldName = parseFieldReference(trimmed);
-    const fieldType = getFieldType(fieldName, context);
-    
-    if (fieldType === 'boolean' || fieldType === 'checkbox') {
-      const columnIdentifier = getColumnIdentifier(fieldName, context);
-      if (context.rowData && columnIdentifier) {
-        const val = context.rowData[columnIdentifier] ?? context.rowData.data?.[columnIdentifier];
-        return Boolean(val);
-      }
-      return false;
-    }
-    
-    const textVal = getTextFieldValue(fieldName, context);
-    const numVal = getFieldValue(fieldName, context);
-    const dateVal = getDateValue(fieldName, context);
-    return !!(textVal || numVal !== 0 || dateVal);
-  }
-  
-  const lowerTrimmed = trimmed.toLowerCase();
-  if (lowerTrimmed === 'true') return true;
-  if (lowerTrimmed === 'false') return false;
-  
-  return null;
+  return evaluateBooleanExpression(condition, context);
 };
 
 export const evaluateIF = (formula: string, context: FormulaContext): any => {
@@ -1874,60 +2603,8 @@ export const evaluateISDATE = (formula: string, context: FormulaContext): boolea
 
 // Evaluate comparison operators directly
 export const evaluateComparison = (formula: string, context: FormulaContext): boolean | null => {
-  const trimmed = formula.trim();
-  
-  // Use COMPARISON_OPERATORS but create non-global regex for matching
-  const operators = COMPARISON_OPERATORS.map(({ op, regex }) => ({
-    op,
-    regex: new RegExp(regex.source) // Remove global flag for single match
-  }));
-  
-  for (const { op, regex } of operators) {
-    const match = regex.exec(trimmed);
-    if (match) {
-      const index = match.index;
-      
-      if (!isValidOperatorMatch(trimmed, op, index)) {
-        continue;
-      }
-      
-      // Check if operator is inside quotes or parentheses
-      let inQuotes = false;
-      let quoteChar = '';
-      let parenDepth = 0;
-      for (let i = 0; i < index; i++) {
-        const char = trimmed[i];
-        const prevChar = i > 0 ? trimmed[i - 1] : '';
-        if ((char === '"' || char === "'") && prevChar !== '\\') {
-          if (!inQuotes) {
-            inQuotes = true;
-            quoteChar = char;
-          } else if (char === quoteChar) {
-            inQuotes = false;
-            quoteChar = '';
-          }
-        }
-        if (!inQuotes) {
-          if (char === '(' && prevChar !== '\\') parenDepth++;
-          if (char === ')' && prevChar !== '\\') parenDepth--;
-        }
-      }
-      if (inQuotes || parenDepth > 0) continue;
-      
-      const left = trimmed.substring(0, index).trim();
-      const right = trimmed.substring(index + op.length).trim();
-      
-      const leftValue = parseComparisonOperand(left, context);
-      const rightValue = parseComparisonOperand(right, context);
-      
-      const result = performComparison(leftValue, rightValue, op);
-      if (result !== null) {
-        return result;
-      }
-    }
-  }
-  
-  return null;
+  const result = evaluateComparisonExpression(formula.trim(), context);
+  return typeof result === 'boolean' ? result : null;
 };
 
 // Evaluate a mathematical expression with operators (+, -, *, /)
@@ -2142,6 +2819,8 @@ export const evaluateFormula = (
   context: FormulaContext,
   validateFormulaFn: (formula: string, context: FormulaContext) => string | null
 ): { result: any; error: string | null } => {
+  resetRuntimeEvaluationError();
+
   if (!formula.trim()) {
     return { result: null, error: null };
   }
@@ -2151,76 +2830,11 @@ export const evaluateFormula = (
     return { result: null, error };
   }
   
-  // Array of evaluation functions to try in order
-  // Each entry is [evaluator, optional condition function]
-  const evaluators: Array<[
-    (formula: string, context: FormulaContext) => any,
-    ((formula: string) => boolean) | null
-  ]> = [
-    [evaluateABS, null],
-    [evaluateSQRT, null],
-    [evaluateCEILING, null],
-    [evaluateFLOOR, null],
-    [evaluateROUND, null],
-    [evaluatePOWER, null],
-    [evaluateMOD, null],
-    [evaluateDIVIDE, null],
-    [evaluateSUBTRACT, null],
-    [evaluateMULTIPLY, null],
-    [evaluateADD, null],
-    [evaluateSUM, null],
-    [evaluateAVERAGE, null],
-    [evaluateMAX, null],
-    [evaluateMIN, null],
-    [evaluateCONCATENATE, null],
-    [evaluateUPPER, null],
-    [evaluateLOWER, null],
-    [evaluateTRIM, null],
-    [evaluateLEFT, null],
-    [evaluateRIGHT, null],
-    [evaluateMID, null],
-    [evaluateLEN, null],
-    [evaluateFIND, null],
-    [evaluateREPLACE, null],
-    [() => evaluateTODAY(), (formula: string) => formula.includes('TODAY()')],
-    [() => evaluateNOW(), (formula: string) => formula.includes('NOW()')],
-    [evaluateDATEADD, null],
-    [evaluateDATEDIFF, null],
-    [evaluateYEAR, null],
-    [evaluateMONTH, null],
-    [evaluateWEEKDAY, null],
-    [evaluateDAY, null],
-    [evaluateDATE, null],
-    [evaluateISBLANK, null],
-    [evaluateISNUMBER, null],
-    [evaluateISTEXT, null],
-    [evaluateISDATE, null],
-    [evaluateAND, null],
-    [evaluateOR, null],
-    [evaluateNOT, null],
-    [evaluateIF, null],
-    [evaluateComparison, null]
-  ];
-  
-  // Try each evaluator in order
-  for (const [evaluator, condition] of evaluators) {
-    if (condition && !condition(formula)) {
-      continue;
-    }
-    const result = evaluator(formula, context);
-    if (result !== null) {
-      return { result, error: null };
-    }
+  const result = evaluateExpressionValue(formula, context);
+  if (runtimeEvaluationError) {
+    return { result: null, error: runtimeEvaluationError };
   }
-  
-  // Fallback: try evaluating mathematical expressions with operators (+, -, *, /)
-  // Supports multiple operands: {Price} + {Tax} + {Shipping}, {Price} * {Quantity} * 1.1, etc.
-  const mathResult = evaluateMathExpression(formula, context);
-  if (mathResult !== null) {
-    return { result: mathResult, error: null };
-  }
-  
-  return { result: null, error: null };
+  return { result, error: null };
 };
 
 // Format the result based on formatting type
@@ -2403,6 +3017,10 @@ export const getCompatibleFieldTypes = (functionName: string | null): string[] |
   if (functionName === 'MATH_OPERATOR') {
     return NUMERIC_TYPES;
   }
+
+  if (functionName === 'CONCAT' || functionName === 'CONCATENATE') {
+    return [...new Set([...TEXT_TYPES, ...NUMERIC_TYPES])];
+  }
   
   if (MATH_FUNCTION_NAMES.includes(functionName)) {
     return NUMERIC_TYPES;
@@ -2478,16 +3096,11 @@ const hasOperator = (text: string, operators: string[]): boolean => {
 const validateBasicSyntax = (formula: string): string | null => {
   if (!formula.trim()) return null;
   
-  // Check parentheses balance
-  const openParens = countChar(formula, '(');
-  const closeParens = countChar(formula, ')');
-  if (openParens !== closeParens) {
-    return 'Mismatched parentheses';
-  }
-  
-  // Validate quoted strings are properly closed
   let inDoubleQuotes = false;
   let inSingleQuotes = false;
+  let parenDepth = 0;
+  let braceDepth = 0;
+
   for (let i = 0; i < formula.length; i++) {
     const char = formula[i];
     const prevChar = i > 0 ? formula[i - 1] : '';
@@ -2501,6 +3114,21 @@ const validateBasicSyntax = (formula: string): string | null => {
         inSingleQuotes = !inSingleQuotes;
       }
     }
+
+    if (inDoubleQuotes || inSingleQuotes) continue;
+
+    if (char === '(') {
+      parenDepth++;
+    } else if (char === ')') {
+      parenDepth--;
+      if (parenDepth < 0) return 'Mismatched parentheses';
+    } else if (char === '{') {
+      braceDepth++;
+      if (braceDepth > 1) return 'Mismatched field reference braces';
+    } else if (char === '}') {
+      braceDepth--;
+      if (braceDepth < 0) return 'Mismatched field reference braces';
+    }
   }
   
   if (inDoubleQuotes) {
@@ -2509,7 +3137,95 @@ const validateBasicSyntax = (formula: string): string | null => {
   if (inSingleQuotes) {
     return "Unclosed single-quoted string. Make sure all ' characters are properly closed.";
   }
+  if (parenDepth !== 0) {
+    return 'Mismatched parentheses';
+  }
+  if (braceDepth !== 0) {
+    return 'Mismatched field reference braces';
+  }
   
+  return null;
+};
+
+const validateFunctionArgumentSyntax = (formula: string): string | null => {
+  const calls = findFunctionCalls(formula, ALL_FUNCTION_NAMES);
+
+  for (const call of calls) {
+    const argsString = call.args ?? '';
+    if (!argsString.trim()) continue;
+
+    let currentArg = '';
+    let depth = 0;
+    let inBraces = false;
+    let inQuotes = false;
+    let quoteChar = '';
+    let argumentIndex = 1;
+
+    const flushArg = (): string | null => {
+      if (!currentArg.trim()) {
+        return `${call.name}() argument ${argumentIndex} is missing. Remove extra commas or provide a value.`;
+      }
+      currentArg = '';
+      argumentIndex++;
+      return null;
+    };
+
+    for (let i = 0; i < argsString.length; i++) {
+      const char = argsString[i];
+      const prevChar = i > 0 ? argsString[i - 1] : '';
+
+      if ((char === '"' || char === "'") && prevChar !== '\\') {
+        if (!inQuotes) {
+          inQuotes = true;
+          quoteChar = char;
+        } else if (char === quoteChar) {
+          inQuotes = false;
+          quoteChar = '';
+        }
+        currentArg += char;
+        continue;
+      }
+
+      if (inQuotes) {
+        currentArg += char;
+        continue;
+      }
+
+      if (char === '{') {
+        inBraces = true;
+        currentArg += char;
+        continue;
+      }
+      if (char === '}') {
+        inBraces = false;
+        currentArg += char;
+        continue;
+      }
+      if (char === '(') {
+        depth++;
+        currentArg += char;
+        continue;
+      }
+      if (char === ')') {
+        depth--;
+        currentArg += char;
+        continue;
+      }
+
+      if (char === ',' && depth === 0 && !inBraces) {
+        const error = flushArg();
+        if (error) return error;
+        continue;
+      }
+
+      currentArg += char;
+    }
+
+    if (!currentArg.trim()) {
+      return `${call.name}() argument ${argumentIndex} is missing. Remove extra commas or provide a value.`;
+    }
+  }
+
   return null;
 };
 
@@ -2571,45 +3287,11 @@ const validateCompoundStatements = (formula: string): string | null => {
     }
   }
 
-  // Check that only one function call is allowed at a time
-  const allFunctionCalls = findFunctionCalls(formula, ALL_FUNCTION_NAMES)
-    .filter(call => !isInsideQuotes(formula, call.index))
-    .map(call => ({ name: call.name, index: call.index }));
-  
-  // Count top-level function calls
-  let topLevelFunctionCount = 0;
-  for (const funcCall of allFunctionCalls) {
-    let parenDepth = 0;
-    let inQuotes = false;
-    let quoteChar = '';
-    
-    for (let i = 0; i < funcCall.index; i++) {
-      const char = formula[i];
-      const prevChar = i > 0 ? formula[i - 1] : '';
-      if ((char === '"' || char === "'") && prevChar !== '\\') {
-        if (!inQuotes) {
-          inQuotes = true;
-          quoteChar = char;
-        } else if (char === quoteChar) {
-          inQuotes = false;
-          quoteChar = '';
-        }
-      }
-      if (!inQuotes) {
-        if (char === '(' && prevChar !== '\\') parenDepth++;
-        if (char === ')' && prevChar !== '\\') parenDepth--;
-      }
-    }
-    
-    if (parenDepth === 0) {
-      topLevelFunctionCount++;
-    }
+  const adjacentFunctionPattern = /\)\s*[A-Z_][A-Z0-9_]*\s*\(/i;
+  if (adjacentFunctionPattern.test(formula)) {
+    return 'Compound expressions are not supported.';
   }
-  
-  if (topLevelFunctionCount > 1) {
-    return 'Only one function call is allowed at a time. Compound expressions are not supported.';
-  }
-  
+
   return null;
 };
 
@@ -2667,8 +3349,17 @@ const validateMathFunctions = (formula: string, context: FormulaContext): string
             }
           }
         } else if (!isNumericLiteral(trimmedArg)) {
-          if (trimmedArg && !startsWithFunctionCall(trimmedArg)) {
+          if (trimmedArg && !startsWithFunctionCall(trimmedArg) && !isComplexExpressionArg(trimmedArg)) {
             return `${funcName}() requires numeric values. "${trimmedArg}" is not numeric`;
+          }
+        }
+      }
+
+      if (funcName === 'DIVIDE' || funcName === 'MOD') {
+        const divisorArgs = args.slice(1);
+        for (const divisorArg of divisorArgs) {
+          if (isZeroDivisorExpression(divisorArg)) {
+            return 'Division by zero is not allowed.';
           }
         }
       }
@@ -2728,7 +3419,7 @@ const validateTextFunctions = (formula: string, context: FormulaContext): string
               return `${funcName}() second argument must be numeric or numeric field reference`;
             }
           }
-        } else if (!isNumericLiteral(countArg)) {
+        } else if (!isNumericLiteral(countArg) && !startsWithFunctionCall(countArg) && !isComplexExpressionArg(countArg)) {
           return `${funcName}() second argument must be a number`;
         }
       }
@@ -2753,7 +3444,7 @@ const validateTextFunctions = (formula: string, context: FormulaContext): string
             }
             return true;
           }
-          return isNumericLiteral(argStr);
+          return isNumericLiteral(argStr) || startsWithFunctionCall(argStr) || isComplexExpressionArg(argStr);
         };
         
         if (!checkNumericArg(startArg)) {
@@ -2801,7 +3492,7 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
               return `${funcName}() requires a date field. "${fieldName}" is a ${fieldType || 'non-date'} field`;
             }
           }
-        } else {
+        } else if (!startsWithFunctionCall(firstArg)) {
           const testDate = new Date(firstArg);
           if (Number.isNaN(testDate.getTime())) {
             return `${funcName}() requires a date field reference (e.g., {Date}) or valid date string`;
@@ -2826,7 +3517,7 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
               return `${funcName}() first argument requires a date field. "${fieldName}" is a ${fieldType || 'non-date'} field`;
             }
           }
-        } else {
+        } else if (!startsWithFunctionCall(firstArg)) {
           const testDate = new Date(firstArg);
           if (Number.isNaN(testDate.getTime())) {
             return `${funcName}() first argument must be a date field reference (e.g., {Date}) or valid date string`;
@@ -2842,14 +3533,14 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
               return `${funcName}() second argument must be numeric. "${fieldName}" is a ${fieldType || 'non-numeric'} field`;
             }
           }
-        } else if (!isNumericLiteral(secondArg)) {
+        } else if (!isNumericLiteral(secondArg) && !startsWithFunctionCall(secondArg) && !isComplexExpressionArg(secondArg)) {
           return `${funcName}() second argument must be a number`;
         }
         
         const thirdArg = args[2].trim();
         const isQuoted = (thirdArg.startsWith('"') && thirdArg.endsWith('"')) ||
                         (thirdArg.startsWith("'") && thirdArg.endsWith("'"));
-        if (!isQuoted && !thirdArg.startsWith('{')) {
+        if (!isQuoted && !thirdArg.startsWith('{') && !startsWithFunctionCall(thirdArg)) {
           return `${funcName}() third argument must be a quoted string (e.g., "day", "month", "year") or text field reference`;
         }
         
@@ -2878,7 +3569,7 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
               return `${funcName}() first argument requires a date field. "${fieldName}" is a ${fieldType || 'non-date'} field`;
             }
           }
-        } else {
+        } else if (!startsWithFunctionCall(firstArg)) {
           const testDate = new Date(firstArg);
           if (Number.isNaN(testDate.getTime())) {
             return `${funcName}() first argument must be a date field reference (e.g., {Date}) or valid date string`;
@@ -2896,7 +3587,7 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
               return `${funcName}() second argument requires a date field. "${fieldName}" is a ${fieldType || 'non-date'} field`;
             }
           }
-        } else {
+        } else if (!startsWithFunctionCall(secondArg)) {
           const testDate = new Date(secondArg);
           if (Number.isNaN(testDate.getTime())) {
             return `${funcName}() second argument must be a date field reference (e.g., {Date}) or valid date string`;
@@ -2906,7 +3597,7 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
         const thirdArg = args[2].trim();
         const isQuoted = (thirdArg.startsWith('"') && thirdArg.endsWith('"')) ||
                         (thirdArg.startsWith("'") && thirdArg.endsWith("'"));
-        if (!isQuoted && !thirdArg.startsWith('{')) {
+        if (!isQuoted && !thirdArg.startsWith('{') && !startsWithFunctionCall(thirdArg)) {
           return `${funcName}() third argument must be a quoted string (e.g., "day", "month", "year") or text field reference`;
         }
         
@@ -2934,7 +3625,7 @@ const validateDateFunctions = (formula: string, context: FormulaContext): string
                 return `${funcName}() argument ${i + 1} must be numeric. "${fieldName}" is a ${fieldType || 'non-numeric'} field`;
               }
             }
-          } else if (!isNumericLiteral(arg)) {
+          } else if (!isNumericLiteral(arg) && !startsWithFunctionCall(arg) && !isComplexExpressionArg(arg)) {
             return `${funcName}() argument ${i + 1} must be a number`;
           }
         }
@@ -3078,6 +3769,36 @@ const validateMathOperators = (formula: string, context: FormulaContext): string
     const lastChar = trimmedFormula.at(-1);
     if (lastChar === '+' || lastChar === '-' || lastChar === '*' || lastChar === '/') {
       return 'Invalid operator usage: expression cannot end with an operator';
+    }
+  }
+
+  for (let i = 0; i < formula.length; i++) {
+    const char = formula[i];
+    if (char !== '/') continue;
+
+    let j = i + 1;
+    while (j < formula.length && isWhitespaceChar(formula[j])) j++;
+    if (j >= formula.length) continue;
+
+    const divisorStart = j;
+    if (formula[divisorStart] === '{') continue;
+
+    if (formula[divisorStart] === '(') {
+      const closeParen = findMatchingParenIndex(formula, divisorStart);
+      if (closeParen !== -1) {
+        const inside = formula.slice(divisorStart + 1, closeParen);
+        if (isZeroDivisorExpression(inside)) {
+          return 'Division by zero is not allowed.';
+        }
+        continue;
+      }
+    }
+
+    const divisorLen = parseNumberLiteralAt(formula, divisorStart);
+    if (divisorLen <= 0) continue;
+    const divisorToken = formula.slice(divisorStart, divisorStart + divisorLen);
+    if (isZeroLiteral(divisorToken)) {
+      return 'Division by zero is not allowed.';
     }
   }
   
@@ -3269,12 +3990,10 @@ const validateComparisonOperators = (formula: string, context: FormulaContext): 
 // Validate logical functions
 const validateLogicalFunctions = (formula: string, _context: FormulaContext): string | null => {
   for (const funcName of LOGICAL_FUNCTION_NAMES) {
-    const funcRegex = new RegExp(String.raw`\b${funcName}\s*\(([^)]*)\)`, 'gi');
-    const matches = [...formula.matchAll(funcRegex)];
+    const matches = findFunctionCalls(formula, [funcName]);
     
     for (const match of matches) {
-      const argsString = match[1] || '';
-      const args = parseFunctionArguments(argsString);
+      const args = parseFunctionArguments(match.args || '');
       
       if (funcName === 'IF') {
         if (args.length < 2) {
@@ -3362,6 +4081,9 @@ export const validateFormula = (formula: string, context: FormulaContext): strin
   if (error) return error;
   
   error = validateCompoundStatements(formula);
+  if (error) return error;
+
+  error = validateFunctionArgumentSyntax(formula);
   if (error) return error;
   
   error = validateFieldReferences(formula, context);
