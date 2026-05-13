@@ -63,18 +63,22 @@ const HeaderMembers: React.FC = () => {
           canAssignUsers() && (
             <button
               onClick={() => setShowAddMemberModal(true)}
-              className="p-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="h-10 w-10 rounded-xl btn-primary text-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
               <UserPlus className="w-5 h-5" />
             </button>
           )
         )}
+      <div className="h-6 w-px bg-gray-300 mx-2"></div>
+
         <UserAvatarStack
           users={members}
           maxVisible={3}
           size="lg"
         />
+      <div className="h-6 w-px bg-gray-300 mx-2"></div>
       </div>
+
 
       {/* Add Member Modal */}
       {!(isWorkspaceReadOnly() || isBaseReadOnly()) && showAddMemberModal && selectedBaseId && selectedWorkspaceId && (

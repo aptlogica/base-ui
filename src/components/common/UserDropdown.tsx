@@ -49,43 +49,14 @@ const UserDropdown: React.FC = () => {
           applyLightTheme();
         }
       } else {
-        // No saved preference - check system preference
-        const prefersDark = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
-        setIsDark(prefersDark);
-        if (prefersDark) {
-          applyDarkTheme();
-        } else {
-          applyLightTheme();
-        }
-        // Save the initial preference
-        localStorage.setItem('theme', prefersDark ? 'dark' : 'light');
+        // No saved preference - default to light (do not follow system theme)
+        setIsDark(false);
+        applyLightTheme();
+        localStorage.setItem('theme', 'light');
       }
     };
 
     initializeTheme();
-
-    // Listen for system theme changes when no explicit preference is set
-    const mediaQuery = globalThis.matchMedia('(prefers-color-scheme: dark)');
-    const handleSystemThemeChange = () => {
-      const savedTheme = localStorage.getItem('theme');
-      // Only respond to system changes if no explicit preference is saved
-      if (!savedTheme) {
-        const prefersDark = mediaQuery.matches;
-        setIsDark(prefersDark);
-        if (prefersDark) {
-          applyDarkTheme();
-        } else {
-          applyLightTheme();
-        }
-        localStorage.setItem('theme', prefersDark ? 'dark' : 'light');
-      }
-    };
-
-    mediaQuery.addEventListener('change', handleSystemThemeChange);
-
-    return () => {
-      mediaQuery.removeEventListener('change', handleSystemThemeChange);
-    };
   }, []);
 
   const handleLogout = async () => {
@@ -138,7 +109,7 @@ const UserDropdown: React.FC = () => {
     (userProfile?.first_name && userProfile?.last_name
       ? `${userProfile.first_name} ${userProfile.last_name}`
       : userProfile?.email || 'User');
-  
+
   const userEmail = userProfile?.email || 'user@example.com';
 
   // Get user initials for avatar
@@ -162,7 +133,7 @@ const UserDropdown: React.FC = () => {
   return (
     <div className="relative flex items-center gap-2" ref={dropdownRef}>
       {/* User Info in Header */}
-      <div className="flex flex-col items-end">
+      <div className="flex flex-col items-end cursor-default">
         {isLoadingProfile ? (
           <div className="space-y-1">
             <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
@@ -170,10 +141,10 @@ const UserDropdown: React.FC = () => {
           </div>
         ) : (
           <>
-            <p className="text-sm font-semibold text-gray-900 leading-tight">
+            <p title={displayName} className="text-sm font-semibold text-primary leading-tight max-w-40 truncate">
               {displayName}
             </p>
-            <p className="text-xs text-gray-500 leading-tight">
+            <p title={userEmail} className="text-xs text-secondary leading-tight max-w-52 truncate">
               {userEmail}
             </p>
           </>
@@ -204,48 +175,48 @@ const UserDropdown: React.FC = () => {
         <div className="absolute right-0 top-full mt-2 w-56 bg-card border space-y-1 py rounded-xl shadow-lg z-50">
           {/* Profile */}
           <div className="p-2">
-          <button
-            onClick={() => {
-              setIsAccountModalOpen(true);
-              setIsOpen(false);
-            }}
-            className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors duration-200 rounded-xl"
-          >
-            <UserPen className="w-5 h-5 text-gray-400" />
-            <span className="text-sm text-primary">Profile</span>
-          </button>
+            <button
+              onClick={() => {
+                setIsAccountModalOpen(true);
+                setIsOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors duration-200 rounded-xl"
+            >
+              <UserPen className="w-5 h-5 text-gray-400" />
+              <span className="text-sm text-primary">Profile</span>
+            </button>
 
-          {/* Dark Mode */}
-          <button
-            onClick={toggleTheme}
-            disabled={isAnimating}
-            className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors rounded-xl duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${isAnimating ? 'theme-toggle-animation' : ''}`}
-            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            aria-pressed={isDark}
-          >
-            {isDark ? (
-              <Sun className="w-5 h-5 text-gray-400 transition-transform duration-200" />
-            ) : (
-              <Moon className="w-5 h-5 text-gray-400 transition-transform duration-200" />
-            )}
-            <span className="text-sm text-primary">
-              {isDark ? 'Light Mode' : 'Dark Mode'}
-            </span>
-          </button>
+            {/* Dark Mode */}
+            <button
+              onClick={toggleTheme}
+              disabled={isAnimating}
+              className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors rounded-xl duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${isAnimating ? 'theme-toggle-animation' : ''}`}
+              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-pressed={isDark}
+            >
+              {isDark ? (
+                <Sun className="w-5 h-5 text-gray-400 transition-transform duration-200" />
+              ) : (
+                <Moon className="w-5 h-5 text-gray-400 transition-transform duration-200" />
+              )}
+              <span className="text-sm text-primary">
+                {isDark ? 'Light Mode' : 'Dark Mode'}
+              </span>
+            </button>
 
-          {/* Separator */}
-          <div className="border-t my-1.5"></div>
+            {/* Separator */}
+            <div className="border-t my-1.5"></div>
 
-          {/* Sign Out */}
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors rounded-xl duration-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-b-xl"
-          >
-            <LogOut className="w-5 h-5 text-gray-400" />
-            <span className="text-sm text-primary">Sign out</span>
-          </button>
-        </div>
+            {/* Sign Out */}
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors rounded-xl duration-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-b-xl"
+            >
+              <LogOut className="w-5 h-5 text-gray-400" />
+              <span className="text-sm text-primary">Sign out</span>
+            </button>
+          </div>
         </div>
       )}
 

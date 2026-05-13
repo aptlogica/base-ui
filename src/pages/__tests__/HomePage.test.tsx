@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 // Hoist mock functions to top scope for vi.mock() to access them
 const {
   mockUseWorkspaceBases,
+  mockUseWorkspaces,
   mockUseCreateBase,
   mockUseUpdateBase,
   mockUseDeleteBase,
@@ -22,6 +23,7 @@ const {
   mockUseQueryClient,
 } = vi.hoisted(() => ({
   mockUseWorkspaceBases: vi.fn(),
+  mockUseWorkspaces: vi.fn(),
   mockUseCreateBase: vi.fn(),
   mockUseUpdateBase: vi.fn(),
   mockUseDeleteBase: vi.fn(),
@@ -40,6 +42,7 @@ const {
 // Mock hooks BEFORE importing component
 vi.mock('../../hooks/useApi', () => ({
   useWorkspaceBases: mockUseWorkspaceBases,
+  useWorkspaces: mockUseWorkspaces,
   useCreateBase: mockUseCreateBase,
   useUpdateBase: mockUseUpdateBase,
   useDeleteBase: mockUseDeleteBase,
@@ -335,6 +338,9 @@ const setupDefaultMocks = () => {
     data: { data: [] },
     isLoading: false,
   });
+  mockUseWorkspaces.mockReturnValue({
+    data: [{ id: 'ws-1', title: 'Workspace 1' }],
+  });
 
   mockUseBaseTables.mockReturnValue([]);
 
@@ -484,11 +490,10 @@ describe('HomePage', () => {
 
       renderWithProviders(<HomePage />);
 
-      const createBaseButtons = screen.queryAllByText(/create new base/i);
-      expect(createBaseButtons.length).toBe(0);
-
-      const importDataButtons = screen.queryAllByText(/import data/i);
-      expect(importDataButtons.length).toBe(0);
+      const createBaseButton = screen.getByRole('button', { name: /create new base/i });
+      const importDataButton = screen.getByRole('button', { name: /import data/i });
+      expect(createBaseButton).toBeDisabled();
+      expect(importDataButton).toBeDisabled();
     });
 
     it('should render base cards when bases are loaded', () => {
@@ -1138,9 +1143,8 @@ describe('HomePage', () => {
 
       renderWithProviders(<HomePage />);
 
-      const createButton = screen.queryByRole('button', { name: /create new base/i });
-      // No create button should be rendered when user lacks permission
-      expect(createButton).not.toBeInTheDocument();
+      const createButton = screen.getByRole('button', { name: /create new base/i });
+      expect(createButton).toBeDisabled();
     });
   });
 

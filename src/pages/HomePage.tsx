@@ -4,7 +4,7 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useState, useMemo, useRef, useEffect, Suspense, lazy } from 'react';
 import { Plus, Import, Search, Zap, Database, ChevronDown } from 'lucide-react';
-import { useWorkspaceBases, useCreateBase, useUpdateBase, useDeleteBase, useBaseTables, useCreateTable } from '../hooks/useApi';
+import { useWorkspaceBases, useCreateBase, useUpdateBase, useDeleteBase, useBaseTables, useCreateTable, useWorkspaces } from '../hooks/useApi';
 import { useNavigationStore } from '../stores/navigationStore';
 import { useNavigationActions } from '../hooks/useNavigationActions';
 import { Loader } from '../components/ui/Loader';
@@ -79,6 +79,7 @@ const getSortOptionLabel = (option: 'recent' | 'a-z' | 'z-a'): string => {
 const HomePage: React.FC = () => {
   const queryClient = useQueryClient();
   const { selectedWorkspaceId, navigateToTable } = useNavigationStore();
+  const { data: workspacesData } = useWorkspaces();
   const { data: workspaceBasesData, isLoading: basesLoading } = useWorkspaceBases(selectedWorkspaceId || '');
   const toast = useToast();
   const { canCreateBase, isBaseLevelAccess } = useWorkspaceAccess(selectedWorkspaceId || undefined);
@@ -388,6 +389,8 @@ const HomePage: React.FC = () => {
 
   const currentUser = useCurrentUser();
   const userName = getUserDisplayName(currentUser);
+  const hasValidSelectedWorkspace = Boolean(selectedWorkspaceId && workspacesData?.some((workspace: any) => workspace?.id === selectedWorkspaceId))
+  const canUseBaseActions = hasValidSelectedWorkspace && canCreateBase();
 
   if (basesLoading) {
     return (
@@ -431,13 +434,7 @@ const HomePage: React.FC = () => {
         {/* Rotated Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: 'url(/assets/home_header_bg.png)',
-            // transform: 'rotate(-13.85deg)',
-            // transformOrigin: 'center center',
-            // width: '100%',
-            // height: '200%',
-          }}
+          style={{ backgroundImage: 'url(/assets/home_header_bg.webp)' }}
         />
         {/* Content with relative positioning */}
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 lg:gap-8">
@@ -454,44 +451,54 @@ const HomePage: React.FC = () => {
           {/* Right Side - Action Cards */}
           <div className="flex flex-col sm:flex-row gap-4 flex-shrink-0 w-full lg:w-auto">
             {/* Create New Base - Only owner, co-owner, maintainer can create */}
-            {canCreateBase() && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (!selectedWorkspaceId) {
-                    toast.error('Please select a workspace first');
-                    return;
-                  }
-                  setShowCreateBase(true);
-                }}
-                className="rounded-xl bg-card border px-5 py-5 flex items-start gap-3 cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px] text-left"
-              >
-                <div className="w-12 h-12 rounded-xl bg-card border flex items-center justify-center">
-                  <Plus className="w-6 h-6 text-gray-900" />
+            <button
+              type="button"
+              disabled={!canUseBaseActions}
+              onClick={() => {
+                if (!selectedWorkspaceId || !hasValidSelectedWorkspace) {
+                  toast.error('Please select a workspace first');
+                  return;
+                }
+                setShowCreateBase(true);
+              }}
+              className={`rounded-xl bg-card border p-5 flex items-start gap-3 transition-all duration-200 w-full sm:w-auto sm:min-w-[300px] max-w-[300px] text-left ${canUseBaseActions ? 'cursor-pointer hover:shadow-md' : 'cursor-not-allowed opacity-60'
+                }`}
+            >
+              <div className="w-12 h-12 p-3 rounded-xl bg-card border flex items-center justify-center">
+                <Plus className="w-6 h-6 text-gray-900" />
+              </div>
+              <div>
+                <div className="font-semibold text-md text-gray-900">Create New Base</div>
+                <div className="text-[10px] text-gray-600">
+                  {hasValidSelectedWorkspace ? 'Start from scratch with a custom schema tailored to your team\'s specific requirements.' : 'Select a workspace first.'}
                 </div>
-                <div>
-                  <div className="font-semibold text-md text-gray-900">Create New Base</div>
-                  <div className="text-xs text-gray-600">Creates a new base.</div>
-                </div>
-              </button>
-            )}
+              </div>
+            </button>
 
             {/* Import Data - Only owner, co-owner, maintainer can import */}
-            {canCreateBase() && (
-              <button
-                type="button"
-                onClick={() => setShowImportData(true)}
-                className="rounded-xl bg-card border px-5 py-5 flex items-start gap-3 cursor-pointer hover:shadow-md transition-all duration-200 w-full sm:w-auto sm:min-w-[250px] text-left"
-              >
-                <div className="w-12 h-12 p-3 rounded-xl bg-card border flex items-center justify-center">
-                  <Import className="w-6 h-6 text-gray-900" />
+            <button
+              type="button"
+              disabled={!canUseBaseActions}
+              onClick={() => {
+                if (!selectedWorkspaceId || !hasValidSelectedWorkspace) {
+                  toast.error('Please select a workspace first');
+                  return;
+                }
+                setShowImportData(true);
+              }}
+              className={`rounded-xl bg-card border p-5 flex items-start gap-3 transition-all duration-200 w-full sm:w-auto sm:min-w-[300px] max-w-[300px] text-left ${canUseBaseActions ? 'cursor-pointer hover:shadow-md' : 'cursor-not-allowed opacity-60'
+                }`}
+            >
+              <div className="w-12 h-12 p-3 rounded-xl bg-card border flex items-center justify-center">
+                <Import className="w-6 h-6 text-gray-900" />
+              </div>
+              <div>
+                <div className="font-semibold text-md text-gray-900">Import Data</div>
+                <div className="text-[10px] text-gray-600">
+                  {hasValidSelectedWorkspace ? 'Seamlessly migrate your data from CSV, Excel, JSON or direct Airtable connection.' : 'Select a workspace first.'}
                 </div>
-                <div>
-                  <div className="font-semibold text-md text-gray-900">Import Data</div>
-                  <div className="text-xs text-gray-600">Bring in external data.</div>
-                </div>
-              </button>
-            )}
+              </div>
+            </button>
           </div>
         </div>
       </div>

@@ -9,7 +9,6 @@ import { Ellipsis, Edit, Trash2, Table2, Pin } from 'lucide-react';
 import { EditItemModal } from '../modals/EditItemModal';
 import DeleteConfirmModal from '../modals/DeleteConfirmModal';
 import { useUpdateTable } from '../../hooks/useApi';
-import { useNavigationActions } from '../../hooks/useNavigationActions';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
 
 import { ExistingItem } from '../../utils/nameValidation';
@@ -18,7 +17,7 @@ interface TableOptionsMenuProps {
   table: any;
   onRename: (name: string) => void;
   onEditDescription: (desc: string) => void;
-  onDelete: () => void;
+  onDelete: () => void | Promise<void>;
   onPinToggle?: (tableId: string, newStatus: boolean) => void;
   portaled?: boolean;
   align?: 'left' | 'right' | 'auto';
@@ -32,7 +31,6 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
   const [showDelete, setShowDelete] = useState(false);
   // TanStack Query mutations
   const updateTableMutation = useUpdateTable();
-  const { handleTableDeletion } = useNavigationActions();
   const { canDeleteTable, isBaseReadOnly, canUpdateTable } = useBaseAccess(table?.base_id);
 
   const handleEditTable = async ({ name, description }: { name: string; description: string }) => {
@@ -61,10 +59,8 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
 
   const handleDeleteTable = async () => {
     try {
-      // Only call the navigation handler - the API call should be handled by the parent component
-      // to avoid duplicate API calls
-      handleTableDeletion(table.id);
-      onDelete();
+      // Let the parent perform the delete API call + any navigation only after success.
+      await Promise.resolve(onDelete());
       setShowDelete(false);
     } catch (error) {
       console.error('Delete error:', error);

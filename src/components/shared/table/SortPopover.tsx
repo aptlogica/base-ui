@@ -355,7 +355,7 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
         >
           <div className="p-3">
             {displaySorts.length === 0 && <div className="text-gray-400 text-sm mb-2">No sort options</div>}
-            {displaySorts.map(renderSortRow)}
+            {displaySorts.map((element, index) => renderSortRow(element, index))}
             {availableColumns.length > 0 && (
               <button
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-sm font-medium mt-2 ${hasUnusedColumns ? 'text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black' : 'text-secondary cursor-not-allowed opacity-60'}`}
