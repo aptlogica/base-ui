@@ -919,7 +919,7 @@ export const Formula: React.FC<FormulaProps> = ({
     const { result, error } = evaluateFormula(formulaText, formulaContext, validateFormula);
 
     if (error) {
-      return null;
+      return <div className={`${className} px-2 truncate text-red-500`}>#VALUE ERROR</div>;
     }
 
     if (result === null) {

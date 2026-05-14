@@ -344,6 +344,8 @@ export const Table: React.FC<TableProps> = ({
     handleColumnDragEnd: handleColumnDragEndFromHook,
     setEditColumn,
     setEditColumnIndex,
+    formulaUsageWarning,
+    setFormulaUsageWarning,
   } = useColumnManagement({
     tableId,
     baseId,
@@ -1204,9 +1206,16 @@ export const Table: React.FC<TableProps> = ({
       {deleteConfirmModalOpen && columnToDelete !== null && (
         <DeleteConfirmModal
           isOpen={deleteConfirmModalOpen}
-          onClose={() => setDeleteConfirmModalOpen(false)}
+          onClose={() => {
+            setDeleteConfirmModalOpen(false);
+            setFormulaUsageWarning(null);
+          }}
           onConfirm={handleConfirmDeleteColumn}
-          message={`Are you sure you want to delete the column "${columns.find(col => col.id === columnToDelete)?.title || 'Unknown Column'}"? This action cannot be undone.`}
+          message={
+            formulaUsageWarning && formulaUsageWarning.length > 0
+              ? `Are you sure you want to continue? The "${columns.find(col => col.id === columnToDelete)?.title || 'Unknown Column'}" column is being used in formula field(s): ${formulaUsageWarning.join(', ')}. Removing it could break dependent formulas.`
+              : `Are you sure you want to delete the column "${columns.find(col => col.id === columnToDelete)?.title || 'Unknown Column'}"? This action cannot be undone.`
+          }
           title="Delete Column"
         />
       )}
