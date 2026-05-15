@@ -31,6 +31,7 @@ import {
   createFieldService,
   updateFieldService,
   deleteFieldService,
+  resetFieldService,
   // New view API services
   createViewService,
   updateViewService,
@@ -724,6 +725,27 @@ export const useUpdateField = () => {
           refetchType: 'active', // CRITICAL: Force immediate refetch, bypasses staleTime
         });
       }
+    },
+  });
+};
+
+export const useResetField = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ column_id, model_id }: { column_id: string; model_id: string }) =>
+      resetFieldService({ column_id, model_id }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['fields'] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(vars.model_id),
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(vars.model_id)],
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };

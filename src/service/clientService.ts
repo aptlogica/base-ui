@@ -819,6 +819,14 @@ export async function deleteFieldService(id: string) {
   return await makeAuthenticatedCall(() => client.tableService.deleteColumn(id));
 }
 
+export async function resetFieldService(params: any) {
+  return await makeAuthenticatedCall(() => client.columnService.reset(params));
+}
+
+export async function bulkUpdateFieldService(params: any) {
+  return await makeAuthenticatedCall(() => client.columnService.bulkUpdate(params));
+}
+
 // View Service wrappers
 export async function createViewService(params: any) {
   return await makeAuthenticatedCall(() => client.tableService.createView(params));
