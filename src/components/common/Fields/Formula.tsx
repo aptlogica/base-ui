@@ -381,9 +381,7 @@ export const Formula: React.FC<FormulaProps> = ({
 
   // Sync formula text with config changes
   useEffect(() => {
-    if (formula && formula !== formulaText) {
-      setFormulaText(formula);
-    }
+    setFormulaText(formula ?? '');
   }, [formula]);
 
   // Sync formatting with config changes

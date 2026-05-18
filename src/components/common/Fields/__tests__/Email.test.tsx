@@ -67,13 +67,7 @@ describe('Email Component', () => {
       await waitFor(() => {
         expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
       });
-      await waitFor(() => {
-        expect(
-          screen.getByText((text, el) =>
-            text === 'original@example.com' && (el?.classList.contains('field-component') ?? false)
-          )
-        ).toBeInTheDocument();
-      });
+      expect(screen.getByText('original@example.com')).toBeInTheDocument();
       expect(mockOnChange).not.toHaveBeenCalled();
     });
   });

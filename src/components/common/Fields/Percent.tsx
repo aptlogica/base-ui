@@ -286,7 +286,9 @@ export const Percent: React.FC<PercentProps> = ({
             style={{ width: `${progress}%` }}
           />
         </div>
-         <span>{localValue}</span>
+        <span className='flex items-center gap-1'>{localValue}
+          <PercentageIcon className="w-4 h-4 text-gray-500" />
+        </span>
       </div>
     );
 
