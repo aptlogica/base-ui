@@ -57,7 +57,9 @@ export const useLookupSourceColumn = (lookupColumnId: string | undefined) => {
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    // Always verify source-column metadata when table remounts/navigation occurs.
+    // This prevents stale lookup formatting after source field config updates.
+    refetchOnMount: 'always',
     refetchOnReconnect: false,
   });
 };

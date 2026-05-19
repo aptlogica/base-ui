@@ -4,6 +4,7 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import React from 'react';
 import { Calendar, Clock, Mail, User, Paperclip, Check, X } from 'lucide-react';
+import { DateTime } from 'luxon';
 
 /**
  * Base pill styling - consistent gray pills for all lookup values
@@ -23,27 +24,30 @@ const stripHTML = (html: string): string => {
 /**
  * Format date string to human-readable format
  */
-const formatDate = (dateString: string): string => {
+const formatDate = (dateString: string, sourceColumn?: any): string => {
   try {
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) return dateString;
-    
-    if (dateString.includes('T') || dateString.includes(' ')) {
-      return date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      });
-    } else {
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
+    const meta = sourceColumn?.meta || sourceColumn?.config || {};
+    const tz = meta.timeZoneLabel || meta.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const isDateTimeType =
+      String(sourceColumn?.uidt || sourceColumn?.type || '').toLowerCase() === 'datetime';
+
+    // Parse ISO first (UTC-aware for Z values), fallback to SQL-like formats.
+    let dt = DateTime.fromISO(dateString, { zone: 'utc' });
+    if (!dt.isValid) {
+      dt = DateTime.fromSQL(dateString, { zone: tz });
     }
+    if (!dt.isValid) {
+      return dateString;
+    }
+
+    // Date-only values should not be shifted by timezone conversion.
+    const hasTimeInfo = dateString.includes('T') || dateString.includes(' ');
+    if (!hasTimeInfo && !isDateTimeType) {
+      return dt.toFormat('LLL d, yyyy');
+    }
+
+    const zoned = dt.setZone(tz);
+    return zoned.toFormat('LLL d, yyyy, h:mm a');
   } catch {
     return dateString;
   }
@@ -75,6 +79,7 @@ interface RenderPillProps {
   value: any;
   sourceColumn: any;
   index: number;
+  userDisplayMap?: Record<string, string>;
 }
 
 /**
@@ -114,13 +119,13 @@ export const renderLongTextPill = ({ value, sourceColumn, index }: RenderPillPro
 export const renderDateTimePill = ({ value, sourceColumn, index }: RenderPillProps): React.ReactNode => {
   if (!value) return null;
   
-  const formatted = formatDate(String(value));
+  const formatted = formatDate(String(value), sourceColumn);
   const isDateTime = String(value).includes('T') || String(value).includes(' ');
   const Icon = isDateTime ? Clock : Calendar;
   
   return (
     <span key={index} className={BASE_PILL_CLASSES}>
-      <Icon className="w-3 h-3 text-gray-500" />
+      <Icon className="w-4 h-4 text-gray-500" />
       <span className="truncate max-w-[150px] block">{formatted}</span>
     </span>
   );
@@ -136,7 +141,7 @@ export const renderEmailPill = ({ value, sourceColumn, index }: RenderPillProps)
   
   return (
     <span key={index} className={BASE_PILL_CLASSES} title={email}>
-      <Mail className="w-3 h-3 text-gray-500" />
+      <Mail className="w-4 h-4 text-gray-500" />
       <span className="truncate max-w-[150px] block">{email}</span>
     </span>
   );
@@ -147,14 +152,39 @@ export const renderEmailPill = ({ value, sourceColumn, index }: RenderPillProps)
  */
 export const renderUserPill = ({ value, sourceColumn, index }: RenderPillProps): React.ReactNode => {
   if (!value) return null;
-  
-  const displayText = typeof value === 'object' 
-    ? (value.name || value.email || value.title || String(value))
-    : String(value);
+
+  const displayMap = sourceColumn?.__lookupUserDisplayMap as Record<string, string> | undefined;
+  const resolveDisplayName = (raw: any): string => {
+    if (raw && typeof raw === 'object') {
+      const objId = raw.id ? String(raw.id) : '';
+      return (
+        raw.name ||
+        raw.display_name ||
+        raw.email ||
+        (objId && displayMap?.[objId]) ||
+        String(raw.title || objId || raw)
+      );
+    }
+
+    const text = String(raw);
+    // Handle comma-separated IDs in a single lookup value.
+    if (text.includes(',')) {
+      return text
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((id) => displayMap?.[id] || id)
+        .join(', ');
+    }
+
+    return displayMap?.[text] || text;
+  };
+
+  const displayText = resolveDisplayName(value);
   
   return (
     <span key={index} className={BASE_PILL_CLASSES} title={displayText}>
-      <User className="w-3 h-3 text-gray-500" />
+      <User className="w-4 h-4 text-gray-500" />
       <span className="truncate max-w-[150px] block">{displayText}</span>
     </span>
   );
@@ -172,7 +202,7 @@ export const renderDurationPill = ({ value, sourceColumn, index }: RenderPillPro
   
   return (
     <span key={index} className={BASE_PILL_CLASSES}>
-      <Clock className="w-3 h-3 text-gray-500" />
+      <Clock className="w-4 h-4 text-gray-500" />
       <span className="truncate max-w-[120px] block">{formatted}</span>
     </span>
   );
@@ -195,7 +225,7 @@ export const renderAttachmentPill = ({ value, sourceColumn, index }: RenderPillP
   
   return (
     <span key={index} className={BASE_PILL_CLASSES} title={fileName}>
-      <Paperclip className="w-3 h-3 text-gray-500" />
+      <Paperclip className="w-4 h-4 text-gray-500" />
       <span className="truncate max-w-[120px] block">{fileName}{count}</span>
     </span>
   );
@@ -211,7 +241,7 @@ export const renderCheckboxPill = ({ value, sourceColumn, index }: RenderPillPro
   
   return (
     <span key={index} className={BASE_PILL_CLASSES}>
-      <Icon className={`w-3 h-3 ${boolValue ? 'text-green-600' : 'text-red-600'}`} />
+      <Icon className={`w-4 h-4 ${boolValue ? 'text-green-600' : 'text-red-600'}`} />
       <span>{text}</span>
     </span>
   );
@@ -223,13 +253,25 @@ export const renderCheckboxPill = ({ value, sourceColumn, index }: RenderPillPro
 export const renderCurrencyPill = ({ value, sourceColumn, index }: RenderPillProps): React.ReactNode => {
   if (value === null || value === undefined) return null;
   
-  const meta = sourceColumn?.meta || {};
-  const currencyType = meta.currencyType || '';
+  const meta = sourceColumn?.meta || sourceColumn?.config || {};
+  const currencyType = meta.currencyType || 'USD';
+  const currencyLocale = meta.currencyLocale || 'en-US';
+  const precision = Number.isFinite(Number(meta.precision)) ? Number(meta.precision) : 2;
   const numValue = typeof value === 'number' ? value : Number.parseFloat(String(value));
   
   if (Number.isNaN(numValue)) return null;
   
-  const formatted = currencyType ? `${currencyType} ${numValue.toLocaleString()}` : numValue.toLocaleString();
+  let formatted: string;
+  try {
+    formatted = new Intl.NumberFormat(currencyLocale, {
+      style: 'currency',
+      currency: currencyType,
+      minimumFractionDigits: precision,
+      maximumFractionDigits: precision
+    }).format(numValue);
+  } catch {
+    formatted = `${currencyType} ${numValue.toLocaleString()}`;
+  }
   
   return (
     <span key={index} className={BASE_PILL_CLASSES}>

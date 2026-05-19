@@ -182,7 +182,6 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
           value={getDisplayValue(fieldType, value)}
           onChange={() => {}}
           readOnly={true}
-          maxLength={1000}
           config={{ ...parsedConfig, hideMaximizeButton: hideActionButtons }}
           allowEdit={false}
           isBorder={false}

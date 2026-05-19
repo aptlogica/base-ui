@@ -666,10 +666,6 @@ export async function getWorkspacesByUser() {
   return await makeAuthenticatedCall(() => client.userService.getWorkspaces());
 }
 
-export async function getTablesByWorkspaceIdService(id: string) {
-  return await makeAuthenticatedCall(() => client.workspace.getTablesByWorkspaceId(id));
-}
-
 export async function updateWorkspaceService(id: string, params: any) {
   return await makeAuthenticatedCall(() => client.workspace.update(id, params));
 }

@@ -79,7 +79,7 @@ describe('lookupRenderers', () => {
 
   it('renders numeric format pills', () => {
     const currency = renderNode(renderCurrencyPill({ value: 1234.5, sourceColumn: { meta: { currencyType: 'USD' } }, index: 0 }));
-    expect(within(currency.container).getByText(/USD/)).toBeInTheDocument();
+    expect(within(currency.container).getByText(/\$1,234\.50|USD/)).toBeInTheDocument();
 
     const percent = renderNode(renderPercentPill({ value: 12.5, sourceColumn: {}, index: 0 }));
     expect(within(percent.container).getByText('12.5%')).toBeInTheDocument();

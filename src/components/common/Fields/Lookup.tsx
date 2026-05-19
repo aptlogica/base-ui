@@ -6,6 +6,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { MoreHorizontal, Search } from 'lucide-react';
 import { useLookupSourceColumn } from '../../../hooks/useLookupSourceColumn';
+import { useGetTenantUsers } from '../../../hooks/useApi';
 import {
   renderRatingPill,
   renderLongTextPill,
@@ -46,6 +47,41 @@ interface LookupProps {
     title?: string;
   };
 }
+
+const stripHtml = (value: string): string => {
+  if (!value) return '';
+  const div = document.createElement('div');
+  div.innerHTML = value;
+  return div.textContent || div.innerText || '';
+};
+
+const normalizeJsonPreview = (value: unknown): string => {
+  if (value === null || value === undefined) return '';
+
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  }
+
+  const text = String(value).trim();
+  if (!text) return '';
+
+  // Handle stringified JSON safely.
+  const looksLikeJson = (text.startsWith('{') && text.endsWith('}')) || (text.startsWith('[') && text.endsWith(']'));
+  if (looksLikeJson) {
+    try {
+      const parsed = JSON.parse(text);
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      return text;
+    }
+  }
+
+  return text;
+};
 
 /**
  * Get the lookup_column_id from field meta
@@ -178,6 +214,30 @@ export const Lookup: React.FC<LookupProps> = ({
 
   // Fetch source column configuration
   const { data: sourceColumn, isLoading: isLoadingSourceColumn } = useLookupSourceColumn(lookupColumnId);
+  const sourceFieldType = useMemo(() => getFieldTypeFromSource(sourceColumn), [sourceColumn]);
+  const isUserLikeLookup = sourceFieldType === 'user' || sourceFieldType === 'createdBy' || sourceFieldType === 'lastModifiedBy';
+
+  // Fetch users only for user-like lookup fields; keep this cache warm and stable.
+  const { data: tenantUsers = [] } = useGetTenantUsers({
+    enabled: isUserLikeLookup,
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: false
+  });
+
+  const lookupUserDisplayMap = useMemo(() => {
+    if (!isUserLikeLookup || !Array.isArray(tenantUsers)) return {};
+    return tenantUsers.reduce((acc: Record<string, string>, user: any) => {
+      const userId = user?.id ? String(user.id) : '';
+      if (!userId) return acc;
+      const displayName =
+        user.display_name ||
+        `${user.first_name || ''} ${user.last_name || ''}`.trim() ||
+        user.email ||
+        userId;
+      acc[userId] = displayName;
+      return acc;
+    }, {});
+  }, [tenantUsers, isUserLikeLookup]);
 
   // Normalize value to array
   const normalizedValues = useMemo(() => normalizeLookupValue(value), [value]);
@@ -188,7 +248,7 @@ export const Lookup: React.FC<LookupProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 320 });
 
   // Calculate visible items based on container width
   React.useEffect(() => {
@@ -232,6 +292,67 @@ export const Lookup: React.FC<LookupProps> = ({
     });
   }, [hiddenItems, searchTerm]);
 
+  const renderLongTextDropdown = (items: any[]) => (
+    <div className="flex flex-col gap-2 max-h-[280px] overflow-auto">
+      {items.map((item, index) => {
+        const text = stripHtml(String(item ?? '')).trim();
+        if (!text) return null;
+        return (
+          <div
+            key={`lt-${index}`}
+            className="px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg text-gray-700 whitespace-pre-wrap break-words"
+            title={text}
+          >
+            {text}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderAttachmentDropdown = (items: any[]) => (
+    <div className="flex flex-col gap-2 max-h-[280px] overflow-auto">
+      {items.map((item, index) => {
+        const attachments = Array.isArray(item) ? item : [item];
+        const valid = attachments.filter((a: any) => a && typeof a === 'object');
+        if (valid.length === 0) return null;
+        return (
+          <div key={`att-${index}`} className="px-3 py-2 bg-white border border-gray-200 rounded-lg">
+            <div className="text-xs text-gray-500 mb-1">{valid.length} file{valid.length > 1 ? 's' : ''}</div>
+            <div className="flex flex-col gap-1">
+              {valid.map((file: any, i: number) => {
+                const name = file.title || file.name || file.file_name || `Attachment ${i + 1}`;
+                return (
+                  <div key={`${name}-${i}`} className="text-sm text-gray-700 truncate" title={name}>
+                    {name}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderJsonDropdown = (items: any[]) => (
+    <div className="flex flex-col gap-2 max-h-[280px] overflow-auto">
+      {items.map((item, index) => {
+        const preview = normalizeJsonPreview(item);
+        if (!preview) return null;
+        return (
+          <pre
+            key={`json-${index}`}
+            className="px-3 py-2 text-xs bg-white border border-gray-200 rounded-lg text-gray-700 whitespace-pre-wrap break-words font-mono overflow-x-auto"
+            title={preview}
+          >
+            {preview}
+          </pre>
+        );
+      })}
+    </div>
+  );
+
   // Handle click outside to close dropdown
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -274,21 +395,43 @@ export const Lookup: React.FC<LookupProps> = ({
       if (renderedItems.length === 0) return null;
 
       return (
-        <div className={`flex flex-wrap gap-1 items-center ${isInDropdown ? 'max-w-full' : ''}`} style={{ maxWidth: '100%', overflow: 'hidden' }}>
+        <div
+          className={`flex ${isInDropdown ? 'flex-wrap' : 'flex-nowrap'} gap-1 items-center ${isInDropdown ? 'max-w-full' : ''}`}
+          style={{ maxWidth: '100%', overflow: 'hidden' }}
+        >
           {renderedItems}
         </div>
       );
     }
 
-    // Render each value as a separate pill using source column type
+    if (isInDropdown && sourceFieldType === 'longText') {
+      return renderLongTextDropdown(items);
+    }
+
+    if (isInDropdown && sourceFieldType === 'attachment') {
+      return renderAttachmentDropdown(items);
+    }
+
+    if (isInDropdown && sourceFieldType === 'json') {
+      return renderJsonDropdown(items);
+    }
+
+    // Render each value as separate pills using source column type
+    const sourceColumnWithContext = isUserLikeLookup
+      ? { ...sourceColumn, __lookupUserDisplayMap: lookupUserDisplayMap }
+      : sourceColumn;
+
     const renderedItems = items
-      .map((item, index) => renderLookupValue(item, sourceColumn, index))
+      .map((item, index) => renderLookupValue(item, sourceColumnWithContext, index))
       .filter((item) => item !== null);
 
     if (renderedItems.length === 0) return null;
 
     return (
-      <div className={`flex flex-wrap gap-1 items-center ${isInDropdown ? 'max-w-full' : ''}`} style={{ maxWidth: '100%', overflow: 'hidden' }}>
+      <div
+        className={`flex ${isInDropdown ? 'flex-wrap' : 'flex-nowrap'} gap-1 items-center ${isInDropdown ? 'max-w-full' : ''}`}
+        style={{ maxWidth: '100%', overflow: 'hidden' }}
+      >
         {renderedItems}
       </div>
     );
@@ -313,7 +456,7 @@ export const Lookup: React.FC<LookupProps> = ({
       {/* Items Container */}
       <div
         ref={containerRef}
-        className="px-1.5 w-full min-h-[32px] flex items-center justify-start flex-wrap gap-1"
+        className="px-1.5 w-full min-h-[32px] flex items-center justify-start flex-nowrap gap-1"
         style={{ overflow: 'hidden' }}
       >
         {renderValues(visibleItems)}
@@ -325,9 +468,30 @@ export const Lookup: React.FC<LookupProps> = ({
               e.stopPropagation()
               if (!isDropdownOpen && containerRef.current) {
                 const rect = containerRef.current.getBoundingClientRect();
+                const viewportPadding = 12;
+                const preferredWidth = 500;
+                const minWidth = 300;
+                const maxAllowedWidth = Math.max(minWidth, window.innerWidth - viewportPadding * 2);
+                const width = Math.min(preferredWidth, maxAllowedWidth);
+
+                const left = Math.min(
+                  Math.max(rect.left + window.scrollX, viewportPadding + window.scrollX),
+                  window.scrollX + window.innerWidth - width - viewportPadding
+                );
+
+                const estimatedHeight = 360;
+                const belowTop = rect.bottom + window.scrollY + 4;
+                const aboveTop = rect.top + window.scrollY - estimatedHeight - 4;
+                const bottomOverflow =
+                  belowTop + estimatedHeight > window.scrollY + window.innerHeight - viewportPadding;
+                const top = bottomOverflow && aboveTop > window.scrollY + viewportPadding
+                  ? aboveTop
+                  : belowTop;
+
                 setDropdownPosition({
-                  top: rect.bottom + window.scrollY,
-                  left: rect.left + window.scrollX
+                  top,
+                  left,
+                  width
                 });
               }
               setIsDropdownOpen(!isDropdownOpen)
@@ -343,10 +507,12 @@ export const Lookup: React.FC<LookupProps> = ({
       {isDropdownOpen && hiddenItems.length > 0 && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-50 bg-gray-100 ml-2 border rounded-xl shadow-lg min-w-[300px] max-w-[500px]"
+          className="fixed z-50 bg-gray-100 border rounded-xl shadow-lg"
           style={{
             top: `${dropdownPosition.top}px`,
-            left: `${dropdownPosition.left}px`
+            left: `${dropdownPosition.left}px`,
+            width: `${dropdownPosition.width}px`,
+            maxWidth: `calc(100vw - 24px)`
           }}
         >
           {/* Search Input */}

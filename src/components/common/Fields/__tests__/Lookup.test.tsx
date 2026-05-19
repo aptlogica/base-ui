@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Lookup } from '../Lookup';
 
 const useLookupSourceColumnMock = vi.fn();
@@ -28,6 +29,13 @@ const renderTextPillMock = vi.fn();
 
 vi.mock('../../../../hooks/useLookupSourceColumn', () => ({
   useLookupSourceColumn: (id: string | undefined) => useLookupSourceColumnMock(id),
+}));
+
+vi.mock('../../../../hooks/useApi', () => ({
+  useGetTenantUsers: vi.fn(() => ({
+    data: [],
+    isLoading: false,
+  })),
 }));
 
 vi.mock('../../../../utils/fieldType', () => ({
@@ -85,6 +93,21 @@ const setOffsetWidth = (value: number) => {
   });
 };
 
+const renderWithQueryClient = (ui: React.ReactElement) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {ui}
+    </QueryClientProvider>
+  );
+};
+
 describe('Lookup', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -105,7 +128,7 @@ describe('Lookup', () => {
   });
 
   it('renders nothing when value is null', () => {
-    const { container } = render(<Lookup value={null} />);
+    const { container } = renderWithQueryClient(<Lookup value={null} />);
     expect(container).toBeEmptyDOMElement();
   });
 
@@ -115,7 +138,7 @@ describe('Lookup', () => {
       isLoading: false,
     });
 
-    render(
+    renderWithQueryClient(
       <Lookup
         label="Lookup Field"
         required={true}
@@ -141,14 +164,14 @@ describe('Lookup', () => {
       isLoading: true,
     });
 
-    render(<Lookup value={['Alpha']} />);
+    renderWithQueryClient(<Lookup value={['Alpha']} />);
     expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
   it('opens dropdown, filters hidden items and closes on outside click', () => {
     setOffsetWidth(160);
 
-    render(<Lookup value={['One', 'Two', 'Three']} />);
+    renderWithQueryClient(<Lookup value={['One', 'Two', 'Three']} />);
 
     const buttons = screen.getAllByRole('button');
     fireEvent.click(buttons[0]);
@@ -168,14 +191,14 @@ describe('Lookup', () => {
       data: { uidt: 'rating' },
       isLoading: false,
     });
-    render(<Lookup value={[5]} />);
+    renderWithQueryClient(<Lookup value={[5]} />);
     expect(renderRatingPillMock).toHaveBeenCalledTimes(1);
 
     useLookupSourceColumnMock.mockReturnValue({
       data: { uidt: 'unknown-type' },
       isLoading: false,
     });
-    render(<Lookup value={['fallback']} />);
+    renderWithQueryClient(<Lookup value={['fallback']} />);
     expect(renderTextPillMock).toHaveBeenCalled();
   });
 });

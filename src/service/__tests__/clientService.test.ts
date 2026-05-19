@@ -16,7 +16,6 @@ import {
   createWorkspaceService,
   getWorkspaceByIdService,
   getWorkspacesByUser,
-  getTablesByWorkspaceIdService,
   updateWorkspaceService,
   deleteWorkspaceService,
   getBasesByWorkspaceIdService,
@@ -222,7 +221,6 @@ describe('clientService', () => {
 
     workspaceApi.create = vi.fn().mockResolvedValue({ data: { id: 'w1' } });
     workspaceApi.getById = vi.fn().mockResolvedValue({ data: { id: 'w1' } });
-    workspaceApi.getTablesByWorkspaceId = vi.fn().mockResolvedValue({ data: [] });
     workspaceApi.update = vi.fn().mockResolvedValue({ data: { id: 'w1' } });
     workspaceApi.delete = vi.fn().mockResolvedValue({ data: { ok: true } });
     workspaceApi.getBasesByWorkspaceId = vi.fn().mockResolvedValue({ data: [] });
@@ -299,7 +297,6 @@ describe('clientService', () => {
     await createWorkspaceService({ title: 'w' } as any);
     await getWorkspaceByIdService('w1');
     await getWorkspacesByUser();
-    await getTablesByWorkspaceIdService('w1');
     await updateWorkspaceService('w1', { title: 'W' });
     await deleteWorkspaceService('w1');
     await getBasesByWorkspaceIdService('w1');
