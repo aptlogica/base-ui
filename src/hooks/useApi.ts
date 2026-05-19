@@ -1054,6 +1054,32 @@ export const useInsertRowData = () => {
   });
 };
 
+export const useBulkUpdateColumn = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      model_id,
+      column_id,
+      updates,
+    }: {
+      model_id: string;
+      column_id: string;
+      updates: Array<{ id: any; value: any }>;
+    }) => bulkUpdateFieldService({ model_id, column_id, updates }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(vars.model_id),
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(vars.model_id)],
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
 
 export const useDeleteRecord = () => {
   const queryClient = useQueryClient();

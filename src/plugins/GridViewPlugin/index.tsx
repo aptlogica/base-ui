@@ -29,7 +29,7 @@ const GridViewPlugin: Plugin = {
   manifest,
   initialize: async (api: PluginAPI) => {
     const GridView: React.FC<{ tableId: string; viewId?: string }> = ({ tableId, viewId }) => {
-      const { tableData, isLoading, error, refresh, addRow, insertRowData, deleteRecord, bulkDeleteRecords, updateField, deleteColumn, createField, updateView, updateRowOrder } = useGridData({ tableId, viewId });
+      const { tableData, isLoading, error, refresh, addRow, insertRowData, bulkUpdateColumn, deleteRecord, bulkDeleteRecords, updateField, deleteColumn, createField, updateView, updateRowOrder } = useGridData({ tableId, viewId });
 
       if (error) {
         return (
@@ -62,7 +62,7 @@ const GridViewPlugin: Plugin = {
             viewId={viewId}
             onRefresh={() => refresh()}
             enableVirtualization={enableVirtualization} // Virtualization control (separate from view metadata)
-            actions={{ addRow, insertRowData, deleteRecord, bulkDeleteRecords, updateField, deleteColumn, createField, updateView, updateRowOrder }}
+            actions={{ addRow, insertRowData, bulkUpdateColumn, deleteRecord, bulkDeleteRecords, updateField, deleteColumn, createField, updateView, updateRowOrder }}
           />
         </Suspense>
       );

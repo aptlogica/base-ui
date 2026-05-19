@@ -43,6 +43,7 @@ import { useBaseAccess } from '../../../../hooks/useBaseAccess';
 type TableActions = {
   addRow: any;
   insertRowData: any;
+  bulkUpdateColumn: any;
   deleteRecord: any;
   bulkDeleteRecords: any;
   updateField: any;
@@ -545,6 +546,7 @@ export const Table: React.FC<TableProps> = ({
     columns,
     tableId,
     insertRowDataMutation: actions?.insertRowData,
+    bulkUpdateColumnMutation: actions?.bulkUpdateColumn,
     onRecordsUpdate: () => { },
   });
 

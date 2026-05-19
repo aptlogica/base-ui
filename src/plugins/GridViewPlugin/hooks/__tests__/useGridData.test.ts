@@ -10,6 +10,7 @@ vi.mock('../../../../hooks/useApi', () => ({
   useDeleteRecord: vi.fn(),
   useBulkDeleteRecords: vi.fn(),
   useInsertRowData: vi.fn(),
+  useBulkUpdateColumn: vi.fn(),
   useUpdateField: vi.fn(),
   useDeleteColumn: vi.fn(),
   useCreateField: vi.fn(),
@@ -22,6 +23,7 @@ describe('useGridData', () => {
   const mockUseDeleteRecord = vi.mocked(useApi.useDeleteRecord);
   const mockUseBulkDeleteRecords = vi.mocked(useApi.useBulkDeleteRecords);
   const mockUseInsertRowData = vi.mocked(useApi.useInsertRowData);
+  const mockUseBulkUpdateColumn = vi.mocked(useApi.useBulkUpdateColumn);
   const mockUseUpdateField = vi.mocked(useApi.useUpdateField);
   const mockUseDeleteColumn = vi.mocked(useApi.useDeleteColumn);
   const mockUseCreateField = vi.mocked(useApi.useCreateField);
@@ -32,6 +34,7 @@ describe('useGridData', () => {
     deleteRecord: vi.fn(),
     bulkDeleteRecords: vi.fn(),
     insertRowData: vi.fn(),
+    bulkUpdateColumn: vi.fn(),
     updateField: vi.fn(),
     deleteColumn: vi.fn(),
     createField: vi.fn(),
@@ -53,6 +56,7 @@ describe('useGridData', () => {
     mockUseDeleteRecord.mockReturnValue(mockCrudOperations.deleteRecord as any);
     mockUseBulkDeleteRecords.mockReturnValue(mockCrudOperations.bulkDeleteRecords as any);
     mockUseInsertRowData.mockReturnValue(mockCrudOperations.insertRowData as any);
+    mockUseBulkUpdateColumn.mockReturnValue(mockCrudOperations.bulkUpdateColumn as any);
     mockUseUpdateField.mockReturnValue(mockCrudOperations.updateField as any);
     mockUseDeleteColumn.mockReturnValue(mockCrudOperations.deleteColumn as any);
     mockUseCreateField.mockReturnValue(mockCrudOperations.createField as any);
@@ -73,6 +77,7 @@ describe('useGridData', () => {
       expect(mockUseDeleteRecord).toHaveBeenCalled();
       expect(mockUseBulkDeleteRecords).toHaveBeenCalled();
       expect(mockUseInsertRowData).toHaveBeenCalled();
+      expect(mockUseBulkUpdateColumn).toHaveBeenCalled();
       expect(mockUseUpdateField).toHaveBeenCalled();
       expect(mockUseDeleteColumn).toHaveBeenCalled();
       expect(mockUseCreateField).toHaveBeenCalled();
@@ -227,6 +232,7 @@ describe('useGridData', () => {
       expect(result.current.deleteRecord).toBe(mockCrudOperations.deleteRecord);
       expect(result.current.bulkDeleteRecords).toBe(mockCrudOperations.bulkDeleteRecords);
       expect(result.current.insertRowData).toBe(mockCrudOperations.insertRowData);
+      expect(result.current.bulkUpdateColumn).toBe(mockCrudOperations.bulkUpdateColumn);
       expect(result.current.updateField).toBe(mockCrudOperations.updateField);
       expect(result.current.deleteColumn).toBe(mockCrudOperations.deleteColumn);
       expect(result.current.createField).toBe(mockCrudOperations.createField);

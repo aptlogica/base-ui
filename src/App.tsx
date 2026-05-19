@@ -162,7 +162,7 @@ const Layout = () => {
           )}
 
           {/* Main content area */}
-          <main className="flex-1 p-0 overflow-y-auto bg-main text-text min-w-0">
+          <main className="flex-1 p-0 overflow-y-auto no-scrollbar bg-main text-text min-w-0">
             <Outlet />
           </main>
 
