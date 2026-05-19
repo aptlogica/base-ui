@@ -154,4 +154,25 @@ describe('useFrontendPagination', () => {
     expect(result.current.currentPage).toBe(1);
     expect(result.current.totalItems).toBe(50);
   });
+
+  it('should preserve current page when data grows (e.g. row added)', () => {
+    const initialData = Array.from({ length: 50 }, (_, i) => i + 1);
+    const { result, rerender } = renderHook(
+      ({ data }) => useFrontendPagination({ data, pageSize: 30 }),
+      { initialProps: { data: initialData } }
+    );
+
+    act(() => {
+      result.current.goToPage(2);
+    });
+    expect(result.current.currentPage).toBe(2);
+    expect(result.current.allLoadedData).toHaveLength(50);
+
+    const grownData = Array.from({ length: 51 }, (_, i) => i + 1);
+    rerender({ data: grownData });
+
+    expect(result.current.currentPage).toBe(2);
+    expect(result.current.totalItems).toBe(51);
+    expect(result.current.allLoadedData).toHaveLength(51);
+  });
 });
