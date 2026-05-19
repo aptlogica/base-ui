@@ -314,51 +314,37 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
     
     const { startDateField, endDateField, titleField, progressField } = processedData;
     const modelId = String(tableData.model.id);
-    
-    // Create a new row first
-    const result = await addRow.mutateAsync({
-      model_id: modelId
-    });
-    
-    const recordId = String(result?.id || result);
-    
-    // Update the row with task data
+
+    const rowPayload: Record<string, unknown> = {};
     if (taskData.name && titleField) {
-      await insertRowData.mutateAsync({
-        model_id: modelId,
-        column_id: String(titleField.id),
-        row_id: Number(recordId),
-        value: taskData.name
-      });
+      rowPayload[String(titleField.id)] = taskData.name;
     }
-    
     if (taskData.startDate && startDateField) {
-      await insertRowData.mutateAsync({
-        model_id: modelId,
-        column_id: String(startDateField.id),
-        row_id: Number(recordId),
-        value: taskData.startDate.toISOString().split('T')[0]
-      });
+      rowPayload[String(startDateField.id)] = taskData.startDate.toISOString().split('T')[0];
     }
-    
     if (taskData.endDate && endDateField) {
-      await insertRowData.mutateAsync({
-        model_id: modelId,
-        column_id: String(endDateField.id),
-        row_id: Number(recordId),
-        value: taskData.endDate.toISOString().split('T')[0]
-      });
+      rowPayload[String(endDateField.id)] = taskData.endDate.toISOString().split('T')[0];
     }
-    
     if (taskData.progress !== undefined && progressField) {
-      await insertRowData.mutateAsync({
-        model_id: modelId,
-        column_id: String(progressField.id),
-        row_id: Number(recordId),
-        value: taskData.progress
-      });
+      rowPayload[String(progressField.id)] = taskData.progress;
     }
-    
+
+    const result = await addRow.mutateAsync({
+      model_id: modelId,
+      rows: Object.keys(rowPayload).length > 0 ? [rowPayload] : undefined
+    });
+
+    const recordId = String(
+      result?.id ??
+      result?.row_id ??
+      result?.data?.id ??
+      result?.data?.row_id ??
+      result?.data?.record?.id ??
+      result?.data?.rows?.[0]?.record?.id ??
+      result?.data?.rows?.[0]?.id ??
+      Date.now()
+    );
+
     return recordId;
   };
 

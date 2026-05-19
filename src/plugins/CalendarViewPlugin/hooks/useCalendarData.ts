@@ -277,12 +277,28 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
     );
   };
 
-  const createEvent = async (_initialValues: Record<string, any>) => {
-    // Create event using the standard addRow hook
-    const result = await addRow.mutateAsync({
-      model_id: String(tableId)
+  const createEvent = async (initialValues: Record<string, any>) => {
+    const rowPayload: Record<string, any> = {};
+    (tableData?.columns || []).forEach((field: any) => {
+      const value = initialValues[field.id] ?? initialValues[field.column_name];
+      if (value === undefined || value === null || value === '') return;
+      rowPayload[field.id] = value;
     });
-    return String(result?.id || result);
+
+    const result = await addRow.mutateAsync({
+      model_id: String(tableId),
+      rows: Object.keys(rowPayload).length > 0 ? [rowPayload] : undefined
+    });
+    return String(
+      result?.id ??
+      result?.row_id ??
+      result?.data?.id ??
+      result?.data?.row_id ??
+      result?.data?.record?.id ??
+      result?.data?.rows?.[0]?.record?.id ??
+      result?.data?.rows?.[0]?.id ??
+      result
+    );
   };
 
   const deleteEvent = async (eventId: string) => {

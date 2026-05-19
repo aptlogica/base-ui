@@ -333,7 +333,7 @@ describe('clientService', () => {
     await updateViewService('v1', { title: 'V2' });
     await deleteViewService('v1');
     await getViewsByModelIdService('m1');
-    await addRow('m1');
+    await addRow({ model_id: 'm1' });
     await deleteRowService({ model_id: 'm1', row_id: 1 });
     await bulkDeleteRowService({ model_id: 'm1', row_ids: [1, 2] });
     await insertRowDataService({ model_id: 'm1', column_id: 'c1', row_id: 1, value: 'x' });

@@ -14,7 +14,7 @@ interface FormPreviewProps {
   onRowDataChange: (fieldId: string, value: unknown) => void;
   onFieldOrderChange: (newFields: FormField[]) => void;
   onClear?: () => void;
-  onSubmit?: (e:React.SyntheticEvent<HTMLFormElement>) => void;
+  onSubmit?: (e: React.SyntheticEvent<HTMLFormElement>) => void;
   onDeleteField: (fieldId: string) => void;
   formError?: string | null;
   model_id?: string;
@@ -140,7 +140,7 @@ const EditableTitle: React.FC<EditableTitleProps> = ({
       <button
         type="button"
         className="mb-4 text-left text-2xl font-bold p-4 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors w-full"
-        style={{ color: textColor || undefined}}
+        style={{ color: textColor || undefined }}
         onClick={onStartEdit}
         onKeyDown={(e) => handleViewKeyDown(e, onStartEdit)}
         aria-label="Click to edit title"
@@ -500,13 +500,7 @@ const FormHeader: React.FC<FormHeaderProps> = ({
 
       {formError && (
         <div
-          className="mb-4 p-3 rounded border"
-          style={{
-            backgroundColor: 'var(--color-bg-error-primary)',
-            color: 'var(--color-text-error-primary)',
-            borderColor: 'var(--color-border-error_subtle)'
-          }}
-        >
+          className="mb-4 p-3 rounded-xl border bg-[var(--color-bg-error-primary)] text-[var(--color-text-error-primary)]">
           {formError}
         </div>
       )}
@@ -516,7 +510,7 @@ const FormHeader: React.FC<FormHeaderProps> = ({
 
 // Extract form actions component
 interface FormActionsProps {
-  onSubmit?: (e:React.SyntheticEvent<HTMLFormElement>) => void;
+  onSubmit?: (e: React.SyntheticEvent<HTMLFormElement>) => void;
   onClear?: () => void;
   primaryColor?: string;
   isSubmitting?: boolean;
@@ -708,7 +702,7 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
 
           <form
             className={isGridLayout ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-2'}
-            onSubmit={onSubmit || ((e:React.SyntheticEvent<HTMLFormElement>) => {
+            onSubmit={onSubmit || ((e: React.SyntheticEvent<HTMLFormElement>) => {
               e.preventDefault();
             })}
           >

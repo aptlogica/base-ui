@@ -273,6 +273,7 @@ Support: support@aptlogica.com | support@serenibase.com
 
     /* GRADIENT */
     --skeuemorphic-gradient-border: linear-gradient(180deg, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0.00) 100%);
+    --color-bg-error-primary: var(--color-error-500);
 }
 
 @layer base {
@@ -312,5 +313,6 @@ Support: support@aptlogica.com | support@serenibase.com
         --color-bg-secondary: var(--color-gray-900);
         --color-border-primary: rgb(47, 47, 47);
         --color-border-secondary: var(--color-gray-800);
+        --color-bg-error-primary: var(--color-error-500);
     }
 }

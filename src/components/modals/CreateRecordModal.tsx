@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { X, CirclePlus } from 'lucide-react';
 import FieldRenderer from '../../plugins/FormViewPlugin/components/shared/FieldRenderer';
-import { useAddRow, useInsertRowData, useAddAttachment, useInsertRelationData } from '../../hooks/useApi';
+import { useAddRow, useAddAttachment, useInsertRelationData } from '../../hooks/useApi';
 import { getFieldTypeIconWithMargin, getRelationTypeFromField } from '../../types/fieldTypes';
 import { getStandardFieldType, getFieldDisplayName, getFieldDefaultValue, createFieldRendererProps } from '../../utils/standardFieldUtils';
 import { isFormulaField } from '../../utils/fieldUtils';
@@ -46,7 +46,6 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const isReadOnly = isBaseReadOnly();
 
     const addRowMutation = useAddRow();
-    const insertValueMutation = useInsertRowData();
     const addAttachmentMutation = useAddAttachment();
     const insertRelationMutation = useInsertRelationData();
     const toast = useToast();
@@ -183,26 +182,32 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         return processedValue;
     };
 
-    const insertFieldValues = async (recordId: string) => {
-        await Promise.all((fields || []).map(async (field) => {
-            if (isAttachmentField(field) || isLinksField(field)) return;
-
+    const buildRowPayload = (): Record<string, any> => {
+        const payload: Record<string, any> = {};
+        (fields || []).forEach((field) => {
+            if (isAttachmentField(field) || isLinksField(field) || isFormulaField(field)) return;
             const value = rowData[field.id];
             if (isEmptyFieldValue(value)) return;
+            payload[field.id] = processFieldValue(field, value);
+        });
+        return payload;
+    };
 
-            const processedValue = processFieldValue(field, value);
+    const extractCreatedRowId = (created: any): string => {
+        const recordId =
+            created?.id ??
+            created?.row_id ??
+            created?.data?.id ??
+            created?.data?.row_id ??
+            created?.data?.record?.id ??
+            created?.data?.record_id ??
+            created?.data?.rows?.[0]?.record?.id ??
+            created?.data?.rows?.[0]?.id;
 
-            try {
-                await insertValueMutation.mutateAsync({
-                    model_id: String(table.id),
-                    column_id: String(field.id),
-                    row_id: Number(recordId),
-                    value: processedValue,
-                });
-            } catch (e) {
-                console.warn('Failed to set initial field value:', field.id, e);
-            }
-        }));
+        if (!recordId) {
+            throw new Error('Failed to create record - no ID returned');
+        }
+        return String(recordId);
     };
 
     const uploadAttachments = async (recordId: string) => {
@@ -293,11 +298,13 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
 
         try {
             setSubmitting(true);
-            const created = await addRowMutation.mutateAsync({ model_id: String(table.id) });
-            const recordId = created?.data?.record?.id || created?.id || String(Date.now());
+            const rowPayload = buildRowPayload();
+            const created = await addRowMutation.mutateAsync({
+                model_id: String(table.id),
+                rows: Object.keys(rowPayload).length > 0 ? [rowPayload] : undefined
+            });
+            const recordId = extractCreatedRowId(created);
             setCreatedRecordId(recordId);
-
-            await insertFieldValues(recordId);
             await uploadAttachments(recordId);
             await insertRelations(recordId);
 

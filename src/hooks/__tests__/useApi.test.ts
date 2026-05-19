@@ -287,7 +287,12 @@ describe("useApi hooks", () => {
 
     renderHook(() => useAddRow());
     await opts.mutationFn({ model_id: "m1" });
-    expect(addRow).toHaveBeenCalledWith("m1");
+    expect(addRow).toHaveBeenCalledWith({
+      model_id: "m1",
+      rows: undefined,
+      created_by: undefined,
+      updated_by: undefined,
+    });
 
     opts.onSuccess(null, { model_id: "m1" });
     expect(invalidateQueries).toHaveBeenCalledWith(

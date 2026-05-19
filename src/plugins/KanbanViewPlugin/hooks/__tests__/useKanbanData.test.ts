@@ -534,7 +534,14 @@ describe('useKanbanData Hook', () => {
         status: 'To Do' 
       });
 
-      expect(mockUseInsertRowData().mutateAsync).toHaveBeenCalled();
+      expect(mockUseAddRow().mutateAsync).toHaveBeenCalledWith({
+        model_id: 'table1',
+        rows: [{
+          '1': 'New Card',
+          '2': 'To Do'
+        }]
+      });
+      expect(mockUseInsertRowData().mutateAsync).not.toHaveBeenCalled();
     });
 
     it('should skip attachment fields when setting initial values', async () => {
@@ -557,10 +564,12 @@ describe('useKanbanData Hook', () => {
         files: ['file.pdf']
       });
 
-      // Should have been called for title but not files
-      const calls = mockUseInsertRowData().mutateAsync.mock.calls;
-      const hasAttachmentCall = calls.some((call: any) => call[0]?.column_id === '2');
-      expect(hasAttachmentCall).toBe(false);
+      expect(mockUseAddRow().mutateAsync).toHaveBeenCalledWith({
+        model_id: 'table1',
+        rows: [{
+          '1': 'New Card'
+        }]
+      });
     });
 
     it('should handle createCard when insertRowData fails', async () => {

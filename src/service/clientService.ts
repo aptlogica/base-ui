@@ -873,6 +873,10 @@ export async function insertRowDataService(params: { model_id: string; column_id
   return await makeAuthenticatedCall(() => client.tableService.insertRowData(params));
 }
 
+export async function updateRowDataService(params: { model_id: string; row_id: number; values: Record<string, any> }) {
+  return await makeAuthenticatedCall(() => client.rowService.update(params));
+}
+
 export async function getAllRecordsService(id: string, options?: { pageNumber?: number; pageLimit?: number }) {
   const queryOptions = options
     ? { page: options.pageNumber, page_size: options.pageLimit }

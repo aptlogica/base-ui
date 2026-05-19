@@ -68,32 +68,34 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
   };
 
   const createCard = async (initialValues: Record<string, any>): Promise<string> => {
-    const created = await addRow.mutateAsync({ model_id: String(tableId) });
-    const recordId = created?.data?.id || created?.id || String(Date.now());
-
-    // Set initial values for each field
+    const rowPayload: Record<string, any> = {};
     if (tableData?.columns) {
-      await Promise.all(tableData.columns.map(async (field: any) => {
-        // Skip attachment fields - they handle their own API calls
+      tableData.columns.forEach((field: any) => {
         if (field.type === 'attachment' || field.uidt === 'attachment') {
           return;
         }
-
         const value = initialValues[field.id] ?? initialValues[field.column_name];
-        if (value === undefined || value === null || value === '') return;
-
-        try {
-          await insertRowData.mutateAsync({
-            model_id: String(tableId),
-            column_id: String(field.id),
-            row_id: Number(recordId),
-            value,
-          });
-        } catch (e) {
-          console.warn('Failed to set initial field value:', field.id, e);
+        if (value === undefined || value === null || value === '') {
+          return;
         }
-      }));
+        rowPayload[field.id] = value;
+      });
     }
+
+    const created = await addRow.mutateAsync({
+      model_id: String(tableId),
+      rows: Object.keys(rowPayload).length > 0 ? [rowPayload] : undefined
+    });
+    const recordId = String(
+      created?.id ??
+      created?.row_id ??
+      created?.data?.id ??
+      created?.data?.row_id ??
+      created?.data?.record?.id ??
+      created?.data?.rows?.[0]?.record?.id ??
+      created?.data?.rows?.[0]?.id ??
+      Date.now()
+    );
 
     return recordId;
   };

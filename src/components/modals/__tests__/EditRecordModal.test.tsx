@@ -5,15 +5,15 @@ import EditRecordModal from '../EditRecordModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
 
-const insertRowDataMutateAsyncMock = vi.fn(() => Promise.resolve({}));
+const updateRowDataMutateAsyncMock = vi.fn(() => Promise.resolve({}));
 const addAttachmentMutateAsyncMock = vi.fn(() => Promise.resolve({}));
 const removeAttachmentsMutateAsyncMock = vi.fn(() => Promise.resolve({}));
 const insertRelationMutateAsyncMock = vi.fn(() => Promise.resolve({}));
 
 // Mock hooks
 vi.mock('../../../hooks/useApi', () => ({
-  useInsertRowData: vi.fn(() => ({
-    mutateAsync: insertRowDataMutateAsyncMock,
+  useUpdateRowData: vi.fn(() => ({
+    mutateAsync: updateRowDataMutateAsyncMock,
     isPending: false,
   })),
   useAddAttachment: vi.fn(() => ({
@@ -505,12 +505,12 @@ describe('EditRecordModal', () => {
       await waitFor(() => {
         expect(screen.getByText(/Required field\(s\) must not be left empty/i)).toBeInTheDocument();
       });
-      expect(insertRowDataMutateAsyncMock).not.toHaveBeenCalled();
+      expect(updateRowDataMutateAsyncMock).not.toHaveBeenCalled();
     });
   });
 
   describe('links persistence', () => {
-    it('uses relation API for links update and not insertRowData', async () => {
+    it('uses relation API for links update and not row update payload', async () => {
       const user = userEvent.setup();
       const fieldsWithLinks = [
         { id: 'field-1', name: 'title', title: 'Title', uidt: 'SingleLineText' },
@@ -552,8 +552,8 @@ describe('EditRecordModal', () => {
       });
 
       expect(
-        insertRowDataMutateAsyncMock.mock.calls.some(
-          ([payload]) => payload?.column_id === 'field-links'
+        updateRowDataMutateAsyncMock.mock.calls.some(
+          ([payload]) => Boolean(payload?.values?.['field-links'])
         )
       ).toBe(false);
     });

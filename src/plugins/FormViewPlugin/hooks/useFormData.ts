@@ -212,10 +212,25 @@ export function useFormData({ tableId }: UseFormDataOptions): UseFormDataReturn 
   const extractCreatedRowId = (createdRecord: any): string => {
     const backendRowId =
       createdRecord?.id ??
+      createdRecord?.row_id ??
+      createdRecord?.data?.id ??
+      createdRecord?.data?.row_id ??
+      createdRecord?.data?.record_id ??
       createdRecord?.data?.record?.id ??
-      createdRecord?.data?.records?.[0]?.id;
+      createdRecord?.data?.record?.row_id ??
+      createdRecord?.data?.rows?.[0]?.record?.id ??
+      createdRecord?.data?.rows?.[0]?.record?.row_id ??
+      createdRecord?.data?.rows?.[0]?.id ??
+      createdRecord?.data?.rows?.[0]?.row_id ??
+      createdRecord?.data?.rows?.[0]?._meta?.id ??
+      createdRecord?.data?.records?.[0]?.id ??
+      createdRecord?.data?.records?.[0]?.row_id ??
+      createdRecord?.data?.records?.[0]?._meta?.id ??
+      createdRecord?.data?.inserted_ids?.[0] ??
+      createdRecord?.data?.insertedIds?.[0];
 
     if (!backendRowId) {
+      console.error('Unexpected createRow response shape:', createdRecord);
       throw new Error('Failed to create record - no ID returned');
     }
 

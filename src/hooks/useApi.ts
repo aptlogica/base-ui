@@ -60,6 +60,7 @@ import {
   deleteRowService,
   bulkDeleteRowService,
   insertRowDataService,
+  updateRowDataService,
   insertRelationDataService,
   // Attachment services
   addAttachmentService,
@@ -1058,6 +1059,25 @@ export const useInsertRowData = () => {
       queryClient.invalidateQueries({
         queryKey: ['tables', String(vars.model_id)],
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
+export const useUpdateRowData = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ model_id, row_id, values }: { model_id: string; row_id: number; values: Record<string, any> }) =>
+      updateRowDataService({ model_id, row_id, values }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(vars.model_id),
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(vars.model_id)],
+        refetchType: 'active'
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
