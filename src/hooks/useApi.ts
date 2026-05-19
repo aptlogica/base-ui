@@ -165,7 +165,17 @@ export const useWorkspaces = () => {
 export const useAddRow = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ model_id }: { model_id: string }) => addRow(model_id),
+    mutationFn: ({
+      model_id,
+      rows,
+      created_by,
+      updated_by
+    }: {
+      model_id: string;
+      rows?: Array<Record<string, any>>;
+      created_by?: string;
+      updated_by?: string;
+    }) => addRow({ model_id, rows, created_by, updated_by }),
     onSuccess: (_, { model_id }) => {
       // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
       // This ensures UI updates instantly after adding a row, regardless of cache age

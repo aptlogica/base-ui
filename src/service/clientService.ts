@@ -852,8 +852,13 @@ export async function getViewsByModelIdService(id: string) {
   return await makeAuthenticatedCall(() => client.tableService.getViewsByModelId(id));
 }
 
-export async function addRow(model_id: string): Promise<any> {
-  return await makeAuthenticatedCall(() => client.tableService.createRow({ model_id }));
+export async function addRow(params: {
+  model_id: string;
+  rows?: Array<Record<string, any>>;
+  created_by?: string;
+  updated_by?: string;
+}): Promise<any> {
+  return await makeAuthenticatedCall(() => client.tableService.createRow(params));
 }
 
 export async function deleteRowService(params: { model_id: string; row_id: number }) {
