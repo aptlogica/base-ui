@@ -113,6 +113,7 @@ export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({
 
   return (
     <>
+      <div className="h-6 w-px bg-gray-300 mx-2" />
       <div // NOSONAR
         ref={containerRef}
         className={`flex items-center ${shouldShowDropdown || onClick ? 'cursor-pointer' : ''} ${className}`}
@@ -151,7 +152,7 @@ export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({
           )}
         </div>
       </div>
-      <div className="h-6 w-px bg-gray-300"></div>
+      <div className="h-6 w-px bg-gray-300 mx-2" />
 
       {/* Dropdown */}
       {shouldShowDropdown && isDropdownOpen && (

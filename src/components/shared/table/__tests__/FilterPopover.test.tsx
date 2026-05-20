@@ -386,7 +386,7 @@ describe('FilterPopover', () => {
     });
 
     it('renders date field input and updates existing date value', async () => {
-      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(false);
+      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(true);
       render(
         <FilterPopover
           columns={[
@@ -405,7 +405,7 @@ describe('FilterPopover', () => {
     });
 
     it('renders duration input and updates existing duration value', async () => {
-      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(false);
+      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(true);
       render(
         <FilterPopover
           columns={[
@@ -424,7 +424,7 @@ describe('FilterPopover', () => {
     });
 
     it('renders rating input and updates existing rating value', async () => {
-      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(false);
+      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(true);
       render(
         <FilterPopover
           columns={[
@@ -443,7 +443,7 @@ describe('FilterPopover', () => {
     });
 
     it('renders time input and updates existing time value', async () => {
-      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(false);
+      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(true);
       render(
         <FilterPopover
           columns={[
@@ -462,7 +462,7 @@ describe('FilterPopover', () => {
     });
 
     it('renders single-select input and updates existing select value', async () => {
-      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(false);
+      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(true);
       render(
         <FilterPopover
           columns={[
@@ -487,7 +487,7 @@ describe('FilterPopover', () => {
     });
 
     it('renders multi-select input and updates existing multiselect value', async () => {
-      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(false);
+      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(true);
       render(
         <FilterPopover
           columns={[
@@ -509,6 +509,25 @@ describe('FilterPopover', () => {
       await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
       await userEvent.click(screen.getByTestId('mock-multiselect'));
       expect(mockOnUpdateFilter).toHaveBeenCalledWith(0, { value: '["A","B"]' });
+    });
+
+    it('does not render any value control when operator does not require value', async () => {
+      vi.mocked(filterUtils.operatorRequiresValue).mockReturnValue(false);
+      render(
+        <FilterPopover
+          columns={[
+            { id: 'col-date', title: 'Due', column_name: 'due', uidt: 'date', config: {} },
+          ]}
+          filters={[{ column: 'due', operator: 'is empty', value: '', logic: 'AND' }]}
+          onAddFilter={mockOnAddFilter}
+          onRemoveFilter={mockOnRemoveFilter}
+          onUpdateFilter={mockOnUpdateFilter}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Filter/i }));
+      expect(screen.queryByTestId('mock-date-field')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('Enter a value')).not.toBeInTheDocument();
     });
   });
 

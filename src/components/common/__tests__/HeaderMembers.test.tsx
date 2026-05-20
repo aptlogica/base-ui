@@ -55,11 +55,11 @@ vi.mock('../UserAvatarStack', () => ({
   ),
 }));
 
-vi.mock('../../modals/AssignUserToWorkspaceModal', () => ({
-  AssignUserToWorkspaceModal: ({ isOpen, onSuccess }: any) =>
+vi.mock('../../modals/AddBaseMembersModal', () => ({
+  AddBaseMembersModal: ({ isOpen, onSuccess }: any) =>
     isOpen ? (
       <div>
-        <div>AssignUserToWorkspaceModal</div>
+        <div>AddBaseMembersModal</div>
         <button onClick={onSuccess}>mock-success</button>
       </div>
     ) : null,
@@ -102,7 +102,7 @@ describe('HeaderMembers', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('opens the assign modal and refetches on success', async () => {
+  it('opens the add-base-members modal and refetches on success', async () => {
     const user = userEvent.setup();
 
     baseMembersQueryState.data = {
@@ -119,10 +119,10 @@ describe('HeaderMembers', () => {
     const addButton = screen.getByRole('button');
     await user.click(addButton);
 
-    expect(screen.getByText('AssignUserToWorkspaceModal')).toBeInTheDocument();
+    expect(screen.getByText('AddBaseMembersModal')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'mock-success' }));
     expect(baseMembersQueryState.refetch).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText('AssignUserToWorkspaceModal')).toBeNull();
+    expect(screen.queryByText('AddBaseMembersModal')).toBeNull();
   });
 });

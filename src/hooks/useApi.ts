@@ -32,6 +32,7 @@ import {
   updateFieldService,
   deleteFieldService,
   resetFieldService,
+  bulkUpdateFieldService,
   // New view API services
   createViewService,
   updateViewService,
@@ -71,7 +72,7 @@ import {
   getWorkspacesByUser,
   //Organization Services 
   getOrganizationService,
-  updateOrganizationService
+  updateOrganizationService,
 } from '../service/clientService';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
 
@@ -781,6 +782,33 @@ export const useDeleteColumn = () => {
   });
 };
 
+
+export const useBulkUpdateColumn = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      model_id,
+      column_id,
+      updates,
+    }: {
+      model_id: string;
+      column_id: string;
+      updates: Array<{ id: any; value: any }>;
+    }) => bulkUpdateFieldService({ model_id, column_id, updates }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(vars.model_id),
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(vars.model_id)],
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
 // =========================
 // View APIs
 // =========================
@@ -1089,33 +1117,6 @@ export const useUpdateRowData = () => {
     },
   });
 };
-
-export const useBulkUpdateColumn = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      model_id,
-      column_id,
-      updates,
-    }: {
-      model_id: string;
-      column_id: string;
-      updates: Array<{ id: any; value: any }>;
-    }) => bulkUpdateFieldService({ model_id, column_id, updates }),
-    onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.records(vars.model_id),
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['tables', String(vars.model_id)],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
-    },
-  });
-};
-
 
 export const useDeleteRecord = () => {
   const queryClient = useQueryClient();
