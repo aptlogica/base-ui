@@ -471,7 +471,7 @@ describe("useApi hooks", () => {
     renderHook(() => apiHooks.useCreateTable());
     renderHook(() => apiHooks.useUpdateTable());
     renderHook(() => apiHooks.useDeleteTable());
-    renderHook(() => apiHooks.useImportTable());
+    renderHook(() => apiHooks.useImportData());
     renderHook(() => apiHooks.useCreateField());
     renderHook(() => apiHooks.useUpdateField());
     renderHook(() => apiHooks.useDeleteColumn());
@@ -525,7 +525,7 @@ describe("useApi hooks", () => {
     opts = getMutationOptions(() => apiHooks.useDeleteTable());
     opts.onSuccess?.({}, { baseId: "b1" });
 
-    opts = getMutationOptions(() => apiHooks.useImportTable());
+    opts = getMutationOptions(() => apiHooks.useImportData());
     opts.onSuccess?.({}, { base_id: "b1" });
 
     opts = getMutationOptions(() => apiHooks.useCreateField());
@@ -737,7 +737,7 @@ describe("useApi hooks", () => {
     await opts.mutationFn({ tableId: "t1", baseId: "b1" });
     expect(deleteTableService).toHaveBeenCalledWith("t1");
 
-    opts = getMutationOptions(() => apiHooks.useImportTable());
+    opts = getMutationOptions(() => apiHooks.useImportData());
     await opts.mutationFn({
       base_id: "b1",
       workspace_id: "w1",

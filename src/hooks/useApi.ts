@@ -611,35 +611,37 @@ export const useDeleteTable = () => {
   });
 };
 
-export const useImportTable = () => {
+export const useImportData = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({
       base_id,
       workspace_id,
-      title,
-      description,
       order_index,
       file,
+      config,
+      primary_column,
       onProgress,
     }: {
       base_id?: string; // Optional: required from sidebar, optional from home page
       workspace_id: string;
-      title: string;
-      description: string;
+      title?: string;
+      description?: string;
       order_index: number;
       file: File;
+      config: any; // ImportPayload with mapped field types and settings
+      primary_column?: string;
       onProgress?: (progressEvent: ProgressEvent) => void;
     }) => {
       return importService(
         {
           ...(base_id && { base_id }), // Only include base_id if provided
           workspace_id,
-          title,
-          description,
           order_index,
           file,
+          config,
+          primary_column: primary_column || '',
         },
         onProgress
       );

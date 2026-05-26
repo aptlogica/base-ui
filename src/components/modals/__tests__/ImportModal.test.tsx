@@ -7,7 +7,7 @@ import { MemoryRouter } from 'react-router-dom';
 
 // Mock useApi hooks
 vi.mock('../../../hooks/useApi', () => ({
-  useImportTable: vi.fn(() => ({
+  useImportData: vi.fn(() => ({
     mutateAsync: vi.fn(),
     isPending: false,
   })),

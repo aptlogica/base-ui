@@ -13,7 +13,7 @@ import { ImportCleanupOptions } from './importer/ImportCleanupOptions';
 import type { ImportCleanupOptionsState } from './importer/ImportCleanupOptions';
 import { buildImportPreview, buildInitialMappings } from './importer/importPreviewBuilder';
 import { getImportFieldMeta, normalizeImportFieldType } from './importer/importFieldConfig';
-import { useImportTable } from '../../hooks/useApi';
+import { useImportData } from '../../hooks/useApi';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 interface ImportModalProps {
@@ -158,7 +158,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const isSubmittingRef = useRef(false);
   const toast = useToast();
   const config = IMPORT_CONFIG[importType];
-  const importTableMutation = useImportTable();
+  const importTableMutation = useImportData();
   const navigate = useNavigate();
   const location = useLocation();
 
