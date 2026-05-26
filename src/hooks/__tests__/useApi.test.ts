@@ -36,7 +36,7 @@ import {
   createTableService,
   updateTableService,
   deleteTableService,
-  importTableService,
+  importService,
   createFieldService,
   updateFieldService,
   deleteFieldService,
@@ -109,7 +109,7 @@ vi.mock("../../service/clientService", () => ({
   createTableService: vi.fn(),
   updateTableService: vi.fn(),
   deleteTableService: vi.fn(),
-  importTableService: vi.fn(),
+  importService: vi.fn(),
   createFieldService: vi.fn(),
   updateFieldService: vi.fn(),
   deleteFieldService: vi.fn(),
@@ -683,7 +683,7 @@ describe("useApi hooks", () => {
     vi.mocked(createTableService).mockResolvedValue({} as any);
     vi.mocked(updateTableService).mockResolvedValue({} as any);
     vi.mocked(deleteTableService).mockResolvedValue({} as any);
-    vi.mocked(importTableService).mockResolvedValue({} as any);
+    vi.mocked(importService).mockResolvedValue({} as any);
     vi.mocked(createFieldService).mockResolvedValue({} as any);
     vi.mocked(updateFieldService).mockResolvedValue({} as any);
     vi.mocked(deleteFieldService).mockResolvedValue({} as any);
@@ -746,7 +746,7 @@ describe("useApi hooks", () => {
       order_index: 1,
       file: {} as File,
     });
-    expect(importTableService).toHaveBeenCalled();
+    expect(importService).toHaveBeenCalled();
 
     opts = getMutationOptions(() => apiHooks.useCreateField());
     await opts.mutationFn({ tableId: "m1", baseId: "b1", config: { title: "F", uidt: "text", meta: {} } });

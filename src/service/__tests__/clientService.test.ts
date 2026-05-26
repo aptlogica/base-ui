@@ -41,7 +41,7 @@ import {
   addAttachmentService,
   removeAttachmentsService,
   updateAttachmentService,
-  importTableService,
+  importService,
   getTenantUsersService,
   getUsersForAssignService,
   addUserService,
@@ -346,7 +346,13 @@ describe('clientService', () => {
       content: { title: 'asset' },
     });
     await addImageService([new File(['a'], 'a.png')]);
-    await importTableService({ workspace_id: 'w1', title: 'T', description: '', order_index: 0, file: new File(['a'], 'a.csv') });
+    await importService({
+      workspace_id: 'w1',
+      order_index: 0,
+      file: new File(['a'], 'a.csv'),
+      config: {},
+      primary_column: 'title',
+    });
 
     await getTenantUsersService();
     await getUsersForAssignService();

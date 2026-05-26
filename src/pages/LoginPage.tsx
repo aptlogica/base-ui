@@ -150,7 +150,7 @@ const LogIn: React.FC = () => {
     return true;
   };
 
-  const handleSubmit = async (e:React.SyntheticEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setEmailError(null);
@@ -219,24 +219,25 @@ const LogIn: React.FC = () => {
 
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 h-screen overflow-hidden">
+    <div
+      className="grid grid-cols-1 md:grid-cols-2 h-[100dvh] min-h-[100dvh] overflow-hidden bg-white bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: 'url(/assets/login-bg.svg)' }}
+    >
       {/* Left Panel */}
-      <div className="bg-card text-tertiary flex items-center justify-center p-8 md:p-12">
+      <div className="text-gray-100 flex items-center justify-center p-8 md:p-12">
         <div className="w-full max-w-md space-y-6">
           {/* Logo and Brand Name */}
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 flex items-center justify-center flex-shrink-0 border rounded-xl shadow-xs">
-              <img
-                src="/assets/logo.svg"
-                alt="Sereni Base Logo"
-                className="w-full h-full object-cover rounded-xl"
-              />
-            </div>
-            <span className="text-xl font-semibold text-gray-900">Sereni Base</span>
+          <div className="flex h-16 w-fit -ml-3 mb-8 items-center justify-center">
+            <img
+              src="/assets/login-logo.png"
+              alt="Sereni Base Logo"
+              className="w-full h-full scale-150 object-contain object-left"
+            />
+            <span className="font-semibold text-2xl leading-none text-[var(--color-text-gray)]">Sereni<br />base</span>
           </div>
 
-          <h2 className="text-3xl font-bold text-foreground text-left">Welcome back</h2>
-          <p className="text-base lg:text-lg text-white/90 leading-relaxed drop-shadow-md">Welcome back! Please enter your details.</p>
+          <h2 className="text-3xl font-bold text-gray-100 text-left">Welcome back</h2>
+          <p className="text-base lg:text-lg text-gray-200 leading-relaxed drop-shadow-md">Welcome back! Please enter your details.</p>
           {hasOtherSession && (
             <div className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
               Another tab is already signed in. Signing in here will sign out the other tab.
@@ -244,7 +245,7 @@ const LogIn: React.FC = () => {
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
-              <label htmlFor="email" className="field-component-label">
+              <label htmlFor="email" className="field-component-label !text-gray-200">
                 Email<span className="field-component-required">*</span>
               </label>
               <input
@@ -268,13 +269,14 @@ const LogIn: React.FC = () => {
                   }
                 }}
                 placeholder="Email"
-                className={`field-component field-component-border field-component-focus ${emailError ? "border-destructive bg-red-50" : ""}`}
+                className={`w-full text-xs px-3 h-11 flex items-center rounded-lg text-black placeholder:text-[var(--color-text-placeholder)] border border-gray-700 outline-none cursor-pointer transition-all duration-200 focus:border focus:border-[--color-brand-600]
+                  ${emailError ? "border-destructive bg-red-50" : ""}`}
                 style={{ boxShadow: "var(--shadow-xs)" }}
               />
               {emailError && <div className="mt-1.5 text-red-500 text-sm">{emailError}</div>}
             </div>
             <div className="relative">
-              <label htmlFor="password" className="field-component-label">
+              <label htmlFor="password" className="field-component-label !text-gray-200">
                 Password<span className="field-component-required">*</span>
               </label>
               <div className="relative">
@@ -295,7 +297,8 @@ const LogIn: React.FC = () => {
                     }
                   }}
                   placeholder="Password"
-                  className={`field-component field-component-border field-component-focus ${passwordError ? "border-destructive bg-red-50" : ""}`}
+                  className={`w-full text-xs px-3 h-11 flex items-center rounded-lg text-black placeholder:text-[var(--color-text-placeholder)] border border-gray-700 outline-none cursor-pointer transition-all duration-200 focus:border focus:border-[--color-brand-600]
+                    ${passwordError ? "border-destructive bg-red-50" : ""}`}
                   style={{ boxShadow: "var(--shadow-xs)" }}
                 />
                 <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-50 flex items-center gap-2">
@@ -316,45 +319,47 @@ const LogIn: React.FC = () => {
               {passwordError && <div className="mt-1.5 text-red-500 text-sm">{passwordError}</div>}
             </div>
             <div className="flex items-center justify-between text-sm">
-              <Link to="/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
+              <Link to="/forgot-password" className="text-gray-400 hover:underline">Forgot password?</Link>
             </div>
             <button
               type="submit"
               disabled={isSendingOtp}
               className="w-full btn-primary py-2 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+            >
               {isSendingOtp ? 'Sending OTP...' : 'Sign in'}
             </button>
-              {error && <div className="text-red-500 text-sm text-center">{error}</div>}
+            {error && <div className="text-red-500 text-sm text-center">{error}</div>}
           </form>
         </div>
       </div>
 
 
       {/* Right Panel */}
-      <div className="hidden md:block relative overflow-hidden h-full bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url(/assets/login-bg.webp)' }}>
-        <div className="absolute inset-0 bg-black/5"></div>
+      <div className="hidden md:block relative h-full">
+        <div className="absolute inset-0 z-10 pointer-events-none">
+          {/* Grid table (back) */}
+          <img
+            src="/assets/grid-table.webp"
+            alt="Grid table preview"
+            className="absolute md:right-[2%] md:top-[16%] md:h-[30%] xl:right-[2%] xl:top-[7%] xl:h-[45%] w-auto max-w-none object-contain"
+            draggable={false}
+          />
 
-        {/* Content Container - Text and Image */}
-        <div className="relative z-10 flex flex-col h-full pt-12 md:pt-16 lg:pt-20 xl:pt-24 overflow-hidden">
-          {/* Promotional Text - Top Left, Consistent Alignment */}
-          <div className="pl-8 md:pl-12 lg:pl-16 xl:pl-20 pr-8 md:pr-12 lg:pr-16 mb-10 md:mb-14 lg:mb-16 xl:mb-20">
-            <div className="space-y-4 text-left max-w-xl lg:max-w-2xl">
-              <h1 className="text-3xl lg:text-4xl xl:text-4xl 2xl:text-6xl font-bold text-black leading-tight">Build powerful databases with ease.</h1>
-              <p className="text-base lg:text-lg xl:text-xl text-black leading-relaxed">Create, manage, and collaborate on databases with our intuitive platform. Organize your data, build custom views, and scale your applications effortlessly.</p>
-            </div>
-          </div>
+          {/* GET request (middle) */}
+          <img
+            src="/assets/get-request.webp"
+            alt="GET request preview"
+            className="absolute md:right-[40%] md:top-[34%] md:h-[27%] xl:right-[40%] xl:top-[34%] xl:h-[45%] w-auto max-w-none object-contain"
+            draggable={false}
+          />
 
-          {/* Calendar View Image - Below Text, Same Left Alignment, Extending Outside (Right Only) */}
-          <div className="pl-8 md:pl-12 lg:pl-16 xl:pl-20 flex-1 min-h-0 overflow-hidden">
-            <div className="bg-white rounded-tl-2xl shadow-2xl overflow-hidden w-[115%] lg:w-[120%] xl:w-[125%] 2xl:w-[130%] h-full">
-              <img
-                src="/assets/login-image.png"
-                alt="Calendar View Preview"
-                className="w-full h-full object-cover object-left-top"
-              />
-            </div>
-          </div>
+          {/* Methods (front) */}
+          <img
+            src="/assets/methods.webp"
+            alt="API methods preview"
+            className="absolute md:right-[-5%] md:bottom-[23%] md:h-[30%] xl:right-[-4%] xl:bottom-[6%] xl:h-[42%] w-auto max-w-none object-contain"
+            draggable={false}
+          />
         </div>
       </div>
     </div>

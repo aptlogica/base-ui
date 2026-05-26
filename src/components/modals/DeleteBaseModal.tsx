@@ -121,12 +121,10 @@ export const DeleteBaseModal: React.FC<DeleteBaseModalProps> = ({
                 type="text"
                 value={baseNameToDelete}
                 onChange={handleInputChange}
-                // onPaste={(e) => e.preventDefault()}
                 placeholder="Enter base name"
                 className="w-full text-sm px-3 h-10 border rounded-lg text-primary focus:border-primary placeholder:text-gray-400 bg-card outline-none transition-all"
                 required
                 minLength={3}
-                // maxLength={50}
                 autoFocus
               />
             </div>

@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ImportModal } from '../ImportModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 
 // Mock useApi hooks
 vi.mock('../../../hooks/useApi', () => ({
@@ -44,7 +45,9 @@ const createTestQueryClient = () =>
 const renderWithQueryClient = (ui: React.ReactElement) => {
   const queryClient = createTestQueryClient();
   return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </MemoryRouter>
   );
 };
 
@@ -110,16 +113,14 @@ describe('ImportModal', () => {
   });
 
   describe('form elements', () => {
-    it('renders table name input', () => {
+    it('does not render table name input in select step', () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
-
-      expect(screen.getByPlaceholderText(/Enter table title/i)).toBeInTheDocument();
+      expect(screen.queryByPlaceholderText(/Enter table title/i)).not.toBeInTheDocument();
     });
 
-    it('renders description input', () => {
+    it('does not render description input in select step', () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
-
-      expect(screen.getByPlaceholderText(/Enter table description/i)).toBeInTheDocument();
+      expect(screen.queryByPlaceholderText(/Enter table description/i)).not.toBeInTheDocument();
     });
 
     it('shows file size limit info', () => {
@@ -176,26 +177,20 @@ describe('ImportModal', () => {
       }
     });
 
-    it('updates table name on input', async () => {
-      const user = userEvent.setup();
-
+    it('keeps Next disabled until a file is selected', async () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
-
-      const input = screen.getByPlaceholderText(/Enter table title/i);
-      await user.type(input, 'My Table');
-
-      expect(input).toHaveValue('My Table');
+      const nextButton = screen.getByRole('button', { name: /Next/i });
+      expect(nextButton).toBeDisabled();
     });
 
-    it('updates description on input', async () => {
+    it('shows selected file name after upload', async () => {
       const user = userEvent.setup();
-
       renderWithQueryClient(<ImportModal {...defaultProps} />);
 
-      const input = screen.getByPlaceholderText(/Enter table description/i);
-      await user.type(input, 'My description');
-
-      expect(input).toHaveValue('My description');
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const file = new File(['a,b\n1,2'], 'sample.csv', { type: 'text/csv' });
+      await user.upload(fileInput, file);
+      expect(screen.getByText('sample.csv')).toBeInTheDocument();
     });
   });
 
@@ -253,26 +248,30 @@ describe('ImportModal', () => {
         <ImportModal {...defaultProps} />
       );
 
-      const input = screen.getByPlaceholderText(/Enter table title/i);
-      await user.type(input, 'Test Table');
-
-      expect(input).toHaveValue('Test Table');
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const file = new File(['a,b\n1,2'], 'reset.csv', { type: 'text/csv' });
+      await user.upload(fileInput, file);
+      expect(screen.getByText('reset.csv')).toBeInTheDocument();
 
       // Close and reopen
       rerender(
-        <QueryClientProvider client={createTestQueryClient()}>
-          <ImportModal {...defaultProps} isOpen={false} />
-        </QueryClientProvider>
+        <MemoryRouter>
+          <QueryClientProvider client={createTestQueryClient()}>
+            <ImportModal {...defaultProps} isOpen={false} />
+          </QueryClientProvider>
+        </MemoryRouter>
       );
 
       rerender(
-        <QueryClientProvider client={createTestQueryClient()}>
-          <ImportModal {...defaultProps} isOpen={true} />
-        </QueryClientProvider>
+        <MemoryRouter>
+          <QueryClientProvider client={createTestQueryClient()}>
+            <ImportModal {...defaultProps} isOpen={true} />
+          </QueryClientProvider>
+        </MemoryRouter>
       );
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/Enter table title/i)).toHaveValue('');
+        expect(screen.queryByText('reset.csv')).not.toBeInTheDocument();
       });
     });
   });
@@ -293,62 +292,29 @@ describe('ImportModal', () => {
   });
 
   describe('title validation', () => {
-    it('shows error when title is less than 3 characters', async () => {
-      const user = userEvent.setup();
+    it('does not show title validation UI in select step', async () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
-
-      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
-      await user.type(titleInput, 'ab');
-
-      await waitFor(() => {
-        expect(screen.getByText(/Table title must be at least 3 characters long/i)).toBeInTheDocument();
-      });
+      expect(screen.queryByText(/Table title must be at least 3 characters long/i)).not.toBeInTheDocument();
     });
 
-    it('shows error when title is not unique', async () => {
-      const user = userEvent.setup();
+    it('does not show title uniqueness UI in select step', async () => {
       const existingTables = [{ title: 'Existing Table' }];
 
       renderWithQueryClient(
         <ImportModal {...defaultProps} existingTables={existingTables} />
       );
 
-      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
-      await user.type(titleInput, 'Existing Table');
-
-      await waitFor(() => {
-        expect(screen.getByText(/Table title must be unique/i)).toBeInTheDocument();
-      });
+      expect(screen.queryByText(/Table title must be unique/i)).not.toBeInTheDocument();
     });
 
-    it('clears error when title becomes valid', async () => {
-      const user = userEvent.setup();
+    it('does not render title input for validation checks', async () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
-
-      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
-      await user.type(titleInput, 'ab');
-
-      await waitFor(() => {
-        expect(screen.getByText(/Table title must be at least 3 characters long/i)).toBeInTheDocument();
-      });
-
-      await user.type(titleInput, 'c');
-
-      await waitFor(() => {
-        expect(screen.queryByText(/Table title must be at least 3 characters long/i)).not.toBeInTheDocument();
-      });
+      expect(screen.queryByPlaceholderText(/Enter table title/i)).not.toBeInTheDocument();
     });
 
-    it('shows red border on title input when there is an error', async () => {
-      const user = userEvent.setup();
+    it('does not show title input border state when title input is absent', async () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
-
-      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
-      await user.type(titleInput, 'ab');
-
-      await waitFor(() => {
-        expect(titleInput).toHaveClass('border-red-500');
-      });
+      expect(screen.queryByPlaceholderText(/Enter table title/i)).not.toBeInTheDocument();
     });
   });
 
@@ -385,31 +351,22 @@ describe('ImportModal', () => {
   });
 
   describe('title validation', () => {
-    it('shows error when title is empty', async () => {
+    it('does not render title required validation in select step', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      expect(screen.queryByText(/Table title is required/i)).not.toBeInTheDocument();
+    });
+
+    it('shows uploaded filename in select step', async () => {
       const user = userEvent.setup();
       renderWithQueryClient(<ImportModal {...defaultProps} />);
 
-      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
-      await user.clear(titleInput);
-
-      await waitFor(() => {
-        expect(screen.queryByText(/Table title is required/i)).toBeDefined();
-      });
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const file = new File(['a,b\n1,2'], 'my_table.csv', { type: 'text/csv' });
+      await user.upload(fileInput, file);
+      expect(screen.getByText('my_table.csv')).toBeInTheDocument();
     });
 
-    it('title is auto-generated from filename', async () => {
-      const user = userEvent.setup();
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-
-      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
-      // Simulate file selection by directly setting the value
-      await user.type(titleInput, 'my_table');
-
-      expect(titleInput).toHaveValue('my_table');
-    });
-
-    it('shows error when title is not unique', async () => {
-      const user = userEvent.setup();
+    it('does not run title uniqueness validation in select step', async () => {
       const existingTables = [
         { title: 'Existing Table' }
       ];
@@ -418,16 +375,10 @@ describe('ImportModal', () => {
         <ImportModal {...defaultProps} existingTables={existingTables} />
       );
 
-      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
-      await user.type(titleInput, 'Existing Table');
-
-      await waitFor(() => {
-        expect(screen.getByText(/Table title must be unique/i)).toBeInTheDocument();
-      });
+      expect(screen.queryByText(/Table title must be unique/i)).not.toBeInTheDocument();
     });
 
-    it('title validation is case-insensitive for uniqueness', async () => {
-      const user = userEvent.setup();
+    it('does not apply case-insensitive title uniqueness in select step', async () => {
       const existingTables = [
         { title: 'My Table' }
       ];
@@ -436,16 +387,10 @@ describe('ImportModal', () => {
         <ImportModal {...defaultProps} existingTables={existingTables} />
       );
 
-      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
-      await user.type(titleInput, 'my table');
-
-      await waitFor(() => {
-        expect(screen.getByText(/Table title must be unique/i)).toBeInTheDocument();
-      });
+      expect(screen.queryByText(/Table title must be unique/i)).not.toBeInTheDocument();
     });
 
-    it('detects duplicate title from model.title structure', async () => {
-      const user = userEvent.setup();
+    it('does not detect duplicate title from model.title in select step', async () => {
       const existingTables = [
         { model: { id: 't1', title: 'Sales Data' } }
       ];
@@ -454,42 +399,24 @@ describe('ImportModal', () => {
         <ImportModal {...defaultProps} existingTables={existingTables as any[]} />
       );
 
-      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
-      await user.type(titleInput, 'sales data');
-
-      await waitFor(() => {
-        expect(screen.getByText(/Table title must be unique/i)).toBeInTheDocument();
-      });
+      expect(screen.queryByText(/Table title must be unique/i)).not.toBeInTheDocument();
     });
 
-    it('clears title error when valid title is entered', async () => {
-      const user = userEvent.setup();
+    it('keeps title input absent when re-validating select step', async () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
-
-      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
-      
-      // Type invalid title first
-      await user.type(titleInput, 'ab');
-      
-      // Clear and type valid title
-      await user.clear(titleInput);
-      await user.type(titleInput, 'Valid Table');
-
-      expect(titleInput).toHaveValue('Valid Table');
+      expect(screen.queryByPlaceholderText(/Enter table title/i)).not.toBeInTheDocument();
     });
   });
 
   describe('form elements', () => {
-    it('renders table name input', () => {
+    it('does not render table name input in select step', () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
-
-      expect(screen.getByPlaceholderText(/Enter table title/i)).toBeInTheDocument();
+      expect(screen.queryByPlaceholderText(/Enter table title/i)).not.toBeInTheDocument();
     });
 
-    it('renders description input', () => {
+    it('does not render description input in select step', () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
-
-      expect(screen.getByPlaceholderText(/Enter table description/i)).toBeInTheDocument();
+      expect(screen.queryByPlaceholderText(/Enter table description/i)).not.toBeInTheDocument();
     });
 
     it('shows file size limit info', () => {
@@ -513,16 +440,8 @@ describe('ImportModal', () => {
     });
 
     it('has placeholder for title error message', async () => {
-      const user = userEvent.setup();
       renderWithQueryClient(<ImportModal {...defaultProps} />);
-
-      const titleInput = screen.getByPlaceholderText(/Enter table title/i);
-      await user.type(titleInput, 'ab');
-
-      await waitFor(() => {
-        const errorText = screen.getByText(/Table title must be at least 3 characters long/i);
-        expect(errorText).toBeInTheDocument();
-      });
+      expect(screen.queryByText(/Table title must be at least 3 characters long/i)).not.toBeInTheDocument();
     });
   });
 });

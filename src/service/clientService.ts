@@ -906,19 +906,22 @@ export async function addImageService(files: File[], onProgress?: (progressEvent
   return await makeAuthenticatedCall(() => client.assetService.addImage({ files }, onProgress));
 }
 
-export async function importTableService(
+export async function importService(
   params: {
     base_id?: string; // Optional: required from sidebar, optional from home page
     workspace_id: string;
-    title: string;
-    description: string;
     order_index: number;
     file: File;
+    config: any;
+    primary_column: string;
   },
   onProgress?: (progressEvent: ProgressEvent) => void
 ) {
-  return await makeAuthenticatedCall(() => client.tableService.import(params, onProgress));
+  // Intentionally omit title/description from the request payload.
+  // Backend should derive any needed metadata (or ignore) for import flows.
+  return await makeAuthenticatedCall(() => client.tableService.import(params as any, onProgress));
 }
+
 
 const updateClientHeaders = (workspaceId?: string | null, baseId?: string | null) => {
   const headers: Record<string, string> = {};

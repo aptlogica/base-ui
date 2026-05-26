@@ -48,7 +48,7 @@ export const DropdownSearch = React.forwardRef<HTMLInputElement, DropdownSearchP
           onChange={(e) => onChange(e.target.value)}
           onFocus={handleFocus}
           placeholder={placeholder}
-          className={inputClassName ?? "w-full pl-9 pr-3 py-2 text-sm border rounded-md focus:outline-none text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)] bg-[--color-alpha-white] transition-colors duration-200"}
+          className={inputClassName ?? "w-full pl-9 pr-3 py-2 text-sm border rounded-xl focus:outline-none text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)] bg-[--color-alpha-white] transition-colors duration-200"}
           autoFocus={autoFocus}
           autoComplete="new-password"
           autoCorrect="off"

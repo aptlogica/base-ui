@@ -26,7 +26,7 @@ import {
   updateTableService,
   deleteTableService,
   getTablesByBaseIdService,
-  importTableService,
+  importService,
   // New field API services
   createFieldService,
   updateFieldService,
@@ -632,7 +632,7 @@ export const useImportTable = () => {
       file: File;
       onProgress?: (progressEvent: ProgressEvent) => void;
     }) => {
-      return importTableService(
+      return importService(
         {
           ...(base_id && { base_id }), // Only include base_id if provided
           workspace_id,
@@ -1094,6 +1094,12 @@ export const useInsertRowData = () => {
         queryKey: ['tables', String(vars.model_id)],
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
+      // Ensure lookup columns in other tables refresh when source table values change.
+      // This marks all table queries stale and refetches whichever table queries are active.
+      queryClient.invalidateQueries({
+        queryKey: ['tables'],
+        refetchType: 'active'
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
@@ -1111,6 +1117,12 @@ export const useUpdateRowData = () => {
       });
       queryClient.invalidateQueries({
         queryKey: ['tables', String(vars.model_id)],
+        refetchType: 'active'
+      });
+      // Ensure lookup columns in other tables refresh when source table values change.
+      // This marks all table queries stale and refetches whichever table queries are active.
+      queryClient.invalidateQueries({
+        queryKey: ['tables'],
         refetchType: 'active'
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
