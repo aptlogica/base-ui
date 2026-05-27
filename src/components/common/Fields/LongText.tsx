@@ -13,7 +13,6 @@ interface LongTextProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  maxLength?: number;
   required?: boolean;
   disabled?: boolean;
   isBorder?: boolean;
@@ -38,7 +37,6 @@ export const LongText: React.FC<LongTextProps> = ({
   value,
   onChange,
   placeholder = "",
-  maxLength,
   required = false,
   disabled = false,
   isBorder = false,
@@ -50,10 +48,7 @@ export const LongText: React.FC<LongTextProps> = ({
   onModalClose,
   config = {}
 }) => {
-  const { defaultValue = '', maxLength: configMaxLength, placeholder: configPlaceholder = placeholder, richText = false, hideMaximizeButton = false } = config;
-  const effectiveMaxLength = typeof maxLength === 'number' && Number.isFinite(maxLength)
-    ? maxLength
-    : (typeof configMaxLength === 'number' && Number.isFinite(configMaxLength) ? configMaxLength : undefined);
+  const { defaultValue = '', placeholder: configPlaceholder = placeholder, richText = false, hideMaximizeButton = false } = config;
   const [localValue, setLocalValue] = useState(value || '');
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -200,10 +195,6 @@ export const LongText: React.FC<LongTextProps> = ({
 
     if (required && !textContent.trim()) {
       return 'This field is required';
-    }
-
-    if (typeof effectiveMaxLength === 'number' && Number.isFinite(effectiveMaxLength) && textContent.length > effectiveMaxLength) {
-      return `Text must be ${effectiveMaxLength} characters or less`;
     }
     return null;
   };
@@ -752,7 +743,6 @@ export const LongText: React.FC<LongTextProps> = ({
           onChange={handleChange}
           onBlur={handleBlur}
           placeholder={configPlaceholder}
-          maxLength={effectiveMaxLength}
           disabled={false}
           className={`field-component ${error ? 'border-red-500 bg-red-50' : ''
             } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'} truncate`}
@@ -986,7 +976,6 @@ export const LongText: React.FC<LongTextProps> = ({
                 value={modalValue}
                 onChange={handleModalChange}
                 onKeyDown={(e) => e.stopPropagation()}
-                maxLength={effectiveMaxLength}
                 className="w-full flex-1 min-h-0 bg-[var(--background)] border rounded-xl p-3 text-sm text-muted-foreground focus:outline-none focus:border-[var(--color-brand-600)] transition-all resize-vertical"
                 placeholder={placeholder}
                 disabled={disabled || readOnly}

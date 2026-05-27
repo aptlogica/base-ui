@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+/* eslint-disable sonarjs/cognitive-complexity */
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, X, Loader2, FileText } from 'lucide-react';
 import { useToast } from '../common/Toast';
@@ -159,6 +160,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const toast = useToast();
   const config = IMPORT_CONFIG[importType];
   const importTableMutation = useImportData();
+  const isImporting = isSubmitting || importTableMutation.isPending;
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -474,7 +476,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         type="button"
         aria-label="Close modal"
         className="absolute inset-0"
-        onClick={onClose}
+        onClick={() => {
+          if (isImporting) return;
+          onClose();
+        }}
       />
       <div // NOSONAR
         className="bg-[var(--color-card)] border border-[var(--color-border-primary)] rounded-xl shadow-2xl max-w-[94vw] max-h-[94vh] flex flex-col relative overflow-hidden transform transition-all duration-200"
@@ -501,8 +506,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             </div>
           </div>
           <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer"
+            onClick={() => {
+              if (isImporting) return;
+              onClose();
+            }}
+            disabled={isImporting}
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Close"
           >
             <X className="text-gray-500 h-5 w-5" />
@@ -757,12 +766,31 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           </div>
         </form>
 
+        {isImporting && (
+          <div className="absolute inset-0 z-20 bg-black/5 backdrop-blur-[1px] cursor-wait" />
+        )}
+
         {/* Footer - Fixed at Bottom */}
         {(
           <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+            {isImporting && (
+              <div className="mr-auto min-w-[220px]">
+                <div className="flex items-center justify-between text-xs text-secondary mb-1">
+                  <span>Uploading...</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+                  <div
+                    className="h-full bg-brand-600 transition-all duration-200"
+                    style={{ width: `${Math.max(0, Math.min(100, uploadProgress))}%` }}
+                  />
+                </div>
+              </div>
+            )}
             <button
               type="button"
               onClick={onClose}
+              disabled={isImporting}
               className="px-16 py-2 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-card)] hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
             >
               Cancel
@@ -806,6 +834,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 <button
                   type="button"
                   onClick={handleBack}
+                  disabled={isImporting}
                   className="px-10 py-2 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-card)] hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
                 >
                   Back
@@ -813,11 +842,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 <button
                   type="submit"
                   form="import-form"
-                  disabled={isSubmitting || importTableMutation.isPending}
+                  disabled={isImporting}
                   className="flex items-center gap-2 px-16 py-2 rounded-xl bg-brand-600 text-black font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-brand-700 focus:ring-2 focus:ring-offset-2 focus:ring-brand-600"
                 >
-                  {(isSubmitting || importTableMutation.isPending) && <Loader2 className="animate-spin h-5 w-5" />}
-                  {(isSubmitting || importTableMutation.isPending) ? 'Importing...' : 'Confirm'}
+                  {isImporting && <Loader2 className="animate-spin h-5 w-5" />}
+                  {isImporting ? 'Importing...' : 'Confirm'}
                 </button>
               </>
             )}

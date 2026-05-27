@@ -51,7 +51,7 @@ export const ImportDataPreviewGrid: React.FC<Props> = ({
     if (text.length <= 96) return text;
     return `${text.slice(0, 93)}...`;
   };
-  console.log('raw', previewRows)
+
   return (
     <div className="bg-card overflow-hidden h-full">
       <div className="mb-3">
@@ -76,7 +76,9 @@ export const ImportDataPreviewGrid: React.FC<Props> = ({
           </thead>
           <tbody>
             {previewRows.map((row, idx) => (
-              <tr key={idx} className="border-b last:border-b-0 px-4 py-3 h-11">
+              <tr 
+                key={idx} //NOSONAR 
+                className="border-b last:border-b-0 px-4 py-3 h-11">
                 {visibleColumns.map((col) => (
                   <td key={col.key} className="px-4 py-3 text-primary whitespace-nowrap">
                     <span className="block max-w-[130px] truncate" title={String(row?.[col.key] ?? '')}>

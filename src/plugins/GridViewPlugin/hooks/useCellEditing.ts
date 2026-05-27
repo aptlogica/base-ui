@@ -204,6 +204,7 @@ export function useCellEditing({
   }, [onRecordsUpdate, updateLinksField]);
 
   // Helper to process debounced cell update
+  /* eslint-disable sonarjs/cognitive-complexity */
   const processDebouncedUpdate = useCallback(async (
     change: { rowId: string; columnKey: string; value: any },
     column: ColumnConfig,

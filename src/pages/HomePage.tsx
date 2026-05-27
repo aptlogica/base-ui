@@ -234,7 +234,6 @@ const HomePage: React.FC = () => {
         removeImage?: boolean;
       } = {};
 
-      console.log(updates)
       // Only include fields that have actually changed
       const currentTitle = editingBase.title || editingBase.name || '';
       const currentDescription = editingBase.description || '';
