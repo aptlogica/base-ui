@@ -7,28 +7,12 @@ import { createPortal } from 'react-dom';
 import { MoreHorizontal, Search } from 'lucide-react';
 import { useLookupSourceColumn } from '../../../hooks/useLookupSourceColumn';
 import { useGetTenantUsers } from '../../../hooks/useApi';
-import {
-  renderRatingPill,
-  renderLongTextPill,
-  renderDateTimePill,
-  renderEmailPill,
-  renderUserPill,
-  renderDurationPill,
-  renderAttachmentPill,
-  renderCheckboxPill,
-  renderCurrencyPill,
-  renderPercentPill,
-  renderDecimalPill,
-  renderURLPill,
-  renderPhoneNumberPill,
-  renderYearPill,
-  renderNumberPill,
-  renderJSONPill,
-  renderMultiSelectPill,
-  renderSingleSelectPill,
-  renderTextPill,
-} from './lookupRenderers';
-import { normalizeFieldType } from '../../../utils/fieldType';
+import { LookupAttachmentValue } from './lookupAttachmentRenderer';
+import { LookupJsonValue } from './lookupJsonRenderer';
+import { LookupLongTextValue } from './lookupLongTextRenderer';
+import { renderTextPill } from './lookupRenderers';
+import { getFieldTypeFromSource, getLookupColumnId, normalizeLookupValue } from './lookupUtils';
+import { renderLookupValue } from './lookupValueRenderer';
 
 interface LookupProps {
   label?: string;
@@ -48,157 +32,6 @@ interface LookupProps {
   };
 }
 
-const stripHtml = (value: string): string => {
-  if (!value) return '';
-  const div = document.createElement('div');
-  div.innerHTML = value;
-  return div.textContent || div.innerText || '';
-};
-
-const normalizeJsonPreview = (value: unknown): string => {
-  if (value === null || value === undefined) return '';
-
-  if (typeof value === 'object') {
-    try {
-      return JSON.stringify(value, null, 2);
-    } catch {
-      return String(value);
-    }
-  }
-
-  const text = String(value).trim();
-  if (!text) return '';
-
-  // Handle stringified JSON safely.
-  const looksLikeJson = (text.startsWith('{') && text.endsWith('}')) || (text.startsWith('[') && text.endsWith(']'));
-  if (looksLikeJson) {
-    try {
-      const parsed = JSON.parse(text);
-      return JSON.stringify(parsed, null, 2);
-    } catch {
-      return text;
-    }
-  }
-
-  return text;
-};
-
-/**
- * Get the lookup_column_id from field meta
- */
-const getLookupColumnId = (field: LookupProps['field']): string | undefined => {
-  if (!field?.meta) return undefined;
-
-  const meta = typeof field.meta === 'string'
-    ? JSON.parse(field.meta || '{}')
-    : field.meta;
-
-  return meta.lookup_column_id;
-};
-
-/**
- * Normalize lookup value to array of individual values
- * Each element in the array represents a value from a related record
- */
-const normalizeLookupValue = (value: any): any[] => {
-  if (value === null || value === undefined) return [];
-
-  // If it's already an array, return it (filter out nulls)
-  if (Array.isArray(value)) {
-    return value.filter(item => item !== null && item !== undefined);
-  }
-
-  // Single value - wrap in array
-  return [value];
-};
-
-/**
- * Get the field type from source column's uidt
- */
-const getFieldTypeFromSource = (sourceColumn: any): string => {
-  if (!sourceColumn) return 'text';
-
-  const uidt = sourceColumn.uidt || sourceColumn.type || 'text';
-  return normalizeFieldType(uidt);
-};
-
-/**
- * Render a single lookup value based on source column type
- */
-const renderLookupValue = (
-  value: any,
-  sourceColumn: any,
-  index: number
-): React.ReactNode | null => {
-  if (value === null || value === undefined) return null;
-
-  const fieldType = getFieldTypeFromSource(sourceColumn);
-  const renderProps = { value, sourceColumn, index };
-
-  switch (fieldType) {
-    case 'rating':
-      return renderRatingPill(renderProps);
-
-    case 'longText':
-      return renderLongTextPill(renderProps);
-
-    case 'datetime':
-    case 'date':
-      return renderDateTimePill(renderProps);
-
-    case 'email':
-      return renderEmailPill(renderProps);
-
-    case 'user':
-    case 'createdBy':
-    case 'lastModifiedBy':
-      return renderUserPill(renderProps);
-
-    case 'duration':
-      return renderDurationPill(renderProps);
-
-    case 'attachment':
-      return renderAttachmentPill(renderProps);
-
-    case 'boolean':
-    case 'checkbox':
-      return renderCheckboxPill(renderProps);
-
-    case 'currency':
-      return renderCurrencyPill(renderProps);
-
-    case 'percent':
-      return renderPercentPill(renderProps);
-
-    case 'decimal':
-      return renderDecimalPill(renderProps);
-
-    case 'url':
-      return renderURLPill(renderProps);
-
-    case 'phoneNumber':
-      return renderPhoneNumberPill(renderProps);
-
-    case 'year':
-      return renderYearPill(renderProps);
-
-    case 'number':
-      return renderNumberPill(renderProps);
-
-    case 'json':
-      return renderJSONPill(renderProps);
-
-    case 'multiSelect':
-      return renderMultiSelectPill(renderProps);
-
-    case 'select':
-      return renderSingleSelectPill(renderProps);
-
-    default:
-      return renderTextPill(renderProps);
-  }
-};
-
 export const Lookup: React.FC<LookupProps> = ({
   label,
   value,
@@ -216,6 +49,9 @@ export const Lookup: React.FC<LookupProps> = ({
   const { data: sourceColumn, isLoading: isLoadingSourceColumn } = useLookupSourceColumn(lookupColumnId);
   const sourceFieldType = useMemo(() => getFieldTypeFromSource(sourceColumn), [sourceColumn]);
   const isUserLikeLookup = sourceFieldType === 'user' || sourceFieldType === 'createdBy' || sourceFieldType === 'lastModifiedBy';
+  const isAttachmentLookup = sourceFieldType === 'attachment';
+  const isJsonLookup = sourceFieldType === 'json';
+  const isLongTextLookup = sourceFieldType === 'longText';
 
   // Fetch users only for user-like lookup fields; keep this cache warm and stable.
   const { data: tenantUsers = [] } = useGetTenantUsers({
@@ -278,80 +114,20 @@ export const Lookup: React.FC<LookupProps> = ({
     setVisibleCount(Math.max(0, count));
   }, [normalizedValues.length]);
 
-  const visibleItems = normalizedValues.slice(0, visibleCount);
-  const hiddenItems = normalizedValues.slice(visibleCount);
+  const visibleItems = (isAttachmentLookup || isJsonLookup || isLongTextLookup) ? normalizedValues : normalizedValues.slice(0, visibleCount);
+  const hiddenItems = (isAttachmentLookup || isJsonLookup || isLongTextLookup) ? [] : normalizedValues.slice(visibleCount);
+  const searchableItems = (isAttachmentLookup || isJsonLookup || isLongTextLookup) ? normalizedValues : hiddenItems;
 
   // Filter hidden items based on search
   const filteredHiddenItems = useMemo(() => {
-    if (!searchTerm) return hiddenItems;
-    return hiddenItems.filter((item: any) => {
+    if (!searchTerm) return searchableItems;
+    return searchableItems.filter((item: any) => {
       const searchableText = typeof item === 'object'
         ? JSON.stringify(item).toLowerCase()
         : String(item).toLowerCase();
       return searchableText.includes(searchTerm.toLowerCase());
     });
-  }, [hiddenItems, searchTerm]);
-
-  const renderLongTextDropdown = (items: any[]) => (
-    <div className="flex flex-col gap-2 max-h-[280px] overflow-auto">
-      {items.map((item, index) => {
-        const text = stripHtml(String(item ?? '')).trim();
-        if (!text) return null;
-        return (
-          <div
-            key={`lt-${index}`}
-            className="px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg text-gray-700 whitespace-pre-wrap break-words"
-            title={text}
-          >
-            {text}
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  const renderAttachmentDropdown = (items: any[]) => (
-    <div className="flex flex-col gap-2 max-h-[280px] overflow-auto">
-      {items.map((item, index) => {
-        const attachments = Array.isArray(item) ? item : [item];
-        const valid = attachments.filter((a: any) => a && typeof a === 'object');
-        if (valid.length === 0) return null;
-        return (
-          <div key={`att-${index}`} className="px-3 py-2 bg-white border border-gray-200 rounded-lg">
-            <div className="text-xs text-gray-500 mb-1">{valid.length} file{valid.length > 1 ? 's' : ''}</div>
-            <div className="flex flex-col gap-1">
-              {valid.map((file: any, i: number) => {
-                const name = file.title || file.name || file.file_name || `Attachment ${i + 1}`;
-                return (
-                  <div key={`${name}-${i}`} className="text-sm text-gray-700 truncate" title={name}>
-                    {name}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  const renderJsonDropdown = (items: any[]) => (
-    <div className="flex flex-col gap-2 max-h-[280px] overflow-auto">
-      {items.map((item, index) => {
-        const preview = normalizeJsonPreview(item);
-        if (!preview) return null;
-        return (
-          <pre
-            key={`json-${index}`}
-            className="px-3 py-2 text-xs bg-white border border-gray-200 rounded-lg text-gray-700 whitespace-pre-wrap break-words font-mono overflow-x-auto"
-            title={preview}
-          >
-            {preview}
-          </pre>
-        );
-      })}
-    </div>
-  );
+  }, [searchableItems, searchTerm]);
 
   // Handle click outside to close dropdown
   React.useEffect(() => {
@@ -372,61 +148,9 @@ export const Lookup: React.FC<LookupProps> = ({
     };
   }, [isDropdownOpen]);
 
-  // Render all lookup values
-  const renderValues = (items: any[], isInDropdown = false) => {
-    if (items.length === 0) return null;
-
-    // If source column is still loading, show loading state
-    if (isLoadingSourceColumn) {
-      return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm bg-gray-100 text-gray-700 border border-gray-200">
-          Loading...
-        </span>
-      );
-    }
-
-    // If source column is not available, fallback to text rendering
-    // This can happen if lookup_column_id is missing or invalid
-    if (!sourceColumn) {
-      const renderedItems = items
-        .map((item, index) => renderTextPill({ value: item, sourceColumn: null, index }))
-        .filter((item) => item !== null);
-
-      if (renderedItems.length === 0) return null;
-
-      return (
-        <div
-          className={`flex ${isInDropdown ? 'flex-wrap' : 'flex-nowrap'} gap-1 items-center ${isInDropdown ? 'max-w-full' : ''}`}
-          style={{ maxWidth: '100%', overflow: 'hidden' }}
-        >
-          {renderedItems}
-        </div>
-      );
-    }
-
-    if (isInDropdown && sourceFieldType === 'longText') {
-      return renderLongTextDropdown(items);
-    }
-
-    if (isInDropdown && sourceFieldType === 'attachment') {
-      return renderAttachmentDropdown(items);
-    }
-
-    if (isInDropdown && sourceFieldType === 'json') {
-      return renderJsonDropdown(items);
-    }
-
-    // Render each value as separate pills using source column type
-    const sourceColumnWithContext = isUserLikeLookup
-      ? { ...sourceColumn, __lookupUserDisplayMap: lookupUserDisplayMap }
-      : sourceColumn;
-
-    const renderedItems = items
-      .map((item, index) => renderLookupValue(item, sourceColumnWithContext, index))
-      .filter((item) => item !== null);
-
+  // Render wrapper for items
+  const renderItemsWrapper = (renderedItems: any[], isInDropdown: boolean) => {
     if (renderedItems.length === 0) return null;
-
     return (
       <div
         className={`flex ${isInDropdown ? 'flex-wrap' : 'flex-nowrap'} gap-1 items-center ${isInDropdown ? 'max-w-full' : ''}`}
@@ -435,6 +159,64 @@ export const Lookup: React.FC<LookupProps> = ({
         {renderedItems}
       </div>
     );
+  };
+
+  // Render text pill fallback when source column is not available
+  const renderTextPillFallback = (items: any[]) => {
+    const renderedItems = items
+      .map((item, index) => renderTextPill({ value: item, sourceColumn: null, index }))
+      .filter((item) => item !== null);
+    return renderItemsWrapper(renderedItems, false);
+  };
+
+  // Render special field types
+  const renderSpecialFieldType = (isInDropdown: boolean, items: any[]) => {
+    if (!isInDropdown && sourceFieldType === 'attachment') {
+      return <LookupAttachmentValue items={items} />;
+    }
+    if (!isInDropdown && sourceFieldType === 'json') {
+      return <LookupJsonValue items={items} />;
+    }
+    if (!isInDropdown && sourceFieldType === 'longText') {
+      return <LookupLongTextValue items={items} />;
+    }
+    return null;
+  };
+
+  // Render lookup values
+  const renderLookupValueItems = (items: any[], isInDropdown: boolean) => {
+    const sourceColumnWithContext = isUserLikeLookup
+      ? { ...sourceColumn, __lookupUserDisplayMap: lookupUserDisplayMap }
+      : sourceColumn;
+
+    const renderedItems = items
+      .map((item, index) => renderLookupValue(item, sourceColumnWithContext, index))
+      .filter((item) => item !== null);
+    return renderItemsWrapper(renderedItems, isInDropdown);
+  };
+
+  // Render all lookup values
+  const renderValues = (items: any[], isInDropdown = false) => {
+    if (items.length === 0) return null;
+
+    if (isLoadingSourceColumn) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm bg-gray-100 text-gray-700 border">
+          Loading...
+        </span>
+      );
+    }
+
+    if (!sourceColumn) {
+      return renderTextPillFallback(items);
+    }
+
+    const specialFieldRender = renderSpecialFieldType(isInDropdown, items);
+    if (specialFieldRender) {
+      return specialFieldRender;
+    }
+
+    return renderLookupValueItems(items, isInDropdown);
   };
 
   // If no values, don't render anything
@@ -461,7 +243,7 @@ export const Lookup: React.FC<LookupProps> = ({
       >
         {renderValues(visibleItems)}
 
-        {hiddenItems.length > 0 && (
+        {hiddenItems.length > 0 && !isAttachmentLookup && !isJsonLookup && !isLongTextLookup && (
           <button
             type="button"
             onClick={(e) => {
@@ -496,7 +278,7 @@ export const Lookup: React.FC<LookupProps> = ({
               }
               setIsDropdownOpen(!isDropdownOpen)
             }}
-            className="inline-flex items-center px-2.5 py-1 rounded-full text-sm bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200 transition-colors"
+            className="inline-flex items-center px-2.5 py-1 rounded-full text-sm bg-gray-100 text-gray-700 border hover:bg-gray-200 transition-colors"
           >
             <MoreHorizontal className="w-3 h-3" />
           </button>
@@ -504,7 +286,7 @@ export const Lookup: React.FC<LookupProps> = ({
       </div>
 
       {/* Dropdown for hidden items - rendered in portal to escape table cell overflow */}
-      {isDropdownOpen && hiddenItems.length > 0 && createPortal(
+      {isDropdownOpen && hiddenItems.length > 0 && !isAttachmentLookup && !isJsonLookup && !isLongTextLookup && createPortal(
         <div
           ref={dropdownRef}
           className="fixed z-50 bg-gray-100 border rounded-xl shadow-lg"

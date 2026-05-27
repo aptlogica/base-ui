@@ -6,9 +6,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, X, Info, Loader2 } from 'lucide-react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { FIELD_TYPES } from '../../types/fieldTypes';
-import {
-  timeZoneOptions,
-} from '../../types/constants';
+import { timeZoneOptions } from '../../types/constants';
 import { FieldTypeDropdown } from '../common/dropdown/fieldDropdown/FieldTypeDropdown';
 import { useBaseTables, useTable, useAllViews, useResetField } from '../../hooks/useApi';
 import { useNavigationStore } from '../../stores/navigationStore';
@@ -974,6 +972,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     // Reset json field config state
   };
 
+/* eslint-disable sonarjs/cognitive-complexity */
   const handleSave = () => {
     // Prevent multiple clicks
     if (isSaving) return;
@@ -1387,9 +1386,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                   const value = e?.target?.value;
                   const capitalized = value?.charAt(0)?.toUpperCase() + value?.slice(1);
                   setFieldName(capitalized);
-                }}
-              // onChange={e => setFieldName(e.target.value)}
-              />
+                }}/>
               <div className={`text-red-500 text-xs mt-1 transition-all duration-300 ease-in-out ${nameError ? 'opacity-100 max-h-6 mb-2' : 'opacity-0 max-h-0 overflow-hidden'}`}>
                 {nameError}
               </div>

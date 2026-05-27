@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+  /* eslint-disable sonarjs/cognitive-complexity */
 import React, { useState, useMemo, useRef, useEffect, Suspense, lazy } from 'react';
 import { Plus, Import, Search, Zap, Database, ChevronDown } from 'lucide-react';
 import { useWorkspaceBases, useCreateBase, useUpdateBase, useDeleteBase, useBaseTables, useCreateTable, useWorkspaces } from '../hooks/useApi';

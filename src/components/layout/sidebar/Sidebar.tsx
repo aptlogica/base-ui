@@ -188,7 +188,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         if (
           ref.current &&
           !ref.current.contains(e.target as Node) &&
-          !popoverRef?.contains(e.target as Node)
+          !popoverRef?.contains(e.target)
         ) {
           onClose?.();
         }
@@ -286,7 +286,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center gap-2">
             <TableOptionsMenu
               table={table}
-              baseId={selectedBase?.id}
               isPinned={isPinned}
               onPinToggle={handlePinToggle}
               onRename={async (newName) => {

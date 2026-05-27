@@ -41,7 +41,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
   const { canCreateWorkspace, canAssignUsers, isFullAccess, isWorkspaceReadOnly } = useWorkspaceAccess(selectedWorkspaceId);
   const { isAdmin } = useUserRole();
 
-  const workspaces = workspacesQuery.data || [];
+  const workspaces = workspacesQuery.data ?? [];
 
   // Get selected workspace details from workspaces list
   const selectedWorkspace = workspaces.find((ws: any) => ws.id === selectedWorkspaceId);

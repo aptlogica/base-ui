@@ -477,7 +477,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="flex-1 overflow-auto min-h-[400px]">
+            <div className="flex-1 overflow-auto min-h-[380px]">
               {readOnly || viewMode === 'tree' ? (
                 <div className="w-full h-full bg-[var(--background)] border rounded-xl p-4 text-sm font-mono overflow-auto">
                   {jsonData !== null && jsonData !== undefined ? (

@@ -537,8 +537,8 @@ function processAndStoreTokens(response: any): any {
   const tokenData: TokenData = {
     access_token: response.data.token.access_token,
     refresh_token: response.data.token.refresh_token || '',
-    expires_at: accessDecoded?.exp as number,
-    refresh_expires_at: refreshDecoded?.exp as number
+    expires_at: accessDecoded?.exp,
+    refresh_expires_at: refreshDecoded?.exp
   };
 
   // Store tokens securely
@@ -917,8 +917,6 @@ export async function importService(
   },
   onProgress?: (progressEvent: ProgressEvent) => void
 ) {
-  // Intentionally omit title/description from the request payload.
-  // Backend should derive any needed metadata (or ignore) for import flows.
   return await makeAuthenticatedCall(() => client.tableService.import(params as any, onProgress));
 }
 

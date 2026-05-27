@@ -15,7 +15,7 @@ const PHONE_RE = /^[+]?[0-9()\-\s]{7,}$/;
 const INTEGER_RE = /^-?\d+$/;
 const DECIMAL_RE = /^-?\d+\.\d+$/;
 const PERCENT_RE = /^-?\d+(\.\d+)?%$/;
-const CURRENCY_RE = /^[\p{Sc}]?\s?-?\d{1,3}(,\d{3})*(\.\d+)?$/u;
+const CURRENCY_RE = /^\p{Sc}?\s?-?\d{1,3}(,\d{3})*(\.\d+)?$/u;
 const BOOLEAN_TRUE = new Set(['true', 'yes', 'y', '1', 'checked']);
 const BOOLEAN_FALSE = new Set(['false', 'no', 'n', '0', 'unchecked']);
 
@@ -58,6 +58,89 @@ const isDateOnlyLike = (value: string): boolean => {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) || /^\d{2}\/\d{2}\/\d{4}$/.test(value);
 };
 
+const includesAny = (name: string, terms: string[]): boolean => {
+  return terms.some((term) => name.includes(term));
+};
+
+const startsWithAny = (name: string, terms: string[]): boolean => {
+  return terms.some((term) => name.startsWith(term));
+};
+
+const allSamplesMatch = (samples: string[], predicate: (value: string) => boolean): boolean => {
+  return samples.every(predicate);
+};
+
+const isBooleanValue = (value: string): boolean => {
+  const normalized = value.toLowerCase();
+  return BOOLEAN_TRUE.has(normalized) || BOOLEAN_FALSE.has(normalized);
+};
+
+interface TypeInferenceRule {
+  match: (name: string, samples: string[]) => boolean;
+  fieldType: string;
+}
+
+const TYPE_INFERENCE_RULES: TypeInferenceRule[] = [
+  {
+    match: (_name, samples) => allSamplesMatch(samples, (value) => INTEGER_RE.test(value)),
+    fieldType: FieldType.Number,
+  },
+  {
+    match: (name, samples) => name.includes('email') || allSamplesMatch(samples, (value) => EMAIL_RE.test(value)),
+    fieldType: FieldType.Email,
+  },
+  {
+    match: (name, samples) => includesAny(name, ['url', 'website']) || allSamplesMatch(samples, (value) => URL_RE.test(value)),
+    fieldType: FieldType.URL,
+  },
+  {
+    match: (name, samples) => includesAny(name, ['phone', 'mobile']) || allSamplesMatch(samples, (value) => PHONE_RE.test(value)),
+    fieldType: FieldType.PhoneNumber,
+  },
+  {
+    match: (name, samples) =>
+      startsWithAny(name, ['is_', 'has_']) ||
+      includesAny(name, ['enabled', 'active']) ||
+      allSamplesMatch(samples, isBooleanValue),
+    fieldType: FieldType.Boolean,
+  },
+  {
+    match: (name, samples) => name.includes('date') || allSamplesMatch(samples, isDateOnlyLike),
+    fieldType: FieldType.Date,
+  },
+  {
+    match: (name, samples) =>
+      (name.includes('time') || name.includes('timestamp')) && allSamplesMatch(samples, isDateLike),
+    fieldType: FieldType.DateTime,
+  },
+  {
+    match: (name) => name.includes('time') || name.includes('timestamp'),
+    fieldType: FieldType.Time,
+  },
+  {
+    match: (name, samples) => name.includes('year') && allSamplesMatch(samples, (value) => /^\d{4}$/.test(value)),
+    fieldType: FieldType.Year,
+  },
+  {
+    match: (name, samples) =>
+      includesAny(name, ['amount', 'price', 'cost']) || allSamplesMatch(samples, (value) => CURRENCY_RE.test(value)),
+    fieldType: FieldType.Currency,
+  },
+  {
+    match: (name, samples) =>
+      includesAny(name, ['percent', 'ratio']) || allSamplesMatch(samples, (value) => PERCENT_RE.test(value)),
+    fieldType: FieldType.Percent,
+  },
+  {
+    match: (_name, samples) => allSamplesMatch(samples, (value) => INTEGER_RE.test(value) || DECIMAL_RE.test(value)),
+    fieldType: FieldType.Decimal,
+  },
+  {
+    match: (_name, samples) => allSamplesMatch(samples, (value) => value.startsWith('{') || value.startsWith('[')),
+    fieldType: FieldType.JSON,
+  },
+];
+
 const inferFieldType = (label: string, values: string[]): string => {
   const name = label.toLowerCase();
   const samples = values.filter(Boolean).slice(0, 20);
@@ -66,58 +149,10 @@ const inferFieldType = (label: string, values: string[]): string => {
     return FieldType.Text;
   }
 
-  if (samples.every((value) => INTEGER_RE.test(value))) {
-    return FieldType.Number;
-  }
-
-  if (name.includes('email') || samples.every((value) => EMAIL_RE.test(value))) {
-    return FieldType.Email;
-  }
-
-  if (name.includes('url') || name.includes('website') || samples.every((value) => URL_RE.test(value))) {
-    return FieldType.URL;
-  }
-
-  if (name.includes('phone') || name.includes('mobile') || samples.every((value) => PHONE_RE.test(value))) {
-    return FieldType.PhoneNumber;
-  }
-
-  if (
-    name.startsWith('is_') ||
-    name.startsWith('has_') ||
-    name.includes('enabled') ||
-    name.includes('active') ||
-    samples.every((value) => BOOLEAN_TRUE.has(value.toLowerCase()) || BOOLEAN_FALSE.has(value.toLowerCase()))
-  ) {
-    return FieldType.Boolean;
-  }
-
-  if (name.includes('date') || samples.every((value) => isDateOnlyLike(value))) {
-    return FieldType.Date;
-  }
-
-  if (name.includes('time') || name.includes('timestamp')) {
-    return samples.every((value) => isDateLike(value)) ? FieldType.DateTime : FieldType.Time;
-  }
-
-  if (name.includes('year') && samples.every((value) => /^\d{4}$/.test(value))) {
-    return FieldType.Year;
-  }
-
-  if (name.includes('amount') || name.includes('price') || name.includes('cost') || samples.every((value) => CURRENCY_RE.test(value))) {
-    return FieldType.Currency;
-  }
-
-  if (name.includes('percent') || name.includes('ratio') || samples.every((value) => PERCENT_RE.test(value))) {
-    return FieldType.Percent;
-  }
-
-  if (samples.every((value) => INTEGER_RE.test(value) || DECIMAL_RE.test(value))) {
-    return FieldType.Decimal;
-  }
-
-  if (samples.every((value) => value.startsWith('{') || value.startsWith('['))) {
-    return FieldType.JSON;
+  for (const rule of TYPE_INFERENCE_RULES) {
+    if (rule.match(name, samples)) {
+      return rule.fieldType;
+    }
   }
 
   return FieldType.Text;
@@ -176,7 +211,15 @@ const buildPreviewFromRows = (rawRows: Record<string, unknown>[], preferredLabel
 const parseJsonPreview = async (file: File): Promise<ImportPreview> => {
   const text = await file.text();
   const parsed = JSON.parse(text);
-  const data = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.data) ? parsed.data : [];
+  
+  let data: unknown[];
+  if (Array.isArray(parsed)) {
+    data = parsed;
+  } else if (Array.isArray(parsed?.data)) {
+    data = parsed.data;
+  } else {
+    data = [];
+  }
 
   if (!Array.isArray(data) || data.length === 0) {
     return { columns: [], rows: [], totalRows: 0 };
@@ -198,12 +241,12 @@ const parseCsvPreview = (file: File): Promise<ImportPreview> => {
       // (We still tolerate "Too few fields" warnings below for blank-ish lines.)
       skipEmptyLines: false,
       dynamicTyping: false,
-      transformHeader: (header) => header.trim(),
-      complete: (results) => {
+      transformHeader: (header: string) => header.trim(),
+      complete: (results: any) => {
         // PapaParse can report "Too few fields" for malformed/short lines (often blank-ish rows).
         // For preview we can still proceed with whatever rows were parsed.
         const fatalError = results.errors.find(
-          (err) => err && typeof err.message === 'string' && !err.message.toLowerCase().includes('too few fields')
+          (err: any) => err && typeof err.message === 'string' && !err.message.toLowerCase().includes('too few fields')
         );
         if (fatalError) {
           reject(new Error(fatalError.message || 'Failed to parse CSV file'));
@@ -211,11 +254,11 @@ const parseCsvPreview = (file: File): Promise<ImportPreview> => {
         }
 
         // Keep rows even if all cells are empty; only drop non-object/null entries.
-        const rows = results.data.filter((row) => row && typeof row === 'object');
+        const rows = results.data.filter((row: any) => row && typeof row === 'object');
 
         resolve(buildPreviewFromRows(rows, results.meta.fields || undefined));
       },
-      error: (error) => reject(error),
+      error: (error: any) => reject(error),
     });
   });
 };

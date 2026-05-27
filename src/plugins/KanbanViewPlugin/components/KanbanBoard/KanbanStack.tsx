@@ -469,7 +469,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
 
   const handleMenuButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+    const rect = (e.currentTarget).getBoundingClientRect();
     setMenuPos({ x: rect.right, y: rect.bottom + 4 });
     globalThis.dispatchEvent(new CustomEvent('kanban-menu-open', { detail: { source: menuOwnerId.current } }));
     setShowMenu(v => !v);

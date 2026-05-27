@@ -31,7 +31,6 @@ export interface UseKanbanDataReturn {
   updateViewMeta: ReturnType<typeof useUpdateViewMeta>;
 
   // Kanban-specific business operations
-  moveCard: (cardId: string, targetStackId: string) => Promise<void>;
   createCard: (initialValues: Record<string, any>) => Promise<string>;
   duplicateCard: (cardId: string) => Promise<string>;
   deleteCard: (cardId: string) => Promise<void>;
@@ -51,7 +50,7 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
     const data = (raw.data ?? raw) as TableData;
     if (!data?.columns) return undefined;
     const filteredColumns = data.columns.filter((col: any) => !fieldsToFilter.includes(col.uidt));
-    return { ...data, columns: filteredColumns } as TableData;
+    return { ...data, columns: filteredColumns };
   }, [tableQuery.data]);
 
   // CRUD operations - thin wrappers around shared hooks
@@ -61,11 +60,6 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
   const updateField = useUpdateField();
   const updateView = useUpdateView();
   const updateViewMeta = useUpdateViewMeta(); // Optimized hook for meta-only updates (cardOrder, etc.)
-
-  // Business logic operations (simplified to work with tableData)
-  const moveCard = async (cardId: string, targetStackId: string): Promise<void> => {
-    // This will be implemented in the UI component where we have access to the group column
-  };
 
   const createCard = async (initialValues: Record<string, any>): Promise<string> => {
     const rowPayload: Record<string, any> = {};
@@ -239,7 +233,6 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
     updateField,
     updateView,
     updateViewMeta,
-    moveCard,
     createCard,
     duplicateCard,
     deleteCard,

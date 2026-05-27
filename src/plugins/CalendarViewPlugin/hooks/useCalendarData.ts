@@ -7,7 +7,7 @@ import { useTable, useAddRow, useDeleteRecord, useInsertRowData, useUpdateField,
 import type { TableData } from '../../../types/api.types';
 import { parseApiColumnMeta } from '../../../components/shared/table/tableUtils';
 import { normalizeFieldType } from '../../../utils/fieldType';
-import type { GridColumn, GridFieldType } from '../../GridViewPlugin/types/grid.types';
+import type { GridColumn } from '../../GridViewPlugin/types/grid.types';
 import { utcISOToZoned } from '../../../utils/dateUtils';
 
 // Data layer for Calendar: fetch + CRUD orchestration; keeps UI components clean
@@ -163,7 +163,7 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
       id: col.id,
       key: col.column_name || col.key,
       title: col.title,
-      type: normalizeFieldType(col.uidt || col.type) as GridFieldType,
+      type: normalizeFieldType(col.uidt || col.type),
       uidt: col.uidt,
       position: col.order_index ?? index,
       hidden: col.hidden || col.deleted || false,

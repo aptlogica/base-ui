@@ -9,7 +9,7 @@ import { DateTime } from 'luxon';
 /**
  * Base pill styling - consistent gray pills for all lookup values
  */
-const BASE_PILL_CLASSES = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm bg-gray-100 text-gray-700 border border-gray-200 whitespace-nowrap';
+const BASE_PILL_CLASSES = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm bg-background text-gray-700 border border-gray-200 whitespace-nowrap';
 
 /**
  * Helper to strip HTML tags from text

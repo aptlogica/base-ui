@@ -62,7 +62,7 @@ interface TableProps {
   };
   viewId?: string;
   onRefresh: () => void;
-  viewConfig?: Record<string, any>;
+  // viewConfig?: Record<string, any>;
   actions?: TableActions;
 }
 
@@ -70,7 +70,7 @@ export const Table: React.FC<TableProps> = ({
   tableData,
   viewId,
   onRefresh,
-  viewConfig,
+  // viewConfig,
   actions,
 }) => {
   const toast = useToast();
@@ -171,7 +171,7 @@ export const Table: React.FC<TableProps> = ({
         }
       });
 
-      return { id: meta.id, _meta: meta, data: dataObj } as TableData;
+      return { id: meta.id, _meta: meta, data: dataObj };
     });
   }, [tableData?.records]); // Full dataset from backend
 

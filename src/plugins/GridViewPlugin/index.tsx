@@ -49,8 +49,6 @@ const GridViewPlugin: Plugin = {
         </div>;
       }
 
-      const enableVirtualization = undefined;
-
       return (
         <Suspense fallback={
           <div className="h-full flex items-center justify-center">
@@ -61,7 +59,6 @@ const GridViewPlugin: Plugin = {
             tableData={tableData}
             viewId={viewId}
             onRefresh={() => refresh()}
-            enableVirtualization={enableVirtualization} // Virtualization control (separate from view metadata)
             actions={{ addRow, insertRowData, bulkUpdateColumn, deleteRecord, bulkDeleteRecords, updateField, deleteColumn, createField, updateView, updateRowOrder }}
           />
         </Suspense>

@@ -151,7 +151,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     trimExtraSpaces: false,
     removeEmptyRows: false,
   });
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState(0); 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -429,7 +429,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       onClose();
       onSuccess?.();
 
-      const currentState = (location.state as any) || {};
+      const currentState = (location.state) || {};
       const nextState = { ...currentState, importSummary };
 
       if (targetRoute) {
@@ -464,10 +464,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   if (!isOpen) return null;
 
   const fileUploadStateClass = getFileUploadStateClass(isDragOver, fileError, selectedFile);
-  // const {
-  //   titleHelpIconClass,
-  //   uniqueRequirementClass,
-  // } = getTitleStatus(title, titleError, isTitleUnique);
 
   return (
     <div // NOSONAR
@@ -517,11 +513,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         <form
           id="import-form"
           onSubmit={handleSubmit}
-          className={`flex-1 min-w-full max-w-full flex flex-col min-h-0 ${
-            uiStep === 'review'
+          className={`flex-1 min-w-full max-w-full flex flex-col min-h-0 ${uiStep === 'review'
               ? 'overflow-y-auto overflow-x-hidden lg:overflow-hidden'
               : 'overflow-y-auto overflow-x-hidden'
-          }`}
+            }`}
         >
           <div className={uiStep === 'review' ? 'flex-1 grid grid-cols-1 gap-6 lg:gap-0 lg:min-h-0 lg:grid-cols-[44%_56%]' : 'p-4 space-y-4 overflow-y-auto overflow-x-hidden'}>
             {uiStep === 'review' ? (

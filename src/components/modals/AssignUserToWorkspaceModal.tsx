@@ -376,7 +376,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
   const isRemoveBasePending = removeUserFromBaseMutation.isPending;
   const isBusy = isBulkPending || isRemoveWorkspacePending || isRemoveBasePending;
 
-  const tenantUsers = tenantUsersQuery.data || [];
+  const tenantUsers = tenantUsersQuery.data ?? [];
   const basesData = (workspaceBasesQuery.data as any)?.data || (workspaceBasesQuery.data as any) || [];
   const bases = ensureArray(basesData);
 

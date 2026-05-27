@@ -156,10 +156,10 @@ describe('useKanbanData Hook', () => {
   });
 
   describe('Business Operations', () => {
-    it('should provide moveCard function', () => {
+    it('should not expose moveCard in hook API', () => {
       const { result } = renderHook(() => useKanbanData({ tableId: 'table1' }));
 
-      expect(result.current.moveCard).toBeInstanceOf(Function);
+      expect((result.current as any).moveCard).toBeUndefined();
     });
 
     it('should provide createCard function', async () => {

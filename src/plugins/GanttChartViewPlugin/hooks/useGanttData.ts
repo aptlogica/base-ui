@@ -182,7 +182,7 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
     const currentView = viewId
       ? (views?.find((v: View) => String(v.id) === String(viewId)) || undefined)
       : (views?.find((v: View) => v.type === 'ganttChart') || views?.[0]);
-    const viewMeta = currentView?.meta ?? ({} as Record<string, unknown>);
+    const viewMeta = currentView?.meta ?? ({});
 
     // Extract view configuration
     const viewConfig = extractViewConfig(viewMeta);

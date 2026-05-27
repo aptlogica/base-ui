@@ -53,7 +53,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
       {/* Edit column */}
       {canUpdate && (
         <button
-          onClick={(event) => onEdit((event.currentTarget as HTMLElement) ?? menuRef.current ?? undefined)}
+          onClick={(event) => onEdit((event.currentTarget) ?? menuRef.current ?? undefined)}
           className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-600 rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors"
           title="Edit column"
         >

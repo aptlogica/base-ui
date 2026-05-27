@@ -41,7 +41,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   title = 'Edit record',
   submitLabel = 'Save changes',
   initialValues = {},
-  onDuplicate,
+  // onDuplicate,
   onDelete,
 }) => {
   const [showHidden, setShowHidden] = useState(false);

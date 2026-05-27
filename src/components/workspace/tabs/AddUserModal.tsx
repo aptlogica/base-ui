@@ -246,7 +246,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
   }, [isEditMode, userAccessData]);
 
 
-  const workspaces = workspacesQuery.data || [];
+  const workspaces = workspacesQuery.data ?? [];
 
   // Filter workspaces based on search term
   const filteredWorkspaces = useMemo(() => {

@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+/* eslint-disable sonarjs/cognitive-complexity */
+import React, { useState, useRef, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Info } from 'lucide-react';
 import { DropdownTrigger } from './DropdownTrigger';
 import { DropdownSearch } from './DropdownSearch';
@@ -36,6 +38,8 @@ interface AdvancedDropdownProps<T = string | number> {
   readonly id?: string;
   readonly helpText?: string;
   readonly validate?: (value: T | T[] | undefined) => string | undefined;
+  readonly portal?: boolean;
+  readonly isImport?: boolean;
 }
 
 export function AdvancedDropdown<T extends string | number>({
@@ -56,11 +60,14 @@ export function AdvancedDropdown<T extends string | number>({
   id,
   helpText,
   validate,
+  portal = false,
+  isImport = false,
 }: AdvancedDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [dropdownPosition, setDropdownPosition] = useState<'below' | 'above'>('below');
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties | null>(null);
 
   // Validation error from validate function
   const validationError = useMemo(() => {
@@ -77,6 +84,7 @@ export function AdvancedDropdown<T extends string | number>({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const optionsRef = useRef<HTMLUListElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Normalize value to always be an array for consistent handling
   const currentValues = useMemo(
@@ -85,13 +93,12 @@ export function AdvancedDropdown<T extends string | number>({
   );
 
   // Filter and sort options based on search query
-  const filteredOptions = Array.from(
-    searchable && searchQuery.trim()
-      ? options.filter(option =>
-        option.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        option.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-      : options
+  const filteredOptions = Array.from( 
+    searchable && searchQuery.trim() 
+    ? options.filter(option =>
+      option.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      option.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      ) : options
   ).sort((a, b) => a.label.localeCompare(b.label));
 
   // Calculate dropdown position based on available space
@@ -225,7 +232,11 @@ export function AdvancedDropdown<T extends string | number>({
   // Click outside to close
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const clickedInsideTrigger = Boolean(dropdownRef.current?.contains(target));
+      const clickedInsideMenu = Boolean(menuRef.current?.contains(target));
+
+      if (!clickedInsideTrigger && !clickedInsideMenu) {
         setIsOpen(false);
         setSearchQuery('');
         setFocusedIndex(-1);
@@ -269,6 +280,104 @@ export function AdvancedDropdown<T extends string | number>({
   const displayLabel = computeDisplayLabel();
   const selectedCount = getSelectedCount(value);
 
+  const computePortalStyle = useCallback((): React.CSSProperties | null => {
+    if (!triggerRef.current) return null;
+
+    const rect = triggerRef.current.getBoundingClientRect();
+    const viewportW = window.innerWidth;
+
+    const desiredWidth = isImport ? rect.width + 70 : rect.width;
+    const left = Math.max(8, Math.min(rect.left, viewportW - 8 - desiredWidth));
+
+    // Initial top value. If opening above, we refine after the menu is measured.
+    const top = dropdownPosition === 'above' ? rect.top : rect.bottom;
+
+    return {
+      position: 'fixed',
+      left,
+      top,
+      width: desiredWidth,
+      zIndex: 60,
+    };
+  }, [dropdownPosition]);
+
+  // Keep portal menu positioned on open/scroll/resize.
+  useEffect(() => {
+    if (!isOpen || !portal) return;
+
+    const update = () => setMenuStyle(computePortalStyle());
+    update();
+
+    // Capture scroll from any ancestor scroller.
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [isOpen, portal, computePortalStyle]);
+
+  // After menu mounts, adjust "above" positioning based on measured height.
+  useLayoutEffect(() => {
+    if (!isOpen || !portal) return;
+    if (dropdownPosition !== 'above') return;
+    if (!menuRef.current || !triggerRef.current) return;
+
+    const rect = triggerRef.current.getBoundingClientRect();
+    const menuH = menuRef.current.offsetHeight || 0;
+    const top = Math.max(8, rect.top - menuH - 4);
+
+    setMenuStyle((prev) => {
+      const base = prev ?? computePortalStyle();
+      return base ? { ...base, top } : null;
+    });
+  }, [isOpen, portal, dropdownPosition, computePortalStyle]);
+
+  const menuNode = isOpen ? (
+    <div
+      ref={menuRef}
+      className={`bg-background border rounded-xl shadow-lg transition-all duration-200 ${portal ? '' : 'absolute z-40 w-full'} ${dropdownPosition === 'above'
+        ? portal ? '' : 'bottom-full mb-1' : portal ? '' : 'top-full mt-1'}`} //NOSONAR
+      style={portal ? (menuStyle ?? undefined) : undefined}
+    >
+      {/* Search Input */}
+      {searchable && (
+        <DropdownSearch
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search options..."
+          ref={searchRef}
+          clearAutofillOnFocus={true}
+        />
+      )}
+
+      {/* Options List */}
+      <ul // NOSONAR
+        ref={optionsRef}
+        className="p-2 space-y-1.5 max-h-48 overflow-auto"
+        style={{ maxHeight: `${maxHeight}px` }}
+        aria-multiselectable={multiple}
+      >
+        {filteredOptions.length === 0 ? (
+          <li className="px-3 py-2 text-sm text-gray-500 text-center">
+            {searchQuery ? 'No results found' : 'No options available'}
+          </li>
+        ) : (
+          filteredOptions.map((option, index) => (
+            <DropdownOption
+              key={`${option.value}-${index}`}
+              option={option}
+              isSelected={isSelected(option.value)}
+              isFocused={index === focusedIndex}
+              multiple={multiple}
+              onClick={() => !option.disabled && handleSelect(option.value)}
+            />
+          ))
+        )}
+      </ul>
+    </div>
+  ) : null;
+
   return (
     <div className={`relative w-full min-w-0 max-w-full ${className}`} ref={dropdownRef}>
       {/* Label with Help Text */}
@@ -310,50 +419,12 @@ export function AdvancedDropdown<T extends string | number>({
       />
 
       {/* Dropdown Menu */}
-      {isOpen && (
-        <div
-          className={`absolute z-40 w-full bg-background border rounded-xl shadow-lg transition-all duration-200 ${dropdownPosition === 'above'
-            ? 'bottom-full mb-1'
-            : 'top-full mt-1'
-            }`}
-        >
-          {/* Search Input */}
-          {searchable && (
-            <DropdownSearch
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search options..."
-              ref={searchRef}
-              clearAutofillOnFocus={true}
-            />
-          )}
-
-          {/* Options List */}
-          <ul // NOSONAR
-            ref={optionsRef}
-            className="p-2 space-y-1.5 max-h-48 overflow-auto"
-            style={{ maxHeight: `${maxHeight}px` }}
-            aria-multiselectable={multiple}
-          >
-            {filteredOptions.length === 0 ? (
-              <li className="px-3 py-2 text-sm text-gray-500 text-center">
-                {searchQuery ? 'No results found' : 'No options available'}
-              </li>
-            ) : (
-              filteredOptions.map((option, index) => (
-                <DropdownOption
-                  key={`${option.value}-${index}`}
-                  option={option}
-                  isSelected={isSelected(option.value)}
-                  isFocused={index === focusedIndex}
-                  multiple={multiple}
-                  onClick={() => !option.disabled && handleSelect(option.value)}
-                />
-              ))
-            )}
-          </ul>
-        </div>
-      )}
+      {(() => {
+        if (portal) {
+          return menuNode ? createPortal(menuNode, document.body) : null;
+        }
+        return menuNode;
+      })()}
 
       {/* Help Text (shown when no error) */}
       {!error && helpText && !label && (
