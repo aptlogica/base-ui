@@ -250,7 +250,12 @@ describe('App', () => {
     const refetch = vi.fn();
     initialRoute = '/workspace/w1/base/b1/table/t1/v1';
     workspacesState = { isLoading: false, error: null };
-    tableState = { isLoading: false, error: new Error('boom'), data: null, refetch };
+    tableState = {
+      isLoading: false,
+      error: new Error('boom'),
+      data: { data: { views: [{ id: 'v1', type: 'grid' }] } },
+      refetch,
+    };
     baseTablesState = { isLoading: false, error: null };
 
     render(<App />);

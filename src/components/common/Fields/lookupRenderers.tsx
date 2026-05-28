@@ -3,7 +3,7 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React from 'react';
-import { Calendar, Clock, Mail, User, Paperclip, Check, X } from 'lucide-react';
+import { Calendar, Clock, Mail, User, Check, X } from 'lucide-react';
 import { DateTime } from 'luxon';
 
 /**
@@ -204,29 +204,6 @@ export const renderDurationPill = ({ value, sourceColumn, index }: RenderPillPro
     <span key={index} className={BASE_PILL_CLASSES}>
       <Clock className="w-4 h-4 text-gray-500" />
       <span className="truncate max-w-[120px] block">{formatted}</span>
-    </span>
-  );
-};
-
-/**
- * Render attachment field with paperclip icon
- */
-export const renderAttachmentPill = ({ value, sourceColumn, index }: RenderPillProps): React.ReactNode => {
-  if (!value) return null;
-  
-  // Handle array of attachments
-  const attachments = Array.isArray(value) ? value : [value];
-  const firstAttachment = attachments[0];
-  
-  if (!firstAttachment) return null;
-  
-  const fileName = firstAttachment.title || firstAttachment.name || 'attachment';
-  const count = attachments.length > 1 ? ` (${attachments.length})` : '';
-  
-  return (
-    <span key={index} className={BASE_PILL_CLASSES} title={fileName}>
-      <Paperclip className="w-4 h-4 text-gray-500" />
-      <span className="truncate max-w-[120px] block">{fileName}{count}</span>
     </span>
   );
 };

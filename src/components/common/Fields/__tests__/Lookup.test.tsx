@@ -13,7 +13,6 @@ const renderDateTimePillMock = vi.fn();
 const renderEmailPillMock = vi.fn();
 const renderUserPillMock = vi.fn();
 const renderDurationPillMock = vi.fn();
-const renderAttachmentPillMock = vi.fn();
 const renderCheckboxPillMock = vi.fn();
 const renderCurrencyPillMock = vi.fn();
 const renderPercentPillMock = vi.fn();
@@ -49,7 +48,6 @@ vi.mock('../lookupRenderers', () => ({
   renderEmailPill: (...args: unknown[]) => renderEmailPillMock(...args),
   renderUserPill: (...args: unknown[]) => renderUserPillMock(...args),
   renderDurationPill: (...args: unknown[]) => renderDurationPillMock(...args),
-  renderAttachmentPill: (...args: unknown[]) => renderAttachmentPillMock(...args),
   renderCheckboxPill: (...args: unknown[]) => renderCheckboxPillMock(...args),
   renderCurrencyPill: (...args: unknown[]) => renderCurrencyPillMock(...args),
   renderPercentPill: (...args: unknown[]) => renderPercentPillMock(...args),
@@ -71,7 +69,6 @@ const allRendererMocks = [
   renderEmailPillMock,
   renderUserPillMock,
   renderDurationPillMock,
-  renderAttachmentPillMock,
   renderCheckboxPillMock,
   renderCurrencyPillMock,
   renderPercentPillMock,

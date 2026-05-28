@@ -166,7 +166,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
                 className="text-white/80 hover:text-white text-lg leading-none"
                 onClick={() => dismiss(toast.id)}
               >
-                <X className='h-4 w-4 text-primary' />
+                <X className='h-4 w-4 text-black' />
               </button>
             )}
           </div>

@@ -10,7 +10,6 @@ import {
   renderEmailPill,
   renderUserPill,
   renderDurationPill,
-  renderAttachmentPill,
   renderCheckboxPill,
   renderCurrencyPill,
   renderPercentPill,
@@ -52,8 +51,6 @@ export const renderLookupValue = (
       return renderUserPill(renderProps);
     case 'duration':
       return renderDurationPill(renderProps);
-    case 'attachment':
-      return renderAttachmentPill(renderProps);
     case 'boolean':
     case 'checkbox':
       return renderCheckboxPill(renderProps);
@@ -81,4 +78,3 @@ export const renderLookupValue = (
       return renderTextPill(renderProps);
   }
 };
-

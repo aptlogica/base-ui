@@ -1237,6 +1237,11 @@ export const useAddAttachment = () => {
       // Invalidate table records to refresh attachment data
       queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id) });
       queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)] });
+      // Attachment values can be shown through lookup fields in other active tables.
+      queryClient.invalidateQueries({
+        queryKey: ['tables'],
+        refetchType: 'active'
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
@@ -1257,6 +1262,11 @@ export const useRemoveAttachments = () => {
       // Invalidate table records to refresh attachment data
       queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id) });
       queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)] });
+      // Attachment values can be shown through lookup fields in other active tables.
+      queryClient.invalidateQueries({
+        queryKey: ['tables'],
+        refetchType: 'active'
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });

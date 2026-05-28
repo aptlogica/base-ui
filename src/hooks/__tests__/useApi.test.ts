@@ -404,6 +404,10 @@ describe("useApi hooks", () => {
     expect(invalidateQueries).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ["tables", "m1"] })
     );
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["tables"],
+      refetchType: "active",
+    });
   });
 
   it("useUpdateAttachment invalidates tables and workspaces", async () => {
