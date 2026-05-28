@@ -22,11 +22,10 @@ interface TableOptionsMenuProps {
   portaled?: boolean;
   align?: 'left' | 'right' | 'auto';
   isPinned?: boolean;
-  baseId?: string;
   existingTables?: ExistingItem[];
 }
 
-const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, onEditDescription, onDelete, portaled = false, align = 'auto', onPinToggle, isPinned = false, baseId, existingTables = [] }) => {
+const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, onEditDescription, onDelete, portaled = false, align = 'auto', onPinToggle, isPinned = false, existingTables = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   // TanStack Query mutations

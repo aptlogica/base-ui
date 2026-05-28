@@ -323,6 +323,10 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
 
   // Helper function to render value input/display for a filter
   const renderFilterValue = (filter: FilterCondition, filterIndex: number, isNewFilter: boolean = false) => {
+    if (!operatorRequiresValue(filter.operator)) {
+      return null;
+    }
+
     const column = visibleColumns.find(col => col.column_name === filter.column);
     if (!column) {
       // For existing filters, use local state while typing, filter.value when not editing

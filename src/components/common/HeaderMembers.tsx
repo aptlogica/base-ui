@@ -7,7 +7,7 @@ import { UserPlus } from 'lucide-react';
 import { UserAvatarStack } from './UserAvatarStack';
 import { useBaseMembers } from '../../hooks/useApi';
 import { useNavigationStore } from '../../stores/navigationStore';
-import { AssignUserToWorkspaceModal } from '../modals/AssignUserToWorkspaceModal';
+import { AddBaseMembersModal } from '../modals/AddBaseMembersModal';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
 import { useComponentVisibility, COMPONENT_IDS } from '../../contexts/RouteContext';
@@ -17,7 +17,7 @@ const HeaderMembers: React.FC = () => {
   const { selectedBaseId, selectedWorkspaceId } = useNavigationStore();
   const baseMembersQuery = useBaseMembers(selectedBaseId || '');
   const { canAssignUsers, isWorkspaceReadOnly } = useWorkspaceAccess(selectedWorkspaceId || '');
-  const { isBaseReadOnly } = useBaseAccess(selectedBaseId || undefined);
+  const { isBaseReadOnly, canManageBaseMembers } = useBaseAccess(selectedBaseId || undefined);
 
   // Route-based visibility check
   const isRouteVisible = useComponentVisibility(COMPONENT_IDS.HEADER_MEMBERS);
@@ -60,7 +60,7 @@ const HeaderMembers: React.FC = () => {
         {(isWorkspaceReadOnly() || isBaseReadOnly()) ? (
           <span className="inline-block px-2 py-0.5 rounded-xl text-xs font-medium bg-gray-100 text-gray-700 border cursor-default">Read only</span>
         ) : (
-          canAssignUsers() && (
+          (canAssignUsers() || canManageBaseMembers()) && (
             <button
               onClick={() => setShowAddMemberModal(true)}
               className="h-10 w-10 rounded-xl btn-primary text-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
@@ -69,24 +69,21 @@ const HeaderMembers: React.FC = () => {
             </button>
           )
         )}
-      <div className="h-6 w-px bg-gray-300 mx-2"></div>
-
         <UserAvatarStack
           users={members}
           maxVisible={3}
           size="lg"
         />
-      <div className="h-6 w-px bg-gray-300 mx-2"></div>
       </div>
 
 
       {/* Add Member Modal */}
       {!(isWorkspaceReadOnly() || isBaseReadOnly()) && showAddMemberModal && selectedBaseId && selectedWorkspaceId && (
-        <AssignUserToWorkspaceModal
+        <AddBaseMembersModal
           isOpen={showAddMemberModal}
           onClose={() => setShowAddMemberModal(false)}
-          workspaceId={selectedWorkspaceId}
           baseId={selectedBaseId}
+          workspaceId={selectedWorkspaceId}
           onSuccess={() => {
             baseMembersQuery.refetch();
             setShowAddMemberModal(false);

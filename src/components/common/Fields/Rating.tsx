@@ -116,7 +116,7 @@ export const Rating: React.FC<RatingProps> = ({
   };
 
   const handleGroupBlur = (e: React.FocusEvent<HTMLDivElement>) => {
-    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
       handleMouseLeave();
     }
   };

@@ -36,7 +36,7 @@ import {
   createTableService,
   updateTableService,
   deleteTableService,
-  importTableService,
+  importService,
   createFieldService,
   updateFieldService,
   deleteFieldService,
@@ -109,7 +109,7 @@ vi.mock("../../service/clientService", () => ({
   createTableService: vi.fn(),
   updateTableService: vi.fn(),
   deleteTableService: vi.fn(),
-  importTableService: vi.fn(),
+  importService: vi.fn(),
   createFieldService: vi.fn(),
   updateFieldService: vi.fn(),
   deleteFieldService: vi.fn(),
@@ -287,7 +287,12 @@ describe("useApi hooks", () => {
 
     renderHook(() => useAddRow());
     await opts.mutationFn({ model_id: "m1" });
-    expect(addRow).toHaveBeenCalledWith("m1");
+    expect(addRow).toHaveBeenCalledWith({
+      model_id: "m1",
+      rows: undefined,
+      created_by: undefined,
+      updated_by: undefined,
+    });
 
     opts.onSuccess(null, { model_id: "m1" });
     expect(invalidateQueries).toHaveBeenCalledWith(
@@ -399,6 +404,10 @@ describe("useApi hooks", () => {
     expect(invalidateQueries).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ["tables", "m1"] })
     );
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["tables"],
+      refetchType: "active",
+    });
   });
 
   it("useUpdateAttachment invalidates tables and workspaces", async () => {
@@ -466,7 +475,7 @@ describe("useApi hooks", () => {
     renderHook(() => apiHooks.useCreateTable());
     renderHook(() => apiHooks.useUpdateTable());
     renderHook(() => apiHooks.useDeleteTable());
-    renderHook(() => apiHooks.useImportTable());
+    renderHook(() => apiHooks.useImportData());
     renderHook(() => apiHooks.useCreateField());
     renderHook(() => apiHooks.useUpdateField());
     renderHook(() => apiHooks.useDeleteColumn());
@@ -520,7 +529,7 @@ describe("useApi hooks", () => {
     opts = getMutationOptions(() => apiHooks.useDeleteTable());
     opts.onSuccess?.({}, { baseId: "b1" });
 
-    opts = getMutationOptions(() => apiHooks.useImportTable());
+    opts = getMutationOptions(() => apiHooks.useImportData());
     opts.onSuccess?.({}, { base_id: "b1" });
 
     opts = getMutationOptions(() => apiHooks.useCreateField());
@@ -678,7 +687,7 @@ describe("useApi hooks", () => {
     vi.mocked(createTableService).mockResolvedValue({} as any);
     vi.mocked(updateTableService).mockResolvedValue({} as any);
     vi.mocked(deleteTableService).mockResolvedValue({} as any);
-    vi.mocked(importTableService).mockResolvedValue({} as any);
+    vi.mocked(importService).mockResolvedValue({} as any);
     vi.mocked(createFieldService).mockResolvedValue({} as any);
     vi.mocked(updateFieldService).mockResolvedValue({} as any);
     vi.mocked(deleteFieldService).mockResolvedValue({} as any);
@@ -732,7 +741,7 @@ describe("useApi hooks", () => {
     await opts.mutationFn({ tableId: "t1", baseId: "b1" });
     expect(deleteTableService).toHaveBeenCalledWith("t1");
 
-    opts = getMutationOptions(() => apiHooks.useImportTable());
+    opts = getMutationOptions(() => apiHooks.useImportData());
     await opts.mutationFn({
       base_id: "b1",
       workspace_id: "w1",
@@ -741,7 +750,7 @@ describe("useApi hooks", () => {
       order_index: 1,
       file: {} as File,
     });
-    expect(importTableService).toHaveBeenCalled();
+    expect(importService).toHaveBeenCalled();
 
     opts = getMutationOptions(() => apiHooks.useCreateField());
     await opts.mutationFn({ tableId: "m1", baseId: "b1", config: { title: "F", uidt: "text", meta: {} } });

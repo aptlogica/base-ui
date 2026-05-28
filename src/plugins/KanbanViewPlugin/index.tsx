@@ -30,7 +30,7 @@ const KanbanViewPlugin: Plugin = {
   initialize: async (api: PluginAPI) => {
     // Single component: fetch and render KanbanBoard directly
     const KanbanView: React.FC<{ tableId: string; viewId?: string }> = ({ tableId, viewId }) => {
-      const { tableData, isLoading, error, refresh, addRow, insertRowData, deleteRecord, updateField, updateView, updateViewMeta, moveCard, createCard, duplicateCard, deleteCard, updateFieldOptions, persistStackOrder, changeGroupByColumn, updateViewConfig } = useKanbanData({ tableId, viewId });
+      const { tableData, isLoading, error, refresh, addRow, insertRowData, deleteRecord, updateField, updateView, updateViewMeta, createCard, duplicateCard, deleteCard, updateFieldOptions, persistStackOrder, changeGroupByColumn, updateViewConfig } = useKanbanData({ tableId, viewId });
 
       if (error) {
         let errorMessage: string;
@@ -71,7 +71,7 @@ const KanbanViewPlugin: Plugin = {
             tableData={tableData}
             viewId={viewId}
             onRefresh={() => refresh()}
-            actions={{ addRow, insertRowData, deleteRecord, updateField, updateView, updateViewMeta, moveCard, createCard, duplicateCard, deleteCard, updateFieldOptions, persistStackOrder, changeGroupByColumn, updateViewConfig }}
+            actions={{ addRow, insertRowData, deleteRecord, updateField, updateView, updateViewMeta, createCard, duplicateCard, deleteCard, updateFieldOptions, persistStackOrder, changeGroupByColumn, updateViewConfig }}
           />
         </Suspense>
       );

@@ -32,7 +32,6 @@ import { useKanbanStacks } from '../../hooks/useKanbanStacks';
 type Column = BaseColumn;
 
 type KanbanActions = {
-  moveCard?: (cardId: string, targetStackId: string) => Promise<void>;
   createCard?: (initialValues: Record<string, any>) => Promise<string>;
   deleteCard: (cardId: string) => Promise<void>;
   duplicateCard: (cardId: string) => Promise<string>;

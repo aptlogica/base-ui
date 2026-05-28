@@ -7,6 +7,7 @@ import { validateFormula } from '../../../utils/formulaHelper';
 
 const toast = { error: vi.fn(), success: vi.fn() };
 const mockUseBaseTables = vi.fn(() => ({ data: null }));
+const mockUseResetField = vi.fn(() => ({ mutate: vi.fn() }));
 
 vi.mock('../../common/Toast', () => ({
   ToastProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -17,6 +18,7 @@ vi.mock('../../../hooks/useApi', () => ({
   useBaseTables: (...args: any[]) => mockUseBaseTables(...args),
   useTable: () => ({ data: null, isLoading: false }),
   useAllViews: () => ({ data: [] }),
+  useResetField: (...args: any[]) => mockUseResetField(...args),
 }));
 
 vi.mock('../../../stores/navigationStore', () => ({

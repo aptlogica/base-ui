@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useColumnManagement } from '../useColumnManagement';
-import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../../../utils/fieldUsageUtils';
+import { checkFieldUsageInViews, checkCriticalFieldUsageInViews, checkFieldUsageInFormulas } from '../../../../utils/fieldUsageUtils';
 import { parseApiColumnMeta } from '../../../../components/shared/table/tableUtils';
 
 // Mock dependencies
 vi.mock('../../../../utils/fieldUsageUtils', () => ({
   checkFieldUsageInViews: vi.fn(),
   checkCriticalFieldUsageInViews: vi.fn(),
+  checkFieldUsageInFormulas: vi.fn(),
 }));
 
 vi.mock('../../../../components/shared/table/tableUtils', () => ({
@@ -17,6 +18,7 @@ vi.mock('../../../../components/shared/table/tableUtils', () => ({
 describe('useColumnManagement', () => {
   const mockCheckFieldUsageInViews = vi.mocked(checkFieldUsageInViews);
   const mockCheckCriticalFieldUsageInViews = vi.mocked(checkCriticalFieldUsageInViews);
+  const mockCheckFieldUsageInFormulas = vi.mocked(checkFieldUsageInFormulas);
   const mockParseApiColumnMeta = vi.mocked(parseApiColumnMeta);
   
   const defaultProps = {
@@ -56,6 +58,10 @@ describe('useColumnManagement', () => {
       isUsedInViews: false,
       usedInViews: [],
     });
+    mockCheckFieldUsageInFormulas.mockReturnValue({
+      isUsedInFormulas: false,
+      usedInFormulas: [],
+    } as any);
   });
 
   describe('initialization', () => {

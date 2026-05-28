@@ -13,7 +13,6 @@ interface LongTextProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  maxLength?: number;
   required?: boolean;
   disabled?: boolean;
   isBorder?: boolean;
@@ -38,7 +37,6 @@ export const LongText: React.FC<LongTextProps> = ({
   value,
   onChange,
   placeholder = "",
-  maxLength = 1000,
   required = false,
   disabled = false,
   isBorder = false,
@@ -50,7 +48,7 @@ export const LongText: React.FC<LongTextProps> = ({
   onModalClose,
   config = {}
 }) => {
-  const { defaultValue = '', maxLength: configMaxLength = maxLength, placeholder: configPlaceholder = placeholder, richText = false, hideMaximizeButton = false } = config;
+  const { defaultValue = '', placeholder: configPlaceholder = placeholder, richText = false, hideMaximizeButton = false } = config;
   const [localValue, setLocalValue] = useState(value || '');
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -197,10 +195,6 @@ export const LongText: React.FC<LongTextProps> = ({
 
     if (required && !textContent.trim()) {
       return 'This field is required';
-    }
-
-    if (textContent.length > maxLength) {
-      return `Text must be ${maxLength} characters or less`;
     }
     return null;
   };
@@ -749,7 +743,6 @@ export const LongText: React.FC<LongTextProps> = ({
           onChange={handleChange}
           onBlur={handleBlur}
           placeholder={configPlaceholder}
-          maxLength={configMaxLength}
           disabled={false}
           className={`field-component ${error ? 'border-red-500 bg-red-50' : ''
             } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'} truncate`}
@@ -983,7 +976,6 @@ export const LongText: React.FC<LongTextProps> = ({
                 value={modalValue}
                 onChange={handleModalChange}
                 onKeyDown={(e) => e.stopPropagation()}
-                maxLength={maxLength}
                 className="w-full flex-1 min-h-0 bg-[var(--background)] border rounded-xl p-3 text-sm text-muted-foreground focus:outline-none focus:border-[var(--color-brand-600)] transition-all resize-vertical"
                 placeholder={placeholder}
                 disabled={disabled || readOnly}

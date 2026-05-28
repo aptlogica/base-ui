@@ -246,7 +246,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
               <input
                 id="primary-color-label"
                 type="color"
-                value={(ap.primaryColor as string) || '#2563eb'}
+                value={(ap.primaryColor) || '#2563eb'}
                 onChange={(e) => onChange({ ...ap, primaryColor: e.target.value })}
                 className="h-8 p-0 w-full bg-none outline-none"
               />
@@ -256,7 +256,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
               <input
                 id="text-color-label"
                 type="color"
-                value={(ap.textColor as string) || '#111827'}
+                value={(ap.textColor) || '#111827'}
                 onChange={(e) => onChange({ ...ap, textColor: e.target.value })}
                 className="h-8 p-0 w-full bg-none outline-none"
               />
@@ -292,7 +292,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                     <input
                       type="url"
                       placeholder="https://..."
-                      value={(ap.logoUrl as string) || ''}
+                      value={(ap.logoUrl) || ''}
                       onChange={(e) => {
                         const v = e.target.value;
                         if (v === '' || validateUrl(v)) {
@@ -418,7 +418,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                   <input
                     type="url"
                     placeholder="https://..."
-                    value={(ap.bannerUrl as string) || ''}
+                    value={(ap.bannerUrl) || ''}
                     onChange={(e) => {
                       const v = e.target.value;
                       if (v === '' || validateUrl(v)) {
@@ -529,7 +529,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                   { label: 'Wide', value: 'wide' },
                   { label: 'Full Width', value: 'full' },
                 ]}
-                value={(ap.layoutWidth as string) || 'wide'}
+                value={(ap.layoutWidth) || 'wide'}
                 onChange={(val: string | string[]) => {
                   const v = Array.isArray(val) ? val[0] : val;
                   onChange({ ...(ap as any), layoutWidth: v as any });
@@ -542,7 +542,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
               <AdvancedDropdown<string>
                 id="title-alignment-label"
                 options={[{ label: 'Left', value: 'left' }, { label: 'Center', value: 'center' }]}
-                value={(ap.align as string) || 'left'}
+                value={(ap.align) || 'left'}
                 onChange={(val: string | string[]) => {
                   const v = Array.isArray(val) ? val[0] : val;
                   onChange({ ...(ap as any), align: v as any });
@@ -559,7 +559,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
               <AdvancedDropdown<string>
                 id="label-position-label"
                 options={[{ label: 'Top', value: 'top' }, { label: 'Left', value: 'left' }]}
-                value={(ap.labelPosition as string) || 'top'}
+                value={(ap.labelPosition) || 'top'}
                 onChange={(val: string | string[]) => {
                   const v = Array.isArray(val) ? val[0] : val;
                   onChange({ ...(ap as any), labelPosition: v as any });
@@ -575,7 +575,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                   { label: 'List', value: 'list' },
                   { label: 'Grid', value: 'grid-2' }
                 ]}
-                value={(ap.fieldLayout as string) || 'list'}
+                value={(ap.fieldLayout) || 'list'}
                 onChange={(val: string | string[]) => {
                   const v = Array.isArray(val) ? val[0] : val;
                   onChange({ ...(ap as any), fieldLayout: v as any });
@@ -592,7 +592,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
               <AdvancedDropdown<string>
                 id="card-style-label"
                 options={[{ label: 'Flat', value: 'flat' }, { label: 'Elevated', value: 'elevated' }]}
-                value={(ap.cardStyle as string) || 'flat'}
+                value={(ap.cardStyle) || 'flat'}
                 onChange={(val: string | string[]) => {
                   const v = Array.isArray(val) ? val[0] : val;
                   onChange({ ...(ap as any), cardStyle: v as any });
@@ -610,7 +610,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                   { label: 'Large', value: 'lg' },
                   { label: 'Extra Large', value: 'xl' },
                 ]}
-                value={(ap.rounded as string) || 'md'}
+                value={(ap.rounded) || 'md'}
                 onChange={(val: string | string[]) => {
                   const v = Array.isArray(val) ? val[0] : val;
                   onChange({ ...(ap as any), rounded: v as any });

@@ -36,7 +36,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
   const baseMembersQuery = useBaseMembers(baseId);
   const toast = useToast();
 
-  const tenantUsers = tenantUsersQuery.data || [];
+  const tenantUsers = tenantUsersQuery.data ?? [];
   
   // Extract base members from response - handle StandardResponse structure
   const baseMembers = useMemo(() => {

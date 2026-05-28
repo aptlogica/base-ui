@@ -381,9 +381,7 @@ export const Formula: React.FC<FormulaProps> = ({
 
   // Sync formula text with config changes
   useEffect(() => {
-    if (formula && formula !== formulaText) {
-      setFormulaText(formula);
-    }
+    setFormulaText(formula ?? '');
   }, [formula]);
 
   // Sync formatting with config changes
@@ -919,7 +917,7 @@ export const Formula: React.FC<FormulaProps> = ({
     const { result, error } = evaluateFormula(formulaText, formulaContext, validateFormula);
 
     if (error) {
-      return null;
+      return <div className={`${className} px-2 truncate text-red-500`}>#VALUE ERROR</div>;
     }
 
     if (result === null) {

@@ -5,7 +5,7 @@
 import { useState, useCallback } from 'react';
 import { GridColumn as ColumnConfig } from '../types/grid.types';
 import { parseApiColumnMeta } from '../../../components/shared/table/tableUtils';
-import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../../utils/fieldUsageUtils';
+import { checkFieldUsageInViews, checkCriticalFieldUsageInViews, checkFieldUsageInFormulas } from '../../../utils/fieldUsageUtils';
 import type { FieldType as FieldTypeUnion } from '../../../types/interfaces/field.interface';
 
 interface UseColumnManagementOptions {
@@ -57,6 +57,7 @@ export function useColumnManagement({
   const [pendingEditColumnChanges, setPendingEditColumnChanges] = useState<PendingEditColumnChanges | null>(null);
   const [dragColumnIndex, setDragColumnIndex] = useState<number | null>(null);
   const [hoverColumnIndex, setHoverColumnIndex] = useState<number | null>(null);
+  const [formulaUsageWarning, setFormulaUsageWarning] = useState<string[] | null>(null);
 
   const createFieldMutation = actions?.createField;
   const deleteColumnMutation = actions?.deleteColumn;
@@ -323,6 +324,17 @@ export function useColumnManagement({
       return;
     }
 
+    // Check if field is used in formulas (warning, not blocking)
+    const fieldTitle = column?.title || column?.key || '';
+    const formulaUsage = checkFieldUsageInFormulas(fieldTitle, columns);
+    
+    if (formulaUsage.isUsedInFormulas) {
+      const formulaNames = formulaUsage.usedInFormulas.map(f => `"${f.columnTitle}"`);
+      setFormulaUsageWarning(formulaNames);
+    } else {
+      setFormulaUsageWarning(null);
+    }
+
     setDeleteConfirmModalOpen(true);
     setColumnToDelete(columnId);
   }, [columns, toast, getCurrentTableViews, getViewsToUse, checkAndBlockCriticalFieldUsage, checkAndBlockGeneralFieldUsage]);
@@ -498,6 +510,8 @@ export function useColumnManagement({
     setPendingEditColumnChanges,
     dragColumnIndex,
     hoverColumnIndex,
+    formulaUsageWarning,
+    setFormulaUsageWarning,
     
     // Handlers
     handleAddColumn,

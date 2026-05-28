@@ -303,7 +303,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
     );
 
     const renderLongText = () => (
-      <LongText {...commonProps} maxLength={1000} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />
+      <LongText {...commonProps} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />
     );
 
     const renderNumber = () => {

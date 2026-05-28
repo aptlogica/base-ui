@@ -76,7 +76,7 @@ describe('LoginPage', () => {
     it('should render login form elements', () => {
       renderWithRouter();
 
-      expect(screen.getByText('Sereni Base')).toBeInTheDocument();
+      expect(screen.getByAltText('Sereni Base Logo')).toBeInTheDocument();
       expect(screen.getByText('Welcome back')).toBeInTheDocument();
       expect(screen.getByText('Welcome back! Please enter your details.')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('Email')).toBeInTheDocument();
@@ -120,17 +120,18 @@ describe('LoginPage', () => {
       expect(logo).toBeInTheDocument();
     });
 
-    it('should render promotional text on right panel', () => {
+    it('should render right panel preview images', () => {
       renderWithRouter();
 
-      expect(screen.getByText('Build powerful databases with ease.')).toBeInTheDocument();
-      expect(screen.getByText(/Create, manage, and collaborate on databases/)).toBeInTheDocument();
+      expect(screen.getByAltText('Grid table preview')).toBeInTheDocument();
+      expect(screen.getByAltText('GET request preview')).toBeInTheDocument();
+      expect(screen.getByAltText('API methods preview')).toBeInTheDocument();
     });
 
-    it('should render calendar view image', () => {
+    it('should render grid view image', () => {
       renderWithRouter();
 
-      const image = screen.getByAltText('Calendar View Preview');
+      const image = screen.getByAltText('Grid table preview');
       expect(image).toBeInTheDocument();
     });
 

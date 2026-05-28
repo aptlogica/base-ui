@@ -16,7 +16,6 @@ import {
   createWorkspaceService,
   getWorkspaceByIdService,
   getWorkspacesByUser,
-  getTablesByWorkspaceIdService,
   updateWorkspaceService,
   deleteWorkspaceService,
   getBasesByWorkspaceIdService,
@@ -42,7 +41,7 @@ import {
   addAttachmentService,
   removeAttachmentsService,
   updateAttachmentService,
-  importTableService,
+  importService,
   getTenantUsersService,
   getUsersForAssignService,
   addUserService,
@@ -222,7 +221,6 @@ describe('clientService', () => {
 
     workspaceApi.create = vi.fn().mockResolvedValue({ data: { id: 'w1' } });
     workspaceApi.getById = vi.fn().mockResolvedValue({ data: { id: 'w1' } });
-    workspaceApi.getTablesByWorkspaceId = vi.fn().mockResolvedValue({ data: [] });
     workspaceApi.update = vi.fn().mockResolvedValue({ data: { id: 'w1' } });
     workspaceApi.delete = vi.fn().mockResolvedValue({ data: { ok: true } });
     workspaceApi.getBasesByWorkspaceId = vi.fn().mockResolvedValue({ data: [] });
@@ -299,7 +297,6 @@ describe('clientService', () => {
     await createWorkspaceService({ title: 'w' } as any);
     await getWorkspaceByIdService('w1');
     await getWorkspacesByUser();
-    await getTablesByWorkspaceIdService('w1');
     await updateWorkspaceService('w1', { title: 'W' });
     await deleteWorkspaceService('w1');
     await getBasesByWorkspaceIdService('w1');
@@ -333,7 +330,7 @@ describe('clientService', () => {
     await updateViewService('v1', { title: 'V2' });
     await deleteViewService('v1');
     await getViewsByModelIdService('m1');
-    await addRow('m1');
+    await addRow({ model_id: 'm1' });
     await deleteRowService({ model_id: 'm1', row_id: 1 });
     await bulkDeleteRowService({ model_id: 'm1', row_ids: [1, 2] });
     await insertRowDataService({ model_id: 'm1', column_id: 'c1', row_id: 1, value: 'x' });
@@ -349,7 +346,13 @@ describe('clientService', () => {
       content: { title: 'asset' },
     });
     await addImageService([new File(['a'], 'a.png')]);
-    await importTableService({ workspace_id: 'w1', title: 'T', description: '', order_index: 0, file: new File(['a'], 'a.csv') });
+    await importService({
+      workspace_id: 'w1',
+      order_index: 0,
+      file: new File(['a'], 'a.csv'),
+      config: {},
+      primary_column: 'title',
+    });
 
     await getTenantUsersService();
     await getUsersForAssignService();

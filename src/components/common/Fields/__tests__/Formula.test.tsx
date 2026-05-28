@@ -450,7 +450,7 @@ describe('Formula', () => {
 
   it('renders nothing in disabled mode when evaluation fails', () => {
     evaluateFormulaMock.mockReturnValue({ result: null, error: 'bad' });
-    const { container } = render(
+    render(
       <Formula
         disabled
         config={{ formula: 'BAD(' }}
@@ -459,6 +459,6 @@ describe('Formula', () => {
       />
     );
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByText('#VALUE ERROR')).toBeInTheDocument();
   });
 });

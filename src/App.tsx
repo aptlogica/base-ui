@@ -37,6 +37,7 @@ import { useClientHeaders } from './hooks/useClientHeaders';
 import { RouteContextProvider } from './contexts/RouteContext';
 import { NavigationResolver } from './components/NavigationResolver';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ImportSuccessModal, type ImportSuccessSummary } from './components/modals/importer/ImportSuccessModal';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -78,6 +79,8 @@ declare global {
 const Layout = () => {
   const { flyoutOpen, selectedWorkspace, openFlyout, closeFlyout, currentPlugin } = usePluginStore();
   const location = useLocation();
+  const navigate = useNavigate();
+  const importSummary = location.state?.importSummary as ImportSuccessSummary | undefined;
 
   // Update client headers when workspace/base changes
   useClientHeaders();
@@ -92,7 +95,7 @@ const Layout = () => {
       return false;
     }
   });
-  
+
   // Wrapper to update both state and sessionStorage
   const updateSidebarCollapsed = (value: boolean | ((prev: boolean) => boolean)) => {
     setSidebarCollapsed((prev: boolean) => {
@@ -101,7 +104,7 @@ const Layout = () => {
       return newValue;
     });
   };
-  
+
   const sidebarWidth = sidebarCollapsed ? 20 : FLYOUT_WIDTH;
 
   // Auto-open flyout menu when on base/table/view routes
@@ -148,11 +151,11 @@ const Layout = () => {
                   sidebarPosition={sidebarPosition}
                   sidebarWidth={sidebarWidth}
                   selectedWorkspace={selectedWorkspace}
-                  
+
                 />
               )}
-              <button 
-                onClick={() => updateSidebarCollapsed(!sidebarCollapsed)} 
+              <button
+                onClick={() => updateSidebarCollapsed(!sidebarCollapsed)}
                 className='absolute top-1/2 right-[-4px] border rounded-tl-full rounded-bl-full bg-gray-100 text-primary p-1 shadow-md z-40 hover:bg-gray-200 transition-colors outline-none'
                 aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
@@ -162,7 +165,7 @@ const Layout = () => {
           )}
 
           {/* Main content area */}
-          <main className="flex-1 p-0 overflow-y-auto bg-main text-text min-w-0">
+          <main className="flex-1 p-0 overflow-y-auto no-scrollbar bg-main text-text min-w-0">
             <Outlet />
           </main>
 
@@ -179,8 +182,8 @@ const Layout = () => {
                   selectedWorkspace={selectedWorkspace}
                 />
               )}
-              <button 
-                onClick={() => updateSidebarCollapsed(!sidebarCollapsed)} 
+              <button
+                onClick={() => updateSidebarCollapsed(!sidebarCollapsed)}
                 className='absolute top-1/2 left-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-40 hover:bg-gray-100 transition-colors outline-none'
                 aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
@@ -192,6 +195,16 @@ const Layout = () => {
 
         {/* Overlays */}
         <ExtensionPoint id="layout:overlay" />
+
+        <ImportSuccessModal
+          open={Boolean(importSummary)}
+          summary={importSummary ?? null}
+          onClose={() => {
+            const currentState = (location.state) || {};
+            const { importSummary: _omit, ...rest } = currentState;
+            navigate(location.pathname, { replace: true, state: rest });
+          }}
+        />
       </div>
     </RouteContextProvider>
   );

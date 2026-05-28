@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { X, Pencil, MoreHorizontal, Trash2 } from 'lucide-react';
 import FieldRenderer from '../../plugins/FormViewPlugin/components/shared/FieldRenderer';
-import { useInsertRowData, useAddAttachment, useRemoveAttachments, useInsertRelationData } from '../../hooks/useApi';
+import { useUpdateRowData, useAddAttachment, useRemoveAttachments, useInsertRelationData } from '../../hooks/useApi';
 import { getFieldTypeIconWithMargin, getRelationTypeFromField } from '../../types/fieldTypes';
 import {
   createFieldRendererProps,
@@ -41,7 +41,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   title = 'Edit record',
   submitLabel = 'Save changes',
   initialValues = {},
-  onDuplicate,
+  // onDuplicate,
   onDelete,
 }) => {
   const [showHidden, setShowHidden] = useState(false);
@@ -57,7 +57,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   const { canUpdateRecord, canDeleteRecord, isBaseReadOnly } = useBaseAccess(baseId);
   const isReadOnly = isBaseReadOnly();
 
-  const insertValueMutation = useInsertRowData();
+  const updateRowDataMutation = useUpdateRowData();
   const addAttachmentMutation = useAddAttachment();
   const removeAttachmentsMutation = useRemoveAttachments();
   const insertRelationMutation = useInsertRelationData();
@@ -265,16 +265,18 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
           value: normalizeValueForSave(f, rowData[f.id])
         }));
 
-      await Promise.all(
-        updates.map(u =>
-          insertValueMutation.mutateAsync({
-            model_id: String(table.id),
-            column_id: String(u.fieldId),
-            row_id: Number(recordId),
-            value: u.value,
-          })
-        )
-      );
+      if (updates.length > 0) {
+        const values = updates.reduce((acc: Record<string, any>, update) => {
+          acc[String(update.fieldId)] = update.value;
+          return acc;
+        }, {});
+
+        await updateRowDataMutation.mutateAsync({
+          model_id: String(table.id),
+          row_id: Number(recordId),
+          values,
+        });
+      }
 
       await Promise.all(
         (fields || [])

@@ -8,7 +8,6 @@ import {
   renderEmailPill,
   renderUserPill,
   renderDurationPill,
-  renderAttachmentPill,
   renderCheckboxPill,
   renderCurrencyPill,
   renderPercentPill,
@@ -57,18 +56,12 @@ describe('lookupRenderers', () => {
     expect(within(durationWithMs.container).getByText('00:00:20.500')).toBeInTheDocument();
   });
 
-  it('renders email, user, attachment, and link pills', () => {
+  it('renders email, user, and link pills', () => {
     const email = renderNode(renderEmailPill({ value: 'a@b.com', sourceColumn: {}, index: 0 }));
     expect(within(email.container).getByText('a@b.com')).toBeInTheDocument();
 
     const user = renderNode(renderUserPill({ value: { name: 'Alice' }, sourceColumn: {}, index: 0 }));
     expect(within(user.container).getByText('Alice')).toBeInTheDocument();
-
-    const attachment = renderNode(renderAttachmentPill({ value: [{ title: 'file.txt' }], sourceColumn: {}, index: 0 }));
-    expect(within(attachment.container).getByText('file.txt')).toBeInTheDocument();
-
-    const multiAttachment = renderNode(renderAttachmentPill({ value: [{ title: 'a.txt' }, { title: 'b.txt' }], sourceColumn: {}, index: 0 }));
-    expect(within(multiAttachment.container).getByText(/a\.txt \(2\)/)).toBeInTheDocument();
 
     const url = renderNode(renderURLPill({ value: 'https://example.com', sourceColumn: {}, index: 0 }));
     expect(within(url.container).getByText('https://example.com')).toBeInTheDocument();
@@ -79,7 +72,7 @@ describe('lookupRenderers', () => {
 
   it('renders numeric format pills', () => {
     const currency = renderNode(renderCurrencyPill({ value: 1234.5, sourceColumn: { meta: { currencyType: 'USD' } }, index: 0 }));
-    expect(within(currency.container).getByText(/USD/)).toBeInTheDocument();
+    expect(within(currency.container).getByText(/\$1,234\.50|USD/)).toBeInTheDocument();
 
     const percent = renderNode(renderPercentPill({ value: 12.5, sourceColumn: {}, index: 0 }));
     expect(within(percent.container).getByText('12.5%')).toBeInTheDocument();

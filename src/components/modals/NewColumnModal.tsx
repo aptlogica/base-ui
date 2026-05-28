@@ -6,11 +6,9 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, X, Info, Loader2 } from 'lucide-react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { FIELD_TYPES } from '../../types/fieldTypes';
-import {
-  timeZoneOptions,
-} from '../../types/constants';
+import { timeZoneOptions } from '../../types/constants';
 import { FieldTypeDropdown } from '../common/dropdown/fieldDropdown/FieldTypeDropdown';
-import { useBaseTables, useTable, useAllViews } from '../../hooks/useApi';
+import { useBaseTables, useTable, useAllViews, useResetField } from '../../hooks/useApi';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { useToast } from '../../components/common/Toast';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../utils/fieldUsageUtils';
@@ -79,6 +77,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   // Get current base ID and tables for relations
   const { selectedBaseId } = useNavigationStore();
   const { data: tablesData } = useBaseTables(selectedBaseId || '') as { data?: any };
+  
+  // Hook for resetting field data (used when formula is cleared)
+  const resetField = useResetField();
   // Get all views for field usage validation (fallback)
   const { data: allViews = [] } = useAllViews();
 
@@ -971,6 +972,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     // Reset json field config state
   };
 
+/* eslint-disable sonarjs/cognitive-complexity */
   const handleSave = () => {
     // Prevent multiple clicks
     if (isSaving) return;
@@ -1099,7 +1101,31 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     });
 
     setIsSaving(true);
-    onSave(colConfig);
+    
+    // Check if we're editing a formula field and the formula has been cleared
+    const isFormulaField = selectedType.key === 'formula';
+    const originalFormula = initialValues?.meta?.formula || initialValues?.config?.formula || '';
+    const isEditingExistingFormula = initialValues?.id && isFormulaField && originalFormula.trim();
+    const isFormulaCleared = !formulaText.trim();
+    
+    // If formula was cleared on an existing formula field, call reset API first
+    if (isEditingExistingFormula && isFormulaCleared && currentTableId) {
+      resetField.mutate(
+        { column_id: initialValues.id, model_id: currentTableId },
+        {
+          onSuccess: () => {
+            onSave(colConfig);
+          },
+          onError: (err: any) => {
+            console.error('Failed to reset formula field:', err);
+            toast.error('Failed to reset formula field data');
+            setIsSaving(false);
+          }
+        }
+      );
+    } else {
+      onSave(colConfig);
+    }
     // Don't reset state here - let the parent component close the modal
     // State will be reset when the modal closes via useEffect
   };
@@ -1360,9 +1386,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                   const value = e?.target?.value;
                   const capitalized = value?.charAt(0)?.toUpperCase() + value?.slice(1);
                   setFieldName(capitalized);
-                }}
-              // onChange={e => setFieldName(e.target.value)}
-              />
+                }}/>
               <div className={`text-red-500 text-xs mt-1 transition-all duration-300 ease-in-out ${nameError ? 'opacity-100 max-h-6 mb-2' : 'opacity-0 max-h-0 overflow-hidden'}`}>
                 {nameError}
               </div>

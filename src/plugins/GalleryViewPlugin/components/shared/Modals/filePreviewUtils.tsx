@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-import React from "react";
-
 type FilePreviewSize = "large" | "small";
 
 const getFileMeta = (file: any) => {

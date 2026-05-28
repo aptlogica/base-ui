@@ -223,7 +223,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
             {/* Content - Grid of thumbnails */}
             <div className="p-6 max-h-[80vh] overflow-y-auto">
               {attachments.length > 0 ? (
-                <div className="grid grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                   {attachments.map((file, index) => {
                     const isHovered = hoveredCardIndex === index;
                     return (

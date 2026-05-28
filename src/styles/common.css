@@ -17,6 +17,7 @@ Support: support@aptlogica.com | support@serenibase.com
   font-size: 12px;
   scrollbar-width: thin;
   scrollbar-color: var(--color-gray-200) var(--color-gray-100);
+  outline: none;
 }
 
 ::-webkit-scrollbar {
@@ -44,7 +45,7 @@ Support: support@aptlogica.com | support@serenibase.com
   justify-content: center;
   height: 100vh;
   font-size: 18px;
-  color: var(--textMuted);
+  color: var(--color-text-secondary);
 }
 
 .sidebar-flyout-bg {
@@ -700,5 +701,20 @@ input[type="password"]::-ms-clear {
   .color-input::-webkit-color-swatch {
     border: none;
     border-radius: 0.5rem;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
   }
 }

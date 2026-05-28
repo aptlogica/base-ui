@@ -115,20 +115,6 @@ export function useFormData({ tableId }: UseFormDataOptions): UseFormDataReturn 
     }
   };
 
-  const createRecord = async (): Promise<string> => {
-    const createdRecord = await addRow.mutateAsync({
-      model_id: tableData?.model?.id || ''
-    });
-
-    const backendRowId = createdRecord.id ?? createdRecord.data?.record?.id;
-
-    if (!backendRowId) {
-      throw new Error('Failed to create record - no ID returned');
-    }
-
-    return String(backendRowId);
-  };
-
   const shouldSkipField = (field: FormField): boolean => {
     return field.type === 'attachment' || field.uidt === 'attachment' ||
            field.type === 'links' || field.uidt === 'links' ||
@@ -200,29 +186,14 @@ export function useFormData({ tableId }: UseFormDataOptions): UseFormDataReturn 
     return value;
   };
 
-  const createInsertPromise = (field: FormField, processedValue: any, backendRowId: string): Promise<any> => {
-    return insertRowData.mutateAsync({
-      model_id: tableData?.model?.id || '',
-      column_id: field.id,
-      row_id: Number(backendRowId),
-      value: processedValue
-    }).catch((err: unknown) => {
-      console.error(`Failed to insert field ${field.title} (${field.id}):`, err);
-      console.error(`Field value was:`, processedValue);
-      console.error(`Field type:`, field.type, field.uidt);
-      throw err;
-    });
-  };
-
-  const processRegularFields = async (formData: Record<string, any>, formFields: FormField[], backendRowId: string): Promise<void> => {
-    const insertPromises: Promise<any>[] = [];
-
+  const buildRegularRowPayload = (formData: Record<string, any>, formFields: FormField[], backendRowIdHint: string): Record<string, any> => {
+    const payload: Record<string, any> = {};
     for (const field of formFields) {
       if (shouldSkipField(field)) {
         continue;
       }
 
-      ensureTitleValue(field, formData, backendRowId);
+      ensureTitleValue(field, formData, backendRowIdHint);
       const value = formData[field.id];
 
       if (value === undefined || value === null || value === '') {
@@ -233,18 +204,45 @@ export function useFormData({ tableId }: UseFormDataOptions): UseFormDataReturn 
       if (processedValue === null) {
         continue; // Field processing failed, skip it
       }
+      payload[field.id] = processedValue;
+    }
+    return payload;
+  };
 
-      const insertPromise = createInsertPromise(field, processedValue, backendRowId);
-      insertPromises.push(insertPromise);
+  const extractCreatedRowId = (createdRecord: any): string => {
+    const backendRowId =
+      createdRecord?.id ??
+      createdRecord?.row_id ??
+      createdRecord?.data?.id ??
+      createdRecord?.data?.row_id ??
+      createdRecord?.data?.record_id ??
+      createdRecord?.data?.record?.id ??
+      createdRecord?.data?.record?.row_id ??
+      createdRecord?.data?.rows?.[0]?.record?.id ??
+      createdRecord?.data?.rows?.[0]?.record?.row_id ??
+      createdRecord?.data?.rows?.[0]?.id ??
+      createdRecord?.data?.rows?.[0]?.row_id ??
+      createdRecord?.data?.rows?.[0]?._meta?.id ??
+      createdRecord?.data?.records?.[0]?.id ??
+      createdRecord?.data?.records?.[0]?.row_id ??
+      createdRecord?.data?.records?.[0]?._meta?.id ??
+      createdRecord?.data?.inserted_ids?.[0] ??
+      createdRecord?.data?.insertedIds?.[0];
+
+    if (!backendRowId) {
+      console.error('Unexpected createRow response shape:', createdRecord);
+      throw new Error('Failed to create record - no ID returned');
     }
 
-    if (insertPromises.length > 0) {
-      try {
-        await Promise.all(insertPromises);
-      } catch (error: unknown) {
-        console.error('Some field insertions failed:', error);
-      }
-    }
+    return String(backendRowId);
+  };
+
+  const createRecord = async (rows?: Array<Record<string, any>>): Promise<string> => {
+    const createdRecord = await addRow.mutateAsync({
+      model_id: tableData?.model?.id || '',
+      rows
+    });
+    return extractCreatedRowId(createdRecord);
   };
 
   const processLinksFields = async (formData: Record<string, any>, formFields: FormField[], backendRowId: string): Promise<void> => {
@@ -335,8 +333,9 @@ export function useFormData({ tableId }: UseFormDataOptions): UseFormDataReturn 
   // Business logic operations
   const submitForm = async (formData: Record<string, any>, formFields: FormField[]): Promise<void> => {
     validateRequiredFields(formData, formFields);
-    const backendRowId = await createRecord();
-    await processRegularFields(formData, formFields, backendRowId);
+    const regularRowPayload = buildRegularRowPayload(formData, formFields, 'new');
+    const rows = Object.keys(regularRowPayload).length > 0 ? [regularRowPayload] : undefined;
+    const backendRowId = await createRecord(rows);
     await processLinksFields(formData, formFields, backendRowId);
     await processAttachmentFields(formData, formFields, backendRowId);
   };

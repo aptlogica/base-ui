@@ -484,7 +484,6 @@ export const ProfileSection: React.FC = () => {
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    console.log(file);
     if (!file) return;
     await processFile(file);
   };

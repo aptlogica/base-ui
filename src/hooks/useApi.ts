@@ -26,11 +26,13 @@ import {
   updateTableService,
   deleteTableService,
   getTablesByBaseIdService,
-  importTableService,
+  importService,
   // New field API services
   createFieldService,
   updateFieldService,
   deleteFieldService,
+  resetFieldService,
+  bulkUpdateFieldService,
   // New view API services
   createViewService,
   updateViewService,
@@ -59,6 +61,7 @@ import {
   deleteRowService,
   bulkDeleteRowService,
   insertRowDataService,
+  updateRowDataService,
   insertRelationDataService,
   // Attachment services
   addAttachmentService,
@@ -69,7 +72,7 @@ import {
   getWorkspacesByUser,
   //Organization Services 
   getOrganizationService,
-  updateOrganizationService
+  updateOrganizationService,
 } from '../service/clientService';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
 
@@ -164,7 +167,17 @@ export const useWorkspaces = () => {
 export const useAddRow = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ model_id }: { model_id: string }) => addRow(model_id),
+    mutationFn: ({
+      model_id,
+      rows,
+      created_by,
+      updated_by
+    }: {
+      model_id: string;
+      rows?: Array<Record<string, any>>;
+      created_by?: string;
+      updated_by?: string;
+    }) => addRow({ model_id, rows, created_by, updated_by }),
     onSuccess: (_, { model_id }) => {
       // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
       // This ensures UI updates instantly after adding a row, regardless of cache age
@@ -598,35 +611,37 @@ export const useDeleteTable = () => {
   });
 };
 
-export const useImportTable = () => {
+export const useImportData = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({
       base_id,
       workspace_id,
-      title,
-      description,
       order_index,
       file,
+      config,
+      primary_column,
       onProgress,
     }: {
       base_id?: string; // Optional: required from sidebar, optional from home page
       workspace_id: string;
-      title: string;
-      description: string;
+      title?: string;
+      description?: string;
       order_index: number;
       file: File;
+      config: any; // ImportPayload with mapped field types and settings
+      primary_column?: string;
       onProgress?: (progressEvent: ProgressEvent) => void;
     }) => {
-      return importTableService(
+      return importService(
         {
           ...(base_id && { base_id }), // Only include base_id if provided
           workspace_id,
-          title,
-          description,
           order_index,
           file,
+          config,
+          primary_column: primary_column || '',
         },
         onProgress
       );
@@ -699,6 +714,12 @@ export const useUpdateField = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['fields'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      // Lookup pills fetch source column config by fieldId. Ensure metadata changes
+      // (e.g. currency config, datetime timezone/format) refresh immediately.
+      queryClient.invalidateQueries({
+        queryKey: ['lookupSourceColumn', String(variables.fieldId)],
+        refetchType: 'active'
+      });
 
       // Check if this is a type change (affects data structure - needs full refetch)
       const isTypeChange = variables.updatedValue.uidt !== undefined;
@@ -728,6 +749,27 @@ export const useUpdateField = () => {
   });
 };
 
+export const useResetField = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ column_id, model_id }: { column_id: string; model_id: string }) =>
+      resetFieldService({ column_id, model_id }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['fields'] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(vars.model_id),
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(vars.model_id)],
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
 export const useDeleteColumn = () => {
   const queryClient = useQueryClient();
 
@@ -737,6 +779,33 @@ export const useDeleteColumn = () => {
     onSuccess: (_, vars) => {
       const tableId = vars?.tableId;
       if (tableId) queryClient.invalidateQueries({ queryKey: queryKeys.fields(tableId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
+
+export const useBulkUpdateColumn = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      model_id,
+      column_id,
+      updates,
+    }: {
+      model_id: string;
+      column_id: string;
+      updates: Array<{ id: any; value: any }>;
+    }) => bulkUpdateFieldService({ model_id, column_id, updates }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(vars.model_id),
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(vars.model_id)],
+        refetchType: 'active'
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
@@ -1027,11 +1096,41 @@ export const useInsertRowData = () => {
         queryKey: ['tables', String(vars.model_id)],
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
+      // Ensure lookup columns in other tables refresh when source table values change.
+      // This marks all table queries stale and refetches whichever table queries are active.
+      queryClient.invalidateQueries({
+        queryKey: ['tables'],
+        refetchType: 'active'
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
 
+export const useUpdateRowData = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ model_id, row_id, values }: { model_id: string; row_id: number; values: Record<string, any> }) =>
+      updateRowDataService({ model_id, row_id, values }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(vars.model_id),
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(vars.model_id)],
+        refetchType: 'active'
+      });
+      // Ensure lookup columns in other tables refresh when source table values change.
+      // This marks all table queries stale and refetches whichever table queries are active.
+      queryClient.invalidateQueries({
+        queryKey: ['tables'],
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
 
 export const useDeleteRecord = () => {
   const queryClient = useQueryClient();
@@ -1138,6 +1237,11 @@ export const useAddAttachment = () => {
       // Invalidate table records to refresh attachment data
       queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id) });
       queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)] });
+      // Attachment values can be shown through lookup fields in other active tables.
+      queryClient.invalidateQueries({
+        queryKey: ['tables'],
+        refetchType: 'active'
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
@@ -1158,6 +1262,11 @@ export const useRemoveAttachments = () => {
       // Invalidate table records to refresh attachment data
       queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id) });
       queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)] });
+      // Attachment values can be shown through lookup fields in other active tables.
+      queryClient.invalidateQueries({
+        queryKey: ['tables'],
+        refetchType: 'active'
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
@@ -1301,7 +1410,11 @@ export const useGetRecordsByPagination = (modelId: string) => {
 // Tenant & User APIs
 // =========================
 
-export const useGetTenantUsers = () => {
+export const useGetTenantUsers = (options?: {
+  enabled?: boolean;
+  staleTime?: number;
+  refetchOnMount?: boolean | 'always';
+}) => {
   return useQuery({
     queryKey: queryKeys.users,
     queryFn: async () => {
@@ -1317,9 +1430,9 @@ export const useGetTenantUsers = () => {
         throw error;
       }
     },
-    enabled: true,
-    staleTime: 0, // Always consider data stale to allow refetching
-    refetchOnMount: 'always', // Always refetch when component mounts (e.g., when navigating to user tab)
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 0, // Always stale by default for user-management pages
+    refetchOnMount: options?.refetchOnMount ?? 'always', // Preserve default behavior
   });
 };
 

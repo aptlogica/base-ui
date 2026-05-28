@@ -43,6 +43,7 @@ import { useBaseAccess } from '../../../../hooks/useBaseAccess';
 type TableActions = {
   addRow: any;
   insertRowData: any;
+  bulkUpdateColumn: any;
   deleteRecord: any;
   bulkDeleteRecords: any;
   updateField: any;
@@ -61,7 +62,7 @@ interface TableProps {
   };
   viewId?: string;
   onRefresh: () => void;
-  viewConfig?: Record<string, any>;
+  // viewConfig?: Record<string, any>;
   actions?: TableActions;
 }
 
@@ -69,7 +70,7 @@ export const Table: React.FC<TableProps> = ({
   tableData,
   viewId,
   onRefresh,
-  viewConfig,
+  // viewConfig,
   actions,
 }) => {
   const toast = useToast();
@@ -170,7 +171,7 @@ export const Table: React.FC<TableProps> = ({
         }
       });
 
-      return { id: meta.id, _meta: meta, data: dataObj } as TableData;
+      return { id: meta.id, _meta: meta, data: dataObj };
     });
   }, [tableData?.records]); // Full dataset from backend
 
@@ -344,6 +345,8 @@ export const Table: React.FC<TableProps> = ({
     handleColumnDragEnd: handleColumnDragEndFromHook,
     setEditColumn,
     setEditColumnIndex,
+    formulaUsageWarning,
+    setFormulaUsageWarning,
   } = useColumnManagement({
     tableId,
     baseId,
@@ -543,6 +546,7 @@ export const Table: React.FC<TableProps> = ({
     columns,
     tableId,
     insertRowDataMutation: actions?.insertRowData,
+    bulkUpdateColumnMutation: actions?.bulkUpdateColumn,
     onRecordsUpdate: () => { },
   });
 
@@ -1204,9 +1208,16 @@ export const Table: React.FC<TableProps> = ({
       {deleteConfirmModalOpen && columnToDelete !== null && (
         <DeleteConfirmModal
           isOpen={deleteConfirmModalOpen}
-          onClose={() => setDeleteConfirmModalOpen(false)}
+          onClose={() => {
+            setDeleteConfirmModalOpen(false);
+            setFormulaUsageWarning(null);
+          }}
           onConfirm={handleConfirmDeleteColumn}
-          message={`Are you sure you want to delete the column "${columns.find(col => col.id === columnToDelete)?.title || 'Unknown Column'}"? This action cannot be undone.`}
+          message={
+            formulaUsageWarning && formulaUsageWarning.length > 0
+              ? `Are you sure you want to continue? The "${columns.find(col => col.id === columnToDelete)?.title || 'Unknown Column'}" column is being used in formula field(s): ${formulaUsageWarning.join(', ')}. Removing it could break dependent formulas.`
+              : `Are you sure you want to delete the column "${columns.find(col => col.id === columnToDelete)?.title || 'Unknown Column'}"? This action cannot be undone.`
+          }
           title="Delete Column"
         />
       )}

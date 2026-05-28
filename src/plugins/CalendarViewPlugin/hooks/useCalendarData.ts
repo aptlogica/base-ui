@@ -7,7 +7,7 @@ import { useTable, useAddRow, useDeleteRecord, useInsertRowData, useUpdateField,
 import type { TableData } from '../../../types/api.types';
 import { parseApiColumnMeta } from '../../../components/shared/table/tableUtils';
 import { normalizeFieldType } from '../../../utils/fieldType';
-import type { GridColumn, GridFieldType } from '../../GridViewPlugin/types/grid.types';
+import type { GridColumn } from '../../GridViewPlugin/types/grid.types';
 import { utcISOToZoned } from '../../../utils/dateUtils';
 
 // Data layer for Calendar: fetch + CRUD orchestration; keeps UI components clean
@@ -163,7 +163,7 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
       id: col.id,
       key: col.column_name || col.key,
       title: col.title,
-      type: normalizeFieldType(col.uidt || col.type) as GridFieldType,
+      type: normalizeFieldType(col.uidt || col.type),
       uidt: col.uidt,
       position: col.order_index ?? index,
       hidden: col.hidden || col.deleted || false,
@@ -277,12 +277,28 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
     );
   };
 
-  const createEvent = async (_initialValues: Record<string, any>) => {
-    // Create event using the standard addRow hook
-    const result = await addRow.mutateAsync({
-      model_id: String(tableId)
+  const createEvent = async (initialValues: Record<string, any>) => {
+    const rowPayload: Record<string, any> = {};
+    (tableData?.columns || []).forEach((field: any) => {
+      const value = initialValues[field.id] ?? initialValues[field.column_name];
+      if (value === undefined || value === null || value === '') return;
+      rowPayload[field.id] = value;
     });
-    return String(result?.id || result);
+
+    const result = await addRow.mutateAsync({
+      model_id: String(tableId),
+      rows: Object.keys(rowPayload).length > 0 ? [rowPayload] : undefined
+    });
+    return String(
+      result?.id ??
+      result?.row_id ??
+      result?.data?.id ??
+      result?.data?.row_id ??
+      result?.data?.record?.id ??
+      result?.data?.rows?.[0]?.record?.id ??
+      result?.data?.rows?.[0]?.id ??
+      result
+    );
   };
 
   const deleteEvent = async (eventId: string) => {

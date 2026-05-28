@@ -3,7 +3,7 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import { useMemo } from 'react';
-import { useTable, useAddRow, useDeleteRecord, useBulkDeleteRecords, useInsertRowData, useUpdateField, useDeleteColumn, useCreateField, useUpdateView } from '../../../hooks/useApi';
+import { useTable, useAddRow, useDeleteRecord, useBulkDeleteRecords, useInsertRowData, useBulkUpdateColumn, useUpdateField, useDeleteColumn, useCreateField, useUpdateView } from '../../../hooks/useApi';
 import type { TableData } from '../../../types/api.types';
 
 // Data layer for Grid: fetch + CRUD orchestration; keeps UI components clean
@@ -22,6 +22,7 @@ export interface UseGridDataReturn {
   refresh: () => void;
   addRow: ReturnType<typeof useAddRow>;
   insertRowData: ReturnType<typeof useInsertRowData>;
+  bulkUpdateColumn: ReturnType<typeof useBulkUpdateColumn>;
   deleteRecord: ReturnType<typeof useDeleteRecord>;
   bulkDeleteRecords: ReturnType<typeof useBulkDeleteRecords>;
   updateField: ReturnType<typeof useUpdateField>;
@@ -55,6 +56,7 @@ export function useGridData({ tableId}: UseGridDataOptions): UseGridDataReturn {
   // Expose mutations as-is; UI decides how/when to call
   const addRow = useAddRow();
   const insertRowData = useInsertRowData();
+  const bulkUpdateColumn = useBulkUpdateColumn();
   const deleteRecord = useDeleteRecord();
   const bulkDeleteRecords = useBulkDeleteRecords();
   const updateField = useUpdateField();
@@ -112,6 +114,7 @@ export function useGridData({ tableId}: UseGridDataOptions): UseGridDataReturn {
     },
     addRow,
     insertRowData,
+    bulkUpdateColumn,
     deleteRecord,
     bulkDeleteRecords,
     updateField,

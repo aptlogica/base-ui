@@ -398,14 +398,6 @@ const Breadcrumb: React.FC = () => {
         return;
       }
 
-      console.log('Updating base with payload:', {
-        baseId: editingBase.id,
-        updates: {
-          ...updates,
-          image: updates.image ? `[File: ${(updates.image as File).name}, ${(updates.image as File).size} bytes]` : undefined
-        }
-      });
-
       await updateBaseMutation.mutateAsync({
         baseId: editingBase.id,
         updates,

@@ -185,3 +185,64 @@ export const checkCriticalFieldUsageInViews = (
     usedInViews
   };
 };
+
+/**
+ * Check if a field is referenced in any formula columns
+ */
+export interface FormulaUsageInfo {
+  isUsedInFormulas: boolean;
+  usedInFormulas: Array<{
+    columnId: string;
+    columnTitle: string;
+    formula: string;
+  }>;
+}
+
+export const checkFieldUsageInFormulas = (
+  fieldTitle: string,
+  columns: any[]
+): FormulaUsageInfo => {
+  const usedInFormulas: FormulaUsageInfo['usedInFormulas'] = [];
+
+  if (!columns || columns.length === 0 || !fieldTitle) {
+    return { isUsedInFormulas: false, usedInFormulas: [] };
+  }
+
+  // Find all formula columns
+  columns.forEach((column) => {
+    const columnType = (column.type || column.uidt || '').toLowerCase();
+    if (columnType !== 'formula') return;
+
+    // Get formula from meta/config
+    let meta = column.meta;
+    if (typeof meta === 'string') {
+      try {
+        meta = JSON.parse(meta);
+      } catch {
+        meta = {};
+      }
+    }
+    const config = column.config || meta || {};
+    const formula = config.formula || '';
+
+    if (!formula) return;
+
+    // Check if field is referenced in the formula using {FieldName} pattern
+    // Escape special regex characters in field name
+    const escapedFieldTitle = fieldTitle.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+    const fieldRefRegex = new RegExp(String.raw`\{${escapedFieldTitle}\}`, 'i');
+
+    if (fieldRefRegex.test(formula)) {
+      usedInFormulas.push({
+        columnId: column.id,
+        columnTitle: column.title || column.column_name || 'Untitled',
+        formula: formula
+      });
+    }
+  });
+
+  return {
+    isUsedInFormulas: usedInFormulas.length > 0,
+    usedInFormulas
+  };
+};

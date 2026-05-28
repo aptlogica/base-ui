@@ -31,7 +31,6 @@ export interface UseKanbanDataReturn {
   updateViewMeta: ReturnType<typeof useUpdateViewMeta>;
 
   // Kanban-specific business operations
-  moveCard: (cardId: string, targetStackId: string) => Promise<void>;
   createCard: (initialValues: Record<string, any>) => Promise<string>;
   duplicateCard: (cardId: string) => Promise<string>;
   deleteCard: (cardId: string) => Promise<void>;
@@ -51,7 +50,7 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
     const data = (raw.data ?? raw) as TableData;
     if (!data?.columns) return undefined;
     const filteredColumns = data.columns.filter((col: any) => !fieldsToFilter.includes(col.uidt));
-    return { ...data, columns: filteredColumns } as TableData;
+    return { ...data, columns: filteredColumns };
   }, [tableQuery.data]);
 
   // CRUD operations - thin wrappers around shared hooks
@@ -62,38 +61,35 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
   const updateView = useUpdateView();
   const updateViewMeta = useUpdateViewMeta(); // Optimized hook for meta-only updates (cardOrder, etc.)
 
-  // Business logic operations (simplified to work with tableData)
-  const moveCard = async (cardId: string, targetStackId: string): Promise<void> => {
-    // This will be implemented in the UI component where we have access to the group column
-  };
-
   const createCard = async (initialValues: Record<string, any>): Promise<string> => {
-    const created = await addRow.mutateAsync({ model_id: String(tableId) });
-    const recordId = created?.data?.id || created?.id || String(Date.now());
-
-    // Set initial values for each field
+    const rowPayload: Record<string, any> = {};
     if (tableData?.columns) {
-      await Promise.all(tableData.columns.map(async (field: any) => {
-        // Skip attachment fields - they handle their own API calls
+      tableData.columns.forEach((field: any) => {
         if (field.type === 'attachment' || field.uidt === 'attachment') {
           return;
         }
-
         const value = initialValues[field.id] ?? initialValues[field.column_name];
-        if (value === undefined || value === null || value === '') return;
-
-        try {
-          await insertRowData.mutateAsync({
-            model_id: String(tableId),
-            column_id: String(field.id),
-            row_id: Number(recordId),
-            value,
-          });
-        } catch (e) {
-          console.warn('Failed to set initial field value:', field.id, e);
+        if (value === undefined || value === null || value === '') {
+          return;
         }
-      }));
+        rowPayload[field.id] = value;
+      });
     }
+
+    const created = await addRow.mutateAsync({
+      model_id: String(tableId),
+      rows: Object.keys(rowPayload).length > 0 ? [rowPayload] : undefined
+    });
+    const recordId = String(
+      created?.id ??
+      created?.row_id ??
+      created?.data?.id ??
+      created?.data?.row_id ??
+      created?.data?.record?.id ??
+      created?.data?.rows?.[0]?.record?.id ??
+      created?.data?.rows?.[0]?.id ??
+      Date.now()
+    );
 
     return recordId;
   };
@@ -237,7 +233,6 @@ export function useKanbanData({ tableId, viewId }: UseKanbanDataOptions): UseKan
     updateField,
     updateView,
     updateViewMeta,
-    moveCard,
     createCard,
     duplicateCard,
     deleteCard,

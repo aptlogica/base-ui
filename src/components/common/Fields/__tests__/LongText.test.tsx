@@ -276,12 +276,11 @@ describe('LongText Component', () => {
       }, { timeout: 2000 });
     });
 
-    it('should enforce maxLength constraint', async () => {
+    it('should allow typing long content in modal textarea', async () => {
       const { container } = render(
         <LongText
           value=""
           onChange={mockOnChange}
-          maxLength={20}
           allowEdit={true}
         />
       );
@@ -290,15 +289,15 @@ describe('LongText Component', () => {
 
       const textboxes = screen.getAllByRole('textbox');
       const textarea = textboxes[1] as HTMLTextAreaElement;
-      expect(textarea.maxLength).toBe(20);
+      await userEvent.type(textarea, 'x'.repeat(40));
+      expect(textarea.value.length).toBeGreaterThanOrEqual(40);
     });
 
-    it('should show character count error when exceeding max', async () => {
+    it('should not call onChange when long content is unchanged', async () => {
       const { container } = render(
         <LongText
           value={'x'.repeat(20)}
           onChange={mockOnChange}
-          maxLength={15}
           allowEdit={true}
         />
       );
@@ -313,8 +312,7 @@ describe('LongText Component', () => {
       fireEvent.click(saveButton);
 
       await waitFor(() => {
-        const errorText = screen.queryByText(/Text must be 15 characters or less/);
-        expect(errorText).toBeInTheDocument();
+        expect(mockOnChange).not.toHaveBeenCalled();
       }, { timeout: 2000 });
     });
   });
@@ -475,12 +473,11 @@ describe('LongText Component', () => {
       expect(input).toBeInTheDocument();
     });
 
-    it('should use configMaxLength when provided', async () => {
+    it('should ignore config maxLength and keep textarea unrestricted', async () => {
       const { container } = render(
         <LongText
           value=""
           onChange={mockOnChange}
-          maxLength={100}
           config={{ maxLength: 50 }}
           allowEdit={true}
         />
@@ -490,7 +487,7 @@ describe('LongText Component', () => {
 
       const textboxes = screen.getAllByRole('textbox');
       const textarea = textboxes[1] as HTMLTextAreaElement;
-      expect(textarea.maxLength).toBe(100);
+      expect(textarea.maxLength).toBe(-1);
     });
 
     it('should use configPlaceholder when provided', () => {
@@ -1516,14 +1513,13 @@ describe('LongText Component', () => {
           value=""
           onChange={mockOnChange}
           required
-          maxLength={5}
         />
       );
 
       const input = screen.getByRole('textbox');
       fireEvent.change(input, { target: { value: 'Too long text' } });
 
-      expect(mockOnChange).not.toHaveBeenCalled();
+      expect(mockOnChange).toHaveBeenCalledWith('Too long text');
     });
 
     it('should handle input change without validation error', () => {

@@ -45,12 +45,18 @@ export function useFrontendPagination<T>({
 }: UseFrontendPaginationOptions<T>): UseFrontendPaginationReturn<T> {
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [prevDataLength, setPrevDataLength] = useState(data.length);
   
-  // Reset to page 1 when data changes (new filter/search)
+  // Reset behavior:
+  // - Data shrinks (usually filter/search tightened): reset to first page.
+  // - Data grows (new row append): preserve currently loaded pages.
   useEffect(() => {
-    setCurrentPage(1);
-    setIsLoadingMore(false);
-  }, [data.length]); // Reset when dataset size changes
+    if (data.length < prevDataLength) {
+      setCurrentPage(1);
+      setIsLoadingMore(false);
+    }
+    setPrevDataLength(data.length);
+  }, [data.length, prevDataLength]);
   
   const totalPages = Math.ceil(data.length / pageSize);
   const totalItems = data.length;

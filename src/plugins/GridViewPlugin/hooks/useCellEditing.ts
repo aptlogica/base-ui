@@ -10,6 +10,7 @@ interface UseCellEditingOptions {
   columns: ColumnConfig[];
   tableId?: string;
   insertRowDataMutation?: any;
+  bulkUpdateColumnMutation?: any;
   onRecordsUpdate: (updater: (prev: any[]) => any[]) => void;
 }
 
@@ -25,12 +26,19 @@ export function useCellEditing({
   columns,
   tableId,
   insertRowDataMutation,
+  bulkUpdateColumnMutation,
   onRecordsUpdate,
 }: UseCellEditingOptions) {
   // Debounce refs for cell changes
   const debounceTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const pendingChanges = useRef<Map<string, { rowId: string; columnKey: string; value: any }>>(new Map());
   const originalValues = useRef<Map<string, any>>(new Map());
+  const formulaBatchQueue = useRef<Map<string, {
+    model_id: string;
+    column_id: string;
+    updates: Map<string, { rowId: string; columnKey: string; value: any }>;
+    timeout?: NodeJS.Timeout;
+  }>>(new Map());
 
   // Clear original values when data refreshes to ensure accurate comparisons
   useEffect(() => {
@@ -196,6 +204,7 @@ export function useCellEditing({
   }, [onRecordsUpdate, updateLinksField]);
 
   // Helper to process debounced cell update
+  /* eslint-disable sonarjs/cognitive-complexity */
   const processDebouncedUpdate = useCallback(async (
     change: { rowId: string; columnKey: string; value: any },
     column: ColumnConfig,
@@ -232,6 +241,60 @@ export function useCellEditing({
     }
 
     try {
+      const isFormulaField = String(column.uidt || column.type || '').toLowerCase() === 'formula';
+      if (isFormulaField && bulkUpdateColumnMutation) {
+        const batchKey = `${String(tableId)}-${String(column.id)}`;
+        const existingBatch = formulaBatchQueue.current.get(batchKey) ?? {
+          model_id: String(tableId),
+          column_id: String(column.id),
+          updates: new Map<string, { rowId: string; columnKey: string; value: any }>(),
+        };
+
+        existingBatch.updates.set(String(change.rowId), {
+          rowId: String(change.rowId),
+          columnKey: change.columnKey,
+          value: change.value,
+        });
+
+        if (existingBatch.timeout) {
+          clearTimeout(existingBatch.timeout);
+        }
+
+        existingBatch.timeout = setTimeout(async () => {
+          const pendingBatch = formulaBatchQueue.current.get(batchKey);
+          if (!pendingBatch || pendingBatch.updates.size === 0) return;
+
+          const updates = Array.from(pendingBatch.updates.values()).map((item) => ({
+            id: Number(item.rowId),
+            value: item.value,
+          }));
+
+          try {
+            await bulkUpdateColumnMutation.mutateAsync({
+              model_id: pendingBatch.model_id,
+              column_id: pendingBatch.column_id,
+              updates,
+            });
+
+            for (const item of pendingBatch.updates.values()) {
+              originalValues.current.set(`${item.rowId}-${item.columnKey}`, item.value);
+              if (onRecordsUpdate) {
+                onRecordsUpdate(prevRecords => updateLocalRecord(prevRecords, item.rowId, item.columnKey, item.value));
+              }
+            }
+          } catch (err) {
+            if (err instanceof Error && !err.message.includes('500')) {
+              console.error('Failed to bulk update formula column:', err);
+            }
+          } finally {
+            formulaBatchQueue.current.delete(batchKey);
+          }
+        }, 250);
+
+        formulaBatchQueue.current.set(batchKey, existingBatch);
+        return;
+      }
+
       await insertRowDataMutation.mutateAsync({
         model_id: String(tableId),
         column_id: String(column.id),
@@ -252,7 +315,7 @@ export function useCellEditing({
         console.error('Failed to update cell:', err);
       }
     }
-  }, [tableId, insertRowDataMutation, onRecordsUpdate, hasValueChanged, isEmptyValue, isNewlyCreatedRow, updateLocalRecord]);
+  }, [tableId, bulkUpdateColumnMutation, insertRowDataMutation, onRecordsUpdate, hasValueChanged, isEmptyValue, isNewlyCreatedRow, updateLocalRecord]);
 
   // Update a single cell value (debounced to reduce API calls)
   const handleCellChange = useCallback(async (rowId: string, columnKey: string, value: any) => {
@@ -360,6 +423,10 @@ export function useCellEditing({
     return () => {
       debounceTimeouts.current.forEach(timeout => clearTimeout(timeout));
       debounceTimeouts.current.clear();
+      formulaBatchQueue.current.forEach(batch => {
+        if (batch.timeout) clearTimeout(batch.timeout);
+      });
+      formulaBatchQueue.current.clear();
       pendingChanges.current.clear();
       originalValues.current.clear();
     };

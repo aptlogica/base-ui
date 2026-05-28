@@ -1930,5 +1930,3 @@ export function renderNewColumnConfigStep(props: any) {
 
   return renderConfigStep();
 }
-
-

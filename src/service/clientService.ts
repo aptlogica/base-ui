@@ -537,8 +537,8 @@ function processAndStoreTokens(response: any): any {
   const tokenData: TokenData = {
     access_token: response.data.token.access_token,
     refresh_token: response.data.token.refresh_token || '',
-    expires_at: accessDecoded?.exp as number,
-    refresh_expires_at: refreshDecoded?.exp as number
+    expires_at: accessDecoded?.exp,
+    refresh_expires_at: refreshDecoded?.exp
   };
 
   // Store tokens securely
@@ -664,10 +664,6 @@ export async function getWorkspaceByIdService(id: string) {
 
 export async function getWorkspacesByUser() {
   return await makeAuthenticatedCall(() => client.userService.getWorkspaces());
-}
-
-export async function getTablesByWorkspaceIdService(id: string) {
-  return await makeAuthenticatedCall(() => client.workspace.getTablesByWorkspaceId(id));
 }
 
 export async function updateWorkspaceService(id: string, params: any) {
@@ -819,6 +815,14 @@ export async function deleteFieldService(id: string) {
   return await makeAuthenticatedCall(() => client.tableService.deleteColumn(id));
 }
 
+export async function resetFieldService(params: any) {
+  return await makeAuthenticatedCall(() => client.columnService.reset(params));
+}
+
+export async function bulkUpdateFieldService(params: any) {
+  return await makeAuthenticatedCall(() => client.columnService.bulkUpdate(params));
+}
+
 // View Service wrappers
 export async function createViewService(params: any) {
   return await makeAuthenticatedCall(() => client.tableService.createView(params));
@@ -844,8 +848,13 @@ export async function getViewsByModelIdService(id: string) {
   return await makeAuthenticatedCall(() => client.tableService.getViewsByModelId(id));
 }
 
-export async function addRow(model_id: string): Promise<any> {
-  return await makeAuthenticatedCall(() => client.tableService.createRow({ model_id }));
+export async function addRow(params: {
+  model_id: string;
+  rows?: Array<Record<string, any>>;
+  created_by?: string;
+  updated_by?: string;
+}): Promise<any> {
+  return await makeAuthenticatedCall(() => client.tableService.createRow(params));
 }
 
 export async function deleteRowService(params: { model_id: string; row_id: number }) {
@@ -858,6 +867,10 @@ export async function bulkDeleteRowService(params: { model_id: string; row_ids: 
 
 export async function insertRowDataService(params: { model_id: string; column_id: string; row_id: number; value: any }) {
   return await makeAuthenticatedCall(() => client.tableService.insertRowData(params));
+}
+
+export async function updateRowDataService(params: { model_id: string; row_id: number; values: Record<string, any> }) {
+  return await makeAuthenticatedCall(() => client.rowService.update(params));
 }
 
 export async function getAllRecordsService(id: string, options?: { pageNumber?: number; pageLimit?: number }) {
@@ -893,19 +906,20 @@ export async function addImageService(files: File[], onProgress?: (progressEvent
   return await makeAuthenticatedCall(() => client.assetService.addImage({ files }, onProgress));
 }
 
-export async function importTableService(
+export async function importService(
   params: {
     base_id?: string; // Optional: required from sidebar, optional from home page
     workspace_id: string;
-    title: string;
-    description: string;
     order_index: number;
     file: File;
+    config: any;
+    primary_column: string;
   },
   onProgress?: (progressEvent: ProgressEvent) => void
 ) {
-  return await makeAuthenticatedCall(() => client.tableService.import(params, onProgress));
+  return await makeAuthenticatedCall(() => client.tableService.import(params as any, onProgress));
 }
+
 
 const updateClientHeaders = (workspaceId?: string | null, baseId?: string | null) => {
   const headers: Record<string, string> = {};

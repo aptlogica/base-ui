@@ -221,14 +221,6 @@ const findMatchingParenIndex = (input: string, openParenIndex: number): number =
   return -1;
 };
 
-const countChar = (input: string, target: string): number => {
-  let count = 0;
-  for (const element of input) {
-    if (element === target) count++;
-  }
-  return count;
-};
-
 const findFunctionCalls = (
   formula: string,
   names: string[]
@@ -1633,9 +1625,9 @@ export const evaluateDATE = (formula: string, context: FormulaContext): Date | n
 // ============================================================================
 
 // Parse a comparison operand (left or right side) into its value
-const parseComparisonOperand = (operand: string, context: FormulaContext): any => {
-  return evaluateExpressionValue(operand, context);
-};
+// const parseComparisonOperand = (operand: string, context: FormulaContext): any => {
+//   return evaluateExpressionValue(operand, context);
+// };
 
 // Perform a comparison operation between two values
 const performComparison = (leftValue: any, rightValue: any, operator: string): boolean | null => {
@@ -1955,10 +1947,73 @@ const evaluateFunctionExpression = (
   const evaluateNumberArg = (arg: string) => coerceToNumber(evaluateArg(arg));
   const evaluateDateArg = (arg: string) => coerceToDate(evaluateArg(arg));
   const evaluateTextArg = (arg: string) => coerceToText(evaluateArg(arg));
+  const dateAdd = (dateValue: Date, amount: number, unitValue: string): Date | null => {
+    const resultDate = new Date(dateValue);
+    switch (unitValue.toLowerCase()) {
+      case 'year':
+      case 'years':
+        resultDate.setFullYear(resultDate.getFullYear() + Math.floor(amount));
+        return resultDate;
+      case 'month':
+      case 'months':
+        resultDate.setMonth(resultDate.getMonth() + Math.floor(amount));
+        return resultDate;
+      case 'day':
+      case 'days':
+        resultDate.setDate(resultDate.getDate() + Math.floor(amount));
+        return resultDate;
+      case 'week':
+      case 'weeks':
+        resultDate.setDate(resultDate.getDate() + Math.floor(amount * 7));
+        return resultDate;
+      case 'hour':
+      case 'hours':
+        resultDate.setHours(resultDate.getHours() + Math.floor(amount));
+        return resultDate;
+      case 'minute':
+      case 'minutes':
+        resultDate.setMinutes(resultDate.getMinutes() + Math.floor(amount));
+        return resultDate;
+      case 'second':
+      case 'seconds':
+        resultDate.setSeconds(resultDate.getSeconds() + Math.floor(amount));
+        return resultDate;
+      default:
+        return null;
+    }
+  };
 
-  switch (upperName) {
-    case 'ADD':
-    case 'SUM': {
+  const dateDiff = (date1: Date, date2: Date, unitValue: string): number | null => {
+    const diffMs = date2.getTime() - date1.getTime();
+    switch (unitValue.toLowerCase()) {
+      case 'year':
+      case 'years':
+        return Math.floor(diffMs / (365.25 * 24 * 60 * 60 * 1000));
+      case 'month':
+      case 'months':
+        return Math.floor(diffMs / (30.44 * 24 * 60 * 60 * 1000));
+      case 'week':
+      case 'weeks':
+        return Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000));
+      case 'day':
+      case 'days':
+        return Math.floor(diffMs / (24 * 60 * 60 * 1000));
+      case 'hour':
+      case 'hours':
+        return Math.floor(diffMs / (60 * 60 * 1000));
+      case 'minute':
+      case 'minutes':
+        return Math.floor(diffMs / (60 * 1000));
+      case 'second':
+      case 'seconds':
+        return Math.floor(diffMs / 1000);
+      default:
+        return null;
+    }
+  };
+
+  const handlers: Record<string, () => any> = {
+    ADD: () => {
       let result = 0;
       for (const arg of args) {
         const value = evaluateNumberArg(arg);
@@ -1966,8 +2021,9 @@ const evaluateFunctionExpression = (
         result += value;
       }
       return result;
-    }
-    case 'SUBTRACT': {
+    },
+    SUM: () => handlers.ADD(),
+    SUBTRACT: () => {
       if (args.length < 2) return null;
       const first = evaluateNumberArg(args[0]);
       if (first === null) return null;
@@ -1978,8 +2034,8 @@ const evaluateFunctionExpression = (
         result -= value;
       }
       return result;
-    }
-    case 'MULTIPLY': {
+    },
+    MULTIPLY: () => {
       if (args.length < 2) return null;
       let result = 1;
       for (const arg of args) {
@@ -1988,8 +2044,8 @@ const evaluateFunctionExpression = (
         result *= value;
       }
       return result;
-    }
-    case 'DIVIDE': {
+    },
+    DIVIDE: () => {
       if (args.length < 2) return null;
       const first = evaluateNumberArg(args[0]);
       if (first === null) return null;
@@ -2004,8 +2060,8 @@ const evaluateFunctionExpression = (
         result /= value;
       }
       return result;
-    }
-    case 'AVERAGE': {
+    },
+    AVERAGE: () => {
       if (args.length === 0) return null;
       let total = 0;
       for (const arg of args) {
@@ -2014,51 +2070,51 @@ const evaluateFunctionExpression = (
         total += value;
       }
       return total / args.length;
-    }
-    case 'MAX': {
+    },
+    MAX: () => {
       if (args.length === 0) return null;
       const values = args.map(evaluateNumberArg);
-      if (values.some(v => v === null)) return null;
+      if (values.includes(null)) return null;
       return Math.max(...(values as number[]));
-    }
-    case 'MIN': {
+    },
+    MIN: () => {
       if (args.length === 0) return null;
       const values = args.map(evaluateNumberArg);
-      if (values.some(v => v === null)) return null;
+      if (values.includes(null)) return null;
       return Math.min(...(values as number[]));
-    }
-    case 'ROUND': {
+    },
+    ROUND: () => {
       if (args.length < 1) return null;
       const value = evaluateNumberArg(args[0]);
       const decimals = args.length > 1 ? evaluateNumberArg(args[1]) : 0;
       if (value === null || decimals === null) return null;
       return Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals);
-    }
-    case 'CEILING': {
+    },
+    CEILING: () => {
       const value = args[0] ? evaluateNumberArg(args[0]) : null;
       return value === null ? null : Math.ceil(value);
-    }
-    case 'FLOOR': {
+    },
+    FLOOR: () => {
       const value = args[0] ? evaluateNumberArg(args[0]) : null;
       return value === null ? null : Math.floor(value);
-    }
-    case 'ABS': {
+    },
+    ABS: () => {
       const value = args[0] ? evaluateNumberArg(args[0]) : null;
       return value === null ? null : Math.abs(value);
-    }
-    case 'POWER': {
+    },
+    POWER: () => {
       if (args.length < 2) return null;
       const base = evaluateNumberArg(args[0]);
       const exponent = evaluateNumberArg(args[1]);
       if (base === null || exponent === null) return null;
       return Math.pow(base, exponent);
-    }
-    case 'SQRT': {
+    },
+    SQRT: () => {
       const value = args[0] ? evaluateNumberArg(args[0]) : null;
       if (value === null || value < 0) return null;
       return Math.sqrt(value);
-    }
-    case 'MOD': {
+    },
+    MOD: () => {
       if (args.length < 2) return null;
       const dividend = evaluateNumberArg(args[0]);
       const divisor = evaluateNumberArg(args[1]);
@@ -2068,9 +2124,8 @@ const evaluateFunctionExpression = (
         return null;
       }
       return dividend % divisor;
-    }
-    case 'CONCAT':
-    case 'CONCATENATE': {
+    },
+    CONCAT: () => {
       const parts: string[] = [];
       for (const arg of args) {
         const value = evaluateTextArg(arg);
@@ -2078,32 +2133,33 @@ const evaluateFunctionExpression = (
         parts.push(value);
       }
       return parts.join('');
-    }
-    case 'LEN': {
+    },
+    CONCATENATE: () => handlers.CONCAT(),
+    LEN: () => {
       const value = args[0] ? evaluateTextArg(args[0]) : null;
       return value === null ? null : value.length;
-    }
-    case 'UPPER': {
+    },
+    UPPER: () => {
       const value = args[0] ? evaluateTextArg(args[0]) : null;
       return value === null ? null : value.toUpperCase();
-    }
-    case 'LOWER': {
+    },
+    LOWER: () => {
       const value = args[0] ? evaluateTextArg(args[0]) : null;
       return value === null ? null : value.toLowerCase();
-    }
-    case 'TRIM': {
+    },
+    TRIM: () => {
       const value = args[0] ? evaluateTextArg(args[0]) : null;
       return value === null ? null : value.trim();
-    }
-    case 'LEFT': {
+    },
+    LEFT: () => {
       if (args.length < 2) return null;
       const textValue = evaluateTextArg(args[0]);
       const countValue = evaluateNumberArg(args[1]);
       if (textValue === null || countValue === null) return null;
       const n = Math.max(0, Math.floor(countValue));
       return n <= 0 ? '' : textValue.slice(0, n);
-    }
-    case 'RIGHT': {
+    },
+    RIGHT: () => {
       if (args.length < 2) return null;
       const textValue = evaluateTextArg(args[0]);
       const countValue = evaluateNumberArg(args[1]);
@@ -2112,8 +2168,8 @@ const evaluateFunctionExpression = (
       if (n <= 0) return '';
       if (n >= textValue.length) return textValue;
       return textValue.slice(textValue.length - n);
-    }
-    case 'MID': {
+    },
+    MID: () => {
       if (args.length < 3) return null;
       const textValue = evaluateTextArg(args[0]);
       const startValue = evaluateNumberArg(args[1]);
@@ -2123,16 +2179,16 @@ const evaluateFunctionExpression = (
       const len = Math.max(0, Math.floor(lengthValue));
       if (len === 0) return '';
       return textValue.substring(start - 1, start - 1 + len);
-    }
-    case 'FIND': {
+    },
+    FIND: () => {
       if (args.length < 2) return null;
       const searchText = evaluateTextArg(args[0]);
       const withinText = evaluateTextArg(args[1]);
       if (searchText === null || withinText === null) return null;
       const position = withinText.indexOf(searchText);
       return position >= 0 ? position + 1 : 0;
-    }
-    case 'REPLACE': {
+    },
+    REPLACE: () => {
       if (args.length < 3) return null;
       const textValue = evaluateTextArg(args[0]);
       const oldText = evaluateTextArg(args[1]);
@@ -2140,103 +2196,48 @@ const evaluateFunctionExpression = (
       if (textValue === null || oldText === null || newText === null) return null;
       const escaped = oldText.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
       return textValue.replaceAll(new RegExp(escaped, 'g'), newText);
-    }
-    case 'TODAY': {
+    },
+    TODAY: () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       return today;
-    }
-    case 'NOW':
-      return new Date();
-    case 'YEAR':
-    case 'MONTH':
-    case 'DAY':
-    case 'WEEKDAY': {
+    },
+    NOW: () => new Date(),
+    YEAR: () => {
+      const dateValue = args[0] ? evaluateDateArg(args[0]) : null;
+      return dateValue === null ? null : dateValue.getFullYear();
+    },
+    MONTH: () => {
+      const dateValue = args[0] ? evaluateDateArg(args[0]) : null;
+      return dateValue === null ? null : dateValue.getMonth() + 1;
+    },
+    DAY: () => {
+      const dateValue = args[0] ? evaluateDateArg(args[0]) : null;
+      return dateValue === null ? null : dateValue.getDate();
+    },
+    WEEKDAY: () => {
       const dateValue = args[0] ? evaluateDateArg(args[0]) : null;
       if (dateValue === null) return null;
-      if (upperName === 'YEAR') return dateValue.getFullYear();
-      if (upperName === 'MONTH') return dateValue.getMonth() + 1;
-      if (upperName === 'DAY') return dateValue.getDate();
       const day = dateValue.getDay();
       return day === 0 ? 7 : day;
-    }
-    case 'DATEADD': {
+    },
+    DATEADD: () => {
       if (args.length < 3) return null;
       const dateValue = evaluateDateArg(args[0]);
       const amount = evaluateNumberArg(args[1]);
       const unitValue = evaluateTextArg(args[2]);
       if (dateValue === null || amount === null || unitValue === null) return null;
-
-      const resultDate = new Date(dateValue);
-      switch (unitValue.toLowerCase()) {
-        case 'year':
-        case 'years':
-          resultDate.setFullYear(resultDate.getFullYear() + Math.floor(amount));
-          break;
-        case 'month':
-        case 'months':
-          resultDate.setMonth(resultDate.getMonth() + Math.floor(amount));
-          break;
-        case 'day':
-        case 'days':
-          resultDate.setDate(resultDate.getDate() + Math.floor(amount));
-          break;
-        case 'week':
-        case 'weeks':
-          resultDate.setDate(resultDate.getDate() + Math.floor(amount * 7));
-          break;
-        case 'hour':
-        case 'hours':
-          resultDate.setHours(resultDate.getHours() + Math.floor(amount));
-          break;
-        case 'minute':
-        case 'minutes':
-          resultDate.setMinutes(resultDate.getMinutes() + Math.floor(amount));
-          break;
-        case 'second':
-        case 'seconds':
-          resultDate.setSeconds(resultDate.getSeconds() + Math.floor(amount));
-          break;
-        default:
-          return null;
-      }
-      return resultDate;
-    }
-    case 'DATEDIFF': {
+      return dateAdd(dateValue, amount, unitValue);
+    },
+    DATEDIFF: () => {
       if (args.length < 3) return null;
       const date1 = evaluateDateArg(args[0]);
       const date2 = evaluateDateArg(args[1]);
       const unitValue = evaluateTextArg(args[2]);
       if (date1 === null || date2 === null || unitValue === null) return null;
-
-      const diffMs = date2.getTime() - date1.getTime();
-      switch (unitValue.toLowerCase()) {
-        case 'year':
-        case 'years':
-          return Math.floor(diffMs / (365.25 * 24 * 60 * 60 * 1000));
-        case 'month':
-        case 'months':
-          return Math.floor(diffMs / (30.44 * 24 * 60 * 60 * 1000));
-        case 'week':
-        case 'weeks':
-          return Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000));
-        case 'day':
-        case 'days':
-          return Math.floor(diffMs / (24 * 60 * 60 * 1000));
-        case 'hour':
-        case 'hours':
-          return Math.floor(diffMs / (60 * 60 * 1000));
-        case 'minute':
-        case 'minutes':
-          return Math.floor(diffMs / (60 * 1000));
-        case 'second':
-        case 'seconds':
-          return Math.floor(diffMs / 1000);
-        default:
-          return null;
-      }
-    }
-    case 'DATE': {
+      return dateDiff(date1, date2, unitValue);
+    },
+    DATE: () => {
       if (args.length < 3) return null;
       const year = evaluateNumberArg(args[0]);
       const month = evaluateNumberArg(args[1]);
@@ -2255,16 +2256,17 @@ const evaluateFunctionExpression = (
         return null;
       }
       return resultDate;
-    }
-    case 'IF': {
+    },
+    IF: () => {
       if (args.length < 2) return null;
       const condition = evaluateBooleanExpression(args[0], context);
       if (condition === null) return null;
-      return condition
-        ? evaluateExpressionValue(args[1], context)
-        : args.length > 2 ? evaluateExpressionValue(args[2], context) : '';
-    }
-    case 'AND': {
+      if (condition) {
+        return evaluateExpressionValue(args[1], context);
+      }
+      return args.length > 2 ? evaluateExpressionValue(args[2], context) : '';
+    },
+    AND: () => {
       if (args.length === 0) return null;
       for (const arg of args) {
         const value = evaluateBooleanExpression(arg, context);
@@ -2272,8 +2274,8 @@ const evaluateFunctionExpression = (
         if (!value) return false;
       }
       return true;
-    }
-    case 'OR': {
+    },
+    OR: () => {
       if (args.length === 0) return null;
       for (const arg of args) {
         const value = evaluateBooleanExpression(arg, context);
@@ -2281,13 +2283,13 @@ const evaluateFunctionExpression = (
         if (value) return true;
       }
       return false;
-    }
-    case 'NOT': {
+    },
+    NOT: () => {
       if (args.length !== 1) return null;
       const value = evaluateBooleanExpression(args[0], context);
       return value === null ? null : !value;
-    }
-    case 'ISBLANK': {
+    },
+    ISBLANK: () => {
       if (args.length !== 1) return null;
       const raw = args[0].trim();
       if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
@@ -2295,16 +2297,16 @@ const evaluateFunctionExpression = (
       }
       const value = evaluateExpressionValue(args[0], context);
       return value === null || value === undefined || value === '';
-    }
-    case 'ISNUMBER': {
+    },
+    ISNUMBER: () => {
       if (args.length !== 1) return null;
       const raw = args[0].trim();
       if (raw.startsWith('{') && raw.endsWith('}')) {
         return isNumericType(getFieldType(parseFieldReference(raw), context));
       }
       return coerceToNumber(evaluateExpressionValue(raw, context)) !== null;
-    }
-    case 'ISTEXT': {
+    },
+    ISTEXT: () => {
       if (args.length !== 1) return null;
       const raw = args[0].trim();
       if (raw.startsWith('{') && raw.endsWith('}')) {
@@ -2312,18 +2314,19 @@ const evaluateFunctionExpression = (
       }
       const value = evaluateExpressionValue(raw, context);
       return typeof value === 'string';
-    }
-    case 'ISDATE': {
+    },
+    ISDATE: () => {
       if (args.length !== 1) return null;
       const raw = args[0].trim();
       if (raw.startsWith('{') && raw.endsWith('}')) {
         return isDateType(getFieldType(parseFieldReference(raw), context));
       }
       return coerceToDate(evaluateExpressionValue(raw, context)) !== null;
-    }
-    default:
-      return null;
-  }
+    },
+  };
+
+  const handler = handlers[upperName];
+  return handler ? handler() : null;
 };
 
 // Check if an operator match is valid (not part of a larger operator like !=, >=, <=)
@@ -2605,35 +2608,6 @@ export const evaluateISDATE = (formula: string, context: FormulaContext): boolea
 export const evaluateComparison = (formula: string, context: FormulaContext): boolean | null => {
   const result = evaluateComparisonExpression(formula.trim(), context);
   return typeof result === 'boolean' ? result : null;
-};
-
-// Evaluate a mathematical expression with operators (+, -, *, /)
-// Supports multiple operands: {Price} + {Tax} + {Shipping}, {Price} * {Quantity} * 1.1, etc.
-// Supports field references, numeric literals, parentheses, and proper operator precedence
-const evaluateMathExpression = (formula: string, context: FormulaContext): number | null => {
-  const trimmed = formula.trim();
-  
-  // Check if formula contains any math operators
-  const hasMathOperator = /[+\-*/]/.test(trimmed);
-  if (!hasMathOperator) {
-    return null;
-  }
-  
-  // Check if formula contains function calls - if so, don't treat as simple math expression
-  // (functions should be evaluated first)
-  if (containsFunctionCallToken(trimmed)) {
-    return null;
-  }
-  
-  try {
-    // Parse and evaluate the expression
-    return parseAndEvaluateExpression(trimmed, context);
-  } catch (error) {
-    // Expression evaluation failed - could be malformed expression or invalid operation
-    // Examples: division by zero, invalid field references, or parsing errors
-    console.error('Formula evaluation error:', error);
-    return null;
-  }
 };
 
 // Parse and evaluate a mathematical expression with proper precedence
@@ -4147,4 +4121,3 @@ export const convertResultToValue = (
   }
   return String(result);
 };
-

@@ -571,31 +571,16 @@ describe('useFormData', () => {
 
       await result.current.submitForm(formData, formFields);
 
-      expect(addRowMutate).toHaveBeenCalledWith({ model_id: 'm1' });
-      expect(insertRowDataMutate).toHaveBeenCalledWith({
+      expect(addRowMutate).toHaveBeenCalledWith({
         model_id: 'm1',
-        column_id: 'f1',
-        row_id: 123,
-        value: 'Hello',
+        rows: [{
+          f1: 'Hello',
+          f2: '2024-01-02',
+          f3: '2024-01-03T10:00:00Z',
+          f4: JSON.stringify({ a: 1 }),
+        }]
       });
-      expect(insertRowDataMutate).toHaveBeenCalledWith({
-        model_id: 'm1',
-        column_id: 'f2',
-        row_id: 123,
-        value: '2024-01-02',
-      });
-      expect(insertRowDataMutate).toHaveBeenCalledWith({
-        model_id: 'm1',
-        column_id: 'f3',
-        row_id: 123,
-        value: '2024-01-03T10:00:00Z',
-      });
-      expect(insertRowDataMutate).toHaveBeenCalledWith({
-        model_id: 'm1',
-        column_id: 'f4',
-        row_id: 123,
-        value: JSON.stringify({ a: 1 }),
-      });
+      expect(insertRowDataMutate).not.toHaveBeenCalled();
 
       expect(insertRelationMutate).toHaveBeenCalledWith({
         model_id: 'm1',

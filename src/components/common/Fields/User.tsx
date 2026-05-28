@@ -368,7 +368,7 @@ export const User: React.FC<UserProps> = ({
                 </span>
               )}
             </div>
-            {allowMultiple && (
+            {allowMultiple && selectedUsers?.length > 1 && (
               <span className="text-gray-500 text-xs flex-shrink-0 ml-1">
                 ({selectedUsers.length})
               </span>

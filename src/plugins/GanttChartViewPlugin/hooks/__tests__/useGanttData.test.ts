@@ -254,20 +254,16 @@ describe('useGanttData', () => {
     });
 
     expect(recordId).toBe('200');
-    expect(addRowMock.mutateAsync).toHaveBeenCalledWith({ model_id: 'model-id' });
-    expect(insertRowDataMock.mutateAsync).toHaveBeenCalledTimes(4);
-    expect(insertRowDataMock.mutateAsync).toHaveBeenCalledWith({
+    expect(addRowMock.mutateAsync).toHaveBeenCalledWith({
       model_id: 'model-id',
-      column_id: 'title',
-      row_id: 200,
-      value: 'Launch',
+      rows: [{
+        title: 'Launch',
+        start: '2024-02-01',
+        end: '2024-02-10',
+        progress: 75,
+      }]
     });
-    expect(insertRowDataMock.mutateAsync).toHaveBeenCalledWith({
-      model_id: 'model-id',
-      column_id: 'start',
-      row_id: 200,
-      value: '2024-02-01',
-    });
+    expect(insertRowDataMock.mutateAsync).not.toHaveBeenCalled();
   });
 
   it('moves a task by updating start and end fields', async () => {
