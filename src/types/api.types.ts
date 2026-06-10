@@ -64,6 +64,31 @@ export interface Base {
 export type BasesResponse = ApiResponse<Base[]>;
 export type BaseResponse = ApiResponse<Base>;
 
+export interface ApplyBaseWithAiField {
+  name: string;
+  type: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface ApplyBaseWithAiTable {
+  name: string;
+  fields: ApplyBaseWithAiField[];
+}
+
+export interface ApplyBaseWithAiRelation {
+  type: string;
+  source_table: string;
+  target_table: string;
+}
+
+export interface ApplyBaseWithAi {
+  base_name: string;
+  workspace_id: string;
+  sample_data?: boolean;
+  tables: ApplyBaseWithAiTable[];
+  relations?: ApplyBaseWithAiRelation[];
+}
+
 // =========================
 // Table Types
 // =========================

@@ -5,6 +5,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import type { ApplyBaseWithAi } from '../types/api.types';
 import {
   // New workspace API services
   createWorkspaceService,
@@ -15,12 +16,13 @@ import {
   getWorkspaceMembersService,
   // New base API services
   createBaseService,
+  createBaseWithAiService,
+  applyBaseWithAiService,
   getBaseByIdService,
   updateBaseService,
   deleteBaseService,
   getBaseMembersService,
   removeUserFromBaseService,
-  createBaseWithAiService,
   // New table API services
   createTableService,
   getTableByIdService,
@@ -534,7 +536,18 @@ export const useCreateBaseWithAi = () => {
     },
   });
 };
- 
+
+export const useApplyBaseWithAi = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: ApplyBaseWithAi) => applyBaseWithAiService(params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      queryClient.invalidateQueries({ queryKey: queryKeys.allBases });
+    },
+  });
+};
 
 export const useDeleteBase = () => {
   const queryClient = useQueryClient();

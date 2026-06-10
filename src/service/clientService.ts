@@ -5,6 +5,7 @@
 // @ts-ignore - SDK module does not have type declarations
 import { SereniBaseClient } from 'serenibase-sdk';
 import { WorkspaceBaseInput } from "../types/interfaces/workspace.interface.js";
+import type { ApplyBaseWithAi } from '../types/api.types.js';
 import { decodeJwt } from 'jose';
 import { LoginParams, VerifyOtpParams, ResendOtpParams } from '../types/interfaces/auth.js';
 
@@ -704,6 +705,22 @@ export async function createBaseWithAiService(params: { prompt: string }) {
     }
 
     throw new Error('AI base generation is not supported by the installed SDK');
+  });
+}
+
+export async function applyBaseWithAiService(params: ApplyBaseWithAi) {
+  return await makeAuthenticatedCall(() => {
+    const baseService = client.baseService as any;
+    if (typeof baseService.applyBaseWithAi === 'function') {
+      return baseService.applyBaseWithAi(params);
+    }
+
+    const httpClient = (client as any).http;
+    if (httpClient?.post) {
+      return httpClient.post('/base/create/ai/apply', params);
+    }
+
+    throw new Error('AI base application is not supported by the installed SDK');
   });
 }
 

@@ -5,12 +5,13 @@
   /* eslint-disable sonarjs/cognitive-complexity */
 import React, { useState, useMemo, useRef, useEffect, Suspense, lazy } from 'react';
 import { Plus, Import, Search, Zap, Database, ChevronDown, Sparkles } from 'lucide-react';
-import { useWorkspaceBases, useCreateBase, useUpdateBase, useDeleteBase, useBaseTables, useCreateTable, useWorkspaces, useCreateBaseWithAi} from '../hooks/useApi';
+import { useWorkspaceBases, useCreateBase, useCreateBaseWithAi, useApplyBaseWithAi, useUpdateBase, useDeleteBase, useBaseTables, useCreateTable, useWorkspaces } from '../hooks/useApi';
 import { useNavigationStore } from '../stores/navigationStore';
 import { useNavigationActions } from '../hooks/useNavigationActions';
 import { Loader } from '../components/ui/Loader';
 import { CreateBaseModal } from '../components/modals/CreateBaseModal';
 import { CreateBaseWithAiModal } from '../components/modals/CreateBaseWithAiModal';
+import { PreviewBaseModal, type PreviewBaseData } from '../components/modals/PreviewBaseModal';
 import { ImportDataModal } from '../components/modals/ImportDataModal';
 import { ImportModal } from '../components/modals/ImportModal';
 import { EditItemModal } from '../components/modals/EditItemModal';
@@ -30,7 +31,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser, getUserDisplayName } from '../auth/useCurrentUser';
 import { useNavigateToBaseFirstView } from '../hooks/useNavigateToBaseFirstView';
 import { getInitials } from '../utils/helpers';
-import { Base } from '../types/api.types';
+import { Base, type ApplyBaseWithAi } from '../types/api.types';
 
 // Wrapper component to handle hooks properly
 const BaseMenuWrapper: React.FC<{
@@ -78,6 +79,48 @@ const getSortOptionLabel = (option: 'recent' | 'a-z' | 'z-a'): string => {
   return 'Z-A';
 };
 
+const normalizePreviewBaseData = (response: unknown): PreviewBaseData => {
+  const payload = (() => {
+    if (!response || typeof response !== 'object') {
+      return {};
+    }
+
+    const candidate = response as Record<string, any>;
+    if (candidate.data && typeof candidate.data === 'object' && !Array.isArray(candidate.data)) {
+      return candidate.data;
+    }
+
+    return candidate;
+  })();
+
+  const tables = Array.isArray(payload.tables)
+    ? payload.tables.map((table: any) => ({
+        name: String(table?.name || ''),
+        fields: Array.isArray(table?.fields)
+          ? table.fields.map((field: any) => ({
+              name: String(field?.name || ''),
+              type: String(field?.type || 'text'),
+              meta: field?.meta && typeof field.meta === 'object' ? field.meta : {},
+            }))
+          : [],
+      })).filter((table: any) => table.name)
+    : [];
+
+  const relations = Array.isArray(payload.relations)
+    ? payload.relations.map((relation: any) => ({
+        type: String(relation?.type || 'has-many'),
+        source_table: String(relation?.source_table || ''),
+        target_table: String(relation?.target_table || ''),
+      })).filter((relation: any) => relation.source_table && relation.target_table)
+    : [];
+
+  return {
+    base_name: String(payload.base_name || payload.title || payload.name || 'Untitled Base'),
+    tables,
+    relations,
+  };
+};
+
 const HomePage: React.FC = () => {
   const queryClient = useQueryClient();
   const { selectedWorkspaceId, navigateToTable } = useNavigationStore();
@@ -86,8 +129,9 @@ const HomePage: React.FC = () => {
   const toast = useToast();
   const { canCreateBase, isBaseLevelAccess } = useWorkspaceAccess(selectedWorkspaceId || undefined);
   const createBaseMutation = useCreateBase();
+  const createBaseWithAiMutation = useCreateBaseWithAi();
+  const applyBaseWithAiMutation = useApplyBaseWithAi();
   const createTableMutation = useCreateTable();
-    const createBaseWithAiMutation = useCreateBaseWithAi();
   const { navigateToFirstView } = useNavigateToBaseFirstView();
 
   // Extract bases array from workspaceBases response
@@ -129,6 +173,8 @@ const HomePage: React.FC = () => {
   const [deletingBase, setDeletingBase] = useState<Base | null>(null);
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [baseForMembers, setBaseForMembers] = useState<Base | null>(null);
+  const [previewBaseData, setPreviewBaseData] = useState<PreviewBaseData | null>(null);
+  const [showPreviewBase, setShowPreviewBase] = useState(false);
   const [showCreateTableBaseId, setShowCreateTableBaseId] = useState<string | null>(null);
   const [checkingBaseId, setCheckingBaseId] = useState<string | null>(null);
   const { data: checkingBaseTablesData } = useBaseTables(checkingBaseId || '');
@@ -397,13 +443,41 @@ const HomePage: React.FC = () => {
       return;
     }
     setIsCreateBaseDropdownOpen(false);
+    setPreviewBaseData(null);
+    setShowPreviewBase(false);
     setShowCreateBaseWithAi(true);
   };
 
   const handleCreateBaseWithAiSubmit = async (prompt: string) => {
-    await createBaseWithAiMutation.mutateAsync({ prompt });
-    // console.log('AI base creation prompt submitted:', prompt);
-    toast.success('AI base generated successfully',);
+    const response = await createBaseWithAiMutation.mutateAsync({ prompt });
+    const normalizedPreview = normalizePreviewBaseData(response);
+    setPreviewBaseData(normalizedPreview);
+    setShowPreviewBase(true);
+    toast.success('AI base generated successfully');
+  };
+
+  const handleApplyBaseWithAi = async (data: PreviewBaseData, includeSampleData: boolean) => {
+    if (!selectedWorkspaceId) {
+      toast.error('Please select a workspace first');
+      return;
+    }
+
+    try {
+      await applyBaseWithAiMutation.mutateAsync({
+        base_name: data.base_name,
+        workspace_id: selectedWorkspaceId,
+        sample_data: includeSampleData,
+        tables: data.tables,
+        relations: data.relations,
+      } satisfies ApplyBaseWithAi);
+
+      toast.success('AI base applied successfully');
+      setShowPreviewBase(false);
+      setPreviewBaseData(null);
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to apply AI base. Please try again.');
+      throw error;
+    }
   };
 
   const handleImportTypeSelect = (importType: string) => {
@@ -786,6 +860,16 @@ const HomePage: React.FC = () => {
         isOpen={showCreateBaseWithAi}
         onClose={() => setShowCreateBaseWithAi(false)}
         onSubmit={handleCreateBaseWithAiSubmit}
+      />
+
+      <PreviewBaseModal
+        isOpen={showPreviewBase}
+        data={previewBaseData}
+        onApply={handleApplyBaseWithAi}
+        onClose={() => {
+          setShowPreviewBase(false);
+          setPreviewBaseData(null);
+        }}
       />
 
       <ImportDataModal

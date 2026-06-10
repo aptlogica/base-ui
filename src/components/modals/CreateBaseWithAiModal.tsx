@@ -5,8 +5,6 @@
 import React, { useEffect, useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import { MultiLineText } from '../common/Fields/MultiLineText';
-import { CreateTableWithAiModal } from './CreateTableWithAiModal';
-import { useToast } from '../common/Toast';
 
 interface CreateBaseWithAiModalProps {
   isOpen: boolean;
@@ -22,15 +20,12 @@ export const CreateBaseWithAiModal: React.FC<CreateBaseWithAiModalProps> = ({
   const [prompt, setPrompt] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showCreateTableWithAi, setShowCreateTableWithAi] = useState(false);
-  const toast = useToast();
 
   useEffect(() => {
     if (isOpen) {
       setPrompt('');
       setError('');
       setIsSubmitting(false);
-      setShowCreateTableWithAi(false);
     }
   }, [isOpen]);
 
@@ -49,7 +44,7 @@ export const CreateBaseWithAiModal: React.FC<CreateBaseWithAiModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  const handleSubmit = async (event?: React.SyntheticEvent, openTableModal = false) => {
+  const handleSubmit = async (event?: React.SyntheticEvent) => {
     event?.preventDefault();
 
     const trimmedPrompt = prompt.trim();
@@ -63,11 +58,7 @@ export const CreateBaseWithAiModal: React.FC<CreateBaseWithAiModalProps> = ({
 
     try {
       await Promise.resolve(onSubmit(trimmedPrompt));
-      if (openTableModal) {
-        setShowCreateTableWithAi(true);
-      } else {
-        onClose();
-      }
+      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create base with AI. Please try again.');
     } finally {
@@ -78,7 +69,6 @@ export const CreateBaseWithAiModal: React.FC<CreateBaseWithAiModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <>
     <div
       className="bg-modal-backdrop relative"
       role="dialog"
@@ -150,7 +140,7 @@ export const CreateBaseWithAiModal: React.FC<CreateBaseWithAiModalProps> = ({
             type="button"
             onClick={(event) => {
               event.preventDefault();
-              void handleSubmit(event, true);
+              handleSubmit(event);
             }}
             disabled={isSubmitting || !prompt.trim()}
             className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -167,15 +157,6 @@ export const CreateBaseWithAiModal: React.FC<CreateBaseWithAiModalProps> = ({
         </div>
       </div>
     </div>
-      <CreateTableWithAiModal
-        isOpen={showCreateTableWithAi}
-        onClose={() => setShowCreateTableWithAi(false)}
-        onSubmit={async (prompt) => {
-          console.log('Create Table with AI prompt submitted:', prompt);
-          setShowCreateTableWithAi(false);
-        }}
-      />
-      </>
   );
 };
  
