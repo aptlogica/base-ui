@@ -25,6 +25,8 @@ import {
   removeUserFromBaseService,
   // New table API services
   createTableService,
+  createTableWithAiService,
+  applyTableWithAiService,
   getTableByIdService,
   updateTableService,
   deleteTableService,
@@ -606,6 +608,39 @@ export const useCreateTable = () => {
     mutationFn: ({ base_id, workspace_id, title, description, order_index }: { base_id: string; workspace_id: string; title: string; description?: string, order_index?: number }) => {
       return createTableService({ base_id, workspace_id, title, description, order_index });
     },
+    onSuccess: (_, { base_id }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tables(base_id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
+export const useCreateTableWithAi = () => {
+  return useMutation({
+    mutationFn: ({ prompt }: { prompt: string }) => {
+      return createTableWithAiService({ prompt });
+    },
+  });
+};
+
+export const useApplyTableWithAi = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: {
+      base_id: string;
+      workspace_id: string;
+      sample_data?: boolean;
+      row?: number;
+      tables: Array<{
+        name: string;
+        fields: Array<{
+          name: string;
+          type: string;
+          meta?: Record<string, any>;
+        }>;
+      }>;
+    }) => applyTableWithAiService(params),
     onSuccess: (_, { base_id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tables(base_id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });

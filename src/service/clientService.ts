@@ -778,6 +778,27 @@ export async function createTableService(params: any) {
   return await makeAuthenticatedCall(() => client.tableService.create(params));
 }
 
+export async function createTableWithAiService(params: { prompt: string }) {
+  return await makeAuthenticatedCall(() => client.tableService.createTableWithAi(params));
+}
+
+export async function applyTableWithAiService(params: {
+  base_id: string;
+  workspace_id: string;
+  sample_data?: boolean;
+  row?: number;
+  tables: Array<{
+    name: string;
+    fields: Array<{
+      name: string;
+      type: string;
+      meta?: Record<string, any>;
+    }>;
+  }>;
+}) {
+  return await makeAuthenticatedCall(() => client.tableService.applyTableWithAi(params));
+}
+
 export async function getTableByIdService(id: string, options?: any) {
   return await makeAuthenticatedCall(() => client.tableService.getById(id, options));
 }

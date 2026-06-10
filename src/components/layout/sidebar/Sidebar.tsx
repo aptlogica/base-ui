@@ -5,7 +5,7 @@
 /* eslint-disable sonarjs/cognitive-complexity */
 import React, { useRef, useEffect, useMemo, useState, Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom';
-import { Pin, ChevronDown, Sheet, Plus, Download } from 'lucide-react';
+import { Pin, ChevronDown, Sheet, Plus, Download, Sparkles, PenLine } from 'lucide-react';
 import { useToast } from '../../common/Toast';
 const CreateTableModal = lazy(() =>
   import('../../modals/CreateTableModal').then(m => ({ default: m.CreateTableModal }))
@@ -14,6 +14,8 @@ const ImportModal = lazy(() =>
   import('../../modals/ImportModal').then(m => ({ default: m.ImportModal }))
 );
 import { CreateBaseModal } from '../../modals/CreateBaseModal';
+import { CreateTableWithAiModal } from '../../modals/CreateTableWithAiModal';
+import { PreviewTableModal, type PreviewTableData } from '../../modals/PreviewTableModal';
 import TableOptionsMenu from '../../tables/TableOptionsMenu';
 import { SidebarProps } from './types';
 import { TableViewsWithData } from './components/TableViewsWithData';
@@ -22,7 +24,7 @@ import { useWorkspaceBusinessLogic } from '../../../hooks/workspace/useWorkspace
 import { Loader } from '../../ui/Loader';
 import { SidebarSkeleton } from '../../common/Skeleton/SidebarSkeleton';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
-import { useUpdateBase } from '../../../hooks/useApi';
+import { useUpdateBase, useCreateTableWithAi, useApplyTableWithAi } from '../../../hooks/useApi';
 import type { TablesResponse } from '../../../types/api.types';
 
 type FieldIdValue = string | { value: string } | null;
@@ -73,10 +75,38 @@ const Sidebar: React.FC<SidebarProps> = ({
   const effectiveSelectedWorkspace = propSelectedWorkspace || currentWorkspace;
   const { canCreateTable } = useBaseAccess(selectedBase?.id);
   const updateBaseMutation = useUpdateBase();
+  const createTableWithAiMutation = useCreateTableWithAi();
+  const applyTableWithAiMutation = useApplyTableWithAi();
 
   // Import table modal state
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedImportType, setSelectedImportType] = useState<'csv' | 'excel' | 'sql' | 'json' | 'airtable' | 'nocodb' | null>(null);
+  const [isCreateTableMenuOpen, setIsCreateTableMenuOpen] = useState(false);
+  const [showCreateTableWithAiModal, setShowCreateTableWithAiModal] = useState(false);
+  const [showPreviewTableWithAi, setShowPreviewTableWithAi] = useState(false);
+  const [previewTableData, setPreviewTableData] = useState<unknown | null>(null);
+  const [createTableWithAiBaseId, setCreateTableWithAiBaseId] = useState<string | null>(null);
+  const createTableMenuRef = useRef<HTMLDivElement>(null);
+
+  const extractCreatedTableId = (response: unknown) => {
+    if (!response || typeof response !== 'object') {
+      return null;
+    }
+
+    const payload = (response as Record<string, any>).data && typeof (response as Record<string, any>).data === 'object'
+      ? (response as Record<string, any>).data
+      : response as Record<string, any>;
+
+    return (
+      payload?.id ||
+      payload?.table_id ||
+      payload?.model?.id ||
+      payload?.data?.id ||
+      payload?.data?.model?.id ||
+      payload?.tables?.[0]?.id ||
+      null
+    );
+  };
 
   // Pinned tables state - stored in base.meta.pinnedTables
   const [pinnedTables, setPinnedTables] = useState<PinnedTables>(() => {
@@ -198,6 +228,29 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   }, [onClose, popoverRef, isLayoutMode]);
 
+  useEffect(() => {
+    if (!isCreateTableMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (createTableMenuRef.current && !createTableMenuRef.current.contains(event.target as Node)) {
+        setIsCreateTableMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsCreateTableMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isCreateTableMenuOpen]);
+
   // Loading and error states
   if (loading) return (
     <div className='p-4 h-full overflow-auto'>
@@ -205,6 +258,63 @@ const Sidebar: React.FC<SidebarProps> = ({
     </div>
   );
   if (error) return <div className="p-8 text-red-600 flyout-error">{error}</div>;
+
+  const closeCreateTableMenu = () => {
+    setIsCreateTableMenuOpen(false);
+  };
+
+  const openCreateTableWithAi = () => {
+    if (!selectedBase?.id) {
+      console.warn('No base selected. Cannot open Create Table with AI modal.');
+      return;
+    }
+
+    setCreateTableWithAiBaseId(selectedBase.id);
+    setPreviewTableData(null);
+    setShowPreviewTableWithAi(false);
+    setShowCreateTableWithAiModal(true);
+    closeCreateTableMenu();
+  };
+
+  const handleCreateTableWithAiSubmit = async (prompt: string) => {
+    const response = await createTableWithAiMutation.mutateAsync({ prompt });
+    setShowCreateTableWithAiModal(false);
+    setPreviewTableData(response);
+    setShowPreviewTableWithAi(true);
+    toast.success('AI table generated successfully');
+  };
+
+  const handleApplyTableWithAi = async (data: PreviewTableData, includeSampleData: boolean) => {
+    const baseId = createTableWithAiBaseId || selectedBase?.id;
+    const workspaceId = selectedWorkspaceId || effectiveSelectedWorkspace?.id || '';
+
+    if (!baseId || !workspaceId) {
+      toast.error('Select a base and workspace to apply the AI table.', { title: 'Error' });
+      return;
+    }
+
+    try {
+      const response = await applyTableWithAiMutation.mutateAsync({
+        base_id: baseId,
+        workspace_id: workspaceId,
+        sample_data: includeSampleData,
+        tables: data.tables,
+      });
+
+      const createdTableId = extractCreatedTableId(response);
+      if (createdTableId) {
+        navigateToTable(workspaceId, baseId, createdTableId);
+      }
+
+      toast.success('AI table applied successfully');
+      setShowPreviewTableWithAi(false);
+      setPreviewTableData(null);
+      setCreateTableWithAiBaseId(null);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to apply AI table. Please try again.', { title: 'Error' });
+      throw err;
+    }
+  };
 
   const renderEmptyState = (message: string) => (
     <div className="text-gray-500 text-sm px-4 py-2 text-center">
@@ -381,24 +491,83 @@ const Sidebar: React.FC<SidebarProps> = ({
               }}
               title={selectedBase && effectiveSelectedWorkspace ? "Import Table" : "Select a base to import a table"}
               disabled={!selectedBase || !effectiveSelectedWorkspace}
-            >
+              >
               <Download className="h-5 w-5"/> Import Table
             </button>
-            <button
-              className="w-full flex items-center justify-center gap-2 btn-primary p-2 rounded transition overflow-hidden"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (selectedBase?.id) {
-                  setShowCreateTableBaseId(selectedBase.id);
-                } else {
-                  console.warn('No base selected. Cannot open Create Table modal.');
-                }
-              }}
-              title={selectedBase ? "Create Table" : "Select a base to create a table"}
-              disabled={!selectedBase}
-            >
-              <Plus className="h-5 w-5"/> Create Table
-            </button>
+            <div className="relative w-full" ref={createTableMenuRef}>
+              <button
+                type="button"
+                className="w-full flex items-center justify-center gap-2 btn-primary p-2 rounded transition overflow-hidden"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!selectedBase) {
+                    console.warn('No base selected. Cannot open Create Table menu.');
+                    return;
+                  }
+                  setIsCreateTableMenuOpen((current) => !current);
+                }}
+                title={selectedBase ? 'Create Table' : 'Select a base to create a table'}
+                disabled={!selectedBase}
+                aria-haspopup="menu"
+                aria-expanded={isCreateTableMenuOpen}
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <Plus className="h-5 w-5 flex-shrink-0" />
+                  <span className="truncate">Create Table</span>
+                </span>
+                <ChevronDown className={`h-4 w-4 flex-shrink-0 transition-transform ${isCreateTableMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isCreateTableMenuOpen && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 z-[10001] overflow-hidden rounded-xl border bg-card shadow-lg">
+                  <div className="p-2">
+                    <button
+                      type="button"
+                      className="w-full rounded-lg px-3 py-2 text-left transition-colors hover:bg-gray-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!selectedBase?.id) {
+                          console.warn('No base selected. Cannot open Create Table with AI modal.');
+                          return;
+                        }
+                        openCreateTableWithAi();
+                      }}
+                      role="menuitem"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Sparkles className="h-4 w-4 flex-shrink-0 text-primary" />
+                        <div className="min-w-0">
+                          <div className="font-medium text-primary">Create with AI</div>
+                          <div className="text-xs text-secondary truncate">Generate a table schema from a prompt</div>
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full rounded-lg px-3 py-2 text-left transition-colors hover:bg-gray-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (selectedBase?.id) {
+                          closeCreateTableMenu();
+                          setShowCreateTableBaseId(selectedBase.id);
+                        } else {
+                          console.warn('No base selected. Cannot open Create Table modal.');
+                        }
+                      }}
+                      role="menuitem"
+                    >
+                      <div className="flex items-center gap-3">
+                        <PenLine className="h-4 w-4 flex-shrink-0 text-primary" />
+                        <div className="min-w-0">
+                          <div className="font-medium text-primary">Create manually</div>
+                          <div className="text-xs text-secondary truncate">Define the table name and description yourself</div>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -429,6 +598,34 @@ const Sidebar: React.FC<SidebarProps> = ({
       ) : null}
 
       {/* Modals - Portal to document.body */}
+      {showCreateTableWithAiModal && ReactDOM.createPortal(
+        <CreateTableWithAiModal
+          isOpen={showCreateTableWithAiModal}
+          onClose={() => {
+            setShowCreateTableWithAiModal(false);
+            setCreateTableWithAiBaseId(null);
+            setPreviewTableData(null);
+            setShowPreviewTableWithAi(false);
+          }}
+          onSubmit={handleCreateTableWithAiSubmit}
+        />,
+        document.body
+      )}
+
+      {showPreviewTableWithAi && previewTableData && ReactDOM.createPortal(
+        <PreviewTableModal
+          isOpen={showPreviewTableWithAi}
+          data={previewTableData}
+          onApply={handleApplyTableWithAi}
+          onClose={() => {
+            setShowPreviewTableWithAi(false);
+            setPreviewTableData(null);
+            setCreateTableWithAiBaseId(null);
+          }}
+        />,
+        document.body
+      )}
+
       {showCreateBaseWorkspaceId && ReactDOM.createPortal(
         <CreateBaseModal
           isOpen={!!showCreateBaseWorkspaceId}
