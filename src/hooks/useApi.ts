@@ -20,6 +20,7 @@ import {
   deleteBaseService,
   getBaseMembersService,
   removeUserFromBaseService,
+  createBaseWithAiService,
   // New table API services
   createTableService,
   getTableByIdService,
@@ -519,6 +520,21 @@ export const useCreateBase = () => {
     },
   });
 };
+
+export const useCreateBaseWithAi = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ prompt }: { prompt: string }) => {
+      return createBaseWithAiService({ prompt });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      queryClient.invalidateQueries({ queryKey: queryKeys.allBases });
+    },
+  });
+};
+ 
 
 export const useDeleteBase = () => {
   const queryClient = useQueryClient();

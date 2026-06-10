@@ -13,6 +13,7 @@ vi.mock('../../sdk/index.esm.js', () => {
     on: vi.fn(),
     off: vi.fn(),
     emit: vi.fn(),
+    post: vi.fn(),
   };
 
   // Mock services

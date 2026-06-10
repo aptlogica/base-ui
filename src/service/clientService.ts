@@ -691,6 +691,22 @@ export async function createBaseService(params: any) {
   return await makeAuthenticatedCall(() => client.baseService.create(params));
 }
 
+export async function createBaseWithAiService(params: { prompt: string }) {
+  return await makeAuthenticatedCall(() => {
+    const baseService = client.baseService as any;
+    if (typeof baseService.createBaseWithAi === 'function') {
+      return baseService.createBaseWithAi(params);
+    }
+
+    const httpClient = (client as any).http;
+    if (httpClient?.post) {
+      return httpClient.post('/base/create/ai', params);
+    }
+
+    throw new Error('AI base generation is not supported by the installed SDK');
+  });
+}
+
 export async function getBaseByIdService(id: string) {
   return await makeAuthenticatedCall(() => client.baseService.getById(id));
 }

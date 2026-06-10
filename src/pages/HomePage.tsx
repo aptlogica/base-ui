@@ -4,12 +4,13 @@
 // Support: support@aptlogica.com | support@serenibase.com
   /* eslint-disable sonarjs/cognitive-complexity */
 import React, { useState, useMemo, useRef, useEffect, Suspense, lazy } from 'react';
-import { Plus, Import, Search, Zap, Database, ChevronDown } from 'lucide-react';
-import { useWorkspaceBases, useCreateBase, useUpdateBase, useDeleteBase, useBaseTables, useCreateTable, useWorkspaces } from '../hooks/useApi';
+import { Plus, Import, Search, Zap, Database, ChevronDown, Sparkles } from 'lucide-react';
+import { useWorkspaceBases, useCreateBase, useUpdateBase, useDeleteBase, useBaseTables, useCreateTable, useWorkspaces, useCreateBaseWithAi} from '../hooks/useApi';
 import { useNavigationStore } from '../stores/navigationStore';
 import { useNavigationActions } from '../hooks/useNavigationActions';
 import { Loader } from '../components/ui/Loader';
 import { CreateBaseModal } from '../components/modals/CreateBaseModal';
+import { CreateBaseWithAiModal } from '../components/modals/CreateBaseWithAiModal';
 import { ImportDataModal } from '../components/modals/ImportDataModal';
 import { ImportModal } from '../components/modals/ImportModal';
 import { EditItemModal } from '../components/modals/EditItemModal';
@@ -86,6 +87,7 @@ const HomePage: React.FC = () => {
   const { canCreateBase, isBaseLevelAccess } = useWorkspaceAccess(selectedWorkspaceId || undefined);
   const createBaseMutation = useCreateBase();
   const createTableMutation = useCreateTable();
+    const createBaseWithAiMutation = useCreateBaseWithAi();
   const { navigateToFirstView } = useNavigateToBaseFirstView();
 
   // Extract bases array from workspaceBases response
@@ -112,6 +114,7 @@ const HomePage: React.FC = () => {
   }, [workspaceBasesData, isBaseLevelAccess]);
 
   const [showCreateBase, setShowCreateBase] = useState(false);
+  const [showCreateBaseWithAi, setShowCreateBaseWithAi] = useState(false);
   const [showImportData, setShowImportData] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedImportType, setSelectedImportType] = useState<'csv' | 'excel' | 'sql' | 'json' | 'airtable' | 'nocodb' | null>(null);
@@ -120,6 +123,8 @@ const HomePage: React.FC = () => {
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const sortButtonRef = useRef<HTMLButtonElement>(null);
+  const [isCreateBaseDropdownOpen, setIsCreateBaseDropdownOpen] = useState(false);
+  const createBaseDropdownRef = useRef<HTMLDivElement>(null);
   const [editingBase, setEditingBase] = useState<Base | null>(null);
   const [deletingBase, setDeletingBase] = useState<Base | null>(null);
   const [showAddMembers, setShowAddMembers] = useState(false);
@@ -153,6 +158,25 @@ const HomePage: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isSortDropdownOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        createBaseDropdownRef.current &&
+        !createBaseDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsCreateBaseDropdownOpen(false);
+      }
+    };
+
+    if (isCreateBaseDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isCreateBaseDropdownOpen]);
 
   // Filter and sort bases based on search term and sort option
   const filteredBases = useMemo(() => {
@@ -350,6 +374,38 @@ const HomePage: React.FC = () => {
     }
   };
 
+  const handleCreateBaseMenuOpen = () => {
+    if (!selectedWorkspaceId || !hasValidSelectedWorkspace) {
+      toast.error('Please select a workspace first');
+      return;
+    }
+    setIsCreateBaseDropdownOpen((isOpen) => !isOpen);
+  };
+
+  const handleCreateBaseManually = () => {
+    if (!selectedWorkspaceId || !hasValidSelectedWorkspace) {
+      toast.error('Please select a workspace first');
+      return;
+    }
+    setIsCreateBaseDropdownOpen(false);
+    setShowCreateBase(true);
+  };
+
+  const handleCreateBaseWithAi = () => {
+    if (!selectedWorkspaceId || !hasValidSelectedWorkspace) {
+      toast.error('Please select a workspace first');
+      return;
+    }
+    setIsCreateBaseDropdownOpen(false);
+    setShowCreateBaseWithAi(true);
+  };
+
+  const handleCreateBaseWithAiSubmit = async (prompt: string) => {
+    await createBaseWithAiMutation.mutateAsync({ prompt });
+    // console.log('AI base creation prompt submitted:', prompt);
+    toast.success('AI base generated successfully',);
+  };
+
   const handleImportTypeSelect = (importType: string) => {
     if (importType === 'csv') {
       setSelectedImportType('csv');
@@ -430,10 +486,10 @@ const HomePage: React.FC = () => {
   return (
     <div className="p-6 md:p-8 lg:p-10">
       {/* Welcome Banner Section */}
-      <div className="rounded-2xl relative overflow-hidden p-6 md:p-8 lg:p-10 mb-8">
+      <div className="rounded-2xl relative overflow-visible p-6 md:p-8 lg:p-10 mb-8">
         {/* Rotated Background Image */}
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          className="absolute inset-0 rounded-2xl bg-cover bg-center bg-no-repeat overflow-hidden"
           style={{ backgroundImage: 'url(/assets/home_header_bg.webp)' }}
         />
         {/* Content with relative positioning */}
@@ -451,29 +507,57 @@ const HomePage: React.FC = () => {
           {/* Right Side - Action Cards */}
           <div className="flex flex-col sm:flex-row gap-4 flex-shrink-0 w-full lg:w-auto">
             {/* Create New Base - Only owner, co-owner, maintainer can create */}
-            <button
-              type="button"
-              disabled={!canUseBaseActions}
-              onClick={() => {
-                if (!selectedWorkspaceId || !hasValidSelectedWorkspace) {
-                  toast.error('Please select a workspace first');
-                  return;
-                }
-                setShowCreateBase(true);
-              }}
-              className={`rounded-xl bg-card border p-5 flex items-start gap-3 transition-all duration-200 w-full sm:w-auto sm:min-w-[300px] max-w-[300px] text-left ${canUseBaseActions ? 'cursor-pointer hover:shadow-md' : 'cursor-not-allowed opacity-60'
-                }`}
-            >
-              <div className="w-12 h-12 p-3 rounded-xl bg-card border flex items-center justify-center">
-                <Plus className="w-6 h-6 text-gray-900" />
-              </div>
-              <div>
-                <div className="font-semibold text-md text-gray-900">Create New Base</div>
-                <div className="text-[10px] text-gray-600">
-                  {hasValidSelectedWorkspace ? 'Start from scratch with a custom schema tailored to your team\'s specific requirements.' : 'Select a workspace first.'}
+            <div className="relative w-full sm:w-auto sm:min-w-[300px] max-w-[300px]" ref={createBaseDropdownRef}>
+              <button
+                type="button"
+                disabled={!canUseBaseActions}
+                onClick={handleCreateBaseMenuOpen}
+                className={`rounded-xl bg-card border p-5 flex items-start gap-3 transition-all duration-200 w-full text-left ${canUseBaseActions ? 'cursor-pointer hover:shadow-md' : 'cursor-not-allowed opacity-60'
+                  }`}
+                aria-expanded={isCreateBaseDropdownOpen}
+                aria-haspopup="menu"
+              >
+                <div className="w-12 h-12 p-3 rounded-xl bg-card border flex items-center justify-center">
+                  <Plus className="w-6 h-6 text-gray-900" />
                 </div>
-              </div>
-            </button>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-md text-gray-900">Create New Base</div>
+                  <div className="text-[10px] text-gray-600">
+                    {hasValidSelectedWorkspace ? 'Start from scratch with a custom schema tailored to your team\'s specific requirements.' : 'Select a workspace first.'}
+                  </div>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-gray-600 flex-shrink-0 transition-transform duration-200 ${isCreateBaseDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isCreateBaseDropdownOpen && (
+                <div className="absolute left-0 right-0 top-full mt-2 bg-card border rounded-xl shadow-lg z-[9999] overflow-hidden">
+                  <div className="p-2">
+                    <button
+                      type="button"
+                      onClick={handleCreateBaseWithAi}
+                      className="w-full rounded-xl text-left p-3 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
+                      role="menuitem"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Sparkles className="w-4 h-4 text-gray-900 flex-shrink-0" />
+                        <span className="font-medium text-primary">Create with AI</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCreateBaseManually}
+                      className="w-full rounded-xl text-left p-3 hover:bg-gray-200 text-sm transition-all duration-200 cursor-pointer"
+                      role="menuitem"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Plus className="w-4 h-4 text-gray-900 flex-shrink-0" />
+                        <span className="font-medium text-primary">Create manually</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Import Data - Only owner, co-owner, maintainer can import */}
             <button
@@ -697,6 +781,12 @@ const HomePage: React.FC = () => {
           existingBases={allBases || []}
         />
       )}
+
+      <CreateBaseWithAiModal
+        isOpen={showCreateBaseWithAi}
+        onClose={() => setShowCreateBaseWithAi(false)}
+        onSubmit={handleCreateBaseWithAiSubmit}
+      />
 
       <ImportDataModal
         isOpen={showImportData}
