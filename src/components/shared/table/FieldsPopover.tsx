@@ -96,7 +96,7 @@ const SystemFieldsSection: React.FC<{
   if (!show || rows.length === 0) return null;
   return (
     <>
-      <div className="border-t border-gray-100 my-2"/>
+      <div className="border-t border-gray-100 my-2" />
       <div className="px-2 py-1 text-xs font-medium text-gray-500 uppercase tracking-wide">System Fields</div>
       {rows}
     </>
@@ -213,7 +213,7 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
     <div className="relative">
       <button
         ref={triggerRef}
-        className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium border shadow-xs rounded-xl hover:bg-sidebar-menu focus:outline-none bg-card text-muted-foreground`}
+        className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium border shadow-xs rounded-xl hover:bg-sidebar-menu focus:outline-none bg-card text-secondary`}
         onClick={openPopover}
         disabled={initLoading}
         aria-busy={initLoading}
@@ -232,7 +232,7 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
           {/* Search bar */}
           <div className="p-2 border-b flex items-center gap-2">
             <input
-              className="field-component field-component-focus field-component-border"
+              className="field-component field-component-focus field-component-border !h-10"
               placeholder="Search fields"
               value={search}
               onChange={handleSearchChange}

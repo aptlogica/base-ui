@@ -39,6 +39,9 @@ import { useCellEditing } from '../../hooks/useCellEditing';
 import { useColumnManagement } from '../../hooks/useColumnManagement';
 import { useTableModals } from '../../hooks/useTableModals';
 import { useBaseAccess } from '../../../../hooks/useBaseAccess';
+import { GridActionsBar } from '../toolbar/GridActionsBar';
+import { GridDataOperationModal } from '../modal/GridDataOperationModal';
+import { useGridDataOperationModal } from '../../hooks/useGridDataOperationModal';
 
 type TableActions = {
   addRow: any;
@@ -81,6 +84,13 @@ export const Table: React.FC<TableProps> = ({
   const backdropRef = useRef<HTMLDivElement>(null);
   const tableBodyRef = useRef<HTMLDivElement>(null);
   const [tableBodyHeight, setTableBodyHeight] = useState(600); // Default height
+  const {
+  activeAction,
+  isOpen: isGridDataOperationModalOpen,
+  openActionModal,
+  closeActionModal,
+  resetActionModal,
+} = useGridDataOperationModal();
 
   // Extract IDs from tableData.model
   const tableId = useMemo(() => String(tableData?.model?.id ?? ''), [tableData?.model?.id]);
@@ -945,10 +955,16 @@ export const Table: React.FC<TableProps> = ({
                 onChange={handleSortChange}
               />
             </div>
-            <Search
-              columns={searchableColumns}
-              onSearch={handleSearch}
-            />
+           <div className="flex items-center gap-2">
+              <GridActionsBar
+                isReadOnly={isBaseReadOnly()}
+                onActionSelect={openActionModal}
+              />
+              <Search
+                columns={searchableColumns}
+                onSearch={handleSearch}
+              />
+            </div>
           </div>
 
           {/* Mobile Layout - Shown on mobile */}
@@ -1073,7 +1089,7 @@ export const Table: React.FC<TableProps> = ({
                 <div className="relative" style={{ height: '40px', width: `${totalTableWidth}px`, minWidth: `${totalTableWidth}px` }}>
                   <div className="flex-shrink-0 w-[48px] h-10 border-r border-b border-border/30 flex items-center justify-center bg-gray-100 hover:bg-gray-200" style={{ height: '40px', position: 'sticky', left: 0, zIndex: 2, boxShadow: 'inset 1px 0 0 var(--color-border), 2px 0 4px -2px rgba(0,0,0,0.06)' }}>
                     <button className="p-1 rounded hover:bg-muted/50 transition-colors" title="Add row" onClick={() => { setActiveCell(null); addNewRow(); }}>
-                      <Plus className="w-5 h-5 text-muted-foreground" />
+                      <Plus className="w-5 h-5 text-secondary" />
                     </button>
                   </div>
                 </div>
@@ -1104,7 +1120,7 @@ export const Table: React.FC<TableProps> = ({
         )}
         <div className="ml-auto flex items-center gap-3 text-sm">
           {/* Virtualization is always enabled - indicator removed to reduce UI clutter */}
-          <div className="text-muted-foreground">
+          <div className="text-secondary">
             {selectedRows?.size > 0 && (
               <>
                 <span>{formatCompactNumber(selectedRows.size)} selected</span>
@@ -1121,6 +1137,18 @@ export const Table: React.FC<TableProps> = ({
           </div>
         </div>
       </div>
+
+      <GridDataOperationModal
+        isOpen={isGridDataOperationModalOpen}
+        action={activeAction}
+        columns={visibleColumns}
+        tableData={tableData as any}
+        onClose={() => {
+          closeActionModal();
+          resetActionModal();
+        }}
+      />
+
 
 
       {/* Context menu for row actions - hide for readonly users */}

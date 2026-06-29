@@ -585,7 +585,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <h1 className="text-lg font-semibold text-foreground truncate">Form View</h1>
-          <span className="text-sm text-muted-foreground whitespace-nowrap">
+          <span className="text-sm text-secondary whitespace-nowrap">
             {formFields.length} field{formFields.length === 1 ? '' : 's'}
           </span>
         </div>

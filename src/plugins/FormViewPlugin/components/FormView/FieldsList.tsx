@@ -83,7 +83,7 @@ export const FieldsList: React.FC<FieldsListProps> = ({
       {/* Search */}
       <div className="p-4 flex-shrink-0">
         <div className="relative">
-          <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-3 w-4 h-4 text-secondary" />
           <input
             type="text"
             placeholder="Search fields..."

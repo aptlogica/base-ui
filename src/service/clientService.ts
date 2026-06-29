@@ -823,6 +823,98 @@ export async function bulkUpdateFieldService(params: any) {
   return await makeAuthenticatedCall(() => client.columnService.bulkUpdate(params));
 }
 
+export async function trimWhitespaceService(params: {
+  model_id: string;
+  columns: string[];
+  trim_mode: 'trim_both' | 'trim_leading' | 'trim_trailing' | 'collapse_spaces';
+}) {
+  return await makeAuthenticatedCall(() => client.columnService.trimWhitespace(params));
+}
+
+export async function caseNormalizeService(params: {
+  model_id: string;
+  columns: string[];
+  case_format: 'lowercase' | 'uppercase' | 'title_case' | 'sentence_case';
+}) {
+  return await makeAuthenticatedCall(() => client.columnService.caseNormalize(params));
+}
+
+export async function findReplaceService(params: {
+  model_id: string;
+  columns: string[];
+  find_value: string;
+  replace_value: string;
+  match_type: 'match_case' | 'ignore_case' | 'match_entire_value';
+}) {
+  return await makeAuthenticatedCall(() => client.columnService.findReplace(params));
+}
+
+export async function mergeColumnsService(params: {
+  model_id: string;
+  columns: string[];
+  new_column_title?: string;
+  merge_format: 'space' | 'comma' | 'dash' | 'custom';
+  custom_separator?: string;
+  keep_original_column: boolean;
+  add_at_end: boolean;
+}) {
+  return await makeAuthenticatedCall(() => client.columnService.mergeColumns(params));
+}
+
+export async function removeDuplicatesService(params: {
+  model_id: string;
+  columns: string[];
+  duplicate: 'remove_row' | 'remove_duplicates' | 'remove_duplicates_matchCase';
+  keep_rule: 'keep_first' | 'keep_last' | 'keep_latest_updated';
+}) {
+  return await makeAuthenticatedCall(() => client.columnService.removeDuplicates(params));
+}
+
+export async function removeSpecialCharactersService(params: {
+  model_id: string;
+  columns: string[];
+  special_characters_type: 'symbols' | 'currency_symbols' | 'brackets' | 'punctuation' | 'custom';
+  custom?: string[]
+}) {
+  return await makeAuthenticatedCall(() => client.columnService.removeSpecialCharacters(params));
+}
+
+export async function extractSubstringService(params: {
+  model_id: string;
+  column_id: string;
+  extraction_method: 'extraction_type' | 'between_characters';
+  extraction_type: 'email' | 'keywords' | 'mentions' | 'tags' | 'url' | 'domain' | 'emoji' | 'phone' | 'prefix';
+  start_after?: string;
+  end_before?: string;
+  keep_original_column: boolean;
+  add_at_end: boolean;
+}) {
+  return await makeAuthenticatedCall(() => client.columnService.extractSubstring(params));
+}
+
+export async function removeFormattingService(params: {
+  model_id: string;
+  columns: string[];
+  formatting: 'currency' | 'percentage' | 'separator' | 'phone' | 'date' | 'custom';
+  custom_pattern?: string[];
+}) {
+  return await makeAuthenticatedCall(() => client.columnService.removeFormatting(params));
+}
+
+export async function splitColumnService(params: {
+  model_id: string;
+  column_id: string;
+  split_by: 
+    | { type: 'separator'; config: { separator: string } }
+    | { type: 'fixed_length'; config: { action: 'before' | 'after'; value: number } }
+    | { type: 'pattern'; config: { pattern: string } };
+  keep_original: boolean;
+  where: 'next' | 'end';
+  limit?: number;
+}) {
+  return await makeAuthenticatedCall(() => client.columnService.splitColumn(params));
+}
+
 // View Service wrappers
 export async function createViewService(params: any) {
   return await makeAuthenticatedCall(() => client.tableService.createView(params));

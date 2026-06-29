@@ -753,7 +753,7 @@ const Breadcrumb: React.FC = () => {
                           </div>
                         ))
                       ) : (
-                        <div className="px-4 py-8 text-center text-muted-foreground text-sm">
+                        <div className="px-4 py-8 text-center text-secondary text-sm">
                           No items found.
                         </div>
                       )}
