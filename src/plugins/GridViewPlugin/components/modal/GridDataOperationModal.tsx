@@ -12,7 +12,7 @@ import type { GridActionDefinition, GridActionId } from '../toolbar/gridActionCa
 import { GridDataOperationPanel } from './shared/GridDataOperationPanel';
 import { GridDataOperationPreviewGrid } from './preview/GridDataOperationPreviewGrid';
 import { getGridDataOperationAdapter } from './shared/gridDataOperationRegistry';
-import type { GridDataOperationState, GridExtractMethod, GridExtractType } from './shared/gridDataOperation.types';
+import type { GridDataOperationApplyPlan, GridDataOperationPreviewResult, GridDataOperationState, GridExtractMethod, GridExtractType } from './shared/gridDataOperation.types';
 import { getGridColumnIdentity } from './shared/gridColumnIdentity';
 import { useToast } from '../../../../components/common/Toast';
 import { bulkUpdateFieldService } from '../../../../service/clientService';
@@ -66,12 +66,17 @@ const buildInitialState = (columns: GridColumn[], actionId?: GridActionId): Grid
 const getColumnValueKey = (column: GridColumn) =>
   String(column.key || column.column_name || column.id || column.title || '');
 
-const getColumnOrderIndex = (column: GridColumn, fallback = 0) =>
-  typeof column.order_index === 'number'
-    ? column.order_index
-    : typeof column.position === 'number'
-      ? column.position
-      : fallback;
+const getColumnOrderIndex = (column: GridColumn, fallback = 0) => {
+  if (typeof column.order_index === 'number') {
+    return column.order_index;
+  }
+
+  if (typeof column.position === 'number') {
+    return column.position;
+  }
+
+  return fallback;
+};
 
 const buildVirtualGridColumn = (column: GridColumn, id: string, title: string): GridColumn => ({
   ...column,
@@ -168,6 +173,505 @@ const getExtractOutputTitle = (method: GridExtractMethod, type: GridExtractType)
   }
 }
 
+const getPreviewSourceColumnIdentity = (
+  actionId: GridActionId | undefined,
+  columns: GridColumn[],
+  state: GridDataOperationState,
+) => {
+  if (actionId === 'extract_substring') {
+    const foundColumn = columns.find((column) => matchesSelectedColumn(column, state.selectedColumnIds[0]));
+    return foundColumn ? getGridColumnIdentity(foundColumn) : state.selectedColumnIds[0];
+  }
+
+  if (actionId === 'split_column') {
+    return state.splitSourceColumnId;
+  }
+
+  if (actionId === 'merge_column') {
+    const lastSelectedId = state.selectedColumnIds.at(-1) || '';
+    if (!lastSelectedId) {
+      return '';
+    }
+
+    const selectedColumn = columns.find((column) => matchesSelectedColumn(column, lastSelectedId));
+    return selectedColumn ? getGridColumnIdentity(selectedColumn) : String(lastSelectedId);
+  }
+
+  return '';
+};
+
+const getPreviewPlacement = (
+  actionId: GridActionId | undefined,
+  state: GridDataOperationState,
+) => {
+  if (actionId === 'extract_substring') {
+    return state.extractPlacement;
+  }
+
+  if (actionId === 'split_column') {
+    return state.splitPlacement;
+  }
+
+  if (actionId === 'merge_column') {
+    return state.mergePlacement;
+  }
+
+  return 'end_of_table';
+};
+
+const getPreviewAdditionsSourceColumn = (
+  columns: GridColumn[],
+  state: GridDataOperationState,
+  sourceColumnIdentity: string,
+) =>
+  columns.find((item) => getGridColumnIdentity(item) === sourceColumnIdentity)
+  ?? columns.find((item) => matchesSelectedColumn(item, state.selectedColumnIds.at(-1) || ''))
+  ?? columns.find((item) => matchesSelectedColumn(item, state.selectedColumnIds[0]))
+  ?? columns[0];
+
+const buildPreviewColumns = (
+  columns: GridColumn[],
+  preview: GridDataOperationPreviewResult | null | undefined,
+  actionId: GridActionId | undefined,
+  state: GridDataOperationState,
+) => {
+  if (!preview?.virtualColumns?.length) {
+    return columns;
+  }
+
+  const sourceColumnIdentity = getPreviewSourceColumnIdentity(actionId, columns, state);
+  const placement = getPreviewPlacement(actionId, state);
+  const virtualById = new Map(preview.virtualColumns.map((column) => [column.id, column.title]));
+  const replacedColumns = columns.map((column) => {
+    const identity = getGridColumnIdentity(column);
+    const virtualTitle = virtualById.get(identity);
+    if (!virtualTitle) return column;
+    return {
+      ...column,
+      title: virtualTitle,
+    };
+  });
+
+  const existingIdentities = new Set(replacedColumns.map((column) => getGridColumnIdentity(column)));
+  const additions = preview.virtualColumns
+    .filter((column) => !existingIdentities.has(column.id))
+    .map((column) => {
+      const sourceColumn = getPreviewAdditionsSourceColumn(columns, state, sourceColumnIdentity);
+      return buildVirtualGridColumn(sourceColumn ?? ({} as GridColumn), column.id, column.title);
+    });
+
+  if (!additions.length) {
+    return replacedColumns;
+  }
+
+  if (placement === 'next_to_original' && sourceColumnIdentity) {
+    const sourceIndex = replacedColumns.findIndex((column) => getGridColumnIdentity(column) === sourceColumnIdentity);
+    if (sourceIndex >= 0) {
+      return [
+        ...replacedColumns.slice(0, sourceIndex + 1),
+        ...additions,
+        ...replacedColumns.slice(sourceIndex + 1),
+      ];
+    }
+  }
+
+  return [...replacedColumns, ...additions];
+};
+
+const updateTablesQueryData = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  tableId: string,
+  updater: (tableSection: any) => void,
+) => {
+  queryClient.setQueryData(['tables', tableId], (oldData: any) => {
+    if (!oldData) return oldData;
+
+    const nextRoot = oldData?.data ? { ...oldData, data: { ...oldData.data } } : { ...oldData };
+    const tableSection = nextRoot.data ?? nextRoot;
+    updater(tableSection);
+    return nextRoot;
+  });
+};
+
+const getSplitDelimiter = (
+  splitMode: GridDataOperationState['splitMode'],
+  separatorType: GridDataOperationState['splitSeparatorType'],
+  customSeparator: string,
+) => {
+  if (splitMode !== 'separator') {
+    return '';
+  }
+
+  if (separatorType === 'custom') {
+    return customSeparator;
+  }
+
+  if (separatorType === 'space') {
+    return ' ';
+  }
+
+  if (separatorType === 'comma') {
+    return ',';
+  }
+
+  if (separatorType === 'dash') {
+    return '-';
+  }
+
+  return '';
+};
+
+const applySplitColumnOperation = async ({
+  applyPlan,
+  columns,
+  state,
+  splitColumnMutation,
+}: {
+  applyPlan: NonNullable<GridDataOperationApplyPlan['splitColumn']>;
+  columns: GridColumn[];
+  state: GridDataOperationState;
+  splitColumnMutation: ReturnType<typeof useSplitColumn>;
+}) => {
+  const splitPlan = applyPlan;
+  const sourceColumn = columns.find((column) => getGridColumnIdentity(column) === splitPlan.sourceColumnId);
+  if (!sourceColumn) {
+    throw new Error('Source column not found for split operation');
+  }
+
+  const sourceColumnId = String(sourceColumn.id || '');
+  const delimiter = getSplitDelimiter(state.splitMode, state.splitSeparatorType, state.splitCustomSeparator);
+
+  await splitColumnMutation.mutateAsync({
+    model_id: splitPlan.modelId,
+    column_id: sourceColumnId,
+    split_method: state.splitMode === 'separator' ? 'delimiter' : state.splitMode,
+    delimiter: state.splitMode === 'separator' ? delimiter : undefined,
+    fixed_length: state.splitMode === 'fixed_length' ? Number.parseInt(state.splitCharacterCount, 10) : undefined,
+    fixed_length_action: state.splitMode === 'fixed_length' ? state.splitFixedDirection : undefined,
+    pattern: state.splitMode === 'pattern' ? state.splitPattern : undefined,
+    keep_original: state.splitOutputMode === 'keep_original',
+    where: state.splitPlacement === 'next_to_original' ? 'next' : 'end',
+  });
+};
+
+const applyExtractSubstringOperation = async ({
+  applyPlan,
+  columns,
+  state,
+  tableData,
+  updateTableCache,
+  extractSubstringMutation,
+}: {
+  applyPlan: NonNullable<GridDataOperationApplyPlan['extractSubstring']>;
+  columns: GridColumn[];
+  state: GridDataOperationState;
+  tableData?: TableData;
+  updateTableCache: (updater: (tableSection: any) => void) => void;
+  extractSubstringMutation: ReturnType<typeof useExtractSubstring>;
+}) => {
+  const extractPlan = applyPlan;
+  const sourceColumn = columns.find((column) =>
+    matchesSelectedColumn(column, extractPlan.sourceColumnId) || getGridColumnIdentity(column) === extractPlan.sourceColumnId
+  );
+  if (!sourceColumn) {
+    throw new Error('Source column not found for extract operation');
+  }
+
+  const outputColumnTitle = extractPlan.outputColumnTitle.trim() || getExtractOutputTitle(extractPlan.extractionMethod, extractPlan.extractionType);
+  const outputColumnId = extractPlan.outputColumnId || outputColumnTitle;
+  const sourceColumnId = String(sourceColumn.id || '');
+  const sourceOrderIndex = getColumnOrderIndex(sourceColumn, 0);
+  const maxOrderIndex = Array.isArray(tableData?.columns)
+    ? tableData.columns.reduce((max, column: any) => {
+      const value = Number(column?.order_index ?? 0);
+      return Number.isFinite(value) && value > max ? value : max;
+    }, sourceOrderIndex)
+    : sourceOrderIndex;
+
+  const createOrderBase = extractPlan.placement === 'next_to_original'
+    ? sourceOrderIndex
+    : maxOrderIndex;
+
+  updateTableCache((tableSection) => {
+    const nextColumns = Array.isArray(tableSection.columns) ? [...tableSection.columns] : [];
+    const sourceIndex = nextColumns.findIndex((column: any) => String(column.id) === sourceColumnId);
+
+    if (extractPlan.keepOriginalColumn) {
+      const extractedColumnRecord = buildCreatedApiColumn(
+        tableData,
+        outputColumnTitle,
+        outputColumnId,
+        createOrderBase + 1,
+      );
+
+      if (extractPlan.placement === 'next_to_original' && sourceIndex >= 0) {
+        nextColumns.splice(sourceIndex + 1, 0, extractedColumnRecord);
+      } else {
+        nextColumns.push(extractedColumnRecord);
+      }
+    } else if (sourceIndex >= 0) {
+      nextColumns[sourceIndex] = {
+        ...nextColumns[sourceIndex],
+        title: outputColumnTitle,
+        column_name: outputColumnTitle,
+      };
+    }
+
+    tableSection.columns = nextColumns;
+  });
+
+  await extractSubstringMutation.mutateAsync({
+    model_id: extractPlan.modelId,
+    column_id: extractPlan.sourceColumnId,
+    extraction_method: extractPlan.extractionMethod,
+    extraction_type: extractPlan.extractionType,
+    start_after: extractPlan.startAfter || undefined,
+    end_before: extractPlan.endBefore || undefined,
+    keep_original_column: extractPlan.keepOriginalColumn,
+    add_at_end: extractPlan.placement === 'end_of_table',
+  });
+};
+
+const applyOptimisticGridDataUpdate = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  tableId: string,
+  applyPlan: GridDataOperationApplyPlan,
+) => {
+  if (applyPlan.kind === 'merge_column') {
+    return;
+  }
+
+  updateTablesQueryData(queryClient, tableId, (tableSection) => {
+    if (Array.isArray(tableSection.records)) {
+      tableSection.records = applyPlan.optimisticRecords;
+    }
+  });
+};
+
+type GridDataOperationMutationParams = {
+  applyPlan: GridDataOperationApplyPlan;
+  columns: GridColumn[];
+  state: GridDataOperationState;
+  tableData?: TableData;
+  updateTableCache: (updater: (tableSection: any) => void) => void;
+  trimWhitespaceMutation: ReturnType<typeof useTrimWhitespace>;
+  caseNormalizeMutation: ReturnType<typeof useCaseNormalize>;
+  findReplaceMutation: ReturnType<typeof useFindReplace>;
+  removeDuplicatesMutation: ReturnType<typeof useRemoveDuplicates>;
+  mergeColumnsMutation: ReturnType<typeof useMergeColumns>;
+  splitColumnMutation: ReturnType<typeof useSplitColumn>;
+  removeSpecialCharactersMutation: ReturnType<typeof useRemoveSpecialCharacters>;
+  extractSubstringMutation: ReturnType<typeof useExtractSubstring>;
+  removeFormattingMutation: ReturnType<typeof useRemoveFormatting>;
+};
+
+type GridDataOperationMutationHandler = (
+  params: GridDataOperationMutationParams,
+) => Promise<boolean>;
+
+const gridDataOperationMutationHandlers: Partial<Record<GridDataOperationApplyPlan['kind'], GridDataOperationMutationHandler>> = {
+  trim_whitespace: async ({ applyPlan, trimWhitespaceMutation }) => {
+    if (!applyPlan.trimWhitespace) {
+      return false;
+    }
+
+    await trimWhitespaceMutation.mutateAsync({
+      model_id: applyPlan.trimWhitespace.modelId,
+      columns: applyPlan.trimWhitespace.columns,
+      trim_mode: applyPlan.trimWhitespace.trimMode,
+    });
+    return true;
+  },
+  case_normalization: async ({ applyPlan, caseNormalizeMutation }) => {
+    if (!applyPlan.caseNormalization) {
+      return false;
+    }
+
+    await caseNormalizeMutation.mutateAsync({
+      model_id: applyPlan.caseNormalization.modelId,
+      columns: applyPlan.caseNormalization.columns,
+      case_format: applyPlan.caseNormalization.caseFormat,
+    });
+    return true;
+  },
+  find_replace: async ({ applyPlan, findReplaceMutation }) => {
+    if (!applyPlan.findReplace) {
+      return false;
+    }
+
+    await findReplaceMutation.mutateAsync({
+      model_id: applyPlan.findReplace.modelId,
+      columns: applyPlan.findReplace.columns,
+      find_value: applyPlan.findReplace.findValue,
+      replace_value: applyPlan.findReplace.replaceValue,
+      match_type: applyPlan.findReplace.matchType,
+    });
+    return true;
+  },
+  remove_duplicates: async ({ applyPlan, removeDuplicatesMutation }) => {
+    if (!applyPlan.removeDuplicates) {
+      return false;
+    }
+
+    await removeDuplicatesMutation.mutateAsync({
+      model_id: applyPlan.removeDuplicates.modelId,
+      columns: applyPlan.removeDuplicates.columns,
+      duplicate: applyPlan.removeDuplicates.duplicateAction,
+      keep_rule: applyPlan.removeDuplicates.keepRule,
+    });
+    return true;
+  },
+  merge_column: async ({ applyPlan, mergeColumnsMutation }) => {
+    if (!applyPlan.mergeColumn) {
+      return false;
+    }
+
+    const mergePlan = applyPlan.mergeColumn;
+    await mergeColumnsMutation.mutateAsync({
+      model_id: mergePlan.modelId,
+      columns: mergePlan.sourceColumnIds,
+      new_column_title: mergePlan.mergedColumnTitle,
+      merge_format: mergePlan.mergeFormat,
+      custom_separator: mergePlan.mergeFormat === 'custom' ? mergePlan.mergeCustomSeparator : undefined,
+      keep_original_column: mergePlan.mergeKeepOriginalColumns,
+      add_at_end: mergePlan.mergePlacement === 'end_of_table',
+    });
+    return true;
+  },
+  split_column: async ({ applyPlan, columns, state, splitColumnMutation }) => {
+    if (!applyPlan.splitColumn) {
+      return false;
+    }
+
+    await applySplitColumnOperation({
+      applyPlan: applyPlan.splitColumn,
+      columns,
+      state,
+      splitColumnMutation,
+    });
+    return true;
+  },
+  remove_special_characters: async ({ applyPlan, removeSpecialCharactersMutation }) => {
+    if (!applyPlan.removeSpecialCharacters) {
+      return false;
+    }
+
+    await removeSpecialCharactersMutation.mutateAsync({
+      model_id: applyPlan.removeSpecialCharacters.modelId,
+      columns: applyPlan.removeSpecialCharacters.columns,
+      special_characters_type: applyPlan.removeSpecialCharacters.specialCharactersType,
+      custom: applyPlan.removeSpecialCharacters.custom,
+    });
+    return true;
+  },
+  extract_substring: async ({ applyPlan, columns, state, tableData, updateTableCache, extractSubstringMutation }) => {
+    if (!applyPlan.extractSubstring) {
+      return false;
+    }
+
+    await applyExtractSubstringOperation({
+      applyPlan: applyPlan.extractSubstring,
+      columns,
+      state,
+      tableData,
+      updateTableCache,
+      extractSubstringMutation,
+    });
+    return true;
+  },
+  remove_formatting: async ({ applyPlan, removeFormattingMutation }) => {
+    if (!applyPlan.removeFormatting) {
+      return false;
+    }
+
+    await removeFormattingMutation.mutateAsync({
+      model_id: applyPlan.removeFormatting.modelId,
+      columns: applyPlan.removeFormatting.columns,
+      formatting: applyPlan.removeFormatting.formatting,
+      custom_pattern: applyPlan.removeFormatting.customPattern,
+    });
+    return true;
+  },
+};
+
+const runGridDataOperationMutation = async (params: GridDataOperationMutationParams) => {
+  const handler = gridDataOperationMutationHandlers[params.applyPlan.kind];
+  if (!handler) {
+    return false;
+  }
+
+  return handler(params);
+};
+
+const applyGridDataOperation = async ({
+  applyPlan,
+  columns,
+  state,
+  tableId,
+  tableData,
+  queryClient,
+  updateTableCache,
+  trimWhitespaceMutation,
+  caseNormalizeMutation,
+  findReplaceMutation,
+  removeDuplicatesMutation,
+  mergeColumnsMutation,
+  splitColumnMutation,
+  removeSpecialCharactersMutation,
+  extractSubstringMutation,
+  removeFormattingMutation,
+}: {
+  applyPlan: GridDataOperationApplyPlan;
+  columns: GridColumn[];
+  state: GridDataOperationState;
+  tableId: string;
+  tableData?: TableData;
+  queryClient: ReturnType<typeof useQueryClient>;
+  updateTableCache: (updater: (tableSection: any) => void) => void;
+  trimWhitespaceMutation: ReturnType<typeof useTrimWhitespace>;
+  caseNormalizeMutation: ReturnType<typeof useCaseNormalize>;
+  findReplaceMutation: ReturnType<typeof useFindReplace>;
+  removeDuplicatesMutation: ReturnType<typeof useRemoveDuplicates>;
+  mergeColumnsMutation: ReturnType<typeof useMergeColumns>;
+  splitColumnMutation: ReturnType<typeof useSplitColumn>;
+  removeSpecialCharactersMutation: ReturnType<typeof useRemoveSpecialCharacters>;
+  extractSubstringMutation: ReturnType<typeof useExtractSubstring>;
+  removeFormattingMutation: ReturnType<typeof useRemoveFormatting>;
+}) => {
+  applyOptimisticGridDataUpdate(queryClient, tableId, applyPlan);
+
+  const handled = await runGridDataOperationMutation({
+    applyPlan,
+    columns,
+    state,
+    tableData,
+    updateTableCache,
+    trimWhitespaceMutation,
+    caseNormalizeMutation,
+    findReplaceMutation,
+    removeDuplicatesMutation,
+    mergeColumnsMutation,
+    splitColumnMutation,
+    removeSpecialCharactersMutation,
+    extractSubstringMutation,
+    removeFormattingMutation,
+  });
+
+  if (handled) {
+    return;
+  }
+
+  await Promise.all(
+    applyPlan.columnUpdates.map((updateGroup) =>
+      bulkUpdateFieldService({
+        model_id: tableId,
+        column_id: updateGroup.columnId,
+        updates: updateGroup.updates,
+      })
+    )
+  );
+};
+
 interface GridDataOperationModalProps {
   isOpen: boolean;
   action: GridActionDefinition | null;
@@ -228,71 +732,7 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
   }, [action, adapter, columns, preview, state, tableData]);
 
   const previewColumns = useMemo(() => {
-    if (!preview?.virtualColumns?.length) {
-      return columns;
-    }
-
-    const sourceColumnIdentity = action?.id === 'extract_substring'
-      ? columns.find((column) => matchesSelectedColumn(column, state.selectedColumnIds[0]))
-        ? getGridColumnIdentity(columns.find((column) => matchesSelectedColumn(column, state.selectedColumnIds[0])) as GridColumn)
-        : state.selectedColumnIds[0]
-      : action?.id === 'split_column'
-        ? state.splitSourceColumnId
-        : action?.id === 'merge_column'
-          ? (() => {
-            const lastSelectedId = state.selectedColumnIds[state.selectedColumnIds.length - 1] || '';
-            if (lastSelectedId) {
-              const selectedColumn = columns.find((column) => matchesSelectedColumn(column, lastSelectedId));
-              return selectedColumn ? getGridColumnIdentity(selectedColumn) : String(lastSelectedId);
-            }
-            return '';
-          })()
-          : '';
-    const placement = action?.id === 'extract_substring'
-      ? state.extractPlacement
-      : action?.id === 'split_column'
-        ? state.splitPlacement
-        : action?.id === 'merge_column'
-          ? state.mergePlacement
-          : 'end_of_table';
-    const virtualById = new Map(preview.virtualColumns.map((column) => [column.id, column.title]));
-    const replacedColumns = columns.map((column) => {
-      const identity = getGridColumnIdentity(column);
-      const virtualTitle = virtualById.get(identity);
-      if (!virtualTitle) return column;
-      return {
-        ...column,
-        title: virtualTitle,
-      };
-    });
-
-    const existingIdentities = new Set(replacedColumns.map((column) => getGridColumnIdentity(column)));
-    const additions = preview.virtualColumns
-      .filter((column) => !existingIdentities.has(column.id))
-      .map((column) => {
-        const sourceColumn = columns.find((item) => getGridColumnIdentity(item) === sourceColumnIdentity)
-          ?? columns.find((item) => matchesSelectedColumn(item, state.selectedColumnIds[state.selectedColumnIds.length - 1] || ''))
-          ?? columns.find((item) => matchesSelectedColumn(item, state.selectedColumnIds[0]))
-          ?? columns[0];
-        return buildVirtualGridColumn(sourceColumn ?? ({} as GridColumn), column.id, column.title);
-      });
-
-    if (!additions.length) {
-      return replacedColumns;
-    }
-
-    if (placement === 'next_to_original' && sourceColumnIdentity) {
-      const sourceIndex = replacedColumns.findIndex((column) => getGridColumnIdentity(column) === sourceColumnIdentity);
-      if (sourceIndex >= 0) {
-        return [
-          ...replacedColumns.slice(0, sourceIndex + 1),
-          ...additions,
-          ...replacedColumns.slice(sourceIndex + 1),
-        ];
-      }
-    }
-
-    return [...replacedColumns, ...additions];
+    return buildPreviewColumns(columns, preview, action?.id, state);
   }, [action?.id, columns, preview, state.extractPlacement, state.mergePlacement, state.selectedColumnIds, state.splitPlacement, state.splitSourceColumnId]);
 
   const updateTableCache = useCallback((updater: (tableSection: any) => void) => {
@@ -374,185 +814,24 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
     try {
       setIsApplying(true);
 
-      if (applyPlan.kind !== 'merge_column') {
-        queryClient.setQueryData(['tables', tableId], (oldData: any) => {
-          if (!oldData) return oldData;
-
-          const nextRoot = oldData?.data ? { ...oldData, data: { ...oldData.data } } : { ...oldData };
-          const tableSection = nextRoot.data ?? nextRoot;
-
-          if (Array.isArray(tableSection.records)) {
-            tableSection.records = applyPlan.optimisticRecords;
-          }
-
-          return nextRoot;
-        });
-      }
-
-      if (applyPlan.kind === 'trim_whitespace' && applyPlan.trimWhitespace) {
-        await trimWhitespaceMutation.mutateAsync({
-          model_id: applyPlan.trimWhitespace.modelId,
-          columns: applyPlan.trimWhitespace.columns,
-          trim_mode: applyPlan.trimWhitespace.trimMode,
-        });
-      } else if (applyPlan.kind === 'case_normalization' && applyPlan.caseNormalization) {
-        await caseNormalizeMutation.mutateAsync({
-          model_id: applyPlan.caseNormalization.modelId,
-          columns: applyPlan.caseNormalization.columns,
-          case_format: applyPlan.caseNormalization.caseFormat,
-        });
-      } else if (applyPlan.kind === 'find_replace' && applyPlan.findReplace) {
-        await findReplaceMutation.mutateAsync({
-          model_id: applyPlan.findReplace.modelId,
-          columns: applyPlan.findReplace.columns,
-          find_value: applyPlan.findReplace.findValue,
-          replace_value: applyPlan.findReplace.replaceValue,
-          match_type: applyPlan.findReplace.matchType,
-        });
-      } else if (applyPlan.kind === 'remove_duplicates' && applyPlan.removeDuplicates) {
-        await removeDuplicatesMutation.mutateAsync({
-          model_id: applyPlan.removeDuplicates.modelId,
-          columns: applyPlan.removeDuplicates.columns,
-          duplicate: applyPlan.removeDuplicates.duplicateAction,
-          keep_rule: applyPlan.removeDuplicates.keepRule,
-        });
-      } else if (applyPlan.kind === 'merge_column' && applyPlan.mergeColumn) {
-        const mergePlan = applyPlan.mergeColumn;
-        await mergeColumnsMutation.mutateAsync({
-          model_id: mergePlan.modelId,
-          columns: mergePlan.sourceColumnIds,
-          new_column_title: mergePlan.mergedColumnTitle,
-          merge_format: mergePlan.mergeFormat,
-          custom_separator: mergePlan.mergeFormat === 'custom' ? mergePlan.mergeCustomSeparator : undefined,
-          keep_original_column: mergePlan.mergeKeepOriginalColumns,
-          add_at_end: mergePlan.mergePlacement === 'end_of_table',
-        });
-      } else if (applyPlan.kind === 'split_column' && applyPlan.splitColumn) {
-        const splitPlan = applyPlan.splitColumn;
-        const sourceColumn = columns.find((column) => getGridColumnIdentity(column) === splitPlan.sourceColumnId);
-        if (!sourceColumn) {
-          throw new Error('Source column not found for split operation');
-        }
-
-        const sourceColumnId = String(sourceColumn.id || '');
-
-        // Map state parameters to useSplitColumn hook parameters
-        let delimiter = '';
-        if (state.splitMode === 'separator') {
-          if (state.splitSeparatorType === 'custom') {
-            delimiter = state.splitCustomSeparator;
-          } else if (state.splitSeparatorType === 'space') {
-            delimiter = ' ';
-          } else if (state.splitSeparatorType === 'comma') {
-            delimiter = ',';
-          } else if (state.splitSeparatorType === 'dash') {
-            delimiter = '-';
-          }
-        }
-
-        // Call the useSplitColumn mutation
-        await splitColumnMutation.mutateAsync({
-          model_id: splitPlan.modelId,
-          column_id: sourceColumnId,
-          split_method: state.splitMode === 'separator' ? 'delimiter' : state.splitMode,
-          delimiter: state.splitMode === 'separator' ? delimiter : undefined,
-          fixed_length: state.splitMode === 'fixed_length' ? Number.parseInt(state.splitCharacterCount, 10) : undefined,
-          fixed_length_action: state.splitMode === 'fixed_length' ? state.splitFixedDirection : undefined,
-          pattern: state.splitMode === 'pattern' ? state.splitPattern : undefined,
-          keep_original: state.splitOutputMode === 'keep_original',
-          where: state.splitPlacement === 'next_to_original' ? 'next' : 'end',
-        });
-      }
-      else if (applyPlan.kind === 'remove_special_characters' && applyPlan.removeSpecialCharacters) {
-        await removeSpecialCharactersMutation.mutateAsync({
-          model_id: applyPlan.removeSpecialCharacters.modelId,
-          columns: applyPlan.removeSpecialCharacters.columns,
-          special_characters_type: applyPlan.removeSpecialCharacters.specialCharactersType,
-          custom: applyPlan.removeSpecialCharacters.custom,
-        });
-      }
-      else if (applyPlan.kind === 'extract_substring' && applyPlan.extractSubstring) {
-        const extractPlan = applyPlan.extractSubstring;
-        const sourceColumn = columns.find((column) =>
-          matchesSelectedColumn(column, extractPlan.sourceColumnId) || getGridColumnIdentity(column) === extractPlan.sourceColumnId
-        );
-        if (!sourceColumn) {
-          throw new Error('Source column not found for extract operation');
-        }
-
-        const outputColumnTitle = extractPlan.outputColumnTitle.trim() || getExtractOutputTitle(extractPlan.extractionMethod, extractPlan.extractionType);
-        const outputColumnId = extractPlan.outputColumnId || outputColumnTitle;
-        const sourceColumnId = String(sourceColumn.id || '');
-        const sourceOrderIndex = getColumnOrderIndex(sourceColumn, 0);
-        const maxOrderIndex = Array.isArray(tableData?.columns)
-          ? tableData!.columns.reduce((max, column: any) => {
-            const value = Number(column?.order_index ?? 0);
-            return Number.isFinite(value) && value > max ? value : max;
-          }, sourceOrderIndex)
-          : sourceOrderIndex;
-
-        const createOrderBase = extractPlan.placement === 'next_to_original'
-          ? sourceOrderIndex
-          : maxOrderIndex;
-
-        updateTableCache((tableSection) => {
-          const nextColumns = Array.isArray(tableSection.columns) ? [...tableSection.columns] : [];
-          const sourceIndex = nextColumns.findIndex((column: any) => String(column.id) === sourceColumnId);
-
-          if (extractPlan.keepOriginalColumn) {
-            const extractedColumnRecord = buildCreatedApiColumn(
-              tableData,
-              outputColumnTitle,
-              outputColumnId,
-              createOrderBase + 1,
-            );
-
-            if (extractPlan.placement === 'next_to_original' && sourceIndex >= 0) {
-              nextColumns.splice(sourceIndex + 1, 0, extractedColumnRecord);
-            } else {
-              nextColumns.push(extractedColumnRecord);
-            }
-          } else if (sourceIndex >= 0) {
-            nextColumns[sourceIndex] = {
-              ...nextColumns[sourceIndex],
-              title: outputColumnTitle,
-              column_name: outputColumnTitle,
-            };
-          }
-
-          tableSection.columns = nextColumns;
-        });
-
-        await extractSubstringMutation.mutateAsync({
-          model_id: extractPlan.modelId,
-          column_id: extractPlan.sourceColumnId,
-          extraction_method: extractPlan.extractionMethod,
-          extraction_type: extractPlan.extractionType,
-          start_after: extractPlan.startAfter || undefined,
-          end_before: extractPlan.endBefore || undefined,
-          keep_original_column: extractPlan.keepOriginalColumn,
-          add_at_end: extractPlan.placement === 'end_of_table',
-        });
-      } 
-      else if (applyPlan.kind === 'remove_formatting' && applyPlan.removeFormatting) {
-      await removeFormattingMutation.mutateAsync({
-        model_id: applyPlan.removeFormatting.modelId,
-        columns: applyPlan.removeFormatting.columns,
-        formatting: applyPlan.removeFormatting.formatting,
-        custom_pattern: applyPlan.removeFormatting.customPattern,
+      await applyGridDataOperation({
+        applyPlan,
+        columns,
+        state,
+        tableId,
+        tableData,
+        queryClient,
+        updateTableCache,
+        trimWhitespaceMutation,
+        caseNormalizeMutation,
+        findReplaceMutation,
+        removeDuplicatesMutation,
+        mergeColumnsMutation,
+        splitColumnMutation,
+        removeSpecialCharactersMutation,
+        extractSubstringMutation,
+        removeFormattingMutation,
       });
-    }
-      else {
-        await Promise.all(
-          applyPlan.columnUpdates.map((updateGroup) =>
-            bulkUpdateFieldService({
-              model_id: tableId,
-              column_id: updateGroup.columnId,
-              updates: updateGroup.updates,
-            })
-          )
-        );
-      }
 
       if (applyPlan.kind === 'merge_column') {
         toast.success('Columns merged successfully.', { title: 'Success' });
@@ -648,3 +927,5 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
     document.body
   );
 };
+
+

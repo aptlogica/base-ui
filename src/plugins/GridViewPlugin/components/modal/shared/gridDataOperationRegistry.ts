@@ -13,11 +13,7 @@ import type {
   GridDataOperationContext,
   GridDataOperationPreviewResult,
   GridExtractType,
-  GridDuplicateAction,
-  GridDuplicateKeepRule,
-  GridFindReplaceMatchMode,
   GridTrimWhitespaceMode,
-  GridFormattingMode,
 } from './gridDataOperation.types';
 import type { GridActionId } from '../../toolbar/gridActionCatalog';
 
@@ -69,7 +65,7 @@ const buildTrimWhitespacePlan = (
       trimMode: trimModeMap[context.state.spaceMode] ?? 'trim_both',
     },
     optimisticRecords: applyGridDataOperationToRecords(
-      Array.isArray(context.tableData?.records) ? context.tableData!.records! : [],
+      Array.isArray(context.tableData?.records) ? context.tableData.records : [],
       preview
     ),
   };
@@ -99,7 +95,7 @@ const buildCaseNormalizationPlan = (
       caseFormat: context.state.caseFormat,
     },
     optimisticRecords: applyGridDataOperationToRecords(
-      Array.isArray(context.tableData?.records) ? context.tableData!.records! : [],
+      Array.isArray(context.tableData?.records) ? context.tableData.records : [],
       preview
     ),
   };
@@ -122,12 +118,12 @@ const buildRemoveDuplicatesPlan = (
     .map((row) => Number(row.id))
     .filter((id) => Number.isFinite(id));
 
-  const duplicateAction = (context.state.duplicateAction as GridDuplicateAction) ?? 'remove_row';
+  const duplicateAction = context.state.duplicateAction ?? 'remove_row';
 
   if (!selectedColumns.length) return null;
 
   const optimisticRecords = applyGridDataOperationToRecords(
-    Array.isArray(context.tableData?.records) ? context.tableData!.records! : [],
+    Array.isArray(context.tableData?.records) ? context.tableData.records : [],
     preview
   );
 
@@ -161,7 +157,7 @@ const buildRemoveDuplicatesPlan = (
         columns: selectedColumns,
         rowIdsToDelete: [],
         duplicateAction,
-        keepRule: (context.state.duplicateKeepRule as GridDuplicateKeepRule) ?? 'keep_first',
+        keepRule: context.state.duplicateKeepRule ?? 'keep_first',
       },
       optimisticRecords,
     };
@@ -176,7 +172,7 @@ const buildRemoveDuplicatesPlan = (
       columns: selectedColumns,
       rowIdsToDelete,
       duplicateAction,
-      keepRule: (context.state.duplicateKeepRule as GridDuplicateKeepRule) ?? 'keep_first',
+      keepRule: context.state.duplicateKeepRule ?? 'keep_first',
     },
     optimisticRecords,
   };
@@ -237,7 +233,7 @@ const buildMergePlan = (
       outputColumnId: '',
     },
     optimisticRecords: applyGridDataOperationToRecords(
-      Array.isArray(context.tableData?.records) ? context.tableData!.records! : [],
+      Array.isArray(context.tableData?.records) ? context.tableData.records : [],
       preview
     ),
   };
@@ -280,7 +276,7 @@ const buildSplitPlan = (
       outputColumnIds,
     },
     optimisticRecords: applyGridDataOperationToRecords(
-      Array.isArray(context.tableData?.records) ? context.tableData!.records! : [],
+      Array.isArray(context.tableData?.records) ? context.tableData.records : [],
       preview
     ),
   };
@@ -309,10 +305,10 @@ const buildFindReplacePlan = (
       columns: selectedColumns,
       findValue: context.state.findText,
       replaceValue: context.state.replaceText,
-      matchType: context.state.matchingCase as GridFindReplaceMatchMode,
+      matchType: context.state.matchingCase,
     },
     optimisticRecords: applyGridDataOperationToRecords(
-      Array.isArray(context.tableData?.records) ? context.tableData!.records! : [],
+      Array.isArray(context.tableData?.records) ? context.tableData.records : [],
       preview
     ),
   };
@@ -346,13 +342,25 @@ const buildRemoveSpecialCharactersPlan = (
         : undefined,
     },
     optimisticRecords: applyGridDataOperationToRecords(
-      Array.isArray(context.tableData?.records) ? context.tableData!.records! : [],
+      Array.isArray(context.tableData?.records) ? context.tableData.records : [],
       preview
     ),
   };
 };
 
 const extractSupportedTypes = new Set<GridExtractType>(['email', 'keywords', 'mentions', 'tags', 'url', 'domain', 'emoji', 'phone', 'prefix']);
+
+const extractTypeTitles: Record<string, string> = {
+  email: 'Extracted Email',
+  url: 'Extracted URL',
+  domain: 'Extracted Domain',
+  keywords: 'Extracted Keywords',
+  mentions: 'Extracted Mentions',
+  tags: 'Extracted Tags',
+  emoji: 'Extracted Emoji',
+  phone: 'Extracted Phone',
+  prefix: 'Extracted Prefix',
+};
 
 const buildExtractPlan = (
   context: GridDataOperationContext,
@@ -374,23 +382,7 @@ const buildExtractPlan = (
   const sourceColumnTitle = String(sourceColumn.title || sourceColumn.column_name || sourceColumnId);
   const outputColumnTitle = context.state.extractMethod === 'between_characters'
     ? 'Extracted value'
-    : context.state.extractType === 'email'
-      ? 'Extracted Email'
-      : context.state.extractType === 'url'
-        ? 'Extracted URL'
-        : context.state.extractType === 'domain'
-          ? 'Extracted Domain'
-          : context.state.extractType === 'keywords'
-            ? 'Extracted Keywords'
-            : context.state.extractType === 'mentions'
-              ? 'Extracted Mentions'
-              : context.state.extractType === 'tags'
-                ? 'Extracted Tags'
-                : context.state.extractType === 'emoji'
-                  ? 'Extracted Emoji'
-                  : context.state.extractType === 'phone'
-                    ? 'Extracted Phone'
-                    : 'Extracted Prefix';
+    : extractTypeTitles[context.state.extractType] ?? 'Extracted Prefix';
 
   return {
     supported: true,
@@ -412,7 +404,7 @@ const buildExtractPlan = (
       outputColumnTitle,
     },
     optimisticRecords: applyGridDataOperationToRecords(
-      Array.isArray(context.tableData?.records) ? context.tableData!.records! : [],
+      Array.isArray(context.tableData?.records) ? context.tableData.records : [],
       preview
     ),
   };
@@ -444,11 +436,11 @@ const buildRemoveFormattingPlan = (
     removeFormatting: {
       modelId: String(context.tableData?.model?.id ?? ''),
       columns: selectedColumns,
-      formatting: context.state.formatting as GridFormattingMode,
+      formatting: context.state.formatting,
       customPattern: customPatterns.length ? customPatterns : undefined,
     },
     optimisticRecords: applyGridDataOperationToRecords(
-      Array.isArray(context.tableData?.records) ? context.tableData!.records! : [],
+      Array.isArray(context.tableData?.records) ? context.tableData.records : [],
       preview
     ),
   };

@@ -59,14 +59,14 @@ const FIXED_LENGTH_OPTIONS: SelectOption[] = [
 ];
 
 const PATTERN_OPTIONS: SelectOption[] = [
-  { value: '\\d+', label: '\\d+', description: 'Numbers' },
+  { value: String.raw`\d+`, label: String.raw`\d+`, description: 'Numbers' },
   { value: '[A-Z]+', label: '[A-Z]+', description: 'Uppercase letters' },
   { value: '[a-z]+', label: '[a-z]+', description: 'Lowercase letters' },
   { value: '[A-Za-z]+', label: '[A-Za-z]+', description: 'Any letters' },
-  { value: '\\s+', label: '\\s+', description: 'Whitespace' },
+  { value: String.raw`\s+`, label: String.raw`\s+`, description: 'Whitespace' },
   { value: '[^a-zA-Z0-9]', label: '[^a-zA-Z0-9]', description: 'Special characters' },
   { value: '@(.+)', label: '@(.+)', description: 'Text after @' },
-  { value: '\\.', label: '\\.', description: 'Dot character' },
+  { value: String.raw`\.`, label: String.raw`\.`, description: 'Dot character' },
 ];
 
 export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({

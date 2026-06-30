@@ -3,7 +3,6 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React from 'react';
-import { Info } from 'lucide-react';
 import type { GridColumn } from '../../../types/grid.types';
 import { ColumnSelectionSection } from '../shared/ColumnSelectionSection';
 import type { GridFormattingMode } from '../shared/gridDataOperation.types';

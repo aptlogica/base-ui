@@ -139,10 +139,11 @@ export const ExtractSubstringPanel: React.FC<ExtractSubstringPanelProps> = ({
             </span>
           </label>
 
-          <label className="flex cursor-pointer items-start gap-3 p-4 hover:bg-muted/50">
+          <label className="flex cursor-pointer items-start gap-3 p-4 hover:bg-muted/50" htmlFor="between-characters">
             <input
               type="radio"
               name="extract-method"
+              id="between-characters"
               checked={method === 'between_characters'}
               onChange={() => onMethodChange('between_characters')}
               className="mt-1 h-4 w-4 radio-primary-brand"
@@ -181,9 +182,10 @@ export const ExtractSubstringPanel: React.FC<ExtractSubstringPanelProps> = ({
 
       <section className="space-y-3">
         <h3 className="text-sm font-semibold text-foreground">Output option</h3>
-        <label className="flex cursor-pointer items-start gap-3 hover:bg-muted/50">
+        <label className="flex cursor-pointer items-start gap-3 hover:bg-muted/50" htmlFor="keep-original-column" aria-label="Keep original column">
           <input
             type="checkbox"
+            id="keep-original-column"
             checked={keepOriginalColumn}
             onChange={(event) => onKeepOriginalColumnChange(event.target.checked)}
             className="mt-1 h-4 w-4 checkbox-primary-brand"
@@ -204,9 +206,11 @@ export const ExtractSubstringPanel: React.FC<ExtractSubstringPanelProps> = ({
           <label
             key={option.value}
             className="flex cursor-pointer items-start gap-3"
+            htmlFor={`extract-placement-${option.value}`}
           >
             <input
               type="radio"
+              id={`extract-placement-${option.value}`}
               name="extract-placement"
               checked={placement === option.value}
               onChange={() => onPlacementChange(option.value as Placement)}

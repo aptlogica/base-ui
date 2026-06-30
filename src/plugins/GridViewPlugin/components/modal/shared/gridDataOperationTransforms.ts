@@ -4,21 +4,16 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import { DateTime } from 'luxon';
 import type { GridColumn } from '../../../types/grid.types';
-import type { TableData } from '../../../../../types/api.types';
 import type {
   GridActionId,
 } from '../../toolbar/gridActionCatalog';
 import type {
   GridCaseFormat,
-  GridDuplicateAction,
-  GridDuplicateKeepRule,
   GridExtractMethod,
   GridExtractType,
   GridFormattingMode,
   GridFindReplaceMatchMode,
   GridSplitFixedDirection,
-  GridSplitMode,
-  GridSplitOutputMode,
   GridSplitSeparatorType,
   GridMergeFormat,
   GridCharRemovalMode,
@@ -46,7 +41,7 @@ const previewSupportedActions = new Set<GridActionId>([
 const CHAR_REMOVAL_PATTERNS: Record<Exclude<GridCharRemovalMode, 'custom'>, RegExp> = {
   symbols: /[@#%&*!~^+=|\\/_`-]/g,
   currency_symbols: /[₹$€£¥¢₩₽₿]/gu,
-  brackets: /[\[\](){}]/g,
+  brackets: /[[\](){}]/g,
   punctuation: /[,.:;]/g,
 };
 
@@ -97,8 +92,8 @@ const extractSupportedTypes = new Set<GridExtractType>([
 ]);
 const extractEmailPattern = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/giu;
 const extractUrlPattern = /\b(?:https?:\/\/|www\.)[^\s<>()]+/giu;
-const extractMentionPattern = /(?:^|\s)(@[A-Za-z0-9_.-]+)/gu;
-const extractTagPattern = /(?:^|\s)(#[A-Za-z0-9_]+)/gu;
+const extractMentionPattern = /(?:^|\s)(@[\w.-]+)/gu;
+const extractTagPattern = /(?:^|\s)(#\w+)/gu;
 const extractEmojiPattern = /\p{Extended_Pictographic}/gu;
 const extractPhonePattern = /(?:^|[^\d])(\+?\d[\d\s().-]{7,}\d)(?=$|[^\d])/gu;
 const keywordStopWords = new Set([
@@ -222,10 +217,12 @@ const splitBySeparator = (
     dash: { regex: /\s*-\s*/g, joiner: '-' },
   };
 
+  const customConfig = customSeparator
+    ? { regex: new RegExp(escapeRegExp(customSeparator), 'g'), joiner: customSeparator }
+    : null;
+
   const config = separatorType === 'custom'
-    ? (customSeparator
-      ? { regex: new RegExp(escapeRegExp(customSeparator), 'g'), joiner: customSeparator }
-      : null)
+    ? customConfig
     : separatorMap[separatorType];
 
   if (!config) {
@@ -355,9 +352,24 @@ const getMergeSeparator = (format: GridMergeFormat, customSeparator: string) => 
   return format === 'custom' ? customSeparator : separatorMap[format];
 };
 
+const stringifyMergeValue = (value: unknown) => {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value);
+  }
+  if (value instanceof Date) return value.toISOString();
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return '';
+  }
+};
+
 export const mergeColumnValues = (values: unknown[], separator: string) =>
   values
-    .map((value) => (value == null ? '' : String(value)))
+    .map((value) => stringifyMergeValue(value))
     .filter((value) => value !== '')
     .join(separator);
 
@@ -431,11 +443,11 @@ const buildMergePreview = (
 
     if (rowChanged) {
       affectedRows += 1;
-      changedRowIds.push(getRowId(row as Record<string, any>, index));
+      changedRowIds.push(getRowId(row, index));
     }
 
     previewRows.push({
-      id: getRowId(row as Record<string, any>, index),
+      id: getRowId(row, index),
       original,
       values,
       changedColumns,
@@ -582,11 +594,11 @@ const buildSplitPreview = (
 
     if (rowChanged) {
       affectedRows += 1;
-      changedRowIds.push(getRowId(row as Record<string, any>, index));
+      changedRowIds.push(getRowId(row, index));
     }
 
     previewRows.push({
-      id: getRowId(row as Record<string, any>, index),
+      id: getRowId(row, index),
       original,
       values,
       changedColumns,
@@ -691,11 +703,11 @@ const buildExtractPreview = (
 
     if (rowChanged) {
       affectedRows += 1;
-      changedRowIds.push(getRowId(row as Record<string, any>, index));
+      changedRowIds.push(getRowId(row, index));
     }
 
     previewRows.push({
-      id: getRowId(row as Record<string, any>, index),
+      id: getRowId(row, index),
       original,
       values,
       changedColumns,
@@ -703,8 +715,9 @@ const buildExtractPreview = (
     });
   });
 
+  const virtualColumnId = outputId === sourceKey ? sourceIdentity : outputId;
   const virtualColumns = state.extractKeepOriginalColumn
-    ? [{ id: outputId === sourceKey ? sourceIdentity : outputId, title: outputTitle }]
+    ? [{ id: virtualColumnId, title: outputTitle }]
     : [{ id: sourceIdentity, title: outputTitle }];
 
   return {
@@ -777,7 +790,7 @@ export const normalizeWhitespaceValue = (value: unknown, mode: GridSpaceMode) =>
   }
 };
 
-const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 
 export const replaceTextValue = (
   value: unknown,
@@ -927,9 +940,9 @@ export const removeFormattingValue = (
     case 'currency':
       return stripFormattingCharacters(value, /[$€£₹¥₩₽₺₫₱,]/g);
     case 'percentage':
-      return stripFormattingCharacters(value, /[%]/g);
+      return stripFormattingCharacters(value, /%/g);
     case 'separator':
-      return stripFormattingCharacters(value, /[,]/g);
+      return stripFormattingCharacters(value, /,/g);
     case 'phone':
       return stripFormattingCharacters(value, /[\s().-]/g);
     case 'date':
@@ -987,11 +1000,11 @@ export const buildGridDataOperationPreview = ({
     return {
       row,
       index,
-      id: getRowId(row as Record<string, any>, index),
+      id: getRowId(row, index),
       original,
       values,
       changedColumns: [] as string[],
-      rowState: 'unchanged' as GridDataOperationPreviewRow['rowState'],
+      rowState: 'unchanged',
     };
   });
 
@@ -1001,7 +1014,7 @@ export const buildGridDataOperationPreview = ({
       const columnIdentity = String(column.id || columnKey);
       return selectedColumnIdSet.has(columnIdentity) || selectedColumnIdSet.has(columnKey);
     });
-    const duplicateAction = (state.duplicateAction as GridDuplicateAction) ?? 'remove_row';
+    const duplicateAction = state.duplicateAction ?? 'remove_row';
 
     if (selectedColumns.length === 0) {
       sourceEntries.forEach((entry) => {
@@ -1042,12 +1055,12 @@ export const buildGridDataOperationPreview = ({
       groupMap.set(groupKey, current);
     });
 
-    const keepRule = (state.duplicateKeepRule as GridDuplicateKeepRule) ?? 'keep_first';
+    const keepRule = state.duplicateKeepRule ?? 'keep_first';
     groupMap.forEach((group) => {
       if (group.length <= 1) return;
 
-      const keeper = keepRule === 'keep_last' ? group[group.length - 1] : group[0];
-      keeper.rowState = 'kept';
+      const keeper = keepRule === 'keep_last' ? group.at(-1) : group[0];
+      keeper!.rowState = 'kept';
 
       group.forEach((entry) => {
         if (entry === keeper) return;
@@ -1084,7 +1097,7 @@ export const buildGridDataOperationPreview = ({
         original: entry.original,
         values: entry.values,
         changedColumns: [],
-        rowState: entry.rowState,
+        rowState: entry.rowState as GridDataOperationPreviewRow['rowState'],
       });
     });
 
@@ -1136,11 +1149,11 @@ export const buildGridDataOperationPreview = ({
 
     if (changedColumns.length > 0) {
       affectedRows += 1;
-      changedRowIds.push(String(getRowId(row as Record<string, any>, index)));
+      changedRowIds.push(String(getRowId(row, index)));
     }
 
     previewRows.push({
-      id: getRowId(row as Record<string, any>, index),
+      id: getRowId(row, index),
       original,
       values,
       changedColumns,

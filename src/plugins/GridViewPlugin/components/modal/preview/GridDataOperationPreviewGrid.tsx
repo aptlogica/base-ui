@@ -12,8 +12,33 @@ interface GridDataOperationPreviewGridProps {
   preview: GridDataOperationPreviewResult;
 }
 
+const stringifyCellValue = (value: unknown) => {
+  if (value == null) return '';
+  if (value instanceof Date) return value.toISOString();
+
+  switch (typeof value) {
+    case 'string':
+      return value;
+    case 'number':
+    case 'boolean':
+    case 'bigint':
+      return `${value}`;
+    case 'symbol':
+      return value.description ? `Symbol(${value.description})` : 'Symbol()';
+    case 'function':
+      return value.name ? `[Function ${value.name}]` : '[Function]';
+    case 'object':
+      try {
+        return JSON.stringify(value) ?? '';
+      } catch {
+        return '[Object]';
+      }
+    default:
+      return '';
+  }
+};
 const formatCell = (value: unknown) => {
-  const text = String(value ?? '');
+  const text = stringifyCellValue(value);
   if (text.length <= 96) return text;
   return `${text.slice(0, 93)}...`;
 };
@@ -30,6 +55,60 @@ const formatBeforeAfter = (before: unknown, after: unknown) => {
 };
 
 const PAGE_SIZE = 20;
+
+const getRowClassName = (row: GridDataOperationPreviewResult['previewRows'][number]) => {
+  if (row.rowState === 'removed') {
+    return 'bg-red-50/70 opacity-80';
+  }
+  if (row.changedColumns.length > 0) {
+    return 'bg-emerald-100/30';
+  }
+  return '';
+};
+
+const getCellClassName = (isRemoved: boolean, isChanged: boolean) => {
+  if (isRemoved) {
+    return 'border-l-2 border-red-400 bg-red-50 text-red-700 line-through';
+  }
+  if (isChanged) {
+    return 'border-l-2 border-emerald-400 bg-emerald-100/70 text-foreground';
+  }
+  return 'text-primary';
+};
+
+const renderCellContent = (
+  isRemoved: boolean,
+  beforeAfter: { beforeText: string; afterText: string } | string | null,
+  row: GridDataOperationPreviewResult['previewRows'][number],
+  columnId: string
+) => {
+  if (isRemoved) {
+    return (
+      <span className="block max-w-[140px] truncate" title={stringifyCellValue(row.values[columnId])}>
+        {formatCell(row.values[columnId])}
+      </span>
+    );
+  }
+
+  if (beforeAfter && typeof beforeAfter === 'object') {
+    return (
+      <div className="min-w-0 space-y-0.5">
+        <div className="max-w-[180px] truncate text-[12px] text-secondary line-through" title={stringifyCellValue(row.original[columnId])}>
+          {beforeAfter.beforeText}
+        </div>
+        <div className="max-w-[180px] truncate text-sm font-medium text-black" title={stringifyCellValue(row.values[columnId])}>
+          {beforeAfter.afterText}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <span className="block max-w-[140px] truncate" title={stringifyCellValue(row.values[columnId])}>
+      {formatCell(row.values[columnId])}
+    </span>
+  );
+};
 
 export const GridDataOperationPreviewGrid: React.FC<GridDataOperationPreviewGridProps> = ({
   columns,
@@ -98,12 +177,7 @@ export const GridDataOperationPreviewGrid: React.FC<GridDataOperationPreviewGrid
             {previewRows.map((row) => (
               <tr
                 key={row.id}
-                className={`border-b h-12 last:border-b-0 transition-colors ${row.rowState === 'removed'
-                    ? 'bg-red-50/70 opacity-80'
-                    : row.changedColumns.length > 0
-                      ? 'bg-emerald-100/30'
-                      : ''
-                  }`}
+                className={`border-b h-12 last:border-b-0 transition-colors ${getRowClassName(row)}`}
               >
                 {visibleColumns.map((column) => {
                   const columnId = String(column.key || column.id);
@@ -115,31 +189,9 @@ export const GridDataOperationPreviewGrid: React.FC<GridDataOperationPreviewGrid
                   return (
                     <td
                       key={columnId}
-                      className={`px-4 py-3 align-middle whitespace-nowrap transition-colors ${isRemoved
-                          ? 'border-l-2 border-red-400 bg-red-50 text-red-700 line-through'
-                          : isChanged
-                            ? 'border-l-2 border-emerald-400 bg-emerald-100/70 text-foreground'
-                            : 'text-primary'
-                        }`}
+                      className={`px-4 py-3 align-middle whitespace-nowrap transition-colors ${getCellClassName(isRemoved, isChanged)}`}
                     >
-                      {isRemoved ? (
-                        <span className="block max-w-[140px] truncate" title={String(row.values[columnId] ?? '')}>
-                          {formatCell(row.values[columnId])}
-                        </span>
-                      ) : beforeAfter && typeof beforeAfter === 'object' ? (
-                        <div className="min-w-0 space-y-0.5">
-                          <div className="max-w-[180px] truncate text-[12px] text-secondary line-through" title={String(row.original[columnId] ?? '')}>
-                            {beforeAfter.beforeText}
-                          </div>
-                          <div className="max-w-[180px] truncate text-sm font-medium text-black" title={String(row.values[columnId] ?? '')}>
-                            {beforeAfter.afterText}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="block max-w-[140px] truncate" title={String(row.values[columnId] ?? '')}>
-                          {formatCell(row.values[columnId])}
-                        </span>
-                      )}
+                      {renderCellContent(isRemoved, beforeAfter, row, columnId)}
                     </td>
                   );
                 })}
