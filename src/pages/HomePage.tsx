@@ -534,7 +534,7 @@ const HomePage: React.FC = () => {
               <span className="font-medium text-primary">
                 {getSortOptionLabel(sortOption)}
               </span>
-              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 text-secondarytransition-transform duration-200 ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {/* Dropdown Menu */}

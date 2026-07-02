@@ -277,7 +277,7 @@ const TableViewRouteWrapper: React.FC = () => {
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-lg mb-2">Something went wrong</div>
-          <p className="text-muted-foreground mb-4">{String(error)}</p>
+          <p className="text-secondary mb-4">{String(error)}</p>
           <button onClick={() => refetch()} className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90">Retry</button>
         </div>
       </div>
@@ -322,7 +322,7 @@ const TableViewRouteWrapper: React.FC = () => {
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-lg mb-2">Something went wrong</div>
-          <p className="text-muted-foreground">Please try again later.</p>
+          <p className="text-secondary">Please try again later.</p>
         </div>
       </div>
     );

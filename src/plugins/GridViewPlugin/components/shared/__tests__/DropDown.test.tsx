@@ -40,7 +40,7 @@ describe('Dropdown', () => {
     it('should show selected value instead of placeholder', () => {
       render(<Dropdown {...defaultProps} value="option1" />);
 
-      expect(screen.getByText('option1')).toBeInTheDocument();
+      expect(screen.getByText('Option 1')).toBeInTheDocument();
       expect(screen.queryByText('Select...')).not.toBeInTheDocument();
     });
 
@@ -119,8 +119,9 @@ describe('Dropdown', () => {
       const trigger = screen.getByText("Select...");
       await userEvent.click(trigger);
 
-      const option1 = screen.getByText(/Option 1/i);
-      await userEvent.click(option1);
+      const option1 = screen.getAllByText(/Option 1/i).find(e => e.closest('li'));
+      expect(option1).toBeDefined();
+      await userEvent.click(option1!);
 
       expect(mockOnChange).toHaveBeenCalledWith('option1');
       expect(screen.queryByText(/Option 2/i)).not.toBeInTheDocument(); // Dropdown closed
@@ -132,14 +133,15 @@ describe('Dropdown', () => {
       const trigger = getTrigger(container);
       await userEvent.click(trigger);
 
-      const selectedOption = screen.getByText(/Option 2/i);
-      expect(selectedOption.closest('li')).toHaveClass('bg-[var(--color-bg-brand-secondary)]');
+      const selectedOption = screen.getAllByText(/Option 2/i).find(e => e.closest('li'));
+      expect(selectedOption).toBeDefined();
+      expect(selectedOption!.closest('li')).toHaveClass('bg-[var(--color-bg-brand-secondary)]');
     });
 
     it('should show current selection in trigger', () => {
       render(<Dropdown {...defaultProps} value="option2" />);
 
-      expect(screen.getByText('option2')).toBeInTheDocument();
+      expect(screen.getByText('Option 2')).toBeInTheDocument();
     });
   });
 
@@ -156,8 +158,9 @@ describe('Dropdown', () => {
       const trigger = getTrigger(container);
       await userEvent.click(trigger);
 
-      const option1 = screen.getByText(/Option 1/i);
-      await userEvent.click(option1);
+      const option1 = screen.getAllByText(/Option 1/i).find(e => e.closest('li'));
+      expect(option1).toBeDefined();
+      await userEvent.click(option1!);
       expect(mockOnChange).toHaveBeenCalledWith(['option1']);
 
       // Dropdown should still be open after first selection
@@ -170,8 +173,9 @@ describe('Dropdown', () => {
       const trigger = getTrigger(container);
       await userEvent.click(trigger);
 
-      const option1 = screen.getByText(/Option 1/i);
-      await userEvent.click(option1);
+      const option1 = screen.getAllByText(/Option 1/i).find(e => e.closest('li'));
+      expect(option1).toBeDefined();
+      await userEvent.click(option1!);
 
       expect(mockOnChange).toHaveBeenCalledWith(['option2']);
     });
@@ -179,7 +183,7 @@ describe('Dropdown', () => {
     it('should show multiple selected values in trigger', () => {
       render(<Dropdown {...multipleProps} value={['option1', 'option2']} />);
 
-      expect(screen.getByText('option1, option2')).toBeInTheDocument();
+      expect(screen.getByText('Option 1, Option 2')).toBeInTheDocument();
     });
 
     it('should show placeholder when no options selected', () => {
@@ -194,12 +198,14 @@ describe('Dropdown', () => {
       const trigger = getTrigger(container);
       await userEvent.click(trigger);
 
-      const option1 = screen.getByText(/Option 1/i);
-      const option3 = screen.getByText(/Option 3/i);
+      const option1 = screen.getAllByText(/Option 1/i).find(e => e.closest('li'));
+      const option3 = screen.getAllByText(/Option 3/i).find(e => e.closest('li'));
+      expect(option1).toBeDefined();
+      expect(option3).toBeDefined();
 
       // Check that selected options have highlight styling
-      expect(option1.closest('li')).toHaveClass('bg-[var(--color-bg-brand-secondary)]');
-      expect(option3.closest('li')).toHaveClass('bg-[var(--color-bg-brand-secondary)]');
+      expect(option1!.closest('li')).toHaveClass('bg-[var(--color-bg-brand-secondary)]');
+      expect(option3!.closest('li')).toHaveClass('bg-[var(--color-bg-brand-secondary)]');
     });
   });
 

@@ -78,26 +78,26 @@ Support: support@aptlogica.com | support@serenibase.com
     --animate-caret-blink: caret-blink 1s infinite;
 
     @keyframes marquee {
-        0% {
-            transform: translateX(0);
+            0% {
+                transform: translateX(0);
+            }
+    
+            100% {
+                transform: translateX(-100%);
+            }
         }
-
-        100% {
-            transform: translateX(-100%);
-        }
-    }
-
-    @keyframes caret-blink {
-
-        0%,
-        50% {
-            opacity: 1;
-        }
-
-        51%,
-        100% {
-            opacity: 0;
-        }
+    
+        @keyframes caret-blink {
+    
+            0%,
+            50% {
+                opacity: 1;
+            }
+    
+            51%,
+            100% {
+                opacity: 0;
+            }
     }
 
     /* BASE COLORS */

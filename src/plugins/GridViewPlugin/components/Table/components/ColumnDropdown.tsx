@@ -106,7 +106,7 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
         className="p-1 rounded transition-colors duration-200"
         title="Column options"
       >
-        {isOpen ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+        {isOpen ? <ChevronUp className="w-3.5 h-3.5 text-secondary" /> : <ChevronDown className="w-3.5 h-3.5 text-secondary" />}
       </button>
 
       {isOpen && createPortal(

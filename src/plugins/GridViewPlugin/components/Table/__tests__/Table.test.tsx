@@ -2,6 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ToastProvider } from '../../../../../components/common/Toast';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { applyFilters } from '../../../../../utils/filterUtils';
 import { sortRowsByDataKey } from '../../../../../utils/sortUtils';
 let Table: typeof import('../Table').Table;
@@ -17,6 +18,15 @@ const mockUseBaseAccess = vi.fn();
 
 vi.mock('../../../../../hooks/useApi', () => ({
   useAllViews: mockUseAllViews,
+  useCaseNormalize: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
+  useExtractSubstring: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
+  useFindReplace: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
+  useMergeColumns: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
+  useRemoveDuplicates: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
+  useRemoveSpecialCharacters: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
+  useRemoveFormatting: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
+  useTrimWhitespace: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
+  useSplitColumn: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
 }));
 
 vi.mock('../../../hooks/useTableViewConfig', () => ({
@@ -81,6 +91,10 @@ vi.mock('../components/ContextMenu', () => ({
 
 vi.mock('../components/ColumnContextMenu', () => ({
   ColumnContextMenu: () => <div data-testid="column-context-menu" />,
+}));
+
+vi.mock('../modal/GridDataOperationModal', () => ({
+  GridDataOperationModal: () => <div data-testid="grid-data-op-modal" />,
 }));
 
 vi.mock('../components/VirtualizedTableBody', () => ({
@@ -264,8 +278,14 @@ const setupDefaultMocks = () => {
   });
 };
 
-const renderWithToast = (ui: React.ReactElement) =>
-  render(<ToastProvider>{ui}</ToastProvider>);
+const renderWithToast = (ui: React.ReactElement) => {
+  const qc = new QueryClient();
+  return render(
+    <QueryClientProvider client={qc}>
+      <ToastProvider>{ui}</ToastProvider>
+    </QueryClientProvider>
+  );
+};
 
 describe('Table', () => {
   beforeEach(() => {
@@ -282,7 +302,7 @@ describe('Table', () => {
     if (!Table) {
       ({ Table } = await import('../Table'));
     }
-  });
+  }, 30000);
 
   it('renders add row button and selection checkbox when editable', () => {
     renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);

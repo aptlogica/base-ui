@@ -37,8 +37,9 @@ export default {
 
       // Breakpoints
       screens: {
-        'xxs': 'var(--breakpoint-xxs)',
-        'xs': 'var(--breakpoint-xs)',
+        // CSS custom properties are not valid inside media queries, so use concrete values.
+        'xxs': '320px',
+        'xs': '600px',
       },
 
       // Border Radius

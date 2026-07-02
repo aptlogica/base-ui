@@ -107,6 +107,6 @@ describe('DropdownTrigger', () => {
         onToggle={vi.fn()}
       />
     );
-    expect(screen.getByText('Select an option...').className).toMatch(/var\(--color-text-placeholder\)/);
+    expect(screen.getByText('Select an option...')).toHaveStyle({ color: 'var(--color-text-placeholder)' });
   });
 });

@@ -136,7 +136,7 @@ export const getFieldTypeInfo = (type: string) => {
 // Helper function to get field type icon component with consistent styling
 export const getFieldTypeIconComponent = (
   type: string,
-  className: string = "w-4 h-4 text-gray-400",
+  className: string = "w-4 h-4 text-gray-500",
   relationType?: string
 ) => {
   if (type === FieldType.Links || type === 'links') {
@@ -150,5 +150,5 @@ export const getFieldTypeIconComponent = (
 
 // Helper function to get field type icon component with margin
 export const getFieldTypeIconWithMargin = (type: string, relationType?: string) => {
-  return getFieldTypeIconComponent(type, "w-4 h-4 mr-2 text-gray-400", relationType);
+  return getFieldTypeIconComponent(type, "w-4 h-4 mr-2 text-gray-500", relationType);
 };
