@@ -1,151 +1,3 @@
-import { describe, it, expect } from 'vitest';
-import {
-  normalizeCaseValue,
-  normalizeWhitespaceValue,
-  replaceTextValue,
-  removeSpecialCharsValue,
-  normalizeCustomFormattingPattern,
-  removeFormattingValue,
-  mergeColumnValues,
-  buildGridDataOperationPreview,
-  applyGridDataOperationToRecords,
-} from '../gridDataOperationTransforms';
-
-describe('gridDataOperationTransforms', () => {
-  it('normalizeCaseValue: lowercases strings', () => {
-    // Arrange
-    const input = 'ABC Def';
-
-    // Act
-    const result = normalizeCaseValue(input, 'lowercase');
-
-    // Assert
-    expect(result).toBe('abc def');
-  });
-
-  it('normalizeCaseValue: title_case capitalizes words', () => {
-    const input = 'hello world from TEST';
-    const result = normalizeCaseValue(input, 'title_case');
-    expect(result).toBe('Hello World From Test');
-  });
-
-  it('normalizeWhitespaceValue: collapses extra spaces', () => {
-    const input = '  a   b  c  ';
-    const result = normalizeWhitespaceValue(input, 'extra');
-    expect(result).toBe('a b c');
-  });
-
-  it('replaceTextValue: match_entire_value replaces whole value only', () => {
-    const value = 'foo';
-    const result = replaceTextValue(value, 'foo', 'bar', 'match_entire_value');
-    expect(result).toBe('bar');
-  });
-
-  it('replaceTextValue: ignore_case replaces all case-insensitive occurrences', () => {
-    const value = 'Foo and foo';
-    const result = replaceTextValue(value, 'foo', 'X', 'ignore_case');
-    expect(result).toBe('X and X');
-  });
-
-  it('removeSpecialCharsValue: symbols mode removes symbol characters', () => {
-    const input = 'a@b#c!d';
-    const result = removeSpecialCharsValue(input, 'symbols', '');
-    expect(result).toBe('abcd');
-  });
-
-  it('removeSpecialCharsValue: custom mode removes provided characters', () => {
-    const input = 'abcxyz123';
-    const result = removeSpecialCharsValue(input, 'custom', 'xyz');
-    expect(result).toBe('abc123');
-  });
-
-  it('normalizeCustomFormattingPattern: splits patterns by newlines and separators', () => {
-    const input = 'one\ntwo,three; four';
-    const result = normalizeCustomFormattingPattern(input);
-    expect(result).toEqual(['one', 'two', 'three', 'four']);
-  });
-
-  it('removeFormattingValue: currency removes currency symbols and commas', () => {
-    const input = '$1,234.50';
-    const result = removeFormattingValue(input, 'currency');
-    expect(result).toBe('1234.50');
-  });
-
-  it('removeFormattingValue: percentage removes percent sign', () => {
-    const input = '50%';
-    const result = removeFormattingValue(input, 'percentage');
-    expect(result).toBe('50');
-  });
-
-  it('removeFormattingValue: date parses common formats to yyyy-MM-dd', () => {
-    const input = '31-12-2021';
-    const result = removeFormattingValue(input, 'date');
-    expect(result).toBe('2021-12-31');
-  });
-
-  it('mergeColumnValues: joins values and ignores null/empty', () => {
-    const result = mergeColumnValues([1, null, 'A', '', { x: 1 }], ',');
-    expect(result).toBe('1,A,{"x":1}');
-  });
-
-  it('buildGridDataOperationPreview: case_normalization updates selected column values', () => {
-    const columns = [{ id: 'c1', key: 'c1', title: 'Name' }];
-    const records = [{ data: { c1: 'ABC' } }];
-    const state = { selectedColumnIds: ['c1'], caseFormat: 'lowercase' } as any;
-
-    const preview = buildGridDataOperationPreview({ actionId: 'case_normalization', columns, tableData: { records }, state } as any);
-    expect(preview.previewRows[0].values.c1).toBe('abc');
-  });
-
-  it('buildGridDataOperationPreview: remove_duplicates with remove_row marks duplicates removed', () => {
-    const columns = [{ id: 'c1', key: 'c1', title: 'Name' }];
-    const records = [{ data: { c1: 'same' } }, { data: { c1: 'same' } }];
-    const state = { selectedColumnIds: ['c1'], duplicateAction: 'remove_row', duplicateKeepRule: 'keep_first' } as any;
-
-    const preview = buildGridDataOperationPreview({ actionId: 'remove_duplicates', columns, tableData: { records }, state } as any);
-    expect(preview.changedRowIds.length).toBe(1);
-  });
-
-  it('buildGridDataOperationPreview: split_column with replace_original sets first part into original column', () => {
-    const columns = [{ id: 'c1', key: 'c1', column_name: 'c1', title: 'Col' }];
-    const records = [{ data: { c1: 'one two three' } }];
-    const state = {
-      splitSourceColumnId: 'c1',
-      splitMode: 'separator',
-      splitSeparatorType: 'space',
-      splitOutputMode: 'replace_original',
-      splitMaxColumns: '3',
-      selectedColumnIds: ['c1'],
-    } as any;
-
-    const preview = buildGridDataOperationPreview({ actionId: 'split_column', columns, tableData: { records }, state } as any);
-    expect(preview.previewRows[0].values.c1).toBe('one');
-  });
-
-  it('applyGridDataOperationToRecords: applies changed column values to records', () => {
-    const records = [{ id: '1', a: 'old' }];
-    const preview = {
-      previewRows: [{ id: '1', rowState: 'changed', values: { a: 'new' }, changedColumns: ['a'] }],
-    } as any;
-
-    const next = applyGridDataOperationToRecords(records, preview);
-    expect((next[0] as any).a).toBe('new');
-  });
-
-  it('buildGridDataOperationPreview: extract_substring with email extracts email into new virtual column', () => {
-    const columns = [{ id: 'c1', key: 'c1', title: 'Contact' }];
-    const records = [{ data: { c1: 'reach: test@example.com please' } }];
-    const state = {
-      selectedColumnIds: ['c1'],
-      extractType: 'email',
-      extractMethod: 'first',
-      extractKeepOriginalColumn: true,
-    } as any;
-
-    const preview = buildGridDataOperationPreview({ actionId: 'extract_substring', columns, tableData: { records }, state } as any);
-    expect(preview.previewRows[0].values['Extracted Email']).toBe('test@example.com');
-  });
-});
 import { describe, expect, it } from 'vitest';
 
 import type { GridColumn } from '../../../../types/grid.types';
@@ -192,14 +44,6 @@ const notesColumn: GridColumn = {
   type: 'text',
 };
 
-const titleOnlyColumn = {
-  id: '',
-  key: '',
-  column_name: '',
-  title: 'Title Only',
-  type: 'text',
-} as unknown as GridColumn;
-
 const createState = (overrides: Partial<GridDataOperationState> = {}): GridDataOperationState => ({
   scope: 'all',
   selectedColumnIds: [],
@@ -219,7 +63,7 @@ const createState = (overrides: Partial<GridDataOperationState> = {}): GridDataO
   splitMaxColumns: '2',
   splitFixedDirection: 'after',
   splitCharacterCount: '2',
-  splitPattern: '',
+    splitPattern: String.raw`\s+`,
   splitOutputMode: 'keep_original',
   splitPlacement: 'next_to_original',
   mergeFormat: 'space',

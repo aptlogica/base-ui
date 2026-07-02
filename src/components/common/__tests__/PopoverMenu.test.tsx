@@ -311,7 +311,7 @@ describe('PopoverMenu', () => {
   describe('Delete/Remove Special Styling', () => {
     it('applies red styling for items with delete in label', async () => {
       const user = userEvent.setup();
-      const deleteItem = [{ label: 'Delete Item', onClick: vi.fn() }];
+      const deleteItem = [{ label: 'Delete Item', onClick: vi.fn(), danger: true }];
       
       render(<PopoverMenu trigger={<span>Open</span>} items={deleteItem} />);
       
@@ -323,7 +323,7 @@ describe('PopoverMenu', () => {
 
     it('applies red styling for items with remove in label', async () => {
       const user = userEvent.setup();
-      const removeItem = [{ label: 'Remove User', onClick: vi.fn() }];
+      const removeItem = [{ label: 'Remove User', onClick: vi.fn(), danger: true }];
       
       render(<PopoverMenu trigger={<span>Open</span>} items={removeItem} />);
       

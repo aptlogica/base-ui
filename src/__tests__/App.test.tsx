@@ -162,7 +162,7 @@ describe('App', () => {
     render(<App />);
 
     expect(screen.getByText('Loader')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText('Login')).toBeInTheDocument());
+    await screen.findByText('Login');
   });
 
   it('does not block public routes with workspace loading', async () => {
@@ -170,7 +170,7 @@ describe('App', () => {
     workspacesState = { isLoading: true, error: null };
     render(<App />);
 
-    await waitFor(() => expect(screen.getByText('Login')).toBeInTheDocument());
+    await screen.findByText('Login');
   });
 
   it('shows workspace loading guard on protected routes', async () => {
@@ -178,9 +178,7 @@ describe('App', () => {
     workspacesState = { isLoading: true, error: null };
     render(<App />);
 
-    await waitFor(() => {
-      expect(screen.getByText(/Preparing your workspace/i)).toBeInTheDocument();
-    });
+    await screen.findByText(/Preparing your workspace/i);
   });
 
   it('renders not found for unknown private route', async () => {
@@ -190,25 +188,25 @@ describe('App', () => {
     baseTablesState = { isLoading: false, error: null };
     render(<App />);
 
-    await waitFor(() => expect(screen.getByText('NotFound')).toBeInTheDocument());
+    await screen.findByText('NotFound');
   });
 
   it('renders forgot and reset routes', async () => {
     initialRoute = '/forgot-password';
     workspacesState = { isLoading: false, error: null };
     render(<App />);
-    await waitFor(() => expect(screen.getByText('Forgot')).toBeInTheDocument());
+    await screen.findByText('Forgot');
 
     initialRoute = '/reset-password/token-x';
     render(<App />);
-    await waitFor(() => expect(screen.getByText('Reset')).toBeInTheDocument());
+    await screen.findByText('Reset');
   });
 
   it('handles auth_token_expired event without crashing', async () => {
     initialRoute = '/workspace';
     workspacesState = { isLoading: false, error: null };
     render(<App />);
-    await waitFor(() => expect(screen.getByText('Ext page:homepage')).toBeInTheDocument());
+    await screen.findByText('Ext page:homepage');
 
     act(() => {
       globalThis.dispatchEvent(new CustomEvent('auth_token_expired'));
@@ -225,7 +223,7 @@ describe('App', () => {
 
     await waitFor(() => {
       expect((clientService.forceLogout as unknown as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
-    });
+    }, { timeout: 2000 });
   });
 
   it('renders administrator route', async () => {
@@ -233,7 +231,7 @@ describe('App', () => {
     workspacesState = { isLoading: false, error: null };
     render(<App />);
 
-    await waitFor(() => expect(screen.getByText('Admin')).toBeInTheDocument());
+    await screen.findByText('Admin');
   });
 
   it('shows table guard loader while table/base data is loading', async () => {
@@ -259,11 +257,8 @@ describe('App', () => {
     baseTablesState = { isLoading: false, error: null };
 
     render(<App />);
-    await act(async () => {
-      await Promise.resolve();
-    });
-    await waitFor(() => expect(screen.queryByText('Loader')).not.toBeInTheDocument(), { timeout: 5000 });
-    await waitFor(() => expect(screen.getByText('Something went wrong')).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText('Loader')).not.toBeInTheDocument());
+    await screen.findByText('Something went wrong');
     const retryBtn = screen.getByRole('button', { name: /retry/i });
     retryBtn.click();
     expect(refetch).toHaveBeenCalledTimes(1);

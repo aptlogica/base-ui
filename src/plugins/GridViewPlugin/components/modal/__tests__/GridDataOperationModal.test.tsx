@@ -4,17 +4,17 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '../../../../../components/common/Toast';
 
-vi.mock('../gridDataOperationRegistry', () => ({
+vi.mock('../shared/gridDataOperationRegistry', () => ({
   getGridDataOperationAdapter: vi.fn(),
 }));
 
-vi.mock('../../preview/GridDataOperationPreviewGrid', () => ({
+vi.mock('../preview/GridDataOperationPreviewGrid', () => ({
   GridDataOperationPreviewGrid: (props: any) => (
     <div data-testid="preview-grid">{Array.isArray(props.columns) ? props.columns.map((c: any) => c.title).join(',') : 'preview'}</div>
   ),
 }));
 
-vi.mock('../GridDataOperationPanel', () => ({
+vi.mock('../shared/GridDataOperationPanel', () => ({
   GridDataOperationPanel: (props: any) => (
     <div data-testid="operation-panel">
       Panel
@@ -23,7 +23,7 @@ vi.mock('../GridDataOperationPanel', () => ({
       <button data-testid="set-sep-dash" onClick={() => props.onStateChange?.({ splitSeparatorType: 'dash' })}>dash</button>
       <button data-testid="set-sep-custom" onClick={() => props.onStateChange?.({ splitSeparatorType: 'custom', splitCustomSeparator: '||' })}>custom</button>
       <button data-testid="set-mode-fixed" onClick={() => props.onStateChange?.({ splitMode: 'fixed_length', splitCharacterCount: '3', splitFixedDirection: 'after' })}>fixed</button>
-      <button data-testid="set-mode-pattern" onClick={() => props.onStateChange?.({ splitMode: 'pattern', splitPattern: '\\d+' })}>pattern</button>
+      <button data-testid="set-mode-pattern" onClick={() => props.onStateChange?.({ splitMode: 'pattern', splitPattern: String.raw`\d+` })}>pattern</button>
       <button data-testid="set-merge-custom-empty" onClick={() => props.onStateChange?.({ mergeFormat: 'custom', mergeCustomSeparator: '', selectedColumnIds: ['a','b'] })}>merge-empty</button>
       <button data-testid="set-merge-custom-filled" onClick={() => props.onStateChange?.({ mergeFormat: 'custom', mergeCustomSeparator: '|' , selectedColumnIds: ['a','b'] })}>merge-filled</button>
       <button data-testid="set-source-nonexist" onClick={() => props.onStateChange?.({ splitSourceColumnId: 'nonexist' })}>set-source-nonexist</button>
@@ -48,7 +48,7 @@ const mockRemoveSpecialCharacters = vi.fn().mockResolvedValue({});
 const mockExtractSubstring = vi.fn().mockResolvedValue({});
 const mockRemoveFormatting = vi.fn().mockResolvedValue({});
 
-vi.mock('../../../../../../hooks/useApi', () => ({
+vi.mock('../../../../../hooks/useApi', () => ({
   useCaseNormalize: () => ({ mutateAsync: mockCaseNormalize }),
   useExtractSubstring: () => ({ mutateAsync: mockExtractSubstring }),
   useFindReplace: () => ({ mutateAsync: mockFindReplace }),
@@ -60,8 +60,8 @@ vi.mock('../../../../../../hooks/useApi', () => ({
   useSplitColumn: () => ({ mutateAsync: mockSplitColumn }),
 }));
 
-vi.mock('../../../../../../components/common/Toast', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../../components/common/Toast')>();
+vi.mock('../../../../../components/common/Toast', async (importOriginal) => {
+  const actual = await importOriginal();
   const mockSuccess = vi.fn();
   const mockError = vi.fn();
   return {
@@ -77,7 +77,7 @@ vi.mock('../../../../../../components/common/Toast', async (importOriginal) => {
   };
 });
 
-vi.mock('../../../../../../service/clientService', () => ({
+vi.mock('../../../../../service/clientService', () => ({
   bulkUpdateFieldService: vi.fn().mockResolvedValue({}),
 }));
 
