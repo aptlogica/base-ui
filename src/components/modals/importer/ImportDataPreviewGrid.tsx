@@ -5,6 +5,7 @@
 import React, { useMemo } from 'react';
 import type { ImportColumnMapping, ImportPreview } from './ImportTypes';
 import { Dot } from 'lucide-react';
+import { buildImportRowKey, stringifyImportCellValue } from './importCellValue';
 
 type Props = {
   preview: ImportPreview;
@@ -24,7 +25,7 @@ export const ImportDataPreviewGrid: React.FC<Props> = ({
     const seen = new Set<string>();
 
     return rows.filter((row) => {
-      const values = preview.columns.map((col) => String(row[col.key] ?? '').trim());
+      const values = preview.columns.map((col) => stringifyImportCellValue(row[col.key]).trim());
 
       const isEmpty = values.every((v) => v === '');
       if (removeEmptyRows && isEmpty) return false;
@@ -36,7 +37,7 @@ export const ImportDataPreviewGrid: React.FC<Props> = ({
       }
       return true;
     })
-  },[preview.rows, preview.columns, removeDuplicateRecords, removeEmptyRows]);
+  }, [preview.rows, preview.columns, removeDuplicateRecords, removeEmptyRows]);
 
   const visibleColumns = useMemo(() => {
     return preview.columns.filter((c) => mappings[c.key]?.include !== false);
@@ -47,7 +48,7 @@ export const ImportDataPreviewGrid: React.FC<Props> = ({
   const totalRows = preview.totalRows ?? preview.rows.length;
 
   const formatCell = (value: unknown) => {
-    const text = String(value ?? '').trim();
+    const text = stringifyImportCellValue(value).trim();
     if (text.length <= 96) return text;
     return `${text.slice(0, 93)}...`;
   };
@@ -75,13 +76,13 @@ export const ImportDataPreviewGrid: React.FC<Props> = ({
             </tr>
           </thead>
           <tbody>
-            {previewRows.map((row, idx) => (
-              <tr 
-                key={idx} //NOSONAR 
+            {previewRows.map((row, rowIndex) => (
+              <tr
+                key={buildImportRowKey(row, visibleColumns, rowIndex)}
                 className="border-b last:border-b-0 px-4 py-3 h-11">
                 {visibleColumns.map((col) => (
                   <td key={col.key} className="px-4 py-3 text-primary whitespace-nowrap">
-                    <span className="block max-w-[130px] truncate" title={String(row?.[col.key] ?? '')}>
+                    <span className="block max-w-[130px] truncate" title={stringifyImportCellValue(row?.[col.key])}>
                       {formatCell(row?.[col.key])}
                     </span>
                   </td>

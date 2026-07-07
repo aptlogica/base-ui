@@ -22,7 +22,7 @@ export type ImportPreviewColumn = {
 
 export type ImportPreview = {
   columns: ImportPreviewColumn[];
-  rows: Array<Record<string, any>>;
+  rows: Array<Record<string, unknown>>;
   totalRows?: number;
 };
 
