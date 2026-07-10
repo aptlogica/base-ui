@@ -5,7 +5,7 @@
 import React from 'react';
 import type { GridColumn } from '../../../types/grid.types';
 import { AdvancedDropdown } from '../../../../../components/common/dropdown/AdvancedDropdown';
-import { getGridColumnIdentity } from '../shared/gridColumnIdentity';
+import { filterGridDataOperationColumns, getGridColumnIdentity } from '../shared/gridColumnIdentity';
 
 type ExtractionMethod = 'extraction_type' | 'between_characters';
 type ExtractionType = 'email' | 'keywords' | 'mentions' | 'tags' | 'url' | 'domain' | 'emoji' | 'phone' | 'prefix';
@@ -77,8 +77,7 @@ export const ExtractSubstringPanel: React.FC<ExtractSubstringPanelProps> = ({
 
         <div className="rounded-xl border bg-card p-3">
           <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
-            {columns
-              .filter((column) => column.id || column.key)
+            {filterGridDataOperationColumns(columns)
               .map((column) => {
                 const columnId = getGridColumnIdentity(column);
                 const checked = selectedColumnId === columnId;

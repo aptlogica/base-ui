@@ -1096,7 +1096,7 @@ export const buildGridDataOperationPreview = ({
         id: entry.id,
         original: entry.original,
         values: entry.values,
-        changedColumns: [],
+        changedColumns: entry.changedColumns,
         rowState: entry.rowState as GridDataOperationPreviewRow['rowState'],
       });
     });

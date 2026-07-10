@@ -35,7 +35,7 @@ import { RemoveSpecialCharsPanel } from '../panels/RemoveSpecialCharsPanel';
 import { SplitColumnPanel } from '../panels/SplitColumnPanel';
 import { MergeColumnPanel } from '../panels/MergeColumnPanel';
 import { ExtractSubstringPanel } from '../panels/ExtractSubstring';
-import { getGridColumnIdentity } from './gridColumnIdentity';
+import { filterGridDataOperationColumns, getGridColumnIdentity } from './gridColumnIdentity';
 
 interface GridDataOperationPanelProps {
   action: GridActionDefinition;
@@ -52,7 +52,7 @@ export const GridDataOperationPanel: React.FC<GridDataOperationPanelProps> = ({
 }) => {
   const { scope, selectedColumnIds, caseFormat, spaceMode, matchingCase, charRemovalMode, customChar } = state;
   const columnOptions = useMemo(
-    () => columns.filter((column) => getGridColumnIdentity(column)),
+    () => filterGridDataOperationColumns(columns),
     [columns]
   );
 

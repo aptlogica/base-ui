@@ -16,6 +16,7 @@ import type {
   GridTrimWhitespaceMode,
 } from './gridDataOperation.types';
 import type { GridActionId } from '../../toolbar/gridActionCatalog';
+import { getGridColumnIdentity, getGridColumnValueKey } from './gridColumnIdentity';
 
 const matchesSelectedColumn = (
   column: { id?: string; key?: string; column_name?: string; title?: string },
@@ -105,13 +106,15 @@ const buildRemoveDuplicatesPlan = (
   context: GridDataOperationContext,
   preview: GridDataOperationPreviewResult,
 ): GridDataOperationApplyPlan | null => {
-  const selectedColumns = context.columns
-    .filter((column) => {
-      const columnId = String(column.id || column.key || column.column_name || column.title || '');
-      return context.state.selectedColumnIds.includes(columnId);
-    })
-    .map((column) => String(column.id || column.key || column.column_name || column.title || ''))
-    .filter(Boolean);
+  const selectedColumnEntries = context.columns
+    .filter((column) => context.state.selectedColumnIds.includes(getGridColumnIdentity(column)))
+    .map((column) => ({
+      columnId: getGridColumnIdentity(column),
+      valueKey: getGridColumnValueKey(column),
+    }))
+    .filter((entry) => entry.columnId && entry.valueKey);
+
+  const selectedColumns = selectedColumnEntries.map((entry) => entry.columnId);
 
   const rowIdsToDelete = preview.previewRows
     .filter((row) => row.rowState === 'removed')
@@ -128,19 +131,19 @@ const buildRemoveDuplicatesPlan = (
   );
 
   if (duplicateAction === 'remove_duplicates') {
-    const columnUpdates = selectedColumns
-      .map((column) => {
+    const columnUpdates = selectedColumnEntries
+      .map(({ columnId, valueKey }) => {
         const updates = preview.previewRows
-          .filter((row) => row.changedColumns.includes(column))
+          .filter((row) => row.changedColumns.includes(valueKey))
           .map((row) => ({
             id: row.id,
-            value: row.values[column],
+            value: row.values[valueKey],
           }));
 
         if (!updates.length) return null;
 
         return {
-          columnId: column,
+          columnId,
           updates,
         };
       })

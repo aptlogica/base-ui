@@ -4,7 +4,7 @@
 // Support: support@aptlogica.com | support@aptlogica.com
 import React from 'react';
 import type { GridColumn } from '../../../types/grid.types';
-import { getGridColumnIdentity } from './gridColumnIdentity';
+import { filterGridDataOperationColumns, getGridColumnIdentity } from './gridColumnIdentity';
 
 interface ColumnSelectionSectionProps {
   columns: GridColumn[];
@@ -23,7 +23,7 @@ export const ColumnSelectionSection: React.FC<ColumnSelectionSectionProps> = ({
   title = 'Select columns',
   description = 'Choose the columns to include in this action.',
 }) => {
-  const selectableColumns = columns.filter((column) => getGridColumnIdentity(column));
+  const selectableColumns = filterGridDataOperationColumns(columns);
 
   return (
     <section className="space-y-2">

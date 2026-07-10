@@ -7,6 +7,7 @@ import type {
   GridDataOperationState,
 } from '../gridDataOperation.types';
 import { getGridDataOperationAdapter } from '../gridDataOperationRegistry';
+import { buildGridDataOperationPreview } from '../gridDataOperationTransforms';
 
 type PreviewRow = GridDataOperationPreviewResult['previewRows'][number];
 
@@ -525,6 +526,55 @@ describe('getGridDataOperationAdapter', () => {
           keepRule: 'keep_latest_updated',
         },
         optimisticRecords: expect.any(Array),
+      }),
+    );
+  });
+
+  it('builds a clear-duplicates apply plan when column id and value key differ', () => {
+    const gridEmailColumn: GridColumn = {
+      id: 'col-1',
+      key: 'email',
+      column_name: 'email',
+      title: 'Email',
+      type: 'text',
+    };
+    const context = createContext({
+      actionId: 'remove_duplicates',
+      columns: [gridEmailColumn],
+      state: createState({
+        selectedColumnIds: ['col-1'],
+        duplicateAction: 'remove_duplicates',
+        duplicateKeepRule: 'keep_first',
+      }),
+      tableData: createTableData([
+        { id: '1', email: 'alice@example.com' },
+        { id: '2', email: 'alice@example.com' },
+      ]),
+    });
+    const preview = buildGridDataOperationPreview(context);
+
+    expect(getGridDataOperationAdapter('remove_duplicates').buildApplyPlan(context, preview)).toEqual(
+      expect.objectContaining({
+        supported: true,
+        kind: 'remove_duplicates',
+        columnUpdates: [
+          {
+            columnId: 'col-1',
+            updates: [
+              {
+                id: '2',
+                value: '',
+              },
+            ],
+          },
+        ],
+        removeDuplicates: {
+          modelId: 'model-1',
+          columns: ['col-1'],
+          rowIdsToDelete: [],
+          duplicateAction: 'remove_duplicates',
+          keepRule: 'keep_first',
+        },
       }),
     );
   });

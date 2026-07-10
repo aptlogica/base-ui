@@ -1,10 +1,14 @@
-import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GridDataOperationPreviewGrid } from '../GridDataOperationPreviewGrid';
 
-const makeColumn = (overrides: Partial<any> = {}) => ({ id: overrides.id, key: overrides.key, title: overrides.title ?? 'Column' });
+const makeColumn = (overrides: Partial<any> = {}) => ({
+  id: overrides.id,
+  key: overrides.key,
+  title: overrides.title ?? 'Column',
+  uidt: overrides.uidt,
+});
 
 const makePreviewRow = (overrides: Partial<any> = {}) => ({
   id: overrides.id ?? `row-${Math.random()}`,
@@ -44,6 +48,27 @@ describe('GridDataOperationPreviewGrid', () => {
     render(<GridDataOperationPreviewGrid columns={columns} preview={preview} />);
 
     expect(screen.getByText('First')).toBeInTheDocument();
+  });
+
+  it('hides columns with excluded uidt values', () => {
+    const columns = [
+      makeColumn({ id: 'c1', title: 'Name', uidt: 'text' }),
+      makeColumn({ id: 'c2', title: 'Files', uidt: 'attachment' }),
+      makeColumn({ id: 'c3', title: 'Owner', uidt: 'user' }),
+      makeColumn({ id: 'c4', title: 'Related', uidt: 'links' }),
+      makeColumn({ id: 'c5', title: 'Lookup', uidt: 'lookup' }),
+      makeColumn({ id: 'c6', title: 'Total', uidt: 'formula' }),
+    ];
+    const preview = { actionId: 'a1', totalRows: 1, affectedRows: 0, affectedCells: 0, affectedColumns: 0, previewRows: [makePreviewRow()] } as any;
+
+    render(<GridDataOperationPreviewGrid columns={columns} preview={preview} />);
+
+    expect(screen.getByText('Name')).toBeInTheDocument();
+    expect(screen.queryByText('Files')).toBeNull();
+    expect(screen.queryByText('Owner')).toBeNull();
+    expect(screen.queryByText('Related')).toBeNull();
+    expect(screen.queryByText('Lookup')).toBeNull();
+    expect(screen.queryByText('Total')).toBeNull();
   });
 
   it('renders a changed cell showing before and after texts', () => {
