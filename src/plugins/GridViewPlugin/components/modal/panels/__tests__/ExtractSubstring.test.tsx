@@ -27,11 +27,12 @@ describe('ExtractSubstringPanel', () => {
     vi.clearAllMocks();
   });
 
-  it('renders only columns that have id or key and shows their titles', () => {
+  it('renders selectable columns with a resolvable identity and hides columns without one', () => {
     const columns = [
       { id: 'c1', title: 'Column 1' },
       { key: 'k2', title: 'Column 2' },
-      { title: 'No Id Or Key' },
+      { title: 'Title Only Column' },
+      { type: 'text' },
     ] as any;
 
     render(
@@ -56,7 +57,8 @@ describe('ExtractSubstringPanel', () => {
 
     expect(screen.getByText('Column 1')).toBeInTheDocument();
     expect(screen.getByText('Column 2')).toBeInTheDocument();
-    expect(screen.queryByText('No Id Or Key')).not.toBeInTheDocument();
+    expect(screen.getByText('Title Only Column')).toBeInTheDocument();
+    expect(screen.getAllByRole('radio', { name: /Column|Title/ })).toHaveLength(3);
   });
 
   it('calls onSelectColumn when a source column radio is clicked', async () => {

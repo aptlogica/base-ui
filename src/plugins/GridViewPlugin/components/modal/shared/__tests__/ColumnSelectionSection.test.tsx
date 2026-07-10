@@ -160,4 +160,20 @@ describe('ColumnSelectionSection', () => {
 
     expect(onToggleAllColumns).toHaveBeenCalledTimes(1);
   });
+
+  it('hides unsupported field types from the column list', () => {
+    const columns: GridColumn[] = [
+      { id: 'column-1', title: 'Name', uidt: 'text' },
+      { id: 'column-2', title: 'Attachment', uidt: 'attachment' },
+      { id: 'column-3', title: 'Formula', uidt: 'formula' },
+      { id: 'column-4', title: 'Lookup', uidt: 'lookup' },
+    ];
+
+    render(<ColumnSelectionSection {...createProps({ columns })} />);
+
+    expect(screen.getByText('Name')).toBeInTheDocument();
+    expect(screen.queryByText('Attachment')).toBeNull();
+    expect(screen.queryByText('Formula')).toBeNull();
+    expect(screen.queryByText('Lookup')).toBeNull();
+  });
 });

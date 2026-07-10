@@ -1,36 +1,170 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ImportModal } from '../ImportModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import type { ImportColumnMapping, ImportPreview } from '../importer/ImportTypes';
+import { validateTableName } from '../../../utils/nameValidation';
 
-// Mock useApi hooks
+const {
+  mockMutateAsync,
+  mockToastError,
+  mockNavigate,
+  mockBuildImportPreview,
+  mockBuildInitialMappings,
+  mockUseImportData,
+} = vi.hoisted(() => {
+  const mockMutateAsync = vi.fn();
+  return {
+    mockMutateAsync,
+    mockToastError: vi.fn(),
+    mockNavigate: vi.fn(),
+    mockBuildImportPreview: vi.fn(),
+    mockBuildInitialMappings: vi.fn(),
+    mockUseImportData: vi.fn(() => ({
+      mutateAsync: mockMutateAsync,
+      isPending: false,
+    })),
+  };
+});
+
 vi.mock('../../../hooks/useApi', () => ({
-  useImportData: vi.fn(() => ({
-    mutateAsync: vi.fn(),
-    isPending: false,
-  })),
+  useImportData: () => mockUseImportData(),
 }));
 
-// Mock Toast
+vi.mock('../../../utils/nameValidation', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../utils/nameValidation')>();
+  return {
+    ...actual,
+    validateTableName: vi.fn((...args: Parameters<typeof actual.validateTableName>) =>
+      actual.validateTableName(...args)
+    ),
+  };
+});
+
 vi.mock('../../common/Toast', () => ({
   useToast: () => ({
     success: vi.fn(),
-    error: vi.fn(),
+    error: mockToastError,
     show: vi.fn(),
   }),
 }));
 
-// Mock MultiLineText
-vi.mock('../../common/Fields/MultiLineText', () => ({
-  MultiLineText: ({ value, onChange, placeholder }: any) => (
-    <textarea
-      value={value}
-      onChange={(e) => onChange?.(e.target.value)}
-      placeholder={placeholder}
-      data-testid={`multiline-${placeholder}`}
-    />
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    useLocation: () => ({ pathname: '/workspace/ws-123', state: { existing: true } }),
+  };
+});
+
+vi.mock('../importer/importPreviewBuilder', () => ({
+  buildImportPreview: (...args: unknown[]) => mockBuildImportPreview(...args),
+  buildInitialMappings: (...args: unknown[]) => mockBuildInitialMappings(...args),
+}));
+
+vi.mock('../importer/ImportCleanupOptions', () => ({
+  ImportCleanupOptions: ({
+    value,
+    onChange,
+  }: {
+    value: {
+      removeDuplicateRecords: boolean;
+      trimExtraSpaces: boolean;
+      removeEmptyRows: boolean;
+    };
+    onChange: (next: typeof value) => void;
+  }) => (
+    <div data-testid="cleanup-options">
+      <button
+        type="button"
+        onClick={() =>
+          onChange({
+            ...value,
+            removeDuplicateRecords: !value.removeDuplicateRecords,
+            trimExtraSpaces: true,
+            removeEmptyRows: true,
+          })
+        }
+      >
+        Toggle cleanup
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock('../importer/ImportDataPreviewGrid', () => ({
+  ImportDataPreviewGrid: () => <div data-testid="preview-grid">Preview grid</div>,
+}));
+
+vi.mock('../importer/ImportColumnMapper', () => ({
+  ImportColumnMapper: ({
+    preview,
+    mappings,
+    onChange,
+    primaryKey,
+    primaryColumnError,
+    onPrimaryKeyChange,
+  }: {
+    preview: ImportPreview;
+    mappings: Record<string, ImportColumnMapping>;
+    onChange: (key: string, patch: Partial<ImportColumnMapping>) => void;
+    primaryKey: string | null;
+    primaryColumnError?: string | null;
+    onPrimaryKeyChange: (key: string | null) => void;
+  }) => (
+    <div data-testid="column-mapper">
+      {primaryColumnError ? <div data-testid="primary-error">{primaryColumnError}</div> : null}
+      <select
+        data-testid="primary-key-select"
+        value={primaryKey || ''}
+        onChange={(event) => onPrimaryKeyChange(event.target.value || null)}
+      >
+        <option value="">none</option>
+        {preview.columns.map((column) => (
+          <option key={column.key} value={column.label}>
+            {column.label}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        onClick={() => onPrimaryKeyChange('Missing Column')}
+      >
+        Set invalid primary
+      </button>
+      {preview.columns.map((column) => {
+        const mapping = mappings[column.key];
+        const include = mapping?.include !== false;
+        return (
+          <div key={column.key} data-testid={`mapping-row-${column.key}`}>
+            <input
+              type="checkbox"
+              aria-label={`include-${column.key}`}
+              checked={include}
+              onChange={() => onChange(column.key, { include: !include })}
+            />
+            <input
+              aria-label={`default-${column.key}`}
+              value={mapping?.defaultValue || ''}
+              onChange={(event) => onChange(column.key, { defaultValue: event.target.value })}
+            />
+            <select
+              aria-label={`type-${column.key}`}
+              value={mapping?.fieldType || 'text'}
+              onChange={(event) => onChange(column.key, { fieldType: event.target.value })}
+            >
+              <option value="text">text</option>
+              <option value="boolean">boolean</option>
+              <option value="rating">rating</option>
+              <option value="number">number</option>
+            </select>
+          </div>
+        );
+      })}
+    </div>
   ),
 }));
 
@@ -51,6 +185,55 @@ const renderWithQueryClient = (ui: React.ReactElement) => {
   );
 };
 
+const createPreview = (): ImportPreview => ({
+  columns: [
+    { key: 'name', label: 'Name' },
+    { key: 'active', label: 'Active' },
+    { key: 'score', label: 'Score' },
+  ],
+  rows: [
+    { name: 'Alice', active: 'true', score: '4' },
+    { name: 'Bob', active: 'false', score: '2' },
+  ],
+  totalRows: 2,
+});
+
+const createMappings = (): Record<string, ImportColumnMapping> => ({
+  name: {
+    sourceName: 'Name',
+    include: true,
+    fieldType: 'text',
+    defaultValue: 'fallback',
+  },
+  active: {
+    sourceName: 'Active',
+    include: true,
+    fieldType: 'boolean',
+    defaultValue: 'yes',
+  },
+  score: {
+    sourceName: 'Score',
+    include: true,
+    fieldType: 'rating',
+    defaultValue: '9',
+  },
+});
+
+const uploadCsv = async (fileName = 'sample.csv', content = 'a,b\n1,2') => {
+  const user = userEvent.setup();
+  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+  const file = new File([content], fileName, { type: 'text/csv' });
+  await user.upload(fileInput, file);
+  return { user, file };
+};
+
+const goToReviewStep = async () => {
+  const { user } = await uploadCsv();
+  await user.click(screen.getByRole('button', { name: /Next/i }));
+  await screen.findByText(/Review and clean your data/i);
+  return user;
+};
+
 describe('ImportModal', () => {
   const defaultProps = {
     isOpen: true,
@@ -59,11 +242,41 @@ describe('ImportModal', () => {
     importType: 'csv' as const,
     workspaceId: 'ws-123',
     baseId: 'base-123',
-    existingTables: [],
+    existingTables: [] as any[],
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseImportData.mockReturnValue({
+      mutateAsync: mockMutateAsync,
+      isPending: false,
+    });
+    mockBuildImportPreview.mockResolvedValue(createPreview());
+    mockBuildInitialMappings.mockReturnValue(createMappings());
+    mockMutateAsync.mockResolvedValue({
+      data: {
+        data: {
+          model: {
+            id: 'table-1',
+            title: 'Imported Table',
+            workspace_id: 'ws-123',
+            base_id: 'base-123',
+          },
+          views: [{ id: 'view-1' }],
+          import_stats: {
+            total_rows: 2,
+            total_columns: 3,
+            error_rows: 0,
+            empty_rows: 0,
+            duplicate_rows: 0,
+            empty_rows_skipped: 0,
+            duplicates_removed: 0,
+            error_rows_file_path: '',
+            error_rows_file_content: '',
+          },
+        },
+      },
+    });
   });
 
   describe('rendering', () => {
@@ -81,179 +294,170 @@ describe('ImportModal', () => {
       expect(screen.getByText(/Import CSV/i)).toBeInTheDocument();
     });
 
-    it('renders upload area', () => {
+    it.each([
+      ['csv', 'CSV', '.csv'],
+      ['excel', 'Excel', '.xlsx,.xls'],
+      ['json', 'JSON', '.json'],
+      ['sql', 'SQL', '.sql'],
+      ['airtable', 'Airtable', '.csv,.json'],
+      ['nocodb', 'NocoDB', '.csv,.json'],
+    ] as const)('renders %s import type correctly', (type, label, accept) => {
+      renderWithQueryClient(<ImportModal {...defaultProps} importType={type} />);
+
+      expect(screen.getByText(new RegExp(`Import ${label}`, 'i'))).toBeInTheDocument();
+      expect(document.querySelector('input[type="file"]')).toHaveAttribute('accept', accept);
+    });
+
+    it('renders Cancel and disabled Next buttons', () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
+
+      expect(screen.getByRole('button', { name: /Cancel/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Next/i })).toBeDisabled();
+    });
+  });
+
+  describe('file selection', () => {
+    it('shows selected file name and size after upload', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      await uploadCsv('sample.csv');
+
+      expect(screen.getByText('sample.csv')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Next/i })).toBeEnabled();
+    });
+
+    it('shows 0 Bytes for empty files', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      await uploadCsv('empty.csv', '');
+
+      expect(screen.getByText('0 Bytes')).toBeInTheDocument();
+    });
+
+    it('removes selected file when Remove file is clicked', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const { user } = await uploadCsv('remove-me.csv');
+
+      await user.click(screen.getByRole('button', { name: /Remove file/i }));
+
+      expect(screen.queryByText('remove-me.csv')).not.toBeInTheDocument();
+      expect(screen.getByText(/browse files/i)).toBeInTheDocument();
+    });
+
+    it('shows error for invalid file extension', async () => {
+      const user = userEvent.setup({ applyAccept: false });
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      await user.upload(fileInput, new File(['content'], 'file.txt', { type: 'text/plain' }));
+
+      expect(await screen.findByText(/Please select a CSV file/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Click or drag and drop to upload file/i)).toHaveClass(
+        'border-red-400'
+      );
+    });
+
+    it('shows error when file exceeds max size', async () => {
+      const user = userEvent.setup({ applyAccept: false });
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const oversized = new File([new ArrayBuffer(2 * 1024 * 1024 + 1)], 'big.csv', {
+        type: 'text/csv',
+      });
+      await user.upload(fileInput, oversized);
+
+      expect(
+        await screen.findByText(/File size exceeds 2 MB/i)
+      ).toBeInTheDocument();
+    });
+
+    it('caps long filenames when deriving title', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const longName = `${'a'.repeat(60)}.csv`;
+      await uploadCsv(longName);
+
+      expect(screen.getByText(longName)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Next/i })).toBeEnabled();
+    });
+
+    it('accepts files via drag and drop', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const uploadArea = screen.getByLabelText(/Click or drag and drop to upload file/i);
+      const file = new File(['a,b\n1,2'], 'dropped.csv', { type: 'text/csv' });
+
+      fireEvent.dragOver(uploadArea);
+      expect(uploadArea).toHaveClass('border-brand-500');
+
+      fireEvent.dragLeave(uploadArea);
+      fireEvent.drop(uploadArea, {
+        dataTransfer: { files: [file] },
+      });
+
+      expect(await screen.findByText('dropped.csv')).toBeInTheDocument();
+    });
+
+    it('ignores drop events without files', () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const uploadArea = screen.getByLabelText(/Click or drag and drop to upload file/i);
+
+      fireEvent.drop(uploadArea, {
+        dataTransfer: { files: [] },
+      });
 
       expect(screen.getByText(/browse files/i)).toBeInTheDocument();
     });
 
-    it('renders Cancel button', () => {
+    it('opens file picker on Enter and Space', () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
-
-      expect(screen.getByRole('button', { name: /Cancel/i })).toBeInTheDocument();
-    });
-
-    it('renders correct title for Excel import', () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} importType="excel" />);
-
-      expect(screen.getByText(/Import Excel/i)).toBeInTheDocument();
-    });
-
-    it('renders correct title for JSON import', () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} importType="json" />);
-
-      expect(screen.getByText(/Import JSON/i)).toBeInTheDocument();
-    });
-
-    it('renders correct title for SQL import', () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} importType="sql" />);
-
-      expect(screen.getByText(/Import SQL/i)).toBeInTheDocument();
-    });
-  });
-
-  describe('form elements', () => {
-    it('does not render table name input in select step', () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-      expect(screen.queryByPlaceholderText(/Enter table title/i)).not.toBeInTheDocument();
-    });
-
-    it('does not render description input in select step', () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-      expect(screen.queryByPlaceholderText(/Enter table description/i)).not.toBeInTheDocument();
-    });
-
-    it('shows file size limit info', () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-
       const uploadArea = screen.getByLabelText(/Click or drag and drop to upload file/i);
-      expect(uploadArea).toBeInTheDocument();
-      
-      const browseFilesText = screen.getByText(/browse files/i);
-      expect(browseFilesText).toBeInTheDocument();
+      const clickSpy = vi.fn();
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      fileInput.click = clickSpy;
+
+      fireEvent.keyDown(uploadArea, { key: 'Enter' });
+      fireEvent.keyDown(uploadArea, { key: ' ' });
+
+      expect(clickSpy).toHaveBeenCalledTimes(2);
     });
   });
 
-  describe('interactions', () => {
-    it('calls onClose when Cancel button is clicked', async () => {
+  describe('close interactions', () => {
+    it('calls onClose from Cancel, backdrop, X, and Escape', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
-
       renderWithQueryClient(<ImportModal {...defaultProps} onClose={onClose} />);
 
       await user.click(screen.getByRole('button', { name: /Cancel/i }));
-
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onClose when clicking backdrop', async () => {
-      const user = userEvent.setup();
-      const onClose = vi.fn();
-
-      renderWithQueryClient(<ImportModal {...defaultProps} onClose={onClose} />);
-
-      // Look for the backdrop button with aria-label
-      const backdrop = screen.getByLabelText('Close modal');
-      await user.click(backdrop);
-
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onClose when clicking X button', async () => {
-      const user = userEvent.setup();
-      const onClose = vi.fn();
-
-      renderWithQueryClient(<ImportModal {...defaultProps} onClose={onClose} />);
-
-      // Find X button - usually the first button with svg icon in header
-      const buttons = screen.getAllByRole('button');
-      const xButton = buttons.find(btn => 
-        btn.querySelector('svg') && !btn.textContent?.includes('Cancel')
-      );
-      
-      if (xButton) {
-        await user.click(xButton);
-        expect(onClose).toHaveBeenCalled();
-      }
-    });
-
-    it('keeps Next disabled until a file is selected', async () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-      const nextButton = screen.getByRole('button', { name: /Next/i });
-      expect(nextButton).toBeDisabled();
-    });
-
-    it('shows selected file name after upload', async () => {
-      const user = userEvent.setup();
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      const file = new File(['a,b\n1,2'], 'sample.csv', { type: 'text/csv' });
-      await user.upload(fileInput, file);
-      expect(screen.getByText('sample.csv')).toBeInTheDocument();
-    });
-  });
-
-  describe('file upload area', () => {
-    it('renders file input with correct accept attribute for CSV', () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} importType="csv" />);
-
-      const fileInput = document.querySelector('input[type="file"]');
-      expect(fileInput).toHaveAttribute('accept', '.csv');
-    });
-
-    it('renders file input with correct accept attribute for Excel', () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} importType="excel" />);
-
-      const fileInput = document.querySelector('input[type="file"]');
-      expect(fileInput).toHaveAttribute('accept', '.xlsx,.xls');
-    });
-
-    it('renders file input with correct accept attribute for JSON', () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} importType="json" />);
-
-      const fileInput = document.querySelector('input[type="file"]');
-      expect(fileInput).toHaveAttribute('accept', '.json');
-    });
-
-    it('renders file input with correct accept attribute for SQL', () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} importType="sql" />);
-
-      const fileInput = document.querySelector('input[type="file"]');
-      expect(fileInput).toHaveAttribute('accept', '.sql');
-    });
-  });
-
-  describe('file validation', () => {
-    it('shows error when SQL file type is invalid', async () => {
-      const user = userEvent.setup({ applyAccept: false });
-      renderWithQueryClient(<ImportModal {...defaultProps} importType="sql" />);
-
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      const invalidFile = new File(['content'], 'file.txt', { type: 'text/plain' });
-
-      await user.upload(fileInput, invalidFile);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Please select a SQL file/i)).toBeInTheDocument();
+      await user.click(screen.getByLabelText('Close modal'));
+      await user.click(screen.getByLabelText('Close'));
+      fireEvent.keyDown(screen.getByText(/Import CSV/i).closest('.fixed')!, {
+        key: 'Escape',
       });
+
+      expect(onClose).toHaveBeenCalledTimes(4);
+    });
+
+    it('does not close while importing', async () => {
+      mockUseImportData.mockReturnValue({
+        mutateAsync: mockMutateAsync,
+        isPending: true,
+      });
+      const onClose = vi.fn();
+      renderWithQueryClient(<ImportModal {...defaultProps} onClose={onClose} />);
+
+      await userEvent.setup().click(screen.getByLabelText('Close modal'));
+      await userEvent.setup().click(screen.getByLabelText('Close'));
+
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByText(/Uploading.../i)).toBeInTheDocument();
     });
   });
 
   describe('state reset', () => {
     it('resets form when modal reopens', async () => {
-      const user = userEvent.setup();
-
-      const { rerender } = renderWithQueryClient(
-        <ImportModal {...defaultProps} />
-      );
-
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      const file = new File(['a,b\n1,2'], 'reset.csv', { type: 'text/csv' });
-      await user.upload(fileInput, file);
+      const { rerender } = renderWithQueryClient(<ImportModal {...defaultProps} />);
+      await uploadCsv('reset.csv');
       expect(screen.getByText('reset.csv')).toBeInTheDocument();
 
-      // Close and reopen
       rerender(
         <MemoryRouter>
           <QueryClientProvider client={createTestQueryClient()}>
@@ -276,173 +480,453 @@ describe('ImportModal', () => {
     });
   });
 
-  describe('different import types', () => {
-    it.each([
-      ['csv', 'CSV'],
-      ['excel', 'Excel'],
-      ['json', 'JSON'],
-      ['sql', 'SQL'],
-    ])('displays correct label for %s import type', (type, label) => {
-      renderWithQueryClient(
-        <ImportModal {...defaultProps} importType={type as any} />
+  describe('preview / review step', () => {
+    it('moves to review step after successful preview build', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      await goToReviewStep();
+
+      expect(screen.getByTestId('column-mapper')).toBeInTheDocument();
+      expect(screen.getByTestId('preview-grid')).toBeInTheDocument();
+      expect(screen.getByTestId('cleanup-options')).toBeInTheDocument();
+      expect(mockBuildImportPreview).toHaveBeenCalled();
+      expect(mockBuildInitialMappings).toHaveBeenCalled();
+    });
+
+    it('shows toast and error when preview build fails', async () => {
+      mockBuildImportPreview.mockRejectedValueOnce(new Error('Broken CSV'));
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const { user } = await uploadCsv();
+
+      await user.click(screen.getByRole('button', { name: /Next/i }));
+
+      expect(await screen.findByText('Broken CSV')).toBeInTheDocument();
+      expect(mockToastError).toHaveBeenCalledWith('Broken CSV');
+      expect(screen.getByText(/Import CSV/i)).toBeInTheDocument();
+    });
+
+    it('uses fallback preview error message when rejection has no message', async () => {
+      mockBuildImportPreview.mockRejectedValueOnce({});
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const { user } = await uploadCsv();
+
+      await user.click(screen.getByRole('button', { name: /Next/i }));
+
+      expect(await screen.findByText(/Failed to read file preview/i)).toBeInTheDocument();
+    });
+
+    it('returns to select step when Back is clicked', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const user = await goToReviewStep();
+
+      await user.click(screen.getByRole('button', { name: /Back/i }));
+
+      expect(screen.getByText(/Import CSV/i)).toBeInTheDocument();
+      expect(screen.getByText('sample.csv')).toBeInTheDocument();
+    });
+
+    it('auto-includes excluded column when selected as primary key', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const user = await goToReviewStep();
+
+      await user.click(screen.getByLabelText('include-score'));
+      expect(screen.getByLabelText('include-score')).not.toBeChecked();
+
+      await user.selectOptions(screen.getByTestId('primary-key-select'), 'Score');
+
+      expect(screen.getByLabelText('include-score')).toBeChecked();
+    });
+
+    it('clears primary key when primary column is excluded', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const user = await goToReviewStep();
+
+      expect(screen.getByTestId('primary-key-select')).toHaveValue('Name');
+      await user.click(screen.getByLabelText('include-name'));
+
+      expect(screen.getByTestId('primary-key-select')).toHaveValue('');
+      expect(screen.getByTestId('primary-error')).toHaveTextContent(
+        'Primary column cannot be excluded.'
+      );
+    });
+
+    it('clears primary error when default value is updated for primary column', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const user = await goToReviewStep();
+
+      await user.clear(screen.getByLabelText('default-name'));
+      await user.click(screen.getByRole('button', { name: /Confirm/i }));
+      expect(await screen.findByTestId('primary-error')).toHaveTextContent(
+        'Primary column cannot be empty.'
       );
 
-      expect(screen.getByText(new RegExp(`Import ${label}`, 'i'))).toBeInTheDocument();
-    });
-  });
-
-  describe('title validation', () => {
-    it('does not show title validation UI in select step', async () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-      expect(screen.queryByText(/Table title must be at least 3 characters long/i)).not.toBeInTheDocument();
-    });
-
-    it('does not show title uniqueness UI in select step', async () => {
-      const existingTables = [{ title: 'Existing Table' }];
-
-      renderWithQueryClient(
-        <ImportModal {...defaultProps} existingTables={existingTables} />
-      );
-
-      expect(screen.queryByText(/Table title must be unique/i)).not.toBeInTheDocument();
-    });
-
-    it('does not render title input for validation checks', async () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-      expect(screen.queryByPlaceholderText(/Enter table title/i)).not.toBeInTheDocument();
-    });
-
-    it('does not show title input border state when title input is absent', async () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-      expect(screen.queryByPlaceholderText(/Enter table title/i)).not.toBeInTheDocument();
-    });
-  });
-
-  describe('file validation', () => {
-    it('shows error when file type is invalid', async () => {
-      const user = userEvent.setup({ applyAccept: false });
-      renderWithQueryClient(<ImportModal {...defaultProps} importType="csv" />);
-
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      const invalidFile = new File(['content'], 'file.txt', { type: 'text/plain' });
-
-      await user.upload(fileInput, invalidFile);
+      await user.type(screen.getByLabelText('default-name'), 'id');
 
       await waitFor(() => {
-        expect(screen.getByText(/Please select a CSV file/i)).toBeInTheDocument();
+        expect(screen.queryByTestId('primary-error')).not.toBeInTheDocument();
       });
     });
 
-    it('shows red border on file upload area when there is a file error', async () => {
-      const user = userEvent.setup({ applyAccept: false });
+    it('updates cleanup options from the cleanup panel', async () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const user = await goToReviewStep();
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      const invalidFile = new File(['content'], 'file.txt', { type: 'text/plain' });
+      await user.click(screen.getByRole('button', { name: /Toggle cleanup/i }));
+      await user.click(screen.getByRole('button', { name: /Confirm/i }));
 
-      await user.upload(fileInput, invalidFile);
-
-      const uploadArea = screen.getByLabelText(/Click or drag and drop to upload file/i);
-
-      await waitFor(() => {
-        expect(uploadArea).toHaveClass('border-red-400');
+      await waitFor(() => expect(mockMutateAsync).toHaveBeenCalled());
+      const payload = mockMutateAsync.mock.calls[0][0];
+      expect(payload.config.settings).toEqual({
+        remove_duplicate_records: true,
+        trim_extra_spaces: true,
+        remove_empty_rows: true,
       });
     });
   });
 
-  describe('title validation', () => {
-    it('does not render title required validation in select step', async () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-      expect(screen.queryByText(/Table title is required/i)).not.toBeInTheDocument();
-    });
-
-    it('shows uploaded filename in select step', async () => {
-      const user = userEvent.setup();
+  describe('submit validation', () => {
+    it('requires a file when form is submitted on select step', async () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      const file = new File(['a,b\n1,2'], 'my_table.csv', { type: 'text/csv' });
-      await user.upload(fileInput, file);
-      expect(screen.getByText('my_table.csv')).toBeInTheDocument();
+      fireEvent.submit(document.getElementById('import-form')!);
+
+      expect(await screen.findByText(/Please select a file to import/i)).toBeInTheDocument();
     });
 
-    it('does not run title uniqueness validation in select step', async () => {
-      const existingTables = [
-        { title: 'Existing Table' }
-      ];
+    it('requires workspace id', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} workspaceId="" />);
+      await goToReviewStep();
 
-      renderWithQueryClient(
-        <ImportModal {...defaultProps} existingTables={existingTables} />
-      );
+      fireEvent.submit(document.getElementById('import-form')!);
 
-      expect(screen.queryByText(/Table title must be unique/i)).not.toBeInTheDocument();
+      await waitFor(() => expect(mockMutateAsync).not.toHaveBeenCalled());
+      expect(screen.getByRole('button', { name: /Confirm/i })).toBeInTheDocument();
     });
 
-    it('does not apply case-insensitive title uniqueness in select step', async () => {
-      const existingTables = [
-        { title: 'My Table' }
-      ];
-
-      renderWithQueryClient(
-        <ImportModal {...defaultProps} existingTables={existingTables} />
-      );
-
-      expect(screen.queryByText(/Table title must be unique/i)).not.toBeInTheDocument();
-    });
-
-    it('does not detect duplicate title from model.title in select step', async () => {
-      const existingTables = [
-        { model: { id: 't1', title: 'Sales Data' } }
-      ];
-
-      renderWithQueryClient(
-        <ImportModal {...defaultProps} existingTables={existingTables as any[]} />
-      );
-
-      expect(screen.queryByText(/Table title must be unique/i)).not.toBeInTheDocument();
-    });
-
-    it('keeps title input absent when re-validating select step', async () => {
+    it('requires at least one included column', async () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
-      expect(screen.queryByPlaceholderText(/Enter table title/i)).not.toBeInTheDocument();
+      const user = await goToReviewStep();
+
+      await user.click(screen.getByLabelText('include-name'));
+      await user.click(screen.getByLabelText('include-active'));
+      await user.click(screen.getByLabelText('include-score'));
+      await user.click(screen.getByRole('button', { name: /Confirm/i }));
+
+      await waitFor(() => expect(mockMutateAsync).not.toHaveBeenCalled());
+      expect(screen.getByRole('button', { name: /Confirm/i })).toBeInTheDocument();
+    });
+
+    it('requires primary column to be included', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const user = await goToReviewStep();
+
+      await user.click(screen.getByRole('button', { name: /Set invalid primary/i }));
+      await user.click(screen.getByRole('button', { name: /Confirm/i }));
+
+      expect(await screen.findByTestId('primary-error')).toHaveTextContent(
+        'Primary column must be included.'
+      );
+      expect(mockMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('requires primary column default value', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const user = await goToReviewStep();
+
+      await user.clear(screen.getByLabelText('default-name'));
+      await user.click(screen.getByRole('button', { name: /Confirm/i }));
+
+      expect(await screen.findByText(/Primary column cannot be empty/i)).toBeInTheDocument();
+      expect(mockMutateAsync).not.toHaveBeenCalled();
     });
   });
 
-  describe('form elements', () => {
-    it('does not render table name input in select step', () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-      expect(screen.queryByPlaceholderText(/Enter table title/i)).not.toBeInTheDocument();
+  describe('successful import', () => {
+    it('submits payload with normalized field meta and navigates to table route', async () => {
+      const onClose = vi.fn();
+      const onSuccess = vi.fn();
+      renderWithQueryClient(
+        <ImportModal {...defaultProps} onClose={onClose} onSuccess={onSuccess} />
+      );
+      const user = await goToReviewStep();
+
+      await user.click(screen.getByRole('button', { name: /Confirm/i }));
+
+      await waitFor(() => expect(mockMutateAsync).toHaveBeenCalled());
+      const args = mockMutateAsync.mock.calls[0][0];
+      expect(args.base_id).toBe('base-123');
+      expect(args.workspace_id).toBe('ws-123');
+      expect(args.order_index).toBe(0);
+      expect(args.primary_column).toBe('Name');
+      expect(args.config.columns).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            column_name: 'Name',
+            uidt: 'text',
+            meta: expect.objectContaining({ defaultValue: 'fallback' }),
+          }),
+          expect.objectContaining({
+            column_name: 'Active',
+            uidt: 'boolean',
+            meta: expect.objectContaining({ defaultValue: true }),
+          }),
+          expect.objectContaining({
+            column_name: 'Score',
+            uidt: 'rating',
+            meta: expect.objectContaining({ ratingDefault: 5 }),
+          }),
+        ])
+      );
+
+      expect(onClose).toHaveBeenCalled();
+      expect(onSuccess).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/workspace/ws-123/base/base-123/table/table-1/view-1',
+        expect.objectContaining({
+          state: expect.objectContaining({
+            existing: true,
+            importSummary: expect.objectContaining({
+              totalRows: 2,
+              columns: 3,
+              tableTitle: 'Imported Table',
+            }),
+          }),
+        })
+      );
     });
 
-    it('does not render description input in select step', () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-      expect(screen.queryByPlaceholderText(/Enter table description/i)).not.toBeInTheDocument();
+    it('omits base_id when not provided and uses existingTables length for order_index', async () => {
+      renderWithQueryClient(
+        <ImportModal
+          {...defaultProps}
+          baseId={undefined}
+          existingTables={[{ id: 't1' }, { id: 't2' }] as any[]}
+        />
+      );
+      const user = await goToReviewStep();
+      await user.click(screen.getByRole('button', { name: /Confirm/i }));
+
+      await waitFor(() => expect(mockMutateAsync).toHaveBeenCalled());
+      const args = mockMutateAsync.mock.calls[0][0];
+      expect(args.base_id).toBeUndefined();
+      expect(args.order_index).toBe(2);
     });
 
-    it('shows file size limit info', () => {
+    it('navigates to current path when import response has no table route', async () => {
+      mockMutateAsync.mockResolvedValueOnce({
+        data: {
+          model: { title: 'Partial' },
+          import_stats: { total_rows: 1, total_columns: 1 },
+        },
+      });
       renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const user = await goToReviewStep();
+      await user.click(screen.getByRole('button', { name: /Confirm/i }));
 
-      const uploadArea = screen.getByLabelText(/Click or drag and drop to upload file/i);
-      expect(uploadArea).toBeInTheDocument();
-      
-      const browseFilesText = screen.getByText(/browse files/i);
-      expect(browseFilesText).toBeInTheDocument();
+      await waitFor(() =>
+        expect(mockNavigate).toHaveBeenCalledWith(
+          '/workspace/ws-123',
+          expect.objectContaining({
+            replace: true,
+            state: expect.objectContaining({
+              importSummary: expect.objectContaining({ tableTitle: 'Partial' }),
+            }),
+          })
+        )
+      );
+    });
+
+    it('handles bare response body and progress callbacks', async () => {
+      mockMutateAsync.mockImplementationOnce(async (payload: any) => {
+        payload.onProgress({ loaded: 50, total: 100 });
+        payload.onProgress({ loaded: 5000, total: 0 });
+        return {
+          model: {
+            id: 'table-2',
+            title: 'Bare',
+            workspace_id: 'ws-123',
+            base_id: 'base-123',
+          },
+          views: [{ id: 'view-2' }],
+        };
+      });
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const user = await goToReviewStep();
+      await user.click(screen.getByRole('button', { name: /Confirm/i }));
+
+      await waitFor(() =>
+        expect(mockNavigate).toHaveBeenCalledWith(
+          '/workspace/ws-123/base/base-123/table/table-2/view-2',
+          expect.any(Object)
+        )
+      );
+    });
+
+    it('normalizes boolean and rating default values in payload', async () => {
+      mockBuildInitialMappings.mockReturnValue({
+        name: {
+          sourceName: 'Name',
+          include: true,
+          fieldType: 'boolean',
+          defaultValue: '1',
+        },
+        active: {
+          sourceName: 'Active',
+          include: true,
+          fieldType: 'boolean',
+          defaultValue: 'no',
+        },
+        score: {
+          sourceName: 'Score',
+          include: true,
+          fieldType: 'rating',
+          defaultValue: 'abc',
+        },
+      });
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const user = await goToReviewStep();
+      await user.selectOptions(screen.getByTestId('primary-key-select'), 'none');
+      await user.click(screen.getByRole('button', { name: /Confirm/i }));
+
+      await waitFor(() => expect(mockMutateAsync).toHaveBeenCalled());
+      const columns = mockMutateAsync.mock.calls[0][0].config.columns;
+      expect(columns[0].meta.defaultValue).toBe(true);
+      expect(columns[1].meta.defaultValue).toBe(false);
+      expect(columns[2].meta.ratingDefault).toBe(0);
+    });
+
+    it('excludes columns with include false from payload and skips empty text defaults', async () => {
+      mockBuildInitialMappings.mockReturnValue({
+        name: {
+          sourceName: 'Name',
+          include: true,
+          fieldType: 'text',
+          defaultValue: '',
+        },
+        active: {
+          sourceName: 'Active',
+          include: false,
+          fieldType: 'text',
+          defaultValue: 'x',
+        },
+        score: {
+          sourceName: 'Score',
+          include: true,
+          fieldType: 'number',
+          defaultValue: '3',
+        },
+      });
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const user = await goToReviewStep();
+      await user.selectOptions(screen.getByTestId('primary-key-select'), 'none');
+      await user.click(screen.getByRole('button', { name: /Confirm/i }));
+
+      await waitFor(() => expect(mockMutateAsync).toHaveBeenCalled());
+      const columns = mockMutateAsync.mock.calls[0][0].config.columns;
+      expect(columns).toHaveLength(2);
+      expect(columns.find((c: any) => c.column_name === 'Active')).toBeUndefined();
+      expect(columns[0].meta.defaultValue).toBeUndefined();
+      expect(columns[1].meta).toEqual(expect.objectContaining({ defaultValue: '3' }));
     });
   });
 
-  describe('separate error display', () => {
-    it('has placeholder for file error message', () => {
+  describe('import errors', () => {
+    it('shows toast when import fails', async () => {
+      mockMutateAsync.mockRejectedValueOnce(new Error('Upload failed'));
       renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const user = await goToReviewStep();
 
-      // The modal should have the structure for displaying file errors
-      const uploadArea = screen.getByLabelText(/Click or drag and drop to upload file/i);
-      expect(uploadArea).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /Confirm/i }));
+
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalledWith('Upload failed');
+      });
+      expect(mockNavigate).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: /Confirm/i })).toBeInTheDocument();
     });
 
-    it('has placeholder for title error message', async () => {
+    it('uses fallback error message when rejection has no message', async () => {
+      mockMutateAsync.mockRejectedValueOnce({});
       renderWithQueryClient(<ImportModal {...defaultProps} />);
-      expect(screen.queryByText(/Table title must be at least 3 characters long/i)).not.toBeInTheDocument();
+      const user = await goToReviewStep();
+
+      await user.click(screen.getByRole('button', { name: /Confirm/i }));
+
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalledWith('Failed to generate import payload');
+      });
+    });
+
+    it('ignores duplicate submit while already submitting', async () => {
+      let resolveMutation: (value: unknown) => void = () => undefined;
+      mockMutateAsync.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveMutation = resolve;
+          })
+      );
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const user = await goToReviewStep();
+
+      await user.click(screen.getByRole('button', { name: /Confirm/i }));
+      await screen.findByText(/Importing.../i);
+      fireEvent.submit(document.getElementById('import-form')!);
+
+      expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+      resolveMutation({
+        data: {
+          data: {
+            model: {
+              id: 'table-1',
+              title: 'Imported Table',
+              workspace_id: 'ws-123',
+              base_id: 'base-123',
+            },
+            views: [{ id: 'view-1' }],
+            import_stats: {},
+          },
+        },
+      });
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalled());
+    });
+  });
+
+  describe('title validation side effects', () => {
+    it('validates short derived titles without blocking Next', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      await uploadCsv('ab.csv');
+
+      expect(screen.getByRole('button', { name: /Next/i })).toBeEnabled();
+    });
+
+    it('validates empty derived titles from extension-only filenames', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      await uploadCsv('.csv');
+
+      expect(screen.getByText('.csv')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Next/i })).toBeEnabled();
+    });
+
+    it('maps unknown table-name validation errors to a fallback message', async () => {
+      vi.mocked(validateTableName).mockReturnValueOnce({
+        isValid: false,
+      });
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      await uploadCsv('custom.csv');
+
+      expect(screen.getByText('custom.csv')).toBeInTheDocument();
+      expect(validateTableName).toHaveBeenCalled();
+    });
+
+    it('validates duplicate derived titles against existing tables', async () => {
+      renderWithQueryClient(
+        <ImportModal
+          {...defaultProps}
+          existingTables={[{ title: 'Sales Data' }]}
+        />
+      );
+      await uploadCsv('Sales Data.csv');
+
+      expect(screen.getByText('Sales Data.csv')).toBeInTheDocument();
     });
   });
 });
-

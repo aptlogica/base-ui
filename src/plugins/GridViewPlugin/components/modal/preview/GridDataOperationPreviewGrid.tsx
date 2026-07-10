@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Dot } from 'lucide-react';
 import type { GridColumn } from '../../../types/grid.types';
 import type { GridDataOperationPreviewResult } from '../shared/gridDataOperation.types';
+import { filterGridDataOperationColumns } from '../shared/gridColumnIdentity';
 
 interface GridDataOperationPreviewGridProps {
   columns: GridColumn[];
@@ -115,7 +116,7 @@ export const GridDataOperationPreviewGrid: React.FC<GridDataOperationPreviewGrid
   preview,
 }) => {
   const [page, setPage] = useState(0);
-  const visibleColumns = columns.filter((column) => column.id || column.key);
+  const visibleColumns = filterGridDataOperationColumns(columns);
   const totalPages = Math.max(1, Math.ceil(preview.previewRows.length / PAGE_SIZE));
 
   useEffect(() => {

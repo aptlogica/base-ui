@@ -13,7 +13,7 @@ import type {
   GridSplitPlacement,
   GridSplitSeparatorType,
 } from '../shared/gridDataOperation.types';
-import { getGridColumnIdentity } from '../shared/gridColumnIdentity';
+import { filterGridDataOperationColumns, getGridColumnIdentity } from '../shared/gridColumnIdentity';
 
 interface SplitColumnPanelProps {
   columns: GridColumn[];
@@ -93,7 +93,7 @@ export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({
   splitPlacement,
   onSplitPlacementChange,
 }) => {
-  const visibleColumns = columns.filter((column) => getGridColumnIdentity(column));
+  const visibleColumns = filterGridDataOperationColumns(columns);
 
   const renderSplitModeFields = (mode: GridSplitMode) => {
     if (splitMode !== mode) return null;

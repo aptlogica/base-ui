@@ -13,7 +13,7 @@ import { GridDataOperationPanel } from './shared/GridDataOperationPanel';
 import { GridDataOperationPreviewGrid } from './preview/GridDataOperationPreviewGrid';
 import { getGridDataOperationAdapter } from './shared/gridDataOperationRegistry';
 import type { GridDataOperationApplyPlan, GridDataOperationPreviewResult, GridDataOperationState, GridExtractMethod, GridExtractType } from './shared/gridDataOperation.types';
-import { getGridColumnIdentity } from './shared/gridColumnIdentity';
+import { filterGridDataOperationColumns, getGridColumnIdentity } from './shared/gridColumnIdentity';
 import { useToast } from '../../../../components/common/Toast';
 import { bulkUpdateFieldService } from '../../../../service/clientService';
 import { useCaseNormalize, useFindReplace, useMergeColumns, useRemoveDuplicates, useTrimWhitespace, useRemoveSpecialCharacters, useExtractSubstring, useRemoveFormatting, useSplitColumn } from '../../../../hooks/useApi';
@@ -21,8 +21,7 @@ import { useCaseNormalize, useFindReplace, useMergeColumns, useRemoveDuplicates,
 const DEFAULT_SELECTED_COUNT = 1;
 
 const buildInitialSelectedColumns = (columns: GridColumn[]) =>
-  columns
-    .filter((column) => getGridColumnIdentity(column))
+  filterGridDataOperationColumns(columns)
     .slice(0, DEFAULT_SELECTED_COUNT)
     .map((column) => getGridColumnIdentity(column));
 
