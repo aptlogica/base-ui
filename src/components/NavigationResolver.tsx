@@ -875,8 +875,8 @@ export const NavigationResolver: React.FC = () => {
       return;
     }
 
-    const currentWorkspace = workspaces.find((ws) => ws.id === selectedWorkspaceId);
-    if (!currentWorkspace) {
+    const workspaceExists = workspaces.some((ws) => ws.id === selectedWorkspaceId);
+    if (!workspaceExists) {
       const targetPath = getBestNavigationTarget(workspaces);
       if (targetPath) {
         replaceNavigate(navigate, targetPath);

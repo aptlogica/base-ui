@@ -27,7 +27,7 @@ export const DefaultValueEditor: React.FC<Props> = ({ fieldType, value, disabled
       FieldType.Year,
       FieldType.Duration,
       FieldType.Rating,
-    ]).has(normalizedType as any);
+    ]).has(normalizedType);
   }, [normalizedType]);
 
   if (normalizedType === FieldType.Boolean) {

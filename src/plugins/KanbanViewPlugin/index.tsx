@@ -45,7 +45,7 @@ const KanbanViewPlugin: Plugin = {
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
               <div className="text-red-500 text-lg mb-2">Something went wrong while loading the kanban view.</div>
-              <p className="text-muted-foreground mb-4">{errorMessage}</p>
+              <p className="text-secondary mb-4">{errorMessage}</p>
               <button onClick={() => refresh()} className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90">Retry</button>
             </div>
           </div>

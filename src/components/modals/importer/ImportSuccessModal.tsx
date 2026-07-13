@@ -4,6 +4,7 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import React from 'react';
 import { ArrowRight, Check, X } from 'lucide-react';
+import { downloadLinkedFile, downloadTextContent } from './importDownload';
 
 export type ImportSuccessSummary = {
   totalRows: number;
@@ -28,30 +29,15 @@ export const ImportSuccessModal: React.FC<Props> = ({ open, summary, onClose }) 
   if (!open || !summary) return null;
 
   const handleDownloadImportLog = () => {
-    const hasInlineContent = Boolean(summary.errorRowsFileContent && summary.errorRowsFileContent.trim().length > 0);
-
-    if (hasInlineContent) {
-      const textContent = summary.errorRowsFileContent || '';
-      const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = 'import_error_rows_report.txt';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(blobUrl);
+    const textContent = summary.errorRowsFileContent?.trim();
+    if (textContent) {
+      downloadTextContent(textContent, 'import_error_rows_report.txt');
       return;
     }
 
-    if (!summary.errorRowsFilePath) return;
-    const link = document.createElement('a');
-    link.href = summary.errorRowsFilePath;
-    link.download = summary.errorRowsFilePath.split('/').pop() || 'import_error_rows.txt';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    if (summary.errorRowsFilePath) {
+      downloadLinkedFile(summary.errorRowsFilePath);
+    }
   };
 
   return (
@@ -64,8 +50,10 @@ export const ImportSuccessModal: React.FC<Props> = ({ open, summary, onClose }) 
       />
 
       <div //NOSONAR
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="import-success-title"
         className="bg-[var(--color-card)] border rounded-xl shadow-2xl w-full max-w-[720px] max-h-[90vh] p-6 relative"
-        onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
@@ -80,7 +68,7 @@ export const ImportSuccessModal: React.FC<Props> = ({ open, summary, onClose }) 
           <div className="w-20 h-20 rounded-full bg-green-600 flex items-center justify-center mb-6">
             <Check className="w-10 h-10 text-white" />
           </div>
-          <h3 className="text-3xl font-semibold text-primary">Data Imported Successfully</h3>
+          <h3 id="import-success-title" className="text-3xl font-semibold text-primary">Data Imported Successfully</h3>
           <p className="mt-2 text-secondary">
             Your import is complete{summary.tableTitle ? ` for "${summary.tableTitle}".` : '.'}
           </p>
@@ -117,8 +105,6 @@ export const ImportSuccessModal: React.FC<Props> = ({ open, summary, onClose }) 
                 <li>{summary.errorRows.toLocaleString()} rows with errors</li>
                 <li>{summary.emptyRows.toLocaleString()} empty rows found</li>
                 <li>{summary.duplicateRows.toLocaleString()} duplicate rows found</li>
-                {/* <li>{summary.emptyRowsSkipped.toLocaleString()} empty rows skipped</li>
-                <li>{summary.duplicatesRemoved.toLocaleString()} duplicates removed</li> */}
               </ul>
             </div>
           </div>

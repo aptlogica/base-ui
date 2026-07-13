@@ -91,7 +91,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
               />
             )}
             {isReadOnly && (
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-secondary">
                 Appearance settings are not available in read-only mode.
               </div>
             )}

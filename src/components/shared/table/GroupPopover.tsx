@@ -279,7 +279,7 @@ export const GroupPopover: React.FC<{
     <div className="relative">
       <button
         ref={triggerRef}
-        className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium border shadow-xs rounded-xl focus:outline-none ${validGroupsCount > 0 ? 'bg-purple-50 text-purple-700 border-purple-300' : 'bg-card text-muted-foreground border-border'}`}
+        className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium border shadow-xs rounded-xl focus:outline-none ${validGroupsCount > 0 ? 'bg-purple-50 text-purple-700 border-purple-300' : 'bg-card text-secondary border-border'}`}
         onClick={() => setOpen(v => !v)}
         type="button"
       >

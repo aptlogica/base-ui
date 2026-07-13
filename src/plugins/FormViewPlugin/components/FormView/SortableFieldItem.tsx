@@ -53,7 +53,7 @@ export const SortableFieldItem: React.FC<SortableFieldItemProps> = ({
         ${isSelected ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : 'border-border hover:border-border/60 hover:bg-muted/50'}
         ${isDragging ? 'opacity-50 border-dashed border-2 border-primary' : ''}
         ${isDragOver ? 'bg-muted/50' : ''}
-        ${field.is_hidden ? 'bg-muted/30 text-muted-foreground cursor-not-allowed' : ''}`}
+        ${field.is_hidden ? 'bg-muted/30 text-secondary cursor-not-allowed' : ''}`}
       onClick={() => {
         // Only trigger select if not dragging
         if (!isDragging) {
@@ -82,7 +82,7 @@ export const SortableFieldItem: React.FC<SortableFieldItemProps> = ({
           aria-label="Drag to reorder field"
           tabIndex={0}
         >
-          <GripVertical className="w-5 h-5 text-muted-foreground mr-2" />
+          <GripVertical className="w-5 h-5 text-secondary mr-2" />
           {(() => {
             const fieldType = FIELD_TYPES.find(type => type?.key === field?.type);
             const IconComponent = fieldType?.icon;
@@ -105,7 +105,7 @@ export const SortableFieldItem: React.FC<SortableFieldItemProps> = ({
               onToggle(field.id);
             }}
           >
-            {field.is_hidden ? <EyeOff className="w-5 h-5 text-muted-foreground" /> : <Eye className="w-5 h-5 text-muted-foreground" />}
+            {field.is_hidden ? <EyeOff className="w-5 h-5 text-secondary" /> : <Eye className="w-5 h-5 text-secondary" />}
           </button>
         )}
         {onDelete && (

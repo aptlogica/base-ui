@@ -797,7 +797,7 @@ export const LongText: React.FC<LongTextProps> = ({
           <div ref={modalRef} className="relative bg-[var(--color-card)] border rounded-xl shadow-xl w-full max-w-5xl h-[85vh] p-6 flex flex-col z-10 overflow-hidden">
             <div className="flex items-center mb-4 flex-shrink-0">
               <AlignLeft className="w-8 h-8 rounded icon-primary p-1 mr-2" />
-              <span className="text-lg font-medium text-muted-foreground">Long Text</span>
+              <span className="text-lg font-medium text-secondary">Long Text</span>
               {richText && !readOnly && (
                 <div className="flex items-center gap-1 ml-4 px-2 py-1 bg-gray-100 rounded-xl">
                   <button
@@ -976,7 +976,7 @@ export const LongText: React.FC<LongTextProps> = ({
                 value={modalValue}
                 onChange={handleModalChange}
                 onKeyDown={(e) => e.stopPropagation()}
-                className="w-full flex-1 min-h-0 bg-[var(--background)] border rounded-xl p-3 text-sm text-muted-foreground focus:outline-none focus:border-[var(--color-brand-600)] transition-all resize-vertical"
+                className="w-full flex-1 min-h-0 bg-[var(--background)] border rounded-xl p-3 text-sm text-secondary focus:outline-none focus:border-[var(--color-brand-600)] transition-all resize-vertical"
                 placeholder={placeholder}
                 disabled={disabled || readOnly}
               />

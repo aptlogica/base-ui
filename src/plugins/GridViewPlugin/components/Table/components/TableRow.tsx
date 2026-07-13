@@ -178,7 +178,7 @@ export const TableRow: React.FC<TableRowProps> = ({
       >
         {(() => {
           const hoverHideClass = canSelectRows ? 'group-hover:opacity-0' : '';
-          const rowNumberClassName = `text-xs text-muted-foreground font-normal absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none transition-opacity duration-150 ${isSelected ? 'opacity-0' : hoverHideClass}`;
+          const rowNumberClassName = `text-xs text-secondary font-normal absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none transition-opacity duration-150 ${isSelected ? 'opacity-0' : hoverHideClass}`;
           return (
             <span className={rowNumberClassName} style={{ zIndex: 1 }}>{displayRowNumber ?? rowIndex + 1}</span>
           );

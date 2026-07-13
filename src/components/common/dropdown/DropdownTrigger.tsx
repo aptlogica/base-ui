@@ -7,6 +7,7 @@ import { ChevronDown, X, Loader2 } from 'lucide-react';
 
 interface DropdownTriggerProps {
   displayLabel: string;
+  description?: string;
   isOpen: boolean;
   disabled?: boolean;
   loading?: boolean;
@@ -20,6 +21,7 @@ interface DropdownTriggerProps {
 
 export const DropdownTrigger = React.forwardRef<HTMLButtonElement, DropdownTriggerProps>(({
   displayLabel,
+  description,
   isOpen,
   disabled,
   loading,
@@ -53,10 +55,19 @@ export const DropdownTrigger = React.forwardRef<HTMLButtonElement, DropdownTrigg
       aria-expanded={isOpen}
       aria-haspopup="listbox"
     >
-      <span className={`block min-w-0 flex-1 truncate ${displayLabel.includes('Select') ? 'var(--color-text-placeholder)' : 'var(--color-text-primary)'
-        }`}>
-        {displayLabel}
-      </span>
+      <div className="block min-w-0 flex-1">
+        <span 
+          className="block truncate text-sm"
+          style={{ color: displayLabel.includes('Select') ? 'var(--color-text-placeholder)' : 'var(--color-text-primary)' }}
+        >
+          {displayLabel}
+        </span>
+        {description && !displayLabel.includes('Select') && (
+          <span className="block truncate text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            {description}
+          </span>
+        )}
+      </div>
 
       <div className="flex shrink-0 items-center space-x-1 ml-2">
         {multiple && selectedCount > 0 && (

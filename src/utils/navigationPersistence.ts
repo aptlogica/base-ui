@@ -218,7 +218,7 @@ export const resolveWorkspaceIdFromBaseId = (baseId: string, workspaces: any[]):
 
   for (const workspace of workspaces) {
     if (workspace?.bases) {
-      const base = workspace.bases.find((b: any) => b.id === baseId);
+      const base = workspace.bases.some((b: any) => b.id === baseId);
       if (base) {
         return workspace.id;
       }

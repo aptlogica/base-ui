@@ -21,6 +21,7 @@ interface PopoverMenuProps {
   align?: Align;
   className?: string;
   portaled?: boolean; // New prop to enable portaling
+  onOpenChange?: (open: boolean) => void;
 }
 
 // Helper functions for positioning calculations
@@ -150,7 +151,8 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
   items,
   align = 'auto',
   className,
-  portaled = false // Default to false for backward compatibility
+  portaled = false, // Default to false for backward compatibility
+  onOpenChange
 }) => {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ horizontal: 'left', vertical: 'down' });
@@ -203,6 +205,10 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
         setPosition(position);
     }
   }, [open, align, portaled, items.length]);
+
+  useEffect(() => {
+    onOpenChange?.(open);
+  }, [open, onOpenChange]);
 
   // Recalculate position after menu is rendered (to get actual dimensions)
   useEffect(() => {
@@ -305,26 +311,31 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
         left: `${absolutePosition.left}px`
       } : undefined}
     >
-      {items.map((item) => (
-        <button
-          key={item.label}
-          className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-xl ${item.label.toLowerCase().includes('delete') || item.label.toLowerCase().includes('remove') ? "text-red-600 hover:bg-red-50" : "text-gray-700 hover:bg-gray-100"} transition-colors duration-200 ${item.danger
-            ? 'text-red-600 hover:bg-red-50'
-            : 'text-gray-700 hover:bg-gray-100'
-            } ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-          onClick={() => {
-            if (!item.disabled) {
-              setOpen(false);
-              item.onClick();
-            }
-          }}
-          disabled={item.disabled}
-          tabIndex={0}
-        >
-          {item.icon && <span className="w-5 h-5 flex items-center justify-center text-gray-600">{item.icon}</span>}
-          <span className="text-sm">{item.label}</span>
-        </button>
-      ))}
+      {items.map((item) => {
+        // Determine the text and background colors
+        const isDanger = item.danger && (item.label.toLowerCase().includes('delete') || item.label.toLowerCase().includes('remove'));
+        const textColor = isDanger ? "text-red-600" : "text-gray-700";
+        const bgColor = isDanger ? "hover:bg-red-50" : "hover:bg-gray-100";
+        const disabledClass = item.disabled ? 'opacity-50 cursor-not-allowed' : '';
+
+        return (
+          <button
+            key={item.label}
+            className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-xl ${textColor} ${bgColor} transition-colors duration-200 ${disabledClass}`}
+            onClick={() => {
+              if (!item.disabled) {
+                setOpen(false);
+                item.onClick();
+              }
+            }}
+            disabled={item.disabled}
+            tabIndex={0}
+          >
+            {item.icon && <span className="w-5 h-5 flex items-center justify-center text-gray-600">{item.icon}</span>}
+            <span className="text-sm">{item.label}</span>
+          </button>
+        )
+      })}
     </div>
   );
 
@@ -333,10 +344,14 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
       <button
         ref={buttonRef}
         type="button"
-        className="flex items-center justify-center p-1.5 rounded-xl hover:bg-gray-300  focus:outline-none transition-colors duration-200"
+        className="flex items-center justify-center rounded-xl hover:bg-gray-300 focus:outline-none transition-colors duration-200"
         onClick={(e) => {
           e.stopPropagation();
-          setOpen(v => !v);
+          setOpen(v => {
+            const next = !v;
+            onOpenChange?.(next);
+            return next;
+          });
         }}
         aria-haspopup="menu"
         aria-expanded={open}

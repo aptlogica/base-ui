@@ -209,7 +209,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
         precision = parts[1] ? parts[1].length : 2;
       }
       renderedComponent = commonProps.value === '-' ? (
-        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-muted-foreground">-</div>
+        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-secondary">-</div>
       ) : (
         <Decimal
           {...commonProps}
@@ -265,7 +265,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
         precision = parts[1] ? parts[1].length : 2;
       }
       renderedComponent = commonProps.value === '-' ? (
-        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-muted-foreground">-</div>
+        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-secondary">-</div>
       ) : (
         <Currency
           {...commonProps}
@@ -288,7 +288,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       break;
     case 'duration':
       renderedComponent = commonProps.value === '-' ? (
-        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-muted-foreground">-</div>
+        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-secondary">-</div>
       ) : (
         <Duration
           {...commonProps}
@@ -322,11 +322,11 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
     case 'datetime':
       if (commonProps.value === '-') {
         renderedComponent = (
-          <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-muted-foreground">-</div>
+          <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-secondary">-</div>
         );
       } else if (isSystemField) {
         renderedComponent = (
-          <div className="w-full px-3 py-2 text-sm text-muted-foreground cursor-not-allowed">
+          <div className="w-full px-3 py-2 text-sm text-secondary cursor-not-allowed">
             {value ? new Date(value).toLocaleString() : getDisplayValue(fieldType, value)}
           </div>
         );
@@ -373,7 +373,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       break;
     case 'url':
       renderedComponent = commonProps.value === '-' ? (
-        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-muted-foreground">-</div>
+        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-secondary">-</div>
       ) : (
         <URLField
           {...commonProps}
@@ -438,7 +438,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       break;
     case 'json':
       renderedComponent = isEmpty(value) ? (
-        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-muted-foreground">-</div>
+        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-secondary">-</div>
       ) : (
         <JSONField {...commonProps} config={{ ...parsedConfig, hideMaximizeButton: hideActionButtons }} />
       );

@@ -129,6 +129,13 @@ export function AdvancedDropdown<T extends string | number>({
     return getDisplayValue(labels, placeholder, multiple);
   }, [currentValues, options, placeholder, multiple]);
 
+  // Get the description of the selected option (for single select only)
+  const selectedDescription = useMemo((): string | undefined => {
+    if (multiple || currentValues.length !== 1) return undefined;
+    const selectedOption = options.find(opt => opt.value === currentValues[0]);
+    return selectedOption?.description;
+  }, [multiple, currentValues, options]);
+
   // Handle option selection
   const handleSelect = useCallback((optionValue: T) => {
     try {
@@ -407,6 +414,7 @@ export function AdvancedDropdown<T extends string | number>({
       {/* Trigger Button */}
       <DropdownTrigger
         displayLabel={displayLabel}
+        description={selectedDescription}
         isOpen={isOpen}
         disabled={disabled}
         loading={loading}

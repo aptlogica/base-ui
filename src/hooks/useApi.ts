@@ -33,6 +33,13 @@ import {
   deleteFieldService,
   resetFieldService,
   bulkUpdateFieldService,
+  trimWhitespaceService,
+  caseNormalizeService,
+  findReplaceService,
+  removeDuplicatesService,
+  removeSpecialCharactersService,
+  extractSubstringService,
+  removeFormattingService,
   // New view API services
   createViewService,
   updateViewService,
@@ -73,6 +80,8 @@ import {
   //Organization Services 
   getOrganizationService,
   updateOrganizationService,
+  mergeColumnsService,
+  splitColumnService
 } from '../service/clientService';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
 
@@ -811,6 +820,232 @@ export const useBulkUpdateColumn = () => {
   });
 };
 
+export const useTrimWhitespace = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      model_id: string;
+      columns: string[];
+      trim_mode: 'trim_both' | 'trim_leading' | 'trim_trailing' | 'collapse_spaces';
+    }) => trimWhitespaceService(params),
+    onSuccess: (_, { model_id }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
+export const useCaseNormalize = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      model_id: string;
+      columns: string[];
+      case_format: 'lowercase' | 'uppercase' | 'title_case' | 'sentence_case';
+    }) => caseNormalizeService(params),
+    onSuccess: (_, { model_id }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
+export const useExtractSubstring = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      model_id: string;
+      column_id: string;
+      extraction_method: 'extraction_type' | 'between_characters';
+      extraction_type: 'email' | 'keywords' | 'mentions' | 'tags' | 'url' | 'domain' | 'emoji' | 'phone' | 'prefix';
+      start_after?: string;
+      end_before?: string;
+      keep_original_column: boolean;
+      add_at_end: boolean;
+    }) => extractSubstringService(params),
+    onSuccess: (_, { model_id }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
+export const useFindReplace = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      model_id: string;
+      columns: string[];
+      find_value: string;
+      replace_value: string;
+      match_type: 'match_case' | 'ignore_case' | 'match_entire_value';
+    }) => findReplaceService(params),
+    onSuccess: (_, { model_id }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
+export const useMergeColumns = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: {
+      model_id: string;
+      columns: string[];
+      new_column_title?: string;
+      merge_format: 'space' | 'comma' | 'dash' | 'custom';
+      custom_separator?: string;
+      keep_original_column: boolean;
+      add_at_end: boolean;
+    }) => mergeColumnsService(params),
+    onSuccess: (_, { model_id }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
+export const useRemoveSpecialCharacters = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      model_id: string;
+      columns: string[];
+      special_characters_type: 'symbols' | 'currency_symbols' | 'brackets' | 'punctuation' | 'custom';
+      custom?: string[];
+    }) => removeSpecialCharactersService(params),
+    onSuccess: (_, { model_id }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
+export const useRemoveFormatting = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      model_id: string;
+      columns: string[];
+      formatting: 'currency' | 'percentage' | 'separator' | 'phone' | 'date' | 'custom';
+      custom_pattern?: string[];
+    }) => removeFormattingService(params),
+    onSuccess: (_, { model_id }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
+export const useSplitColumn = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      model_id: string;
+      column_id: string;
+      split_method: 'delimiter' | 'fixed_length' | 'pattern';
+      delimiter?: string;
+      fixed_length?: number;
+      fixed_length_action?: 'before' | 'after';
+      pattern?: string;
+      keep_original?: boolean;
+      where?: 'next' | 'end';
+      limit?: number;
+    }) => {
+      // Transform params to match splitColumnService signature
+      let split_by: any;
+      
+      if (params.split_method === 'delimiter' && params.delimiter) {
+        split_by = { type: 'separator' as const, config: { separator: params.delimiter } };
+      } else if (params.split_method === 'fixed_length' && params.fixed_length) {
+        split_by = {
+          type: 'fixed_length' as const,
+          config: {
+            action: params.fixed_length_action || 'before',
+            value: params.fixed_length
+          }
+        };
+      } else if (params.split_method === 'pattern' && params.pattern) {
+        split_by = { type: 'pattern' as const, config: { pattern: params.pattern } };
+      } else {
+        throw new Error('Invalid split column parameters');
+      }
+
+      return splitColumnService({
+        model_id: params.model_id,
+        column_id: params.column_id,
+        split_by,
+        keep_original: params.keep_original ?? true,
+        where: params.where ?? 'next',
+        limit: params.limit
+      });
+    },
+    onSuccess: (_, { model_id }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    }
+  });
+};
+
+
 // =========================
 // View APIs
 // =========================
@@ -1170,6 +1405,35 @@ export const useBulkDeleteRecords = () => {
       queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
+export const useRemoveDuplicates = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      model_id,
+      columns,
+      duplicate,
+      keep_rule,
+    }: {
+      model_id: string;
+      columns: string[];
+      duplicate: 'remove_row' | 'remove_duplicates' | 'remove_duplicates_matchCase';
+      keep_rule: 'keep_first' | 'keep_last' | 'keep_latest_updated';
+    }) =>
+      removeDuplicatesService({ model_id, columns, duplicate, keep_rule }),
+    onSuccess: (_, { model_id }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active',
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },

@@ -384,7 +384,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
     const renderDateTime = () => {
       if (isSystemField) {
         const tz = getSelectedTimeZone();
-        return <div className="w-full px-3 py-2 text-sm text-muted-foreground cursor-not-allowed">{formatInZone(value, tz)}</div>;
+        return <div className="w-full px-3 py-2 text-sm text-secondary cursor-not-allowed">{formatInZone(value, tz)}</div>;
       }
       const normalizedValue = normalizeDateValue(value, getDefaultValueFromConfig(parsedConfig, fieldType));
       return <DateTime {...commonProps} value={normalizedValue} config={parsedConfig} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />;

@@ -9,6 +9,7 @@ import { getFieldTypeIconComponent } from '../../../types/fieldTypes';
 import AdvancedDropdown from '../../common/dropdown/AdvancedDropdown';
 import { DefaultValueEditor } from './DefaultValueEditor';
 import { getAllowedImportFieldOptions } from './importFieldConfig';
+import { getSingleDropdownValue } from './importDropdownValue';
 
 type Props = {
   preview: ImportPreview;
@@ -57,7 +58,9 @@ export const ImportColumnMapper: React.FC<Props> = ({ preview, mappings, onChang
           <AdvancedDropdown
             options={primaryKeyOptions}
             value={primaryKey || ''}
-            onChange={(v: any) => onPrimaryKeyChange(v || null)}
+            onChange={(value: string | string[]) => {
+              onPrimaryKeyChange(getSingleDropdownValue(value) || null);
+            }}
             placeholder="Select primary key column"
             className="text-xs"
             searchable={true}
@@ -120,7 +123,9 @@ export const ImportColumnMapper: React.FC<Props> = ({ preview, mappings, onChang
                 <AdvancedDropdown
                   options={fieldTypeOptions}
                   value={fieldType}
-                  onChange={(v: any) => onChange(key, { fieldType: String(v) })}
+                  onChange={(value: string | string[]) => {
+                    onChange(key, { fieldType: getSingleDropdownValue(value) });
+                  }}
                   disabled={!include}
                   placeholder="Select field type"
                   className="text-xs"
