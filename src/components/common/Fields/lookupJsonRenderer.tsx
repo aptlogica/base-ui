@@ -9,7 +9,8 @@ import { ChevronDown, ChevronRight, Maximize2, X } from 'lucide-react';
 const normalizeJson = (value: unknown): unknown => {
   if (value === null || value === undefined || value === '') return null;
   if (typeof value === 'object') return value;
-  const text = String(value).trim();
+  if (typeof value !== 'string') return value;
+  const text = value.trim();
   if (!text) return null;
   try {
     return JSON.parse(text);
@@ -42,7 +43,10 @@ const TreeNode: React.FC<TreeNodeProps> = ({ data, path, level, expanded, onTogg
     if (typeof val === 'boolean') return <span className="text-blue-600">{String(val)}</span>;
     if (typeof val === 'number') return <span className="text-green-600">{val}</span>;
     if (typeof val === 'string') return <span className="text-orange-600">"{val}"</span>;
-    return <span className="text-gray-800">{String(val)}</span>;
+    if (typeof val === 'bigint' || typeof val === 'symbol') {
+      return <span className="text-gray-800">{val.toString()}</span>;
+    }
+    return <span className="text-gray-800">{JSON.stringify(val)}</span>;
   };
 
   if (Array.isArray(data)) {

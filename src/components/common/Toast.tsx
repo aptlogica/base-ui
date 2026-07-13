@@ -28,7 +28,7 @@ interface InternalToast extends Required<Omit<ToastOptions, 'action' | 'onClose'
   id: string;
   title?: string;
   position?: ToastPosition;
-  action?: ToastOptions['action'];
+  action?: NonNullable<ToastOptions['action']>;
   onClose?: () => void;
 }
 

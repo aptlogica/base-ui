@@ -14,7 +14,7 @@ import {
 } from '../../../../utils/standardFieldUtils';
 
 // Component for truncated descriptions with "see more" functionality
-const DescriptionWithSeeMore: React.FC<{ description: string; appearance?: FormConfig['appearance'] }> = ({ description, appearance }) => {
+const DescriptionWithSeeMore: React.FC<{ description: string; appearance?: NonNullable<FormConfig['appearance']> }> = ({ description, appearance }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const maxLength = 175; // Characters to show before truncation
   const shouldTruncate = description.length > maxLength;
@@ -68,7 +68,7 @@ interface SortableFormFieldProps {
   onDrop?: () => void;
   onDragEnd?: () => void;
   onDelete?: (fieldId: string) => void;
-  appearance?: FormConfig['appearance'];
+  appearance?: NonNullable<FormConfig['appearance']>;
   // Props needed for attachment fields
   model_id?: string;
   row_id?: number;
@@ -302,7 +302,7 @@ const createDragHandlers = (
 // Extract field content rendering
 const FieldContent: React.FC<{
   field: FormField;
-  appearance?: FormConfig['appearance'];
+  appearance?: NonNullable<FormConfig['appearance']>;
   fieldRendererProps: any;
   onChange?: (value: unknown) => void;
   isReadOnly: boolean;

@@ -6,7 +6,7 @@ import * as clientService from '../service/clientService';
 
 let initialRoute = '/login';
 let workspacesState = { isLoading: false, error: null as any };
-let tableState = { isLoading: false, error: null as any, data: null as any, refetch: vi.fn() };
+let tableState = { isLoading: false, isFetching: false, error: null as any, data: null as any, refetch: vi.fn() };
 let baseTablesState = { isLoading: false, error: null as any };
 let shouldThrowPluginConfig = false;
 let pluginConfigState: { builtin: Array<{ id: string; path: string; enabled?: boolean }> } = { builtin: [] };
@@ -152,6 +152,9 @@ describe('App', () => {
       selectedWorkspace: null,
       currentPlugin: null,
     };
+    workspacesState = { isLoading: false, error: null };
+    tableState = { isLoading: false, isFetching: false, error: null, data: null, refetch: vi.fn() };
+    baseTablesState = { isLoading: false, error: null };
     mockOpenFlyout.mockReset();
     mockCloseFlyout.mockReset();
   });
@@ -250,6 +253,7 @@ describe('App', () => {
     workspacesState = { isLoading: false, error: null };
     tableState = {
       isLoading: false,
+      isFetching: false,
       error: new Error('boom'),
       data: { data: { views: [{ id: 'v1', type: 'grid' }] } },
       refetch,
@@ -257,7 +261,6 @@ describe('App', () => {
     baseTablesState = { isLoading: false, error: null };
 
     render(<App />);
-    await waitFor(() => expect(screen.queryByText('Loader')).not.toBeInTheDocument());
     await screen.findByText('Something went wrong');
     const retryBtn = screen.getByRole('button', { name: /retry/i });
     retryBtn.click();

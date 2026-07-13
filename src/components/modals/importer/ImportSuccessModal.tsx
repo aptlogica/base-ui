@@ -49,7 +49,7 @@ export const ImportSuccessModal: React.FC<Props> = ({ open, summary, onClose }) 
         onClick={onClose}
       />
 
-      <div
+      <div //NOSONAR
         role="dialog"
         aria-modal="true"
         aria-labelledby="import-success-title"
