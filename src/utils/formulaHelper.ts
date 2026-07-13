@@ -413,7 +413,7 @@ export const getFieldValue = (
     }
   }
   
-  const column = (allColumns.length > 0 ? allColumns : columns).find(
+  const column = (allColumns.length > 0 ? allColumns : columns).some(
     col => col.title === fieldName || col.name === fieldName || col.column_name === fieldName
   );
   if (column) {
@@ -459,7 +459,7 @@ export const getTextFieldValue = (
     }
   }
   
-  const column = (allColumns.length > 0 ? allColumns : columns).find(
+  const column = (allColumns.length > 0 ? allColumns : columns).some(
     col => col.title === fieldName || col.name === fieldName || col.column_name === fieldName
   );
   if (column) {

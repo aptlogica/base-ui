@@ -102,7 +102,15 @@ const keywordStopWords = new Set([
   'over', 'under', 'about', 'after', 'before', 'between', 'through', 'during', 'without', 'within',
 ]);
 
-const cleanMatch = (value: string) => value.replace(/[.,;:!?)]*$/, '');
+const trailingPunctuation = new Set(['.', ',', ';', ':', '!', '?', ')']);
+
+const cleanMatch = (value: string) => {
+  let end = value.length;
+  while (end > 0 && trailingPunctuation.has(value[end - 1]!)) {
+    end -= 1;
+  }
+  return end === value.length ? value : value.slice(0, end);
+};
 
 const getExtractionTitle = (type: GridExtractType, method: GridExtractMethod) => {
   if (method === 'between_characters') return 'Extracted value';
@@ -213,8 +221,8 @@ const splitBySeparator = (
 ) => {
   const separatorMap: Record<Exclude<GridSplitSeparatorType, 'custom'>, { regex: RegExp; joiner: string }> = {
     space: { regex: /\s+/g, joiner: ' ' },
-    comma: { regex: /\s*,\s*/g, joiner: ',' },
-    dash: { regex: /\s*-\s*/g, joiner: '-' },
+    comma: { regex: /,/g, joiner: ',' },
+    dash: { regex: /-/g, joiner: '-' },
   };
 
   const customConfig = customSeparator
@@ -781,7 +789,7 @@ export const normalizeWhitespaceValue = (value: unknown, mode: GridSpaceMode) =>
     case 'leading':
       return value.replace(/^\s+/g, '');
     case 'trailing':
-      return value.replace(/\s+$/g, '');
+      return value.trimEnd();
     case 'extra':
       return value.replace(/\s+/g, ' ').trim();
     case 'both':

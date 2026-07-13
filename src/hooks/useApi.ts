@@ -80,7 +80,6 @@ import {
   //Organization Services 
   getOrganizationService,
   updateOrganizationService,
-  resetData,
   mergeColumnsService,
   splitColumnService
 } from '../service/clientService';

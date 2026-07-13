@@ -240,7 +240,7 @@ export function useGalleryViewConfig({
         };
       } else {
         // Field doesn't exist - add it (shouldn't happen after ensuring all columns are in config)
-        const column = columns.find(c => String(c.id) === String(fieldId));
+        const column = columns.some(c => String(c.id) === String(fieldId));
         if (column) {
           const columnIndex = columns.findIndex(c => String(c.id) === String(fieldId));
           updatedFieldConfig.push({
