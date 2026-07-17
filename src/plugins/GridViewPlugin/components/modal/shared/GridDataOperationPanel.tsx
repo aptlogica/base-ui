@@ -35,6 +35,7 @@ import { RemoveSpecialCharsPanel } from '../panels/RemoveSpecialCharsPanel';
 import { SplitColumnPanel } from '../panels/SplitColumnPanel';
 import { MergeColumnPanel } from '../panels/MergeColumnPanel';
 import { ExtractSubstringPanel } from '../panels/ExtractSubstring';
+import { FuzzyDuplicationPanel } from '../panels/FuzzyDuplicationPanel';
 import { filterGridDataOperationColumns, getGridColumnIdentity } from './gridColumnIdentity';
 
 interface GridDataOperationPanelProps {
@@ -42,6 +43,7 @@ interface GridDataOperationPanelProps {
   columns: GridColumn[];
   state: GridDataOperationState;
   onStateChange: (patch: Partial<GridDataOperationState>) => void;
+  preview?: any;
 }
 
 export const GridDataOperationPanel: React.FC<GridDataOperationPanelProps> = ({
@@ -49,6 +51,7 @@ export const GridDataOperationPanel: React.FC<GridDataOperationPanelProps> = ({
   columns,
   state,
   onStateChange,
+  preview,
 }) => {
   const { scope, selectedColumnIds, caseFormat, spaceMode, matchingCase, charRemovalMode, customChar } = state;
   const columnOptions = useMemo(
@@ -351,6 +354,23 @@ export const GridDataOperationPanel: React.FC<GridDataOperationPanelProps> = ({
             onDuplicateActionChange={setDuplicateAction}
             duplicateKeepRule={state.duplicateKeepRule}
             onDuplicateKeepRuleChange={setDuplicateKeepRule}
+          />
+        );
+      case 'fuzzy_deduplication':
+        return (
+          <FuzzyDuplicationPanel
+            columns={columns}
+            selectedColumnIds={selectedColumnIds}
+            onToggleColumn={toggleColumn}
+            onToggleAllColumns={toggleAllColumns}
+            fuzzySensitivity={state.fuzzySensitivity}
+            onFuzzySensitivityChange={(val) => onStateChange({ fuzzySensitivity: val })}
+            duplicateKeepRule={state.duplicateKeepRule}
+            onDuplicateKeepRuleChange={(val) => onStateChange({ duplicateKeepRule: val })}
+            duplicateAction={state.duplicateAction === 'remove_duplicates' ? 'remove_duplicates' : 'remove_row'}
+            onDuplicateActionChange={(val) => onStateChange({ duplicateAction: val })}
+            duplicatesCount={preview ? preview.changedRowIds.length : 0}
+            rowsAffected={preview ? preview.affectedRows : 0}
           />
         );
       case 'remove_special_characters':

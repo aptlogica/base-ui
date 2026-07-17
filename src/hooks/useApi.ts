@@ -37,6 +37,7 @@ import {
   caseNormalizeService,
   findReplaceService,
   removeDuplicatesService,
+  fuzzyDuplicatesService,
   removeSpecialCharactersService,
   extractSubstringService,
   removeFormattingService,
@@ -1426,6 +1427,37 @@ export const useRemoveDuplicates = () => {
       keep_rule: 'keep_first' | 'keep_last' | 'keep_latest_updated';
     }) =>
       removeDuplicatesService({ model_id, columns, duplicate, keep_rule }),
+    onSuccess: (_, { model_id }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
+export const useFuzzyDeduplication = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      model_id,
+      columns,
+      threshold,
+      duplicate,
+      keep_rule,
+    }: {
+      model_id: string;
+      columns: string[];
+      threshold: 'low' | 'medium' | 'high';
+      duplicate: 'remove_row' | 'remove_duplicates';
+      keep_rule: 'keep_first' | 'keep_last' | 'keep_latest_updated';
+    }) =>
+      fuzzyDuplicatesService({ model_id, columns, threshold, duplicate, keep_rule }),
     onSuccess: (_, { model_id }) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),

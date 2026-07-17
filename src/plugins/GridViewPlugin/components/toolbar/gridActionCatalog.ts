@@ -142,7 +142,7 @@ export const GRID_ACTIONS: Record<GridActionId, GridActionDefinition> = {
 export const GRID_ACTION_GROUPS: Record<GridActionGroup, GridActionDefinition[]> = {
   clean: [
     GRID_ACTIONS.remove_duplicates,
-    // GRID_ACTIONS.fuzzy_deduplication is intentionally hidden for now.
+    GRID_ACTIONS.fuzzy_deduplication,
     GRID_ACTIONS.remove_extra_spaces,
     GRID_ACTIONS.remove_special_characters,
     GRID_ACTIONS.remove_formatting,

@@ -94,6 +94,7 @@ const createState = (overrides: Partial<GridDataOperationState> = {}): GridDataO
   extractEndBefore: '',
   extractKeepOriginalColumn: false,
   extractPlacement: 'next_to_original',
+  fuzzySensitivity: 'medium',
   ...overrides,
 });
 
@@ -150,10 +151,49 @@ describe('getGridDataOperationAdapter', () => {
     expect(adapter.buildApplyPlan(createContext(), createPreview())).toBeNull();
   });
 
-  it('returns the no-op adapter for fuzzy deduplication', () => {
-    const adapter = getGridDataOperationAdapter('fuzzy_deduplication');
+  it('builds a fuzzy deduplication plan for the selected columns', () => {
+    const context = createContext({
+      actionId: 'fuzzy_deduplication',
+      columns: [firstNameColumn],
+      state: createState({
+        selectedColumnIds: ['first_name'],
+        duplicateAction: 'remove_row',
+        fuzzySensitivity: 'medium',
+      }),
+      tableData: createTableData([
+        { id: 1, first_name: 'Alice' },
+        { id: 2, first_name: 'Alicia' },
+      ]),
+    });
+    const preview = createPreview({
+      actionId: 'fuzzy_deduplication',
+      previewRows: [
+        createPreviewRow('1', { first_name: 'Alice' }, { rowState: 'kept' }),
+        createPreviewRow('2', { first_name: 'Alicia' }, { rowState: 'removed' }),
+      ],
+      changedRowIds: ['2'],
+      totalRows: 2,
+      previewCount: 2,
+      affectedRows: 1,
+      affectedCells: 0,
+      affectedColumns: 1,
+    });
 
-    expect(adapter.buildApplyPlan(createContext(), createPreview())).toBeNull();
+    expect(getGridDataOperationAdapter('fuzzy_deduplication').buildApplyPlan(context, preview)).toEqual(
+      expect.objectContaining({
+        supported: true,
+        kind: 'fuzzy_deduplication',
+        columnUpdates: [],
+        fuzzyDeduplication: {
+          modelId: 'model-1',
+          columns: ['first_name'],
+          threshold: 'medium',
+          duplicateAction: 'remove_row',
+          keepRule: 'keep_first',
+        },
+        optimisticRecords: expect.any(Array),
+      }),
+    );
   });
 
   it('returns null for unsupported previews across the supported adapters', () => {

@@ -18,7 +18,7 @@ export type GridCharRemovalMode =
   | 'punctuation'
   | 'custom';
 export type GridFormattingMode = 'currency' | 'percentage' | 'separator' | 'phone' | 'date' | 'custom';
-export type GridDuplicateKeepRule = 'keep_first' | 'keep_last' | 'keep_latest_updated';
+export type GridDuplicateKeepRule = 'keep_first' | 'keep_last' | 'keep_latest_updated' | 'keep_highest' | 'keep_lowest';
 export type GridSplitMode = 'separator' | 'fixed_length' | 'pattern';
 export type GridSplitSeparatorType = 'space' | 'comma' | 'dash' | 'custom';
 export type GridSplitFixedDirection = 'after' | 'before';
@@ -66,6 +66,7 @@ export interface GridDataOperationState {
   extractEndBefore: string;
   extractKeepOriginalColumn: boolean;
   extractPlacement: GridExtractPlacement;
+  fuzzySensitivity: 'low' | 'medium' | 'high';
 }
 
 export interface GridDataOperationPreviewRow {
@@ -108,7 +109,7 @@ export interface GridRemoveFormattingApplyPlan {
 
 export interface GridDataOperationApplyPlan {
   supported: boolean;
-  kind: 'bulk_update' | 'trim_whitespace' | 'case_normalization' | 'find_replace' | 'remove_duplicates' | 'split_column' | 'merge_column' | 'remove_special_characters' | 'extract_substring' | 'remove_formatting';
+  kind: 'bulk_update' | 'trim_whitespace' | 'case_normalization' | 'find_replace' | 'remove_duplicates' | 'split_column' | 'merge_column' | 'remove_special_characters' | 'extract_substring' | 'remove_formatting' | 'fuzzy_deduplication';
   columnUpdates: GridDataOperationColumnUpdatePlan[];
   optimisticRecords: Record<string, any>[];
   trimWhitespace?: {
@@ -181,6 +182,13 @@ export interface GridDataOperationApplyPlan {
     custom?: string[];
   };
   removeFormatting?: GridRemoveFormattingApplyPlan;
+  fuzzyDeduplication?: {
+    modelId: string;
+    columns: string[];
+    threshold: 'low' | 'medium' | 'high';
+    duplicateAction: 'remove_row' | 'remove_duplicates';
+    keepRule: 'keep_first' | 'keep_last' | 'keep_latest_updated';
+  };
 }
 
 export interface GridDataOperationContext {

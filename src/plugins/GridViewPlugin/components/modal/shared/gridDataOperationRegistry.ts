@@ -181,6 +181,47 @@ const buildRemoveDuplicatesPlan = (
   };
 };
 
+const buildFuzzyDeduplicationPlan = (
+  context: GridDataOperationContext,
+  preview: GridDataOperationPreviewResult,
+): GridDataOperationApplyPlan | null => {
+  const selectedColumns = context.columns
+    .filter((column) => context.state.selectedColumnIds.includes(getGridColumnIdentity(column)))
+    .map((column) => getGridColumnIdentity(column))
+    .filter(Boolean);
+
+  if (!selectedColumns.length) return null;
+
+  const duplicateAction = context.state.duplicateAction === 'remove_duplicates' ? 'remove_duplicates' : 'remove_row';
+
+  const keepRule = context.state.duplicateKeepRule === 'keep_last'
+    ? 'keep_last'
+    : context.state.duplicateKeepRule === 'keep_latest_updated'
+      ? 'keep_latest_updated'
+      : 'keep_first';
+
+  const threshold = context.state.fuzzySensitivity || 'medium';
+
+  const optimisticRecords = applyGridDataOperationToRecords(
+    Array.isArray(context.tableData?.records) ? context.tableData.records : [],
+    preview
+  );
+
+  return {
+    supported: true,
+    kind: 'fuzzy_deduplication',
+    columnUpdates: [],
+    fuzzyDeduplication: {
+      modelId: String(context.tableData?.model?.id ?? ''),
+      columns: selectedColumns,
+      threshold,
+      duplicateAction,
+      keepRule,
+    },
+    optimisticRecords,
+  };
+};
+
 const buildMergePlan = (
   context: GridDataOperationContext,
   preview: GridDataOperationPreviewResult,
@@ -490,7 +531,13 @@ const ACTION_ADAPTERS: Partial<Record<GridActionId, GridDataOperationAdapter>> =
       return buildRemoveDuplicatesPlan(context, preview);
     },
   },
-  fuzzy_deduplication: createNoopAdapter(),
+  fuzzy_deduplication: {
+    buildPreview: buildGridDataOperationPreview,
+    buildApplyPlan: (context, preview) => {
+      if (!preview.supported) return null;
+      return buildFuzzyDeduplicationPlan(context, preview);
+    },
+  },
   remove_special_characters: {
     buildPreview: buildGridDataOperationPreview,
     buildApplyPlan: (context, preview) => {

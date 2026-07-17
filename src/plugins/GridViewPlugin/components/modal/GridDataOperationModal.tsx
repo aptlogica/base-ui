@@ -16,7 +16,7 @@ import type { GridDataOperationApplyPlan, GridDataOperationPreviewResult, GridDa
 import { filterGridDataOperationColumns, getGridColumnIdentity } from './shared/gridColumnIdentity';
 import { useToast } from '../../../../components/common/Toast';
 import { bulkUpdateFieldService } from '../../../../service/clientService';
-import { useCaseNormalize, useFindReplace, useMergeColumns, useRemoveDuplicates, useTrimWhitespace, useRemoveSpecialCharacters, useExtractSubstring, useRemoveFormatting, useSplitColumn } from '../../../../hooks/useApi';
+import { useCaseNormalize, useFindReplace, useMergeColumns, useRemoveDuplicates, useTrimWhitespace, useRemoveSpecialCharacters, useExtractSubstring, useRemoveFormatting, useSplitColumn, useFuzzyDeduplication } from '../../../../hooks/useApi';
 
 const DEFAULT_SELECTED_COUNT = 1;
 
@@ -37,6 +37,7 @@ const buildInitialState = (columns: GridColumn[], actionId?: GridActionId): Grid
   matchingCase: 'match_case',
   duplicateAction: 'remove_row',
   duplicateKeepRule: 'keep_first',
+  fuzzySensitivity: 'medium',
   splitSourceColumnId: buildInitialSelectedColumns(columns)[0] ?? '',
   splitMode: 'separator',
   splitSeparatorType: 'space',
@@ -462,6 +463,7 @@ type GridDataOperationMutationParams = {
   removeSpecialCharactersMutation: ReturnType<typeof useRemoveSpecialCharacters>;
   extractSubstringMutation: ReturnType<typeof useExtractSubstring>;
   removeFormattingMutation: ReturnType<typeof useRemoveFormatting>;
+  fuzzyDeduplicationMutation: ReturnType<typeof useFuzzyDeduplication>;
 };
 
 type GridDataOperationMutationHandler = (
@@ -469,6 +471,20 @@ type GridDataOperationMutationHandler = (
 ) => Promise<boolean>;
 
 const gridDataOperationMutationHandlers: Partial<Record<GridDataOperationApplyPlan['kind'], GridDataOperationMutationHandler>> = {
+  fuzzy_deduplication: async ({ applyPlan, fuzzyDeduplicationMutation }) => {
+    if (!applyPlan.fuzzyDeduplication) {
+      return false;
+    }
+
+    await fuzzyDeduplicationMutation.mutateAsync({
+      model_id: applyPlan.fuzzyDeduplication.modelId,
+      columns: applyPlan.fuzzyDeduplication.columns,
+      threshold: applyPlan.fuzzyDeduplication.threshold,
+      duplicate: applyPlan.fuzzyDeduplication.duplicateAction,
+      keep_rule: applyPlan.fuzzyDeduplication.keepRule,
+    });
+    return true;
+  },
   trim_whitespace: async ({ applyPlan, trimWhitespaceMutation }) => {
     if (!applyPlan.trimWhitespace) {
       return false;
@@ -619,6 +635,7 @@ const applyGridDataOperation = async ({
   removeSpecialCharactersMutation,
   extractSubstringMutation,
   removeFormattingMutation,
+  fuzzyDeduplicationMutation,
 }: {
   applyPlan: GridDataOperationApplyPlan;
   columns: GridColumn[];
@@ -636,6 +653,7 @@ const applyGridDataOperation = async ({
   removeSpecialCharactersMutation: ReturnType<typeof useRemoveSpecialCharacters>;
   extractSubstringMutation: ReturnType<typeof useExtractSubstring>;
   removeFormattingMutation: ReturnType<typeof useRemoveFormatting>;
+  fuzzyDeduplicationMutation: ReturnType<typeof useFuzzyDeduplication>;
 }) => {
   applyOptimisticGridDataUpdate(queryClient, tableId, applyPlan);
 
@@ -654,6 +672,7 @@ const applyGridDataOperation = async ({
     removeSpecialCharactersMutation,
     extractSubstringMutation,
     removeFormattingMutation,
+    fuzzyDeduplicationMutation,
   });
 
   if (handled) {
@@ -697,6 +716,7 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
   const removeFormattingMutation = useRemoveFormatting();
   const trimWhitespaceMutation = useTrimWhitespace();
   const splitColumnMutation = useSplitColumn();
+  const fuzzyDeduplicationMutation = useFuzzyDeduplication();
   const [isApplying, setIsApplying] = useState(false);
   const [state, setState] = useState<GridDataOperationState>(() => buildInitialState(columns, action?.id));
   const tableId = String(tableData?.model?.id ?? '');
@@ -830,6 +850,7 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
         removeSpecialCharactersMutation,
         extractSubstringMutation,
         removeFormattingMutation,
+        fuzzyDeduplicationMutation,
       });
 
       if (applyPlan.kind === 'merge_column') {
@@ -898,6 +919,7 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
               columns={columns}
               state={state}
               onStateChange={handleStateChange}
+              preview={preview}
             />
 
             <div className="border-t bg-card px-5 py-4">

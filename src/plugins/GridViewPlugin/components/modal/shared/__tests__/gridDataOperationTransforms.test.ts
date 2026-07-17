@@ -79,6 +79,7 @@ const createState = (overrides: Partial<GridDataOperationState> = {}): GridDataO
   extractEndBefore: '',
   extractKeepOriginalColumn: false,
   extractPlacement: 'next_to_original',
+  fuzzySensitivity: 'medium',
   ...overrides,
 });
 
@@ -1320,6 +1321,60 @@ describe('applyGridDataOperationToRecords', () => {
       { id: '1', name: 'ALICE' },
       { id: '2', name: 'Bob' },
     ]);
+  });
+});
+
+describe('fuzzy_deduplication preview', () => {
+  it('correctly deduplicates three identical rows with keep_first', () => {
+    const context = createContext({
+      actionId: 'fuzzy_deduplication',
+      columns: [nameColumn],
+      state: createState({
+        selectedColumnIds: ['name'],
+        duplicateAction: 'remove_row',
+        duplicateKeepRule: 'keep_first',
+        fuzzySensitivity: 'medium',
+      }),
+      tableData: createTableData([
+        { id: 'rec-1', name: 'Apple' },
+        { id: 'rec-2', name: 'Apple' },
+        { id: 'rec-3', name: 'Apple' },
+      ]),
+    });
+
+    const preview = buildGridDataOperationPreview(context);
+    expect(preview.affectedRows).toBe(2);
+    expect(preview.previewRows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'rec-1', rowState: 'kept' }),
+      expect.objectContaining({ id: 'rec-2', rowState: 'removed' }),
+      expect.objectContaining({ id: 'rec-3', rowState: 'removed' }),
+    ]));
+  });
+
+  it('correctly deduplicates three identical rows with keep_last', () => {
+    const context = createContext({
+      actionId: 'fuzzy_deduplication',
+      columns: [nameColumn],
+      state: createState({
+        selectedColumnIds: ['name'],
+        duplicateAction: 'remove_row',
+        duplicateKeepRule: 'keep_last',
+        fuzzySensitivity: 'medium',
+      }),
+      tableData: createTableData([
+        { id: 'rec-1', name: 'Apple' },
+        { id: 'rec-2', name: 'Apple' },
+        { id: 'rec-3', name: 'Apple' },
+      ]),
+    });
+
+    const preview = buildGridDataOperationPreview(context);
+    expect(preview.affectedRows).toBe(2);
+    expect(preview.previewRows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'rec-1', rowState: 'removed' }),
+      expect.objectContaining({ id: 'rec-2', rowState: 'removed' }),
+      expect.objectContaining({ id: 'rec-3', rowState: 'kept' }),
+    ]));
   });
 });
 
