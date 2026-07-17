@@ -3,14 +3,16 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, X, HelpCircle, CloudUpload } from 'lucide-react';
 import { MultiLineText } from '../common/Fields/MultiLineText';
 import { validateBaseName } from '../../utils/nameValidation';
+import { useNavigationStore } from '../../stores/navigationStore';
 
 interface CreateBaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (data: { name: string; description: string; image?: File | null }) => void;
+  onCreate: (data: { name: string; description: string; image?: File | null }) => Promise<any>;
   workspaceId: string;
   defaultName?: string;
   existingBases?: any[];
@@ -105,6 +107,8 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
   const [validationError, setValidationError] = useState('');
   const [imageError, setImageError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+  const { navigateToTable } = useNavigationStore();
 
   const getSafeImageSrc = (value: string | null): string | null => {
     if (!value) return null;
@@ -236,11 +240,25 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      onCreate({
+      const result = await onCreate({
         name: name.trim(),
         description: description.trim(),
         image: image || null,
       });
+      console.log("result",result)
+
+      // Navigate to the first table grid view after successful creation
+      if (result?.data?.id) {
+        const baseId = result?.data?.id;
+        const workspaceId = result?.data?.workspace_id || _workspaceId;
+        const firstTableId = result?.data?.tables?.[0]?.model?.id;
+
+        if (workspaceId && baseId && firstTableId) {
+          navigateToTable(workspaceId, baseId, firstTableId);
+          navigate(`/workspace/${workspaceId}/base/${baseId}/table/${firstTableId}/grid`);
+        }
+      }
+
       // Close the modal on successful creation
       onClose();
     } catch (err) {

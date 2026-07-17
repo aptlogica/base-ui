@@ -5,7 +5,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import type { ApplyBaseWithAi } from '../types/api.types';
+import type { ApplyBaseWithAi, ApplyBaseWithAiResponse } from '../types/api.types';
 import {
   // New workspace API services
   createWorkspaceService,
@@ -18,6 +18,7 @@ import {
   createBaseService,
   createBaseWithAiService,
   applyBaseWithAiService,
+  sendChatService,
   getBaseByIdService,
   updateBaseService,
   deleteBaseService,
@@ -542,12 +543,25 @@ export const useCreateBaseWithAi = () => {
 export const useApplyBaseWithAi = () => {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<ApplyBaseWithAiResponse, Error, ApplyBaseWithAi>({
     mutationFn: (params: ApplyBaseWithAi) => applyBaseWithAiService(params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
       queryClient.invalidateQueries({ queryKey: queryKeys.allBases });
     },
+  });
+};
+
+export const useSereniChat = () => {
+  return useMutation({
+    mutationFn: (params: {
+      messages: Array<{
+        role: 'system' | 'user' | 'assistant';
+        content: string;
+      }>;
+      model?: string;
+      temperature?: number;
+    }) => sendChatService(params),
   });
 };
 

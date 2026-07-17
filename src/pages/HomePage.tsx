@@ -32,6 +32,7 @@ import { useCurrentUser, getUserDisplayName } from '../auth/useCurrentUser';
 import { useNavigateToBaseFirstView } from '../hooks/useNavigateToBaseFirstView';
 import { getInitials } from '../utils/helpers';
 import { Base, type ApplyBaseWithAi } from '../types/api.types';
+import { useSereniChat } from '../contexts/SereniChatContext';
 
 // Wrapper component to handle hooks properly
 const BaseMenuWrapper: React.FC<{
@@ -383,7 +384,7 @@ const HomePage: React.FC = () => {
     }
 
     try {
-      await createBaseMutation.mutateAsync({
+      const result = await createBaseMutation.mutateAsync({
         title: name,
         description: description || '',
         workspace_id: selectedWorkspaceId,
@@ -397,36 +398,25 @@ const HomePage: React.FC = () => {
 
       toast.success('Base created successfully');
       setShowCreateBase(false);
-      // COMMENTED OUT: Navigation to table on base creation
-      // try {
-      //   // Update navigation store first
-      //   const { navigateToBase } = useNavigationStore.getState();
-      //   navigateToBase(selectedWorkspaceId, baseId);
 
-      //   // Try to navigate to first view, but fallback to base page if no tables exist
-      //   await navigateToFirstView(baseId);
-      // } catch (err) {
-      //   console.error('Navigation error after base creation:', err);
-      //   // Fallback: navigate directly to base page
-      //   const { navigateToBase } = useNavigationStore.getState();
-      //   navigateToBase(selectedWorkspaceId, baseId);
-      //   navigate(`/base/${baseId}`);
-      // }
+      // Return the result for navigation in the modal
+      return result;
     } catch (err: unknown) {
       const errorMessage = err && typeof err === 'object' && 'message' in err
         ? String(err.message)
         : 'Failed to create base. Please try again.';
       toast.error(errorMessage);
+      throw err;
     }
   };
 
-  const handleCreateBaseMenuOpen = () => {
-    if (!selectedWorkspaceId || !hasValidSelectedWorkspace) {
-      toast.error('Please select a workspace first');
-      return;
-    }
-    setIsCreateBaseDropdownOpen((isOpen) => !isOpen);
-  };
+  // const handleCreateBaseMenuOpen = () => {
+  //   if (!selectedWorkspaceId || !hasValidSelectedWorkspace) {
+  //     toast.error('Please select a workspace first');
+  //     return;
+  //   }
+  //   setIsCreateBaseDropdownOpen((isOpen) => !isOpen);
+  // };
 
   const handleCreateBaseManually = () => {
     if (!selectedWorkspaceId || !hasValidSelectedWorkspace) {
@@ -456,24 +446,27 @@ const HomePage: React.FC = () => {
     toast.success('AI base generated successfully');
   };
 
-  const handleApplyBaseWithAi = async (data: PreviewBaseData, includeSampleData: boolean) => {
+  const handleApplyBaseWithAi = async (data: PreviewBaseData, sampleData: boolean): Promise<void | { base_id: string; data: any }> => {
     if (!selectedWorkspaceId) {
       toast.error('Please select a workspace first');
       return;
     }
 
     try {
-      await applyBaseWithAiMutation.mutateAsync({
+      const result = await applyBaseWithAiMutation.mutateAsync({
         base_name: data.base_name,
         workspace_id: selectedWorkspaceId,
-        sample_data: includeSampleData,
+        sample_data: sampleData,
         tables: data.tables,
         relations: data.relations,
       } satisfies ApplyBaseWithAi);
-
       toast.success('AI base applied successfully');
       setShowPreviewBase(false);
       setPreviewBaseData(null);
+      return {
+        base_id: result.base_id,
+        data: result.data
+      };
     } catch (error: any) {
       toast.error(error?.message || 'Failed to apply AI base. Please try again.');
       throw error;
@@ -521,6 +514,12 @@ const HomePage: React.FC = () => {
   const userName = getUserDisplayName(currentUser);
   const hasValidSelectedWorkspace = Boolean(selectedWorkspaceId && workspacesData?.some((workspace: any) => workspace?.id === selectedWorkspaceId))
   const canUseBaseActions = hasValidSelectedWorkspace && canCreateBase();
+  const { closeSereniChat } = useSereniChat();
+
+  // Close chatbot when navigating to home page
+  useEffect(() => {
+    closeSereniChat();
+  }, [closeSereniChat]);
 
   if (basesLoading) {
     return (
@@ -585,7 +584,7 @@ const HomePage: React.FC = () => {
               <button
                 type="button"
                 disabled={!canUseBaseActions}
-                onClick={handleCreateBaseMenuOpen}
+                onClick={handleCreateBaseManually}
                 className={`rounded-xl bg-card border p-5 flex items-start gap-3 transition-all duration-200 w-full text-left ${canUseBaseActions ? 'cursor-pointer hover:shadow-md' : 'cursor-not-allowed opacity-60'
                   }`}
                 aria-expanded={isCreateBaseDropdownOpen}
@@ -600,10 +599,10 @@ const HomePage: React.FC = () => {
                     {hasValidSelectedWorkspace ? 'Start from scratch with a custom schema tailored to your team\'s specific requirements.' : 'Select a workspace first.'}
                   </div>
                 </div>
-                <ChevronDown className={`w-4 h-4 text-gray-600 flex-shrink-0 transition-transform duration-200 ${isCreateBaseDropdownOpen ? 'rotate-180' : ''}`} />
+                {/* <ChevronDown className={`w-4 h-4 text-gray-600 flex-shrink-0 transition-transform duration-200 ${isCreateBaseDropdownOpen ? 'rotate-180' : ''}`} /> */}
               </button>
 
-              {isCreateBaseDropdownOpen && (
+              {/* {isCreateBaseDropdownOpen && (
                 <div className="absolute left-0 right-0 top-full mt-2 bg-card border rounded-xl shadow-lg z-[9999] overflow-hidden">
                   <div className="p-2">
                     <button
@@ -630,8 +629,28 @@ const HomePage: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              )}
+              )} */}
             </div>
+
+            {/* Create New Base with AI  */}
+            
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleCreateBaseWithAi}
+              className={`rounded-xl bg-card border p-5 flex items-start gap-3 transition-all duration-200 w-full sm:w-auto sm:min-w-[300px] max-w-[300px] text-left ${canUseBaseActions ? 'cursor-pointer hover:shadow-md' : 'cursor-not-allowed opacity-60'
+                }`}
+            >
+              <div className="w-12 h-12 p-3 rounded-xl bg-card border flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-gray-900" />
+              </div>
+              <div>
+                <div className="font-semibold text-md text-gray-900">Build With AI</div>
+                <div className="text-[10px] text-gray-600">
+                  AI-powered base creation from your use case
+                </div>
+              </div>
+            </button>
 
             {/* Import Data - Only owner, co-owner, maintainer can import */}
             <button

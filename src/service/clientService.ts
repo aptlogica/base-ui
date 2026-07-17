@@ -5,7 +5,7 @@
 // @ts-ignore - SDK module does not have type declarations
 import { SereniBaseClient } from 'serenibase-sdk';
 import { WorkspaceBaseInput } from "../types/interfaces/workspace.interface.js";
-import type { ApplyBaseWithAi } from '../types/api.types.js';
+import type { ApplyBaseWithAi, ApplyBaseWithAiResponse } from '../types/api.types.js';
 import { decodeJwt } from 'jose';
 import { LoginParams, VerifyOtpParams, ResendOtpParams } from '../types/interfaces/auth.js';
 
@@ -14,6 +14,23 @@ interface TokenData {
   refresh_token: string;
   expires_at?: number;
   refresh_expires_at?: number;
+}
+
+interface SereniChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+interface SereniChatRequest {
+  messages: SereniChatMessage[];
+  model?: string;
+  temperature?: number;
+}
+
+interface SereniChatResponse {
+  reply?: string;
+  error?: string;
+  detail?: string;
 }
 
 const STORAGE_KEY = '_st_';
@@ -35,6 +52,8 @@ const deobfuscate = (data: string): string => {
 };
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '';
+
+const stripTrailingSlashes = (value: string): string => value.replace(/\/+$/, '');
 
 
 const storeTokenSecurely = (tokenData: TokenData): void => {
@@ -692,7 +711,7 @@ export async function createBaseService(params: any) {
   return await makeAuthenticatedCall(() => client.baseService.create(params));
 }
 
-export async function createBaseWithAiService(params: { prompt: string }) {
+export async function createBaseWithAiService(params: { prompt: string },) {
   return await makeAuthenticatedCall(() => {
     const baseService = client.baseService as any;
     if (typeof baseService.createBaseWithAi === 'function') {
@@ -708,7 +727,7 @@ export async function createBaseWithAiService(params: { prompt: string }) {
   });
 }
 
-export async function applyBaseWithAiService(params: ApplyBaseWithAi) {
+export async function applyBaseWithAiService(params: ApplyBaseWithAi): Promise<ApplyBaseWithAiResponse> {
   return await makeAuthenticatedCall(() => {
     const baseService = client.baseService as any;
     if (typeof baseService.applyBaseWithAi === 'function') {
@@ -721,6 +740,17 @@ export async function applyBaseWithAiService(params: ApplyBaseWithAi) {
     }
 
     throw new Error('AI base application is not supported by the installed SDK');
+  });
+}
+
+export async function sendChatService(params: SereniChatRequest): Promise<SereniChatResponse> {
+  return await makeAuthenticatedCall(async () => {
+    const httpClient = (client as any).http;
+    if (httpClient?.post) {
+      return await httpClient.post('/chat', params);
+    }
+
+    throw new Error('Chat API is not supported by the installed SDK');
   });
 }
 

@@ -12,11 +12,12 @@ interface FieldType {
     isSystem?: boolean;
 }
 
-export function FieldTypeDropdown({ selectedType, setSelectedType, fieldTypes, disabled = false }: Readonly<{
+export function FieldTypeDropdown({ selectedType, setSelectedType, fieldTypes, disabled = false, className}: Readonly<{
     selectedType: FieldType | null;
     setSelectedType: (type: FieldType) => void;
     fieldTypes: FieldType[];
     disabled?: boolean;
+    className?: string;
 }>) {
     const [open, setOpen] = React.useState(false);
     const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -32,7 +33,7 @@ export function FieldTypeDropdown({ selectedType, setSelectedType, fieldTypes, d
     }, []);
 
     return (
-        <div className="mb-3 relative" ref={dropdownRef}>
+        <div className={`mb-3 relative ${className || ""}`} ref={dropdownRef}>
             <button
                 type="button"
                 disabled={disabled}

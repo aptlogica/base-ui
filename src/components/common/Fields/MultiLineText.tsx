@@ -10,6 +10,7 @@ interface MultiLineTextProps {
   value?: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  placeholderElement?: React.ReactNode;
   maxLength?: number;
   required?: boolean;
   disabled?: boolean;
@@ -18,6 +19,7 @@ interface MultiLineTextProps {
   allowEdit?: boolean;
   rows?: number;
   helperText?: string;
+  gradientBorder?: boolean;
 }
 
 export const MultiLineText: React.FC<MultiLineTextProps> = ({
@@ -25,6 +27,7 @@ export const MultiLineText: React.FC<MultiLineTextProps> = ({
   value,
   onChange,
   placeholder = "",
+  placeholderElement,
   maxLength = 500,
   required = false,
   disabled = false,
@@ -33,6 +36,7 @@ export const MultiLineText: React.FC<MultiLineTextProps> = ({
   allowEdit = true,
   helperText,
   rows = 3, // default
+  gradientBorder = false,
 }) => {
   const [localValue, setLocalValue] = useState<string>(value ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -88,25 +92,57 @@ export const MultiLineText: React.FC<MultiLineTextProps> = ({
       )}
 
       {/* Single textarea */}
-      <textarea
-        value={localValue}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        placeholder={placeholder}
-        disabled={disabled}
-        readOnly={!allowEdit}
-        maxLength={maxLength}
-        rows={rows}
-        className={`w-full text-[var(--color-text-primary)] p-3 rounded-[var(--radius-lg)] text-sm leading-normal ${className}
-          resize-none overflow-y-auto overflow-x-hidden
-          whitespace-pre-wrap break-words
-          transition-all duration-200 outline-none
-          ${isBorder ? "field-component-border field-component-focus" : ""}
-          ${error ? "border-red-500 bg-red-50" : "border"}
-          ${disabled ? "cursor-not-allowed text-gray-400" : "cursor-text"}
-        `}
-        style={{ height: fixedHeight }}
-      />
+      {gradientBorder ? (
+        <div className="relative rounded-xl">
+          <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-green-400 to-indigo-700 -z-10"></div>
+          <div className="absolute inset-[2px] rounded-xl bg-white -z-10"></div>
+          <textarea
+            value={localValue}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            placeholder={placeholderElement ? "" : placeholder}
+            disabled={disabled}
+            readOnly={!allowEdit}
+            maxLength={maxLength}
+            rows={rows}
+            className={`w-full text-[var(--color-text-primary)] p-3 rounded-lg bg-transparent text-sm leading-normal border-none ${className}
+              resize-none overflow-y-auto overflow-x-hidden
+              whitespace-pre-wrap break-words
+              transition-all duration-200 outline-none
+              ${error ? "bg-red-50" : ""}
+              ${disabled ? "cursor-not-allowed text-gray-400" : "cursor-text"}
+            `}
+            style={{ height: fixedHeight }}
+          />
+          {/* Custom placeholder overlay for gradient border */}
+          {placeholderElement && !localValue && (
+            <div className="absolute top-4 left-4 pointer-events-none text-gray-400 text-sm flex items-center gap-2">
+              {placeholderElement}
+            </div>
+          )}
+        </div>
+      ) : (
+          <textarea
+            value={localValue}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            placeholder={placeholderElement ? "" : placeholder}
+            disabled={disabled}
+            readOnly={!allowEdit}
+            maxLength={maxLength}
+            rows={rows}
+            className={`w-full text-[var(--color-text-primary)] p-3 rounded-[var(--radius-lg)] text-sm leading-normal ${className}
+              resize-none overflow-y-auto overflow-x-hidden
+              whitespace-pre-wrap break-words
+              transition-all duration-200 outline-none
+              ${isBorder ? "field-component-border field-component-focus" : ""}
+              ${error ? "border-red-500 bg-red-50" : "border"}
+              ${disabled ? "cursor-not-allowed text-gray-400" : "cursor-text"}
+            `}
+            style={{ height: fixedHeight }}
+          />
+
+      )}
 
       {/* Error Icon */}
       {error && (

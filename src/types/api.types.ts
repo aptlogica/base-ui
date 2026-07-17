@@ -89,6 +89,11 @@ export interface ApplyBaseWithAi {
   relations?: ApplyBaseWithAiRelation[];
 }
 
+export interface ApplyBaseWithAiResponse {
+  base_id: string;
+  data: any;
+}
+
 // =========================
 // Table Types
 // =========================

@@ -30,11 +30,13 @@ import { usePluginStore, FLYOUT_WIDTH } from './stores/pluginStore';
 import { ExtensionPoint } from './core/ExtensionPoint';
 import { ToastProvider } from './components/common/Toast';
 import Sidebar from './components/layout/sidebar/Sidebar';
+import SereniChatPanel from './components/common/SereniChatPanel';
 import { Loader } from './components/ui/Loader';
 import AdministratorPage from './pages/AdministratorPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { useClientHeaders } from './hooks/useClientHeaders';
 import { RouteContextProvider } from './contexts/RouteContext';
+import { SereniChatProvider } from './contexts/SereniChatContext';
 import { NavigationResolver } from './components/NavigationResolver';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { ImportSuccessModal, type ImportSuccessSummary } from './components/modals/importer/ImportSuccessModal';
@@ -127,84 +129,89 @@ const Layout = () => {
   // Layout: header on top, then sidebar on left and view on right
   return (
     <RouteContextProvider>
-      <div className="min-h-screen w-screen h-screen flex flex-col bg-background">
-        {/* Header - full width at top */}
-        <header className="flex items-center justify-between bg-card px-6 py-2 border-b shadow-sm flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <ExtensionPoint id="layout:header-left" />
-          </div>
-          <div className="flex items-center gap-2">
-            <ExtensionPoint id="layout:header" />
-          </div>
-        </header>
+      <div className="flex h-screen w-screen overflow-hidden">
+        <div className="flex flex-col bg-background flex-1 h-full overflow-hidden">
+          {/* Header - full width at top */}
+          <header className="flex items-center justify-between bg-card px-6 py-2 border-b shadow-sm flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <ExtensionPoint id="layout:header-left" />
+            </div>
+            <div className="flex items-center gap-2">
+              <ExtensionPoint id="layout:header" />
+            </div>
+          </header>
 
-        {/* Below header: Sidebar on left, View on right */}
-        <div className="flex-1 flex min-h-0 overflow-hidden">
-          {/* Layout-Integrated Flyout Menu - Left Side */}
-          {sidebarPosition === 'left' && flyoutOpen && (
-            <aside
-              style={{ width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
-              className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out relative"
-            >
-              {!sidebarCollapsed && (
-                <Sidebar
-                  sidebarPosition={sidebarPosition}
-                  sidebarWidth={sidebarWidth}
-                  selectedWorkspace={selectedWorkspace}
-
-                />
-              )}
-              <button
-                onClick={() => updateSidebarCollapsed(!sidebarCollapsed)}
-                className='absolute top-1/2 right-[-4px] border rounded-tl-full rounded-bl-full bg-gray-100 text-primary p-1 shadow-md z-40 hover:bg-gray-200 transition-colors outline-none'
-                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          {/* Below header: Sidebar on left, View on right */}
+          <div className="flex-1 flex min-h-0 overflow-hidden">
+            {/* Layout-Integrated Flyout Menu - Left Side */}
+            {sidebarPosition === 'left' && flyoutOpen && (
+              <aside
+                style={{ width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
+                className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out relative"
               >
-                {sidebarCollapsed ? <ChevronRight className="w-5 h-6" /> : <ChevronLeft className="w-5 h-6" />}
-              </button>
-            </aside>
-          )}
+                {!sidebarCollapsed && (
+                  <Sidebar
+                    sidebarPosition={sidebarPosition}
+                    sidebarWidth={sidebarWidth}
+                    selectedWorkspace={selectedWorkspace}
 
-          {/* Main content area */}
-          <main className="flex-1 p-0 overflow-y-auto no-scrollbar bg-main text-text min-w-0">
-            <Outlet />
-          </main>
+                  />
+                )}
+                <button
+                  onClick={() => updateSidebarCollapsed(!sidebarCollapsed)}
+                  className='absolute top-1/2 right-[-4px] border rounded-tl-full rounded-bl-full bg-gray-100 text-primary p-1 shadow-md z-40 hover:bg-gray-200 transition-colors outline-none'
+                  aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                >
+                  {sidebarCollapsed ? <ChevronRight className="w-5 h-6" /> : <ChevronLeft className="w-5 h-6" />}
+                </button>
+              </aside>
+            )}
 
-          {/* Layout-Integrated Flyout Menu - Right Side */}
-          {sidebarPosition === 'right' && flyoutOpen && (
-            <aside
-              style={{ width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
-              className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out relative"
-            >
-              {!sidebarCollapsed && (
-                <Sidebar
-                  sidebarPosition={sidebarPosition}
-                  sidebarWidth={sidebarWidth}
-                  selectedWorkspace={selectedWorkspace}
-                />
-              )}
-              <button
-                onClick={() => updateSidebarCollapsed(!sidebarCollapsed)}
-                className='absolute top-1/2 left-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-40 hover:bg-gray-100 transition-colors outline-none'
-                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            {/* Main content area */}
+            <main className="flex-1 p-0 overflow-y-auto no-scrollbar bg-main text-text min-w-0">
+              <Outlet />
+            </main>
+
+            {/* Layout-Integrated Flyout Menu - Right Side */}
+            {sidebarPosition === 'right' && flyoutOpen && (
+              <aside
+                style={{ width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
+                className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out relative"
               >
-                {sidebarCollapsed ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-              </button>
-            </aside>
-          )}
+                {!sidebarCollapsed && (
+                  <Sidebar
+                    sidebarPosition={sidebarPosition}
+                    sidebarWidth={sidebarWidth}
+                    selectedWorkspace={selectedWorkspace}
+                  />
+                )}
+                <button
+                  onClick={() => updateSidebarCollapsed(!sidebarCollapsed)}
+                  className='absolute top-1/2 left-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-40 hover:bg-gray-100 transition-colors outline-none'
+                  aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                >
+                  {sidebarCollapsed ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+                </button>
+              </aside>
+            )}
+          </div>
+
+          {/* Overlays */}
+          <ExtensionPoint id="layout:overlay" />
+
+          <ImportSuccessModal
+            open={Boolean(importSummary)}
+            summary={importSummary ?? null}
+            onClose={() => {
+              const currentState = (location.state) || {};
+              const { importSummary: _omit, ...rest } = currentState;
+              navigate(location.pathname, { replace: true, state: rest });
+            }}
+          />
         </div>
 
-        {/* Overlays */}
-        <ExtensionPoint id="layout:overlay" />
-
-        <ImportSuccessModal
-          open={Boolean(importSummary)}
-          summary={importSummary ?? null}
-          onClose={() => {
-            const currentState = (location.state) || {};
-            const { importSummary: _omit, ...rest } = currentState;
-            navigate(location.pathname, { replace: true, state: rest });
-          }}
-        />
+        {/* Sereni Chat Panel beside main content */}
+        <SereniChatPanel />
       </div>
     </RouteContextProvider>
   );
@@ -491,17 +498,19 @@ const App: React.FC = () => {
     <PluginFrameworkProvider plugins={plugins as Parameters<typeof PluginFrameworkProvider>[0]['plugins']} defaultConfig={{}}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          <AuthProviderChooser>
-            {announcement && <AnnouncementBar {...announcement} />}
-            <AppInitializer>
-              <Router>
-                <WorkspacesGuard>
-                  <NavigationResolver />
-                  <AppRoutes />
-                </WorkspacesGuard>
-              </Router>
-            </AppInitializer>
-          </AuthProviderChooser>
+          <SereniChatProvider>
+            <AuthProviderChooser>
+              {announcement && <AnnouncementBar {...announcement} />}
+              <AppInitializer>
+                <Router>
+                  <WorkspacesGuard>
+                    <NavigationResolver />
+                    <AppRoutes />
+                  </WorkspacesGuard>
+                </Router>
+              </AppInitializer>
+            </AuthProviderChooser>
+          </SereniChatProvider>
         </ToastProvider>
       </QueryClientProvider>
     </PluginFrameworkProvider>

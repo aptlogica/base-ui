@@ -3,7 +3,7 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Plus, Table2, X } from 'lucide-react';
+import { ChevronDown, Plus, Table2, Trash2, X } from 'lucide-react';
 import { FIELD_TYPES, FieldType } from '../../types/fieldTypes';
 
 export interface PreviewTableField {
@@ -11,6 +11,22 @@ export interface PreviewTableField {
   type: string;
   meta?: Record<string, unknown>;
 }
+
+export interface PreviewTableRelationField extends PreviewTableField {
+  isRelationField: true;
+  relationIndex: number;
+  relationType: string;
+}
+
+type PreviewTableDisplayField = PreviewTableField | PreviewTableRelationField;
+
+interface PreviewTableWithRelationFields extends Omit<PreviewTableSchema, 'fields'> {
+  fields: PreviewTableDisplayField[];
+}
+
+const isPreviewTableRelationField = (
+  field: PreviewTableDisplayField
+): field is PreviewTableRelationField => 'isRelationField' in field;
 
 export interface PreviewTableSchema {
   name: string;
@@ -39,6 +55,9 @@ const normalizeFieldType = (value: string) => {
   const exists = FIELD_TYPES.some((fieldType) => fieldType.key === value);
   return exists ? value : FieldType.Text;
 };
+
+const hiddenFieldTypeKeys = new Set(['links', 'lookup', 'select', 'multiSelect']);
+const visibleFieldTypes = FIELD_TYPES.filter((fieldType) => !hiddenFieldTypeKeys.has(fieldType.key));
 
 const createDraftData = (input: PreviewTableData): PreviewTableData => ({
   tables: input.tables.map((table) => ({
@@ -131,27 +150,56 @@ export const PreviewTableModal: React.FC<PreviewTableModalProps> = ({
     return draftData.tables[selectedTableIndex] || draftData.tables[0] || null;
   }, [draftData, selectedTableIndex]);
 
-  const selectedTableRelations = useMemo(() => {
-    if (!draftData?.relations?.length || !selectedTable) return [];
-    return draftData.relations.filter(
-      (relation) =>
-        relation.source_table === selectedTable.name || relation.target_table === selectedTable.name
-    );
+  const relationFieldRows = useMemo(() => {
+    if (!selectedTable || !draftData?.relations?.length) return [];
+
+    return draftData.relations
+      .map((relation, relationIndex) => {
+        const matchesSelectedTable =
+          relation.source_table === selectedTable.name || relation.target_table === selectedTable.name;
+
+        if (!matchesSelectedTable) {
+          return null;
+        }
+
+        const isOutgoing = relation.source_table === selectedTable.name;
+        const otherTable = isOutgoing ? relation.target_table : relation.source_table;
+        return {
+          isRelationField: true as const,
+          relationIndex,
+          name: otherTable,
+          type: FieldType.Links,
+          relationType: relation.type,
+          meta: {
+            relation: {
+              type: relation.type,
+              with: otherTable,
+            },
+          },
+        };
+      })
+      .filter((relation): relation is {
+        isRelationField: true;
+        relationIndex: number;
+        name: string;
+        type: FieldType.Links;
+        relationType: string;
+        meta: {
+          relation: {
+            type: string;
+            with: string;
+          };
+        };
+      } => relation !== null);
   }, [draftData, selectedTable]);
 
-  const relationFieldRows = useMemo(() => {
-    if (!selectedTable) return [];
-
-    return selectedTableRelations.map((relation) => {
-      const isOutgoing = relation.source_table === selectedTable.name;
-      const otherTable = isOutgoing ? relation.target_table : relation.source_table;
-      return {
-        name: otherTable,
-        type: FieldType.Links,
-        relationType: relation.type,
-      };
-    });
-  }, [selectedTable, selectedTableRelations]);
+  const selectedTableWithRelationFields = useMemo<PreviewTableWithRelationFields | null>(() => {
+    if (!selectedTable) return null;
+    return {
+      ...selectedTable,
+      fields: [...selectedTable.fields, ...relationFieldRows],
+    };
+  }, [relationFieldRows, selectedTable]);
 
   const updateDraftData = (updater: (current: PreviewTableData) => PreviewTableData) => {
     setDraftData((current) => {
@@ -207,6 +255,29 @@ export const PreviewTableModal: React.FC<PreviewTableModalProps> = ({
           }),
         };
       }),
+    }));
+  };
+
+  const handleDeleteField = (fieldIndex: number) => {
+    updateDraftData((current) => ({
+      ...current,
+      tables: current.tables.map((table, index) => {
+        if (index !== selectedTableIndex) {
+          return table;
+        }
+
+        return {
+          ...table,
+          fields: table.fields.filter((_, currentFieldIndex) => currentFieldIndex !== fieldIndex),
+        };
+      }),
+    }));
+  };
+
+  const handleDeleteRelationField = (relationIndex: number) => {
+    updateDraftData((current) => ({
+      ...current,
+      relations: current.relations.filter((_, currentRelationIndex) => currentRelationIndex !== relationIndex),
     }));
   };
 
@@ -309,10 +380,10 @@ export const PreviewTableModal: React.FC<PreviewTableModalProps> = ({
                         </option>
                       ))}
                     </select>
-                    <ChevronDown
+                    {/* <ChevronDown
                       size={16}
                       className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
+                    /> */}
                   </div>
                 </div>
 
@@ -342,77 +413,83 @@ export const PreviewTableModal: React.FC<PreviewTableModalProps> = ({
                     </p>
                   </div>
                   <div className="inline-flex items-center gap-2 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
-                    {selectedTable?.fields?.length || 0} Fields Defined
+                    {selectedTableWithRelationFields?.fields?.length || 0} Fields Defined
                   </div>
                 </div>
 
                 <div className="p-4">
-                  <div className="grid grid-cols-[minmax(0,1fr)_140px_32px] gap-3 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+                  <div className="grid grid-cols-[minmax(0,1fr)_140px_40px] gap-3 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-secondary">
                     <div>Field Name</div>
                     <div>Type</div>
                     <div />
                   </div>
 
                   <div className="overflow-hidden rounded-xl border">
-                    {(selectedTable?.fields?.length || relationFieldRows.length) ? (
+                    {(selectedTableWithRelationFields?.fields?.length || 0) ? (
                       <>
-                        {selectedTable?.fields?.map((field, index) => (
+                        {selectedTableWithRelationFields?.fields?.map((field, index) => (
                           <div
                             key={`field-${index}`}
-                            className="grid grid-cols-[minmax(0,1fr)_140px_32px] items-center gap-3 px-3 py-3 border-b last:border-b-0 bg-white"
-                          >
-                            <div className="min-w-0">
-                              <input
-                                type="text"
-                                value={field.name}
-                                onChange={(event) => handleFieldChange(index, 'name', event.target.value)}
-                                className="w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-primary outline-none focus:border-green-300 focus:bg-green-50"
-                                aria-label={`Field name ${index + 1}`}
-                              />
-                            </div>
-                            <div className="min-w-0">
-                              <select
-                                value={normalizeFieldType(field.type)}
-                                onChange={(event) => handleFieldChange(index, 'type', event.target.value)}
-                                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-700 outline-none focus:border-green-300 focus:bg-white"
-                                aria-label={`Field type ${index + 1}`}
-                              >
-                                {FIELD_TYPES.map((fieldType) => (
-                                  <option key={fieldType.key} value={fieldType.key}>
-                                    {fieldType.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <ChevronDown size={16} className="justify-self-center text-gray-400" />
-                          </div>
-                        ))}
-
-                        {relationFieldRows.map((relationField, index) => (
-                          <div
-                            key={`relation-field-${index}`}
-                            className="grid grid-cols-[minmax(0,1fr)_140px_32px] items-center gap-3 px-3 py-3 border-b last:border-b-0 bg-green-50/40"
+                            className={`grid grid-cols-[minmax(0,1fr)_140px_40px] items-center gap-3 px-3 py-3 border-b last:border-b-0 ${
+                              isPreviewTableRelationField(field) ? 'bg-green-50/40' : 'bg-white'
+                            }`}
                           >
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
                                 <input
                                   type="text"
-                                  value={relationField.name}
-                                  readOnly
-                                  className="w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-primary outline-none"
-                                  aria-label={`Relation field name ${index + 1}`}
+                                  value={field.name}
+                                  onChange={
+                                    isPreviewTableRelationField(field)
+                                      ? undefined
+                                      : (event) => handleFieldChange(index, 'name', event.target.value)
+                                  }
+                                  readOnly={isPreviewTableRelationField(field)}
+                                  className="w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-primary outline-none focus:border-green-300 focus:bg-green-50"
+                                  aria-label={`${isPreviewTableRelationField(field) ? 'Relation' : 'Field'} name ${index + 1}`}
                                 />
-                                <span className="inline-flex items-center rounded-lg bg-green-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-green-700">
-                                  Relation
-                                </span>
+                                {isPreviewTableRelationField(field) && (
+                                  <span className="inline-flex items-center rounded-lg bg-green-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-green-700">
+                                    Relation
+                                  </span>
+                                )}
                               </div>
                             </div>
                             <div className="min-w-0">
-                              <div className="inline-flex w-full items-center rounded-lg border border-green-200 bg-white px-2 py-1 text-sm text-green-800">
-                                Links
-                              </div>
+                              {isPreviewTableRelationField(field) ? (
+                                <div className="inline-flex w-full items-center rounded-lg border border-green-200 bg-white px-2 py-1 text-sm text-green-800">
+                                  Links
+                                </div>
+                              ) : (
+                                <select
+                                  value={normalizeFieldType(field.type)}
+                                  onChange={(event) => handleFieldChange(index, 'type', event.target.value)}
+                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-700 outline-none focus:border-green-300 focus:bg-white"
+                                  aria-label={`Field type ${index + 1}`}
+                                >
+                                  {visibleFieldTypes.map((fieldType) => (
+                                    <option key={fieldType.key} value={fieldType.key}>
+                                      {fieldType.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
                             </div>
-                            <ChevronDown size={16} className="justify-self-center text-gray-300" />
+                            <div className="flex justify-end">
+                              <button
+                                type="button"
+                                onClick={
+                                  isPreviewTableRelationField(field)
+                                    ? () => handleDeleteRelationField(field.relationIndex)
+                                    : () => handleDeleteField(index)
+                                }
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                                aria-label={`${isPreviewTableRelationField(field) ? 'Delete relation field' : 'Delete field'} ${index + 1}`}
+                                title={isPreviewTableRelationField(field) ? 'Delete relation field' : 'Delete field'}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </>
