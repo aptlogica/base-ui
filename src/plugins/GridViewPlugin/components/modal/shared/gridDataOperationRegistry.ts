@@ -4,6 +4,7 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import {
   buildGridDataOperationPreview,
+  buildGridDataOperationPreviewAsync,
   applyGridDataOperationToRecords,
   normalizeCustomFormattingPattern,
 } from './gridDataOperationTransforms';
@@ -217,6 +218,24 @@ const buildFuzzyDeduplicationPlan = (
       threshold,
       duplicateAction,
       keepRule,
+      deduplicationMode: context.state.deduplicationMode || 'automatic',
+      rowActions: (() => {
+        if (context.state.deduplicationMode !== 'manual') {
+          return undefined;
+        }
+        if (context.state.rowActions && Object.keys(context.state.rowActions).length > 0) {
+          return context.state.rowActions;
+        }
+        const actions: Record<string, 'delete' | 'clear'> = {};
+        for (const row of preview.previewRows) {
+          if (row.rowState === 'removed') {
+            actions[row.id] = 'delete';
+          } else if (row.rowState === 'changed') {
+            actions[row.id] = 'clear';
+          }
+        }
+        return actions;
+      })(),
     },
     optimisticRecords,
   };
@@ -533,6 +552,7 @@ const ACTION_ADAPTERS: Partial<Record<GridActionId, GridDataOperationAdapter>> =
   },
   fuzzy_deduplication: {
     buildPreview: buildGridDataOperationPreview,
+    buildPreviewAsync: buildGridDataOperationPreviewAsync,
     buildApplyPlan: (context, preview) => {
       if (!preview.supported) return null;
       return buildFuzzyDeduplicationPlan(context, preview);

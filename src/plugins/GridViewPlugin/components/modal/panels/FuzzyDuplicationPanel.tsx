@@ -26,6 +26,8 @@ interface FuzzyDuplicationPanelProps {
     onDuplicateActionChange: (value: 'remove_row' | 'remove_duplicates') => void;
     duplicatesCount: number;
     rowsAffected: number;
+    deduplicationMode?: 'automatic' | 'manual';
+    onDeduplicationModeChange?: (value: 'automatic' | 'manual') => void;
 }
 const MATCHING_METHOD_OPTIONS: Array<{
     value: MatchingMethod;
@@ -78,7 +80,7 @@ const DUPLICATE_ACTION_OPTIONS: Array<{
         {
             value: 'remove_row',
             label: 'Remove duplicate rows',
-            description: 'Delete duplicate rows and keep a single matching row.',
+            description: 'Keep one row and delete all other rows in the duplicate group.',
         },
         {
             value: 'remove_duplicates',
@@ -90,26 +92,32 @@ const DUPLICATE_ACTION_OPTIONS: Array<{
 const KEEP_RULE_OPTIONS: Array<{
     value: 'keep_first' | 'keep_last' | 'keep_latest_updated' | 'keep_highest' | 'keep_lowest';
     label: string;
+    description: string;
 }> = [
         {
             value: 'keep_first',
-            label: 'Keep first occurrence'
+            label: 'Keep first occurrence',
+            description: 'Keep the first record and remove others.'
         },
         {
             value: 'keep_last',
-            label: 'Keep last occurrence'
+            label: 'Keep last occurrence',
+            description: 'Keep the last record and remove others.'
         },
         {
             value: 'keep_latest_updated',
-            label: 'Keep last updated record'
+            label: 'Keep last updated record',
+            description: 'Keep the record with the most recent updated time.'
         },
         {
             value: 'keep_highest',
-            label: 'Keep highest value'
+            label: 'Keep highest value',
+            description: 'Keep the record with the highest value.'
         },
         {
             value: 'keep_lowest',
-            label: 'Keep lowest value'
+            label: 'Keep lowest value',
+            description: 'Keep the record with the lowest value.'
         }
     ];
 
@@ -125,7 +133,9 @@ export const FuzzyDuplicationPanel: React.FC<FuzzyDuplicationPanelProps> = ({
     duplicateAction,
     onDuplicateActionChange,
     duplicatesCount,
-    rowsAffected
+    rowsAffected,
+    deduplicationMode = 'automatic',
+    onDeduplicationModeChange,
 }) => {
     // Normalize keep rule string if it has the extra 's' from layout state
     const normalizedKeepRule = (duplicateKeepRule === 'keep_latest_updated' || (duplicateKeepRule as string) === 'keep_lastest_updated')
@@ -134,6 +144,35 @@ export const FuzzyDuplicationPanel: React.FC<FuzzyDuplicationPanelProps> = ({
 
     return (
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
+            <div className="flex items-center justify-between border-b pb-4 mb-2">
+                <div>
+                    <h3 className="text-sm font-semibold text-primary">Deduplication Mode</h3>
+                    <p className="text-xs text-secondary">Choose how duplicates are resolved.</p>
+                </div>
+                <div className="flex rounded-lg border p-1 ">
+                    <button
+                        type="button"
+                        onClick={() => onDeduplicationModeChange?.('automatic')}
+                        className={`w-24 py-1.5 rounded-md text-xs font-semibold transition-all text-center ${deduplicationMode === 'automatic'
+                            ? 'btn-primary text-white shadow-sm'
+                            : 'text-secondary dark:text-gray-400 hover:text-black dark:hover:text-white'
+                            }`}
+                    >
+                        Automatic
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onDeduplicationModeChange?.('manual')}
+                        className={`w-24 py-1.5 rounded-md text-xs font-semibold transition-all text-center ${deduplicationMode === 'manual'
+                            ? 'btn-primary text-white shadow-sm'
+                            : 'text-secondary dark:text-gray-400 hover:text-black dark:hover:text-white'
+                            }`}
+                    >
+                        Manual
+                    </button>
+                </div>
+            </div>
+
             <ColumnSelectionSection
                 columns={columns}
                 selectedColumnIds={selectedColumnIds}
@@ -144,7 +183,7 @@ export const FuzzyDuplicationPanel: React.FC<FuzzyDuplicationPanelProps> = ({
             />
 
             <section className="space-y-4">
-                 <div className="space-y-2">
+                <div className="space-y-2">
                     <div>
                         <h3 className="text-sm font-semibold text-primary">Matching Method</h3>
                         <p className="text-sm text-secondary">

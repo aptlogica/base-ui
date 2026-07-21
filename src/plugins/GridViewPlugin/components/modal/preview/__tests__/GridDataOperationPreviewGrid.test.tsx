@@ -8,7 +8,7 @@ const makeColumn = (overrides: Partial<any> = {}) => ({
   key: overrides.key,
   title: overrides.title ?? 'Column',
   uidt: overrides.uidt,
-});
+}) as any;
 
 const makePreviewRow = (overrides: Partial<any> = {}) => ({
   id: overrides.id ?? `row-${Math.random()}`,
@@ -122,7 +122,7 @@ describe('GridDataOperationPreviewGrid', () => {
 
   it('stringifies named functions with function name', () => {
     const columns = [makeColumn({ id: 'c1', title: 'Col1' })];
-    function myFn() {}
+    function myFn() { }
     const row = makePreviewRow({ values: { c1: myFn } });
     const preview = { actionId: 'a1', totalRows: 1, affectedRows: 0, affectedCells: 0, affectedColumns: 0, previewRows: [row] } as any;
 

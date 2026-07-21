@@ -67,6 +67,8 @@ export interface GridDataOperationState {
   extractKeepOriginalColumn: boolean;
   extractPlacement: GridExtractPlacement;
   fuzzySensitivity: 'low' | 'medium' | 'high';
+  rowActions?: Record<string, 'keep' | 'delete' | 'clear' | 'none'>;
+  deduplicationMode?: 'automatic' | 'manual';
 }
 
 export interface GridDataOperationPreviewRow {
@@ -75,6 +77,7 @@ export interface GridDataOperationPreviewRow {
   values: Record<string, any>;
   changedColumns: string[];
   rowState?: 'unchanged' | 'changed' | 'removed' | 'kept';
+  groupId?: string;
 }
 
 export interface GridDataOperationPreviewResult {
@@ -88,6 +91,8 @@ export interface GridDataOperationPreviewResult {
   affectedCells: number;
   affectedColumns: number;
   actionId: GridActionId;
+  deduplicationMode?: 'automatic' | 'manual';
+  duplicateAction?: 'remove_row' | 'remove_duplicates';
 }
 
 export interface GridDataOperationCellUpdate {
@@ -188,17 +193,31 @@ export interface GridDataOperationApplyPlan {
     threshold: 'low' | 'medium' | 'high';
     duplicateAction: 'remove_row' | 'remove_duplicates';
     keepRule: 'keep_first' | 'keep_last' | 'keep_latest_updated';
+    deduplicationMode?: 'automatic' | 'manual';
+    rowActions?: Record<string, 'keep' | 'delete' | 'clear' | 'none'>;
   };
+}
+
+export interface GridScanProgress {
+  isScanning: boolean;
+  scannedRows: number;
+  totalRows: number;
+  duplicatesDetected: number;
 }
 
 export interface GridDataOperationContext {
   actionId: GridActionId;
   columns: GridColumn[];
-  tableData?: TableData | null;
+  tableData: TableData;
   state: GridDataOperationState;
+  onProgress?: (progress: { scannedRows: number; totalRows: number; duplicatesDetected: number }) => void;
 }
 
 export interface GridDataOperationAdapter {
   buildPreview: (context: GridDataOperationContext) => GridDataOperationPreviewResult;
-  buildApplyPlan: (context: GridDataOperationContext, preview: GridDataOperationPreviewResult) => GridDataOperationApplyPlan | null;
+  buildPreviewAsync?: (context: GridDataOperationContext) => Promise<GridDataOperationPreviewResult>;
+  buildApplyPlan: (
+    context: GridDataOperationContext,
+    preview: GridDataOperationPreviewResult,
+  ) => GridDataOperationApplyPlan | null;
 }

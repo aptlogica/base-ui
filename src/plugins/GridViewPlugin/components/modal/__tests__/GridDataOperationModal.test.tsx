@@ -24,8 +24,8 @@ vi.mock('../shared/GridDataOperationPanel', () => ({
       <button data-testid="set-sep-custom" onClick={() => props.onStateChange?.({ splitSeparatorType: 'custom', splitCustomSeparator: '||' })}>custom</button>
       <button data-testid="set-mode-fixed" onClick={() => props.onStateChange?.({ splitMode: 'fixed_length', splitCharacterCount: '3', splitFixedDirection: 'after' })}>fixed</button>
       <button data-testid="set-mode-pattern" onClick={() => props.onStateChange?.({ splitMode: 'pattern', splitPattern: String.raw`\d+` })}>pattern</button>
-      <button data-testid="set-merge-custom-empty" onClick={() => props.onStateChange?.({ mergeFormat: 'custom', mergeCustomSeparator: '', selectedColumnIds: ['a','b'] })}>merge-empty</button>
-      <button data-testid="set-merge-custom-filled" onClick={() => props.onStateChange?.({ mergeFormat: 'custom', mergeCustomSeparator: '|' , selectedColumnIds: ['a','b'] })}>merge-filled</button>
+      <button data-testid="set-merge-custom-empty" onClick={() => props.onStateChange?.({ mergeFormat: 'custom', mergeCustomSeparator: '', selectedColumnIds: ['a', 'b'] })}>merge-empty</button>
+      <button data-testid="set-merge-custom-filled" onClick={() => props.onStateChange?.({ mergeFormat: 'custom', mergeCustomSeparator: '|', selectedColumnIds: ['a', 'b'] })}>merge-filled</button>
       <button data-testid="set-source-nonexist" onClick={() => props.onStateChange?.({ splitSourceColumnId: 'nonexist' })}>set-source-nonexist</button>
       <button data-testid="set-extract-end" onClick={() => props.onStateChange?.({ extractPlacement: 'end_of_table' })}>extract-end</button>
       <button data-testid="set-split-end" onClick={() => props.onStateChange?.({ splitPlacement: 'end_of_table' })}>split-end</button>
@@ -177,7 +177,7 @@ describe('GridDataOperationModal', () => {
   it('applies merge action and shows success toast', async () => {
     const { __mock } = (await import('../../../../../components/common/Toast')) as any;
     const tableData = { model: { id: 'table-1' } } as any;
-    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-1', sourceColumnIds: ['a','b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' } } as any;
+    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-1', sourceColumnIds: ['a', 'b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' } } as any;
 
     (getGridDataOperationAdapter as any).mockReturnValue({
       buildPreview: () => ({ virtualColumns: [] }),
@@ -403,7 +403,7 @@ describe('GridDataOperationModal', () => {
   it('applies merge action with custom separator and shows success toast', async () => {
     const { __mock } = (await import('../../../../../components/common/Toast')) as any;
     const tableData = { model: { id: 'table-2' } } as any;
-    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-2', sourceColumnIds: ['a','b'], mergedColumnTitle: 'M', mergeFormat: 'custom', mergeCustomSeparator: '|', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
+    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-2', sourceColumnIds: ['a', 'b'], mergedColumnTitle: 'M', mergeFormat: 'custom', mergeCustomSeparator: '|', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
 
     (getGridDataOperationAdapter as any).mockReturnValue({
       buildPreview: () => ({ virtualColumns: [] }),
@@ -428,10 +428,12 @@ describe('GridDataOperationModal', () => {
 
   it('falls back to bulkUpdateFieldService for multiple update groups', async () => {
     const tableData = { model: { id: 'table-3' } } as any;
-    const fallbackPlan = { kind: 'unknown_kind', columnUpdates: [
-      { columnId: 'col1', updates: [{ id: 'r1', value: 'v' }] },
-      { columnId: 'col2', updates: [{ id: 'r2', value: 'v2' }] },
-    ], optimisticRecords: [{ id: 'r1' }, { id: 'r2' }] } as any;
+    const fallbackPlan = {
+      kind: 'unknown_kind', columnUpdates: [
+        { columnId: 'col1', updates: [{ id: 'r1', value: 'v' }] },
+        { columnId: 'col2', updates: [{ id: 'r2', value: 'v2' }] },
+      ], optimisticRecords: [{ id: 'r1' }, { id: 'r2' }]
+    } as any;
 
     (getGridDataOperationAdapter as any).mockReturnValue({
       buildPreview: () => ({ virtualColumns: [] }),
@@ -516,7 +518,7 @@ describe('GridDataOperationModal', () => {
   });
 
   it.each([
-    'trim_whitespace','case_normalization','find_replace','remove_duplicates','merge_column','split_column','remove_special_characters','extract_substring','remove_formatting','fuzzy_deduplication',
+    'trim_whitespace', 'case_normalization', 'find_replace', 'remove_duplicates', 'merge_column', 'split_column', 'remove_special_characters', 'extract_substring', 'remove_formatting', 'fuzzy_deduplication',
   ])('falls back to bulkUpdateFieldService when %s handler config missing', async (kind) => {
     const tableData = { model: { id: `tb-${kind}` } } as any;
     const fallbackPlan = { kind, columnUpdates: [{ columnId: 'col1', updates: [{ id: 'r1', value: 'v' }] }], optimisticRecords: [] } as any;
@@ -593,7 +595,7 @@ describe('GridDataOperationModal', () => {
   });
 
   it.each([
-    'url','domain','keywords','mentions','tags','emoji','phone','prefix','',
+    'url', 'domain', 'keywords', 'mentions', 'tags', 'emoji', 'phone', 'prefix', '',
   ])('applies extract_substring for type %s with keepOriginal true', async (etype) => {
     const tableData = { model: { id: 't' }, columns: [{ id: 'src', order_index: 0 }, { id: 'other', order_index: 1 }] } as any;
     const extractPlan = { kind: 'extract_substring', extractSubstring: { modelId: 't', sourceColumnId: 'src', outputColumnTitle: '', outputColumnId: '', extractionMethod: 'extraction_type', extractionType: etype || 'email', keepOriginalColumn: true, placement: 'next_to_original' }, columnUpdates: [] } as any;
@@ -662,7 +664,7 @@ describe('GridDataOperationModal', () => {
     const tableData = { model: { id: 't' } } as any;
     const mergeAction = { ...defaultAction, id: 'merge_column' } as any;
     const preview = { virtualColumns: [{ id: 'merged', title: 'Merged' }] } as any;
-    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 't', sourceColumnIds: ['a','b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
+    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 't', sourceColumnIds: ['a', 'b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
 
     (getGridDataOperationAdapter as any).mockReturnValue({
       buildPreview: () => preview,
@@ -733,7 +735,7 @@ describe('GridDataOperationModal', () => {
     );
 
     const tableData = { model: { id: 'table-err2' }, columns: [{ id: 'src', order_index: 0 }] } as any;
-    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-err2', sourceColumnIds: ['a','b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
+    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-err2', sourceColumnIds: ['a', 'b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
 
     (getGridDataOperationAdapter as any).mockReturnValue({
       buildPreview: () => ({ virtualColumns: [] }),
@@ -791,7 +793,7 @@ describe('GridDataOperationModal', () => {
     );
 
     const tableData = { model: { id: 'table-err3' } } as any;
-    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-err3', sourceColumnIds: ['a','b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
+    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-err3', sourceColumnIds: ['a', 'b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
 
     (getGridDataOperationAdapter as any).mockReturnValue({
       buildPreview: () => ({ virtualColumns: [] }),

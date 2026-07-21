@@ -876,6 +876,8 @@ export async function fuzzyDuplicatesService(params: {
   threshold: 'low' | 'medium' | 'high';
   duplicate: 'remove_row' | 'remove_duplicates';
   keep_rule: 'keep_first' | 'keep_last' | 'keep_latest_updated';
+  deduplication_mode?: 'automatic' | 'manual';
+  row_actions?: Record<string, 'keep' | 'delete' | 'clear' | 'none'>;
 }) {
     return await makeAuthenticatedCall(() => client.columnService.fuzzyDuplicates(params));
 }

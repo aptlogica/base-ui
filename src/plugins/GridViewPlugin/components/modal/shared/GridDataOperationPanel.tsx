@@ -371,6 +371,8 @@ export const GridDataOperationPanel: React.FC<GridDataOperationPanelProps> = ({
             onDuplicateActionChange={(val) => onStateChange({ duplicateAction: val })}
             duplicatesCount={preview ? preview.changedRowIds.length : 0}
             rowsAffected={preview ? preview.affectedRows : 0}
+            deduplicationMode={state.deduplicationMode}
+            onDeduplicationModeChange={(val) => onStateChange({ deduplicationMode: val })}
           />
         );
       case 'remove_special_characters':

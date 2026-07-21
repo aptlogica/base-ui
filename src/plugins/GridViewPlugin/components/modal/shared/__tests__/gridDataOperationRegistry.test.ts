@@ -190,6 +190,7 @@ describe('getGridDataOperationAdapter', () => {
           threshold: 'medium',
           duplicateAction: 'remove_row',
           keepRule: 'keep_first',
+          deduplicationMode: 'automatic',
         },
         optimisticRecords: expect.any(Array),
       }),
