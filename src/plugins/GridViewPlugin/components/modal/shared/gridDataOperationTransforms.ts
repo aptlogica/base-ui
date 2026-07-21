@@ -1435,6 +1435,7 @@ const buildFuzzyDeduplicationPreview = (
     affectedColumns: affectedColumnsSet.size,
     actionId: 'fuzzy_deduplication',
     deduplicationMode,
+    duplicateAction: state.duplicateAction === 'remove_duplicates' ? 'remove_duplicates' : 'remove_row',
   };
 };
 

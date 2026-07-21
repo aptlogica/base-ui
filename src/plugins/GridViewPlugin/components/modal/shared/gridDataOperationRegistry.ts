@@ -223,15 +223,27 @@ const buildFuzzyDeduplicationPlan = (
         if (context.state.deduplicationMode !== 'manual') {
           return undefined;
         }
-        if (context.state.rowActions && Object.keys(context.state.rowActions).length > 0) {
-          return context.state.rowActions;
-        }
+        // Build the actionable map: start from preview row defaults then apply user overrides.
+        // Only 'delete' and 'clear' are sent to the backend; 'keep'/'none' means skip the row.
         const actions: Record<string, 'delete' | 'clear'> = {};
         for (const row of preview.previewRows) {
           if (row.rowState === 'removed') {
             actions[row.id] = 'delete';
           } else if (row.rowState === 'changed') {
             actions[row.id] = 'clear';
+          }
+        }
+        // Apply user overrides from state.rowActions
+        if (context.state.rowActions) {
+          for (const [rowId, action] of Object.entries(context.state.rowActions)) {
+            if (action === 'delete') {
+              actions[rowId] = 'delete';
+            } else if (action === 'clear') {
+              actions[rowId] = 'clear';
+            } else {
+              // 'keep' or 'none' — remove from the actionable map
+              delete actions[rowId];
+            }
           }
         }
         return actions;
