@@ -272,20 +272,6 @@ export const FuzzyDuplicationPanel: React.FC<FuzzyDuplicationPanelProps> = ({
             </section>
 
             <div className="space-y-2 border-t"></div>
-
-            <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
-                <div className="flex items-center gap-2">
-                    <Info className="h-8 w-8 flex-shrink-0" />
-                    <div className="flex flex-col gap-1">
-                        <p className="text-foreground">
-                            <span className="text-indigo-700 font-semibold">{duplicatesCount}</span> duplicates detected
-                        </p>
-                        <p className="text-foreground">
-                            <span className="text-indigo-700 font-semibold">{rowsAffected}</span> {duplicateAction === 'remove_row' ? (rowsAffected === 1 ? 'row' : 'rows') : (rowsAffected === 1 ? 'cell' : 'cells')} will be affected
-                        </p>
-                    </div>
-                </div>
-            </div>
         </div>
     );
 };
