@@ -5,6 +5,7 @@ import { AddUserModal } from '../AddUserModal';
 
 const mockAddUser = vi.fn();
 const mockEditUserMutation = vi.fn();
+const mockRemoveAvatarMutation = vi.fn();
 const mockUseWorkspaces = vi.fn();
 const mockUseUserRolesAndAccess = vi.fn();
 const mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() };
@@ -18,6 +19,10 @@ vi.mock('../../../../hooks/useApi', () => ({
   }),
   useEditUser: () => ({
     mutateAsync: mockEditUserMutation,
+    isPending: false,
+  }),
+  useRemoveAvatar: () => ({
+    mutateAsync: mockRemoveAvatarMutation,
     isPending: false,
   }),
   useWorkspaces: () => mockUseWorkspaces(),
@@ -87,6 +92,7 @@ describe('AddUserModal', () => {
     mockUseUserRolesAndAccess.mockReturnValue({ data: null });
     mockUseCurrentUser.mockReturnValue({ id: 'current-1', email: 'current@example.com' });
     mockUseUserRole.mockReturnValue({ isOwner: () => true });
+    mockRemoveAvatarMutation.mockResolvedValue({});
       const urlRef = globalThis.URL;
       vi.stubGlobal(
         'URL',
@@ -575,6 +581,91 @@ describe('AddUserModal', () => {
         expect(globalThis.URL.createObjectURL).toHaveBeenCalled();
       });
       expect(screen.queryByText(/max 800 x 400px/i)).not.toBeInTheDocument();
+    });
+
+    it('removes existing avatar via API when remove button is clicked in edit mode', async () => {
+      const user = userEvent.setup();
+      render(
+        <AddUserModal
+          {...defaultProps}
+          editUser={{
+            id: 'user-1',
+            first_name: 'John',
+            last_name: 'Doe',
+            email: 'john@example.com',
+            display_name: 'John Doe',
+            status: 'active',
+            email_verified: true,
+            timezone: 'UTC',
+            locale: 'en',
+            roles: [],
+            avatar: 'https://example.com/avatar.png',
+          }}
+        />
+      );
+
+      expect(screen.getByAltText('Avatar preview')).toBeInTheDocument();
+      const removeBtn = screen.getByAltText('Avatar preview').closest('.relative')?.querySelector('button');
+      expect(removeBtn).toBeTruthy();
+      await user.click(removeBtn!);
+
+      await waitFor(() => {
+        expect(mockRemoveAvatarMutation).toHaveBeenCalled();
+      });
+      expect(mockToast.success).toHaveBeenCalledWith('Avatar removed successfully');
+      expect(screen.queryByAltText('Avatar preview')).not.toBeInTheDocument();
+    });
+
+    it('clears local avatar preview without API when removing a newly selected file', async () => {
+      setMockImageDimensions(600, 300);
+      const user = userEvent.setup();
+      render(<AddUserModal {...defaultProps} />);
+
+      const fileInput = document.getElementById('avatar-upload') as HTMLInputElement;
+      const file = new File(['img'], 'ok.png', { type: 'image/png' });
+      fireEvent.change(fileInput, { target: { files: [file] } });
+
+      await waitFor(() => {
+        expect(screen.getByAltText('Avatar preview')).toBeInTheDocument();
+      });
+
+      const removeBtn = screen.getByAltText('Avatar preview').closest('.relative')?.querySelector('button');
+      expect(removeBtn).toBeTruthy();
+      await user.click(removeBtn!);
+
+      expect(mockRemoveAvatarMutation).not.toHaveBeenCalled();
+      expect(screen.queryByAltText('Avatar preview')).not.toBeInTheDocument();
+    });
+
+    it('shows error toast when existing avatar removal fails', async () => {
+      mockRemoveAvatarMutation.mockRejectedValue(new Error('Remove failed'));
+      const user = userEvent.setup();
+      render(
+        <AddUserModal
+          {...defaultProps}
+          editUser={{
+            id: 'user-1',
+            first_name: 'John',
+            last_name: 'Doe',
+            email: 'john@example.com',
+            display_name: 'John Doe',
+            status: 'active',
+            email_verified: true,
+            timezone: 'UTC',
+            locale: 'en',
+            roles: [],
+            avatar: 'https://example.com/avatar.png',
+          }}
+        />
+      );
+
+      const removeBtn = screen.getByAltText('Avatar preview').closest('.relative')?.querySelector('button');
+      await user.click(removeBtn!);
+
+      await waitFor(() => {
+        expect(mockToast.error).toHaveBeenCalledWith('Remove failed');
+      });
+      expect(screen.getByAltText('Avatar preview')).toBeInTheDocument();
     });
 
     it('hides workspace panel when co-owner toggle is enabled', async () => {

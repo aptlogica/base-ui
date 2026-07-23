@@ -1650,8 +1650,9 @@ export const useRemoveAvatar = (userId: string) => {
       return result;
     },
     onSuccess: () => {
-      // Invalidate user profile queries to refetch updated data
+      // Invalidate profile and tenant users so avatar removal is reflected everywhere
       queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users });
     },
   });
 };

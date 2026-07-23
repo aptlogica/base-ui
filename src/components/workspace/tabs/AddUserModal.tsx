@@ -8,7 +8,8 @@ import {
   useAddUser,
   useEditUser,
   useWorkspaces,
-  useUserRolesAndAccess
+  useUserRolesAndAccess,
+  useRemoveAvatar,
 } from '../../../hooks/useApi';
 import { useToast } from '../../common/Toast';
 import { WorkspaceItem, WorkspaceAssignment } from './WorkspaceItem';
@@ -128,6 +129,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
   const { mutate: addUser, isPending: isAddingUser } = useAddUser();
   const editUserMutation = useEditUser();
+  const removeAvatarMutation = useRemoveAvatar(editUser?.id || '');
   const workspacesQuery = useWorkspaces();
   const toast = useToast();
   
@@ -290,6 +292,37 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
       };
       img.src = globalThis.URL.createObjectURL(file);
     }
+  };
+
+  const clearAvatarInput = () => {
+    const input = globalThis.document.getElementById('avatar-upload') as HTMLInputElement | null;
+    if (input) input.value = '';
+  };
+
+  const handleRemoveAvatar = async () => {
+    // Newly selected file (not yet saved) — clear local preview only
+    if (avatar) {
+      setAvatar(null);
+      setAvatarPreview(null);
+      clearAvatarInput();
+      return;
+    }
+
+    // Existing server avatar in edit mode — call remove API (same as ProfileSection)
+    if (isEditMode && editUser?.id && avatarPreview) {
+      try {
+        await removeAvatarMutation.mutateAsync();
+        setAvatarPreview(null);
+        clearAvatarInput();
+        toast.success('Avatar removed successfully');
+      } catch (error: any) {
+        toast.error(error?.message || 'Failed to remove avatar');
+      }
+      return;
+    }
+
+    setAvatarPreview(null);
+    clearAvatarInput();
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -693,12 +726,10 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setAvatar(null);
-                            setAvatarPreview(null);
-                            const input = globalThis.document.getElementById('avatar-upload') as HTMLInputElement;
-                            if (input) input.value = '';
+                            void handleRemoveAvatar();
                           }}
-                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-primary rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                          disabled={removeAvatarMutation.isPending}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-primary rounded-full flex items-center justify-center hover:bg-red-600 transition-colors disabled:opacity-50"
                         >
                           <X size={12} />
                         </button>
