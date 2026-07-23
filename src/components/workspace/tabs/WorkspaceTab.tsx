@@ -38,7 +38,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
   const workspaceMembersQuery = useWorkspaceMembers(selectedWorkspaceId);
   const removeUserFromWorkspaceMutation = useRemoveUserFromWorkspace();
   const toast = useToast();
-  const { canCreateWorkspace, canAssignUsers, isFullAccess, isWorkspaceReadOnly } = useWorkspaceAccess(selectedWorkspaceId);
+  const { canCreateWorkspace, canAssignUsers, isAdmin: isWorkspaceOwnerOrCoOwner, isWorkspaceReadOnly } = useWorkspaceAccess(selectedWorkspaceId);
   const { isAdmin } = useUserRole();
 
   const workspaces = workspacesQuery.data ?? [];
@@ -99,8 +99,8 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
       setIsEditModalOpen(false);
       workspacesQuery.refetch();
     } catch (error: any) {
-      toast.error(error?.message || 'Failed to update workspace');
-      throw error; // Re-throw so modal can handle it
+      // Re-throw so CreateWorkspaceModal can show the error toast (avoid double toast)
+      throw error;
     }
   };
 
@@ -354,7 +354,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
 
         {/* Edit Details and Create Workspace Buttons */}
         <div className="flex items-center gap-3">
-          {selectedWorkspaceId && selectedWorkspace && (isAdmin() || isFullAccess) && !isWorkspaceReadOnly() && (
+          {selectedWorkspaceId && selectedWorkspace && (isAdmin() || isWorkspaceOwnerOrCoOwner) && !isWorkspaceReadOnly() && (
             <button
               onClick={() => setIsEditModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 text-sm border text-gray-600 rounded-xl hover:bg-gray-100 transition-colors"

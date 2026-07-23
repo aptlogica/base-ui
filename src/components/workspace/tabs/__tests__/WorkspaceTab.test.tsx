@@ -145,7 +145,7 @@ describe('WorkspaceTab', () => {
     mockUseWorkspaceAccess.mockReturnValue({
       canCreateWorkspace: () => true,
       canAssignUsers: () => true,
-      isFullAccess: true,
+      isAdmin: true,
       isWorkspaceReadOnly: () => false,
     });
     mockUseUserRole.mockReturnValue({ isAdmin: () => true });
@@ -243,13 +243,27 @@ describe('WorkspaceTab', () => {
       expect(screen.getByTestId('create-workspace-modal')).toBeInTheDocument();
     });
 
-    it('does not show Edit Details when user is not admin and not full access', () => {
+    it('does not show Edit Details when user is not admin and not workspace owner/co-owner', () => {
       mockUseUserRole.mockReturnValue({ isAdmin: () => false });
       mockUseWorkspaceAccess.mockReturnValue({
         canCreateWorkspace: () => false,
         canAssignUsers: () => false,
-        isFullAccess: false,
+        isAdmin: false,
         isWorkspaceReadOnly: () => true,
+      });
+
+      render(<WorkspaceTab workspaceId="ws-1" />);
+
+      expect(screen.queryByRole('button', { name: /edit details/i })).not.toBeInTheDocument();
+    });
+
+    it('does not show Edit Details for maintainer role', () => {
+      mockUseUserRole.mockReturnValue({ isAdmin: () => false });
+      mockUseWorkspaceAccess.mockReturnValue({
+        canCreateWorkspace: () => false,
+        canAssignUsers: () => true,
+        isAdmin: false,
+        isWorkspaceReadOnly: () => false,
       });
 
       render(<WorkspaceTab workspaceId="ws-1" />);
