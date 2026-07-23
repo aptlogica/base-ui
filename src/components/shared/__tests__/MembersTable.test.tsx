@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MembersTable, type Member } from '../MembersTable';
 
 const useUserRolesAndAccessMock = vi.fn(() => ({ data: [], isLoading: false, error: null }));
+const hasAdminRoleMock = vi.fn(() => true);
 
 vi.mock('axios', () => ({
   default: {
@@ -25,6 +26,10 @@ vi.mock('../../../hooks/useClickOutside', () => ({
 vi.mock('../../../hooks/useApi', () => ({
   useUserRolesAndAccess: (...args: any[]) => useUserRolesAndAccessMock(...args),
   useTenantUsers: vi.fn(() => ({ data: [], isLoading: false, error: null })),
+}));
+
+vi.mock('../../../hooks/useUserRole', () => ({
+  useUserRole: () => ({ hasAdminRole: hasAdminRoleMock }),
 }));
 
 vi.mock('../../../service/clientService', () => ({
@@ -89,6 +94,7 @@ describe('MembersTable', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useUserRolesAndAccessMock.mockReturnValue({ data: [], isLoading: false, error: null });
+    hasAdminRoleMock.mockReturnValue(true);
   });
 
   describe('Rendering', () => {
@@ -303,6 +309,22 @@ describe('MembersTable', () => {
       const manageButton = screen.getByText(/Manage Role/i);
       fireEvent.click(manageButton);
       expect(onEdit).toHaveBeenCalledWith('m1');
+    });
+
+    it('should show Manage Role for owner/admin users', async () => {
+      hasAdminRoleMock.mockReturnValue(true);
+      const onEdit = vi.fn();
+      renderWithQueryClient(<MembersTable members={[createMember()]} onEditMember={onEdit} />);
+      await userEvent.click(screen.getByLabelText('More actions'));
+      expect(screen.getByText(/Manage Role/i)).toBeInTheDocument();
+    });
+
+    it('should hide Manage Role for non-admin users', async () => {
+      hasAdminRoleMock.mockReturnValue(false);
+      const onEdit = vi.fn();
+      renderWithQueryClient(<MembersTable members={[createMember()]} onEditMember={onEdit} />);
+      await userEvent.click(screen.getByLabelText('More actions'));
+      expect(screen.queryByText(/Manage Role/i)).not.toBeInTheDocument();
     });
   });
 

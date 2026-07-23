@@ -8,6 +8,7 @@ import { MoreVertical, ChevronsUpDown, Search, Edit, Trash2 } from 'lucide-react
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { AccessRole } from './AccessRoleSelector';
 import { useUserRolesAndAccess } from '../../hooks/useApi';
+import { useUserRole } from '../../hooks/useUserRole';
 import { getInitials } from '../../utils/helpers';
 import { formatCreatedDate, formatRelativeLastActive, getAvatarColor, getRolePillStyle } from './userTableUtils';
 import { AccessDetailsRow } from './table/AccessDetailsRow';
@@ -270,6 +271,10 @@ export const MembersTable: React.FC<MembersTableProps> = ({
   const itemsPerPage = 10;
   const actionsMenuRef = useRef<HTMLDivElement>(null);
   const actionButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
+
+  // Only Owner and Co-owner (admin) can update member roles
+  const { hasAdminRole } = useUserRole();
+  const canManageRole = hasAdminRole();
 
   // Filter members based on search
   const filteredMembers = useMemo(() => {
@@ -628,7 +633,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
             left: `${menuPosition.left}px`,
           }}
         >
-          {onEditMember && (
+          {onEditMember && canManageRole && (
             <button
               onClick={() => handleEditMember(openActionsMenu)}
               className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl flex items-center gap-2"
