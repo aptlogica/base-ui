@@ -63,7 +63,7 @@
     "eslint-plugin-storybook": "10.5.3",
     "globals": "^16.0.0",
     "jsdom": "^24.0.0",
-    "postcss": "^8.5.6",
+    "postcss": "^8.5.25",
     "storybook": "^10.5.3",
     "tailwindcss": "^3.4.17",
     "typescript-eslint": "^8.65.0",
