@@ -1125,3 +1125,33 @@ export async function updateOrganizationService(orgId: string, updateData: { nam
 }
 
 
+
+// =========================
+// Automations (triggers & webhooks)
+// =========================
+
+export interface Automation {
+  id: string;
+  model_id: string;
+  title?: string;
+  type: 'trigger' | 'webhook' | 'function';
+  context: string;
+}
+
+// The SDK has no automation resource yet, so these use its authenticated HTTP client directly
+export async function getAutomationsService(tableId: string): Promise<{ data: Automation[] }> {
+  return await makeAuthenticatedCall(() => (client as any).http.get('/automation', { params: { model_id: tableId } }));
+}
+
+// All entries of the automations table, from every table
+export async function getAllAutomationsService(): Promise<{ data: Automation[] }> {
+  return await makeAuthenticatedCall(() => (client as any).http.get('/automation'));
+}
+
+export async function createAutomationService(params: Omit<Automation, 'id'>): Promise<{ data: Automation }> {
+  return await makeAuthenticatedCall(() => (client as any).http.post('/automation/create', params));
+}
+
+export async function deleteAutomationService(id: string) {
+  return await makeAuthenticatedCall(() => (client as any).http.delete(`/automation/${id}`));
+}

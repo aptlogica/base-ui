@@ -5,9 +5,10 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { PopoverMenu } from '../common/PopoverMenu';
-import { Ellipsis, Edit, Trash2, Table2, Pin } from 'lucide-react';
+import { Ellipsis, Edit, Trash2, Table2, Pin, Zap } from 'lucide-react';
 import { EditItemModal } from '../modals/EditItemModal';
 import DeleteConfirmModal from '../modals/DeleteConfirmModal';
+import TableTriggersModal from '../modals/TableTriggersModal';
 import { useUpdateTable } from '../../hooks/useApi';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
 
@@ -28,6 +29,7 @@ interface TableOptionsMenuProps {
 const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, onEditDescription, onDelete, portaled = false, align = 'auto', onPinToggle, isPinned = false, existingTables = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [showTriggers, setShowTriggers] = useState(false);
   // TanStack Query mutations
   const updateTableMutation = useUpdateTable();
   const { canDeleteTable, isBaseReadOnly, canUpdateTable } = useBaseAccess(table?.base_id);
@@ -85,6 +87,12 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
       icon: <Edit className="w-5 h-5 text-gray-500" />,
       onClick: () => setShowEditModal(true)
     }] : []),
+    // Triggers & webhooks
+    ...(canUpdateTable() && !isBaseReadOnly() ? [{
+      label: 'Triggers & webhooks',
+      icon: <Zap className="w-5 h-5 text-gray-500" />,
+      onClick: () => setShowTriggers(true)
+    }] : []),
     // Delete table - only show if user can delete
     ...(canDeleteTable() ? [{
       label: 'Delete table',
@@ -123,6 +131,15 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
           itemType="table"
           existingItems={existingTables}
           currentItemId={table?.id}
+        />,
+        document.body
+      )}
+
+      {showTriggers && ReactDOM.createPortal(
+        <TableTriggersModal
+          key={table?.id}
+          table={table}
+          onClose={() => setShowTriggers(false)}
         />,
         document.body
       )}

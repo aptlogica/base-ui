@@ -81,7 +81,11 @@ import {
   getOrganizationService,
   updateOrganizationService,
   mergeColumnsService,
-  splitColumnService
+  splitColumnService,
+  getAutomationsService,
+  getAllAutomationsService,
+  createAutomationService,
+  deleteAutomationService,
 } from '../service/clientService';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
 
@@ -1960,5 +1964,51 @@ export const useUpdateOrganization = (organizationId: string) => {
     onError: (error: any) => {
       console.error('❌ Update organization failed:', error);
     }
+  });
+};
+
+// =========================
+// Automations (triggers & webhooks)
+// =========================
+
+export const useAutomations = (tableId: string) => {
+  return useQuery({
+    queryKey: ['tables', tableId, 'automations'],
+    queryFn: () => getAutomationsService(tableId),
+    enabled: !!tableId,
+    select: (res) => res?.data ?? [],
+  });
+};
+
+export const useAllAutomations = (enabled = true) => {
+  return useQuery({
+    queryKey: ['automations', 'all'],
+    queryFn: () => getAllAutomationsService(),
+    enabled,
+    select: (res) => res?.data ?? [],
+  });
+};
+
+export const useCreateAutomation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createAutomationService,
+    onSuccess: (_, params) => {
+      queryClient.invalidateQueries({ queryKey: ['tables', params.model_id, 'automations'] });
+      queryClient.invalidateQueries({ queryKey: ['automations', 'all'] });
+    },
+  });
+};
+
+export const useDeleteAutomation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string; tableId: string }) => deleteAutomationService(id),
+    onSuccess: (_, { tableId }) => {
+      queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
+      queryClient.invalidateQueries({ queryKey: ['automations', 'all'] });
+    },
   });
 };
