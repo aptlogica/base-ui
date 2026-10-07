@@ -1136,6 +1136,8 @@ export interface Automation {
   title?: string;
   type: 'trigger' | 'webhook' | 'function';
   context: string;
+  // Triggers only: timing + events chosen in the form, e.g. "BEFORE INSERT, BEFORE UPDATE"
+  event?: string;
   created_by?: string;
   last_modified_by?: string;
   created_time?: string;
@@ -1151,7 +1153,7 @@ export async function createAutomationService(params: Omit<Automation, 'id'>): P
   return await makeAuthenticatedCall(() => (client as any).http.post('/automation/create', params));
 }
 
-export async function updateAutomationService({ id, ...params }: { id: string; title: string; context: string }): Promise<{ data: Automation }> {
+export async function updateAutomationService({ id, ...params }: { id: string; title: string; context: string; event?: string }): Promise<{ data: Automation }> {
   return await makeAuthenticatedCall(() => (client as any).http.put(`/automation/${id}`, params));
 }
 

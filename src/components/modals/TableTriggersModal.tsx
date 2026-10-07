@@ -13,7 +13,7 @@ import UserName from './triggers/UserName';
 import { useAutomations, useDeleteAutomation } from '../../hooks/useApi';
 import type { Automation } from '../../service/clientService';
 import {
-  AutomationType, TYPE_CONFIG, displayTitle, formatDate, nameFromContext, triggerEvent,
+  AutomationType, TYPE_CONFIG, displayTitle, formatDate, nameFromContext,
 } from './triggers/automationUtils';
 
 interface TableTriggersModalProps {
@@ -240,7 +240,7 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
                         {item.type === 'trigger' && (
                           <td className="px-4 py-3">
                             <div className="flex flex-col items-center gap-1">
-                              {triggerEvent(item.context).split(', ').map(event => (
+                              {(item.event ? item.event.split(', ') : ['-']).map(event => (
                                 <span key={event} className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs font-medium whitespace-nowrap">{event}</span>
                               ))}
                             </div>

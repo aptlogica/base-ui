@@ -1996,7 +1996,7 @@ export const useUpdateAutomation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ tableId: _tableId, ...params }: { id: string; tableId: string; title: string; context: string }) => updateAutomationService(params),
+    mutationFn: ({ tableId: _tableId, ...params }: { id: string; tableId: string; title: string; context: string; event?: string }) => updateAutomationService(params),
     onSuccess: (_, { tableId }) => {
       queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
     },

@@ -7,7 +7,10 @@ import { X, AlertCircle, CheckCircle2, Play } from 'lucide-react';
 import { MultiLineText } from '../../common/Fields/MultiLineText';
 import { useCreateAutomation, useUpdateAutomation, useRunAutomation } from '../../../hooks/useApi';
 import type { Automation } from '../../../service/clientService';
-import { AutomationType, TYPE_CONFIG, placeholderFor } from './automationUtils';
+import {
+  AutomationType, TRIGGER_OPERATIONS, TRIGGER_TIMINGS, TYPE_CONFIG, TriggerOperation, TriggerTiming,
+  formatEvent, parseEvent, parseQueryEvent, placeholderFor, withTriggerEvents,
+} from './automationUtils';
 
 interface AutomationFormModalProps {
   type: AutomationType;
@@ -26,6 +29,24 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
   const [title, setTitle] = useState(item?.title || '');
   const [context, setContext] = useState(item?.context || '');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  // Timing and events of a trigger: stored in the event column and written into the query
+  const isTrigger = type === 'trigger';
+  const initialEvent = parseEvent(item?.event) || (item && parseQueryEvent(item.context)) || { timing: 'AFTER' as TriggerTiming, operations: ['INSERT'] as TriggerOperation[] };
+  const [timing, setTiming] = useState<TriggerTiming>(initialEvent.timing);
+  const [operations, setOperations] = useState<TriggerOperation[]>(initialEvent.operations);
+  const event = isTrigger ? formatEvent(timing, operations) : '';
+
+  const changeEvent = (nextTiming: TriggerTiming, nextOperations: TriggerOperation[]) => {
+    setTiming(nextTiming);
+    setOperations(nextOperations);
+    // With no event ticked the query keeps its events; Save asks for at least one
+    if (nextOperations.length > 0) {
+      setContext(prev => withTriggerEvents(prev, nextTiming, nextOperations));
+    }
+  };
+
+  const toggleOperation = (op: TriggerOperation) =>
+    changeEvent(timing, operations.includes(op) ? operations.filter(o => o !== op) : [...operations, op]);
 
   const createAutomation = useCreateAutomation();
   const updateAutomation = useUpdateAutomation();
@@ -34,25 +55,34 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
 
   // Save only stores the changes; Run applies the saved query in Postgres
   const canRun = !!item && type !== 'webhook';
-  const hasChanges = !!item && (title.trim() !== (item.title || '') || context.trim() !== item.context.trim());
+  const hasChanges = !!item && (
+    title.trim() !== (item.title || '') || context.trim() !== item.context.trim() || (isTrigger && event !== (item.event || ''))
+  );
 
   const handleSave = async () => {
     if (!title.trim()) {
       setMessage({ ok: false, text: 'Title is required' });
       return;
     }
+    if (isTrigger && operations.length === 0) {
+      setMessage({ ok: false, text: 'Select at least one event' });
+      return;
+    }
     if (!context.trim()) {
       setMessage({ ok: false, text: `${config.queryLabel} is required` });
       return;
     }
+    // The chosen timing and events win over what is typed in the query
+    const query = (isTrigger ? withTriggerEvents(context, timing, operations) : context).trim();
+    setContext(query);
     setMessage(null);
     try {
       if (item) {
-        await updateAutomation.mutateAsync({ id: item.id, tableId, title: title.trim(), context: context.trim() });
+        await updateAutomation.mutateAsync({ id: item.id, tableId, title: title.trim(), context: query, event });
         setMessage({ ok: true, text: canRun ? 'Saved. Click Run to apply it in Postgres.' : 'Saved.' });
         return;
       }
-      await createAutomation.mutateAsync({ model_id: tableId, title: title.trim(), type, context: context.trim() });
+      await createAutomation.mutateAsync({ model_id: tableId, title: title.trim(), type, context: query, event });
       onClose();
     } catch (err: any) {
       setMessage({ ok: false, text: err?.message || 'Failed to save' });
@@ -127,6 +157,48 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
               <p className="text-xs text-gray-500">{title.length}/50 characters</p>
             </div>
 
+            {isTrigger && (
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <p className="field-component-label !text-primary">Trigger timing <span className="field-component-required">*</span></p>
+                  <div className="flex items-center border border-[var(--color-border-primary)] rounded-xl p-0.5 w-fit" role="group" aria-label="Trigger timing">
+                    {TRIGGER_TIMINGS.map(value => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => changeEvent(value, operations)}
+                        aria-pressed={timing === value}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${timing === value ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-primary)]'}`}
+                      >
+                        {value}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="field-component-label !text-primary">Trigger events <span className="field-component-required">*</span></p>
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                    {TRIGGER_OPERATIONS.map(op => (
+                      <label key={op} className="flex items-center gap-2 text-sm text-primary cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={operations.includes(op)}
+                          onChange={() => toggleOperation(op)}
+                          className="w-4 h-4 accent-[var(--color-bg-brand-primary)]"
+                        />
+                        {op}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Saved as: {event || '-'}.{' '}
+                    {timing === 'INSTEAD OF' && 'INSTEAD OF works only on views, not tables. '}
+                    {operations.includes('TRUNCATE') && 'TRUNCATE needs FOR EACH STATEMENT instead of FOR EACH ROW.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <MultiLineText
               label={config.queryLabel}
               value={context}
@@ -174,7 +246,7 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
           <button
             type="button"
             onClick={handleSave}
-            disabled={isSaving || !title.trim() || !context.trim() || (!!item && !hasChanges)}
+            disabled={isSaving || !title.trim() || !context.trim() || (isTrigger && operations.length === 0) || (!!item && !hasChanges)}
             className="px-10 py-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSaving ? (
