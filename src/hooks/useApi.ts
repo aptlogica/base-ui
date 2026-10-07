@@ -83,8 +83,9 @@ import {
   mergeColumnsService,
   splitColumnService,
   getAutomationsService,
-  getAllAutomationsService,
   createAutomationService,
+  updateAutomationService,
+  runAutomationService,
   deleteAutomationService,
 } from '../service/clientService';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
@@ -1980,15 +1981,6 @@ export const useAutomations = (tableId: string) => {
   });
 };
 
-export const useAllAutomations = (enabled = true) => {
-  return useQuery({
-    queryKey: ['automations', 'all'],
-    queryFn: () => getAllAutomationsService(),
-    enabled,
-    select: (res) => res?.data ?? [],
-  });
-};
-
 export const useCreateAutomation = () => {
   const queryClient = useQueryClient();
 
@@ -1996,7 +1988,28 @@ export const useCreateAutomation = () => {
     mutationFn: createAutomationService,
     onSuccess: (_, params) => {
       queryClient.invalidateQueries({ queryKey: ['tables', params.model_id, 'automations'] });
-      queryClient.invalidateQueries({ queryKey: ['automations', 'all'] });
+    },
+  });
+};
+
+export const useUpdateAutomation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ tableId: _tableId, ...params }: { id: string; tableId: string; title: string; context: string }) => updateAutomationService(params),
+    onSuccess: (_, { tableId }) => {
+      queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
+    },
+  });
+};
+
+export const useRunAutomation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string; tableId: string }) => runAutomationService(id),
+    onSuccess: (_, { tableId }) => {
+      queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
     },
   });
 };
@@ -2008,7 +2021,6 @@ export const useDeleteAutomation = () => {
     mutationFn: ({ id }: { id: string; tableId: string }) => deleteAutomationService(id),
     onSuccess: (_, { tableId }) => {
       queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
-      queryClient.invalidateQueries({ queryKey: ['automations', 'all'] });
     },
   });
 };

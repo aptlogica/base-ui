@@ -1136,6 +1136,10 @@ export interface Automation {
   title?: string;
   type: 'trigger' | 'webhook' | 'function';
   context: string;
+  created_by?: string;
+  last_modified_by?: string;
+  created_time?: string;
+  last_modified_time?: string;
 }
 
 // The SDK has no automation resource yet, so these use its authenticated HTTP client directly
@@ -1143,13 +1147,17 @@ export async function getAutomationsService(tableId: string): Promise<{ data: Au
   return await makeAuthenticatedCall(() => (client as any).http.get('/automation', { params: { model_id: tableId } }));
 }
 
-// All entries of the automations table, from every table
-export async function getAllAutomationsService(): Promise<{ data: Automation[] }> {
-  return await makeAuthenticatedCall(() => (client as any).http.get('/automation'));
-}
-
 export async function createAutomationService(params: Omit<Automation, 'id'>): Promise<{ data: Automation }> {
   return await makeAuthenticatedCall(() => (client as any).http.post('/automation/create', params));
+}
+
+export async function updateAutomationService({ id, ...params }: { id: string; title: string; context: string }): Promise<{ data: Automation }> {
+  return await makeAuthenticatedCall(() => (client as any).http.put(`/automation/${id}`, params));
+}
+
+// Applies the saved query in Postgres
+export async function runAutomationService(id: string): Promise<{ data: Automation }> {
+  return await makeAuthenticatedCall(() => (client as any).http.post(`/automation/${id}/run`));
 }
 
 export async function deleteAutomationService(id: string) {

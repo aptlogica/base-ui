@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { PopoverMenu } from '../common/PopoverMenu';
-import { Ellipsis, Edit, Trash2, Table2, Pin, Zap } from 'lucide-react';
+import { Ellipsis, Edit, Trash2, Table2, Pin, Zap, Webhook } from 'lucide-react';
 import { EditItemModal } from '../modals/EditItemModal';
 import DeleteConfirmModal from '../modals/DeleteConfirmModal';
 import TableTriggersModal from '../modals/TableTriggersModal';
@@ -29,7 +29,8 @@ interface TableOptionsMenuProps {
 const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, onEditDescription, onDelete, portaled = false, align = 'auto', onPinToggle, isPinned = false, existingTables = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
-  const [showTriggers, setShowTriggers] = useState(false);
+  // Which automations popup is open: triggers & functions, or webhooks
+  const [automationView, setAutomationView] = useState<'triggers' | 'webhooks' | null>(null);
   // TanStack Query mutations
   const updateTableMutation = useUpdateTable();
   const { canDeleteTable, isBaseReadOnly, canUpdateTable } = useBaseAccess(table?.base_id);
@@ -87,11 +88,15 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
       icon: <Edit className="w-5 h-5 text-gray-500" />,
       onClick: () => setShowEditModal(true)
     }] : []),
-    // Triggers & webhooks
+    // Triggers & functions, and webhooks
     ...(canUpdateTable() && !isBaseReadOnly() ? [{
-      label: 'Triggers & webhooks',
+      label: 'Triggers & Functions',
       icon: <Zap className="w-5 h-5 text-gray-500" />,
-      onClick: () => setShowTriggers(true)
+      onClick: () => setAutomationView('triggers')
+    }, {
+      label: 'Webhooks',
+      icon: <Webhook className="w-5 h-5 text-gray-500" />,
+      onClick: () => setAutomationView('webhooks')
     }] : []),
     // Delete table - only show if user can delete
     ...(canDeleteTable() ? [{
@@ -135,11 +140,12 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
         document.body
       )}
 
-      {showTriggers && ReactDOM.createPortal(
+      {automationView && ReactDOM.createPortal(
         <TableTriggersModal
-          key={table?.id}
+          key={`${table?.id}-${automationView}`}
           table={table}
-          onClose={() => setShowTriggers(false)}
+          view={automationView}
+          onClose={() => setAutomationView(null)}
         />,
         document.body
       )}
