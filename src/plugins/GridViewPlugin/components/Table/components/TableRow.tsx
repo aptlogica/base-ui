@@ -160,6 +160,7 @@ export const TableRow: React.FC<TableRowProps> = ({
       onKeyDown={handleRowKeyDown}
       role="row"
       tabIndex={0}
+      data-row-id={rowId}
     >
       <div
         className={`flex-shrink-0 w-13 border-r border-b border-border/30 ${isRowActive ? 'bg-[var(--color-blue-50)]' : 'bg-background hover:bg-gray-50'} flex items-center justify-center relative select-none gap-2`}
@@ -232,6 +233,7 @@ export const TableRow: React.FC<TableRowProps> = ({
             onKeyDown={(e) => handleCellKeyDown(e, column.key)}
             role="gridcell"
             tabIndex={0}
+            data-col-key={column.key}
           >
             <EditableTableCell
               column={props.column}
