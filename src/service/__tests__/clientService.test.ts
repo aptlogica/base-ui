@@ -379,6 +379,23 @@ describe('clientService', () => {
     expect(client.organization.getAll).toHaveBeenCalled();
   });
 
+  it('sends base meta as JSON in the create-base form data', async () => {
+    sessionStorage.setItem('user_id', 'u1');
+    const http = (client as any).http;
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValue({ data: { id: 'b1' } });
+    const meta = { dateFormat: 'DD/MM/YYYY', currencyLocale: 'en-IN', currencyType: 'INR' };
+
+    const result = await createBaseService({ title: 'Base', description: 'd', workspace_id: 'w1', meta });
+
+    expect(result).toEqual({ data: { id: 'b1' } });
+    const [url, formData] = postSpy.mock.calls[0] as [string, FormData];
+    expect(url).toBe('/base/create');
+    expect(formData.get('title')).toBe('Base');
+    expect(formData.get('workspace_id')).toBe('w1');
+    expect(JSON.parse(formData.get('meta') as string)).toEqual(meta);
+    postSpy.mockRestore();
+  });
+
   it('continues base update when image upload fails', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     sessionStorage.setItem('user_id', 'u1');

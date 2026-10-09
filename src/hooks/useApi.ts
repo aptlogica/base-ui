@@ -517,9 +517,9 @@ export const useCreateBase = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ title, description, workspace_id, image }: { title: string; description: string; workspace_id: string; image?: File | Blob | null }) => {
-      // Directly pass the SDK CreateBase interface
-      return createBaseService({ title, description, workspace_id, image: image || undefined });
+    mutationFn: ({ title, description, workspace_id, image, meta }: { title: string; description: string; workspace_id: string; image?: File | Blob | null; meta?: object }) => {
+      // SDK CreateBase interface, plus optional base-level `meta`
+      return createBaseService({ title, description, workspace_id, image: image || undefined, ...(meta && { meta }) });
     },
     onSuccess: (_, { workspace_id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bases(workspace_id) });

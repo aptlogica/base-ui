@@ -2,15 +2,46 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, X, HelpCircle, CloudUpload } from 'lucide-react';
 import { MultiLineText } from '../common/Fields/MultiLineText';
 import { validateBaseName } from '../../utils/nameValidation';
+import {
+  CurrencySelect,
+  DateFormatSelect,
+  HourFormatSelect,
+  TimeFormatSelect,
+  TimeZoneSettings,
+  ToggleSwitch,
+  type HourFormat,
+} from './FieldFormatSelectors';
+
+export interface BaseFormatSettings {
+  dateFormat: string;
+  dateTimeFormat: {
+    dateFormat: string;
+    timeFormat: string;
+    hourFormat: HourFormat;
+    displayTimeZone: boolean;
+    sameTimezone: boolean;
+    timeZone: string;
+  };
+  currencyLocale: string;
+  currencyType: string;
+}
+
+export interface CreateBaseData {
+  name: string;
+  description: string;
+  image?: File | null;
+  // Only present when the Advanced Selector is turned on
+  meta?: BaseFormatSettings;
+}
 
 interface CreateBaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (data: { name: string; description: string; image?: File | null }) => void;
+  onCreate: (data: CreateBaseData) => void;
   workspaceId: string;
   defaultName?: string;
   existingBases?: any[];
@@ -105,6 +136,17 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
   const [validationError, setValidationError] = useState('');
   const [imageError, setImageError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const [dateFormat, setDateFormat] = useState('YYYY-MM-DD');
+  const [dateTimeDateFormat, setDateTimeDateFormat] = useState('YYYY-MM-DD');
+  const [dateTimeTimeFormat, setDateTimeTimeFormat] = useState('hh:mm');
+  const [hourFormat, setHourFormat] = useState<HourFormat>('24');
+  const [displayTimeZone, setDisplayTimeZone] = useState(false);
+  const [sameTimezone, setSameTimezone] = useState(false);
+  const [timeZone, setTimeZone] = useState('');
+  const [currencyLocale, setCurrencyLocale] = useState('en-US');
+  const [currencyType, setCurrencyType] = useState('USD');
 
   const getSafeImageSrc = (value: string | null): string | null => {
     if (!value) return null;
@@ -139,8 +181,23 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
       setValidationError('');
       setImageError('');
       setIsSubmitting(false);
+      setShowAdvanced(false);
+      setDateFormat('YYYY-MM-DD');
+      setDateTimeDateFormat('YYYY-MM-DD');
+      setDateTimeTimeFormat('hh:mm');
+      setHourFormat('24');
+      setDisplayTimeZone(false);
+      setSameTimezone(false);
+      setTimeZone('');
+      setCurrencyLocale('en-US');
+      setCurrencyType('USD');
     }
   }, [isOpen, defaultName, initialImage]);
+
+  // Focus the name input when the modal opens
+  useEffect(() => {
+    if (isOpen) nameInputRef.current?.focus();
+  }, [isOpen]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -217,7 +274,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
     }
   }, [name, existingBases]);
 
-  const handleSubmit = async (e?: React.SyntheticEvent) => {
+  const handleSubmit = (e?: React.SyntheticEvent) => {
     e?.preventDefault();
 
     if (!name.trim()) {
@@ -240,6 +297,22 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
         name: name.trim(),
         description: description.trim(),
         image: image || null,
+        ...(showAdvanced && {
+          meta: {
+            dateFormat,
+            dateTimeFormat: {
+              dateFormat: dateTimeDateFormat,
+              timeFormat: dateTimeTimeFormat,
+              hourFormat,
+              displayTimeZone,
+              sameTimezone,
+              // A specific time zone only applies when it is shared by all members
+              timeZone: sameTimezone ? timeZone : '',
+            },
+            currencyLocale,
+            currencyType,
+          },
+        }),
       });
       // Close the modal on successful creation
       onClose();
@@ -336,6 +409,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                 <input
                   type="text"
                   id="baseName"
+                  ref={nameInputRef}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter base name"
@@ -343,7 +417,6 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                   required
                   minLength={3}
                   maxLength={50}
-                  autoFocus
                 />
                 <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
                   <span className="relative inline-block group">
@@ -427,6 +500,55 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
               {imageError && (
                 <div className="mb-2 text-sm text-red-600">
                   <span>{imageError}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Advanced Selector - formats used across the base */}
+            <div className="space-y-3">
+              <ToggleSwitch
+                role="switch"
+                checked={showAdvanced}
+                onChange={setShowAdvanced}
+                label="Advanced Selector"
+                className="flex items-center gap-2 cursor-pointer w-fit"
+                labelClassName="text-sm font-medium text-primary"
+              />
+
+              {showAdvanced && (
+                <div className="space-y-1">
+                  <DateFormatSelect value={dateFormat} onChange={setDateFormat} />
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <DateFormatSelect
+                        label="Date-Time Format (Date)"
+                        value={dateTimeDateFormat}
+                        onChange={setDateTimeDateFormat}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <TimeFormatSelect
+                        label="Date-Time Format (Time)"
+                        value={dateTimeTimeFormat}
+                        onChange={setDateTimeTimeFormat}
+                      />
+                    </div>
+                  </div>
+                  <HourFormatSelect value={hourFormat} onChange={setHourFormat} />
+                  <TimeZoneSettings
+                    displayTimeZone={displayTimeZone}
+                    onDisplayTimeZoneChange={setDisplayTimeZone}
+                    sameTimezone={sameTimezone}
+                    onSameTimezoneChange={setSameTimezone}
+                    timeZone={timeZone}
+                    onTimeZoneChange={setTimeZone}
+                  />
+                  <CurrencySelect
+                    currencyLocale={currencyLocale}
+                    onCurrencyLocaleChange={setCurrencyLocale}
+                    currencyType={currencyType}
+                    onCurrencyTypeChange={setCurrencyType}
+                  />
                 </div>
               )}
             </div>

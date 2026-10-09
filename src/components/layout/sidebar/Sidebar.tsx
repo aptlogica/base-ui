@@ -24,6 +24,7 @@ import { SidebarSkeleton } from '../../common/Skeleton/SidebarSkeleton';
 import { useBaseAccess } from '../../../hooks/useBaseAccess';
 import { useUpdateBase } from '../../../hooks/useApi';
 import type { TablesResponse } from '../../../types/api.types';
+import { getCreatedTableId } from '../../../utils/helpers';
 
 type FieldIdValue = string | { value: string } | null;
 
@@ -456,7 +457,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           <CreateTableModal
             isOpen={!!showCreateTableBaseId}
             onClose={() => setShowCreateTableBaseId(null)}
-            baseId={showCreateTableBaseId}
             existingTables={((baseTables as TablesResponse | undefined)?.data || [])}
             onCreate={async ({ name, description }) => {
               try {
@@ -475,12 +475,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                 // Persist navigation and navigate to the newly created table
                 try {
                   const workspaceId = selectedWorkspaceId || effectiveSelectedWorkspace?.id || '';
-                  if (workspaceId && showCreateTableBaseId && newTable && typeof newTable === 'object' && 'data' in newTable) {
-                    const tableResponse = newTable as { data?: { id?: string } };
-                    if (tableResponse.data?.id) {
-                      // Use the provided navigation function to update URL
-                      navigateToTable(workspaceId, showCreateTableBaseId, tableResponse.data.id);
-                    }
+                  const newTableId = getCreatedTableId(newTable);
+                  if (workspaceId && showCreateTableBaseId && newTableId) {
+                    // Use the provided navigation function to update URL
+                    navigateToTable(workspaceId, showCreateTableBaseId, newTableId);
                   }
                 } catch (error_) {
                   console.warn('Navigation after table create failed', error_);

@@ -17,7 +17,7 @@ import { useBaseAccess } from '../../hooks/useBaseAccess';
 import { BaseMenu } from './BaseMenu';
 import { EditItemModal } from '../modals/EditItemModal';
 import { AddBaseMembersModal } from '../modals/AddBaseMembersModal';
-import { CreateBaseModal } from '../modals/CreateBaseModal';
+import { CreateBaseModal, type CreateBaseData } from '../modals/CreateBaseModal';
 import { DeleteBaseModal } from '../modals/DeleteBaseModal';
 import { useNavigationActions } from '../../hooks/useNavigationActions';
 import { useToast } from './Toast';
@@ -472,7 +472,7 @@ const Breadcrumb: React.FC = () => {
     setDropdownPosition(null);
   };
 
-  const handleCreateBase = async ({ name, description, image }: { name: string; description: string; image?: File | null }) => {
+  const handleCreateBase = async ({ name, description, image, meta }: CreateBaseData) => {
     if (!selectedWorkspaceId) {
       toast.error('Please select a workspace first');
       return;
@@ -484,6 +484,7 @@ const Breadcrumb: React.FC = () => {
         description: description || '',
         workspace_id: selectedWorkspaceId,
         image: image || undefined,
+        meta,
       });
 
       // Invalidate queries to refresh the list
