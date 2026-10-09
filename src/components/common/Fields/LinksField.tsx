@@ -27,6 +27,8 @@ interface LinksFieldProps {
                 with: string;
                 type: 'one-to-one' | 'has-many' | 'many-to-many';
             };
+            entity_role?: 'source' | 'target';
+            is_self_link?: boolean;
         };
     };
     disabled?: boolean;
@@ -123,6 +125,10 @@ export const LinksField: React.FC<LinksFieldProps> = ({
     // Get relation info from field meta
     const targetTableId = field?.meta?.relation?.with;
     const relationType = field?.meta?.relation?.type || 'one-to-one';
+    const entityRole = field?.meta?.entity_role || 'source';
+    const isSelfLink = !!field?.meta?.is_self_link || (!!targetTableId && targetTableId === currentTableId);
+    // This side stores a single ID in one-to-one, and on the child (target) side of has-many.
+    const isSingleSelect = relationType === 'one-to-one' || (relationType === 'has-many' && entityRole === 'target');
 
     const { data: tableData, isLoading: isTableLoading } = useTable(targetTableId || '');
     const insertRelationMutation = useInsertRelationData();
@@ -132,11 +138,14 @@ export const LinksField: React.FC<LinksFieldProps> = ({
         if (!data?.data?.records || !Array.isArray(data.data.records)) {
             return [];
         }
-        return data.data.records.map((record: any) => ({
-            id: record.id.toString(),
-            ...record
-        }));
-    }, [tableData]);
+        return data.data.records
+            .map((record: any) => ({
+                id: record.id.toString(),
+                ...record
+            }))
+            // On a self-link a record can't link to itself.
+            .filter((record: RelatedRecord) => !(isSelfLink && currentRowId !== undefined && record.id === String(currentRowId)));
+    }, [tableData, isSelfLink, currentRowId]);
 
     const recordsById = useMemo(() => {
         const map = new Map<string, RelatedRecord>();
@@ -322,12 +331,19 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             // Optimistically update the UI immediately
             // Preserve the original value format (IDs or objects)
             const currentValue = Array.isArray(value) ? value : [];
-            const optimisticValue = isAlreadySelected
-                ? currentValue.filter((v: any) => {
+            let optimisticValue: any[];
+            if (isAlreadySelected) {
+                optimisticValue = currentValue.filter((v: any) => {
                     const vId = typeof v === 'object' && v?.id ? v.id.toString() : v?.toString();
                     return vId !== record.id.toString();
-                })
-                : [...currentValue, record]; // Add the full record object
+                });
+            } else {
+                // A single-value side replaces its current link; the server unlinks the old one.
+                optimisticValue = isSingleSelect ? [record] : [...currentValue, record];
+            }
+            if (isSingleSelect && !isAlreadySelected) {
+                setIsOpen(false);
+            }
 
             // Update via onChange to trigger UI update immediately
             if (onChange) {
@@ -350,15 +366,18 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             }
         } else {
             // Update local state only (for form view)
-            const newSelectedRecords = isAlreadySelected
-                ? selectedRecords.filter(r => r.id !== record.id)
-                : [...selectedRecords, record];
+            let newSelectedRecords: RelatedRecord[];
+            if (isAlreadySelected) {
+                newSelectedRecords = selectedRecords.filter(r => r.id !== record.id);
+            } else {
+                newSelectedRecords = isSingleSelect ? [record] : [...selectedRecords, record];
+            }
 
             if (onChange) {
                 onChange(newSelectedRecords);
             }
         }
-    }, [disabled, selectedRecords, persistImmediately, persistRelation, onChange, toast, value, currentTableId, queryClient]);
+    }, [disabled, selectedRecords, persistImmediately, persistRelation, onChange, toast, value, currentTableId, queryClient, isSingleSelect]);
 
     const handleRemoveRecord = useCallback(async (recordId: string) => {
         if (disabled) return;
