@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, X, HelpCircle, CloudUpload } from 'lucide-react';
 import { MultiLineText } from '../common/Fields/MultiLineText';
 import { validateBaseName } from '../../utils/nameValidation';
@@ -12,6 +12,7 @@ import {
   HourFormatSelect,
   TimeFormatSelect,
   TimeZoneSettings,
+  ToggleSwitch,
   type HourFormat,
 } from './FieldFormatSelectors';
 
@@ -136,6 +137,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
   const [imageError, setImageError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const [dateFormat, setDateFormat] = useState('YYYY-MM-DD');
   const [dateTimeDateFormat, setDateTimeDateFormat] = useState('YYYY-MM-DD');
   const [dateTimeTimeFormat, setDateTimeTimeFormat] = useState('hh:mm');
@@ -191,6 +193,11 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
       setCurrencyType('USD');
     }
   }, [isOpen, defaultName, initialImage]);
+
+  // Focus the name input when the modal opens
+  useEffect(() => {
+    if (isOpen) nameInputRef.current?.focus();
+  }, [isOpen]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -267,7 +274,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
     }
   }, [name, existingBases]);
 
-  const handleSubmit = async (e?: React.SyntheticEvent) => {
+  const handleSubmit = (e?: React.SyntheticEvent) => {
     e?.preventDefault();
 
     if (!name.trim()) {
@@ -402,6 +409,7 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                 <input
                   type="text"
                   id="baseName"
+                  ref={nameInputRef}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter base name"
@@ -409,7 +417,6 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                   required
                   minLength={3}
                   maxLength={50}
-                  autoFocus
                 />
                 <div className="absolute right-5 top-1/2 h-5 w-4 transform -translate-y-1/2 z-50">
                   <span className="relative inline-block group">
@@ -499,21 +506,14 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
 
             {/* Advanced Selector - formats used across the base */}
             <div className="space-y-3">
-              <label className="flex items-center gap-2 cursor-pointer w-fit">
-                <div className="relative inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    role="switch"
-                    aria-label="Advanced Selector"
-                    checked={showAdvanced}
-                    onChange={e => setShowAdvanced(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                  <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-                </div>
-                <span className="text-sm font-medium text-primary">Advanced Selector</span>
-              </label>
+              <ToggleSwitch
+                role="switch"
+                checked={showAdvanced}
+                onChange={setShowAdvanced}
+                label="Advanced Selector"
+                className="flex items-center gap-2 cursor-pointer w-fit"
+                labelClassName="text-sm font-medium text-primary"
+              />
 
               {showAdvanced && (
                 <div className="space-y-1">

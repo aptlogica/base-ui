@@ -944,29 +944,21 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setRatingColor('yellow');
     setRatingMax(5);
     setRatingDefault(0);
-    setDateFormat('YYYY-MM-DD');
-    setTimeFormat('hh:mm');
-    setHourFormat('24');
-    setDisplayTimeZone(false);
-    setSameTimezone(false);
-    setTimeZone('');
+    // Start from the formats chosen when the base was created (user can still change them)
+    const baseDefaults = getBaseFormatDefaults(baseMeta, type.key);
+    setDateFormat(baseDefaults.dateFormat ?? 'YYYY-MM-DD');
+    setTimeFormat(baseDefaults.timeFormat ?? 'hh:mm');
+    setHourFormat(baseDefaults.hourFormat ?? '24');
+    setDisplayTimeZone(baseDefaults.displayTimeZone ?? false);
+    setSameTimezone(baseDefaults.sameTimezone ?? false);
+    setTimeZone(baseDefaults.timeZone ?? '');
     setDateTimeDefault('');
     setShowDateTimeDefault(false);
     // Reset currency config state
-    setCurrencyType('USD');
-    setCurrencyLocale('en-US');
+    setCurrencyType(baseDefaults.currencyType ?? 'USD');
+    setCurrencyLocale(baseDefaults.currencyLocale ?? 'en-US');
     setCurrencyDefault(null);
     setShowCurrencyDefault(false);
-    // Start from the formats chosen when the base was created (user can still change them)
-    const baseDefaults = getBaseFormatDefaults(baseMeta, type.key);
-    if (baseDefaults.dateFormat) setDateFormat(baseDefaults.dateFormat);
-    if (baseDefaults.timeFormat) setTimeFormat(baseDefaults.timeFormat);
-    if (baseDefaults.hourFormat) setHourFormat(baseDefaults.hourFormat);
-    if (baseDefaults.displayTimeZone !== undefined) setDisplayTimeZone(baseDefaults.displayTimeZone);
-    if (baseDefaults.sameTimezone !== undefined) setSameTimezone(baseDefaults.sameTimezone);
-    if (baseDefaults.timeZone) setTimeZone(baseDefaults.timeZone);
-    if (baseDefaults.currencyLocale) setCurrencyLocale(baseDefaults.currencyLocale);
-    if (baseDefaults.currencyType) setCurrencyType(baseDefaults.currencyType);
     // Reset text config state
     setShowTextDefault(false);
     setShowDescription(false);

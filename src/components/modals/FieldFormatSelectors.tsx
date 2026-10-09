@@ -47,11 +47,11 @@ export function DateFormatSelect({
   value,
   onChange,
   label = 'Date Format',
-}: {
+}: Readonly<{
   value: string;
   onChange: (value: string) => void;
   label?: string;
-}) {
+}>) {
   return (
     <div className="mb-3">
       <div className={labelClassName}>{label}</div>
@@ -68,11 +68,11 @@ export function TimeFormatSelect({
   value,
   onChange,
   label = 'Time Format',
-}: {
+}: Readonly<{
   value: string;
   onChange: (value: string) => void;
   label?: string;
-}) {
+}>) {
   return (
     <div className="mb-3">
       <div className={labelClassName}>{label}</div>
@@ -96,11 +96,11 @@ export function HourFormatSelect({
   value,
   onChange,
   label = 'Time Display',
-}: {
+}: Readonly<{
   value: HourFormat;
   onChange: (value: HourFormat) => void;
   label?: string;
-}) {
+}>) {
   return (
     <div className="mb-3">
       <div className={labelClassName}>{label}</div>
@@ -120,20 +120,27 @@ export function HourFormatSelect({
   );
 }
 
-function ToggleSwitch({
+export function ToggleSwitch({
   checked,
   onChange,
   label,
-}: {
+  role,
+  className = 'flex items-center gap-2 cursor-pointer',
+  labelClassName = 'text-sm text-[var(--color-text-tertiary)]',
+}: Readonly<{
   checked: boolean;
   onChange: (checked: boolean) => void;
   label: string;
-}) {
+  role?: 'switch';
+  className?: string;
+  labelClassName?: string;
+}>) {
   return (
-    <label className="flex items-center gap-2 cursor-pointer">
+    <label className={className}>
       <div className="relative inline-flex items-center">
         <input
           type="checkbox"
+          role={role}
           checked={checked}
           onChange={e => onChange(e.target.checked)}
           className="sr-only peer"
@@ -141,12 +148,12 @@ function ToggleSwitch({
         <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
         <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
       </div>
-      <span className="text-sm text-[var(--color-text-tertiary)]">{label}</span>
+      <span className={labelClassName}>{label}</span>
     </label>
   );
 }
 
-const timeZoneDropdownOptions = timeZoneOptions.map((o: any) => ({ label: o.label, value: o.label, rightLabel: o.value, description: o.value }));
+const timeZoneDropdownOptions = timeZoneOptions.map((o) => ({ label: o.label, value: o.label, rightLabel: o.value, description: o.value }));
 
 export function TimeZoneSettings({
   displayTimeZone,
@@ -155,14 +162,14 @@ export function TimeZoneSettings({
   onSameTimezoneChange,
   timeZone,
   onTimeZoneChange,
-}: {
+}: Readonly<{
   displayTimeZone: boolean;
   onDisplayTimeZoneChange: (value: boolean) => void;
   sameTimezone: boolean;
   onSameTimezoneChange: (value: boolean) => void;
   timeZone: string;
   onTimeZoneChange: (value: string) => void;
-}) {
+}>) {
   return (
     <div className="mb-3">
       <div className="space-y-2">
@@ -173,8 +180,8 @@ export function TimeZoneSettings({
             <AdvancedDropdown
               options={timeZoneDropdownOptions}
               value={timeZone}
-              onChange={(val: any) => onTimeZoneChange(val as string)}
-              searchable={true}
+              onChange={(val) => onTimeZoneChange(val as string)}
+              searchable
               placeholder="Select time zone"
             />
           </div>
@@ -189,12 +196,12 @@ export function CurrencySelect({
   onCurrencyLocaleChange,
   currencyType,
   onCurrencyTypeChange,
-}: {
+}: Readonly<{
   currencyLocale: string;
   onCurrencyLocaleChange: (value: string) => void;
   currencyType: string;
   onCurrencyTypeChange: (value: string) => void;
-}) {
+}>) {
   return (
     <>
       <div className='flex gap-2 mb-2'>
@@ -205,7 +212,7 @@ export function CurrencySelect({
             value={currencyLocale}
             onChange={(val) => onCurrencyLocaleChange(val as string)}
             placeholder="Select Locale"
-            searchable={true}
+            searchable
           />
         </div>
         <div className='flex-1'>
@@ -215,7 +222,7 @@ export function CurrencySelect({
             value={currencyType}
             onChange={(val) => onCurrencyTypeChange(val as string)}
             placeholder="Select Currency"
-            searchable={true}
+            searchable
           />
         </div>
       </div>

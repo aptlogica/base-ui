@@ -321,7 +321,7 @@ const HomePage: React.FC = () => {
         description: description || '',
         workspace_id: selectedWorkspaceId,
         image: image || undefined,
-        meta: meta as Record<string, unknown> | undefined,
+        meta,
       });
 
       // Invalidate queries to refresh the bases list
@@ -788,7 +788,6 @@ const HomePage: React.FC = () => {
           <CreateTableModal
             isOpen={!!showCreateTableBaseId}
             onClose={() => setShowCreateTableBaseId(null)}
-            baseId={showCreateTableBaseId}
             existingTables={[]}
             onCreate={async ({ name, description }: { name: string; description: string }) => {
               try {

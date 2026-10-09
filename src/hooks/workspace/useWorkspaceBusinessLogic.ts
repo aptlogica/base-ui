@@ -199,7 +199,7 @@ export const useWorkspaceBusinessLogic = () => {
         description: description || '',
         workspace_id: currentWorkspace.id,
         image: image || undefined,
-        meta: meta as Record<string, unknown> | undefined,
+        meta,
       });
 
       setShowCreateBaseWorkspaceId(null);

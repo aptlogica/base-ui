@@ -1,4 +1,3 @@
-import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
 import { CreateTableModal } from '../CreateTableModal';
@@ -33,7 +32,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={onCreate}
-        baseId="b1"
         existingTables={[]}
       />
     );
@@ -50,7 +48,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={vi.fn()}
-        baseId="b1"
         existingTables={[]}
       />
     );
@@ -64,7 +61,7 @@ describe('CreateTableModal', () => {
   });
 
   it('keeps typed name when parent re-renders with a new existingTables array', async () => {
-    const props = { isOpen: true, onClose: vi.fn(), onCreate: vi.fn(), baseId: 'b1' };
+    const props = { isOpen: true, onClose: vi.fn(), onCreate: vi.fn() };
     const { rerender } = render(<CreateTableModal {...props} existingTables={[]} />);
 
     const input = await screen.findByDisplayValue('Table 1');
@@ -82,7 +79,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={onCreate}
-        baseId="b1"
         existingTables={[]}
       />
     );
@@ -99,7 +95,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={vi.fn()}
-        baseId="b1"
         defaultName="Preset"
       />
     );
@@ -114,7 +109,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={onCreate}
-        baseId="b1"
         existingTables={[]}
       />
     );
@@ -135,7 +129,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={onClose}
         onCreate={vi.fn()}
-        baseId="b1"
       />
     );
 
@@ -152,7 +145,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={onCreate}
-        baseId="b1"
         existingTables={[]}
       />
     );

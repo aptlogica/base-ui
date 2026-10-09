@@ -457,7 +457,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           <CreateTableModal
             isOpen={!!showCreateTableBaseId}
             onClose={() => setShowCreateTableBaseId(null)}
-            baseId={showCreateTableBaseId}
             existingTables={((baseTables as TablesResponse | undefined)?.data || [])}
             onCreate={async ({ name, description }) => {
               try {

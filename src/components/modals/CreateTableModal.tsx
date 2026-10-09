@@ -11,7 +11,6 @@ interface CreateTableModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (data: { name: string; description: string }) => void;
-  baseId: string;
   defaultName?: string;
   existingTables?: any[];
 }
@@ -20,7 +19,6 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
   isOpen,
   onClose,
   onCreate,
-  baseId,
   defaultName = '',
   existingTables = [],
 }) => {
@@ -52,7 +50,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
 
   // Select the pre-populated name once it is in the input so typing replaces it
   useEffect(() => {
-    if (!isOpen || !shouldSelectNameRef.current || !name) return;
+    if (!isOpen || !shouldSelectNameRef.current || !name) return undefined;
     const timer = setTimeout(() => {
       const input = nameInputRef.current;
       if (!input) return;
@@ -88,7 +86,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  const handleSubmit = async (e?: React.SyntheticEvent) => {
+  const handleSubmit = (e?: React.SyntheticEvent) => {
     e?.preventDefault();
 
     if (!name.trim()) {

@@ -484,7 +484,7 @@ const Breadcrumb: React.FC = () => {
         description: description || '',
         workspace_id: selectedWorkspaceId,
         image: image || undefined,
-        meta: meta as Record<string, unknown> | undefined,
+        meta,
       });
 
       // Invalidate queries to refresh the list
