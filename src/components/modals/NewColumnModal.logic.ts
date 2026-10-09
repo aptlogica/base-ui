@@ -433,6 +433,10 @@ export const buildColumnPayload = (params: BuildColumnPayloadParams) => {
 export interface BaseFormatDefaults {
   dateFormat?: string;
   timeFormat?: string;
+  hourFormat?: '12' | '24';
+  displayTimeZone?: boolean;
+  sameTimezone?: boolean;
+  timeZone?: string;
   currencyLocale?: string;
   currencyType?: string;
 }
@@ -458,9 +462,15 @@ export const getBaseFormatDefaults = (meta: unknown, fieldTypeKey: string): Base
     return { dateFormat: parsed.dateFormat || undefined };
   }
   if (DATE_TIME_FIELD_TYPES.has(fieldTypeKey)) {
+    const dateTime = parsed.dateTimeFormat || {};
+    const hourFormat = String(dateTime.hourFormat ?? '');
     return {
-      dateFormat: parsed.dateTimeFormat?.dateFormat || undefined,
-      timeFormat: parsed.dateTimeFormat?.timeFormat || undefined,
+      dateFormat: dateTime.dateFormat || undefined,
+      timeFormat: dateTime.timeFormat || undefined,
+      hourFormat: hourFormat === '12' || hourFormat === '24' ? hourFormat : undefined,
+      displayTimeZone: typeof dateTime.displayTimeZone === 'boolean' ? dateTime.displayTimeZone : undefined,
+      sameTimezone: typeof dateTime.sameTimezone === 'boolean' ? dateTime.sameTimezone : undefined,
+      timeZone: dateTime.timeZone || undefined,
     };
   }
   if (fieldTypeKey === 'currency') {

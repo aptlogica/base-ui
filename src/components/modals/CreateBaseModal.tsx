@@ -6,11 +6,25 @@ import React, { useState, useEffect } from 'react';
 import { Plus, X, HelpCircle, CloudUpload } from 'lucide-react';
 import { MultiLineText } from '../common/Fields/MultiLineText';
 import { validateBaseName } from '../../utils/nameValidation';
-import { CurrencySelect, DateFormatSelect, TimeFormatSelect } from './FieldFormatSelectors';
+import {
+  CurrencySelect,
+  DateFormatSelect,
+  HourFormatSelect,
+  TimeFormatSelect,
+  TimeZoneSettings,
+  type HourFormat,
+} from './FieldFormatSelectors';
 
 export interface BaseFormatSettings {
   dateFormat: string;
-  dateTimeFormat: { dateFormat: string; timeFormat: string };
+  dateTimeFormat: {
+    dateFormat: string;
+    timeFormat: string;
+    hourFormat: HourFormat;
+    displayTimeZone: boolean;
+    sameTimezone: boolean;
+    timeZone: string;
+  };
   currencyLocale: string;
   currencyType: string;
 }
@@ -125,6 +139,10 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
   const [dateFormat, setDateFormat] = useState('YYYY-MM-DD');
   const [dateTimeDateFormat, setDateTimeDateFormat] = useState('YYYY-MM-DD');
   const [dateTimeTimeFormat, setDateTimeTimeFormat] = useState('hh:mm');
+  const [hourFormat, setHourFormat] = useState<HourFormat>('24');
+  const [displayTimeZone, setDisplayTimeZone] = useState(false);
+  const [sameTimezone, setSameTimezone] = useState(false);
+  const [timeZone, setTimeZone] = useState('');
   const [currencyLocale, setCurrencyLocale] = useState('en-US');
   const [currencyType, setCurrencyType] = useState('USD');
 
@@ -165,6 +183,10 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
       setDateFormat('YYYY-MM-DD');
       setDateTimeDateFormat('YYYY-MM-DD');
       setDateTimeTimeFormat('hh:mm');
+      setHourFormat('24');
+      setDisplayTimeZone(false);
+      setSameTimezone(false);
+      setTimeZone('');
       setCurrencyLocale('en-US');
       setCurrencyType('USD');
     }
@@ -271,7 +293,15 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
         ...(showAdvanced && {
           meta: {
             dateFormat,
-            dateTimeFormat: { dateFormat: dateTimeDateFormat, timeFormat: dateTimeTimeFormat },
+            dateTimeFormat: {
+              dateFormat: dateTimeDateFormat,
+              timeFormat: dateTimeTimeFormat,
+              hourFormat,
+              displayTimeZone,
+              sameTimezone,
+              // A specific time zone only applies when it is shared by all members
+              timeZone: sameTimezone ? timeZone : '',
+            },
             currencyLocale,
             currencyType,
           },
@@ -504,6 +534,15 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
                       />
                     </div>
                   </div>
+                  <HourFormatSelect value={hourFormat} onChange={setHourFormat} />
+                  <TimeZoneSettings
+                    displayTimeZone={displayTimeZone}
+                    onDisplayTimeZoneChange={setDisplayTimeZone}
+                    sameTimezone={sameTimezone}
+                    onSameTimezoneChange={setSameTimezone}
+                    timeZone={timeZone}
+                    onTimeZoneChange={setTimeZone}
+                  />
                   <CurrencySelect
                     currencyLocale={currencyLocale}
                     onCurrencyLocaleChange={setCurrencyLocale}

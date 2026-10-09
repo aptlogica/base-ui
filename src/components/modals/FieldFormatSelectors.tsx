@@ -8,6 +8,7 @@ import {
   currencyLocaleOptions,
   dateFormatOptions,
   timeFormatOptions,
+  timeZoneOptions,
 } from '../../types/constants';
 
 const labelClassName = 'block text-sm font-medium text-[var(--color-text-tertiary)] mb-1';
@@ -80,6 +81,105 @@ export function TimeFormatSelect({
         value={value}
         onChange={(val) => onChange(val as string)}
       />
+    </div>
+  );
+}
+
+export type HourFormat = '12' | '24';
+
+const hourOptionClassName = (selected: boolean) =>
+  `flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${selected
+    ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
+    : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`;
+
+export function HourFormatSelect({
+  value,
+  onChange,
+  label = 'Time Display',
+}: {
+  value: HourFormat;
+  onChange: (value: HourFormat) => void;
+  label?: string;
+}) {
+  return (
+    <div className="mb-3">
+      <div className={labelClassName}>{label}</div>
+      <div className="flex items-center gap-2">
+        {(['12', '24'] as const).map((option) => (
+          <label key={option} className={hourOptionClassName(value === option)}>
+            <input
+              type="radio"
+              className="hidden"
+              checked={value === option}
+              onChange={() => onChange(option)}
+            />{option} Hrs
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ToggleSwitch({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+}) {
+  return (
+    <label className="flex items-center gap-2 cursor-pointer">
+      <div className="relative inline-flex items-center">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={e => onChange(e.target.checked)}
+          className="sr-only peer"
+        />
+        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
+        <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+      </div>
+      <span className="text-sm text-[var(--color-text-tertiary)]">{label}</span>
+    </label>
+  );
+}
+
+const timeZoneDropdownOptions = timeZoneOptions.map((o: any) => ({ label: o.label, value: o.label, rightLabel: o.value, description: o.value }));
+
+export function TimeZoneSettings({
+  displayTimeZone,
+  onDisplayTimeZoneChange,
+  sameTimezone,
+  onSameTimezoneChange,
+  timeZone,
+  onTimeZoneChange,
+}: {
+  displayTimeZone: boolean;
+  onDisplayTimeZoneChange: (value: boolean) => void;
+  sameTimezone: boolean;
+  onSameTimezoneChange: (value: boolean) => void;
+  timeZone: string;
+  onTimeZoneChange: (value: string) => void;
+}) {
+  return (
+    <div className="mb-3">
+      <div className="space-y-2">
+        <ToggleSwitch checked={displayTimeZone} onChange={onDisplayTimeZoneChange} label="Display time zone" />
+        <ToggleSwitch checked={sameTimezone} onChange={onSameTimezoneChange} label="Use same timezone for all members" />
+        {sameTimezone && (
+          <div className="mt-2">
+            <AdvancedDropdown
+              options={timeZoneDropdownOptions}
+              value={timeZone}
+              onChange={(val: any) => onTimeZoneChange(val as string)}
+              searchable={true}
+              placeholder="Select time zone"
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

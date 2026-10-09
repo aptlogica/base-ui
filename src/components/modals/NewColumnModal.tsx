@@ -961,6 +961,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     const baseDefaults = getBaseFormatDefaults(baseMeta, type.key);
     if (baseDefaults.dateFormat) setDateFormat(baseDefaults.dateFormat);
     if (baseDefaults.timeFormat) setTimeFormat(baseDefaults.timeFormat);
+    if (baseDefaults.hourFormat) setHourFormat(baseDefaults.hourFormat);
+    if (baseDefaults.displayTimeZone !== undefined) setDisplayTimeZone(baseDefaults.displayTimeZone);
+    if (baseDefaults.sameTimezone !== undefined) setSameTimezone(baseDefaults.sameTimezone);
+    if (baseDefaults.timeZone) setTimeZone(baseDefaults.timeZone);
     if (baseDefaults.currencyLocale) setCurrencyLocale(baseDefaults.currencyLocale);
     if (baseDefaults.currencyType) setCurrencyType(baseDefaults.currencyType);
     // Reset text config state

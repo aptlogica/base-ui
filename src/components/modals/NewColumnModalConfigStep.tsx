@@ -15,9 +15,8 @@ import {
   ratingColorOptions, precisionOptions,
   progressColorOptions,
   durationFormatOptions,
-  timeZoneOptions,
 } from '../../types/constants';
-import { CurrencySelect, DateFormatSelect, TimeFormatSelect } from './FieldFormatSelectors';
+import { CurrencySelect, DateFormatSelect, HourFormatSelect, TimeFormatSelect, TimeZoneSettings } from './FieldFormatSelectors';
 import { renderBasicConfigStep } from './NewColumnModalConfigStep.basic';
 import { renderDateTimeConfigStep } from './NewColumnModalConfigStep.dateTime';
 import { renderContactConfigStep } from './NewColumnModalConfigStep.contact';
@@ -1219,43 +1218,6 @@ export function renderNewColumnConfigStep(props: any) {
     </div>
   );
 
-  const renderHourFormatToggle = ({
-    hourFormat,
-    setHourFormat,
-    wrapperClassName = 'grid grid-cols-2 gap-4 mb-2',
-  }: {
-    hourFormat: '12' | '24';
-    setHourFormat: (value: '12' | '24') => void;
-    wrapperClassName?: string;
-  }) => (
-    <div className={wrapperClassName}>
-      <label
-        className={`flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '12'
-          ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
-          : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}
-      >
-        <input
-          type="radio"
-          className="hidden"
-          checked={hourFormat === '12'}
-          onChange={() => setHourFormat('12')}
-        />12 Hrs
-      </label>
-      <label
-        className={`flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '24'
-          ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
-          : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}
-      >
-        <input
-          type="radio"
-          className="hidden"
-          checked={hourFormat === '24'}
-          onChange={() => setHourFormat('24')}
-        />24 Hrs
-      </label>
-    </div>
-  );
-
   // Config step for each type
   function renderConfigStep() {
     const basicConfig = renderBasicConfigStep({
@@ -1630,61 +1592,15 @@ export function renderNewColumnConfigStep(props: any) {
             <DateFormatSelect value={dateFormat} onChange={setDateFormat} />
             <TimeFormatSelect value={timeFormat} onChange={setTimeFormat} />
 
-            {/* Time Display Preference */}
-            <div className="mb-3">
-              <div className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Time Display</div>
-              <div className="flex items-center gap-2">
-                {renderHourFormatToggle({
-                  hourFormat,
-                  setHourFormat,
-                  wrapperClassName: 'flex items-center gap-2',
-                })}
-              </div>
-            </div>
-
-            {/* Timezone Options */}
-            <div className="mb-3">
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <div className="relative inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={displayTimeZone}
-                      onChange={e => setDisplayTimeZone(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                    <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-                  </div>
-                  <span className="text-sm text-[var(--color-text-tertiary)]">Display time zone</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <div className="relative inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={sameTimezone}
-                      onChange={e => setSameTimezone(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                    <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-                  </div>
-                  <span className="text-sm text-[var(--color-text-tertiary)]">Use same timezone for all members</span>
-                </label>
-                {sameTimezone && (
-                  <div className="mt-2">
-                    <AdvancedDropdown
-                      options={timeZoneOptions.map((o: any) => ({ label: o.label, value: o.label, rightLabel: o.value, description: o.value }))}
-                      value={timeZone}
-                      onChange={(val: any) => setTimeZone(val as string)}
-                      searchable={true}
-                      placeholder="Select time zone"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
+            <HourFormatSelect value={hourFormat} onChange={setHourFormat} />
+            <TimeZoneSettings
+              displayTimeZone={displayTimeZone}
+              onDisplayTimeZoneChange={setDisplayTimeZone}
+              sameTimezone={sameTimezone}
+              onSameTimezoneChange={setSameTimezone}
+              timeZone={timeZone}
+              onTimeZoneChange={setTimeZone}
+            />
 
             {/* Default Value - Only show for datetime, not for createdTime/lastModifiedTime */}
             {selectedType?.key === 'datetime' && (
