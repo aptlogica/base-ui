@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Table2, X, HelpCircle } from 'lucide-react';
 import { MultiLineText } from '../common/Fields/MultiLineText';
 import { validateTableName, getDefaultTableName } from '../../utils/nameValidation';
@@ -24,22 +24,44 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
   defaultName = '',
   existingTables = [],
 }) => {
-  const [name, setName] = useState(defaultName);
+  // Compute the default name up front so the input renders with it already filled in
+  const [name, setName] = useState(() => defaultName || getDefaultTableName(existingTables));
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const shouldSelectNameRef = useRef(true);
+  const existingTablesRef = useRef(existingTables);
+  existingTablesRef.current = existingTables;
+  const wasOpenRef = useRef(isOpen);
 
+  // Re-populate the default name only when the modal goes from closed to open, so parent
+  // re-renders (e.g. a new existingTables array reference) don't overwrite what the user typed
   useEffect(() => {
-    if (isOpen) {
-      const initialName = defaultName || getDefaultTableName(existingTables);
-      setName(initialName);
+    if (isOpen && !wasOpenRef.current) {
+      setName(defaultName || getDefaultTableName(existingTablesRef.current));
       setDescription('');
       setError('');
       setValidationError('');
       setIsSubmitting(false);
+      shouldSelectNameRef.current = true;
     }
-  }, [isOpen, defaultName, existingTables]);
+    wasOpenRef.current = isOpen;
+  }, [isOpen, defaultName]);
+
+  // Select the pre-populated name once it is in the input so typing replaces it
+  useEffect(() => {
+    if (!isOpen || !shouldSelectNameRef.current || !name) return;
+    const timer = setTimeout(() => {
+      const input = nameInputRef.current;
+      if (!input) return;
+      shouldSelectNameRef.current = false;
+      input.focus();
+      input.select();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [isOpen, name]);
 
   // Validate name on change
   useEffect(() => {
@@ -145,6 +167,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
                 <input
                   type="text"
                   id="tableName"
+                  ref={nameInputRef}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter table name"

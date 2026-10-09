@@ -13,14 +13,11 @@ import { DateTime, Duration, JSONField, User, Currency, MultiLineText, Formula }
 import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown';
 import {
   ratingColorOptions, precisionOptions,
-  currencyOptions,
-  currencyLocaleOptions,
   progressColorOptions,
   durationFormatOptions,
-  dateFormatOptions,
-  timeFormatOptions,
   timeZoneOptions,
 } from '../../types/constants';
+import { CurrencySelect, DateFormatSelect, TimeFormatSelect } from './FieldFormatSelectors';
 import { renderBasicConfigStep } from './NewColumnModalConfigStep.basic';
 import { renderDateTimeConfigStep } from './NewColumnModalConfigStep.dateTime';
 import { renderContactConfigStep } from './NewColumnModalConfigStep.contact';
@@ -1194,35 +1191,6 @@ export function renderNewColumnConfigStep(props: any) {
     setPrecision(newPrecision);
   };
 
-  // Prevent duplicate React keys in dropdown options when constants contain repeated values.
-  const getUniqueDropdownOptions = (options: Array<{ label?: string; value?: string }>) => {
-    const seen = new Set<string>();
-    return options.reduce<Array<{ label: string; value: string }>>((acc, option) => {
-      const label = option?.label ?? option?.value ?? '';
-      const value = option?.value ?? option?.label ?? '';
-      if (!label || !value) return acc;
-      if (seen.has(value)) return acc;
-      seen.add(value);
-      acc.push({ label, value });
-      return acc;
-    }, []);
-  };
-
-  const uniqueCurrencyLocaleOptions = getUniqueDropdownOptions(currencyLocaleOptions);
-  const uniqueCurrencyOptions = getUniqueDropdownOptions(currencyOptions);
-  const currencySymbolByType: Record<string, string> = {
-    USD: '$',
-    EUR: '\u20AC',
-    GBP: '\u00A3',
-    JPY: '\u00A5',
-    CAD: 'C$',
-    AUD: 'A$',
-    CHF: 'CHF',
-    CNY: '\u00A5',
-    INR: '\u20B9',
-    BRL: 'R$',
-  };
-
   const renderDefaultValueToggle = ({
     show,
     setShow,
@@ -1524,31 +1492,12 @@ export function renderNewColumnConfigStep(props: any) {
       case 'currency':
         return (
           <>
-            <div className='flex gap-2 mb-2'>
-              <div className='flex-1'>
-                <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Currency Locale</div>
-                <AdvancedDropdown
-                  options={uniqueCurrencyLocaleOptions}
-                  value={currencyLocale}
-                  onChange={(val) => setCurrencyLocale(val as string)}
-                  placeholder="Select Locale"
-                  searchable={true}
-                />
-              </div>
-              <div className='flex-1'>
-                <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Currency Code</div>
-                <AdvancedDropdown
-                  options={uniqueCurrencyOptions}
-                  value={currencyType}
-                  onChange={(val) => setCurrencyType(val as string)}
-                  placeholder="Select Currency"
-                  searchable={true}
-                />
-              </div>
-            </div>
-            <div className="mb-4 text-xs text-gray-600">
-              Selected currency : {currencySymbolByType[currencyType] || currencyType}
-            </div>
+            <CurrencySelect
+              currencyLocale={currencyLocale}
+              onCurrencyLocaleChange={setCurrencyLocale}
+              currencyType={currencyType}
+              onCurrencyTypeChange={setCurrencyType}
+            />
             <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Precision</div>
             <AdvancedDropdown
               options={precisionOptions}
@@ -1678,24 +1627,8 @@ export function renderNewColumnConfigStep(props: any) {
       case 'lastModifiedTime':
         return (
           <>
-            {/* Date Format */}
-            <div className="mb-3">
-              <div className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Date Format</div>
-              <AdvancedDropdown
-                options={dateFormatOptions}
-                value={dateFormat}
-                onChange={(val) => setDateFormat(val as string)}
-              />
-            </div>
-            {/* Time Format */}
-            <div className="mb-3">
-              <div className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Time Format</div>
-              <AdvancedDropdown
-                options={timeFormatOptions}
-                value={timeFormat}
-                onChange={(value: any) => setTimeFormat(value)}
-              />
-            </div>
+            <DateFormatSelect value={dateFormat} onChange={setDateFormat} />
+            <TimeFormatSelect value={timeFormat} onChange={setTimeFormat} />
 
             {/* Time Display Preference */}
             <div className="mb-3">

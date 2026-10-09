@@ -285,4 +285,57 @@ describe('CreateBaseModal', () => {
     expect(screen.queryByAltText('Preview')).not.toBeInTheDocument();
   });
 
+  it('keeps Advanced Selector off by default and hides format fields', () => {
+    render(
+      <CreateBaseModal
+        isOpen={true}
+        onClose={onClose}
+        onCreate={onCreate}
+        workspaceId="w1"
+      />
+    );
+
+    expect(screen.getByRole('switch', { name: 'Advanced Selector' })).not.toBeChecked();
+    expect(screen.queryByText('Date Format')).not.toBeInTheDocument();
+    expect(screen.queryByText('Currency Locale')).not.toBeInTheDocument();
+  });
+
+  it('shows date, date-time and currency fields when Advanced Selector is on and submits them', async () => {
+    render(
+      <CreateBaseModal
+        isOpen={true}
+        onClose={onClose}
+        onCreate={onCreate}
+        workspaceId="w1"
+      />
+    );
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Advanced Selector' }));
+
+    expect(screen.getByText('Date Format')).toBeInTheDocument();
+    expect(screen.getByText('Date-Time Format (Date)')).toBeInTheDocument();
+    expect(screen.getByText('Date-Time Format (Time)')).toBeInTheDocument();
+    expect(screen.getByText('Currency Locale')).toBeInTheDocument();
+    expect(screen.getByText('Currency Code')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('Enter base name'), {
+      target: { value: 'Sales' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Base' }));
+
+    await waitFor(() =>
+      expect(onCreate).toHaveBeenCalledWith({
+        name: 'Sales',
+        description: '',
+        image: null,
+        meta: {
+          dateFormat: 'YYYY-MM-DD',
+          dateTimeFormat: { dateFormat: 'YYYY-MM-DD', timeFormat: 'hh:mm' },
+          currencyLocale: 'en-US',
+          currencyType: 'USD',
+        },
+      })
+    );
+  });
+
 });

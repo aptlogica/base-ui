@@ -429,3 +429,45 @@ export const buildColumnPayload = (params: BuildColumnPayloadParams) => {
     meta: finalMeta,
   };
 };
+
+export interface BaseFormatDefaults {
+  dateFormat?: string;
+  timeFormat?: string;
+  currencyLocale?: string;
+  currencyType?: string;
+}
+
+const DATE_TIME_FIELD_TYPES = new Set(['datetime', 'createdTime', 'lastModifiedTime']);
+
+/**
+ * Resolves the format defaults saved in a base's `meta` (set on base creation)
+ * for the given field type. `meta` may arrive as an object or a JSON string.
+ */
+export const getBaseFormatDefaults = (meta: unknown, fieldTypeKey: string): BaseFormatDefaults => {
+  let parsed: any = meta;
+  if (typeof meta === 'string') {
+    try {
+      parsed = JSON.parse(meta);
+    } catch {
+      return {};
+    }
+  }
+  if (!parsed || typeof parsed !== 'object') return {};
+
+  if (fieldTypeKey === 'date') {
+    return { dateFormat: parsed.dateFormat || undefined };
+  }
+  if (DATE_TIME_FIELD_TYPES.has(fieldTypeKey)) {
+    return {
+      dateFormat: parsed.dateTimeFormat?.dateFormat || undefined,
+      timeFormat: parsed.dateTimeFormat?.timeFormat || undefined,
+    };
+  }
+  if (fieldTypeKey === 'currency') {
+    return {
+      currencyLocale: parsed.currencyLocale || undefined,
+      currencyType: parsed.currencyType || undefined,
+    };
+  }
+  return {};
+};

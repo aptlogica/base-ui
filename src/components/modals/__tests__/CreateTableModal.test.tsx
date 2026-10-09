@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor } from '@testing-library/react';
 import { CreateTableModal } from '../CreateTableModal';
 
 const validateTableNameMock = vi.fn();
@@ -42,6 +42,36 @@ describe('CreateTableModal', () => {
     fireEvent.change(screen.getByLabelText(/table name/i), { target: { value: 'New Table' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create Table' }));
     expect(onCreate).toHaveBeenCalledWith({ name: 'New Table', description: '' });
+  });
+
+  it('auto-selects the pre-populated default name', async () => {
+    render(
+      <CreateTableModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onCreate={vi.fn()}
+        baseId="b1"
+        existingTables={[]}
+      />
+    );
+
+    const input = (await screen.findByDisplayValue('Table 1')) as HTMLInputElement;
+    await waitFor(() => {
+      expect(document.activeElement).toBe(input);
+      expect(input.selectionStart).toBe(0);
+      expect(input.selectionEnd).toBe('Table 1'.length);
+    });
+  });
+
+  it('keeps typed name when parent re-renders with a new existingTables array', async () => {
+    const props = { isOpen: true, onClose: vi.fn(), onCreate: vi.fn(), baseId: 'b1' };
+    const { rerender } = render(<CreateTableModal {...props} existingTables={[]} />);
+
+    const input = await screen.findByDisplayValue('Table 1');
+    fireEvent.change(input, { target: { value: 'Customers' } });
+    rerender(<CreateTableModal {...props} existingTables={[]} />);
+
+    expect(screen.getByLabelText(/table name/i)).toHaveValue('Customers');
   });
 
   it('blocks submission when name is invalid', () => {

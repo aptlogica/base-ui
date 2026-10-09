@@ -3,6 +3,7 @@ import {
   buildColumnPayload,
   buildFieldMeta,
   getUniqueColumnNameByUidt,
+  getBaseFormatDefaults,
   isDuplicateFieldName,
   toTitleCase,
 } from '../NewColumnModal.logic';
@@ -551,5 +552,36 @@ describe('NewColumnModal.logic', () => {
       displayTimeZone: false,
     });
     expect(durationMeta.meta.defaultValue).toBe(90);
+  });
+});
+
+describe('getBaseFormatDefaults', () => {
+  const meta = {
+    dateFormat: 'DD/MM/YYYY',
+    dateTimeFormat: { dateFormat: 'MM-DD-YYYY', timeFormat: 'HH:mm' },
+    currencyLocale: 'en-IN',
+    currencyType: 'INR',
+  };
+
+  it('returns the base date format for date fields', () => {
+    expect(getBaseFormatDefaults(meta, 'date')).toEqual({ dateFormat: 'DD/MM/YYYY' });
+  });
+
+  it('returns the base date-time format for datetime fields', () => {
+    expect(getBaseFormatDefaults(meta, 'datetime')).toEqual({ dateFormat: 'MM-DD-YYYY', timeFormat: 'HH:mm' });
+  });
+
+  it('returns the base currency for currency fields', () => {
+    expect(getBaseFormatDefaults(meta, 'currency')).toEqual({ currencyLocale: 'en-IN', currencyType: 'INR' });
+  });
+
+  it('accepts meta as a JSON string', () => {
+    expect(getBaseFormatDefaults(JSON.stringify(meta), 'currency')).toEqual({ currencyLocale: 'en-IN', currencyType: 'INR' });
+  });
+
+  it('returns nothing for missing/invalid meta or unrelated field types', () => {
+    expect(getBaseFormatDefaults(undefined, 'date')).toEqual({});
+    expect(getBaseFormatDefaults('not json', 'date')).toEqual({});
+    expect(getBaseFormatDefaults(meta, 'text')).toEqual({});
   });
 });

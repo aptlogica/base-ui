@@ -4,10 +4,9 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import { Plus } from 'lucide-react';
 import { DateField, Time, Year } from '../../components/common/Fields';
-import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown';
 import { convertDateFormat } from '../../utils/helpers';
-import { dateFormatOptions } from '../../types/constants';
 import { renderDescriptionToggle } from './NewColumnModalConfigStep';
+import { DateFormatSelect } from './FieldFormatSelectors';
 
 export function renderDateTimeConfigStep(props: any) {
   const {
@@ -64,14 +63,7 @@ export function renderDateTimeConfigStep(props: any) {
       return (
         <>
           <div className="mb-3 space-y-2">
-            <div className="mb-3">
-              <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Date format</div>
-              <AdvancedDropdown
-                options={dateFormatOptions}
-                value={dateFormat}
-                onChange={(val) => setDateFormat(val as string)}
-              />
-            </div>
+            <DateFormatSelect label="Date format" value={dateFormat} onChange={setDateFormat} />
             <div>
               <button
                 className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-2 space-y-2"

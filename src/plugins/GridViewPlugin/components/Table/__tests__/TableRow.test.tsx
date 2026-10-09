@@ -117,18 +117,15 @@ describe('TableRow', () => {
       expect(checkbox).toBeChecked();
     });
 
-    it('should apply active row styling when selected', () => {
+    it('should apply light blue background to the whole row when selected', () => {
       render(<TableRow {...defaultProps} isSelected={true} />);
 
       const row = screen.getByRole('row');
-      expect(row).toHaveClass('border-[var(--color-brand-600)]');
-    });
-    it('should apply right border to last cell when active row has multiple columns', () => {
-      render(<TableRow {...defaultProps} isSelected={true} />);
-
-      const cells = screen.getAllByRole('gridcell');
-      const lastCell = cells[cells.length - 1];
-      expect(lastCell).toHaveClass('border-r', 'border-[var(--color-brand-600)]');
+      expect(row).toHaveClass('row-highlighted');
+      screen.getAllByRole('gridcell').forEach((cell) => {
+        expect(cell).toHaveClass('bg-[var(--color-blue-50)]');
+        expect(cell).not.toHaveClass('border-[var(--color-brand-600)]');
+      });
     });
   });
 
@@ -247,12 +244,16 @@ describe('TableRow', () => {
   });
 
   describe('active cell styling', () => {
-    it('should highlight active cell', () => {
+    it('should give active cell a green border and other cells a light blue background', () => {
       const activeCell = { rowId: 'row-1', colKey: 'title' };
       render(<TableRow {...defaultProps} activeCell={activeCell} />);
 
-      const row = screen.getByRole('row');
-      expect(row).toHaveClass('border-[var(--color-brand-600)]');
+      const active = screen.getByTestId('cell-title').closest('[role="gridcell"]');
+      expect(active).toHaveClass('border', 'border-[var(--color-brand-600)]');
+      expect(active).not.toHaveClass('bg-[var(--color-blue-50)]');
+      screen.getAllByRole('gridcell').filter((cell) => cell !== active).forEach((cell) => {
+        expect(cell).toHaveClass('bg-[var(--color-blue-50)]');
+      });
     });
 
     it('should not highlight row when different row is active', () => {

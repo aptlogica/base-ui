@@ -8,12 +8,12 @@ import { useClickOutside } from '../../hooks/useClickOutside';
 import { FIELD_TYPES } from '../../types/fieldTypes';
 import { timeZoneOptions } from '../../types/constants';
 import { FieldTypeDropdown } from '../common/dropdown/fieldDropdown/FieldTypeDropdown';
-import { useBaseTables, useTable, useAllViews, useResetField } from '../../hooks/useApi';
+import { useBaseTables, useBaseById, useTable, useAllViews, useResetField } from '../../hooks/useApi';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { useToast } from '../../components/common/Toast';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../utils/fieldUsageUtils';
 import { renderNewColumnConfigStep } from './NewColumnModalConfigStep';
-import { buildColumnPayload, buildFieldMeta, getUniqueColumnNameByUidt, isDuplicateFieldName } from './NewColumnModal.logic';
+import { buildColumnPayload, buildFieldMeta, getUniqueColumnNameByUidt, isDuplicateFieldName, getBaseFormatDefaults } from './NewColumnModal.logic';
 import { validateFormula } from '../../utils/formulaHelper';
 
 interface FieldType {
@@ -77,6 +77,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   // Get current base ID and tables for relations
   const { selectedBaseId } = useNavigationStore();
   const { data: tablesData } = useBaseTables(selectedBaseId || '') as { data?: any };
+  const { data: baseData } = useBaseById(selectedBaseId || '') as { data?: { data?: { meta?: unknown } } };
+  const baseMeta = baseData?.data?.meta;
   
   // Hook for resetting field data (used when formula is cleared)
   const resetField = useResetField();
@@ -868,15 +870,20 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   }, [fieldName, fields, step, initialValues]);
 
   // Auto-focus field name input when modal opens and step is 1 or 2
+  const isEditMode = !!initialValues;
   useEffect(() => {
     if (isOpen && (step === 1 || step === 2) && fieldNameInputRef.current) {
       // Small delay to ensure the modal is fully rendered
       const timer = setTimeout(() => {
         fieldNameInputRef.current?.focus();
+        // In edit mode, select the existing name so it can be replaced by typing
+        if (isEditMode) {
+          fieldNameInputRef.current?.select();
+        }
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, step]);
+  }, [isOpen, step, isEditMode]);
 
   // Filter out hidden field types (button, formula, uuid) from user selection
   const filteredTypes: FieldType[] = FIELD_TYPES
@@ -947,8 +954,15 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setShowDateTimeDefault(false);
     // Reset currency config state
     setCurrencyType('USD');
+    setCurrencyLocale('en-US');
     setCurrencyDefault(null);
     setShowCurrencyDefault(false);
+    // Start from the formats chosen when the base was created (user can still change them)
+    const baseDefaults = getBaseFormatDefaults(baseMeta, type.key);
+    if (baseDefaults.dateFormat) setDateFormat(baseDefaults.dateFormat);
+    if (baseDefaults.timeFormat) setTimeFormat(baseDefaults.timeFormat);
+    if (baseDefaults.currencyLocale) setCurrencyLocale(baseDefaults.currencyLocale);
+    if (baseDefaults.currencyType) setCurrencyType(baseDefaults.currencyType);
     // Reset text config state
     setShowTextDefault(false);
     setShowDescription(false);

@@ -146,7 +146,7 @@ export const TableRow: React.FC<TableRowProps> = ({
   return (
     // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
     <div
-      className={`group grid transition-colors min-w-full ${isRowActive ? 'relative z-[2] border-[var(--color-brand-600)]' : ''}`}
+      className={`group grid transition-colors min-w-full ${isRowActive ? 'relative z-[2] row-highlighted' : ''}`}
       style={{
         gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`,
         height: '40px',
@@ -154,9 +154,6 @@ export const TableRow: React.FC<TableRowProps> = ({
         maxHeight: '40px',
         boxSizing: 'border-box',
         overflow: 'visible',
-        boxShadow: isRowActive
-          ? 'inset 0 1px 0 var(--color-brand-600), inset 0 -1px 0 var(--color-brand-600), inset -1px 0 0 var(--color-brand-600)'
-          : undefined,
       }}
       onContextMenu={onContextMenu}
       onClick={handleRowClick}
@@ -165,15 +162,13 @@ export const TableRow: React.FC<TableRowProps> = ({
       tabIndex={0}
     >
       <div
-        className={`flex-shrink-0 w-13 bg-background border-r hover:bg-gray-50 ${isRowActive ? 'border-t border-[var(--color-brand-600)]' : 'border-b border-border/30'} flex items-center justify-center relative select-none gap-2`}
+        className={`flex-shrink-0 w-13 border-r border-b border-border/30 ${isRowActive ? 'bg-[var(--color-blue-50)]' : 'bg-background hover:bg-gray-50'} flex items-center justify-center relative select-none gap-2`}
         style={{
           height: '40px',
           position: 'sticky',
           left: 0,
           zIndex: 11,
-          boxShadow: isRowActive
-            ? 'inset 1px 0 0 var(--color-brand-600), inset 0 -1px 0 var(--color-brand-600)'
-            : 'inset 1px 0 0 var(--color-border), inset 0 -1px 0 var(--color-border)'
+          boxShadow: 'inset 1px 0 0 var(--color-border), inset 0 -1px 0 var(--color-border)'
         }}
       >
         {(() => {
@@ -203,12 +198,11 @@ export const TableRow: React.FC<TableRowProps> = ({
         const column = columns[index];
         let borderClass: string;
         if (props.isActive) {
+          // Selected cell: green border, default background
           borderClass = 'border border-[var(--color-brand-600)]';
         } else if (isRowActive) {
-          // Keep row-level top/bottom border visible on each cell
-          borderClass = props.isLast
-            ? 'border-t border-b border-r border-[var(--color-brand-600)]'
-            : 'border-t border-b border-[var(--color-brand-600)]';
+          // Other cells in a highlighted row: light blue background (overrides the cell's and its input's own bg)
+          borderClass = 'border-b border-border/30 bg-[var(--color-blue-50)] [&>div]:!bg-[var(--color-blue-50)] [&_.field-component]:!bg-[var(--color-blue-50)] [&_.field-component-focus]:!bg-[var(--color-blue-50)]';
         } else {
           borderClass = 'border-b border-border/30';
         }

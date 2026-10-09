@@ -6,11 +6,27 @@ import React, { useState, useEffect } from 'react';
 import { Plus, X, HelpCircle, CloudUpload } from 'lucide-react';
 import { MultiLineText } from '../common/Fields/MultiLineText';
 import { validateBaseName } from '../../utils/nameValidation';
+import { CurrencySelect, DateFormatSelect, TimeFormatSelect } from './FieldFormatSelectors';
+
+export interface BaseFormatSettings {
+  dateFormat: string;
+  dateTimeFormat: { dateFormat: string; timeFormat: string };
+  currencyLocale: string;
+  currencyType: string;
+}
+
+export interface CreateBaseData {
+  name: string;
+  description: string;
+  image?: File | null;
+  // Only present when the Advanced Selector is turned on
+  meta?: BaseFormatSettings;
+}
 
 interface CreateBaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (data: { name: string; description: string; image?: File | null }) => void;
+  onCreate: (data: CreateBaseData) => void;
   workspaceId: string;
   defaultName?: string;
   existingBases?: any[];
@@ -105,6 +121,12 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
   const [validationError, setValidationError] = useState('');
   const [imageError, setImageError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [dateFormat, setDateFormat] = useState('YYYY-MM-DD');
+  const [dateTimeDateFormat, setDateTimeDateFormat] = useState('YYYY-MM-DD');
+  const [dateTimeTimeFormat, setDateTimeTimeFormat] = useState('hh:mm');
+  const [currencyLocale, setCurrencyLocale] = useState('en-US');
+  const [currencyType, setCurrencyType] = useState('USD');
 
   const getSafeImageSrc = (value: string | null): string | null => {
     if (!value) return null;
@@ -139,6 +161,12 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
       setValidationError('');
       setImageError('');
       setIsSubmitting(false);
+      setShowAdvanced(false);
+      setDateFormat('YYYY-MM-DD');
+      setDateTimeDateFormat('YYYY-MM-DD');
+      setDateTimeTimeFormat('hh:mm');
+      setCurrencyLocale('en-US');
+      setCurrencyType('USD');
     }
   }, [isOpen, defaultName, initialImage]);
 
@@ -240,6 +268,14 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
         name: name.trim(),
         description: description.trim(),
         image: image || null,
+        ...(showAdvanced && {
+          meta: {
+            dateFormat,
+            dateTimeFormat: { dateFormat: dateTimeDateFormat, timeFormat: dateTimeTimeFormat },
+            currencyLocale,
+            currencyType,
+          },
+        }),
       });
       // Close the modal on successful creation
       onClose();
@@ -427,6 +463,53 @@ export const CreateBaseModal: React.FC<CreateBaseModalProps> = ({
               {imageError && (
                 <div className="mb-2 text-sm text-red-600">
                   <span>{imageError}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Advanced Selector - formats used across the base */}
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 cursor-pointer w-fit">
+                <div className="relative inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    aria-label="Advanced Selector"
+                    checked={showAdvanced}
+                    onChange={e => setShowAdvanced(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
+                  <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
+                </div>
+                <span className="text-sm font-medium text-primary">Advanced Selector</span>
+              </label>
+
+              {showAdvanced && (
+                <div className="space-y-1">
+                  <DateFormatSelect value={dateFormat} onChange={setDateFormat} />
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <DateFormatSelect
+                        label="Date-Time Format (Date)"
+                        value={dateTimeDateFormat}
+                        onChange={setDateTimeDateFormat}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <TimeFormatSelect
+                        label="Date-Time Format (Time)"
+                        value={dateTimeTimeFormat}
+                        onChange={setDateTimeTimeFormat}
+                      />
+                    </div>
+                  </div>
+                  <CurrencySelect
+                    currencyLocale={currencyLocale}
+                    onCurrencyLocaleChange={setCurrencyLocale}
+                    currencyType={currencyType}
+                    onCurrencyTypeChange={setCurrencyType}
+                  />
                 </div>
               )}
             </div>

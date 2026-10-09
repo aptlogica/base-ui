@@ -9,6 +9,7 @@ import { useToast } from '../../components/common/Toast';
 import { useNavigation } from '../../hooks/useNavigation';
 import { useNavigationActions } from '../../hooks/useNavigationActions';
 import { useWorkspaceSelection } from './useWorkspaceSelection';
+import type { CreateBaseData } from '../../components/modals/CreateBaseModal';
 
 /**
  * Centralized business logic for workspace operations
@@ -186,7 +187,7 @@ export const useWorkspaceBusinessLogic = () => {
     }
   }, [createWorkspaceMutation, authUser?.id, navigateAndPersist, navigate, setWorkspace, setSelectedWorkspace]);
 
-  const handleCreateBaseForWorkspace = useCallback(async ({ name, description, image }: { name: string; description: string; image?: File | null }) => {
+  const handleCreateBaseForWorkspace = useCallback(async ({ name, description, image, meta }: CreateBaseData) => {
     if (!currentWorkspace) {
       toast.error('No workspace selected');
       return;
@@ -198,6 +199,7 @@ export const useWorkspaceBusinessLogic = () => {
         description: description || '',
         workspace_id: currentWorkspace.id,
         image: image || undefined,
+        meta: meta as Record<string, unknown> | undefined,
       });
 
       setShowCreateBaseWorkspaceId(null);
