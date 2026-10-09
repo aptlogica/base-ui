@@ -1468,7 +1468,8 @@ export const useInsertRelationData = () => {
       // Invalidate target table if provided
       // Performance: refetchType: 'active' only refetches if target table is currently open
       // If target table isn't open, this has zero performance impact - no API call happens
-      if (target_table_id) {
+      // On a self-link the target is the same table, which was already refreshed above.
+      if (target_table_id && String(target_table_id) !== String(model_id)) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.records(target_table_id),
           refetchType: 'active' // Only refetch if query is currently active (table is open)
