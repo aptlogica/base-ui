@@ -20,7 +20,9 @@ interface TableTriggersModalProps {
   table: any;
   // 'triggers' shows the Triggers and Functions tabs; 'webhooks' shows only webhooks
   view: 'triggers' | 'webhooks';
-  onClose: () => void;
+  onClose?: () => void;
+  // Render only the list, to fill a panel of another popup (the table settings popup)
+  embedded?: boolean;
 }
 
 const VIEW_TYPES: Record<TableTriggersModalProps['view'], AutomationType[]> = {
@@ -46,7 +48,7 @@ const COLUMNS: Record<AutomationType, { label: string; width: string }[]> = {
   ],
 };
 
-const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, onClose }) => {
+const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, onClose, embedded = false }) => {
   const tableId: string = table?.id;
   const tableTitle: string = table?.title || table?.name || '';
   const { data: automations = [], isLoading } = useAutomations(tableId);
@@ -99,15 +101,18 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
 
   const columns = COLUMNS[activeTab];
 
-  return (
-    <div //NOSONAR
-      className="bg-modal-backdrop relative"
-      // Escape closes the list only when no popup is open on top of it
-      onKeyDown={e => e.key === 'Escape' && !form && !deleteItem && onClose()}
-    >
-      <button type="button" aria-label="Close modal" className="absolute inset-0" onClick={onClose} />
-      <div className="bg-modal !p-0 flex flex-col relative overflow-hidden h-[680px] !max-h-[90vh] !max-w-6xl">
-        {/* Header: table name - tab */}
+  const content = (
+      <div className={embedded
+        ? 'flex flex-col relative overflow-hidden h-full'
+        : 'bg-modal !p-0 flex flex-col relative overflow-hidden h-[680px] !max-h-[90vh] !max-w-6xl'}
+      >
+        {/* Header: table name - tab (the settings popup has its own header) */}
+        {embedded ? tabTypes.length === 1 && (
+          <div className="px-4 pt-4 flex-shrink-0">
+            <h3 className="text-base font-semibold text-primary">{tab.label}</h3>
+            <p className="text-sm text-secondary">{tab.description}</p>
+          </div>
+        ) : (
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
@@ -127,6 +132,7 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
             <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
           </button>
         </div>
+        )}
 
         {/* Tabs (the webhooks view has only one type, so no tabs) */}
         {tabTypes.length > 1 && (
@@ -281,7 +287,10 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
           <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />
         </div>
       </div>
+  );
 
+  const popups = (
+    <>
       {form && ReactDOM.createPortal(
         <AutomationFormModal
           key={form.item?.id || `new-${form.type}`}
@@ -307,6 +316,31 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
         />,
         document.body
       )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div //NOSONAR
+        className="h-full"
+        // Escape from the form or delete popups closes only that popup, not the settings popup
+        onKeyDown={e => e.key === 'Escape' && (form || deleteItem) && e.stopPropagation()}
+      >
+        {content}
+        {popups}
+      </div>
+    );
+  }
+
+  return (
+    <div //NOSONAR
+      className="bg-modal-backdrop relative"
+      // Escape closes the list only when no popup is open on top of it
+      onKeyDown={e => e.key === 'Escape' && !form && !deleteItem && onClose?.()}
+    >
+      <button type="button" aria-label="Close modal" className="absolute inset-0" onClick={onClose} />
+      {content}
+      {popups}
     </div>
   );
 };
