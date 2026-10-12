@@ -13,14 +13,10 @@ import { DateTime, Duration, JSONField, User, Currency, MultiLineText, Formula }
 import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown';
 import {
   ratingColorOptions, precisionOptions,
-  currencyOptions,
-  currencyLocaleOptions,
   progressColorOptions,
   durationFormatOptions,
-  dateFormatOptions,
-  timeFormatOptions,
-  timeZoneOptions,
 } from '../../types/constants';
+import { CurrencySelect, DateFormatSelect, HourFormatSelect, TimeFormatSelect, TimeZoneSettings } from './FieldFormatSelectors';
 import { renderBasicConfigStep } from './NewColumnModalConfigStep.basic';
 import { renderDateTimeConfigStep } from './NewColumnModalConfigStep.dateTime';
 import { renderContactConfigStep } from './NewColumnModalConfigStep.contact';
@@ -1194,35 +1190,6 @@ export function renderNewColumnConfigStep(props: any) {
     setPrecision(newPrecision);
   };
 
-  // Prevent duplicate React keys in dropdown options when constants contain repeated values.
-  const getUniqueDropdownOptions = (options: Array<{ label?: string; value?: string }>) => {
-    const seen = new Set<string>();
-    return options.reduce<Array<{ label: string; value: string }>>((acc, option) => {
-      const label = option?.label ?? option?.value ?? '';
-      const value = option?.value ?? option?.label ?? '';
-      if (!label || !value) return acc;
-      if (seen.has(value)) return acc;
-      seen.add(value);
-      acc.push({ label, value });
-      return acc;
-    }, []);
-  };
-
-  const uniqueCurrencyLocaleOptions = getUniqueDropdownOptions(currencyLocaleOptions);
-  const uniqueCurrencyOptions = getUniqueDropdownOptions(currencyOptions);
-  const currencySymbolByType: Record<string, string> = {
-    USD: '$',
-    EUR: '\u20AC',
-    GBP: '\u00A3',
-    JPY: '\u00A5',
-    CAD: 'C$',
-    AUD: 'A$',
-    CHF: 'CHF',
-    CNY: '\u00A5',
-    INR: '\u20B9',
-    BRL: 'R$',
-  };
-
   const renderDefaultValueToggle = ({
     show,
     setShow,
@@ -1248,43 +1215,6 @@ export function renderNewColumnConfigStep(props: any) {
         {label}
       </button>
       {show && children}
-    </div>
-  );
-
-  const renderHourFormatToggle = ({
-    hourFormat,
-    setHourFormat,
-    wrapperClassName = 'grid grid-cols-2 gap-4 mb-2',
-  }: {
-    hourFormat: '12' | '24';
-    setHourFormat: (value: '12' | '24') => void;
-    wrapperClassName?: string;
-  }) => (
-    <div className={wrapperClassName}>
-      <label
-        className={`flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '12'
-          ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
-          : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}
-      >
-        <input
-          type="radio"
-          className="hidden"
-          checked={hourFormat === '12'}
-          onChange={() => setHourFormat('12')}
-        />12 Hrs
-      </label>
-      <label
-        className={`flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '24'
-          ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
-          : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}
-      >
-        <input
-          type="radio"
-          className="hidden"
-          checked={hourFormat === '24'}
-          onChange={() => setHourFormat('24')}
-        />24 Hrs
-      </label>
     </div>
   );
 
@@ -1524,31 +1454,12 @@ export function renderNewColumnConfigStep(props: any) {
       case 'currency':
         return (
           <>
-            <div className='flex gap-2 mb-2'>
-              <div className='flex-1'>
-                <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Currency Locale</div>
-                <AdvancedDropdown
-                  options={uniqueCurrencyLocaleOptions}
-                  value={currencyLocale}
-                  onChange={(val) => setCurrencyLocale(val as string)}
-                  placeholder="Select Locale"
-                  searchable={true}
-                />
-              </div>
-              <div className='flex-1'>
-                <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Currency Code</div>
-                <AdvancedDropdown
-                  options={uniqueCurrencyOptions}
-                  value={currencyType}
-                  onChange={(val) => setCurrencyType(val as string)}
-                  placeholder="Select Currency"
-                  searchable={true}
-                />
-              </div>
-            </div>
-            <div className="mb-4 text-xs text-gray-600">
-              Selected currency : {currencySymbolByType[currencyType] || currencyType}
-            </div>
+            <CurrencySelect
+              currencyLocale={currencyLocale}
+              onCurrencyLocaleChange={setCurrencyLocale}
+              currencyType={currencyType}
+              onCurrencyTypeChange={setCurrencyType}
+            />
             <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Precision</div>
             <AdvancedDropdown
               options={precisionOptions}
@@ -1678,80 +1589,18 @@ export function renderNewColumnConfigStep(props: any) {
       case 'lastModifiedTime':
         return (
           <>
-            {/* Date Format */}
-            <div className="mb-3">
-              <div className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Date Format</div>
-              <AdvancedDropdown
-                options={dateFormatOptions}
-                value={dateFormat}
-                onChange={(val) => setDateFormat(val as string)}
-              />
-            </div>
-            {/* Time Format */}
-            <div className="mb-3">
-              <div className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Time Format</div>
-              <AdvancedDropdown
-                options={timeFormatOptions}
-                value={timeFormat}
-                onChange={(value: any) => setTimeFormat(value)}
-              />
-            </div>
+            <DateFormatSelect value={dateFormat} onChange={setDateFormat} />
+            <TimeFormatSelect value={timeFormat} onChange={setTimeFormat} />
 
-            {/* Time Display Preference */}
-            <div className="mb-3">
-              <div className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Time Display</div>
-              <div className="flex items-center gap-2">
-                {renderHourFormatToggle({
-                  hourFormat,
-                  setHourFormat,
-                  wrapperClassName: 'flex items-center gap-2',
-                })}
-              </div>
-            </div>
-
-            {/* Timezone Options */}
-            <div className="mb-3">
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <div className="relative inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={displayTimeZone}
-                      onChange={e => setDisplayTimeZone(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                    <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-                  </div>
-                  <span className="text-sm text-[var(--color-text-tertiary)]">Display time zone</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <div className="relative inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={sameTimezone}
-                      onChange={e => setSameTimezone(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
-                    <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-                  </div>
-                  <span className="text-sm text-[var(--color-text-tertiary)]">Use same timezone for all members</span>
-                </label>
-                {sameTimezone && (
-                  <div className="mt-2">
-                    <AdvancedDropdown
-                      options={timeZoneOptions.map((o: any) => ({ label: o.label, value: o.label, rightLabel: o.value, description: o.value }))}
-                      value={timeZone}
-                      onChange={(val: any) => setTimeZone(val as string)}
-                      searchable={true}
-                      placeholder="Select time zone"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
+            <HourFormatSelect value={hourFormat} onChange={setHourFormat} />
+            <TimeZoneSettings
+              displayTimeZone={displayTimeZone}
+              onDisplayTimeZoneChange={setDisplayTimeZone}
+              sameTimezone={sameTimezone}
+              onSameTimezoneChange={setSameTimezone}
+              timeZone={timeZone}
+              onTimeZoneChange={setTimeZone}
+            />
 
             {/* Default Value - Only show for datetime, not for createdTime/lastModifiedTime */}
             {selectedType?.key === 'datetime' && (

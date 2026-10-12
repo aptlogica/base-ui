@@ -9,7 +9,7 @@ import { useWorkspaceBases, useCreateBase, useUpdateBase, useDeleteBase, useBase
 import { useNavigationStore } from '../stores/navigationStore';
 import { useNavigationActions } from '../hooks/useNavigationActions';
 import { Loader } from '../components/ui/Loader';
-import { CreateBaseModal } from '../components/modals/CreateBaseModal';
+import { CreateBaseModal, type CreateBaseData } from '../components/modals/CreateBaseModal';
 import { ImportDataModal } from '../components/modals/ImportDataModal';
 import { ImportModal } from '../components/modals/ImportModal';
 import { EditItemModal } from '../components/modals/EditItemModal';
@@ -28,8 +28,9 @@ import { getRoleLabel } from '../types/roles';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser, getUserDisplayName } from '../auth/useCurrentUser';
 import { useNavigateToBaseFirstView } from '../hooks/useNavigateToBaseFirstView';
-import { getInitials } from '../utils/helpers';
 import { invalidateBaseQueries } from '../utils/queryInvalidation';
+import { getInitials, getCreatedTableId } from '../utils/helpers';
+import { useNavigation } from '../hooks/useNavigation';
 import { Base } from '../types/api.types';
 
 // Wrapper component to handle hooks properly
@@ -80,7 +81,9 @@ const getSortOptionLabel = (option: 'recent' | 'a-z' | 'z-a'): string => {
 
 const HomePage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { selectedWorkspaceId, navigateToTable } = useNavigationStore();
+  const { selectedWorkspaceId } = useNavigationStore();
+  // URL-aware navigation (updates store + route)
+  const { navigateToTable } = useNavigation();
   const { data: workspacesData } = useWorkspaces();
   const { data: workspaceBasesData, isLoading: basesLoading } = useWorkspaceBases(selectedWorkspaceId || '');
   const toast = useToast();
@@ -303,7 +306,7 @@ const HomePage: React.FC = () => {
     setShowAddMembers(true);
   };
 
-  const handleCreateBase = async ({ name, description, image }: { name: string; description: string; image?: File | null }) => {
+  const handleCreateBase = async ({ name, description, image, meta }: CreateBaseData) => {
     if (!selectedWorkspaceId) {
       toast.error('Please select a workspace first');
       return;
@@ -315,6 +318,7 @@ const HomePage: React.FC = () => {
         description: description || '',
         workspace_id: selectedWorkspaceId,
         image: image || undefined,
+        meta,
       });
 
       // Invalidate queries to refresh the bases list
@@ -790,8 +794,9 @@ const HomePage: React.FC = () => {
                 });
 
                 // Navigate to the newly created table
-                if (selectedWorkspaceId && showCreateTableBaseId && newTable && typeof newTable === 'object' && 'data' in newTable && (newTable as any).data?.id) {
-                  navigateToTable(selectedWorkspaceId, showCreateTableBaseId, (newTable as any).data.id);
+                const newTableId = getCreatedTableId(newTable);
+                if (selectedWorkspaceId && showCreateTableBaseId && newTableId) {
+                  navigateToTable(selectedWorkspaceId, showCreateTableBaseId, newTableId);
                 }
 
                 setShowCreateTableBaseId(null);

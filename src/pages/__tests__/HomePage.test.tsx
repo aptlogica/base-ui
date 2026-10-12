@@ -21,6 +21,7 @@ const {
   mockUseCurrentUser,
   mockUseNavigateToBaseFirstView,
   mockUseQueryClient,
+  mockUseNavigation,
 } = vi.hoisted(() => ({
   mockUseWorkspaceBases: vi.fn(),
   mockUseWorkspaces: vi.fn(),
@@ -37,6 +38,7 @@ const {
   mockUseCurrentUser: vi.fn(),
   mockUseNavigateToBaseFirstView: vi.fn(),
   mockUseQueryClient: vi.fn(),
+  mockUseNavigation: vi.fn(),
 }));
 
 // Mock hooks BEFORE importing component
@@ -52,6 +54,10 @@ vi.mock('../../hooks/useApi', () => ({
 
 vi.mock('../../stores/navigationStore', () => ({
   useNavigationStore: mockUseNavigationStore,
+}));
+
+vi.mock('../../hooks/useNavigation', () => ({
+  useNavigation: mockUseNavigation,
 }));
 
 vi.mock('../../hooks/useNavigationActions', () => ({
@@ -295,6 +301,10 @@ const setupDefaultMocks = () => {
 
   mockUseNavigationStore.mockReturnValue({
     selectedWorkspaceId: 'ws-1',
+    navigateToTable: vi.fn(),
+  });
+
+  mockUseNavigation.mockReturnValue({
     navigateToTable: vi.fn(),
   });
 
@@ -1759,8 +1769,8 @@ describe('HomePage', () => {
       const navigateToTable = vi.fn();
       mockUseNavigationStore.mockReturnValue({
         selectedWorkspaceId: 'ws-1',
-        navigateToTable,
       });
+      mockUseNavigation.mockReturnValue({ navigateToTable });
 
       mockUseWorkspaceBases.mockReturnValue({
         data: { data: mockBases },

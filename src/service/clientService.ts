@@ -688,7 +688,24 @@ export async function removeUserFromWorkspaceService(workspaceId: string, params
 
 // BaseService wrappers with auth/tenant headers
 export async function createBaseService(params: any) {
-  return await makeAuthenticatedCall(() => client.baseService.create(params));
+  if (!params?.meta) {
+    return await makeAuthenticatedCall(() => client.baseService.create(params));
+  }
+  // The SDK's create() only forwards title/description/workspace_id/image, so build the
+  // same multipart request here to also send `meta` (base-level format defaults)
+  return await makeAuthenticatedCall(() => {
+    const httpClient = (client as any).http;
+    const formData = new FormData();
+    formData.append('title', params.title);
+    if (params.description) formData.append('description', params.description);
+    if (params.workspace_id) formData.append('workspace_id', params.workspace_id);
+    if (params.image) formData.append('image', params.image);
+    formData.append('meta', JSON.stringify(params.meta));
+    return httpClient.post('/base/create', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      ...httpClient.getUploadLimits?.(false),
+    });
+  });
 }
 
 export async function getBaseByIdService(id: string) {

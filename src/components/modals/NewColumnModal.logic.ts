@@ -429,3 +429,55 @@ export const buildColumnPayload = (params: BuildColumnPayloadParams) => {
     meta: finalMeta,
   };
 };
+
+export interface BaseFormatDefaults {
+  dateFormat?: string;
+  timeFormat?: string;
+  hourFormat?: '12' | '24';
+  displayTimeZone?: boolean;
+  sameTimezone?: boolean;
+  timeZone?: string;
+  currencyLocale?: string;
+  currencyType?: string;
+}
+
+const DATE_TIME_FIELD_TYPES = new Set(['datetime', 'createdTime', 'lastModifiedTime']);
+
+/**
+ * Resolves the format defaults saved in a base's `meta` (set on base creation)
+ * for the given field type. `meta` may arrive as an object or a JSON string.
+ */
+export const getBaseFormatDefaults = (meta: unknown, fieldTypeKey: string): BaseFormatDefaults => {
+  let parsed: any = meta;
+  if (typeof meta === 'string') {
+    try {
+      parsed = JSON.parse(meta);
+    } catch {
+      return {};
+    }
+  }
+  if (!parsed || typeof parsed !== 'object') return {};
+
+  if (fieldTypeKey === 'date') {
+    return { dateFormat: parsed.dateFormat || undefined };
+  }
+  if (DATE_TIME_FIELD_TYPES.has(fieldTypeKey)) {
+    const dateTime = parsed.dateTimeFormat || {};
+    const hourFormat = String(dateTime.hourFormat ?? '');
+    return {
+      dateFormat: dateTime.dateFormat || undefined,
+      timeFormat: dateTime.timeFormat || undefined,
+      hourFormat: hourFormat === '12' || hourFormat === '24' ? hourFormat : undefined,
+      displayTimeZone: typeof dateTime.displayTimeZone === 'boolean' ? dateTime.displayTimeZone : undefined,
+      sameTimezone: typeof dateTime.sameTimezone === 'boolean' ? dateTime.sameTimezone : undefined,
+      timeZone: dateTime.timeZone || undefined,
+    };
+  }
+  if (fieldTypeKey === 'currency') {
+    return {
+      currencyLocale: parsed.currencyLocale || undefined,
+      currencyType: parsed.currencyType || undefined,
+    };
+  }
+  return {};
+};

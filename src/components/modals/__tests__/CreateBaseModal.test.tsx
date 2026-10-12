@@ -285,4 +285,104 @@ describe('CreateBaseModal', () => {
     expect(screen.queryByAltText('Preview')).not.toBeInTheDocument();
   });
 
+  it('keeps Advanced Selector off by default and hides format fields', () => {
+    render(
+      <CreateBaseModal
+        isOpen={true}
+        onClose={onClose}
+        onCreate={onCreate}
+        workspaceId="w1"
+      />
+    );
+
+    expect(screen.getByRole('switch', { name: 'Advanced Selector' })).not.toBeChecked();
+    expect(screen.queryByText('Date Format')).not.toBeInTheDocument();
+    expect(screen.queryByText('Currency Locale')).not.toBeInTheDocument();
+  });
+
+  it('shows date, date-time and currency fields when Advanced Selector is on and submits them', async () => {
+    render(
+      <CreateBaseModal
+        isOpen={true}
+        onClose={onClose}
+        onCreate={onCreate}
+        workspaceId="w1"
+      />
+    );
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Advanced Selector' }));
+
+    expect(screen.getByText('Date Format')).toBeInTheDocument();
+    expect(screen.getByText('Date-Time Format (Date)')).toBeInTheDocument();
+    expect(screen.getByText('Date-Time Format (Time)')).toBeInTheDocument();
+    expect(screen.getByText('Time Display')).toBeInTheDocument();
+    expect(screen.getByText('Display time zone')).toBeInTheDocument();
+    expect(screen.getByText('Use same timezone for all members')).toBeInTheDocument();
+    expect(screen.getByText('Currency Locale')).toBeInTheDocument();
+    expect(screen.getByText('Currency Code')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('Enter base name'), {
+      target: { value: 'Sales' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Base' }));
+
+    await waitFor(() =>
+      expect(onCreate).toHaveBeenCalledWith({
+        name: 'Sales',
+        description: '',
+        image: null,
+        meta: {
+          dateFormat: 'YYYY-MM-DD',
+          dateTimeFormat: {
+            dateFormat: 'YYYY-MM-DD',
+            timeFormat: 'hh:mm',
+            hourFormat: '24',
+            displayTimeZone: false,
+            sameTimezone: false,
+            timeZone: '',
+          },
+          currencyLocale: 'en-US',
+          currencyType: 'USD',
+        },
+      })
+    );
+  });
+
+  it('submits chosen time display and timezone options', async () => {
+    render(
+      <CreateBaseModal
+        isOpen={true}
+        onClose={onClose}
+        onCreate={onCreate}
+        workspaceId="w1"
+      />
+    );
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Advanced Selector' }));
+    fireEvent.click(screen.getByLabelText('12 Hrs'));
+    fireEvent.click(screen.getByLabelText('Display time zone'));
+    fireEvent.click(screen.getByLabelText('Use same timezone for all members'));
+
+    expect(screen.getByText('Select time zone')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('Enter base name'), {
+      target: { value: 'Sales' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Base' }));
+
+    await waitFor(() =>
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          meta: expect.objectContaining({
+            dateTimeFormat: expect.objectContaining({
+              hourFormat: '12',
+              displayTimeZone: true,
+              sameTimezone: true,
+            }),
+          }),
+        })
+      )
+    );
+  });
+
 });
