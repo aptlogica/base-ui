@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Table2, X, HelpCircle } from 'lucide-react';
 import { MultiLineText } from '../common/Fields/MultiLineText';
 import { validateTableName, getDefaultTableName } from '../../utils/nameValidation';
@@ -10,8 +10,7 @@ import { validateTableName, getDefaultTableName } from '../../utils/nameValidati
 interface CreateTableModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (data: { name: string; description: string }) => void;
-  baseId: string;
+  onCreate: (data: { name: string; description: string }) => void | Promise<void>;
   defaultName?: string;
   existingTables?: any[];
 }
@@ -20,26 +19,47 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
   isOpen,
   onClose,
   onCreate,
-  baseId,
   defaultName = '',
   existingTables = [],
 }) => {
-  const [name, setName] = useState(defaultName);
+  // Compute the default name up front so the input renders with it already filled in
+  const [name, setName] = useState(() => defaultName || getDefaultTableName(existingTables));
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const shouldSelectNameRef = useRef(true);
+  const existingTablesRef = useRef(existingTables);
+  existingTablesRef.current = existingTables;
+  const wasOpenRef = useRef(isOpen);
 
+  // Re-populate the default name only when the modal goes from closed to open, so parent
+  // re-renders (e.g. a new existingTables array reference) don't overwrite what the user typed
   useEffect(() => {
-    if (isOpen) {
-      const initialName = defaultName || getDefaultTableName(existingTables);
-      setName(initialName);
+    if (isOpen && !wasOpenRef.current) {
+      setName(defaultName || getDefaultTableName(existingTablesRef.current));
       setDescription('');
       setError('');
       setValidationError('');
       setIsSubmitting(false);
+      shouldSelectNameRef.current = true;
     }
-  }, [isOpen, defaultName, existingTables]);
+    wasOpenRef.current = isOpen;
+  }, [isOpen, defaultName]);
+
+  // Select the pre-populated name once it is in the input so typing replaces it
+  useEffect(() => {
+    if (!isOpen || !shouldSelectNameRef.current || !name) return undefined;
+    const timer = setTimeout(() => {
+      const input = nameInputRef.current;
+      if (!input) return;
+      shouldSelectNameRef.current = false;
+      input.focus();
+      input.select();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [isOpen, name]);
 
   // Validate name on change
   useEffect(() => {
@@ -85,10 +105,10 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      onCreate({ name: name.trim(), description: description.trim() });
-    } catch (err: any) {
+      await onCreate({ name: name.trim(), description: description.trim() });
+    } catch (err: unknown) {
       if (err && typeof err === 'object' && 'message' in err) {
-        setError((err as Error).message || 'Failed to create table. Please try again.');
+        setError(String(err.message) || 'Failed to create table. Please try again.');
       } else {
         setError('Failed to create table. Please try again.');
       }
@@ -135,7 +155,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
           </button>
         </div>
         {/* Scrollable Content Area */}
-        <form id="create-table-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+        <form id="create-table-form" onSubmit={(e) => { void handleSubmit(e); }} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="p-4 space-y-4">
             <div className="space-y-1">
               <label htmlFor="tableName" className="block text-sm font-medium text-primary mb-1">
@@ -145,6 +165,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
                 <input
                   type="text"
                   id="tableName"
+                  ref={nameInputRef}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter table name"
@@ -208,7 +229,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
             type="button"
             onClick={(e) => {
               e.preventDefault();
-              handleSubmit(e);
+              void handleSubmit(e);
             }}
             disabled={isSubmitting || !name.trim() || name.trim().length < 3}
             className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"

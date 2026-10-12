@@ -379,6 +379,37 @@ describe('clientService', () => {
     expect(client.organization.getAll).toHaveBeenCalled();
   });
 
+  it('sends base meta as JSON in the create-base form data', async () => {
+    sessionStorage.setItem('user_id', 'u1');
+    const http = (client as any).http;
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValue({ data: { id: 'b1' } });
+    const meta = { dateFormat: 'DD/MM/YYYY', currencyLocale: 'en-IN', currencyType: 'INR' };
+
+    const result = await createBaseService({ title: 'Base', description: 'd', workspace_id: 'w1', meta });
+
+    expect(result).toEqual({ data: { id: 'b1' } });
+    const [url, formData] = postSpy.mock.calls[0] as [string, FormData];
+    expect(url).toBe('/base/create');
+    expect(formData.get('title')).toBe('Base');
+    expect(formData.get('workspace_id')).toBe('w1');
+    expect(JSON.parse(formData.get('meta') as string)).toEqual(meta);
+    postSpy.mockRestore();
+  });
+
+  it('omits optional create-base fields that are not provided', async () => {
+    sessionStorage.setItem('user_id', 'u1');
+    const http = (client as any).http;
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValue({ data: { id: 'b2' } });
+
+    await createBaseService({ title: 'Base', image: new File(['x'], 'x.png'), meta: { dateFormat: 'YYYY-MM-DD' } });
+
+    const formData = postSpy.mock.calls[0][1] as FormData;
+    expect(formData.has('description')).toBe(false);
+    expect(formData.has('workspace_id')).toBe(false);
+    expect(formData.get('image')).toBeInstanceOf(File);
+    postSpy.mockRestore();
+  });
+
   it('continues base update when image upload fails', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     sessionStorage.setItem('user_id', 'u1');
@@ -523,5 +554,73 @@ describe('clientService', () => {
 
     await login({ email: 'user@example.com', password: 'pw' } as any);
     expect(sessionStorage.getItem('user_role')).toBe('workspace-owner');
+  });
+
+  describe('refresh failures force logout', () => {
+    const now = () => Math.floor(Date.now() / 1000);
+
+    const seedExpiredAccess = () => {
+      sessionStorage.setItem('_st_', createJwt({ exp: now() - 10, user_id: 'user-1' }));
+      sessionStorage.setItem('_te_', String(now() - 10));
+    };
+
+    const expectLoggedOut = async () => {
+      const listener = vi.fn();
+      globalThis.addEventListener('auth_token_expired', listener);
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      (globalThis as any).location.pathname = '/login';
+
+      await expect(isAuthenticated()).resolves.toBe(false);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(getStoredAccessToken()).toBe('');
+      globalThis.removeEventListener('auth_token_expired', listener);
+    };
+
+    it('logs out when no refresh token is stored', async () => {
+      seedExpiredAccess();
+      sessionStorage.setItem('user_id', 'user-1');
+      await expectLoggedOut();
+    });
+
+    it('logs out when no user_id is stored', async () => {
+      seedExpiredAccess();
+      sessionStorage.setItem('_rt_', 'refresh-token');
+      sessionStorage.setItem('_rte_', String(now() + 3600));
+      await expectLoggedOut();
+    });
+
+    it('logs out when the refresh token is expired', async () => {
+      seedExpiredAccess();
+      sessionStorage.setItem('_rt_', 'refresh-token');
+      sessionStorage.setItem('_rte_', String(now() - 10));
+      sessionStorage.setItem('user_id', 'user-1');
+      await expectLoggedOut();
+    });
+
+    it('logs out when the refresh endpoint returns 401', async () => {
+      seedExpiredAccess();
+      sessionStorage.setItem('_rt_', 'refresh-token');
+      sessionStorage.setItem('_rte_', String(now() + 3600));
+      sessionStorage.setItem('user_id', 'user-1');
+      (client.auth as any).refreshToken = vi.fn().mockRejectedValue({ response: { status: 401 } });
+      await expectLoggedOut();
+    });
+
+    it('does not log out when the refresh endpoint fails with a non-auth error', async () => {
+      seedExpiredAccess();
+      sessionStorage.setItem('_rt_', 'refresh-token');
+      sessionStorage.setItem('_rte_', String(now() + 3600));
+      sessionStorage.setItem('user_id', 'user-1');
+      (client.auth as any).refreshToken = vi.fn().mockRejectedValue({ response: { status: 500 } });
+      const listener = vi.fn();
+      globalThis.addEventListener('auth_token_expired', listener);
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await expect(isAuthenticated()).resolves.toBe(false);
+
+      expect(listener).not.toHaveBeenCalled();
+      globalThis.removeEventListener('auth_token_expired', listener);
+    });
   });
 });

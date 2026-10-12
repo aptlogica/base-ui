@@ -246,19 +246,19 @@ const refreshAccessToken = async (): Promise<string> => {
     // Validate refresh token and user ID
     if (!refreshToken) {
       console.error('No refresh token found in storage');
-      await forceLogout();
+      forceLogout();
       return '';
     }
 
     if (!userId) {
       console.error('No user_id found in storage');
-      await forceLogout();
+      forceLogout();
       return '';
     }
 
     if (isRefreshExpired) {
       console.error('Refresh token is expired');
-      await forceLogout();
+      forceLogout();
       return '';
     }
 
@@ -304,7 +304,7 @@ const refreshAccessToken = async (): Promise<string> => {
 
     // Only force logout on authentication errors (401, 403)
     if (error?.response?.status === 401 || error?.response?.status === 403) {
-      await forceLogout();
+      forceLogout();
     }
 
     return '';
@@ -325,7 +325,7 @@ export const updateClientToken = (token: string) => {
  * Dispatches 'auth_token_expired' event for components to handle
  * Uses custom event for navigation to avoid full page refresh
  */
-export const forceLogout = async (): Promise<void> => {
+export const forceLogout = (): void => {
   clearTokens();
   updateClientToken('');
 
@@ -688,7 +688,24 @@ export async function removeUserFromWorkspaceService(workspaceId: string, params
 
 // BaseService wrappers with auth/tenant headers
 export async function createBaseService(params: any) {
-  return await makeAuthenticatedCall(() => client.baseService.create(params));
+  if (!params?.meta) {
+    return await makeAuthenticatedCall(() => client.baseService.create(params));
+  }
+  // The SDK's create() only forwards title/description/workspace_id/image, so build the
+  // same multipart request here to also send `meta` (base-level format defaults)
+  return await makeAuthenticatedCall(() => {
+    const httpClient = (client as any).http;
+    const formData = new FormData();
+    formData.append('title', params.title);
+    if (params.description) formData.append('description', params.description);
+    if (params.workspace_id) formData.append('workspace_id', params.workspace_id);
+    if (params.image) formData.append('image', params.image);
+    formData.append('meta', JSON.stringify(params.meta));
+    return httpClient.post('/base/create', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      ...httpClient.getUploadLimits?.(false),
+    });
+  });
 }
 
 export async function getBaseByIdService(id: string) {
