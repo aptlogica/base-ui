@@ -28,6 +28,7 @@ import { getRoleLabel } from '../types/roles';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser, getUserDisplayName } from '../auth/useCurrentUser';
 import { useNavigateToBaseFirstView } from '../hooks/useNavigateToBaseFirstView';
+import { invalidateBaseQueries } from '../utils/queryInvalidation';
 import { getInitials, getCreatedTableId } from '../utils/helpers';
 import { useNavigation } from '../hooks/useNavigation';
 import { Base } from '../types/api.types';
@@ -195,7 +196,7 @@ const HomePage: React.FC = () => {
     return sorted;
   }, [allBases, searchTerm, sortOption]);
 
-  const handleBaseClick = async (base: any) => {
+  const handleBaseClick = (base: any) => {
     // Set the base to check - this will trigger the useBaseTables hook
     setCheckingBaseId(base.id);
   };
@@ -271,9 +272,7 @@ const HomePage: React.FC = () => {
       setEditingBase(null);
 
       // Invalidate queries to refresh the list
-      queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      queryClient.invalidateQueries({ queryKey: ['allBases'] });
+      invalidateBaseQueries(queryClient, selectedWorkspaceId);
     } catch (err: any) {
       console.error('Failed to update base:', err);
       toast.error(err?.message || 'Failed to update base. Please try again.');
@@ -292,9 +291,7 @@ const HomePage: React.FC = () => {
       handleBaseDeletion(baseId);
 
       // Invalidate queries to refresh the list
-      queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      queryClient.invalidateQueries({ queryKey: ['allBases'] });
+      invalidateBaseQueries(queryClient, selectedWorkspaceId);
 
       toast.success('Base deleted successfully');
     } catch (err: any) {
@@ -325,9 +322,7 @@ const HomePage: React.FC = () => {
       });
 
       // Invalidate queries to refresh the bases list
-      queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      queryClient.invalidateQueries({ queryKey: ['allBases'] });
+      invalidateBaseQueries(queryClient, selectedWorkspaceId);
 
       toast.success('Base created successfully');
       setShowCreateBase(false);

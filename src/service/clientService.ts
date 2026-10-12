@@ -246,19 +246,19 @@ const refreshAccessToken = async (): Promise<string> => {
     // Validate refresh token and user ID
     if (!refreshToken) {
       console.error('No refresh token found in storage');
-      await forceLogout();
+      forceLogout();
       return '';
     }
 
     if (!userId) {
       console.error('No user_id found in storage');
-      await forceLogout();
+      forceLogout();
       return '';
     }
 
     if (isRefreshExpired) {
       console.error('Refresh token is expired');
-      await forceLogout();
+      forceLogout();
       return '';
     }
 
@@ -304,7 +304,7 @@ const refreshAccessToken = async (): Promise<string> => {
 
     // Only force logout on authentication errors (401, 403)
     if (error?.response?.status === 401 || error?.response?.status === 403) {
-      await forceLogout();
+      forceLogout();
     }
 
     return '';
@@ -325,7 +325,7 @@ export const updateClientToken = (token: string) => {
  * Dispatches 'auth_token_expired' event for components to handle
  * Uses custom event for navigation to avoid full page refresh
  */
-export const forceLogout = async (): Promise<void> => {
+export const forceLogout = (): void => {
   clearTokens();
   updateClientToken('');
 

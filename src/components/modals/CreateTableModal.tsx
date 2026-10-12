@@ -10,7 +10,7 @@ import { validateTableName, getDefaultTableName } from '../../utils/nameValidati
 interface CreateTableModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (data: { name: string; description: string }) => void;
+  onCreate: (data: { name: string; description: string }) => void | Promise<void>;
   defaultName?: string;
   existingTables?: any[];
 }
@@ -86,7 +86,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  const handleSubmit = (e?: React.SyntheticEvent) => {
+  const handleSubmit = async (e?: React.SyntheticEvent) => {
     e?.preventDefault();
 
     if (!name.trim()) {
@@ -105,10 +105,10 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      onCreate({ name: name.trim(), description: description.trim() });
-    } catch (err: any) {
+      await onCreate({ name: name.trim(), description: description.trim() });
+    } catch (err: unknown) {
       if (err && typeof err === 'object' && 'message' in err) {
-        setError((err as Error).message || 'Failed to create table. Please try again.');
+        setError(String(err.message) || 'Failed to create table. Please try again.');
       } else {
         setError('Failed to create table. Please try again.');
       }
@@ -155,7 +155,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
           </button>
         </div>
         {/* Scrollable Content Area */}
-        <form id="create-table-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+        <form id="create-table-form" onSubmit={(e) => { void handleSubmit(e); }} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="p-4 space-y-4">
             <div className="space-y-1">
               <label htmlFor="tableName" className="block text-sm font-medium text-primary mb-1">
@@ -229,7 +229,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
             type="button"
             onClick={(e) => {
               e.preventDefault();
-              handleSubmit(e);
+              void handleSubmit(e);
             }}
             disabled={isSubmitting || !name.trim() || name.trim().length < 3}
             className="flex items-center gap-2 px-16 py-2 rounded-xl btn-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
