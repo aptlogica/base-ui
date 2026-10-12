@@ -144,7 +144,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                 ...record
             }))
             // On a self-link a record can't link to itself.
-            .filter((record: RelatedRecord) => !(isSelfLink && currentRowId !== undefined && record.id === String(currentRowId)));
+            .filter((record: RelatedRecord) => !(isSelfLink && currentRowId !== undefined && String(record.id) === String(currentRowId)));
     }, [tableData, isSelfLink, currentRowId]);
 
     const recordsById = useMemo(() => {

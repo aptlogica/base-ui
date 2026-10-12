@@ -1144,10 +1144,6 @@ export function renderNewColumnConfigStep(props: any) {
     setSelectedTableId,
     selectedTable,
     setSelectedTable,
-    inverseTitle,
-    setInverseTitle,
-    isSelfLink,
-    currentTableId,
     selectedRelationId,
     setSelectedRelationId,
     selectedLookupColumnId,
@@ -1184,6 +1180,8 @@ export function renderNewColumnConfigStep(props: any) {
     isValidPercentInput,
     isLinksFieldEditing,
   } = props;
+  // Self-link props for the links field config.
+  const { inverseTitle, setInverseTitle, isSelfLink, currentTableId } = props;
   const handleJsonChange = (value: any) => {
     const stringify = JSON.stringify(value, null, 2);
     setDefaultValue(stringify);

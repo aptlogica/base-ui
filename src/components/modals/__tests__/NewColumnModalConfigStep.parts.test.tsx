@@ -433,6 +433,167 @@ describe('NewColumnModalConfigStep split modules', () => {
     expect(screen.getByTestId('Select table to link')).toBeDisabled();
   });
 
+  it('relations: links type marks the current table and clears inverse title on self-link', () => {
+    const setSelectedTableId = vi.fn();
+    const setSelectedTable = vi.fn();
+    const setInverseTitle = vi.fn();
+    const tables = [
+      { id: 't1', title: 'Orders' },
+      { id: 't2', alias: 'customers' },
+      { id: 't3' },
+    ];
+
+    renderStep(
+      renderRelationsConfigStep({
+        selectedType: { key: 'links' },
+        isLinksFieldEditing: false,
+        relationType: 'one-to-one',
+        setRelationType: vi.fn(),
+        tables,
+        selectedTableId: '',
+        setSelectedTableId,
+        selectedTable: null,
+        setSelectedTable,
+        setInverseTitle,
+        currentTableId: 't1',
+        showDescription: false,
+        setShowDescription: vi.fn(),
+        description: '',
+        setDescription: vi.fn(),
+      })
+    );
+
+    expect(screen.getByRole('option', { name: 'Orders (this table)' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'customers' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Table t3' })).toBeInTheDocument();
+
+    const dropdown = screen.getByTestId('Select table to link');
+    fireEvent.change(dropdown, { target: { value: 't2' } });
+    expect(setInverseTitle).not.toHaveBeenCalled();
+
+    fireEvent.change(dropdown, { target: { value: 't1' } });
+    expect(setSelectedTableId).toHaveBeenLastCalledWith('t1');
+    expect(setSelectedTable).toHaveBeenLastCalledWith({ id: 't1', title: 'Orders' });
+    expect(setInverseTitle).toHaveBeenCalledWith('');
+  });
+
+  it('relations: links type shows self-link note instead of inverse title input', () => {
+    renderStep(
+      renderRelationsConfigStep({
+        selectedType: { key: 'links' },
+        isLinksFieldEditing: false,
+        relationType: 'one-to-one',
+        setRelationType: vi.fn(),
+        tables: undefined,
+        selectedTableId: 't1',
+        setSelectedTableId: vi.fn(),
+        selectedTable: { id: 't1', title: 'Orders' },
+        setSelectedTable: vi.fn(),
+        inverseTitle: '',
+        setInverseTitle: vi.fn(),
+        isSelfLink: true,
+        currentTableId: 't1',
+        showDescription: false,
+        setShowDescription: vi.fn(),
+        description: '',
+        setDescription: vi.fn(),
+      })
+    );
+
+    expect(screen.getByText(/Linking a table to itself creates one field/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Field name in linked table')).not.toBeInTheDocument();
+  });
+
+  it('relations: links type updates inverse title for another table', () => {
+    const setInverseTitle = vi.fn();
+
+    renderStep(
+      renderRelationsConfigStep({
+        selectedType: { key: 'links' },
+        isLinksFieldEditing: false,
+        relationType: 'one-to-one',
+        setRelationType: vi.fn(),
+        tables: [{ id: 't2', title: 'Customers' }],
+        selectedTableId: 't2',
+        setSelectedTableId: vi.fn(),
+        selectedTable: { id: 't2', title: 'Customers' },
+        setSelectedTable: vi.fn(),
+        inverseTitle: '',
+        setInverseTitle,
+        isSelfLink: false,
+        currentTableId: 't1',
+        showDescription: false,
+        setShowDescription: vi.fn(),
+        description: '',
+        setDescription: vi.fn(),
+      })
+    );
+
+    expect(screen.queryByText(/Linking a table to itself creates one field/)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Field name in linked table'), { target: { value: 'Orders' } });
+    expect(setInverseTitle).toHaveBeenCalledWith('Orders');
+  });
+
+  it('relations: lookup labels link fields with the table they point to', () => {
+    renderStep(
+      renderRelationsConfigStep({
+        selectedType: { key: 'lookup' },
+        tables: [
+          { id: 't1', title: 'Orders' },
+          { id: 't2', title: 'Customers' },
+          { id: 't3', alias: 'products' },
+        ],
+        currentTableId: 't1',
+        linkFields: [
+          { id: 'self', title: 'Parent', meta: { relation: { with: 't1' } } },
+          { id: 'cust', name: 'Customer', meta: { relation: { with: 't2' } } },
+          { id: 'prod', title: 'Product', meta: { relation: { with: 't3' } } },
+          { id: 'gone', meta: { relation: { with: 'missing' } } },
+        ],
+        targetTableFields: [],
+        selectedRelationId: '',
+        setSelectedRelationId: vi.fn(),
+        selectedLookupColumnId: '',
+        setSelectedLookupColumnId: vi.fn(),
+        setHasUserModifiedLookupColumn: vi.fn(),
+        isTargetTableLoading: false,
+        showDescription: false,
+        setShowDescription: vi.fn(),
+        description: '',
+        setDescription: vi.fn(),
+      })
+    );
+
+    expect(screen.getByRole('option', { name: 'Parent → this table' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Customer → Customers' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Product → products' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'gone' })).toBeInTheDocument();
+  });
+
+  it('relations: lookup falls back to field label when tables are unavailable', () => {
+    renderStep(
+      renderRelationsConfigStep({
+        selectedType: { key: 'lookup' },
+        tables: undefined,
+        currentTableId: 't1',
+        linkFields: [{ id: 'cust', title: 'Customer', meta: { relation: { with: 't2' } } }],
+        targetTableFields: [],
+        selectedRelationId: '',
+        setSelectedRelationId: vi.fn(),
+        selectedLookupColumnId: '',
+        setSelectedLookupColumnId: vi.fn(),
+        setHasUserModifiedLookupColumn: vi.fn(),
+        isTargetTableLoading: false,
+        showDescription: false,
+        setShowDescription: vi.fn(),
+        description: '',
+        setDescription: vi.fn(),
+      })
+    );
+
+    expect(screen.getByRole('option', { name: 'Customer' })).toBeInTheDocument();
+  });
+
   it('relations: lookup type updates relation/lookup fields', () => {
     const setSelectedRelationId = vi.fn();
     const setSelectedLookupColumnId = vi.fn();
