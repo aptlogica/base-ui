@@ -56,6 +56,9 @@ export interface BuildFieldMetaParams {
   selectedTableId: string;
   selectedTable: any;
   relationType: 'one-to-one' | 'has-many' | 'many-to-many';
+  // Title of the column created on the other table (not used for a self-link, which has one column)
+  inverseTitle?: string;
+  currentTableId?: string;
   selectedRelationId: string;
   selectedLookupColumnId: string;
   linkFields: any[];
@@ -273,6 +276,10 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
       with: params.selectedTableId,
       type: params.relationType
     };
+    const inverseTitle = params.inverseTitle?.trim();
+    if (inverseTitle && params.selectedTableId !== params.currentTableId) {
+      config.relation.inverse_title = inverseTitle;
+    }
   };
 
   const handleLookup = (): BuildFieldMetaResult | void => {
@@ -293,6 +300,8 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
       return { error: 'Selected link field does not have a valid relation_id' };
     }
     config.relation_id = relationIdFromMeta;
+    // Both columns of a self-link share relation_id, so the link field decides the direction.
+    config.link_column_id = params.selectedRelationId;
     config.lookup_column_id = params.selectedLookupColumnId;
   };
 
