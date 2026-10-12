@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useWorkspaceBusinessLogic } from '../useWorkspaceBusinessLogic';
 
@@ -169,5 +169,56 @@ describe('useWorkspaceBusinessLogic', () => {
     });
 
     expect(toastError).toHaveBeenCalledWith('No workspace selected');
+  });
+
+  describe('navigation after workspace creation', () => {
+    let rafSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      rafSpy = vi
+        .spyOn(globalThis, 'requestAnimationFrame')
+        .mockImplementation((cb: FrameRequestCallback) => {
+          cb(0);
+          return 0;
+        });
+    });
+
+    afterEach(() => {
+      rafSpy.mockRestore();
+      mockState.navigateAndPersist.mockReset();
+    });
+
+    it('falls back to workspace home when navigateAndPersist throws', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockState.navigateAndPersist.mockImplementation(() => {
+        throw new Error('persist failed');
+      });
+      createWorkspaceMutation.mutateAsync.mockResolvedValue({
+        data: { id: 'ws1', bases: [{ id: 'b1', tables: [{ id: 't1' }] }] },
+      });
+
+      const { result } = renderHook(() => useWorkspaceBusinessLogic());
+      await act(async () => {
+        await result.current.handleCreateWorkspace('Workspace', 'Desc');
+      });
+
+      expect(mockState.navigate).toHaveBeenCalledWith('/workspace/ws1', { replace: true });
+      expect(consoleSpy).toHaveBeenCalledWith('Navigation error after workspace creation:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('navigates to workspace home when the new workspace has no bases', async () => {
+      const onSuccess = vi.fn();
+      createWorkspaceMutation.mutateAsync.mockResolvedValue({ data: { id: 'ws2', bases: [] } });
+
+      const { result } = renderHook(() => useWorkspaceBusinessLogic());
+      await act(async () => {
+        await result.current.handleCreateWorkspace('Workspace', '', onSuccess);
+      });
+
+      expect(mockState.navigateAndPersist).not.toHaveBeenCalled();
+      expect(mockState.navigate).toHaveBeenCalledWith('/workspace/ws2', { replace: true });
+      expect(onSuccess).toHaveBeenCalledWith({ id: 'ws2', bases: [] });
+    });
   });
 });

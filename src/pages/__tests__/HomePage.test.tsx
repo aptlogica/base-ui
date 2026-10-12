@@ -1934,4 +1934,66 @@ describe('HomePage', () => {
       });
     });
   });
+
+  describe('Base mutation success flows', () => {
+    it('deletes base, cleans up navigation and invalidates queries', async () => {
+      const mockQueryClient = { invalidateQueries: vi.fn() };
+      mockUseQueryClient.mockReturnValue(mockQueryClient);
+      const mockNavigationActions = { handleBaseDeletion: vi.fn() };
+      mockUseNavigationActions.mockReturnValue(mockNavigationActions);
+      const mockDeleteMutation = { mutateAsync: vi.fn().mockResolvedValue({}), isPending: false };
+      mockUseDeleteBase.mockReturnValue(mockDeleteMutation);
+      const toastObj = mockUseToast();
+      mockUseWorkspaceBases.mockReturnValue({
+        data: { data: [createMockBase({ id: 'base-del', title: 'Doomed Base' })] },
+        isLoading: false,
+      });
+
+      renderWithProviders(<HomePage />);
+
+      fireEvent.click(screen.getByRole('button', { name: /delete base/i }));
+      fireEvent.click(screen.getByRole('button', { name: /confirm delete/i }));
+
+      await waitFor(() => {
+        expect(toastObj.success).toHaveBeenCalledWith('Base deleted successfully');
+      });
+      expect(mockDeleteMutation.mutateAsync).toHaveBeenCalledWith('base-del');
+      expect(mockNavigationActions.handleBaseDeletion).toHaveBeenCalledWith('base-del');
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['workspaces', 'ws-1', 'bases'] });
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['workspaces'] });
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['allBases'] });
+    });
+
+    it('creates base, invalidates queries and closes the modal', async () => {
+      const mockQueryClient = { invalidateQueries: vi.fn() };
+      mockUseQueryClient.mockReturnValue(mockQueryClient);
+      const mockCreateMutation = {
+        mutateAsync: vi.fn().mockResolvedValue({ data: { id: 'new-base' } }),
+        isPending: false,
+      };
+      mockUseCreateBase.mockReturnValue(mockCreateMutation);
+      const toastObj = mockUseToast();
+
+      renderWithProviders(<HomePage />);
+
+      fireEvent.click(screen.getByRole('button', { name: /create new base/i }));
+      fireEvent.click(await screen.findByRole('button', { name: /confirm create base/i }));
+
+      await waitFor(() => {
+        expect(toastObj.success).toHaveBeenCalledWith('Base created successfully');
+      });
+      expect(mockCreateMutation.mutateAsync).toHaveBeenCalledWith({
+        title: 'New Base',
+        description: 'Desc',
+        workspace_id: 'ws-1',
+        image: undefined,
+      });
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['workspaces', 'ws-1', 'bases'] });
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['workspaces'] });
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['allBases'] });
+      await waitFor(() => {
+        expect(screen.queryByTestId('create-base-modal')).not.toBeInTheDocument();
+      });
+    });
+  });
 });

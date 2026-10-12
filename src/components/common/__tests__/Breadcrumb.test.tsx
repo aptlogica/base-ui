@@ -37,10 +37,12 @@ const toastErrorSpy = vi.fn();
 const navigateSpy = vi.fn();
 const navigateToTableSpy = vi.fn();
 const navigateToViewSpy = vi.fn();
+const navigateToFirstViewSpy = vi.fn();
+let selectedWorkspaceIdValue: string | null = 'ws1';
 
 const useNavigationStoreImpl = vi.hoisted(() => Object.assign(
   () => ({
-    selectedWorkspaceId: 'ws1',
+    selectedWorkspaceId: selectedWorkspaceIdValue,
     selectedBaseId: 'b1',
     selectedTableId: 't1',
     selectedViewId: 'v1',
@@ -80,7 +82,7 @@ vi.mock('../../../hooks/useApi', () => ({
 }));
 
 vi.mock('../../../hooks/useNavigateToBaseFirstView', () => ({
-  useNavigateToBaseFirstView: () => ({ navigateToFirstView: vi.fn() }),
+  useNavigateToBaseFirstView: () => ({ navigateToFirstView: navigateToFirstViewSpy }),
 }));
 
 vi.mock('../../../hooks/useWorkspaceAccess', () => ({
@@ -217,6 +219,8 @@ describe('Breadcrumb', () => {
     navigateSpy.mockClear();
     navigateToTableSpy.mockClear();
     navigateToViewSpy.mockClear();
+    navigateToFirstViewSpy.mockReset();
+    selectedWorkspaceIdValue = 'ws1';
     updateBaseMutationSpy.mockReset();
     deleteBaseMutationSpy.mockReset();
     createBaseMutationSpy.mockReset();
@@ -468,5 +472,120 @@ describe('Breadcrumb', () => {
     });
     expect(toastSuccessSpy).toHaveBeenCalledWith('Base created successfully');
     expect(invalidateQueriesSpy).toHaveBeenCalled();
+  });
+
+  describe('navigation fallbacks', () => {
+    const base2 = { id: 'b2', title: 'Base Two', workspace_id: 'ws1' } as any;
+
+    const openBaseDropdown = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(screen.getByRole('button', { name: /base one/i }));
+      const portal = document.querySelector('.breadcrumb-dropdown-portal') as HTMLElement;
+      return within(portal);
+    };
+
+    const deleteCurrentBase = async (user: ReturnType<typeof userEvent.setup>) => {
+      await openBaseDropdown(user);
+      await user.click(screen.getAllByText('Delete Base')[0]);
+      await user.click(screen.getByText('Confirm Delete'));
+    };
+
+    it('navigates to first view of a remaining base after deletion', async () => {
+      const user = userEvent.setup();
+      canDeleteBaseFromBaseValue = true;
+      workspaceBasesData = { data: [base, base2] };
+      deleteBaseMutationSpy.mockResolvedValueOnce(undefined);
+      navigateToFirstViewSpy.mockResolvedValueOnce(undefined);
+
+      render(<Breadcrumb />);
+      await deleteCurrentBase(user);
+
+      expect(navigateToFirstViewSpy).toHaveBeenCalledWith('b2');
+      expect(navigateSpy).not.toHaveBeenCalled();
+      expect(toastSuccessSpy).toHaveBeenCalledWith('Base deleted successfully');
+    });
+
+    it('falls back to workspace home when navigating to remaining base fails', async () => {
+      const user = userEvent.setup();
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      canDeleteBaseFromBaseValue = true;
+      workspaceBasesData = { data: [base, base2] };
+      deleteBaseMutationSpy.mockResolvedValueOnce(undefined);
+      navigateToFirstViewSpy.mockRejectedValueOnce(new Error('no views'));
+
+      render(<Breadcrumb />);
+      await deleteCurrentBase(user);
+
+      expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws1');
+      expect(toastSuccessSpy).toHaveBeenCalledWith('Base deleted successfully');
+      warnSpy.mockRestore();
+    });
+
+    it('navigates to workspace home when last base is deleted', async () => {
+      const user = userEvent.setup();
+      canDeleteBaseFromBaseValue = true;
+      deleteBaseMutationSpy.mockResolvedValueOnce(undefined);
+
+      render(<Breadcrumb />);
+      await deleteCurrentBase(user);
+
+      expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws1');
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['workspaces', 'ws1', 'bases'] });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['workspaces'] });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['allBases'] });
+    });
+
+    it('navigates to workspace list when base is deleted without a selected workspace', async () => {
+      const user = userEvent.setup();
+      canDeleteBaseFromBaseValue = true;
+      selectedWorkspaceIdValue = null;
+      deleteBaseMutationSpy.mockResolvedValueOnce(undefined);
+
+      render(<Breadcrumb />);
+      await deleteCurrentBase(user);
+
+      expect(navigateSpy).toHaveBeenCalledWith('/workspace');
+    });
+
+    it('navigates to first view when another base is picked from the dropdown', async () => {
+      const user = userEvent.setup();
+      workspaceBasesData = { data: [base, base2] };
+      navigateToFirstViewSpy.mockResolvedValueOnce(undefined);
+
+      render(<Breadcrumb />);
+      const portal = await openBaseDropdown(user);
+      await user.click(portal.getByRole('button', { name: /base two/i }));
+
+      expect(navigateToFirstViewSpy).toHaveBeenCalledWith('b2');
+      expect(navigateSpy).not.toHaveBeenCalled();
+    });
+
+    it('falls back to workspace home when switching base fails', async () => {
+      const user = userEvent.setup();
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      workspaceBasesData = { data: [base, base2] };
+      navigateToFirstViewSpy.mockRejectedValueOnce(new Error('no views'));
+
+      render(<Breadcrumb />);
+      const portal = await openBaseDropdown(user);
+      await user.click(portal.getByRole('button', { name: /base two/i }));
+
+      expect(navigateSpy).toHaveBeenCalledWith('/workspace/ws1');
+      warnSpy.mockRestore();
+    });
+
+    it('falls back to workspace list when switching base fails without a selected workspace', async () => {
+      const user = userEvent.setup();
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      selectedWorkspaceIdValue = null;
+      workspaceBasesData = { data: [base, base2] };
+      navigateToFirstViewSpy.mockRejectedValueOnce(new Error('no views'));
+
+      render(<Breadcrumb />);
+      const portal = await openBaseDropdown(user);
+      await user.click(portal.getByRole('button', { name: /base two/i }));
+
+      expect(navigateSpy).toHaveBeenCalledWith('/workspace');
+      warnSpy.mockRestore();
+    });
   });
 });

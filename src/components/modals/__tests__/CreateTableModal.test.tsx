@@ -33,7 +33,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={onCreate}
-        baseId="b1"
         existingTables={[]}
       />
     );
@@ -52,7 +51,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={onCreate}
-        baseId="b1"
         existingTables={[]}
       />
     );
@@ -69,7 +67,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={vi.fn()}
-        baseId="b1"
         defaultName="Preset"
       />
     );
@@ -84,7 +81,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={onCreate}
-        baseId="b1"
         existingTables={[]}
       />
     );
@@ -105,7 +101,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={onClose}
         onCreate={vi.fn()}
-        baseId="b1"
       />
     );
 
@@ -122,7 +117,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={onCreate}
-        baseId="b1"
         existingTables={[]}
       />
     );
@@ -133,5 +127,26 @@ describe('CreateTableModal', () => {
     await screen.findByDisplayValue('Valid Name');
     fireEvent.click(screen.getByRole('button', { name: 'Create Table' }));
     expect(await screen.findByText('Boom')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['rejects with an empty message', () => Promise.reject(new Error(''))],
+    ['rejects with a non-object value', () => Promise.reject('boom')],
+  ])('shows fallback error when onCreate %s', async (_label, impl) => {
+    const onCreate = vi.fn(impl);
+    render(
+      <CreateTableModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onCreate={onCreate}
+        existingTables={[]}
+      />
+    );
+
+    await screen.findByDisplayValue('Table 1');
+    fireEvent.change(screen.getByLabelText(/table name/i), { target: { value: 'Valid Name' } });
+    await screen.findByDisplayValue('Valid Name');
+    fireEvent.click(screen.getByRole('button', { name: 'Create Table' }));
+    expect(await screen.findByText('Failed to create table. Please try again.')).toBeInTheDocument();
   });
 });
