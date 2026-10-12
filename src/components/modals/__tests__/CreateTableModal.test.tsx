@@ -33,7 +33,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={onCreate}
-        baseId="b1"
         existingTables={[]}
       />
     );
@@ -52,7 +51,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={onCreate}
-        baseId="b1"
         existingTables={[]}
       />
     );
@@ -69,7 +67,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={vi.fn()}
-        baseId="b1"
         defaultName="Preset"
       />
     );
@@ -84,7 +81,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={onCreate}
-        baseId="b1"
         existingTables={[]}
       />
     );
@@ -105,7 +101,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={onClose}
         onCreate={vi.fn()}
-        baseId="b1"
       />
     );
 
@@ -122,7 +117,6 @@ describe('CreateTableModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         onCreate={onCreate}
-        baseId="b1"
         existingTables={[]}
       />
     );

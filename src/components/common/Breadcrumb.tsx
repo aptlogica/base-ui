@@ -404,9 +404,9 @@ const Breadcrumb: React.FC = () => {
       });
 
       // Invalidate queries to refresh the list
-      queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      queryClient.invalidateQueries({ queryKey: ['allBases'] });
+      void queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
+      void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      void queryClient.invalidateQueries({ queryKey: ['allBases'] });
 
       toast.success('Base updated successfully');
       setEditingBase(null);
@@ -438,21 +438,21 @@ const Breadcrumb: React.FC = () => {
           await navigateToFirstView(remainingBases[0].id);
         } catch (err) {
           console.warn(err)
-          navigate(`/workspace/${selectedWorkspaceId}`);
+          void navigate(`/workspace/${selectedWorkspaceId}`);
         }
       } else if (selectedWorkspaceId) {
-        navigate(`/workspace/${selectedWorkspaceId}`);
+        void navigate(`/workspace/${selectedWorkspaceId}`);
       } else {
-        navigate('/workspace');
+        void navigate('/workspace');
       }
 
       // Now clean up navigation state
       handleBaseDeletion(baseId);
 
       // Invalidate queries to refresh the list
-      queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      queryClient.invalidateQueries({ queryKey: ['allBases'] });
+      void queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
+      void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      void queryClient.invalidateQueries({ queryKey: ['allBases'] });
 
       toast.success('Base deleted successfully');
       setOpenDropdown(null);
@@ -487,9 +487,9 @@ const Breadcrumb: React.FC = () => {
       });
 
       // Invalidate queries to refresh the list
-      queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      queryClient.invalidateQueries({ queryKey: ['allBases'] });
+      void queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
+      void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      void queryClient.invalidateQueries({ queryKey: ['allBases'] });
 
       toast.success('Base created successfully');
       setShowCreateBase(false);
@@ -549,9 +549,9 @@ const Breadcrumb: React.FC = () => {
           } catch (err) {
             console.warn(err)
             if (selectedWorkspaceId) {
-              navigate(`/workspace/${selectedWorkspaceId}`);
+              void navigate(`/workspace/${selectedWorkspaceId}`);
             } else {
-              navigate('/workspace');
+              void navigate('/workspace');
             }
           }
         },
@@ -579,7 +579,7 @@ const Breadcrumb: React.FC = () => {
           const { navigateToTable } = useNavigationStore.getState();
           if (selectedWorkspaceId && selectedBaseId) {
             navigateToTable(selectedWorkspaceId, selectedBaseId, tableId);
-            navigate(`/workspace/${selectedWorkspaceId}/base/${selectedBaseId}/table/${tableId}/grid`);
+            void navigate(`/workspace/${selectedWorkspaceId}/base/${selectedBaseId}/table/${tableId}/grid`);
           }
         },
         isActive: tableId === selectedTableId
@@ -606,7 +606,7 @@ const Breadcrumb: React.FC = () => {
           const { navigateToView } = useNavigationStore.getState();
           if (selectedWorkspaceId && selectedBaseId && selectedTableId) {
             navigateToView(selectedWorkspaceId, selectedBaseId, selectedTableId, view.id);
-            navigate(`/workspace/${selectedWorkspaceId}/base/${selectedBaseId}/table/${selectedTableId}/${view.id}`);
+            void navigate(`/workspace/${selectedWorkspaceId}/base/${selectedBaseId}/table/${selectedTableId}/${view.id}`);
           }
         },
         isActive: view.id === selectedViewId

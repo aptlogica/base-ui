@@ -166,16 +166,16 @@ export const useWorkspaceBusinessLogic = () => {
       if (firstBase?.id && firstTableId && authUser?.id) {
         try {
           navigateAndPersist(workspaceData.id, firstBase.id, firstTableId, authUser.id);
-          navigate(`/workspace/${workspaceData.id}/base/${firstBase.id}/table/${firstTableId}/grid`);
+          void navigate(`/workspace/${workspaceData.id}/base/${firstBase.id}/table/${firstTableId}/grid`);
         } catch (error_) {
             console.error('Navigation error after workspace creation:', error_);
             // Fallback to workspace homepage if navigation fails
-            navigate(`/workspace/${workspaceData.id}`, { replace: true });
+            void navigate(`/workspace/${workspaceData.id}`, { replace: true });
         }
       } else {
           // Navigate to workspace homepage if no base/table exists
           // Use replace to avoid adding to history stack
-          navigate(`/workspace/${workspaceData.id}`, { replace: true });
+          void navigate(`/workspace/${workspaceData.id}`, { replace: true });
       }
       });
 
@@ -222,13 +222,13 @@ export const useWorkspaceBusinessLogic = () => {
       // Invalidate relevant queries to trigger UI updates
       // This ensures the table list and other components refresh
       if (workspacesQuery) {
-        workspacesQuery.refetch();
+        void workspacesQuery.refetch();
       }
       if (baseTablesQuery) {
-        baseTablesQuery.refetch();
+        void baseTablesQuery.refetch();
       }
       if (tableByIdQuery) {
-        tableByIdQuery.refetch();
+        void tableByIdQuery.refetch();
       }
       
       toast.success('Table updated successfully');
@@ -271,7 +271,7 @@ export const useWorkspaceBusinessLogic = () => {
     }
   }, [selectedTableId, selectedBaseId, baseTables, handleTableDeletion, toggleTableExpansion, navigateToTable, navigateToBase, toast, deleteTableMutation]);
 
-  const handleDeleteView = useCallback(async (view: any) => {
+  const handleDeleteView = useCallback((view: any) => {
     try {
       const isCurrentlySelected = selectedViewId === view.id;
       

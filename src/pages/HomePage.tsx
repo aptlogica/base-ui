@@ -192,7 +192,7 @@ const HomePage: React.FC = () => {
     return sorted;
   }, [allBases, searchTerm, sortOption]);
 
-  const handleBaseClick = async (base: any) => {
+  const handleBaseClick = (base: any) => {
     // Set the base to check - this will trigger the useBaseTables hook
     setCheckingBaseId(base.id);
   };
@@ -268,9 +268,9 @@ const HomePage: React.FC = () => {
       setEditingBase(null);
 
       // Invalidate queries to refresh the list
-      queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      queryClient.invalidateQueries({ queryKey: ['allBases'] });
+      void queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
+      void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      void queryClient.invalidateQueries({ queryKey: ['allBases'] });
     } catch (err: any) {
       console.error('Failed to update base:', err);
       toast.error(err?.message || 'Failed to update base. Please try again.');
@@ -289,9 +289,9 @@ const HomePage: React.FC = () => {
       handleBaseDeletion(baseId);
 
       // Invalidate queries to refresh the list
-      queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      queryClient.invalidateQueries({ queryKey: ['allBases'] });
+      void queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
+      void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      void queryClient.invalidateQueries({ queryKey: ['allBases'] });
 
       toast.success('Base deleted successfully');
     } catch (err: any) {
@@ -321,9 +321,9 @@ const HomePage: React.FC = () => {
       });
 
       // Invalidate queries to refresh the bases list
-      queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      queryClient.invalidateQueries({ queryKey: ['allBases'] });
+      void queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
+      void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      void queryClient.invalidateQueries({ queryKey: ['allBases'] });
 
       toast.success('Base created successfully');
       setShowCreateBase(false);
@@ -784,7 +784,6 @@ const HomePage: React.FC = () => {
           <CreateTableModal
             isOpen={!!showCreateTableBaseId}
             onClose={() => setShowCreateTableBaseId(null)}
-            baseId={showCreateTableBaseId}
             existingTables={[]}
             onCreate={async ({ name, description }: { name: string; description: string }) => {
               try {
