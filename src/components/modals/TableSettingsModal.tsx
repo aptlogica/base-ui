@@ -34,7 +34,7 @@ const TableSettingsModal: React.FC<TableSettingsModalProps> = ({ table, onClose 
       onKeyDown={e => e.key === 'Escape' && onClose()}
     >
       <button type="button" aria-label="Close modal" className="absolute inset-0" onClick={onClose} />
-      <div className="bg-modal !p-0 flex flex-col relative overflow-hidden h-[760px] !max-h-[92vh] !max-w-7xl">
+      <div className="bg-modal !p-0 flex flex-col relative overflow-hidden h-[760px] !max-h-[92vh] !max-w-[1344px]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">

@@ -247,7 +247,7 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
                           <td className="px-4 py-3">
                             <div className="flex flex-col items-center gap-1">
                               {(item.event ? item.event.split(', ') : ['-']).map(event => (
-                                <span key={event} className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs font-medium whitespace-nowrap">{event}</span>
+                                <span key={event} className="px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[10px] leading-tight font-medium whitespace-nowrap">{event}</span>
                               ))}
                             </div>
                           </td>
