@@ -58,6 +58,9 @@ const getRawTables = (tablesData: any) => {
   return [];
 };
 
+const isSelfLinkTable = (selectedTableId: string, currentTableId?: string) =>
+  !!currentTableId && selectedTableId === currentTableId;
+
 const isFieldTypeLocked = (
   isFieldUsedInViews: boolean,
   isLinksFieldEditing: boolean,
@@ -344,7 +347,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const [selectedTableId, setSelectedTableId] = useState<string>('');
   const [selectedTable, setSelectedTable] = useState<any>(null);
   const [inverseTitle, setInverseTitle] = useState<string>('');
-  const isSelfLink = !!currentTableId && selectedTableId === currentTableId;
+  const isSelfLink = isSelfLinkTable(selectedTableId, currentTableId);
 
   // Add state for lookup field config
   const [selectedRelationId, setSelectedRelationId] = useState<string>('');
