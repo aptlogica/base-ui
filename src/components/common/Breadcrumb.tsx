@@ -24,6 +24,7 @@ import { useToast } from './Toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useComponentVisibility, COMPONENT_IDS } from '../../contexts/RouteContext';
 import { getInitials } from '../../utils/helpers';
+import { invalidateBaseQueries } from '../../utils/queryInvalidation';
 import type { Base, BasesResponse, BaseResponse, ViewsResponse, TablesResponse, TableResponse } from '../../types/api.types';
 
 interface BreadcrumbItem {
@@ -404,9 +405,7 @@ const Breadcrumb: React.FC = () => {
       });
 
       // Invalidate queries to refresh the list
-      void queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
-      void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      void queryClient.invalidateQueries({ queryKey: ['allBases'] });
+      invalidateBaseQueries(queryClient, selectedWorkspaceId);
 
       toast.success('Base updated successfully');
       setEditingBase(null);
@@ -450,9 +449,7 @@ const Breadcrumb: React.FC = () => {
       handleBaseDeletion(baseId);
 
       // Invalidate queries to refresh the list
-      void queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
-      void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      void queryClient.invalidateQueries({ queryKey: ['allBases'] });
+      invalidateBaseQueries(queryClient, selectedWorkspaceId);
 
       toast.success('Base deleted successfully');
       setOpenDropdown(null);
@@ -487,9 +484,7 @@ const Breadcrumb: React.FC = () => {
       });
 
       // Invalidate queries to refresh the list
-      void queryClient.invalidateQueries({ queryKey: ['workspaces', selectedWorkspaceId, 'bases'] });
-      void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      void queryClient.invalidateQueries({ queryKey: ['allBases'] });
+      invalidateBaseQueries(queryClient, selectedWorkspaceId);
 
       toast.success('Base created successfully');
       setShowCreateBase(false);

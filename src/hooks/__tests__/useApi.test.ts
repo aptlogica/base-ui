@@ -845,4 +845,133 @@ describe("useApi hooks", () => {
     await opts.mutationFn({ workspaceId: "w1", user_id: "u1" });
     expect(removeUserFromWorkspaceService).toHaveBeenCalledWith("w1", { user_id: "u1" });
   });
+
+  it("useBulkAddBaseMembers invalidates base members, bases and workspaces", () => {
+    const opts = getMutationOptions(() => apiHooks.useBulkAddBaseMembers());
+    opts.onSuccess({}, { baseId: "b1", workspaceId: "w1", members: [] });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["base", "b1", "members"] });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["bases"] });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["workspaces"] });
+    expect(invalidateQueries).toHaveBeenCalledTimes(3);
+  });
+
+  it("useRemoveUserFromBase invalidates user roles, base members and bases", () => {
+    const opts = getMutationOptions(() => apiHooks.useRemoveUserFromBase());
+    opts.onSuccess({}, { baseId: "b1", user_id: "u9" });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["userRolesAndAccess", "u9"],
+      exact: false,
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["base", "b1", "members"] });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["bases"] });
+    expect(invalidateQueries).toHaveBeenCalledTimes(3);
+  });
+
+  it("useUpdateBase invalidates workspace-specific bases when workspace_id is cached", () => {
+    const opts = getMutationOptions(() => apiHooks.useUpdateBase());
+    opts.onSuccess({}, { baseId: "b1" });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["bases", "b1"] });
+    expect(getQueryData).toHaveBeenCalledWith(["bases", "b1"]);
+    expect(invalidateQueries).toHaveBeenCalledTimes(4);
+  });
+
+  it("useUpdateBase falls back to invalidating workspaces when cached base has no workspace_id", () => {
+    getQueryData.mockReturnValueOnce({ data: {} });
+    const opts = getMutationOptions(() => apiHooks.useUpdateBase());
+    opts.onSuccess({}, { baseId: "b2" });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["bases", "b2"] });
+    expect(invalidateQueries).toHaveBeenLastCalledWith({ queryKey: ["workspaces"] });
+    expect(invalidateQueries).toHaveBeenCalledTimes(4);
+  });
+
+  it("useUpdateBase falls back to invalidating workspaces when base is not cached", () => {
+    getQueryData.mockReturnValueOnce(undefined);
+    const opts = getMutationOptions(() => apiHooks.useUpdateBase());
+    opts.onSuccess({}, { baseId: "b3" });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["bases", "b3"] });
+    expect(invalidateQueries).toHaveBeenLastCalledWith({ queryKey: ["workspaces"] });
+    expect(invalidateQueries).toHaveBeenCalledTimes(4);
+  });
+
+  it("useUpdateTable invalidates tables and workspaces", () => {
+    const opts = getMutationOptions(() => apiHooks.useUpdateTable());
+    opts.onSuccess({}, { tableId: "t1", params: {} });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["tables"] });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["workspaces"] });
+    expect(invalidateQueries).toHaveBeenCalledTimes(2);
+  });
+
+  it("useResetField invalidates fields, records, table and workspaces", () => {
+    const opts = getMutationOptions(() => apiHooks.useResetField());
+    opts.onSuccess({}, { column_id: "c1", model_id: "m1" });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["fields"] });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["tables", "m1"],
+      refetchType: "active",
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["workspaces"] });
+    expect(invalidateQueries).toHaveBeenCalledTimes(4);
+  });
+
+  it.each([
+    ["useBulkUpdateColumn", { model_id: "m1", column_id: "c1", updates: [] }],
+    ["useTrimWhitespace", { model_id: "m1", columns: ["c1"], trim_mode: "trim_both" }],
+    ["useCaseNormalize", { model_id: "m1", columns: ["c1"], case_format: "uppercase" }],
+    ["useExtractSubstring", { model_id: "m1", column_id: "c1", extraction_method: "extraction_type", extraction_type: "email", keep_original_column: true, add_at_end: false }],
+    ["useFindReplace", { model_id: "m1", columns: ["c1"], find_value: "a", replace_value: "b", match_type: "match_case" }],
+    ["useMergeColumns", { model_id: "m1", columns: ["c1", "c2"], merge_format: "space", keep_original_column: true, add_at_end: false }],
+    ["useRemoveSpecialCharacters", { model_id: "m1", columns: ["c1"], special_characters_type: "symbols" }],
+    ["useRemoveFormatting", { model_id: "m1", columns: ["c1"], formatting: "currency" }],
+    ["useSplitColumn", { model_id: "m1", column_id: "c1", split_method: "delimiter", delimiter: "," }],
+    ["useRemoveDuplicates", { model_id: "m1", columns: ["c1"], duplicate: "remove_row", keep_rule: "keep_first" }],
+  ])("%s onSuccess invalidates records, table and workspaces", (hookName, vars) => {
+    const opts = getMutationOptions(() => (apiHooks as any)[hookName]());
+    opts.onSuccess({}, vars);
+    const recordsCall = invalidateQueries.mock.calls[0][0];
+    expect(recordsCall.refetchType).toBe("active");
+    expect(recordsCall.queryKey).toContain("m1");
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["tables", "m1"],
+      refetchType: "active",
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["workspaces"] });
+    expect(invalidateQueries).toHaveBeenCalledTimes(3);
+  });
+
+  it("useUpdateRowData invalidates records, table, all tables and workspaces", () => {
+    const opts = getMutationOptions(() => apiHooks.useUpdateRowData());
+    opts.onSuccess({}, { model_id: "m1", row_id: 1, values: {} });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["tables", "m1"],
+      refetchType: "active",
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["tables"], refetchType: "active" });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["workspaces"] });
+    expect(invalidateQueries).toHaveBeenCalledTimes(4);
+  });
+
+  it("useUpdateUserProfile invalidates profile and stores display name", () => {
+    sessionStorage.removeItem("user_display_name");
+    const opts = getMutationOptions(() => apiHooks.useUpdateUserProfile("u1"));
+    opts.onSuccess({}, { first_name: "J" });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["userProfile"] });
+    expect(sessionStorage.getItem("user_display_name")).toBeNull();
+
+    opts.onSuccess({}, { display_name: "Jane" });
+    expect(sessionStorage.getItem("user_display_name")).toBe("Jane");
+    sessionStorage.removeItem("user_display_name");
+  });
+
+  it("useRemoveAvatar invalidates the user profile", () => {
+    const opts = getMutationOptions(() => apiHooks.useRemoveAvatar("u1"));
+    opts.onSuccess();
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["userProfile"] });
+  });
+
+  it("useGetRecordsByPagination invalidates records for the model", () => {
+    const opts = getMutationOptions(() => apiHooks.useGetRecordsByPagination("m7"));
+    opts.onSuccess();
+    expect(invalidateQueries).toHaveBeenCalledTimes(1);
+    expect(invalidateQueries.mock.calls[0][0].queryKey).toContain("m7");
+  });
 });
