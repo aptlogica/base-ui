@@ -9,6 +9,8 @@ vi.mock('../SortableFormField', () => ({
       <button type="button" onClick={() => onDragStart?.()}>drag-start-{field.id}</button>
       <button type="button" onClick={() => onDragOver?.()}>drag-over-{field.id}</button>
       <button type="button" onClick={() => onDrop?.()}>drop-{field.id}</button>
+      <button type="button" onClick={() => onDragOver?.('right')}>drag-over-right-{field.id}</button>
+      <button type="button" onClick={() => onDrop?.('right')}>drop-right-{field.id}</button>
       <button type="button" onClick={() => onDragEnd?.()}>drag-end-{field.id}</button>
       <button type="button" onClick={() => onDelete?.(field.id)}>delete-{field.id}</button>
       <button type="button" onClick={() => onEdit?.(field.id)}>edit-{field.id}</button>
@@ -17,6 +19,15 @@ vi.mock('../SortableFormField', () => ({
       <span>{isReadOnly ? 'readonly' : 'editable'}</span>
     </div>
   ),
+}));
+
+const mutateAsyncMock = vi.fn();
+vi.mock('../../../../../hooks/useApi', () => ({
+  useAddImage: () => ({ mutateAsync: mutateAsyncMock }),
+}));
+
+vi.mock('../../../../../components/common/Toast', () => ({
+  useToast: () => ({ success: vi.fn(), error: vi.fn() }),
 }));
 
 vi.mock('../../../../../utils/fieldUtils', async (importOriginal) => {
@@ -161,7 +172,8 @@ describe('FormPreview', () => {
           onDeleteField={mockOnDeleteField}
         />
       );
-      expect(screen.getByText('Powered by SereniBase')).toBeInTheDocument();
+      expect(screen.getByAltText('Sereni Base')).toBeInTheDocument();
+      expect(screen.getByText('Sereni Base')).toBeInTheDocument();
     });
 
     it('should not render SereniBase branding when hideNocoBranding is true', () => {
@@ -182,7 +194,7 @@ describe('FormPreview', () => {
           onDeleteField={mockOnDeleteField}
         />
       );
-      expect(screen.queryByText('Powered by SereniBase')).not.toBeInTheDocument();
+      expect(screen.queryByAltText('Sereni Base')).not.toBeInTheDocument();
     });
 
     it('renders banner and logo when provided', () => {
@@ -535,6 +547,69 @@ describe('FormPreview', () => {
       fireEvent.click(screen.getByRole('button', { name: 'drop-f2' }));
 
       expect(onFieldOrderChange).not.toHaveBeenCalled();
+    });
+
+    it('puts two fields in the same row when dropped on the side of a field', () => {
+      const onFieldOrderChange = vi.fn();
+      const onConfigChange = vi.fn();
+      render(
+        <FormPreview
+          config={defaultConfig}
+          selectedFieldId={null}
+          rowData={{}}
+          onRowDataChange={mockOnRowDataChange}
+          onFieldOrderChange={onFieldOrderChange}
+          onDeleteField={mockOnDeleteField}
+          onConfigChange={onConfigChange}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'drag-start-f2' }));
+      fireEvent.click(screen.getByRole('button', { name: 'drag-over-right-f1' }));
+      fireEvent.click(screen.getByRole('button', { name: 'drop-right-f1' }));
+
+      expect(onFieldOrderChange).not.toHaveBeenCalled();
+      expect(onConfigChange).toHaveBeenCalledWith({
+        appearance: expect.objectContaining({ inlineFieldIds: ['f2'] }),
+      });
+    });
+
+    it('renders fields that share a row side by side', () => {
+      render(
+        <FormPreview
+          config={{ ...defaultConfig, appearance: { ...defaultConfig.appearance, inlineFieldIds: ['f2'] } }}
+          selectedFieldId={null}
+          rowData={{}}
+          onRowDataChange={mockOnRowDataChange}
+          onFieldOrderChange={mockOnFieldOrderChange}
+          onDeleteField={mockOnDeleteField}
+        />
+      );
+
+      const row = screen.getByTestId('form-field-row');
+      expect(row).toContainElement(screen.getByTestId('field-f1'));
+      expect(row).toContainElement(screen.getByTestId('field-f2'));
+    });
+
+    it('does not pair fields in the two-column layout', () => {
+      const onConfigChange = vi.fn();
+      render(
+        <FormPreview
+          config={{ ...defaultConfig, appearance: { ...defaultConfig.appearance, fieldLayout: 'grid-2' } }}
+          selectedFieldId={null}
+          rowData={{}}
+          onRowDataChange={mockOnRowDataChange}
+          onFieldOrderChange={mockOnFieldOrderChange}
+          onDeleteField={mockOnDeleteField}
+          onConfigChange={onConfigChange}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'drag-start-f2' }));
+      fireEvent.click(screen.getByRole('button', { name: 'drop-right-f1' }));
+
+      expect(onConfigChange).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('form-field-row')).not.toBeInTheDocument();
     });
   });
 });
