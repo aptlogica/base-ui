@@ -8,6 +8,7 @@ import { sortRowsByDataKey } from '../../../../../utils/sortUtils';
 let Table: typeof import('../Table').Table;
 const mockToastError = vi.fn();
 const mockToastSuccess = vi.fn();
+const mockCellEditClick = vi.fn();
 
 const mockUseAllViews = vi.fn();
 const mockUseTableViewConfig = vi.fn();
@@ -160,6 +161,19 @@ vi.mock('../components/VirtualizedTableBody', () => ({
   }: any) => (
     <div data-testid="virtualized-body">
       <div data-testid="row-count">{data?.length ?? 0}</div>
+      {(data ?? []).map((row: any) => {
+        const rowId = String(row?._meta?.id || row?.id || '');
+        return (
+          <div key={rowId} data-row-id={rowId}>
+            <div data-col-key="name">
+              <span role="button" tabIndex={0} aria-label={`edit-name-${rowId}`} onClick={() => mockCellEditClick(rowId, 'name')} onKeyDown={() => {}} />
+              <input type="text" aria-label={`input-name-${rowId}`} />
+              <input type="color" aria-label={`color-name-${rowId}`} />
+            </div>
+            <div data-col-key="value" tabIndex={-1} aria-label={`cell-value-${rowId}`} />
+          </div>
+        );
+      })}
       <div data-testid="grouped-flag">{groupedData ? 'yes' : 'no'}</div>
       <button type="button" onClick={() => onRowSelect?.('1', true)}>
         Select First Row
@@ -2016,5 +2030,280 @@ describe('Table', () => {
     const headers = screen.getAllByRole('columnheader');
     fireEvent.dragStart(headers[0]);
     expect(handleColumnDragStart).not.toHaveBeenCalled();
+  });
+});
+
+describe('Table - Enter on last row adds a row', () => {
+  const twoRecords = {
+    ...tableData,
+    records: [...tableData.records, { id: '2', name: 'Row 2', value: 20 }],
+  };
+  const columnsWithFirstKey = (key: string) => [
+    { id: 'col-x', key, column_name: key, title: key, type: 'text', isSystem: false, system: false },
+    { id: 'col-2', key: 'value', column_name: 'value', title: 'Value', type: 'number', isSystem: false, system: false },
+  ];
+
+  let loadNextPage: ReturnType<typeof vi.fn>;
+  let scrollIntoView: ReturnType<typeof vi.fn>;
+
+  const overrideViewConfig = (overrides: Record<string, unknown>) => {
+    const base = mockUseTableViewConfig();
+    mockUseTableViewConfig.mockReturnValue({ ...base, ...overrides });
+  };
+
+  const renderTable = (props: Record<string, unknown>) => {
+    const qc = new QueryClient();
+    const wrap = (p: Record<string, unknown>) => (
+      <QueryClientProvider client={qc}>
+        <ToastProvider>
+          <Table tableData={tableData as any} onRefresh={vi.fn()} {...p} />
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+    const utils = render(wrap(props));
+    return { ...utils, rerenderTable: (p: Record<string, unknown>) => utils.rerender(wrap(p)) };
+  };
+
+  const pressEnter = (label: string, init: Record<string, unknown> = {}) =>
+    fireEvent.keyDown(screen.getByLabelText(label), { key: 'Enter', ...init });
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    setupDefaultMocks();
+    (globalThis as any).ResizeObserver = class {
+      observe() {}
+      disconnect() {}
+    };
+    if (!(globalThis as any).CSS?.escape) {
+      (globalThis as any).CSS = { ...(globalThis as any).CSS, escape: (s: string) => s };
+    }
+    scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView as any;
+    loadNextPage = vi.fn();
+    mockUseFrontendPagination.mockImplementation(({ data }: any) => ({
+      allLoadedData: data,
+      loadNextPage,
+      hasMore: false,
+      isLoadingMore: false,
+    }));
+    if (!Table) {
+      ({ Table } = await import('../Table'));
+    }
+  }, 30000);
+
+  it('creates a row and opens the first cell of the new row for editing', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    const onRefresh = vi.fn();
+    const { rerenderTable } = renderTable({ actions: { addRow: { mutateAsync } }, onRefresh });
+
+    pressEnter('input-name-1');
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ model_id: 'tbl-1' }));
+    await waitFor(() => expect(onRefresh).toHaveBeenCalled());
+
+    rerenderTable({ tableData: twoRecords, actions: { addRow: { mutateAsync } }, onRefresh });
+
+    await waitFor(() => expect(mockCellEditClick).toHaveBeenCalledWith('2', 'name'));
+    expect(scrollIntoView).toHaveBeenCalled();
+    expect(document.activeElement).toBe(screen.getByLabelText('edit-name-2'));
+  });
+
+  it('focuses the cell itself when it has no edit trigger', async () => {
+    overrideViewConfig({ visibleColumns: columnsWithFirstKey('value') });
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    const { rerenderTable } = renderTable({ actions: { addRow: { mutateAsync } } });
+
+    pressEnter('input-name-1');
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+    rerenderTable({ tableData: twoRecords, actions: { addRow: { mutateAsync } } });
+
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('cell-value-2')));
+    expect(mockCellEditClick).not.toHaveBeenCalled();
+  });
+
+  it('gives up after retrying when the new cell never renders', async () => {
+    overrideViewConfig({ visibleColumns: columnsWithFirstKey('missing') });
+    const rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame');
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    const { rerenderTable } = renderTable({ actions: { addRow: { mutateAsync } } });
+
+    pressEnter('input-name-1');
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+    rerenderTable({ tableData: twoRecords, actions: { addRow: { mutateAsync } } });
+
+    await waitFor(() => expect(rafSpy.mock.calls.length).toBeGreaterThanOrEqual(11), { timeout: 3000 });
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    rafSpy.mockRestore();
+  });
+
+  it('ignores Enter outside a text field of the last row', () => {
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    renderTable({ tableData: twoRecords, actions: { addRow: { mutateAsync } } });
+
+    pressEnter('input-name-1'); // not the last row
+    pressEnter('input-name-2', { shiftKey: true });
+    pressEnter('input-name-2', { isComposing: true });
+    fireEvent.keyDown(screen.getByLabelText('input-name-2'), { key: 'a' });
+    pressEnter('color-name-2'); // non-text input
+    pressEnter('edit-name-2'); // not an input
+
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('ignores Enter when more rows remain to be loaded', () => {
+    mockUseFrontendPagination.mockImplementation(({ data }: any) => ({
+      allLoadedData: data,
+      loadNextPage,
+      hasMore: true,
+      isLoadingMore: false,
+    }));
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    renderTable({ actions: { addRow: { mutateAsync } } });
+
+    pressEnter('input-name-1');
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['the base is read-only', { isBaseReadOnly: () => true }],
+    ['the user cannot create records', { canCreateRecord: () => false }],
+  ])('ignores Enter when %s', (_label, access) => {
+    mockUseBaseAccess.mockReturnValue({ ...mockUseBaseAccess(), ...access });
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    renderTable({ actions: { addRow: { mutateAsync } } });
+
+    pressEnter('input-name-1');
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('does not create a second row while one is pending', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    renderTable({ actions: { addRow: { mutateAsync } } });
+
+    pressEnter('input-name-1');
+    pressEnter('input-name-1');
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+  });
+
+  it('allows retrying after the add row request fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const mutateAsync = vi.fn().mockRejectedValue(new Error('fail'));
+    renderTable({ actions: { addRow: { mutateAsync } } });
+
+    pressEnter('input-name-1');
+    await waitFor(() => expect(mockToastError).toHaveBeenCalled());
+    pressEnter('input-name-1');
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(2));
+  });
+
+  it('does nothing when no add row action is provided', async () => {
+    renderTable({});
+    pressEnter('input-name-1');
+    await waitFor(() => expect(mockToastSuccess).not.toHaveBeenCalled());
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  it('drops the pending row when it is hidden by the current search', async () => {
+    overrideViewConfig({ searchTerm: 'Row', selectedSearchField: { key: 'name' } });
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    const { rerenderTable } = renderTable({ actions: { addRow: { mutateAsync } } });
+
+    pressEnter('input-name-1');
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+
+    const hiddenRecord = { ...tableData, records: [...tableData.records, { id: '2', name: 'Other', value: 20 }] };
+    rerenderTable({ tableData: hiddenRecord, actions: { addRow: { mutateAsync } } });
+    // Pending state is cleared, so a later visible record is not auto-focused
+    rerenderTable({
+      tableData: { ...hiddenRecord, records: [...hiddenRecord.records, { id: '3', name: 'Row 3', value: 30 }] },
+      actions: { addRow: { mutateAsync } },
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(mockCellEditClick).not.toHaveBeenCalled();
+  });
+
+  it('loads the next page when the new row is not loaded yet', async () => {
+    mockUseFrontendPagination.mockImplementation(({ data }: any) => ({
+      allLoadedData: data.slice(0, 1),
+      loadNextPage,
+      hasMore: data.length > 1,
+      isLoadingMore: false,
+    }));
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    const { rerenderTable } = renderTable({ actions: { addRow: { mutateAsync } } });
+
+    pressEnter('input-name-1');
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+    rerenderTable({ tableData: twoRecords, actions: { addRow: { mutateAsync } } });
+
+    await waitFor(() => expect(loadNextPage).toHaveBeenCalled());
+    expect(mockCellEditClick).not.toHaveBeenCalled();
+  });
+});
+
+describe('Table - column header double click', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    setupDefaultMocks();
+    (globalThis as any).ResizeObserver = class {
+      observe() {}
+      disconnect() {}
+    };
+    if (!Table) {
+      ({ Table } = await import('../Table'));
+    }
+  }, 30000);
+
+  const withColumnHandlers = () => {
+    const handleEditColumn = vi.fn();
+    const handleCloseColMenu = vi.fn();
+    mockUseColumnManagement.mockReturnValue({ ...mockUseColumnManagement(), handleEditColumn });
+    mockUseTableModals.mockReturnValue({ ...mockUseTableModals(), handleCloseColMenu });
+    return { handleEditColumn, handleCloseColMenu };
+  };
+
+  it('opens the edit column popup anchored to the header', () => {
+    const { handleEditColumn, handleCloseColMenu } = withColumnHandlers();
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    const header = screen.getAllByRole('columnheader')[0];
+    fireEvent.doubleClick(header);
+
+    expect(handleCloseColMenu).toHaveBeenCalled();
+    expect(handleEditColumn).toHaveBeenCalledWith(
+      expect.objectContaining({ key: 'name' }),
+      0,
+      { target: header },
+    );
+  });
+
+  it('ignores double clicks on buttons inside the header', () => {
+    const { handleEditColumn } = withColumnHandlers();
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    fireEvent.doubleClick(screen.getAllByRole('button', { name: /open dropdown/i })[0]);
+    expect(handleEditColumn).not.toHaveBeenCalled();
+  });
+
+  it('ignores double clicks when the user cannot update columns', () => {
+    const { handleEditColumn } = withColumnHandlers();
+    mockUseBaseAccess.mockReturnValue({ ...mockUseBaseAccess(), canUpdateColumn: () => false });
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    fireEvent.doubleClick(screen.getAllByRole('columnheader')[0]);
+    expect(handleEditColumn).not.toHaveBeenCalled();
+  });
+
+  it('ignores double clicks on system columns', () => {
+    const { handleEditColumn } = withColumnHandlers();
+    const base = mockUseTableViewConfig();
+    mockUseTableViewConfig.mockReturnValue({
+      ...base,
+      visibleColumns: base.visibleColumns.map((c: any, i: number) => (i === 0 ? { ...c, isSystem: true, system: true } : c)),
+    });
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    fireEvent.doubleClick(screen.getAllByRole('columnheader')[0]);
+    expect(handleEditColumn).not.toHaveBeenCalled();
   });
 });

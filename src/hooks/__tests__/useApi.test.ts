@@ -720,6 +720,9 @@ describe("useApi hooks", () => {
     opts = getMutationOptions(() => apiHooks.useCreateBase());
     await opts.mutationFn({ title: "B", description: "", workspace_id: "w1", image: null });
     expect(createBaseService).toHaveBeenCalled();
+    const meta = { dateFormat: "DD/MM/YYYY" };
+    await opts.mutationFn({ title: "B", description: "", workspace_id: "w1", meta });
+    expect(createBaseService).toHaveBeenLastCalledWith({ title: "B", description: "", workspace_id: "w1", image: undefined, meta });
 
     opts = getMutationOptions(() => apiHooks.useDeleteBase());
     await opts.mutationFn("b1");

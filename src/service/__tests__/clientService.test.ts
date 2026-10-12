@@ -396,6 +396,20 @@ describe('clientService', () => {
     postSpy.mockRestore();
   });
 
+  it('omits optional create-base fields that are not provided', async () => {
+    sessionStorage.setItem('user_id', 'u1');
+    const http = (client as any).http;
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValue({ data: { id: 'b2' } });
+
+    await createBaseService({ title: 'Base', image: new File(['x'], 'x.png'), meta: { dateFormat: 'YYYY-MM-DD' } });
+
+    const formData = postSpy.mock.calls[0][1] as FormData;
+    expect(formData.has('description')).toBe(false);
+    expect(formData.has('workspace_id')).toBe(false);
+    expect(formData.get('image')).toBeInstanceOf(File);
+    postSpy.mockRestore();
+  });
+
   it('continues base update when image upload fails', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     sessionStorage.setItem('user_id', 'u1');
