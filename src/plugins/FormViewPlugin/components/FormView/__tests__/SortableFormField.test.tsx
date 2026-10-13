@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, createEvent } from '@testing-library/react';
 import { SortableFormField } from '../SortableFormField';
 import type { FormField } from '../../../../../types/form';
 
@@ -260,6 +260,50 @@ describe('SortableFormField', () => {
       );
 
       expect(screen.getByLabelText('Drag and drop zone')).toBeInTheDocument();
+    });
+
+    it('reports the side of the field the cursor is on', () => {
+      const onDragOver = vi.fn();
+      const onDrop = vi.fn();
+      render(
+        <SortableFormField
+          field={mockField}
+          value=""
+          onDragOver={onDragOver}
+          onDrop={onDrop}
+        />
+      );
+
+      const zone = screen.getByLabelText('Drag and drop zone');
+      vi.spyOn(zone, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 400 } as DOMRect);
+
+      // jsdom ignores clientX in drag event init, so set it on the event directly
+      const fireAt = (type: 'dragOver' | 'drop', clientX: number) => {
+        const event = createEvent[type](zone);
+        Object.defineProperty(event, 'clientX', { value: clientX });
+        fireEvent(zone, event);
+      };
+      fireAt('dragOver', 20);
+      fireAt('dragOver', 200);
+      fireAt('drop', 390);
+
+      expect(onDragOver).toHaveBeenNthCalledWith(1, 'left');
+      expect(onDragOver).toHaveBeenNthCalledWith(2, 'center');
+      expect(onDrop).toHaveBeenCalledWith('right');
+    });
+
+    it('shows a side indicator for a side drop', () => {
+      render(
+        <SortableFormField
+          field={mockField}
+          value=""
+          isDragOver
+          dropPosition="left"
+          onDragOver={vi.fn()}
+        />
+      );
+
+      expect(screen.getByTestId('side-drop-indicator-left')).toBeInTheDocument();
     });
   });
 

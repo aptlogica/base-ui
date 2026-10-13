@@ -55,6 +55,9 @@ const DescriptionWithSeeMore: React.FC<{ description: string; appearance?: NonNu
   );
 };
 
+// Where a dragged field is dropped on a target: on its left/right edge pairs the two fields in one row
+export type DropPosition = 'left' | 'right' | 'center';
+
 interface SortableFormFieldProps {
   field: FormField;
   isSelected?: boolean;
@@ -63,9 +66,10 @@ interface SortableFormFieldProps {
   draggable?: boolean;
   isDragging?: boolean;
   isDragOver?: boolean;
+  dropPosition?: DropPosition | null;
   onDragStart?: () => void;
-  onDragOver?: () => void;
-  onDrop?: () => void;
+  onDragOver?: (position: DropPosition) => void;
+  onDrop?: (position: DropPosition) => void;
   onDragEnd?: () => void;
   onDelete?: (fieldId: string) => void;
   appearance?: NonNullable<FormConfig['appearance']>;
@@ -273,27 +277,39 @@ const ActionButtons: React.FC<{
 };
 
 // Extract container className computation
-const getContainerClassName = (isSelected: boolean, isDragging: boolean, isDragOver: boolean, labelPosition?: string): string => {
+const getContainerClassName = (isSelected: boolean, isDragging: boolean, isDragOver: boolean, dropPosition?: DropPosition | null, labelPosition?: string): string => {
   const spacing = labelPosition === 'left' ? 'space-y-7' : 'space-y-2';
+  const isSideDrop = dropPosition === 'left' || dropPosition === 'right';
   return `relative group ${spacing} p-4 rounded-xl transition-all select-none
     ${isSelected ? 'bg-[var(--color-utility-brand-50)] border-2 border-[var(--color-brand-200)] shadow-sm' : 'hover:bg-gray-50'}
     ${isDragging ? 'opacity-50 border-dashed border-2  border-[var(--color-brand-400)]' : ''}
-    ${isDragOver ? 'ring-2 ring-[var(--ring-color-primary)]' : ''}`;
+    ${isDragOver && !isSideDrop ? 'ring-2 ring-[var(--ring-color-primary)]' : ''}`;
+};
+
+// Edge zones (as a fraction of the field width) that place the dragged field beside the target
+const SIDE_DROP_ZONE = 0.25;
+
+const getDropPosition = (e: React.DragEvent): DropPosition => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  if (x < rect.width * SIDE_DROP_ZONE) return 'left';
+  if (x > rect.width * (1 - SIDE_DROP_ZONE)) return 'right';
+  return 'center';
 };
 
 // Extract drag handlers setup
 const createDragHandlers = (
-  onDragOver?: () => void,
-  onDrop?: () => void
+  onDragOver?: (position: DropPosition) => void,
+  onDrop?: (position: DropPosition) => void
 ) => {
   const handleDragOver = onDragOver ? (e: React.DragEvent) => {
     e.preventDefault();
-    onDragOver();
+    onDragOver(getDropPosition(e));
   } : undefined;
 
   const handleDrop = onDrop ? (e: React.DragEvent) => {
     e.preventDefault();
-    onDrop();
+    onDrop(getDropPosition(e));
   } : undefined;
 
   return { handleDragOver, handleDrop };
@@ -346,6 +362,7 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
   draggable = false,
   isDragging = false,
   isDragOver = false,
+  dropPosition = null,
   onDragStart,
   onDragOver,
   onDrop,
@@ -372,7 +389,8 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
   );
 
   const { handleDragOver, handleDrop } = createDragHandlers(onDragOver, onDrop);
-  const containerClassName = getContainerClassName(isSelected ?? false, isDragging ?? false, isDragOver ?? false, appearance?.labelPosition);
+  const containerClassName = getContainerClassName(isSelected ?? false, isDragging ?? false, isDragOver ?? false, dropPosition, appearance?.labelPosition);
+  const sideDropIndicator = isDragOver && (dropPosition === 'left' || dropPosition === 'right') ? dropPosition : null;
 
   // Drag-and-drop zones are mouse/touch based and don't require keyboard handlers
   const ContainerTag = (handleDragOver || handleDrop) ? 'section' : 'div';
@@ -386,6 +404,12 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
       ...(handleDragOver || handleDrop ? { 'aria-label': 'Drag and drop zone' } : {})
     },
     <>
+      {sideDropIndicator && (
+        <span
+          data-testid={`side-drop-indicator-${sideDropIndicator}`}
+          className={`absolute top-2 bottom-2 w-1 rounded-full bg-[var(--color-brand-400)] ${sideDropIndicator === 'left' ? '-left-1' : '-right-1'}`}
+        />
+      )}
       <ActionButtons
         field={field}
         isReadOnly={isReadOnly}
