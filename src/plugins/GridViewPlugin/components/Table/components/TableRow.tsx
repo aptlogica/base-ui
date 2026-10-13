@@ -49,6 +49,10 @@ const getColumnIdentity = (column: ColumnConfig): string => {
   return String(column.id || column.key || '');
 };
 
+// Red cell for a primary key problem. The editor inside paints its own background, and a clicked row forces a
+// blue one, so the red is forced onto the editor too and wins over the active cell and row styles.
+const INVALID_CELL_CLASS = 'border border-red-500 bg-red-50 [&>div]:!bg-red-50 [&_.field-component]:!bg-red-50 [&_.field-component-focus]:!bg-red-50';
+
 export const TableRow: React.FC<TableRowProps> = ({
   row,
   rowIndex,
@@ -211,8 +215,8 @@ export const TableRow: React.FC<TableRowProps> = ({
         const column = columns[index];
         const cellKey = `${rowId}-${column.key}`;
         let borderClass: string;
-        if (saveErrorCells?.has(cellKey)) {
-          borderClass = 'border border-red-500';
+        if (invalidCells?.[column.key] || saveErrorCells?.has(cellKey)) {
+          borderClass = INVALID_CELL_CLASS;
         } else if (props.isActive) {
           // Selected cell: green border, default background
           borderClass = 'border border-[var(--color-brand-600)]';
@@ -232,7 +236,7 @@ export const TableRow: React.FC<TableRowProps> = ({
           // eslint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role
           <div
             key={`${column.id || column.key || 'column'}-${index}-${cellResets?.[cellKey] ?? 0}`}
-            className={invalidCells?.[column.key] ? `${borderClass} bg-red-50 ring-1 ring-inset ring-red-500` : borderClass}
+            className={borderClass}
             style={{
               height: '40px',
               minHeight: '40px',

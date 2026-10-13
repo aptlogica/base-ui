@@ -176,6 +176,9 @@ vi.mock('../components/VirtualizedTableBody', () => ({
       <button type="button" onClick={() => onCellChange?.('1', 'name', '')}>
         Clear First Name
       </button>
+      <button type="button" onClick={() => onCellChange?.('2', 'name', 'Row 1')}>
+        Copy First Name To Second
+      </button>
       {(data ?? []).map((row: any) => {
         const rowId = String(row?._meta?.id || row?.id || '');
         return (
@@ -1168,6 +1171,16 @@ describe('Table', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+
+    it('does not send a key value that repeats another row', () => {
+      const twoRows = { ...tableData, records: [...tableData.records, { id: '2', name: 'Row 2', value: 20 }] };
+      renderWithToast(<Table tableData={twoRows as any} onRefresh={vi.fn()} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Copy First Name To Second' }));
+
+      expect(mockHandleCellChange).not.toHaveBeenCalled();
+      expect(mockToastError).toHaveBeenCalledWith('Name = "Row 1" is already used by record #1.', expect.anything());
     });
 
     it('does not send an emptied key cell of a saved row', () => {

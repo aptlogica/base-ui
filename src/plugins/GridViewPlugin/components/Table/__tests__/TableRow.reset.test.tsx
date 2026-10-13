@@ -54,7 +54,8 @@ describe('TableRow cell reset after a rejected save', () => {
     expect(screen.getByTestId('input-code')).toHaveValue('HR');
 
     // The save of Code was rejected (e.g. HR is already used by another record)
-    rerender(renderRow({ code: 1 }));
+    // Resets are keyed by `${rowId}-${columnKey}`
+    rerender(renderRow({ 'row-1-code': 1 }));
 
     expect(screen.getByTestId('input-code')).toHaveValue('OPS');
     expect(screen.getByTestId('input-notes')).toHaveValue('typed');

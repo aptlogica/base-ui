@@ -32,7 +32,7 @@ import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldCo
 import { useAllViews, usePrimaryKey, useUpsertRow } from '../../../../hooks/useApi';
 import { useRequiredKeyFields } from '../../../../hooks/useRequiredKeyFields';
 import { useDraftRows, isDraftRowId } from '../../hooks/useDraftRows';
-import { isEmptyKeyValue, missingKeyMessage } from '../../../../utils/primaryKeyFields';
+import { isEmptyKeyValue } from '../../../../utils/primaryKeyFields';
 import { getFieldTypeIconComponent, getRelationTypeFromField } from '../../../../types/fieldTypes';
 import { ColumnDropdown } from './components/ColumnDropdown';
 import { Loader } from '../../../../components/ui/Loader';
@@ -322,7 +322,9 @@ export const Table: React.FC<TableProps> = ({
   const draftRowsState = useDraftRows({
     tableId,
     columns,
+    savedRows: allRecords,
     keyColumnIds,
+    keyIncludesId: primaryKeyColumnIds.some(id => columns.find(c => String(c.id) === id)?.key === 'id'),
     upsert: upsertRowMutation.mutateAsync,
     onSaved: () => {
       toast.success('Record added', { title: 'Success', duration: 3000 });
@@ -330,7 +332,7 @@ export const Table: React.FC<TableProps> = ({
     },
     onError: message => toast.error(message, { title: 'Not saved', duration: 6000 }),
   });
-  const { draftRows, invalidCells, addDraft, updateDraft, removeDraft } = draftRowsState;
+  const { draftRows, invalidCells, addDraft, updateDraft, removeDraft, savedKeyProblem } = draftRowsState;
 
   // Leaving or refreshing the page would lose unsaved drafts
   useEffect(() => {
@@ -654,21 +656,20 @@ export const Table: React.FC<TableProps> = ({
     return new Set([...expandedGroups, `${DRAFT_GROUP.groupColumn}-${DRAFT_GROUP.groupValue}-0`]);
   }, [groupedData, draftRows.length, expandedGroups]);
 
-  // Draft cells stay in the browser; on saved rows a primary key cell can't be emptied
+  // Draft cells stay in the browser. On saved rows a primary key cell is checked before it is sent: an empty
+  // value or one that repeats another row's key is not saved; the cell is boxed in red and shows the saved value.
   const handleGridCellChange = useCallback((rowId: string, columnKey: string, value: any) => {
     if (isDraftRowId(rowId)) {
       updateDraft(rowId, columnKey, value);
       return;
     }
-    const column = columns.find(c => c.key === columnKey);
-    if (column?.id && keyColumnIds.includes(String(column.id)) && isEmptyKeyValue(value)) {
-      toast.error(missingKeyMessage([column.title]), { title: 'Not saved', duration: 6000 });
-      const cellKey = `${rowId}-${columnKey}`;
-      setCellResets(prev => ({ ...prev, [cellKey]: (prev[cellKey] ?? 0) + 1 }));
+    const problem = savedKeyProblem(rowId, columnKey, value);
+    if (problem) {
+      handleCellSaveError({ rowId, columnKey, error: { message: problem, code: isEmptyKeyValue(value) ? 'PKY_1007' : 'PKY_1008' } });
       return;
     }
     handleCellChange(rowId, columnKey, value);
-  }, [updateDraft, columns, keyColumnIds, toast, handleCellChange]);
+  }, [updateDraft, savedKeyProblem, handleCellSaveError, handleCellChange]);
 
   // Measure table body container height
   useEffect(() => {

@@ -39,15 +39,19 @@ let draftCounter = 0;
 export interface UseDraftRowsOptions {
   tableId: string;
   columns: GridColumn[];
+  // Saved records, to find empty or repeated keys
+  savedRows?: GridRecord[];
   // Key column IDs a record must fill in (empty for tables keyed by Id alone)
   keyColumnIds: string[];
+  // The key also includes Id, which makes every record's key unique: only empty cells are checked
+  keyIncludesId?: boolean;
   // Insert (upsert): without a row id it creates the record with values by column ID, with one it updates it
   upsert: (args: { model_id: string; row_id?: number; values: Record<string, unknown> }) => Promise<unknown>;
   onSaved?: () => void;
   onError?: (message: string) => void;
 }
 
-export const useDraftRows = ({ tableId, columns, keyColumnIds, upsert, onSaved, onError }: UseDraftRowsOptions) => {
+export const useDraftRows = ({ tableId, columns, savedRows = [], keyColumnIds, keyIncludesId = false, upsert, onSaved, onError }: UseDraftRowsOptions) => {
   const enabled = keyColumnIds.length > 0;
   const [drafts, setDraftsState] = useState<DraftRow[]>(() => draftCache.get(tableId) ?? []);
   const draftsRef = useRef(drafts);
@@ -83,6 +87,66 @@ export const useDraftRows = ({ tableId, columns, keyColumnIds, upsert, onSaved, 
     [keyColumns],
   );
 
+  // A row's key as one comparable string; null while a key cell is empty
+  const keyOf = useCallback((value: (key: string) => unknown): string | null => {
+    const parts: string[] = [];
+    for (const column of keyColumns) {
+      const v = value(column.key);
+      if (isEmptyKeyValue(v)) return null;
+      parts.push(String(v).trim());
+    }
+    return JSON.stringify(parts);
+  }, [keyColumns]);
+
+  const savedValue = (row: GridRecord, key: string) => (row.data && key in row.data ? row.data[key] : row[key]);
+
+  // Saved record ids by key, to tell a draft which record already has its key
+  const savedKeys = useMemo(() => {
+    const byKey = new Map<string, string[]>();
+    if (keyColumns.length === 0) return byKey;
+    for (const row of savedRows) {
+      const key = keyOf(k => savedValue(row, k));
+      if (key === null) continue;
+      const id = String(row._meta?.id ?? row.id);
+      byKey.set(key, [...(byKey.get(key) ?? []), id]);
+    }
+    return byKey;
+  }, [savedRows, keyColumns, keyOf]);
+
+  // Why a draft's key can't be saved: already used by a saved record or by another draft
+  const duplicateReason = useCallback((draft: DraftRow, all: DraftRow[]): string | null => {
+    if (keyIncludesId) return null;
+    const key = keyOf(k => draft.values[k]);
+    if (key === null) return null;
+    const holders = savedKeys.get(key);
+    if (holders?.length) return `Already used by record #${holders[0]}`;
+    if (all.some(d => d.id !== draft.id && keyOf(k => d.values[k]) === key)) return 'Same key as another new row';
+    return null;
+  }, [keyOf, savedKeys, keyIncludesId]);
+
+  // Checks a key cell edit on a saved record before it is sent: the record's key with the new value must not
+  // be empty or used by another row. Returns the reason, or null when the value is fine.
+  const savedKeyProblem = useCallback((rowId: string, columnKey: string, value: unknown): string | null => {
+    const column = keyColumns.find(c => c.key === columnKey);
+    if (!column) return null;
+    if (isEmptyKeyValue(value)) return `${column.title} is required: it is part of the primary key.`;
+    if (keyIncludesId) return null;
+    const row = savedRows.find(r => String(r._meta?.id ?? r.id) === rowId);
+    if (!row) return null;
+    const valueOf = (k: string) => (k === columnKey ? value : savedValue(row, k));
+    const key = keyOf(valueOf);
+    if (key === null) return null;
+    const other = (savedKeys.get(key) ?? []).find(id => id !== rowId);
+    const usedByDraft = drafts.some(d => keyOf(k => d.values[k]) === key);
+    if (!other && !usedByDraft) return null;
+    const pairs = keyColumns.map(c => {
+      const v = valueOf(c.key);
+      return `${c.title} = ${typeof v === 'number' || /^-?\d+(\.\d+)?$/.test(String(v).trim()) ? String(v).trim() : `"${String(v).trim()}"`}`;
+    });
+    const subject = keyColumns.length > 1 ? `The combination ${pairs.join(', ')}` : pairs[0];
+    return `${subject} is already used by ${other ? `record #${other}` : 'a new row'}.`;
+  }, [keyColumns, keyIncludesId, savedRows, keyOf, savedKeys, drafts]);
+
   // Values by column ID for the insert; only fields a new record can be given
   const insertValues = useCallback((draft: DraftRow) => {
     const values: Record<string, unknown> = {};
@@ -103,7 +167,7 @@ export const useDraftRows = ({ tableId, columns, keyColumnIds, upsert, onSaved, 
 
   const save = useCallback(async (draftId: string) => {
     const draft = draftsRef.current.find(d => d.id === draftId);
-    if (!draft || draft.saving || missingKeyColumns(draft).length > 0) return;
+    if (!draft || draft.saving || missingKeyColumns(draft).length > 0 || duplicateReason(draft, draftsRef.current)) return;
 
     const submitted = insertValues(draft);
     setDrafts(prev => prev.map(d => (d.id === draftId ? { ...d, saving: true, error: undefined, duplicate: false } : d)));
@@ -130,7 +194,7 @@ export const useDraftRows = ({ tableId, columns, keyColumnIds, upsert, onSaved, 
       setDrafts(prev => prev.map(d => (d.id === draftId ? { ...d, saving: false, error: message, duplicate } : d)));
       onError?.(message);
     }
-  }, [missingKeyColumns, insertValues, setDrafts, upsert, tableId, onSaved, onError]);
+  }, [missingKeyColumns, duplicateReason, insertValues, setDrafts, upsert, tableId, onSaved, onError]);
 
   const scheduleSave = useCallback((draftId: string) => {
     const existing = timers.current.get(draftId);
@@ -152,11 +216,13 @@ export const useDraftRows = ({ tableId, columns, keyColumnIds, upsert, onSaved, 
     setDrafts(prev => prev.map(d => (d.id === draftId
       ? { ...d, values: { ...d.values, [columnKey]: value }, error: undefined, duplicate: false }
       : d)));
-    const draft = draftsRef.current.find(d => d.id === draftId);
-    if (draft && missingKeyColumns(draft).length === 0) {
-      scheduleSave(draftId);
+    // Saved once the key is complete and unique; other drafts waiting on this key may now be free too
+    for (const draft of draftsRef.current) {
+      if (missingKeyColumns(draft).length === 0 && !duplicateReason(draft, draftsRef.current)) {
+        scheduleSave(draft.id);
+      }
     }
-  }, [setDrafts, missingKeyColumns, scheduleSave]);
+  }, [setDrafts, missingKeyColumns, duplicateReason, scheduleSave]);
 
   const removeDraft = useCallback((draftId: string) => {
     removeTimer(draftId);
@@ -170,21 +236,50 @@ export const useDraftRows = ({ tableId, columns, keyColumnIds, upsert, onSaved, 
     data: { ...d.values },
   })), [drafts]);
 
-  // Cells to show in red, with the reason: rowId -> columnKey -> message
+  // Key cells to show in red, with the reason: rowId -> columnKey -> message. Empty key cells and keys used by
+  // more than one row, on drafts and saved rows alike.
   const invalidCells = useMemo(() => {
     const cells: Record<string, Record<string, string>> = {};
+    if (keyColumns.length === 0) return cells;
+    const markKey = (rowId: string, message: string) => {
+      cells[rowId] = { ...cells[rowId] };
+      keyColumns.forEach(c => { cells[rowId][c.key] = message; });
+    };
+
     for (const draft of drafts) {
-      const byColumn: Record<string, string> = {};
-      if (draft.duplicate && draft.error) {
-        keyColumns.forEach(c => { byColumn[c.key] = draft.error as string; });
+      const duplicate = duplicateReason(draft, drafts);
+      if (duplicate) markKey(draft.id, duplicate);
+      else if (draft.duplicate && draft.error) markKey(draft.id, draft.error);
+      const missing = missingKeyColumns(draft);
+      if (missing.length) {
+        cells[draft.id] = { ...cells[draft.id] };
+        missing.forEach(c => { cells[draft.id][c.key] = 'Required: part of the primary key'; });
       }
-      missingKeyColumns(draft).forEach(c => { byColumn[c.key] = 'Required: part of the primary key'; });
-      if (Object.keys(byColumn).length > 0) cells[draft.id] = byColumn;
+    }
+
+    for (const row of savedRows) {
+      const rowId = String(row._meta?.id ?? row.id);
+      const key = keyOf(k => savedValue(row, k));
+      if (key === null) {
+        cells[rowId] = {};
+        keyColumns.forEach(c => {
+          if (isEmptyKeyValue(savedValue(row, c.key))) cells[rowId][c.key] = 'Required: part of the primary key';
+        });
+        continue;
+      }
+      if (keyIncludesId) continue;
+      const holders = savedKeys.get(key) ?? [];
+      const draftHolder = drafts.some(d => keyOf(k => d.values[k]) === key);
+      if (holders.length > 1) {
+        markKey(rowId, `Same key as record #${holders.find(id => id !== rowId)}`);
+      } else if (draftHolder) {
+        markKey(rowId, 'Same key as a new row');
+      }
     }
     return cells;
-  }, [drafts, keyColumns, missingKeyColumns]);
+  }, [drafts, savedRows, keyColumns, keyOf, savedKeys, duplicateReason, missingKeyColumns, keyIncludesId]);
 
-  return { enabled, drafts, draftRows, invalidCells, addDraft, updateDraft, removeDraft };
+  return { enabled, drafts, draftRows, invalidCells, addDraft, updateDraft, removeDraft, savedKeyProblem };
 };
 
 // For tests: forget drafts kept between renders

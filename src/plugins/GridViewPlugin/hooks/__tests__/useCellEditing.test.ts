@@ -300,7 +300,7 @@ describe('useCellEditing', () => {
         await Promise.resolve();
       });
 
-      expect(onSaveError).toHaveBeenCalledWith(rejection, { rowId: '1', columnKey: 'name' });
+      expect(onSaveError).toHaveBeenCalledWith({ rowId: '1', columnKey: 'name', error: rejection });
       expect(props.onRecordsUpdate).not.toHaveBeenCalled();
     });
 
