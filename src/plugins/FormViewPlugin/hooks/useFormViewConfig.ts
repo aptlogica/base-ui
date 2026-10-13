@@ -44,7 +44,9 @@ export function useFormViewConfig({
       fieldLayout: initialAppearance?.fieldLayout ?? view.appearance?.fieldLayout ?? 'list',
       cardStyle: initialAppearance?.cardStyle ?? view.appearance?.cardStyle ?? 'flat',
       align: initialAppearance?.align ?? view.appearance?.align ?? 'left',
-      rounded: initialAppearance?.rounded ?? view.appearance?.rounded ?? 'lg'
+      rounded: initialAppearance?.rounded ?? view.appearance?.rounded ?? 'lg',
+      logoPosition: initialAppearance?.logoPosition ?? view.appearance?.logoPosition ?? 'banner',
+      inlineFieldIds: initialAppearance?.inlineFieldIds ?? view.appearance?.inlineFieldIds ?? []
     },
     submission: {
       showSubmitAnother: view.submission?.showSubmitAnother || false,
@@ -113,7 +115,9 @@ export function useFormViewConfig({
           currentAppearance.fieldLayout !== currentPersistedAppearance.fieldLayout ||
           currentAppearance.cardStyle !== currentPersistedAppearance.cardStyle ||
           currentAppearance.align !== currentPersistedAppearance.align ||
-          currentAppearance.rounded !== currentPersistedAppearance.rounded
+          currentAppearance.rounded !== currentPersistedAppearance.rounded ||
+          currentAppearance.logoPosition !== currentPersistedAppearance.logoPosition ||
+          JSON.stringify(currentAppearance.inlineFieldIds ?? []) !== JSON.stringify(currentPersistedAppearance.inlineFieldIds ?? [])
         );
         
         if (titleChanged || descriptionChanged || appearanceChanged) {
@@ -135,7 +139,9 @@ export function useFormViewConfig({
                 fieldLayout: currentPersistedAppearance.fieldLayout ?? view.appearance?.fieldLayout ?? 'list',
                 cardStyle: currentPersistedAppearance.cardStyle ?? view.appearance?.cardStyle ?? 'flat',
                 align: currentPersistedAppearance.align ?? view.appearance?.align ?? 'left',
-                rounded: currentPersistedAppearance.rounded ?? view.appearance?.rounded ?? 'lg'
+                rounded: currentPersistedAppearance.rounded ?? view.appearance?.rounded ?? 'lg',
+                logoPosition: currentPersistedAppearance.logoPosition ?? view.appearance?.logoPosition ?? 'banner',
+                inlineFieldIds: currentPersistedAppearance.inlineFieldIds ?? view.appearance?.inlineFieldIds ?? []
               }
             })
           };

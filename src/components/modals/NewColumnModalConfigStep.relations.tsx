@@ -16,6 +16,10 @@ export function renderRelationsConfigStep(props: any) {
     setSelectedTableId,
     selectedTable,
     setSelectedTable,
+    inverseTitle,
+    setInverseTitle,
+    isSelfLink,
+    currentTableId,
     showDescription,
     setShowDescription,
     description,
@@ -120,16 +124,23 @@ export function renderRelationsConfigStep(props: any) {
           <div className="mb-4">
             <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Target Table</div>
             <AdvancedDropdown
-              options={Array.isArray(tables) ? tables.map(table => ({
-                value: table.id,
-                label: table.title || table.alias || `Table ${table.id}`
-              })) : []}
+              options={Array.isArray(tables) ? tables.map(table => {
+                const tableLabel = table.title || table.alias || `Table ${table.id}`;
+                return {
+                  value: table.id,
+                  label: table.id === currentTableId ? `${tableLabel} (this table)` : tableLabel
+                };
+              }) : []}
               value={selectedTableId}
               onChange={(value) => {
                 if (!isLinksFieldEditing) {
                   setSelectedTableId(value as string);
                   const table = Array.isArray(tables) ? tables.find(t => t.id === value) : null;
                   setSelectedTable(table);
+                  // A self-link has no field in a linked table, so drop any name typed for one.
+                  if (value === currentTableId) {
+                    setInverseTitle('');
+                  }
                 }
               }}
               placeholder="Select table to link"
@@ -149,6 +160,31 @@ export function renderRelationsConfigStep(props: any) {
             )}
           </div>
 
+          {selectedTableId && !isLinksFieldEditing && isSelfLink && (
+            <div className="mb-4 text-xs text-gray-500 bg-gray-50 border rounded-xl p-2">
+              Linking a table to itself creates one field. Only the record you edit stores the link; the linked record is not changed.
+            </div>
+          )}
+
+          {selectedTableId && !isLinksFieldEditing && !isSelfLink && (
+            <div className="mb-4">
+              <label htmlFor="inverseTitle" className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-2">
+                Field name in linked table
+              </label>
+              <input
+                id="inverseTitle"
+                type="text"
+                value={inverseTitle}
+                onChange={(e) => setInverseTitle(e.target.value)}
+                placeholder="Defaults to this table's name"
+                className="w-full px-3 py-2 border border-[var(--color-gray-300)] bg-[var(--color-alpha-white)] text-[var(--color-gray-900)] rounded-xl text-sm outline-none field-component-focus"
+              />
+              <div className="mt-1 text-xs text-gray-500">
+                The linked table gets a field that shows the records linked back to this table.
+              </div>
+            </div>
+          )}
+
           {renderDescriptionToggle({
             showDescription,
             setShowDescription,
@@ -160,10 +196,19 @@ export function renderRelationsConfigStep(props: any) {
         </>
       );
     case 'lookup': {
-      const relationOptions = linkFields.map((field: Record<string, any>) => ({
-        value: field.id,
-        label: field.title || field.name || field.id
-      }));
+      // Show which table each link points to, so both directions of a self-link are distinguishable.
+      const relationOptions = linkFields.map((field: Record<string, any>) => {
+        const fieldLabel = field.title || field.name || field.id;
+        const linkedTableId = field?.meta?.relation?.with;
+        const linkedTable = Array.isArray(tables) ? tables.find((t: any) => t.id === linkedTableId) : null;
+        const linkedLabel = linkedTableId === currentTableId
+          ? 'this table'
+          : linkedTable?.title || linkedTable?.alias;
+        return {
+          value: field.id,
+          label: linkedLabel ? `${fieldLabel} → ${linkedLabel}` : fieldLabel
+        };
+      });
 
       const lookupColumnOptions = targetTableFields.map((field: Record<string, any>) => ({
         value: field.id,

@@ -12,8 +12,9 @@ interface UseCellEditingOptions {
   insertRowDataMutation?: any;
   bulkUpdateColumnMutation?: any;
   onRecordsUpdate: (updater: (prev: any[]) => any[]) => void;
-  // A save the backend rejected, e.g. a primary key value already used by another record
-  onSaveError?: (error: unknown, cell: { rowId: string; columnKey: string }) => void;
+  // Called when the server rejects a cell value (e.g. a unique key), so the grid can show the
+  // reason and put the saved value back
+  onSaveError?: (failure: { rowId: string; columnKey: string; error: unknown }) => void;
 }
 
 interface RecordWithId {
@@ -317,9 +318,8 @@ export function useCellEditing({
       if (err instanceof Error && !err.message.includes('500')) {
         console.error('Failed to update cell:', err);
       }
-      // Forget the rejected value so the next edit is compared with what is saved
-      originalValues.current.delete(`${change.rowId}-${change.columnKey}`);
-      onSaveError?.(err, { rowId: change.rowId, columnKey: change.columnKey });
+      // Nothing was saved: the original value stays the reference for the next edit
+      onSaveError?.({ rowId: change.rowId, columnKey: change.columnKey, error: err });
     }
   }, [tableId, bulkUpdateColumnMutation, insertRowDataMutation, onRecordsUpdate, onSaveError, hasValueChanged, isEmptyValue, isNewlyCreatedRow, updateLocalRecord]);
 

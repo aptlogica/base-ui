@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { AppearanceSettings } from '../AppearanceSettings';
@@ -10,33 +10,6 @@ vi.mock('../../../../../hooks/useApi', () => ({
   useAddImage: () => ({
     mutateAsync: mutateAsyncMock,
   }),
-}));
-
-vi.mock('../../../../../components/common/dropdown/AdvancedDropdown', () => ({
-  __esModule: true,
-  default: ({
-    id,
-    options,
-    value,
-    onChange,
-  }: {
-    id?: string;
-    options: Array<{ label: string; value: string }>;
-    value?: string;
-    onChange: (value: string | string[]) => void;
-  }) => (
-    <select
-      data-testid={id || 'advanced-dropdown'}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
-  ),
 }));
 
 const createWrapper = () => {
@@ -89,7 +62,7 @@ describe('AppearanceSettings', () => {
         { wrapper: createWrapper() }
       );
 
-      expect(screen.getByText('Appearance settings')).toBeInTheDocument();
+      expect(screen.getByText('Appearance Settings')).toBeInTheDocument();
     });
 
     it('should render Background Color label', () => {
@@ -200,7 +173,7 @@ describe('AppearanceSettings', () => {
       expect(screen.getByText('Title Alignment')).toBeInTheDocument();
     });
 
-    it('should render Label Position label', () => {
+    it('should render field layout options', () => {
       render(
         <AppearanceSettings
           appearance={defaultAppearance}
@@ -209,7 +182,9 @@ describe('AppearanceSettings', () => {
         { wrapper: createWrapper() }
       );
 
-      expect(screen.getByText('Label Position')).toBeInTheDocument();
+      expect(screen.getByText('Single-Column')).toBeInTheDocument();
+      expect(screen.getByText('Multi-Column')).toBeInTheDocument();
+      expect(screen.getByText('Left-Aligned Labels')).toBeInTheDocument();
     });
 
     it('should render Field Layout label', () => {
@@ -392,7 +367,7 @@ describe('AppearanceSettings', () => {
         { wrapper: createWrapper() }
       );
 
-      fireEvent.click(screen.getAllByText('Insert via URL')[0]);
+      fireEvent.click(screen.getAllByText('Insert via URL')[1]);
       const input = screen.getByPlaceholderText('https://...');
       fireEvent.change(input, { target: { value: 'https://example.com/logo.png' } });
 
@@ -459,7 +434,7 @@ describe('AppearanceSettings', () => {
       );
 
       const fileInputs = document.querySelectorAll('input[type="file"]');
-      fireEvent.change(fileInputs[0], { target: { files: [file] } });
+      fireEvent.change(fileInputs[1], { target: { files: [file] } });
 
       await waitFor(() => {
         expect(mutateAsyncMock).toHaveBeenCalledWith({ files: [file] });
@@ -538,7 +513,7 @@ describe('AppearanceSettings', () => {
       expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ bannerUrl: '' }));
     });
 
-    it('updates layout and appearance dropdown fields', () => {
+    it('updates layout and appearance segmented fields', () => {
       render(
         <AppearanceSettings
           appearance={defaultAppearance}
@@ -547,19 +522,41 @@ describe('AppearanceSettings', () => {
         { wrapper: createWrapper() }
       );
 
-      fireEvent.change(screen.getByTestId('layout-width-label'), { target: { value: 'full' } });
-      fireEvent.change(screen.getByTestId('title-alignment-label'), { target: { value: 'center' } });
-      fireEvent.change(screen.getByTestId('label-position-label'), { target: { value: 'left' } });
-      fireEvent.change(screen.getByTestId('field-layout-label'), { target: { value: 'grid-2' } });
-      fireEvent.change(screen.getByTestId('card-style-label'), { target: { value: 'elevated' } });
-      fireEvent.change(screen.getByTestId('rounded-corners-label'), { target: { value: 'xl' } });
+      const group = (name: string) => within(screen.getByRole('group', { name }));
 
-      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ layoutWidth: 'full' }));
-      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ align: 'center' }));
-      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ labelPosition: 'left' }));
-      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ fieldLayout: 'grid-2' }));
+      fireEvent.click(group('Layout Width').getByRole('button', { name: 'Large' }));
+      fireEvent.click(group('Title Alignment').getByRole('button', { name: 'Right' }));
+      fireEvent.click(screen.getByText('Left-Aligned Labels'));
+      fireEvent.click(screen.getByText('Multi-Column'));
+      fireEvent.click(group('Card Style').getByRole('button', { name: 'Elevated' }));
+      fireEvent.click(group('Rounded Corners').getByRole('button', { name: 'Small' }));
+      fireEvent.click(screen.getByRole('button', { name: /Below Banner/ }));
+
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ layoutWidth: 'wide' }));
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ align: 'right' }));
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ fieldLayout: 'list', labelPosition: 'left' }));
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ fieldLayout: 'grid-2', labelPosition: 'top' }));
       expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ cardStyle: 'elevated' }));
-      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ rounded: 'xl' }));
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ rounded: 'md' }));
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ logoPosition: 'below' }));
+    });
+
+    it('marks the active segmented options as pressed', () => {
+      render(
+        <AppearanceSettings
+          appearance={{ ...defaultAppearance, layoutWidth: 'medium', align: 'center', rounded: 'xl', logoPosition: 'below' }}
+          onChange={mockOnChange}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      const group = (name: string) => within(screen.getByRole('group', { name }));
+
+      expect(group('Layout Width').getByRole('button', { name: 'Medium' })).toHaveAttribute('aria-pressed', 'true');
+      expect(group('Title Alignment').getByRole('button', { name: 'Center' })).toHaveAttribute('aria-pressed', 'true');
+      expect(group('Rounded Corners').getByRole('button', { name: 'Large' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: /Below Banner/ })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: /On Banner/ })).toHaveAttribute('aria-pressed', 'false');
     });
   });
 
@@ -573,7 +570,7 @@ describe('AppearanceSettings', () => {
         { wrapper: createWrapper() }
       );
 
-      expect(screen.getByText('Appearance settings')).toBeInTheDocument();
+      expect(screen.getByText('Appearance Settings')).toBeInTheDocument();
     });
 
     it('should handle empty appearance object', () => {
@@ -585,7 +582,64 @@ describe('AppearanceSettings', () => {
         { wrapper: createWrapper() }
       );
 
-      expect(screen.getByText('Appearance settings')).toBeInTheDocument();
+      expect(screen.getByText('Appearance Settings')).toBeInTheDocument();
+    });
+  });
+
+  describe('URL handling and image replacement', () => {
+    const renderSettings = (appearance: Record<string, unknown>) =>
+      render(<AppearanceSettings appearance={appearance} onChange={mockOnChange} />, { wrapper: createWrapper() });
+
+    it('rejects non-http URLs and clears the error for a valid one', () => {
+      renderSettings(defaultAppearance);
+      fireEvent.click(screen.getAllByText('Insert via URL')[1]);
+      const input = screen.getByPlaceholderText('https://...');
+
+      fireEvent.change(input, { target: { value: 'ftp://example.com/logo.png' } });
+      expect(screen.getByText('Invalid URL')).toBeInTheDocument();
+
+      fireEvent.change(input, { target: { value: 'https://example.com/logo.png' } });
+      expect(screen.queryByText('Invalid URL')).not.toBeInTheDocument();
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ logoUrl: 'https://example.com/logo.png' }));
+    });
+
+    it('treats relative asset paths as uploaded files and allows replacing them', async () => {
+      renderSettings({ ...defaultAppearance, logoUrl: '/assets/logo.png' });
+      const clickSpy = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
+      fireEvent.click(screen.getByTitle('Change logo'));
+      expect(clickSpy).toHaveBeenCalled();
+      clickSpy.mockRestore();
+
+      const replaceInput = screen.getByTitle('Change logo').parentElement!.querySelector('input[type="file"]')!;
+      fireEvent.change(replaceInput, { target: { files: [new File(['x'], 'x.png', { type: 'image/png' })] } });
+      await waitFor(() => {
+        expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ logoUrl: 'https://example.com/image.png' }));
+      });
+    });
+
+    it('does not offer replacement for external image URLs', () => {
+      renderSettings({ ...defaultAppearance, bannerUrl: 'https://cdn.example.com/banner.png' });
+      expect(screen.getByAltText('Banner preview')).toBeInTheDocument();
+      expect(screen.queryByTitle('Change banner')).not.toBeInTheDocument();
+    });
+
+    it('opens the file picker from Browse', () => {
+      renderSettings(defaultAppearance);
+      const clickSpy = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
+      fireEvent.click(screen.getAllByText('Browse')[0]);
+      expect(clickSpy).toHaveBeenCalled();
+      clickSpy.mockRestore();
+    });
+
+    it('highlights the active background color', () => {
+      renderSettings({ ...defaultAppearance, backgroundColor: '#ECFDF3' });
+      expect(screen.getByRole('button', { name: 'Background color #ECFDF3' })).toHaveClass('ring-2');
+      expect(screen.getByRole('button', { name: 'Background color #E0DDFB' })).not.toHaveClass('ring-2');
+    });
+
+    it('marks the left-aligned labels layout as active', () => {
+      renderSettings({ ...defaultAppearance, labelPosition: 'left' });
+      expect(screen.getByRole('button', { name: /Left-Aligned Labels/ })).toHaveAttribute('aria-pressed', 'true');
     });
   });
 });

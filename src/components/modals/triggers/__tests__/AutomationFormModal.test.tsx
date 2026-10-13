@@ -7,11 +7,13 @@ import type { Automation } from '../../../../service/clientService';
 const createMutateAsync = vi.fn();
 const updateMutateAsync = vi.fn();
 const runMutateAsync = vi.fn();
+const validateMutateAsync = vi.fn();
 
 vi.mock('../../../../hooks/useApi', () => ({
   useCreateAutomation: () => ({ mutateAsync: createMutateAsync, isPending: false }),
   useUpdateAutomation: () => ({ mutateAsync: updateMutateAsync, isPending: false }),
   useRunAutomation: () => ({ mutateAsync: runMutateAsync, isPending: false }),
+  useValidateAutomation: () => ({ mutateAsync: validateMutateAsync, isPending: false }),
 }));
 
 // Plain textarea instead of the rich field component
@@ -35,6 +37,18 @@ const savedTrigger: Automation = {
 const typeQuery = (label: string, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
+// Clicks Validate and waits for it to pass; Save and Run need a validated query
+const validate = async () => {
+  await userEvent.click(screen.getByRole('button', { name: 'Validate' }));
+  await screen.findByText(/^Valid: Postgres accepts this query/);
+};
+
+// Run shows only after Validate passes; returns the Run button
+const validateFirst = async () => {
+  await userEvent.click(screen.getByRole('button', { name: 'Validate' }));
+  return screen.findByRole('button', { name: 'Run' });
+};
+
 describe('AutomationFormModal', () => {
   const onClose = vi.fn();
 
@@ -43,6 +57,7 @@ describe('AutomationFormModal', () => {
     createMutateAsync.mockResolvedValue({});
     updateMutateAsync.mockResolvedValue({});
     runMutateAsync.mockResolvedValue({});
+    validateMutateAsync.mockResolvedValue({ data: { valid: true } });
   });
 
   describe('adding a trigger', () => {
@@ -65,6 +80,11 @@ describe('AutomationFormModal', () => {
       expect(save).toBeDisabled();
 
       typeQuery('Trigger query', TRIGGER_QUERY);
+      // Filled, but the query has not passed Validate yet
+      expect(save).toBeDisabled();
+      expect(save).toHaveAttribute('title', 'Validate the query first');
+
+      await validate();
       expect(save).toBeEnabled();
     });
 
@@ -77,6 +97,7 @@ describe('AutomationFormModal', () => {
       await userEvent.click(screen.getByRole('checkbox', { name: 'UPDATE' }));
       expect(screen.getByText(/Saved as: BEFORE INSERT, BEFORE UPDATE/)).toBeInTheDocument();
 
+      await validate();
       await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
       await waitFor(() => expect(createMutateAsync).toHaveBeenCalledWith({
@@ -111,6 +132,7 @@ describe('AutomationFormModal', () => {
       render(<AutomationFormModal type="trigger" table={table} onClose={onClose} />);
       await userEvent.type(screen.getByLabelText(/Title/), 'Log salary');
       typeQuery('Trigger query', TRIGGER_QUERY);
+      await validate();
       await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
       expect(await screen.findByText('syntax error at or near "TRIGER"')).toBeInTheDocument();
@@ -126,6 +148,7 @@ describe('AutomationFormModal', () => {
 
       await userEvent.type(screen.getByLabelText(/Title/), 'Log fn');
       typeQuery('Function query', `  ${FUNCTION_QUERY}  `);
+      await validate();
       await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
       await waitFor(() => expect(createMutateAsync).toHaveBeenCalledWith({
@@ -144,6 +167,9 @@ describe('AutomationFormModal', () => {
       const save = screen.getByRole('button', { name: 'Save' });
       expect(save).toBeDisabled();
       await userEvent.type(screen.getByLabelText(/Title/), '!');
+      // Changed, but not validated yet
+      expect(save).toBeDisabled();
+      await validate();
       expect(save).toBeEnabled();
     });
 
@@ -157,6 +183,7 @@ describe('AutomationFormModal', () => {
       render(<AutomationFormModal type="trigger" table={table} item={savedTrigger} onClose={onClose} />);
       await userEvent.clear(screen.getByLabelText(/Title/));
       await userEvent.type(screen.getByLabelText(/Title/), 'Audit salary');
+      await validate();
       await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
       await waitFor(() => expect(updateMutateAsync).toHaveBeenCalledWith({
@@ -168,7 +195,7 @@ describe('AutomationFormModal', () => {
 
     it('disables Run while there are unsaved changes', async () => {
       render(<AutomationFormModal type="trigger" table={table} item={savedTrigger} onClose={onClose} />);
-      const run = screen.getByRole('button', { name: 'Run' });
+      const run = await validateFirst();
       expect(run).toBeEnabled();
       await userEvent.type(screen.getByLabelText(/Title/), '!');
       expect(run).toBeDisabled();
@@ -177,7 +204,7 @@ describe('AutomationFormModal', () => {
 
     it('runs the saved query and closes', async () => {
       render(<AutomationFormModal type="trigger" table={table} item={savedTrigger} onClose={onClose} />);
-      await userEvent.click(screen.getByRole('button', { name: 'Run' }));
+      await userEvent.click(await validateFirst());
       await waitFor(() => expect(runMutateAsync).toHaveBeenCalledWith({ id: 'a1', tableId: 't1' }));
       expect(onClose).toHaveBeenCalled();
     });
@@ -185,7 +212,7 @@ describe('AutomationFormModal', () => {
     it('shows the error when running fails', async () => {
       runMutateAsync.mockRejectedValue(new Error('function log_fn() does not exist'));
       render(<AutomationFormModal type="trigger" table={table} item={savedTrigger} onClose={onClose} />);
-      await userEvent.click(screen.getByRole('button', { name: 'Run' }));
+      await userEvent.click(await validateFirst());
       expect(await screen.findByText('function log_fn() does not exist')).toBeInTheDocument();
       expect(onClose).not.toHaveBeenCalled();
     });
@@ -194,6 +221,106 @@ describe('AutomationFormModal', () => {
       const webhook: Automation = { id: 'w1', model_id: 't1', type: 'webhook', title: 'Notify', context: '{"url":"x"}' };
       render(<AutomationFormModal type="webhook" table={table} item={webhook} onClose={onClose} />);
       expect(screen.queryByRole('button', { name: 'Run' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('validating', () => {
+    it('shows Validate first, then Run in its place once the query passes', async () => {
+      render(<AutomationFormModal type="trigger" table={table} item={savedTrigger} onClose={onClose} />);
+      expect(screen.queryByRole('button', { name: 'Run' })).not.toBeInTheDocument();
+
+      await validateFirst();
+      expect(screen.getByText('Valid: Postgres accepts this query. You can run it now.')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Validate' })).not.toBeInTheDocument();
+    });
+
+    it('keeps Validate for a new entry, which has nothing to run', async () => {
+      render(<AutomationFormModal type="trigger" table={table} onClose={onClose} />);
+      typeQuery('Trigger query', TRIGGER_QUERY);
+      await userEvent.click(screen.getByRole('button', { name: 'Validate' }));
+      expect(await screen.findByText('Valid: Postgres accepts this query.')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Validate' })).toBeInTheDocument();
+    });
+
+    it('hides Run again when the query or events change after validating', async () => {
+      render(<AutomationFormModal type="trigger" table={table} item={savedTrigger} onClose={onClose} />);
+      await validateFirst();
+
+      await userEvent.click(screen.getByRole('checkbox', { name: 'UPDATE' }));
+      expect(screen.queryByRole('button', { name: 'Run' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Validate' })).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('checkbox', { name: 'UPDATE' }));
+      expect(screen.getByRole('button', { name: 'Run' })).toBeInTheDocument();
+
+      typeQuery('Trigger query', TRIGGER_QUERY.replace('log_fn', 'other_fn'));
+      expect(screen.queryByRole('button', { name: 'Run' })).not.toBeInTheDocument();
+    });
+
+    it('keeps Run hidden when the query is not valid', async () => {
+      validateMutateAsync.mockResolvedValue({ data: { valid: false, message: 'syntax error' } });
+      render(<AutomationFormModal type="trigger" table={table} item={savedTrigger} onClose={onClose} />);
+      await userEvent.click(screen.getByRole('button', { name: 'Validate' }));
+      expect(await screen.findByText('syntax error')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Run' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    });
+
+    it('asks to run after saving a validated change', async () => {
+      render(<AutomationFormModal type="trigger" table={table} item={savedTrigger} onClose={onClose} />);
+      await userEvent.type(screen.getByLabelText(/Title/), '!');
+      await validateFirst();
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+      expect(await screen.findByText('Saved. Click Run to apply it in Postgres.')).toBeInTheDocument();
+    });
+
+    it('validates a new trigger as typed, with the chosen events', async () => {
+      render(<AutomationFormModal type="trigger" table={table} onClose={onClose} />);
+      const validate = screen.getByRole('button', { name: 'Validate' });
+      expect(validate).toBeDisabled();
+
+      typeQuery('Trigger query', TRIGGER_QUERY);
+      await userEvent.click(validate);
+
+      await waitFor(() => expect(validateMutateAsync).toHaveBeenCalledWith({
+        model_id: 't1', id: undefined, type: 'trigger', context: TRIGGER_QUERY, event: 'AFTER INSERT',
+      }));
+      expect(await screen.findByText('Valid: Postgres accepts this query.')).toBeInTheDocument();
+      // Nothing is saved or run
+      expect(createMutateAsync).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('validates unsaved changes of an existing entry by its id', async () => {
+      render(<AutomationFormModal type="function" table={table} item={{ ...savedTrigger, type: 'function', context: FUNCTION_QUERY, event: '' }} onClose={onClose} />);
+      const edited = FUNCTION_QUERY.replace('RETURN NEW', 'RETURN OLD');
+      typeQuery('Function query', edited);
+      await userEvent.click(screen.getByRole('button', { name: 'Validate' }));
+
+      await waitFor(() => expect(validateMutateAsync).toHaveBeenCalledWith({
+        model_id: 't1', id: 'a1', type: 'function', context: edited, event: '',
+      }));
+      expect(updateMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("shows Postgres' reason when the query is not valid", async () => {
+      validateMutateAsync.mockResolvedValue({ data: { valid: false, message: 'function log_fn() does not exist' } });
+      render(<AutomationFormModal type="trigger" table={table} item={savedTrigger} onClose={onClose} />);
+      await userEvent.click(screen.getByRole('button', { name: 'Validate' }));
+      expect(await screen.findByText('function log_fn() does not exist')).toBeInTheDocument();
+    });
+
+    it('shows the error when the query has the wrong format', async () => {
+      validateMutateAsync.mockRejectedValue(new Error('Invalid trigger query'));
+      render(<AutomationFormModal type="trigger" table={table} item={savedTrigger} onClose={onClose} />);
+      await userEvent.click(screen.getByRole('button', { name: 'Validate' }));
+      expect(await screen.findByText('Invalid trigger query')).toBeInTheDocument();
+    });
+
+    it('has no Validate button for a webhook', () => {
+      const webhook: Automation = { id: 'w1', model_id: 't1', type: 'webhook', title: 'Notify', context: '{"url":"x"}' };
+      render(<AutomationFormModal type="webhook" table={table} item={webhook} onClose={onClose} />);
+      expect(screen.queryByRole('button', { name: 'Validate' })).not.toBeInTheDocument();
     });
   });
 

@@ -246,19 +246,19 @@ const refreshAccessToken = async (): Promise<string> => {
     // Validate refresh token and user ID
     if (!refreshToken) {
       console.error('No refresh token found in storage');
-      await forceLogout();
+      forceLogout();
       return '';
     }
 
     if (!userId) {
       console.error('No user_id found in storage');
-      await forceLogout();
+      forceLogout();
       return '';
     }
 
     if (isRefreshExpired) {
       console.error('Refresh token is expired');
-      await forceLogout();
+      forceLogout();
       return '';
     }
 
@@ -304,7 +304,7 @@ const refreshAccessToken = async (): Promise<string> => {
 
     // Only force logout on authentication errors (401, 403)
     if (error?.response?.status === 401 || error?.response?.status === 403) {
-      await forceLogout();
+      forceLogout();
     }
 
     return '';
@@ -325,7 +325,7 @@ export const updateClientToken = (token: string) => {
  * Dispatches 'auth_token_expired' event for components to handle
  * Uses custom event for navigation to avoid full page refresh
  */
-export const forceLogout = async (): Promise<void> => {
+export const forceLogout = (): void => {
   clearTokens();
   updateClientToken('');
 
@@ -688,7 +688,24 @@ export async function removeUserFromWorkspaceService(workspaceId: string, params
 
 // BaseService wrappers with auth/tenant headers
 export async function createBaseService(params: any) {
-  return await makeAuthenticatedCall(() => client.baseService.create(params));
+  if (!params?.meta) {
+    return await makeAuthenticatedCall(() => client.baseService.create(params));
+  }
+  // The SDK's create() only forwards title/description/workspace_id/image, so build the
+  // same multipart request here to also send `meta` (base-level format defaults)
+  return await makeAuthenticatedCall(() => {
+    const httpClient = (client as any).http;
+    const formData = new FormData();
+    formData.append('title', params.title);
+    if (params.description) formData.append('description', params.description);
+    if (params.workspace_id) formData.append('workspace_id', params.workspace_id);
+    if (params.image) formData.append('image', params.image);
+    formData.append('meta', JSON.stringify(params.meta));
+    return httpClient.post('/base/create', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      ...httpClient.getUploadLimits?.(false),
+    });
+  });
 }
 
 export async function getBaseByIdService(id: string) {
@@ -1172,6 +1189,18 @@ export async function runAutomationService(id: string): Promise<{ data: Automati
   return await makeAuthenticatedCall(() => (client as any).http.post(`/automation/${id}/run`));
 }
 
+// Whether Postgres accepts a trigger or function query; message is Postgres' reason when not
+export interface AutomationValidationResult {
+  valid: boolean;
+  message?: string;
+}
+
+// Runs the query as typed (saved or not) in a rolled-back transaction; nothing is changed.
+// id is set when editing, so the query is checked as a replacement of what that entry installed.
+export async function validateAutomationService(params: { model_id: string; id?: string; type: 'trigger' | 'function'; context: string; event?: string }): Promise<{ data: AutomationValidationResult }> {
+  return await makeAuthenticatedCall(() => (client as any).http.post('/automation/validate', params));
+}
+
 export async function deleteAutomationService(id: string) {
   return await makeAuthenticatedCall(() => (client as any).http.delete(`/automation/${id}`));
 }
@@ -1225,4 +1254,65 @@ export async function getPrimaryKeyService(tableId: string): Promise<{ data: Pri
 
 export async function updatePrimaryKeyService({ tableId, columnIds }: { tableId: string; columnIds: string[] }): Promise<{ data: PrimaryKey }> {
   return await makeAuthenticatedCall(() => (client as any).http.put(`/table/${tableId}/primary-key`, { column_ids: columnIds }));
+}
+
+// =========================
+// Table constraints (unique keys; later primary key and check)
+// =========================
+
+export type TableConstraintType = 'unique' | 'primary' | 'check';
+
+export interface ConstraintColumn {
+  id: string;
+  title: string;
+}
+
+export interface TableConstraintOptions {
+  // Empty values count as equal, so only one record may leave the columns empty
+  nulls_not_distinct?: boolean;
+}
+
+export interface TableConstraint {
+  id: string;
+  title: string;
+  // Name of the constraint in Postgres
+  constraint_name: string;
+  // Columns of the key, in order
+  columns: ConstraintColumn[];
+  options: TableConstraintOptions;
+  // 'missing' when the Postgres constraint no longer exists
+  status: 'ok' | 'missing';
+}
+
+export interface TableConstraintInput {
+  title: string;
+  column_ids: string[];
+  options?: TableConstraintOptions;
+}
+
+// Whether records already share values in the chosen columns; message names the columns when not
+export interface ConstraintCheckResult {
+  valid: boolean;
+  message?: string;
+}
+
+export async function getTableConstraintsService(tableId: string, type: TableConstraintType): Promise<{ data: TableConstraint[] }> {
+  return await makeAuthenticatedCall(() => (client as any).http.get('/table-constraint', { params: { model_id: tableId, type } }));
+}
+
+// Checks existing records against the columns without changing anything
+export async function checkTableConstraintService(params: { model_id: string; column_ids: string[]; options?: TableConstraintOptions }): Promise<{ data: ConstraintCheckResult }> {
+  return await makeAuthenticatedCall(() => (client as any).http.post('/table-constraint/check', params));
+}
+
+export async function createTableConstraintService(params: TableConstraintInput & { model_id: string; type: TableConstraintType }): Promise<{ data: TableConstraint }> {
+  return await makeAuthenticatedCall(() => (client as any).http.post('/table-constraint/create', params));
+}
+
+export async function updateTableConstraintService({ id, ...params }: TableConstraintInput & { id: string }): Promise<{ data: TableConstraint }> {
+  return await makeAuthenticatedCall(() => (client as any).http.put(`/table-constraint/${id}`, params));
+}
+
+export async function deleteTableConstraintService(id: string) {
+  return await makeAuthenticatedCall(() => (client as any).http.delete(`/table-constraint/${id}`));
 }

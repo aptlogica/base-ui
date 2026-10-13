@@ -8,12 +8,12 @@ import { useClickOutside } from '../../hooks/useClickOutside';
 import { FIELD_TYPES } from '../../types/fieldTypes';
 import { timeZoneOptions } from '../../types/constants';
 import { FieldTypeDropdown } from '../common/dropdown/fieldDropdown/FieldTypeDropdown';
-import { useBaseTables, useTable, useAllViews, useResetField } from '../../hooks/useApi';
+import { useBaseTables, useBaseById, useTable, useAllViews, useResetField } from '../../hooks/useApi';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { useToast } from '../../components/common/Toast';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../utils/fieldUsageUtils';
 import { renderNewColumnConfigStep } from './NewColumnModalConfigStep';
-import { buildColumnPayload, buildFieldMeta, getUniqueColumnNameByUidt, isDuplicateFieldName } from './NewColumnModal.logic';
+import { buildColumnPayload, buildFieldMeta, getUniqueColumnNameByUidt, isDuplicateFieldName, getBaseFormatDefaults } from './NewColumnModal.logic';
 import { validateFormula } from '../../utils/formulaHelper';
 
 interface FieldType {
@@ -58,6 +58,9 @@ const getRawTables = (tablesData: any) => {
   return [];
 };
 
+const isSelfLinkTable = (selectedTableId: string, currentTableId?: string) =>
+  !!currentTableId && selectedTableId === currentTableId;
+
 const isFieldTypeLocked = (
   isFieldUsedInViews: boolean,
   isLinksFieldEditing: boolean,
@@ -77,6 +80,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   // Get current base ID and tables for relations
   const { selectedBaseId } = useNavigationStore();
   const { data: tablesData } = useBaseTables(selectedBaseId || '') as { data?: any };
+  const { data: baseData } = useBaseById(selectedBaseId || '') as { data?: { data?: { meta?: unknown } } };
+  const baseMeta = baseData?.data?.meta;
   
   // Hook for resetting field data (used when formula is cleared)
   const resetField = useResetField();
@@ -124,7 +129,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     return fieldUsage.isUsedInViews;
   }, [initialValues?.id, currentTableViews, currentTableId]);
 
-  // Extract tables array from response and filter out current table
+  // Extract tables array from response. The current table stays in the list (first) so a table can link to itself.
   const tables = useMemo(() => {
     if (!tablesData) return [];
 
@@ -134,10 +139,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     const rawTables = getRawTables(tablesData);
 
     // Extract model objects when present, otherwise use table item directly.
-    return rawTables
+    const allTables = rawTables
       .map((item: any) => item?.model || item)
-      .filter((table: any) => !!table?.id)
-      .filter((table: any) => table.id !== currentTableId); // Exclude current table from target selection
+      .filter((table: any) => !!table?.id);
+    const current = allTables.filter((table: any) => table.id === currentTableId);
+    const others = allTables.filter((table: any) => table.id !== currentTableId);
+    return [...current, ...others];
   }, [tablesData, currentTableId]);
 
   // Config state for each type
@@ -339,6 +346,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const [relationType, setRelationType] = useState<'one-to-one' | 'has-many' | 'many-to-many'>('one-to-one');
   const [selectedTableId, setSelectedTableId] = useState<string>('');
   const [selectedTable, setSelectedTable] = useState<any>(null);
+  const [inverseTitle, setInverseTitle] = useState<string>('');
+  const isSelfLink = isSelfLinkTable(selectedTableId, currentTableId);
 
   // Add state for lookup field config
   const [selectedRelationId, setSelectedRelationId] = useState<string>('');
@@ -726,6 +735,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setRelationType('one-to-one');
     setSelectedTableId('');
     setSelectedTable(null);
+    setInverseTitle('');
     // Reset lookup field config state
     setSelectedRelationId('');
     setSelectedLookupColumnId('');
@@ -798,6 +808,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setRelationType('one-to-one');
     setSelectedTableId('');
     setSelectedTable(null);
+    setInverseTitle('');
     setSelectedRelationId('');
     setSelectedLookupColumnId('');
     setHasUserModifiedLookupColumn(false);
@@ -868,15 +879,20 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   }, [fieldName, fields, step, initialValues]);
 
   // Auto-focus field name input when modal opens and step is 1 or 2
+  const isEditMode = !!initialValues;
   useEffect(() => {
     if (isOpen && (step === 1 || step === 2) && fieldNameInputRef.current) {
       // Small delay to ensure the modal is fully rendered
       const timer = setTimeout(() => {
         fieldNameInputRef.current?.focus();
+        // In edit mode, select the existing name so it can be replaced by typing
+        if (isEditMode) {
+          fieldNameInputRef.current?.select();
+        }
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, step]);
+  }, [isOpen, step, isEditMode]);
 
   // Filter out hidden field types (button, formula, uuid) from user selection
   const filteredTypes: FieldType[] = FIELD_TYPES
@@ -937,16 +953,19 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setRatingColor('yellow');
     setRatingMax(5);
     setRatingDefault(0);
-    setDateFormat('YYYY-MM-DD');
-    setTimeFormat('hh:mm');
-    setHourFormat('24');
-    setDisplayTimeZone(false);
-    setSameTimezone(false);
-    setTimeZone('');
+    // Start from the formats chosen when the base was created (user can still change them)
+    const baseDefaults = getBaseFormatDefaults(baseMeta, type.key);
+    setDateFormat(baseDefaults.dateFormat ?? 'YYYY-MM-DD');
+    setTimeFormat(baseDefaults.timeFormat ?? 'hh:mm');
+    setHourFormat(baseDefaults.hourFormat ?? '24');
+    setDisplayTimeZone(baseDefaults.displayTimeZone ?? false);
+    setSameTimezone(baseDefaults.sameTimezone ?? false);
+    setTimeZone(baseDefaults.timeZone ?? '');
     setDateTimeDefault('');
     setShowDateTimeDefault(false);
     // Reset currency config state
-    setCurrencyType('USD');
+    setCurrencyType(baseDefaults.currencyType ?? 'USD');
+    setCurrencyLocale(baseDefaults.currencyLocale ?? 'en-US');
     setCurrencyDefault(null);
     setShowCurrencyDefault(false);
     // Reset text config state
@@ -958,6 +977,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setRelationType('one-to-one');
     setSelectedTableId('');
     setSelectedTable(null);
+    setInverseTitle('');
     // Reset lookup field config state
     setSelectedRelationId('');
     setSelectedLookupColumnId('');
@@ -1075,6 +1095,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       selectedTableId,
       selectedTable,
       relationType,
+      inverseTitle,
+      currentTableId,
       selectedRelationId,
       selectedLookupColumnId,
       linkFields,
@@ -1258,6 +1280,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setSelectedTableId,
     selectedTable,
     setSelectedTable,
+    inverseTitle,
+    setInverseTitle,
+    isSelfLink,
+    currentTableId,
     selectedRelationId,
     setSelectedRelationId,
     selectedLookupColumnId,

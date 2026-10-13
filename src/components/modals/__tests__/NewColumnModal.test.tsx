@@ -8,6 +8,7 @@ import { validateFormula } from '../../../utils/formulaHelper';
 const toast = { error: vi.fn(), success: vi.fn() };
 const mockUseBaseTables = vi.fn(() => ({ data: null }));
 const mockUseResetField = vi.fn(() => ({ mutate: vi.fn() }));
+const mockUseBaseById = vi.fn((): { data: any } => ({ data: null }));
 
 vi.mock('../../common/Toast', () => ({
   ToastProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -16,6 +17,7 @@ vi.mock('../../common/Toast', () => ({
 
 vi.mock('../../../hooks/useApi', () => ({
   useBaseTables: (...args: any[]) => mockUseBaseTables(...args),
+  useBaseById: () => mockUseBaseById(),
   useTable: () => ({ data: null, isLoading: false }),
   useAllViews: () => ({ data: [] }),
   useResetField: (...args: any[]) => mockUseResetField(...args),
@@ -120,6 +122,7 @@ describe('NewColumnModal', () => {
     toast.error.mockClear();
     toast.success.mockClear();
     mockUseBaseTables.mockReturnValue({ data: null });
+    mockUseBaseById.mockReturnValue({ data: null });
     vi.mocked(validateFormula).mockReturnValue(null);
   });
 
@@ -295,6 +298,33 @@ describe('NewColumnModal', () => {
     const payload = onSave.mock.calls[0][0];
     expect(payload.type).toBe(type);
     expect(payload.meta).toBeDefined();
+  });
+
+  it.each([
+    ['currency', { currencyLocale: 'en-IN', currencyType: 'INR' }],
+    ['date', { dateFormat: 'DD/MM/YYYY' }],
+    ['datetime', { dateFormat: 'MM-DD-YYYY', timeFormat: 'HH:mm' }],
+  ])('defaults %s formats to those saved on the base', (type, expected) => {
+    mockUseBaseById.mockReturnValue({
+      data: {
+        data: {
+          meta: {
+            dateFormat: 'DD/MM/YYYY',
+            dateTimeFormat: { dateFormat: 'MM-DD-YYYY', timeFormat: 'HH:mm' },
+            currencyLocale: 'en-IN',
+            currencyType: 'INR',
+          },
+        },
+      },
+    });
+    const onSave = vi.fn();
+    render(<NewColumnModal isOpen={true} onClose={vi.fn()} onSave={onSave} />);
+
+    fireEvent.click(screen.getByText(type));
+    fireEvent.click(screen.getByText('Save Field'));
+
+    expect(onSave).toHaveBeenCalled();
+    expect(onSave.mock.calls[0][0].meta).toMatchObject(expected);
   });
 
   it('blocks save for formula field when formula is invalid at save time', () => {

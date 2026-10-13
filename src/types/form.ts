@@ -47,8 +47,11 @@ export interface FormConfig {
     labelPosition?: 'top' | 'left';
     fieldLayout?: 'list' | 'grid-2';
     cardStyle?: 'flat' | 'elevated';
-    align?: 'left' | 'center';
+    align?: 'left' | 'center' | 'right';
+    logoPosition?: 'banner' | 'below';
     rounded?: 'none' | 'md' | 'lg' | 'xl';
+    // Field ids placed in the same row as the field before them (single-column layout)
+    inlineFieldIds?: string[];
     [key: string]: unknown;
   };
   submission?: {

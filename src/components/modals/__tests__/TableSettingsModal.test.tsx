@@ -13,6 +13,10 @@ vi.mock('../tableSettings/PrimaryKeyPanel', () => ({
   default: ({ table }: { table: { id: string } }) => <div data-testid="primary-key-panel">{table.id}</div>,
 }));
 
+vi.mock('../constraints/UniqueKeysPanel', () => ({
+  default: ({ table }: { table: { id: string } }) => <div data-testid="unique-keys-panel">{`unique:${table.id}`}</div>,
+}));
+
 const table = { id: 't1', title: 'Employee' };
 
 describe('TableSettingsModal', () => {
@@ -44,7 +48,16 @@ describe('TableSettingsModal', () => {
     render(<TableSettingsModal table={table} onClose={onClose} />);
     expect(screen.getByRole('button', { name: 'Primary Key' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByTestId('primary-key-panel')).toHaveTextContent('t1');
+    expect(screen.queryByTestId('unique-keys-panel')).not.toBeInTheDocument();
     expect(screen.queryByTestId('triggers-panel')).not.toBeInTheDocument();
+  });
+
+  it('shows the unique constraints of the table under Unique Key', async () => {
+    render(<TableSettingsModal table={table} onClose={onClose} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Unique Key' }));
+    expect(screen.getByRole('button', { name: 'Unique Key' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByTestId('unique-keys-panel')).toHaveTextContent('unique:t1');
+    expect(screen.queryByTestId('primary-key-panel')).not.toBeInTheDocument();
   });
 
   it('embeds the triggers list in Triggers & Functions', async () => {
@@ -53,16 +66,16 @@ describe('TableSettingsModal', () => {
     expect(screen.getByRole('button', { name: 'Triggers & Functions' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByTestId('triggers-panel')).toHaveTextContent('triggers:embedded:t1');
     expect(screen.queryByTestId('primary-key-panel')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('unique-keys-panel')).not.toBeInTheDocument();
   });
 
   it('shows an empty right side for sections that are not built yet', async () => {
     render(<TableSettingsModal table={table} onClose={onClose} />);
-    for (const label of ['Unique Key', 'Check Constraints']) {
-      await userEvent.click(screen.getByRole('button', { name: label }));
-      expect(screen.getByRole('button', { name: label })).toHaveAttribute('aria-current', 'page');
-      expect(screen.queryByTestId('triggers-panel')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('primary-key-panel')).not.toBeInTheDocument();
-    }
+    await userEvent.click(screen.getByRole('button', { name: 'Check Constraints' }));
+    expect(screen.getByRole('button', { name: 'Check Constraints' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByTestId('triggers-panel')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('primary-key-panel')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('unique-keys-panel')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Primary Key' }));
     expect(screen.getByTestId('primary-key-panel')).toBeInTheDocument();
