@@ -91,8 +91,7 @@ const createTestQueryClient = () =>
     },
   });
 
-const renderWithQueryClient = (ui: React.ReactElement) => {
-  const queryClient = createTestQueryClient();
+const renderWithQueryClient = (ui: React.ReactElement, queryClient = createTestQueryClient()) => {
   return render(
     <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
   );
@@ -478,6 +477,25 @@ describe('EditRecordModal', () => {
 
       expect(submitButton).not.toBeDisabled();
     });
+
+    it('shows the exact reason when the backend rejects the save', async () => {
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => true,
+        canDeleteRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+      const message = 'The combination Code = "HR", Year = 2026 is already used by record #4 (Acme). Each record needs a unique primary key (Code + Year).';
+      updateRowDataMutateAsyncMock.mockRejectedValueOnce(Object.assign(new Error(message), { code: 'PKY_1008' }) as never);
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      const user = userEvent.setup();
+      renderWithQueryClient(<EditRecordModal {...defaultProps} />);
+      await user.clear(screen.getByTestId('field-input-field-1'));
+      await user.type(screen.getByTestId('field-input-field-1'), 'HR');
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+      expect(await screen.findByText(message)).toBeInTheDocument();
+    });
   });
 
   describe('required validation', () => {
@@ -556,6 +574,38 @@ describe('EditRecordModal', () => {
           ([payload]) => Boolean(payload?.values?.['field-links'])
         )
       ).toBe(false);
+    });
+
+    it('unlinks records stored by their composite primary key', async () => {
+      const user = userEvent.setup();
+      const fieldsWithLinks = [
+        { id: 'field-1', name: 'title', title: 'Title', uidt: 'SingleLineText' },
+        { id: 'field-links', name: 'links', title: 'Links', uidt: 'links', type: 'links', meta: { relation: { with: 'table-org' } } },
+      ];
+      // The linked table's records, as loaded by the links field
+      const queryClient = createTestQueryClient();
+      queryClient.setQueryData(['tables', 'table-org'], {
+        data: { records: [{ id: 7, code: 'IN', dept: 'HR' }, { id: 8, code: 'US', dept: 'HR' }] },
+      });
+
+      renderWithQueryClient(
+        <EditRecordModal
+          {...defaultProps}
+          recordId="123"
+          fields={fieldsWithLinks}
+          initialValues={{ 'field-1': 'Existing Title', 'field-links': [{ code: 'US', dept: 'HR' }] }}
+        />,
+        queryClient,
+      );
+
+      await user.clear(screen.getByTestId('field-input-field-links'));
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+      await waitFor(() => {
+        expect(insertRelationMutateAsyncMock).toHaveBeenCalledWith(
+          expect.objectContaining({ column_id: 'field-links', source_row_id: 123, target_row_id: 8, action: 'unlink' })
+        );
+      });
     });
   });
 });

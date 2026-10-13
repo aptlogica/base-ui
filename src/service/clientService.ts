@@ -1165,3 +1165,54 @@ export async function runAutomationService(id: string): Promise<{ data: Automati
 export async function deleteAutomationService(id: string) {
   return await makeAuthenticatedCall(() => (client as any).http.delete(`/automation/${id}`));
 }
+
+// =========================
+// Primary key
+// =========================
+
+export interface PrimaryKeyColumn {
+  id: string;
+  title: string;
+  column_name: string;
+  uidt: string;
+  system: boolean;
+  in_key: boolean;
+  eligible: boolean;
+  // Why the field can't be a key field
+  reason?: string;
+}
+
+export interface PrimaryKey {
+  model_id: string;
+  // Key fields in key order
+  column_ids: string[];
+  column_names: string[];
+  // True while link fields store this table's key values
+  locked: boolean;
+  link_columns: string[];
+  columns: PrimaryKeyColumn[];
+}
+
+// Returned in error.details (PKY_1004) when existing records don't satisfy a new key
+export interface PrimaryKeyViolation {
+  // States exactly what failed; also the error message
+  message: string;
+  columns: string[];
+  column_titles: string[];
+  // Records with at least one empty key field
+  null_count: number;
+  empty_fields: { column: string; title: string; count: number }[];
+  null_records: { id: number; title: string; missing?: string[] }[];
+  // Key value combinations used by more than one record
+  duplicate_groups: number;
+  duplicates: { values: Record<string, unknown>; count: number; record_ids: number[] }[];
+}
+
+// The SDK has no primary key resource yet, so these use its authenticated HTTP client directly
+export async function getPrimaryKeyService(tableId: string): Promise<{ data: PrimaryKey }> {
+  return await makeAuthenticatedCall(() => (client as any).http.get(`/table/${tableId}/primary-key`));
+}
+
+export async function updatePrimaryKeyService({ tableId, columnIds }: { tableId: string; columnIds: string[] }): Promise<{ data: PrimaryKey }> {
+  return await makeAuthenticatedCall(() => (client as any).http.put(`/table/${tableId}/primary-key`, { column_ids: columnIds }));
+}

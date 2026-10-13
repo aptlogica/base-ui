@@ -14,6 +14,9 @@ import {
   getStandardFieldType
 } from '../../utils/standardFieldUtils';
 import { isFormulaField } from '../../utils/fieldUtils';
+import { apiErrorMessage } from '../../utils/apiErrors';
+import { cachedTableRecords, linkItemIdentity, linkItems, linkRowIds } from '../../utils/linkValues';
+import { useQueryClient } from '@tanstack/react-query';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
 import { useToast } from '../../components/common/Toast';
 
@@ -62,6 +65,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   const removeAttachmentsMutation = useRemoveAttachments();
   const insertRelationMutation = useInsertRelationData();
   const toast = useToast();
+  const queryClient = useQueryClient();
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -181,9 +185,9 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
       // Convert Date objects to ISO datetime string
       return value.toISOString();
     } else if (fieldType === 'links' || field.uidt === 'links') {
-      const ids = (Array.isArray(value) ? value : [])
-        .map((item: any) => item?.id ?? item)
-        .map(String)
+      const records = cachedTableRecords(queryClient, field?.meta?.relation?.with);
+      const ids = linkItems(value)
+        .map(item => linkItemIdentity(item, records))
         .filter((id: string) => id.trim() !== '')
         .sort((a, b) => a.localeCompare(b));
       return ids.join(',');
@@ -332,19 +336,10 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
         (fields || [])
           .filter(f => f.type === 'links' || f.uidt === 'links')
           .map(async (field) => {
-            const originalIds = new Set<number>(
-              (Array.isArray(originalData[field.id]) ? originalData[field.id] : [])
-                .map((item: any) => item?.id ?? item)
-                .map((id: any) => Number.parseInt(String(id), 10))
-                .filter((id: number) => Number.isFinite(id))
-            );
-
-            const currentIds = new Set<number>(
-              (Array.isArray(rowData[field.id]) ? rowData[field.id] : [])
-                .map((item: any) => item?.id ?? item)
-                .map((id: any) => Number.parseInt(String(id), 10))
-                .filter((id: number) => Number.isFinite(id))
-            );
+            // Cells hold the linked records' key values; the linked table's records resolve them to row ids
+            const targetRecords = cachedTableRecords(queryClient, field?.meta?.relation?.with);
+            const originalIds = new Set<number>(linkRowIds(originalData[field.id], targetRecords));
+            const currentIds = new Set<number>(linkRowIds(rowData[field.id], targetRecords));
 
             const toLink: number[] = Array.from(currentIds).filter((id) => !originalIds.has(id));
             const toUnlink: number[] = Array.from(originalIds).filter((id) => !currentIds.has(id));
@@ -389,7 +384,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     } catch (err) {
       console.error('Failed to save record', err);
       setSubmitting(false);
-      setFormError('Failed to save changes. Please try again.');
+      setFormError(apiErrorMessage(err, 'Failed to save changes. Please try again.'));
     }
   };
 

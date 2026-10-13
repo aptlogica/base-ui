@@ -4,6 +4,7 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import { cleanRichTextContent, isTruthyValue } from './tooltipTextUtils';
 import { utcISOToZoned } from '../../utils/dateUtils';
+import { linkItemLabel } from '../../utils/linkValues';
 
 type TooltipColumn = {
   type?: string;
@@ -199,7 +200,8 @@ const formatArrayValue = (raw: any[]) => {
   if (raw.length > 0 && typeof raw[0] === 'object' && raw[0].title) {
     return raw.map((v: any) => v?.title || v?.name || String(v)).join(', ');
   }
-  return raw.map(v => (v?.name || v?.filename || v?.fileName || String(v))).join(', ');
+  // Plain objects without a name are link keys, e.g. {"code": "IN", "dept": "HR"} -> "IN / HR"
+  return raw.map(v => (v?.name || v?.filename || v?.fileName || (v && typeof v === 'object' ? linkItemLabel(v) : String(v)))).join(', ');
 };
 
 const formatObjectValue = (raw: any) => {

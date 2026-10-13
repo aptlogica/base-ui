@@ -11,6 +11,7 @@ import { getStandardFieldType, getFieldDisplayName, getFieldDefaultValue, create
 import { isFormulaField } from '../../utils/fieldUtils';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
 import { useToast } from '../common/Toast';
+import { apiErrorMessage } from '../../utils/apiErrors';
 
 type CreateRecordModalProps = {
     isOpen: boolean;
@@ -315,7 +316,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         } catch (err) {
             console.error('Failed to create record', err);
             setSubmitting(false);
-            setFormError('Failed to save record. Please try again.');
+            setFormError(apiErrorMessage(err, 'Failed to save record. Please try again.'));
         }
     };
 

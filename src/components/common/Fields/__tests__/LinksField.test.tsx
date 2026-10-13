@@ -226,6 +226,33 @@ describe('LinksField', () => {
     expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
+  it('resolves stored primary-key values to the linked records', async () => {
+    // A composite-key table stores [{code, dept}] instead of ids
+    mockRecords = [
+      { id: 1, title: 'India HR', code: 'IN', dept: 'HR' },
+      { id: 2, title: 'US HR', code: 'US', dept: 'HR' },
+    ] as any;
+    mockIsLoading = false;
+    mutateAsyncMock.mockResolvedValue({});
+    const onChange = vi.fn();
+
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'has-many' } } }}
+        value={[{ code: 'US', dept: 'HR' }, { code: 'UK', dept: 'OPS' }]}
+        onChange={onChange}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    expect(screen.getByText('US HR')).toBeInTheDocument();
+    expect(screen.queryByText('India HR')).not.toBeInTheDocument();
+    // A key without a loaded record shows its values
+    expect(screen.getByText('Record UK / OPS')).toBeInTheDocument();
+    expect(screen.queryByText(/object Object/)).not.toBeInTheDocument();
+  });
+
   it('shows empty state when no records exist', async () => {
     mockRecords = [];
     mockIsLoading = false;

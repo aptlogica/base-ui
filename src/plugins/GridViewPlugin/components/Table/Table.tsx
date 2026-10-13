@@ -17,10 +17,11 @@ import { VirtualizedTableBody } from './components/VirtualizedTableBody';
 import { Search } from '../../../../components/shared/table/Search';
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
 import ReactDOM from 'react-dom';
-import { Plus, List, Lock } from 'lucide-react';
+import { Plus, List, Lock, KeyRound } from 'lucide-react';
 import EditRecordModal from '../../../../components/modals/EditRecordModal';
 import { buildInitialValuesForEdit } from '../../../../utils/initialValues';
 import { useToast } from '../../../../components/common/Toast';
+import { apiErrorMessage } from '../../../../utils/apiErrors';
 import { sortRowsByDataKey } from '../../../../utils/sortUtils';
 import { applyFilters } from '../../../../utils/filterUtils';
 import { formatCompactNumber } from '../../../../utils/helpers';
@@ -28,7 +29,7 @@ const NewColumnModal = lazy(() =>
   import('../../../../components/modals/NewColumnModal').then(m => ({ default: m.NewColumnModal }))
 );
 import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldConfirmModal';
-import { useAllViews } from '../../../../hooks/useApi';
+import { useAllViews, usePrimaryKey } from '../../../../hooks/useApi';
 import { getFieldTypeIconComponent, getRelationTypeFromField } from '../../../../types/fieldTypes';
 import { ColumnDropdown } from './components/ColumnDropdown';
 import { Loader } from '../../../../components/ui/Loader';
@@ -94,6 +95,9 @@ export const Table: React.FC<TableProps> = ({
 
   // Extract IDs from tableData.model
   const tableId = useMemo(() => String(tableData?.model?.id ?? ''), [tableData?.model?.id]);
+  // Primary key fields get a key icon in their header; the position matters for composite keys
+  const { data: primaryKey } = usePrimaryKey(tableId);
+  const primaryKeyColumnIds = useMemo(() => primaryKey?.column_ids ?? [], [primaryKey]);
   const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
 
   // Check permissions for read-only access
@@ -551,6 +555,9 @@ export const Table: React.FC<TableProps> = ({
     initialPage: 1,
   });
 
+  // Cells whose save was rejected are re-created, so their editors drop the unsaved text: rowId -> columnKey -> count
+  const [cellResets, setCellResets] = useState<Record<string, Record<string, number>>>({});
+
   const { handleCellChange } = useCellEditing({
     data: paginatedData,
     columns,
@@ -558,6 +565,15 @@ export const Table: React.FC<TableProps> = ({
     insertRowDataMutation: actions?.insertRowData,
     bulkUpdateColumnMutation: actions?.bulkUpdateColumn,
     onRecordsUpdate: () => { },
+    // Show why the value wasn't saved (e.g. a duplicate or empty primary key) and reload the saved values
+    onSaveError: (err, { rowId, columnKey }) => {
+      toast.error(apiErrorMessage(err, 'Failed to save the change'), { title: 'Not saved', duration: 6000 });
+      setCellResets(prev => ({
+        ...prev,
+        [rowId]: { ...prev[rowId], [columnKey]: (prev[rowId]?.[columnKey] ?? 0) + 1 },
+      }));
+      onRefresh?.();
+    },
   });
 
   // Measure table body container height
@@ -635,7 +651,7 @@ export const Table: React.FC<TableProps> = ({
       onRefresh?.();
     } catch (err) {
       console.error('Failed to add row', err);
-      toast.error('Failed to add row', { title: 'Error', duration: 3500 });
+      toast.error(apiErrorMessage(err, 'Failed to add row'), { title: 'Error', duration: 3500 });
     }
   }, [addRowMutation, tableId, toast, onRefresh]);
 
@@ -859,6 +875,17 @@ export const Table: React.FC<TableProps> = ({
                 <Lock className="w-3 h-3 ml-1 inline text-tertiary" />
               )}
             </span>
+            {/* Primary key marker */}
+            {column.id && primaryKeyColumnIds.includes(String(column.id)) && (() => {
+              const label = primaryKeyColumnIds.length > 1
+                ? `Primary key field ${primaryKeyColumnIds.indexOf(String(column.id)) + 1} of ${primaryKeyColumnIds.length}`
+                : 'Primary key';
+              return (
+                <span title={label} aria-label={label} role="img" className="flex-shrink-0 inline-flex" data-testid={`primary-key-icon-${column.id}`}>
+                  <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+                </span>
+              );
+            })()}
           </div>
           {/* Column dropdown - hide for readonly users */}
           {canShowColumnDropdown(column) && (
@@ -892,7 +919,8 @@ export const Table: React.FC<TableProps> = ({
     openColumnDropdownIndex,
     canShowColumnDropdown,
     getColumnHeaderClassName,
-    setOpenColumnDropdownIndex
+    setOpenColumnDropdownIndex,
+    primaryKeyColumnIds
   ]);
 
   const getEstimatedItemCount = useCallback(() => {
@@ -1067,6 +1095,7 @@ export const Table: React.FC<TableProps> = ({
                 selectedRows={selectedRows}
                 onRowSelect={handleRowSelect}
                 onCellChange={handleCellChange}
+                cellResets={cellResets}
                 onContextMenu={handleContextMenu}
                 activeCell={activeCell}
                 setActiveCell={setActiveCell}

@@ -15,6 +15,8 @@ interface VirtualizedTableBodyProps {
   selectedRows: Set<string>;
   onRowSelect: (rowId: string, selected: boolean) => void;
   onCellChange: (rowId: string, columnKey: string, value: any) => void;
+  // Cells to re-create after a rejected save: rowId -> columnKey -> count
+  cellResets?: Record<string, Record<string, number>>;
   onContextMenu: (e: React.MouseEvent, rowId: string) => void;
   activeCell: { rowId: string; colKey: string } | null;
   setActiveCell: React.Dispatch<React.SetStateAction<{ rowId: string; colKey: string } | null>>;
@@ -125,6 +127,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
   selectedRows,
   onRowSelect,
   onCellChange,
+  cellResets,
   onContextMenu,
   activeCell,
   setActiveCell,
@@ -422,6 +425,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
         onSelect={onRowSelect}
         canSelectRows={canSelectRows}
         onCellChange={onCellChange}
+        cellResets={cellResets?.[rowId]}
         onContextMenu={e => onContextMenu(e, rowId)}
         activeCell={activeCell}
         setActiveCell={setActiveCell}
@@ -432,7 +436,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
         pinnedColumnOffsets={pinnedColumnOffsets}
       />
     );
-  }, [columns, columnWidths, selectedRows, onRowSelect, onCellChange, onContextMenu, activeCell, setActiveCell, tableId, allColumns, canEdit, pinnedColumnIds, pinnedColumnOffsets]);
+  }, [columns, columnWidths, selectedRows, onRowSelect, onCellChange, cellResets, onContextMenu, activeCell, setActiveCell, tableId, allColumns, canEdit, pinnedColumnIds, pinnedColumnOffsets]);
 
   const virtualItems = virtualizer.getVirtualItems();
 

@@ -10,6 +10,7 @@ const mockToastError = vi.fn();
 const mockToastSuccess = vi.fn();
 
 const mockUseAllViews = vi.fn();
+const mockUsePrimaryKey = vi.fn();
 const mockUseTableViewConfig = vi.fn();
 const mockUseFrontendPagination = vi.fn();
 const mockUseCellEditing = vi.fn();
@@ -20,6 +21,7 @@ const mockUseGridDataOperationModal = vi.fn();
 
 vi.mock('../../../../../hooks/useApi', () => ({
   useAllViews: mockUseAllViews,
+  usePrimaryKey: (...args: unknown[]) => mockUsePrimaryKey(...args),
   useCaseNormalize: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
   useExtractSubstring: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
   useFindReplace: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
@@ -334,6 +336,7 @@ const tableData = {
 
 const setupDefaultMocks = () => {
   mockUseAllViews.mockReturnValue({ data: [] });
+  mockUsePrimaryKey.mockReturnValue({ data: undefined });
   mockUseBaseAccess.mockReturnValue({
     isBaseReadOnly: () => false,
     canCreateColumn: () => true,
@@ -460,6 +463,23 @@ describe('Table', () => {
 
     expect(screen.getAllByRole('button', { name: /add row/i }).length).toBeGreaterThan(0);
     expect(screen.getByRole('checkbox')).toBeInTheDocument();
+  });
+
+  it('marks primary key columns with a key icon', () => {
+    mockUsePrimaryKey.mockReturnValue({ data: { column_ids: ['col-1'] } });
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(mockUsePrimaryKey).toHaveBeenCalledWith('tbl-1');
+    expect(screen.getByTestId('primary-key-icon-col-1')).toHaveAttribute('title', 'Primary key');
+    expect(screen.queryByTestId('primary-key-icon-col-2')).not.toBeInTheDocument();
+  });
+
+  it('numbers the fields of a composite primary key', () => {
+    mockUsePrimaryKey.mockReturnValue({ data: { column_ids: ['col-2', 'col-1'] } });
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('primary-key-icon-col-2')).toHaveAttribute('title', 'Primary key field 1 of 2');
+    expect(screen.getByTestId('primary-key-icon-col-1')).toHaveAttribute('title', 'Primary key field 2 of 2');
   });
 
   it('hides add row button when read-only', () => {

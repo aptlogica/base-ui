@@ -24,6 +24,8 @@ interface TableRowProps {
   canSelectRows?: boolean;
   pinnedColumnIds?: string[];
   pinnedColumnOffsets?: Record<string, number>;
+  // How often each cell (by column key) was reset after a rejected save
+  cellResets?: Record<string, number>;
 }
 
 // Helper to extract row ID
@@ -58,6 +60,7 @@ export const TableRow: React.FC<TableRowProps> = ({
   canSelectRows = true,
   pinnedColumnIds = [],
   pinnedColumnOffsets = {},
+  cellResets,
 }) => {
   // Memoize rowId to avoid recalculating on every render
   const rowId = useMemo(() => getRowId(row), [row]);
@@ -240,6 +243,7 @@ export const TableRow: React.FC<TableRowProps> = ({
             tabIndex={0}
           >
             <EditableTableCell
+              key={cellResets?.[column.key] ?? 0}
               column={props.column}
               value={props.value}
               onChange={(value) => handleCellChange(column.key, value)}
@@ -410,6 +414,10 @@ export const MemoizedTableRow = React.memo(TableRow, (prevProps, nextProps) => {
   }
 
   if (!compareRowIds(prevProps, nextProps)) {
+    return false;
+  }
+
+  if (prevProps.cellResets !== nextProps.cellResets) {
     return false;
   }
 

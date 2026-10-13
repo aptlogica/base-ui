@@ -9,6 +9,10 @@ vi.mock('../TableTriggersModal', () => ({
   ),
 }));
 
+vi.mock('../tableSettings/PrimaryKeyPanel', () => ({
+  default: ({ table }: { table: { id: string } }) => <div data-testid="primary-key-panel">{table.id}</div>,
+}));
+
 const table = { id: 't1', title: 'Employee' };
 
 describe('TableSettingsModal', () => {
@@ -36,36 +40,45 @@ describe('TableSettingsModal', () => {
     expect(screen.queryByText('Webhooks')).not.toBeInTheDocument();
   });
 
-  it('opens on Triggers & Functions with the list embedded', () => {
+  it('opens on Primary Key', () => {
     render(<TableSettingsModal table={table} onClose={onClose} />);
+    expect(screen.getByRole('button', { name: 'Primary Key' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByTestId('primary-key-panel')).toHaveTextContent('t1');
+    expect(screen.queryByTestId('triggers-panel')).not.toBeInTheDocument();
+  });
+
+  it('embeds the triggers list in Triggers & Functions', async () => {
+    render(<TableSettingsModal table={table} onClose={onClose} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Triggers & Functions' }));
     expect(screen.getByRole('button', { name: 'Triggers & Functions' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByTestId('triggers-panel')).toHaveTextContent('triggers:embedded:t1');
+    expect(screen.queryByTestId('primary-key-panel')).not.toBeInTheDocument();
   });
 
   it('shows an empty right side for sections that are not built yet', async () => {
     render(<TableSettingsModal table={table} onClose={onClose} />);
-    for (const label of ['Primary Key', 'Unique Key', 'Check Constraints']) {
+    for (const label of ['Unique Key', 'Check Constraints']) {
       await userEvent.click(screen.getByRole('button', { name: label }));
       expect(screen.getByRole('button', { name: label })).toHaveAttribute('aria-current', 'page');
-      expect(screen.getByRole('button', { name: 'Triggers & Functions' })).not.toHaveAttribute('aria-current');
       expect(screen.queryByTestId('triggers-panel')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('primary-key-panel')).not.toBeInTheDocument();
     }
 
-    await userEvent.click(screen.getByRole('button', { name: 'Triggers & Functions' }));
-    expect(screen.getByTestId('triggers-panel')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Primary Key' }));
+    expect(screen.getByTestId('primary-key-panel')).toBeInTheDocument();
   });
 
   it('closes with the close button, the backdrop and Escape', async () => {
     render(<TableSettingsModal table={table} onClose={onClose} />);
     await userEvent.click(screen.getByRole('button', { name: 'Close' }));
     await userEvent.click(screen.getByRole('button', { name: 'Close modal' }));
-    fireEvent.keyDown(screen.getByTestId('triggers-panel'), { key: 'Escape' });
+    fireEvent.keyDown(screen.getByTestId('primary-key-panel'), { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(3);
   });
 
   it('ignores other keys', () => {
     render(<TableSettingsModal table={table} onClose={onClose} />);
-    fireEvent.keyDown(screen.getByTestId('triggers-panel'), { key: 'Enter' });
+    fireEvent.keyDown(screen.getByTestId('primary-key-panel'), { key: 'Enter' });
     expect(onClose).not.toHaveBeenCalled();
   });
 });

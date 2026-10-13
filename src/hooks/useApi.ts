@@ -87,6 +87,8 @@ import {
   updateAutomationService,
   runAutomationService,
   deleteAutomationService,
+  getPrimaryKeyService,
+  updatePrimaryKeyService,
 } from '../service/clientService';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
 
@@ -2021,6 +2023,26 @@ export const useDeleteAutomation = () => {
     mutationFn: ({ id }: { id: string; tableId: string }) => deleteAutomationService(id),
     onSuccess: (_, { tableId }) => {
       queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
+    },
+  });
+};
+
+export const usePrimaryKey = (tableId: string) => {
+  return useQuery({
+    queryKey: ['tables', tableId, 'primary-key'],
+    queryFn: () => getPrimaryKeyService(tableId),
+    enabled: !!tableId,
+    select: (res) => res?.data,
+  });
+};
+
+export const useUpdatePrimaryKey = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updatePrimaryKeyService,
+    onSuccess: (res, { tableId }) => {
+      queryClient.setQueryData(['tables', tableId, 'primary-key'], res);
     },
   });
 };
