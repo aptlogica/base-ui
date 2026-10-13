@@ -10,7 +10,7 @@ export const buildFieldRows = (fields: FormField[], inlineIds: string[] = []): F
   const inline = new Set(inlineIds);
   const rows: FormField[][] = [];
   fields.forEach(field => {
-    const lastRow = rows[rows.length - 1];
+    const lastRow = rows.at(-1);
     if (lastRow?.length === 1 && inline.has(field.id)) {
       lastRow.push(field);
     } else {
@@ -40,7 +40,7 @@ const getCenterInsertIndex = (
   const rowIds = targetRow.map(f => f.id).filter(id => id !== draggedId);
   const movingDown = fields.findIndex(f => f.id === draggedId) < fields.findIndex(f => f.id === targetId);
   return movingDown
-    ? remaining.findIndex(f => f.id === rowIds[rowIds.length - 1]) + 1
+    ? remaining.findIndex(f => f.id === rowIds.at(-1)) + 1
     : remaining.findIndex(f => f.id === rowIds[0]);
 };
 
