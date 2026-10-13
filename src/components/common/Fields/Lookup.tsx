@@ -84,7 +84,15 @@ export const Lookup: React.FC<LookupProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 320 });
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 260 });
+
+  // Focus the search input when the hidden-items dropdown opens
+  React.useEffect(() => {
+    if (isDropdownOpen) {
+      searchInputRef.current?.focus();
+    }
+  }, [isDropdownOpen]);
 
   // Calculate visible items based on container width
   React.useEffect(() => {
@@ -251,22 +259,24 @@ export const Lookup: React.FC<LookupProps> = ({
               if (!isDropdownOpen && containerRef.current) {
                 const rect = containerRef.current.getBoundingClientRect();
                 const viewportPadding = 12;
-                const preferredWidth = 500;
-                const minWidth = 300;
-                const maxAllowedWidth = Math.max(minWidth, window.innerWidth - viewportPadding * 2);
-                const width = Math.min(preferredWidth, maxAllowedWidth);
+                // Keep the dropdown proportional to the cell instead of a fixed large width
+                const minWidth = 220;
+                const maxWidth = 320;
+                const maxAllowedWidth = window.innerWidth - viewportPadding * 2;
+                const width = Math.min(Math.max(rect.width, minWidth), maxWidth, maxAllowedWidth);
 
+                // Dropdown is position: fixed, so use viewport coordinates (no scroll offsets)
                 const left = Math.min(
-                  Math.max(rect.left + window.scrollX, viewportPadding + window.scrollX),
-                  window.scrollX + window.innerWidth - width - viewportPadding
+                  Math.max(rect.left, viewportPadding),
+                  window.innerWidth - width - viewportPadding
                 );
 
-                const estimatedHeight = 360;
-                const belowTop = rect.bottom + window.scrollY + 4;
-                const aboveTop = rect.top + window.scrollY - estimatedHeight - 4;
+                const estimatedHeight = 300;
+                const belowTop = rect.bottom + 4;
+                const aboveTop = rect.top - estimatedHeight - 4;
                 const bottomOverflow =
-                  belowTop + estimatedHeight > window.scrollY + window.innerHeight - viewportPadding;
-                const top = bottomOverflow && aboveTop > window.scrollY + viewportPadding
+                  belowTop + estimatedHeight > window.innerHeight - viewportPadding;
+                const top = bottomOverflow && aboveTop > viewportPadding
                   ? aboveTop
                   : belowTop;
 
@@ -307,7 +317,7 @@ export const Lookup: React.FC<LookupProps> = ({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-8 pr-3 py-2 text-sm border rounded-xl text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)] bg-[--color-alpha-white] outline-none transition-all duration-200"
-                autoFocus
+                ref={searchInputRef}
               />
             </div>
           </div>
