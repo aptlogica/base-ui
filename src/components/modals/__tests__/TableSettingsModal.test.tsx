@@ -40,17 +40,19 @@ describe('TableSettingsModal', () => {
     expect(screen.queryByText('Webhooks')).not.toBeInTheDocument();
   });
 
-  it('opens on Triggers & Functions with the list embedded', () => {
+  it('opens on Unique Key with the unique constraints of the table', () => {
     render(<TableSettingsModal table={table} onClose={onClose} />);
-    expect(screen.getByRole('button', { name: 'Triggers & Functions' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByTestId('triggers-panel')).toHaveTextContent('triggers:embedded:t1');
-  });
-
-  it('shows the unique constraints of the table under Unique Key', async () => {
-    render(<TableSettingsModal table={table} onClose={onClose} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Unique Key' }));
+    expect(screen.getByRole('button', { name: 'Unique Key' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByTestId('unique-keys-panel')).toHaveTextContent('unique:t1');
     expect(screen.queryByTestId('triggers-panel')).not.toBeInTheDocument();
+  });
+
+  it('shows the triggers list embedded under Triggers & Functions', async () => {
+    render(<TableSettingsModal table={table} onClose={onClose} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Triggers & Functions' }));
+    expect(screen.getByRole('button', { name: 'Triggers & Functions' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByTestId('triggers-panel')).toHaveTextContent('triggers:embedded:t1');
+    expect(screen.queryByTestId('unique-keys-panel')).not.toBeInTheDocument();
   });
 
   it('shows an empty right side for sections that are not built yet', async () => {
@@ -58,7 +60,7 @@ describe('TableSettingsModal', () => {
     for (const label of ['Primary Key', 'Check Constraints']) {
       await userEvent.click(screen.getByRole('button', { name: label }));
       expect(screen.getByRole('button', { name: label })).toHaveAttribute('aria-current', 'page');
-      expect(screen.getByRole('button', { name: 'Triggers & Functions' })).not.toHaveAttribute('aria-current');
+      expect(screen.getByRole('button', { name: 'Unique Key' })).not.toHaveAttribute('aria-current');
       expect(screen.queryByTestId('triggers-panel')).not.toBeInTheDocument();
       expect(screen.queryByTestId('unique-keys-panel')).not.toBeInTheDocument();
     }
@@ -71,13 +73,13 @@ describe('TableSettingsModal', () => {
     render(<TableSettingsModal table={table} onClose={onClose} />);
     await userEvent.click(screen.getByRole('button', { name: 'Close' }));
     await userEvent.click(screen.getByRole('button', { name: 'Close modal' }));
-    fireEvent.keyDown(screen.getByTestId('triggers-panel'), { key: 'Escape' });
+    fireEvent.keyDown(screen.getByTestId('unique-keys-panel'), { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(3);
   });
 
   it('ignores other keys', () => {
     render(<TableSettingsModal table={table} onClose={onClose} />);
-    fireEvent.keyDown(screen.getByTestId('triggers-panel'), { key: 'Enter' });
+    fireEvent.keyDown(screen.getByTestId('unique-keys-panel'), { key: 'Enter' });
     expect(onClose).not.toHaveBeenCalled();
   });
 });

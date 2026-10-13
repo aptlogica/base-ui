@@ -27,6 +27,9 @@ interface TableRowProps {
   // Bumped per cell ("<rowId>-<columnKey>") when its save fails; part of the cell key, so the
   // cell remounts and shows the saved value instead of what was typed
   cellResets?: Record<string, number>;
+  // Cells ("<rowId>-<columnKey>") whose last save failed (e.g. a duplicate value for a unique
+  // key); boxed in red instead of the active border
+  saveErrorCells?: Set<string>;
 }
 
 // Helper to extract row ID
@@ -62,6 +65,7 @@ export const TableRow: React.FC<TableRowProps> = ({
   pinnedColumnIds = [],
   pinnedColumnOffsets = {},
   cellResets,
+  saveErrorCells,
 }) => {
   // Memoize rowId to avoid recalculating on every render
   const rowId = useMemo(() => getRowId(row), [row]);
@@ -202,7 +206,9 @@ export const TableRow: React.FC<TableRowProps> = ({
       {memoizedColumnProps.map((props, index) => {
         const column = columns[index];
         let borderClass: string;
-        if (props.isActive) {
+        if (saveErrorCells?.has(`${rowId}-${column.key}`)) {
+          borderClass = 'border border-red-500';
+        } else if (props.isActive) {
           // Selected cell: green border, default background
           borderClass = 'border border-[var(--color-brand-600)]';
         } else if (isRowActive) {
@@ -267,7 +273,8 @@ const compareBasicProps = (prevProps: TableRowProps, nextProps: TableRowProps): 
     prevProps.columnWidths.length === nextProps.columnWidths.length &&
     prevProps.activeCell?.rowId === nextProps.activeCell?.rowId &&
     prevProps.activeCell?.colKey === nextProps.activeCell?.colKey &&
-    prevProps.cellResets === nextProps.cellResets
+    prevProps.cellResets === nextProps.cellResets &&
+    prevProps.saveErrorCells === nextProps.saveErrorCells
   );
 };
 

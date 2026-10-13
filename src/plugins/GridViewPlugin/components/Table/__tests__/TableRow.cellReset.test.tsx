@@ -53,3 +53,19 @@ describe('TableRow cell reset after a rejected save', () => {
     expect(input().value).toBe('typed');
   });
 });
+
+describe('TableRow save error highlight', () => {
+  const cell = () => screen.getByTestId('input-customer_id').closest('[role="gridcell"]') as HTMLElement;
+
+  it('boxes the failed cell in red, even when it is the active cell', () => {
+    render(<MemoizedTableRow {...props} activeCell={{ rowId: '7', colKey: 'customer_id' }} saveErrorCells={new Set(['7-customer_id'])} />);
+    expect(cell().className).toContain('border-red-500');
+    expect(cell().className).not.toContain('brand-600');
+  });
+
+  it('goes back to the normal border once the error clears', () => {
+    const { rerender } = render(<MemoizedTableRow {...props} saveErrorCells={new Set(['7-customer_id'])} />);
+    rerender(<MemoizedTableRow {...props} saveErrorCells={new Set()} />);
+    expect(cell().className).not.toContain('border-red-500');
+  });
+});

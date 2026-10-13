@@ -55,7 +55,7 @@ describe('constraintUtils', () => {
     expect(columnBlockReason(COLUMNS[1])).toBeNull();
     expect(columnBlockReason(COLUMNS[2])).toBeNull();
     expect(columnBlockReason(COLUMNS[4])).toBe("Attachments can't be part of a key");
-    expect(columnBlockReason(col('x', 'Dept', { uidt: 'link' }))).toBe("Link fields can't be part of a key");
+    expect(columnBlockReason(col('x', 'Dept', { uidt: 'links' }))).toBe("Link fields can't be part of a key");
     // The server also flags columns made with the table as virtual; they are ordinary columns
     expect(columnBlockReason(col('x', 'EMPLOYEE_ID', { uidt: 'number', virtual: true }))).toBeNull();
     expect(columnBlockReason(col('x', 'Total', { uidt: 'formula' }))).toBe("Formula fields can't be part of a key");

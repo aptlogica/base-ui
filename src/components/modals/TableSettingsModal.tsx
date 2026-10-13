@@ -27,7 +27,7 @@ const SECTIONS: { key: Section; label: string; icon: React.ElementType }[] = [
 // Table settings: sections on the left, the selected section's content on the right
 const TableSettingsModal: React.FC<TableSettingsModalProps> = ({ table, onClose }) => {
   const tableTitle: string = table?.title || table?.name || '';
-  const [section, setSection] = useState<Section>('triggers');
+  const [section, setSection] = useState<Section>('uniqueKey');
 
   return (
     <div //NOSONAR

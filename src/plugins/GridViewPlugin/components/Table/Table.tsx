@@ -17,7 +17,7 @@ import { VirtualizedTableBody } from './components/VirtualizedTableBody';
 import { Search } from '../../../../components/shared/table/Search';
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
 import ReactDOM from 'react-dom';
-import { Plus, List, Lock, Key as KeyIcon } from 'lucide-react';
+import { Plus, List, Lock } from 'lucide-react';
 import EditRecordModal from '../../../../components/modals/EditRecordModal';
 import { buildInitialValuesForEdit } from '../../../../utils/initialValues';
 import { useToast } from '../../../../components/common/Toast';
@@ -28,7 +28,7 @@ const NewColumnModal = lazy(() =>
   import('../../../../components/modals/NewColumnModal').then(m => ({ default: m.NewColumnModal }))
 );
 import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldConfirmModal';
-import { useAllViews, useTableConstraints } from '../../../../hooks/useApi';
+import { useAllViews } from '../../../../hooks/useApi';
 import { getFieldTypeIconComponent, getRelationTypeFromField } from '../../../../types/fieldTypes';
 import { ColumnDropdown } from './components/ColumnDropdown';
 import { Loader } from '../../../../components/ui/Loader';
@@ -104,18 +104,6 @@ export const Table: React.FC<TableProps> = ({
   // Extract IDs from tableData.model
   const tableId = useMemo(() => String(tableData?.model?.id ?? ''), [tableData?.model?.id]);
   const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
-
-  // Unique keys of the table, by column: the header shows a key icon on columns that are part of one
-  const { data: uniqueKeys } = useTableConstraints(tableId, 'unique');
-  const uniqueKeysByColumn = useMemo(() => {
-    const byColumn = new Map<string, string[]>();
-    for (const key of uniqueKeys ?? []) {
-      for (const keyColumn of key.columns ?? []) {
-        byColumn.set(keyColumn.id, [...(byColumn.get(keyColumn.id) ?? []), key.title]);
-      }
-    }
-    return byColumn;
-  }, [uniqueKeys]);
 
   // Check permissions for read-only access
   const { isBaseReadOnly, canCreateColumn, canDeleteRecord, canUpdateRecord, canCreateRecord, canUpdateColumn, canDeleteColumn } = useBaseAccess(baseId || undefined);
@@ -575,6 +563,8 @@ export const Table: React.FC<TableProps> = ({
   // A failed cell save (e.g. the value breaks a unique key) shows the server's reason and
   // remounts that cell, so it shows the saved value again instead of what was typed
   const [cellResets, setCellResets] = useState<Record<string, number>>({});
+  const [saveErrorCells, setSaveErrorCells] = useState<Set<string>>(() => new Set());
+  const saveErrorTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const handleCellSaveError = useCallback(({ rowId, columnKey, error }: { rowId: string; columnKey: string; error: unknown }) => {
     const { message, code } = (error ?? {}) as { message?: string; code?: string };
     // TCN_1012: the value repeats a unique key (Settings > Unique Key)
@@ -582,7 +572,23 @@ export const Table: React.FC<TableProps> = ({
     toast.error(message || 'The value could not be saved', { title, duration: 5000 });
     const cellKey = `${rowId}-${columnKey}`;
     setCellResets(prev => ({ ...prev, [cellKey]: (prev[cellKey] ?? 0) + 1 }));
+    // Box the cell in red while the toast is shown
+    setSaveErrorCells(prev => new Set(prev).add(cellKey));
+    clearTimeout(saveErrorTimeouts.current.get(cellKey));
+    saveErrorTimeouts.current.set(cellKey, setTimeout(() => {
+      saveErrorTimeouts.current.delete(cellKey);
+      setSaveErrorCells(prev => {
+        const next = new Set(prev);
+        next.delete(cellKey);
+        return next;
+      });
+    }, 5000));
   }, [toast]);
+
+  useEffect(() => {
+    const timeouts = saveErrorTimeouts.current;
+    return () => timeouts.forEach(clearTimeout);
+  }, []);
 
   const { handleCellChange } = useCellEditing({
     data: paginatedData,
@@ -997,17 +1003,6 @@ export const Table: React.FC<TableProps> = ({
                 <Lock className="w-3 h-3 ml-1 inline text-tertiary" />
               )}
             </span>
-            {/* Part of a unique key (Settings > Unique Key) */}
-            {column.id && uniqueKeysByColumn.has(String(column.id)) && (
-              <span
-                className="flex-shrink-0 inline-flex"
-                title={`Unique: ${uniqueKeysByColumn.get(String(column.id))!.join(', ')}`}
-                aria-label={`Unique: ${uniqueKeysByColumn.get(String(column.id))!.join(', ')}`}
-                role="img"
-              >
-                <KeyIcon className="w-3 h-3 text-green-600" />
-              </span>
-            )}
           </div>
           {/* Column dropdown - hide for readonly users */}
           {canShowColumnDropdown(column) && (
@@ -1042,8 +1037,7 @@ export const Table: React.FC<TableProps> = ({
     canShowColumnDropdown,
     canUpdateColumn,
     getColumnHeaderClassName,
-    setOpenColumnDropdownIndex,
-    uniqueKeysByColumn
+    setOpenColumnDropdownIndex
   ]);
 
   const getEstimatedItemCount = useCallback(() => {
@@ -1220,6 +1214,7 @@ export const Table: React.FC<TableProps> = ({
                 onRowSelect={handleRowSelect}
                 onCellChange={handleCellChange}
                 cellResets={cellResets}
+                saveErrorCells={saveErrorCells}
                 onContextMenu={handleContextMenu}
                 activeCell={activeCell}
                 setActiveCell={setActiveCell}
