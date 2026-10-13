@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatCompactNumber, debounce, convertDateFormat } from '../helpers';
+import { formatCompactNumber, debounce, convertDateFormat, getCreatedTableId } from '../helpers';
 
 describe('formatCompactNumber', () => {
   it('should format numbers less than 1000', () => {
@@ -92,3 +92,16 @@ describe('convertDateFormat', () => {
   });
 });
 
+describe('getCreatedTableId', () => {
+  it('reads the id from each supported response shape', () => {
+    expect(getCreatedTableId({ data: { id: 't1' } })).toBe('t1');
+    expect(getCreatedTableId({ data: { model: { id: 't2' } } })).toBe('t2');
+    expect(getCreatedTableId({ model: { id: 't3' } })).toBe('t3');
+    expect(getCreatedTableId({ id: 't4' })).toBe('t4');
+  });
+
+  it('returns undefined when no id is present', () => {
+    expect(getCreatedTableId(undefined)).toBeUndefined();
+    expect(getCreatedTableId({ data: {} })).toBeUndefined();
+  });
+});

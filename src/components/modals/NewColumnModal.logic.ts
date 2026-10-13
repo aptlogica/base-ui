@@ -56,6 +56,9 @@ export interface BuildFieldMetaParams {
   selectedTableId: string;
   selectedTable: any;
   relationType: 'one-to-one' | 'has-many' | 'many-to-many';
+  // Title of the column created on the other table (not used for a self-link, which has one column)
+  inverseTitle?: string;
+  currentTableId?: string;
   selectedRelationId: string;
   selectedLookupColumnId: string;
   linkFields: any[];
@@ -273,6 +276,10 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
       with: params.selectedTableId,
       type: params.relationType
     };
+    const inverseTitle = params.inverseTitle?.trim();
+    if (inverseTitle && params.selectedTableId !== params.currentTableId) {
+      config.relation.inverse_title = inverseTitle;
+    }
   };
 
   const handleLookup = (): BuildFieldMetaResult | void => {
@@ -293,6 +300,8 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
       return { error: 'Selected link field does not have a valid relation_id' };
     }
     config.relation_id = relationIdFromMeta;
+    // Both columns of a self-link share relation_id, so the link field decides the direction.
+    config.link_column_id = params.selectedRelationId;
     config.lookup_column_id = params.selectedLookupColumnId;
   };
 
@@ -428,4 +437,56 @@ export const buildColumnPayload = (params: BuildColumnPayloadParams) => {
     description: params.description,
     meta: finalMeta,
   };
+};
+
+export interface BaseFormatDefaults {
+  dateFormat?: string;
+  timeFormat?: string;
+  hourFormat?: '12' | '24';
+  displayTimeZone?: boolean;
+  sameTimezone?: boolean;
+  timeZone?: string;
+  currencyLocale?: string;
+  currencyType?: string;
+}
+
+const DATE_TIME_FIELD_TYPES = new Set(['datetime', 'createdTime', 'lastModifiedTime']);
+
+/**
+ * Resolves the format defaults saved in a base's `meta` (set on base creation)
+ * for the given field type. `meta` may arrive as an object or a JSON string.
+ */
+export const getBaseFormatDefaults = (meta: unknown, fieldTypeKey: string): BaseFormatDefaults => {
+  let parsed: any = meta;
+  if (typeof meta === 'string') {
+    try {
+      parsed = JSON.parse(meta);
+    } catch {
+      return {};
+    }
+  }
+  if (!parsed || typeof parsed !== 'object') return {};
+
+  if (fieldTypeKey === 'date') {
+    return { dateFormat: parsed.dateFormat || undefined };
+  }
+  if (DATE_TIME_FIELD_TYPES.has(fieldTypeKey)) {
+    const dateTime = parsed.dateTimeFormat || {};
+    const hourFormat = String(dateTime.hourFormat ?? '');
+    return {
+      dateFormat: dateTime.dateFormat || undefined,
+      timeFormat: dateTime.timeFormat || undefined,
+      hourFormat: hourFormat === '12' || hourFormat === '24' ? hourFormat : undefined,
+      displayTimeZone: typeof dateTime.displayTimeZone === 'boolean' ? dateTime.displayTimeZone : undefined,
+      sameTimezone: typeof dateTime.sameTimezone === 'boolean' ? dateTime.sameTimezone : undefined,
+      timeZone: dateTime.timeZone || undefined,
+    };
+  }
+  if (fieldTypeKey === 'currency') {
+    return {
+      currencyLocale: parsed.currencyLocale || undefined,
+      currencyType: parsed.currencyType || undefined,
+    };
+  }
+  return {};
 };
