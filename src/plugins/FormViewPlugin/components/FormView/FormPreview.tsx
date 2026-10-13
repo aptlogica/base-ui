@@ -7,9 +7,8 @@ import { SortableFormField, DropPosition } from './SortableFormField';
 import { buildFieldRows, moveFieldOnDrop } from './fieldRows';
 import { FormField, FormConfig } from '../../../../types/form';
 import { isFormulaField } from '../../../../utils/fieldUtils';
-import { useAddImage } from '../../../../hooks/useApi';
-import { useToast } from '../../../../components/common/Toast';
-import { ImagePlus } from 'lucide-react';
+import { useImageUpload } from '../shared/useImageUpload';
+import { ImagePlus, Trash2 } from 'lucide-react';
 
 interface FormPreviewProps {
   config: FormConfig;
@@ -86,10 +85,8 @@ const computeAppearanceStyles = (appearance: FormConfig['appearance']): Appearan
 
   return { containerWidth, cardStyle, rounded, titleAlign };
 };
-interface EditableTitleProps {
-  title: string;
+interface InlineEditProps {
   isEditing: boolean;
-  editedTitle: string;
   onEditChange: (value: string) => void;
   onSave: () => void;
   onCancel: () => void;
@@ -98,6 +95,14 @@ interface EditableTitleProps {
   canEdit: boolean;
   textColor?: string;
 }
+
+interface EditableTitleProps extends InlineEditProps {
+  title: string;
+  editedTitle: string;
+}
+
+// An empty text color falls back to the theme color
+const getTextStyle = (textColor?: string): React.CSSProperties => ({ color: textColor || undefined });
 
 const handleTitleKeyDown = (e: React.KeyboardEvent, onSave: () => void, onCancel: () => void) => {
   if (e.key === 'Enter') {
@@ -108,6 +113,9 @@ const handleTitleKeyDown = (e: React.KeyboardEvent, onSave: () => void, onCancel
   }
 };
 
+// Inline editors mount only after the user chooses to edit, so move focus into them
+const focusOnMount = (element: HTMLElement | null) => element?.focus();
+
 const handleViewKeyDown = (e: React.KeyboardEvent, onStartEdit: () => void) => {
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
@@ -115,7 +123,7 @@ const handleViewKeyDown = (e: React.KeyboardEvent, onStartEdit: () => void) => {
   }
 };
 
-const EditableTitle: React.FC<EditableTitleProps> = ({
+const EditableTitle: React.FC<Readonly<EditableTitleProps>> = ({
   title,
   isEditing,
   editedTitle,
@@ -135,9 +143,9 @@ const EditableTitle: React.FC<EditableTitleProps> = ({
         onChange={(e) => onEditChange(e.target.value)}
         onBlur={onSave}
         onKeyDown={(e) => handleTitleKeyDown(e, onSave, onCancel)}
-        className="mb-2 -mx-2 w-[calc(100%+1rem)] text-xl font-semibold focus:outline-none bg-gray-100 border-none px-2 py-1 rounded-lg"
-        style={{ color: textColor || undefined }}
-        autoFocus
+        className="mb-2 [text-align:inherit] -mx-2 w-[calc(100%+1rem)] text-xl font-semibold focus:outline-none bg-gray-100 border-none px-2 py-1 rounded-lg"
+        style={getTextStyle(textColor)}
+        ref={focusOnMount}
       />
     );
   }
@@ -146,8 +154,8 @@ const EditableTitle: React.FC<EditableTitleProps> = ({
     return (
       <button
         type="button"
-        className="mb-2 -mx-2 px-2 py-1 text-left text-xl font-semibold rounded-lg cursor-pointer hover:bg-gray-50 transition-colors w-[calc(100%+1rem)]"
-        style={{ color: textColor || undefined }}
+        className="mb-2 -mx-2 px-2 py-1 [text-align:inherit] text-[1.25rem] text-[var(--color-text-primary)] font-semibold rounded-lg cursor-pointer hover:bg-gray-50 transition-colors w-[calc(100%+1rem)]"
+        style={getTextStyle(textColor)}
         onClick={onStartEdit}
         onKeyDown={(e) => handleViewKeyDown(e, onStartEdit)}
         aria-label="Click to edit title"
@@ -160,7 +168,7 @@ const EditableTitle: React.FC<EditableTitleProps> = ({
   return (
     <h1
       className="mb-2 text-xl font-semibold py-1"
-      style={{ color: textColor || undefined }}
+      style={getTextStyle(textColor)}
     >
       {title}
     </h1>
@@ -168,17 +176,9 @@ const EditableTitle: React.FC<EditableTitleProps> = ({
 };
 
 // Extract editable description component
-interface EditableDescriptionProps {
+interface EditableDescriptionProps extends InlineEditProps {
   description: string | null | undefined;
-  isEditing: boolean;
   editedDescription: string;
-  onEditChange: (value: string) => void;
-  onSave: () => void;
-  onCancel: () => void;
-  onStartEdit: () => void;
-  isReadOnly: boolean;
-  canEdit: boolean;
-  textColor?: string;
 }
 
 const handleDescriptionKeyDown = (e: React.KeyboardEvent, onCancel: () => void) => {
@@ -190,19 +190,19 @@ const handleDescriptionKeyDown = (e: React.KeyboardEvent, onCancel: () => void) 
 const renderDescriptionContent = (description: string | null | undefined, textColor?: string) => {
   if (description) {
     return (
-      <p className="text-sm leading-relaxed text-[var(--color-gray-600)]" style={{ color: textColor || undefined }}>
+      <p className="text-sm leading-relaxed text-[var(--color-gray-600)]" style={getTextStyle(textColor)}>
         {description}
       </p>
     );
   }
   return (
-    <p className="text-sm leading-relaxed text-[var(--color-gray-500)]" style={{ color: textColor || undefined }}>
+    <p className="text-[0.875rem] font-medium leading-relaxed text-[var(--color-gray-500)]" style={getTextStyle(textColor)}>
       Add form description
     </p>
   );
 };
 
-const EditableDescription: React.FC<EditableDescriptionProps> = ({
+const EditableDescription: React.FC<Readonly<EditableDescriptionProps>> = ({
   description,
   isEditing,
   editedDescription,
@@ -224,8 +224,8 @@ const EditableDescription: React.FC<EditableDescriptionProps> = ({
         placeholder="Add form description"
         rows={2}
         className="-mx-2 w-[calc(100%+1rem)] text-sm leading-relaxed focus:outline-none resize-none bg-gray-100 border-none px-2 py-1 rounded-lg"
-        style={{ color: textColor || undefined }}
-        autoFocus
+        style={getTextStyle(textColor)}
+        ref={focusOnMount}
       />
     );
   }
@@ -274,28 +274,9 @@ interface FormFieldsListProps {
   isSubmitting?: boolean;
 }
 
-interface RenderFormFieldParams {
+type RenderFormFieldParams = Omit<FormFieldsListProps, 'fields'> & {
   field: FormField;
-  index: number;
-  selectedFieldId: string | null;
-  rowData: Record<string, any>;
-  onRowDataChange: (fieldId: string, value: unknown) => void;
-  draggedFieldId: string | null;
-  dragOverFieldId: string | null;
-  dragOverPosition: DropPosition | null;
-  onDragStart: (fieldId: string) => void;
-  onDragOver: (fieldId: string, position?: DropPosition) => void;
-  onDrop: (fieldId: string, position?: DropPosition) => void;
-  onDragEnd: () => void;
-  onDeleteField: (fieldId: string) => void;
-  appearance: FormConfig['appearance'];
-  model_id?: string;
-  row_id?: number;
-  onEdit?: (fieldId: string) => void;
-  isReadOnly: boolean;
-  isGridLayout: boolean;
-  isSubmitting?: boolean;
-}
+};
 
 const getFormFieldDragHandlers = (
   isReadOnly: boolean,
@@ -331,7 +312,6 @@ const getFormFieldClasses = (isGridLayout: boolean) => {
 const renderFormField = (params: RenderFormFieldParams) => {
   const {
     field,
-    index,
     selectedFieldId,
     rowData,
     onRowDataChange,
@@ -360,7 +340,7 @@ const renderFormField = (params: RenderFormFieldParams) => {
   const isDragOver = dragOverFieldId === field.id;
 
   return (
-    <div key={field.id + index} className={containerClass}>
+    <div key={field.id} className={containerClass}>
       <div className={innerClass}>
         <SortableFormField
           field={field}
@@ -388,64 +368,23 @@ const renderFormField = (params: RenderFormFieldParams) => {
   );
 };
 
-const FormFieldsList: React.FC<FormFieldsListProps> = ({
-  fields,
-  selectedFieldId,
-  rowData,
-  onRowDataChange,
-  draggedFieldId,
-  dragOverFieldId,
-  dragOverPosition,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  onDragEnd,
-  onDeleteField,
-  appearance,
-  model_id,
-  row_id,
-  onEdit,
-  isReadOnly,
-  isGridLayout,
-  isSubmitting = false
-}) => {
-  const renderField = (field: FormField, index: number) =>
-    renderFormField({
-      field,
-      index,
-      selectedFieldId,
-      rowData,
-      onRowDataChange,
-      draggedFieldId,
-      dragOverFieldId,
-      dragOverPosition,
-      onDragStart,
-      onDragOver,
-      onDrop,
-      onDragEnd,
-      onDeleteField,
-      appearance,
-      model_id,
-      row_id,
-      onEdit,
-      isReadOnly,
-      isGridLayout,
-      isSubmitting
-    });
+const FormFieldsList: React.FC<Readonly<FormFieldsListProps>> = ({ fields, ...fieldProps }) => {
+  const { appearance, isGridLayout } = fieldProps;
+  const renderField = (field: FormField) => renderFormField({ ...fieldProps, field });
 
   if (isGridLayout) {
-    return <>{fields.map(renderField)}</>;
+    return <>{fields.map((field) => renderField(field))}</>;
   }
 
   // Single-column layout: fields dropped beside each other share a row
   return (
     <>
-      {buildFieldRows(fields, appearance?.inlineFieldIds).map((row, index) =>
+      {buildFieldRows(fields, appearance?.inlineFieldIds).map((row) =>
         row.length === 1
-          ? renderField(row[0], index)
+          ? renderField(row[0])
           : (
             <div key={row.map(f => f.id).join('-')} className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="form-field-row">
-              {row.map(field => renderField(field, index))}
+              {row.map(field => renderField(field))}
             </div>
           )
       )}
@@ -476,7 +415,7 @@ interface FormHeaderProps {
   formError?: string | null;
 }
 
-const FormHeader: React.FC<FormHeaderProps> = ({
+const FormHeader: React.FC<Readonly<FormHeaderProps>> = ({
   appearance,
   styles,
   title,
@@ -498,19 +437,21 @@ const FormHeader: React.FC<FormHeaderProps> = ({
   formError
 }) => {
   return (
-    <div className={`mb-8 ${styles.titleAlign}`}>
-      <EditableTitle
-        title={title}
-        isEditing={isEditingTitle}
-        editedTitle={editedTitle}
-        onEditChange={onTitleChange}
-        onSave={onTitleSave}
-        onCancel={onTitleCancel}
-        onStartEdit={onStartEditTitle}
-        isReadOnly={isReadOnly}
-        canEdit={canEdit}
-        textColor={appearance?.textColor}
-      />
+    <div className="mb-8">
+      <div className={styles.titleAlign}>
+        <EditableTitle
+          title={title}
+          isEditing={isEditingTitle}
+          editedTitle={editedTitle}
+          onEditChange={onTitleChange}
+          onSave={onTitleSave}
+          onCancel={onTitleCancel}
+          onStartEdit={onStartEditTitle}
+          isReadOnly={isReadOnly}
+          canEdit={canEdit}
+          textColor={appearance?.textColor}
+        />
+      </div>
 
       <EditableDescription
         description={description}
@@ -547,7 +488,7 @@ interface FormActionsProps {
 const getContrastTextColor = (hex: string): string => {
   const match = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
   if (!match) return '#ffffff';
-  const value = parseInt(match[1], 16);
+  const value = Number.parseInt(match[1], 16);
   const r = (value >> 16) & 0xff;
   const g = (value >> 8) & 0xff;
   const b = value & 0xff;
@@ -555,7 +496,7 @@ const getContrastTextColor = (hex: string): string => {
   return luminance > 0.6 ? '#101828' : '#ffffff';
 };
 
-const FormActions: React.FC<FormActionsProps> = ({ onSubmit, onClear, primaryColor, isSubmitting = false }) => {
+const FormActions: React.FC<Readonly<FormActionsProps>> = ({ onSubmit, onClear, primaryColor, isSubmitting = false }) => {
   if (!onSubmit) return null;
 
   // Default to the brand color; a custom primary color from appearance settings overrides it
@@ -593,9 +534,7 @@ const FormActions: React.FC<FormActionsProps> = ({ onSubmit, onClear, primaryCol
 
 const FormBranding: React.FC = () => (
   <div className="mt-6 pt-6 border-t border-gray-200 flex items-center justify-center gap-2">
-    <span className="flex items-center justify-center w-6 h-6 rounded-md border border-gray-200 bg-white shadow-sm">
-      <img src="/assets/logo.svg" alt="Sereni Base" className="w-4 h-4" />
-    </span>
+    <img src="/assets/sereni-logo.svg" alt="Sereni Base" className="w-[1.625rem] h-[1.625rem]" />
     <p className="text-xs text-gray-600">
       Powered by <span className="font-semibold text-gray-900">Sereni Base</span>
     </p>
@@ -644,8 +583,9 @@ const useDragAndDrop = ({
   }, [allowSideDrop]);
 
   const handleDrop = useCallback((fieldId: string, position: DropPosition = 'center') => {
+    const dropPosition = allowSideDrop ? position : 'center';
     const result = draggedFieldId
-      ? moveFieldOnDrop(fields, visibleFields, inlineFieldIds, draggedFieldId, fieldId, allowSideDrop ? position : 'center')
+      ? moveFieldOnDrop(fields, visibleFields, inlineFieldIds, draggedFieldId, fieldId, dropPosition)
       : null;
     if (result) {
       if (!isSameOrder(result.fields, fields)) {
@@ -669,61 +609,64 @@ const useDragAndDrop = ({
   };
 };
 
-// Uploads an image file and returns its hosted URL via onUploaded
-const useImageUpload = (onUploaded: (url: string) => void) => {
-  const addImageMutation = useAddImage();
-  const toast = useToast();
-  const [uploading, setUploading] = useState(false);
-
-  const upload = useCallback(async (file?: File) => {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file', { title: 'Invalid File Type' });
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('File size must be less than 5MB', { title: 'File Too Large' });
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const response: any = await addImageMutation.mutateAsync({ files: [file] });
-      const url = response?.data?.data?.url
-        || response?.data?.url
-        || response?.data?.data?.[0]?.url
-        || response?.data?.[0]?.url
-        || (typeof response?.data === 'string' ? response.data : '');
-      if (!url) {
-        toast.error('Failed to get image URL from response', { title: 'Upload Failed' });
-        return;
-      }
-      onUploaded(url);
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to upload image. Please try again.', { title: 'Upload Failed' });
-    } finally {
-      setUploading(false);
-    }
-  }, [addImageMutation, toast, onUploaded]);
-
-  return { upload, uploading };
-};
-
 const imageButtonShadow = 'shadow-[inset_0_0_0_1px_rgba(10,13,18,0.18),inset_0_-2px_0_0_rgba(10,13,18,0.05),0_1px_2px_0_rgba(10,13,18,0.05)]';
 
 interface FormBannerProps {
   bannerUrl?: string;
   canEdit: boolean;
   onUpload: (url: string) => void;
+  onRemove: () => void;
 }
 
-const FormBanner: React.FC<FormBannerProps> = ({ bannerUrl, canEdit, onUpload }) => {
+const FormBanner: React.FC<Readonly<FormBannerProps>> = ({ bannerUrl, canEdit, onUpload, onRemove }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const { upload, uploading } = useImageUpload(onUpload);
 
   if (bannerUrl) {
-    return <img src={bannerUrl} alt="Banner" className="w-full h-48 object-cover border-b" />;
+    if (!canEdit) {
+      return <img src={bannerUrl} alt="Banner" className="w-full h-48 object-cover border-b" />;
+    }
+
+    return (
+      <div className="relative group">
+        <img src={bannerUrl} alt="Banner" className="w-full h-48 object-cover border-b" />
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            void upload(e.target.files?.[0]);
+            e.target.value = '';
+          }}
+        />
+        <div
+          className={`absolute inset-0 flex items-center justify-center gap-2 transition-opacity ${uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-within:opacity-100'}`}
+        >
+          <button
+            type="button"
+            aria-label="Change banner"
+            disabled={uploading}
+            onClick={() => inputRef.current?.click()}
+            className={`flex p-2.5 justify-center items-center rounded-lg bg-white hover:bg-gray-50 ${imageButtonShadow}`}
+          >
+            {uploading
+              ? <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+              : <ImagePlus className="w-5 h-5 text-[var(--color-gray-600)]" />}
+          </button>
+          <button
+            type="button"
+            aria-label="Remove banner"
+            disabled={uploading}
+            onClick={onRemove}
+            className={`flex p-2.5 justify-center items-center rounded-lg bg-white hover:bg-gray-50 ${imageButtonShadow}`}
+          >
+            <Trash2 className="w-5 h-5 text-[var(--color-error-600)]" />
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (!canEdit) return null;
@@ -736,7 +679,7 @@ const FormBanner: React.FC<FormBannerProps> = ({ bannerUrl, canEdit, onUpload })
       onDrop={(e) => {
         e.preventDefault();
         setIsDragOver(false);
-        upload(e.dataTransfer.files?.[0]);
+        void upload(e.dataTransfer.files?.[0]);
       }}
     >
       <input
@@ -744,7 +687,7 @@ const FormBanner: React.FC<FormBannerProps> = ({ bannerUrl, canEdit, onUpload })
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={(e) => upload(e.target.files?.[0])}
+        onChange={(e) => { void upload(e.target.files?.[0]); }}
       />
       <button
         type="button"
@@ -758,17 +701,17 @@ const FormBanner: React.FC<FormBannerProps> = ({ bannerUrl, canEdit, onUpload })
           : <ImagePlus className="w-5 h-5 text-[var(--color-gray-600)]" />}
       </button>
       <div className="flex flex-col items-center gap-1 text-center">
-        <p className="text-sm text-[var(--color-gray-600)]">
+        <p className="text-[0.875rem] font-normal text-[var(--color-text-tertiary)]">
           <button
             type="button"
-            className="font-semibold text-[var(--color-text-brand-secondary,#079455)] hover:underline"
+            className="font-semibold text-[var(--color-brand-600)] hover:underline text-sm"
             onClick={() => inputRef.current?.click()}
           >
             Click to add
           </button>{' '}
           a banner or drag and drop
         </p>
-        <p className="text-xs text-[var(--color-gray-600)]">SVG, PNG, JPG or GIF (max. 800 × 400px)</p>
+        <p className="text-[0.75rem] text-[var(--color-text-tertiary)] font-normal">SVG, PNG, JPG or GIF (max. 800 × 400px)</p>
       </div>
     </div>
   );
@@ -778,36 +721,38 @@ interface FormLogoProps {
   logoUrl?: string;
   canEdit: boolean;
   overlapBanner: boolean;
-  align: 'left' | 'center' | 'right';
   onUpload: (url: string) => void;
+  onRemove: () => void;
 }
 
-const overlapAlignClass = {
-  left: 'left-6 md:left-[5.75rem]',
-  center: 'left-1/2 -translate-x-1/2',
-  right: 'right-6 md:right-[5.75rem]'
-};
-
-const inlineAlignClass = {
-  left: '',
-  center: 'justify-center',
-  right: 'justify-end'
-};
-
-const FormLogo: React.FC<FormLogoProps> = ({ logoUrl, canEdit, overlapBanner, align, onUpload }) => {
+const FormLogo: React.FC<Readonly<FormLogoProps>> = ({ logoUrl, canEdit, overlapBanner, onUpload, onRemove }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const { upload, uploading } = useImageUpload(onUpload);
 
   if (!logoUrl && !canEdit) return null;
 
   const positionClass = overlapBanner
-    ? `absolute top-0 -translate-y-1/2 ${overlapAlignClass[align]}`
-    : `mb-6 flex ${inlineAlignClass[align]}`;
+    ? 'absolute top-0 -translate-y-1/2 left-6 md:left-[5.75rem]'
+    : 'mb-6 flex';
 
   return (
     <div className={positionClass}>
       {logoUrl ? (
-        <img src={logoUrl} alt="Logo" className="h-16 max-w-[10rem] object-contain rounded-lg bg-white border p-1" />
+        <div className="relative group inline-flex">
+          <img src={logoUrl} alt="Logo" className="h-16 max-w-[10rem] object-contain rounded-lg bg-white border p-1" />
+          {canEdit && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/20 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+              <button
+                type="button"
+                aria-label="Remove logo"
+                onClick={onRemove}
+                className={`flex p-2 justify-center items-center rounded-lg bg-white hover:bg-gray-50 ${imageButtonShadow}`}
+              >
+                <Trash2 className="w-4 h-4 text-[var(--color-error-600)]" />
+              </button>
+            </div>
+          )}
+        </div>
       ) : (
         <>
           <input
@@ -815,7 +760,7 @@ const FormLogo: React.FC<FormLogoProps> = ({ logoUrl, canEdit, overlapBanner, al
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => upload(e.target.files?.[0])}
+            onChange={(e) => { void upload(e.target.files?.[0]); }}
           />
           <button
             type="button"
@@ -826,7 +771,7 @@ const FormLogo: React.FC<FormLogoProps> = ({ logoUrl, canEdit, overlapBanner, al
             {uploading
               ? <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
               : <ImagePlus className="w-4 h-4 text-[var(--color-gray-500)]" />}
-            <span>Add a logo</span>
+            <span className='text-[0.875rem] font-semibold text-[var(--color-text-primary)]'>Add a logo</span>
           </button>
         </>
       )}
@@ -834,7 +779,7 @@ const FormLogo: React.FC<FormLogoProps> = ({ logoUrl, canEdit, overlapBanner, al
   );
 };
 
-export const FormPreview: React.FC<FormPreviewProps> = ({
+export const FormPreview: React.FC<Readonly<FormPreviewProps>> = ({
   config,
   selectedFieldId,
   rowData,
@@ -854,11 +799,11 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedTitle, setEditedTitle] = useState(config.title);
-  const [editedDescription, setEditedDescription] = useState(config.description || '');
+  const [editedDescription, setEditedDescription] = useState(config.description ?? '');
 
   useEffect(() => {
     setEditedTitle(config.title);
-    setEditedDescription(config.description || '');
+    setEditedDescription(config.description ?? '');
   }, [config.title, config.description]);
 
   const appearance = config.appearance || {};
@@ -903,14 +848,14 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
   }, [config.title]);
 
   const handleDescriptionSave = useCallback(() => {
-    if (onConfigChange && editedDescription.trim() !== (config.description || '')) {
+    if (onConfigChange && editedDescription.trim() !== (config.description ?? '')) {
       onConfigChange({ description: editedDescription.trim() });
     }
     setIsEditingDescription(false);
   }, [onConfigChange, editedDescription, config.description]);
 
   const handleDescriptionCancel = useCallback(() => {
-    setEditedDescription(config.description || '');
+    setEditedDescription(config.description ?? '');
     setIsEditingDescription(false);
   }, [config.description]);
 
@@ -926,6 +871,7 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
               bannerUrl={appearance.bannerUrl}
               canEdit={canEdit && !isReadOnly}
               onUpload={(url) => onConfigChange?.({ appearance: { ...appearance, bannerUrl: url } })}
+              onRemove={() => onConfigChange?.({ appearance: { ...appearance, bannerUrl: undefined } })}
             />
           )}
 
@@ -934,69 +880,69 @@ export const FormPreview: React.FC<FormPreviewProps> = ({
               logoUrl={appearance.logoUrl}
               canEdit={canEdit && !isReadOnly}
               overlapBanner={logoOnBanner}
-              align={appearance.align || 'left'}
               onUpload={(url) => onConfigChange?.({ appearance: { ...appearance, logoUrl: url } })}
+              onRemove={() => onConfigChange?.({ appearance: { ...appearance, logoUrl: undefined } })}
             />
 
-          <FormHeader
-            appearance={appearance}
-            styles={styles}
-            title={config.title}
-            description={config.description}
-            isEditingTitle={isEditingTitle}
-            isEditingDescription={isEditingDescription}
-            editedTitle={editedTitle}
-            editedDescription={editedDescription}
-            onTitleChange={setEditedTitle}
-            onDescriptionChange={setEditedDescription}
-            onTitleSave={handleTitleSave}
-            onTitleCancel={handleTitleCancel}
-            onDescriptionSave={handleDescriptionSave}
-            onDescriptionCancel={handleDescriptionCancel}
-            onStartEditTitle={() => setIsEditingTitle(true)}
-            onStartEditDescription={() => setIsEditingDescription(true)}
-            isReadOnly={isReadOnly}
-            canEdit={canEdit}
-            formError={formError}
-          />
-
-          <form
-            className={isGridLayout ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-2'}
-            onSubmit={onSubmit || ((e: React.SyntheticEvent<HTMLFormElement>) => {
-              e.preventDefault();
-            })}
-          >
-            <FormFieldsList
-              fields={visibleFields}
-              selectedFieldId={selectedFieldId}
-              rowData={rowData}
-              onRowDataChange={onRowDataChange}
-              draggedFieldId={draggedFieldId}
-              dragOverFieldId={dragOverFieldId}
-              dragOverPosition={dragOverPosition}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              onDragEnd={handleDragEnd}
-              onDeleteField={onDeleteField}
+            <FormHeader
               appearance={appearance}
-              model_id={model_id}
-              row_id={row_id}
-              onEdit={onEdit}
+              styles={styles}
+              title={config.title}
+              description={config.description}
+              isEditingTitle={isEditingTitle}
+              isEditingDescription={isEditingDescription}
+              editedTitle={editedTitle}
+              editedDescription={editedDescription}
+              onTitleChange={setEditedTitle}
+              onDescriptionChange={setEditedDescription}
+              onTitleSave={handleTitleSave}
+              onTitleCancel={handleTitleCancel}
+              onDescriptionSave={handleDescriptionSave}
+              onDescriptionCancel={handleDescriptionCancel}
+              onStartEditTitle={() => setIsEditingTitle(true)}
+              onStartEditDescription={() => setIsEditingDescription(true)}
               isReadOnly={isReadOnly}
-              isGridLayout={isGridLayout}
-              isSubmitting={isSubmitting}
+              canEdit={canEdit}
+              formError={formError}
             />
 
-            <FormActions
-              onSubmit={onSubmit}
-              onClear={onClear}
-              primaryColor={appearance.primaryColor}
-              isSubmitting={isSubmitting}
-            />
-          </form>
+            <form
+              className={isGridLayout ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-2'}
+              onSubmit={onSubmit ?? ((e: React.SyntheticEvent<HTMLFormElement>) => {
+                e.preventDefault();
+              })}
+            >
+              <FormFieldsList
+                fields={visibleFields}
+                selectedFieldId={selectedFieldId}
+                rowData={rowData}
+                onRowDataChange={onRowDataChange}
+                draggedFieldId={draggedFieldId}
+                dragOverFieldId={dragOverFieldId}
+                dragOverPosition={dragOverPosition}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
+                onDeleteField={onDeleteField}
+                appearance={appearance}
+                model_id={model_id}
+                row_id={row_id}
+                onEdit={onEdit}
+                isReadOnly={isReadOnly}
+                isGridLayout={isGridLayout}
+                isSubmitting={isSubmitting}
+              />
 
-          {!appearance.hideNocoBranding && <FormBranding />}
+              <FormActions
+                onSubmit={onSubmit}
+                onClear={onClear}
+                primaryColor={appearance.primaryColor}
+                isSubmitting={isSubmitting}
+              />
+            </form>
+
+            {!appearance.hideNocoBranding && <FormBranding />}
           </div>
         </div>
       </div>

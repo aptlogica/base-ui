@@ -585,4 +585,61 @@ describe('AppearanceSettings', () => {
       expect(screen.getByText('Appearance Settings')).toBeInTheDocument();
     });
   });
+
+  describe('URL handling and image replacement', () => {
+    const renderSettings = (appearance: Record<string, unknown>) =>
+      render(<AppearanceSettings appearance={appearance} onChange={mockOnChange} />, { wrapper: createWrapper() });
+
+    it('rejects non-http URLs and clears the error for a valid one', () => {
+      renderSettings(defaultAppearance);
+      fireEvent.click(screen.getAllByText('Insert via URL')[1]);
+      const input = screen.getByPlaceholderText('https://...');
+
+      fireEvent.change(input, { target: { value: 'ftp://example.com/logo.png' } });
+      expect(screen.getByText('Invalid URL')).toBeInTheDocument();
+
+      fireEvent.change(input, { target: { value: 'https://example.com/logo.png' } });
+      expect(screen.queryByText('Invalid URL')).not.toBeInTheDocument();
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ logoUrl: 'https://example.com/logo.png' }));
+    });
+
+    it('treats relative asset paths as uploaded files and allows replacing them', async () => {
+      renderSettings({ ...defaultAppearance, logoUrl: '/assets/logo.png' });
+      const clickSpy = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
+      fireEvent.click(screen.getByTitle('Change logo'));
+      expect(clickSpy).toHaveBeenCalled();
+      clickSpy.mockRestore();
+
+      const replaceInput = screen.getByTitle('Change logo').parentElement!.querySelector('input[type="file"]')!;
+      fireEvent.change(replaceInput, { target: { files: [new File(['x'], 'x.png', { type: 'image/png' })] } });
+      await waitFor(() => {
+        expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ logoUrl: 'https://example.com/image.png' }));
+      });
+    });
+
+    it('does not offer replacement for external image URLs', () => {
+      renderSettings({ ...defaultAppearance, bannerUrl: 'https://cdn.example.com/banner.png' });
+      expect(screen.getByAltText('Banner preview')).toBeInTheDocument();
+      expect(screen.queryByTitle('Change banner')).not.toBeInTheDocument();
+    });
+
+    it('opens the file picker from Browse', () => {
+      renderSettings(defaultAppearance);
+      const clickSpy = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
+      fireEvent.click(screen.getAllByText('Browse')[0]);
+      expect(clickSpy).toHaveBeenCalled();
+      clickSpy.mockRestore();
+    });
+
+    it('highlights the active background color', () => {
+      renderSettings({ ...defaultAppearance, backgroundColor: '#ECFDF3' });
+      expect(screen.getByRole('button', { name: 'Background color #ECFDF3' })).toHaveClass('ring-2');
+      expect(screen.getByRole('button', { name: 'Background color #E0DDFB' })).not.toHaveClass('ring-2');
+    });
+
+    it('marks the left-aligned labels layout as active', () => {
+      renderSettings({ ...defaultAppearance, labelPosition: 'left' });
+      expect(screen.getByRole('button', { name: /Left-Aligned Labels/ })).toHaveAttribute('aria-pressed', 'true');
+    });
+  });
 });
