@@ -3,9 +3,9 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useState } from 'react';
-import { X, AlertCircle, CheckCircle2, Play } from 'lucide-react';
+import { X, AlertCircle, CheckCircle2, Play, ShieldCheck } from 'lucide-react';
 import { MultiLineText } from '../../common/Fields/MultiLineText';
-import { useCreateAutomation, useUpdateAutomation, useRunAutomation } from '../../../hooks/useApi';
+import { useCreateAutomation, useUpdateAutomation, useRunAutomation, useValidateAutomation } from '../../../hooks/useApi';
 import type { Automation } from '../../../service/clientService';
 import {
   AutomationType, TRIGGER_OPERATIONS, TRIGGER_TIMINGS, TYPE_CONFIG, TriggerOperation, TriggerTiming,
@@ -51,10 +51,18 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
   const createAutomation = useCreateAutomation();
   const updateAutomation = useUpdateAutomation();
   const runAutomation = useRunAutomation();
+  const validateAutomation = useValidateAutomation();
   const isSaving = createAutomation.isPending || updateAutomation.isPending;
 
   // Save only stores the changes; Run applies the saved query in Postgres
   const canRun = !!item && type !== 'webhook';
+  // Validate checks the query as typed, saved or not, so it is offered for new entries too
+  const canValidate = type !== 'webhook';
+  // The query as it will be sent: the chosen timing and events win over what is typed
+  const preparedQuery = () => (isTrigger ? withTriggerEvents(context, timing, operations) : context).trim();
+  // Query and events that last passed Validate; Run shows only while the form still matches them
+  const [validated, setValidated] = useState<string | null>(null);
+  const isValidated = validated !== null && validated === `${preparedQuery()}\n${event}`;
   const hasChanges = !!item && (
     title.trim() !== (item.title || '') || context.trim() !== item.context.trim() || (isTrigger && event !== (item.event || ''))
   );
@@ -86,6 +94,25 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
       onClose();
     } catch (err: any) {
       setMessage({ ok: false, text: err?.message || 'Failed to save' });
+    }
+  };
+
+  // Postgres runs the query in a transaction that is rolled back, so nothing is changed
+  const handleValidate = async () => {
+    if (type === 'webhook') return;
+    const query = preparedQuery();
+    setMessage(null);
+    setValidated(null);
+    try {
+      const result = await validateAutomation.mutateAsync({ model_id: tableId, id: item?.id, type, context: query, event });
+      if (result.data.valid) {
+        setValidated(`${query}\n${event}`);
+        setMessage({ ok: true, text: canRun ? 'Valid: Postgres accepts this query. You can run it now.' : 'Valid: Postgres accepts this query.' });
+      } else {
+        setMessage({ ok: false, text: result.data.message || 'Postgres rejected this query' });
+      }
+    } catch (err: any) {
+      setMessage({ ok: false, text: err?.message || 'Failed to validate' });
     }
   };
 
@@ -221,7 +248,7 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
           </div>
         </div>
 
-        {/* Footer: Save stores the changes; Run applies the saved query in Postgres */}
+        {/* Footer: Validate checks the query as typed; Save stores the changes; Run applies the saved query in Postgres */}
         <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
           <button
             type="button"
@@ -231,11 +258,24 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
           >
             Cancel
           </button>
-          {canRun && (
+          {/* Validate until the query passes, then Run in its place */}
+          {canValidate && !(canRun && isValidated) && (
+            <button
+              type="button"
+              onClick={handleValidate}
+              disabled={validateAutomation.isPending || runAutomation.isPending || isSaving || !context.trim() || (isTrigger && operations.length === 0)}
+              title="Check the query in Postgres without changing anything"
+              className="px-6 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 flex items-center gap-2"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              {validateAutomation.isPending ? 'Validating...' : 'Validate'}
+            </button>
+          )}
+          {canRun && isValidated && (
             <button
               type="button"
               onClick={handleRun}
-              disabled={runAutomation.isPending || isSaving || hasChanges}
+              disabled={runAutomation.isPending || validateAutomation.isPending || isSaving || hasChanges}
               title={hasChanges ? 'Save first: Run applies the saved query' : 'Apply the saved query in Postgres'}
               className="px-10 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 flex items-center gap-2"
             >
@@ -246,7 +286,9 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
           <button
             type="button"
             onClick={handleSave}
-            disabled={isSaving || !title.trim() || !context.trim() || (isTrigger && operations.length === 0) || (!!item && !hasChanges)}
+            // A trigger or function is saved only once the query as typed has passed Validate
+            disabled={isSaving || !title.trim() || !context.trim() || (isTrigger && operations.length === 0) || (!!item && !hasChanges) || (canValidate && !isValidated)}
+            title={canValidate && !isValidated ? 'Validate the query first' : undefined}
             className="px-10 py-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSaving ? (

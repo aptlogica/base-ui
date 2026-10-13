@@ -86,6 +86,7 @@ import {
   createAutomationService,
   updateAutomationService,
   runAutomationService,
+  validateAutomationService,
   deleteAutomationService,
   getTableConstraintsService,
   checkTableConstraintService,
@@ -2021,6 +2022,10 @@ export const useRunAutomation = () => {
     },
   });
 };
+
+// Nothing is changed, so no queries are invalidated
+export const useValidateAutomation = () =>
+  useMutation({ mutationFn: validateAutomationService });
 
 export const useDeleteAutomation = () => {
   const queryClient = useQueryClient();

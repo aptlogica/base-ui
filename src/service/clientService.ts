@@ -1179,6 +1179,18 @@ export async function runAutomationService(id: string): Promise<{ data: Automati
   return await makeAuthenticatedCall(() => (client as any).http.post(`/automation/${id}/run`));
 }
 
+// Whether Postgres accepts a trigger or function query; message is Postgres' reason when not
+export interface AutomationValidationResult {
+  valid: boolean;
+  message?: string;
+}
+
+// Runs the query as typed (saved or not) in a rolled-back transaction; nothing is changed.
+// id is set when editing, so the query is checked as a replacement of what that entry installed.
+export async function validateAutomationService(params: { model_id: string; id?: string; type: 'trigger' | 'function'; context: string; event?: string }): Promise<{ data: AutomationValidationResult }> {
+  return await makeAuthenticatedCall(() => (client as any).http.post('/automation/validate', params));
+}
+
 export async function deleteAutomationService(id: string) {
   return await makeAuthenticatedCall(() => (client as any).http.delete(`/automation/${id}`));
 }
