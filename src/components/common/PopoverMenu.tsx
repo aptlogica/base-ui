@@ -282,12 +282,15 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
       }
     };
 
+    // Use capture phase so parents that stopPropagation on mousedown
+    // (e.g. menu wrappers inside dropdown lists) can't prevent closing,
+    // ensuring only one popover menu is open at a time.
     if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside, true);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside, true);
     };
   }, [open]);
 
