@@ -450,4 +450,93 @@ describe('LinksField', () => {
     await waitFor(() => expect(toastError).toHaveBeenCalled());
     expect(onChange).toHaveBeenLastCalledWith(originalValue);
   });
+
+  it('hides the current row from the options on a self-link', async () => {
+    const user = userEvent.setup();
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl1', type: 'many-to-many' } } }}
+        value={[]}
+        onChange={vi.fn()}
+        currentRowId={1}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+
+    expect(screen.queryByRole('option', { name: /record one/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /record two/i })).toBeInTheDocument();
+  });
+
+  it('unlinks an already selected record when its option is clicked', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'many-to-many' } } }}
+        value={[{ id: 1, title: 'Record One' }, 2]}
+        onChange={onChange}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    await user.click(screen.getByRole('option', { name: /record one/i }));
+
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith([2]));
+    await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalledWith(expect.objectContaining({ action: 'unlink' })));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Record unlinked successfully'));
+  });
+
+  it('appends to existing links on a many-to-many field and keeps the dropdown open', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'many-to-many' } } }}
+        value={[{ id: 1, title: 'Record One' }]}
+        onChange={onChange}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    await user.click(screen.getByRole('option', { name: /record two/i }));
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(onChange.mock.calls[0][0]).toEqual([
+      { id: 1, title: 'Record One' },
+      expect.objectContaining({ title: 'Record Two' }),
+    ]);
+    expect(screen.getByRole('listbox', { name: 'Available records' })).toBeInTheDocument();
+  });
+
+  it('toggles local selection on a many-to-many field without persisting', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'many-to-many' } } }}
+        value={[{ id: 1, title: 'Record One' }]}
+        onChange={onChange}
+        currentRowId={10}
+        currentTableId="tbl1"
+        persistImmediately={false}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    await user.click(screen.getByRole('option', { name: /record one/i }));
+    expect(onChange).toHaveBeenLastCalledWith([]);
+
+    await user.click(screen.getByRole('option', { name: /record two/i }));
+    expect(onChange.mock.calls[1][0]).toEqual([
+      expect.objectContaining({ title: 'Record One' }),
+      expect.objectContaining({ title: 'Record Two' }),
+    ]);
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+  });
 });

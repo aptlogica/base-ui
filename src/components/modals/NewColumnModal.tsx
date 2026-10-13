@@ -58,6 +58,9 @@ const getRawTables = (tablesData: any) => {
   return [];
 };
 
+const isSelfLinkTable = (selectedTableId: string, currentTableId?: string) =>
+  !!currentTableId && selectedTableId === currentTableId;
+
 const isFieldTypeLocked = (
   isFieldUsedInViews: boolean,
   isLinksFieldEditing: boolean,
@@ -126,7 +129,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     return fieldUsage.isUsedInViews;
   }, [initialValues?.id, currentTableViews, currentTableId]);
 
-  // Extract tables array from response and filter out current table
+  // Extract tables array from response. The current table stays in the list (first) so a table can link to itself.
   const tables = useMemo(() => {
     if (!tablesData) return [];
 
@@ -136,10 +139,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     const rawTables = getRawTables(tablesData);
 
     // Extract model objects when present, otherwise use table item directly.
-    return rawTables
+    const allTables = rawTables
       .map((item: any) => item?.model || item)
-      .filter((table: any) => !!table?.id)
-      .filter((table: any) => table.id !== currentTableId); // Exclude current table from target selection
+      .filter((table: any) => !!table?.id);
+    const current = allTables.filter((table: any) => table.id === currentTableId);
+    const others = allTables.filter((table: any) => table.id !== currentTableId);
+    return [...current, ...others];
   }, [tablesData, currentTableId]);
 
   // Config state for each type
@@ -341,6 +346,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const [relationType, setRelationType] = useState<'one-to-one' | 'has-many' | 'many-to-many'>('one-to-one');
   const [selectedTableId, setSelectedTableId] = useState<string>('');
   const [selectedTable, setSelectedTable] = useState<any>(null);
+  const [inverseTitle, setInverseTitle] = useState<string>('');
+  const isSelfLink = isSelfLinkTable(selectedTableId, currentTableId);
 
   // Add state for lookup field config
   const [selectedRelationId, setSelectedRelationId] = useState<string>('');
@@ -728,6 +735,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setRelationType('one-to-one');
     setSelectedTableId('');
     setSelectedTable(null);
+    setInverseTitle('');
     // Reset lookup field config state
     setSelectedRelationId('');
     setSelectedLookupColumnId('');
@@ -800,6 +808,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setRelationType('one-to-one');
     setSelectedTableId('');
     setSelectedTable(null);
+    setInverseTitle('');
     setSelectedRelationId('');
     setSelectedLookupColumnId('');
     setHasUserModifiedLookupColumn(false);
@@ -968,6 +977,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setRelationType('one-to-one');
     setSelectedTableId('');
     setSelectedTable(null);
+    setInverseTitle('');
     // Reset lookup field config state
     setSelectedRelationId('');
     setSelectedLookupColumnId('');
@@ -1085,6 +1095,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       selectedTableId,
       selectedTable,
       relationType,
+      inverseTitle,
+      currentTableId,
       selectedRelationId,
       selectedLookupColumnId,
       linkFields,
@@ -1268,6 +1280,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setSelectedTableId,
     selectedTable,
     setSelectedTable,
+    inverseTitle,
+    setInverseTitle,
+    isSelfLink,
+    currentTableId,
     selectedRelationId,
     setSelectedRelationId,
     selectedLookupColumnId,
