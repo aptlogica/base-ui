@@ -101,6 +101,94 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
 
   const columns = COLUMNS[activeTab];
 
+  let tableRows: React.ReactNode;
+  if (isLoading) {
+    tableRows = (
+      <tr>
+        <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-gray-500">Loading…</td>
+      </tr>
+    );
+  } else if (items.length === 0) {
+    tableRows = (
+      <tr>
+        <td colSpan={columns.length} className="px-6 py-12 text-center">
+          {query ? (
+            <p className="text-sm text-gray-500">No {tab.label.toLowerCase()} match "{search.trim()}"</p>
+          ) : (
+            <div className="flex flex-col items-center gap-3">
+              <TabIcon size={32} className="icon-primary p-1.5 rounded-xl bg-primary/10" />
+              <p className="text-sm text-gray-500">No {tab.label.toLowerCase()} yet</p>
+              <button
+                type="button"
+                onClick={() => setForm({ type: activeTab })}
+                className="px-4 py-2 rounded-xl btn-primary text-primary text-sm font-medium flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add {tab.singular}
+              </button>
+            </div>
+          )}
+        </td>
+      </tr>
+    );
+  } else {
+    tableRows = pageItems.map(item => {
+      const title = displayTitle(item);
+      return (
+        <tr key={item.id} className="bg-card hover:bg-gray-50 transition-colors">
+          <td className="px-4 py-3 max-w-[240px]">
+            <button
+              type="button"
+              onClick={() => openItem(item)}
+              className="flex items-center gap-2 text-left w-full min-w-0 group"
+            >
+              <span className="text-sm font-medium text-primary truncate group-hover:underline" title={title}>{title}</span>
+            </button>
+          </td>
+          {item.type !== 'webhook' && (
+            <td className="px-4 py-3 max-w-[220px]">
+              <span className="block text-xs text-gray-600 font-mono truncate" title={nameFromContext(item.context)}>{nameFromContext(item.context)}</span>
+            </td>
+          )}
+          {item.type === 'trigger' && (
+            <td className="px-4 py-3">
+              <div className="flex flex-col items-center gap-1">
+                {(item.event ? item.event.split(', ') : ['-']).map(event => (
+                  <span key={event} className="px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[10px] leading-tight font-medium whitespace-nowrap">{event}</span>
+                ))}
+              </div>
+            </td>
+          )}
+          <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center truncate"><UserName userId={item.created_by} /></td>
+          <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center">{formatDate(item.created_time)}</td>
+          <td className="px-4 py-3">
+            <div className="flex items-center justify-center gap-1">
+              <button
+                type="button"
+                aria-label={`Edit ${title}`}
+                onClick={() => openItem(item)}
+                className="h-8 px-2 rounded-xl hover:bg-gray-100 flex items-center gap-1.5 text-sm text-gray-700 flex-shrink-0"
+              >
+                <Edit className="w-4 h-4 text-secondary" />
+                Edit
+              </button>
+              <button
+                type="button"
+                aria-label={`Delete ${title}`}
+                onClick={() => setDeleteItem(item)}
+                disabled={deleteAutomation.isPending}
+                className="h-8 px-2 rounded-xl hover:bg-gray-100 flex items-center gap-1.5 text-sm text-red-600 flex-shrink-0 disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </button>
+            </div>
+          </td>
+        </tr>
+      );
+    });
+  }
+
   const content = (
       <div className={embedded
         ? 'flex flex-col relative overflow-hidden h-full'
@@ -199,88 +287,7 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-gray-500">Loading…</td>
-                  </tr>
-                ) : items.length === 0 ? (
-                  <tr>
-                    <td colSpan={columns.length} className="px-6 py-12 text-center">
-                      {query ? (
-                        <p className="text-sm text-gray-500">No {tab.label.toLowerCase()} match "{search.trim()}"</p>
-                      ) : (
-                        <div className="flex flex-col items-center gap-3">
-                          <TabIcon size={32} className="icon-primary p-1.5 rounded-xl bg-primary/10" />
-                          <p className="text-sm text-gray-500">No {tab.label.toLowerCase()} yet</p>
-                          <button
-                            type="button"
-                            onClick={() => setForm({ type: activeTab })}
-                            className="px-4 py-2 rounded-xl btn-primary text-primary text-sm font-medium flex items-center gap-2"
-                          >
-                            <Plus className="w-4 h-4" />
-                            Add {tab.singular}
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ) : (
-                  pageItems.map(item => {
-                    const title = displayTitle(item);
-                    return (
-                      <tr key={item.id} className="bg-card hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 max-w-[240px]">
-                          <button
-                            type="button"
-                            onClick={() => openItem(item)}
-                            className="flex items-center gap-2 text-left w-full min-w-0 group"
-                          >
-                            <span className="text-sm font-medium text-primary truncate group-hover:underline" title={title}>{title}</span>
-                          </button>
-                        </td>
-                        {item.type !== 'webhook' && (
-                          <td className="px-4 py-3 max-w-[220px]">
-                            <span className="block text-xs text-gray-600 font-mono truncate" title={nameFromContext(item.context)}>{nameFromContext(item.context)}</span>
-                          </td>
-                        )}
-                        {item.type === 'trigger' && (
-                          <td className="px-4 py-3">
-                            <div className="flex flex-col items-center gap-1">
-                              {(item.event ? item.event.split(', ') : ['-']).map(event => (
-                                <span key={event} className="px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[10px] leading-tight font-medium whitespace-nowrap">{event}</span>
-                              ))}
-                            </div>
-                          </td>
-                        )}
-                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center truncate"><UserName userId={item.created_by} /></td>
-                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center">{formatDate(item.created_time)}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              type="button"
-                              aria-label={`Edit ${title}`}
-                              onClick={() => openItem(item)}
-                              className="h-8 px-2 rounded-xl hover:bg-gray-100 flex items-center gap-1.5 text-sm text-gray-700 flex-shrink-0"
-                            >
-                              <Edit className="w-4 h-4 text-secondary" />
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              aria-label={`Delete ${title}`}
-                              onClick={() => setDeleteItem(item)}
-                              disabled={deleteAutomation.isPending}
-                              className="h-8 px-2 rounded-xl hover:bg-gray-100 flex items-center gap-1.5 text-sm text-red-600 flex-shrink-0 disabled:opacity-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
+                {tableRows}
               </tbody>
             </table>
           </div>

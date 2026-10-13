@@ -79,12 +79,16 @@ export const parseEvent = (event?: string): { timing: TriggerTiming; operations:
   const parts = event.split(',').map(part => part.trim().toUpperCase().split(/\s+/)).filter(words => words.length >= 2);
   if (!parts.length) return null;
   const timing = parts[0].slice(0, -1).join(' ') as TriggerTiming;
-  const operations = parts.map(words => words[words.length - 1] as TriggerOperation).filter(op => TRIGGER_OPERATIONS.includes(op));
+  const operations = parts.map(words => words.at(-1) as TriggerOperation).filter(op => TRIGGER_OPERATIONS.includes(op));
   return TRIGGER_TIMINGS.includes(timing) ? { timing, operations } : null;
 };
 
 // The "BEFORE INSERT OR UPDATE OF col" part of a CREATE TRIGGER query; the events may be missing
-const eventClauseRegexp = /(CREATE\s+(?:OR\s+REPLACE\s+)?TRIGGER\s+"?\w+"?\s+)(BEFORE|AFTER|INSTEAD\s+OF)\b([\s\S]*?)(\s+ON\s+)/i;
+// The events are matched word by word (any word but ON), so the regexp never backtracks over them
+const eventClauseRegexp = /(CREATE\s+(?:OR\s+REPLACE\s+)?TRIGGER\s+"?\w+"?\s+)(BEFORE|AFTER|INSTEAD\s+OF)\b(\S*(?:\s+(?!ON\s)\S+)*)(\s+ON\s+)/i;
+
+// " OR " between events; the lookbehind starts each match only at the first space of a run
+const orSeparatorRegexp = /(?<!\s)\s+OR\s+/i;
 
 // Timing and events written in a trigger query (used when an older entry has no stored event)
 export const parseQueryEvent = (context: string): { timing: TriggerTiming; operations: TriggerOperation[] } | null => {
@@ -92,7 +96,7 @@ export const parseQueryEvent = (context: string): { timing: TriggerTiming; opera
   if (!match) return null;
   const operations = match[3]
     .trim()
-    .split(/\s+OR\s+/i)
+    .split(orSeparatorRegexp)
     .map(part => part.trim().split(/\s+/)[0].toUpperCase() as TriggerOperation)
     .filter(op => TRIGGER_OPERATIONS.includes(op));
   return { timing: match[2].replace(/\s+/g, ' ').toUpperCase() as TriggerTiming, operations };
@@ -101,10 +105,12 @@ export const parseQueryEvent = (context: string): { timing: TriggerTiming; opera
 // Writes the chosen timing and events into the trigger query, keeping an existing "UPDATE OF columns"
 export const withTriggerEvents = (context: string, timing: TriggerTiming, operations: TriggerOperation[]): string =>
   context.replace(eventClauseRegexp, (_match, head: string, _timing: string, events: string, on: string) => {
-    const updatePart = events.trim().split(/\s+OR\s+/i).find(part => /^UPDATE\b/i.test(part.trim())) || '';
-    const updateOf = /UPDATE\s+OF\s+([\s\S]+)$/i.exec(updatePart.trim());
+    const updatePart = events.trim().split(orSeparatorRegexp).find(part => /^UPDATE\b/i.test(part.trim())) || '';
+    const updateOf = /UPDATE\s+OF\s+(\S[\s\S]*)$/i.exec(updatePart.trim());
     const sorted = TRIGGER_OPERATIONS.filter(op => operations.includes(op));
-    return `${head}${timing} ${sorted.map(op => (op === 'UPDATE' && updateOf ? `UPDATE OF ${updateOf[1].trim()}` : op)).join(' OR ')}${on.replace(/^[ \t]+/, ' ')}`;
+    const updateEvent = updateOf ? `UPDATE OF ${updateOf[1].trim()}` : 'UPDATE';
+    const newEvents = sorted.map(op => (op === 'UPDATE' ? updateEvent : op)).join(' OR ');
+    return `${head}${timing} ${newEvents}${on.replace(/^[ \t]+/, ' ')}`;
   });
 
 export const displayTitle = (item: Automation): string => item.title || nameFromContext(item.context);

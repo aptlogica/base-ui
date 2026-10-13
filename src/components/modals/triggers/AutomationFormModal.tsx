@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, AlertCircle, CheckCircle2, Play, ShieldCheck } from 'lucide-react';
 import { MultiLineText } from '../../common/Fields/MultiLineText';
 import { useCreateAutomation, useUpdateAutomation, useRunAutomation, useValidateAutomation } from '../../../hooks/useApi';
@@ -20,6 +20,26 @@ interface AutomationFormModalProps {
   onClose: () => void;
 }
 
+const DEFAULT_EVENT = { timing: 'AFTER' as TriggerTiming, operations: ['INSERT'] as TriggerOperation[] };
+
+// Timing and events to start with: the stored event, else the ones written in the saved query
+const initialEventOf = (item?: Automation) =>
+  parseEvent(item?.event) || (item && parseQueryEvent(item.context)) || DEFAULT_EVENT;
+
+// The first reason the form can't be saved yet, or null
+const formError = (title: string, context: string, isTrigger: boolean, operations: TriggerOperation[], queryLabel: string): string | null => {
+  if (!title.trim()) return 'Title is required';
+  if (isTrigger && operations.length === 0) return 'Select at least one event';
+  if (!context.trim()) return `${queryLabel} is required`;
+  return null;
+};
+
+// Whether the title, query or (for a trigger) event differ from the saved entry
+const differsFromSaved = (item: Automation, title: string, context: string, isTrigger: boolean, event: string): boolean =>
+  title.trim() !== (item.title || '') || context.trim() !== item.context.trim() || (isTrigger && event !== (item.event || ''));
+
+const errorText = (err: any, fallback: string): string => err?.message || fallback;
+
 const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, item, onClose }) => {
   const tableId: string = table?.id;
   const alias: string = table?.alias || 'table_name';
@@ -27,11 +47,12 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
   const Icon = config.icon;
 
   const [title, setTitle] = useState(item?.title || '');
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const [context, setContext] = useState(item?.context || '');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   // Timing and events of a trigger: stored in the event column and written into the query
   const isTrigger = type === 'trigger';
-  const initialEvent = parseEvent(item?.event) || (item && parseQueryEvent(item.context)) || { timing: 'AFTER' as TriggerTiming, operations: ['INSERT'] as TriggerOperation[] };
+  const initialEvent = initialEventOf(item);
   const [timing, setTiming] = useState<TriggerTiming>(initialEvent.timing);
   const [operations, setOperations] = useState<TriggerOperation[]>(initialEvent.operations);
   const event = isTrigger ? formatEvent(timing, operations) : '';
@@ -63,21 +84,12 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
   // Query and events that last passed Validate; Run shows only while the form still matches them
   const [validated, setValidated] = useState<string | null>(null);
   const isValidated = validated !== null && validated === `${preparedQuery()}\n${event}`;
-  const hasChanges = !!item && (
-    title.trim() !== (item.title || '') || context.trim() !== item.context.trim() || (isTrigger && event !== (item.event || ''))
-  );
+  const hasChanges = !!item && differsFromSaved(item, title, context, isTrigger, event);
 
   const handleSave = async () => {
-    if (!title.trim()) {
-      setMessage({ ok: false, text: 'Title is required' });
-      return;
-    }
-    if (isTrigger && operations.length === 0) {
-      setMessage({ ok: false, text: 'Select at least one event' });
-      return;
-    }
-    if (!context.trim()) {
-      setMessage({ ok: false, text: `${config.queryLabel} is required` });
+    const invalid = formError(title, context, isTrigger, operations, config.queryLabel);
+    if (invalid) {
+      setMessage({ ok: false, text: invalid });
       return;
     }
     // The chosen timing and events win over what is typed in the query
@@ -93,7 +105,7 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
       await createAutomation.mutateAsync({ model_id: tableId, title: title.trim(), type, context: query, event });
       onClose();
     } catch (err: any) {
-      setMessage({ ok: false, text: err?.message || 'Failed to save' });
+      setMessage({ ok: false, text: errorText(err, 'Failed to save') });
     }
   };
 
@@ -112,7 +124,7 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
         setMessage({ ok: false, text: result.data.message || 'Postgres rejected this query' });
       }
     } catch (err: any) {
-      setMessage({ ok: false, text: err?.message || 'Failed to validate' });
+      setMessage({ ok: false, text: errorText(err, 'Failed to validate') });
     }
   };
 
@@ -123,9 +135,14 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
       await runAutomation.mutateAsync({ id: item.id, tableId });
       onClose();
     } catch (err: any) {
-      setMessage({ ok: false, text: err?.message || 'Failed to run' });
+      setMessage({ ok: false, text: errorText(err, 'Failed to run') });
     }
   };
+
+  // Focus the title when the form opens
+  useEffect(() => {
+    titleInputRef.current?.focus();
+  }, []);
 
   return (
     <div //NOSONAR
@@ -178,7 +195,7 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
                 onChange={e => setTitle(e.target.value)}
                 placeholder={config.titlePlaceholder}
                 maxLength={50}
-                autoFocus
+                ref={titleInputRef}
                 className="field-component field-component-border field-component-focus border"
               />
               <p className="text-xs text-gray-500">{title.length}/50 characters</p>
@@ -188,7 +205,7 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
               <div className="space-y-4">
                 <div className="space-y-1">
                   <p className="field-component-label !text-primary">Trigger timing <span className="field-component-required">*</span></p>
-                  <div className="flex items-center border border-[var(--color-border-primary)] rounded-xl p-0.5 w-fit" role="group" aria-label="Trigger timing">
+                  <fieldset className="flex items-center border border-[var(--color-border-primary)] rounded-xl p-0.5 w-fit" aria-label="Trigger timing">
                     {TRIGGER_TIMINGS.map(value => (
                       <button
                         key={value}
@@ -200,7 +217,7 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
                         {value}
                       </button>
                     ))}
-                  </div>
+                  </fieldset>
                 </div>
                 <div className="space-y-1">
                   <p className="field-component-label !text-primary">Trigger events <span className="field-component-required">*</span></p>

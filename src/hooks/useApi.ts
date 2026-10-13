@@ -1996,7 +1996,7 @@ export const useCreateAutomation = () => {
   return useMutation({
     mutationFn: createAutomationService,
     onSuccess: (_, params) => {
-      queryClient.invalidateQueries({ queryKey: ['tables', params.model_id, 'automations'] });
+      void queryClient.invalidateQueries({ queryKey: ['tables', params.model_id, 'automations'] });
     },
   });
 };
@@ -2007,7 +2007,7 @@ export const useUpdateAutomation = () => {
   return useMutation({
     mutationFn: ({ tableId: _tableId, ...params }: { id: string; tableId: string; title: string; context: string; event?: string }) => updateAutomationService(params),
     onSuccess: (_, { tableId }) => {
-      queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
+      void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
     },
   });
 };
@@ -2018,7 +2018,7 @@ export const useRunAutomation = () => {
   return useMutation({
     mutationFn: ({ id }: { id: string; tableId: string }) => runAutomationService(id),
     onSuccess: (_, { tableId }) => {
-      queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
+      void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
     },
   });
 };
@@ -2033,7 +2033,7 @@ export const useDeleteAutomation = () => {
   return useMutation({
     mutationFn: ({ id }: { id: string; tableId: string }) => deleteAutomationService(id),
     onSuccess: (_, { tableId }) => {
-      queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
+      void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
     },
   });
 };
@@ -2059,7 +2059,7 @@ export const useCreateTableConstraint = () => {
   return useMutation({
     mutationFn: createTableConstraintService,
     onSuccess: (_, params) => {
-      queryClient.invalidateQueries({ queryKey: ['tables', params.model_id, 'constraints'] });
+      void queryClient.invalidateQueries({ queryKey: ['tables', params.model_id, 'constraints'] });
     },
   });
 };
@@ -2070,7 +2070,7 @@ export const useUpdateTableConstraint = () => {
   return useMutation({
     mutationFn: ({ tableId: _tableId, ...params }: TableConstraintInput & { id: string; tableId: string }) => updateTableConstraintService(params),
     onSuccess: (_, { tableId }) => {
-      queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'constraints'] });
+      void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'constraints'] });
     },
   });
 };
@@ -2081,7 +2081,7 @@ export const useDeleteTableConstraint = () => {
   return useMutation({
     mutationFn: ({ id }: { id: string; tableId: string }) => deleteTableConstraintService(id),
     onSuccess: (_, { tableId }) => {
-      queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'constraints'] });
+      void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'constraints'] });
     },
   });
 };

@@ -97,11 +97,11 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
       }}
     >
       <button type="button" aria-label="Close modal" className="absolute inset-0" onClick={onClose} />
-      <div
-        role="dialog"
+      <dialog
+        open
         aria-modal="true"
         aria-labelledby="unique-key-form-title"
-        className="bg-modal !p-0 flex flex-col relative overflow-hidden !max-w-2xl !max-h-[90vh] min-h-[420px]"
+        className="bg-modal !p-0 flex flex-col relative overflow-hidden !max-w-2xl !max-h-[90vh] min-h-[420px] text-inherit"
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
@@ -172,7 +172,7 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
                 className="w-4 h-4 mt-0.5 accent-[var(--color-bg-brand-primary)]"
               />
               <span>
-                <span className="block">Treat empty values as duplicates</span>
+                Treat empty values as duplicates
                 <span className="block text-xs text-gray-500">Only one record may leave these columns empty.</span>
               </span>
             </label>
@@ -212,7 +212,7 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
             )}
           </button>
         </div>
-      </div>
+      </dialog>
     </div>
   );
 };

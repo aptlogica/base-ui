@@ -205,8 +205,9 @@ export const TableRow: React.FC<TableRowProps> = ({
       </div>
       {memoizedColumnProps.map((props, index) => {
         const column = columns[index];
+        const cellKey = `${rowId}-${column.key}`;
         let borderClass: string;
-        if (saveErrorCells?.has(`${rowId}-${column.key}`)) {
+        if (saveErrorCells?.has(cellKey)) {
           borderClass = 'border border-red-500';
         } else if (props.isActive) {
           // Selected cell: green border, default background
@@ -226,7 +227,7 @@ export const TableRow: React.FC<TableRowProps> = ({
         return (
           // eslint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role
           <div
-            key={`${column.id || column.key || 'column'}-${index}-${cellResets?.[`${rowId}-${column.key}`] ?? 0}`}
+            key={`${column.id || column.key || 'column'}-${index}-${cellResets?.[cellKey] ?? 0}`}
             className={borderClass}
             style={{
               height: '40px',
