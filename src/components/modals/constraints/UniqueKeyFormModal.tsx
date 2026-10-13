@@ -172,7 +172,7 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
                 className="w-4 h-4 mt-0.5 accent-[var(--color-bg-brand-primary)]"
               />
               <span>
-                Treat empty values as duplicates
+                Treat empty values as duplicates{' '}
                 <span className="block text-xs text-gray-500">Only one record may leave these columns empty.</span>
               </span>
             </label>

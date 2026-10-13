@@ -40,6 +40,20 @@ const differsFromSaved = (item: Automation, title: string, context: string, isTr
 
 const errorText = (err: any, fallback: string): string => err?.message || fallback;
 
+// Button text while its request is running, e.g. Validating... instead of Validate
+const pendingLabel = (isPending: boolean, pending: string, idle: string): string => (isPending ? pending : idle);
+
+// Result of Save, Validate or Run: green when it worked, red otherwise
+const FormMessage: React.FC<{ message: { ok: boolean; text: string } | null }> = ({ message }) => {
+  if (!message) return null;
+  return (
+    <div className={`text-sm flex items-center gap-1 ${message.ok ? 'text-green-600' : 'text-red-600'}`}>
+      {message.ok ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+      <span>{message.text}</span>
+    </div>
+  );
+};
+
 const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, item, onClose }) => {
   const tableId: string = table?.id;
   const alias: string = table?.alias || 'table_name';
@@ -256,12 +270,7 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
               helperText={config.helperText}
             />
 
-            {message && (
-              <div className={`text-sm flex items-center gap-1 ${message.ok ? 'text-green-600' : 'text-red-600'}`}>
-                {message.ok ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
-                <span>{message.text}</span>
-              </div>
-            )}
+            <FormMessage message={message} />
           </div>
         </div>
 
@@ -285,7 +294,7 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
               className="px-6 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 flex items-center gap-2"
             >
               <ShieldCheck className="w-4 h-4" />
-              {validateAutomation.isPending ? 'Validating...' : 'Validate'}
+              {pendingLabel(validateAutomation.isPending, 'Validating...', 'Validate')}
             </button>
           )}
           {canRun && isValidated && (
@@ -297,7 +306,7 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
               className="px-10 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 flex items-center gap-2"
             >
               <Play className="w-4 h-4" />
-              {runAutomation.isPending ? 'Running...' : 'Run'}
+              {pendingLabel(runAutomation.isPending, 'Running...', 'Run')}
             </button>
           )}
           <button

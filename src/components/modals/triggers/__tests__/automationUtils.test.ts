@@ -98,6 +98,11 @@ describe('automationUtils', () => {
     it('returns null when the query is not a trigger', () => {
       expect(parseQueryEvent('SELECT 1')).toBeNull();
     });
+
+    it('skips a CREATE TRIGGER with no timing after it and reads the next one', () => {
+      const query = 'CREATE TRIGGER CREATE TRIGGER t BEFORE DELETE ON emp FOR EACH ROW EXECUTE FUNCTION f();';
+      expect(parseQueryEvent(query)).toEqual({ timing: 'BEFORE', operations: ['DELETE'] });
+    });
   });
 
   describe('withTriggerEvents', () => {
@@ -116,6 +121,13 @@ describe('automationUtils', () => {
 
     it('leaves a query without a trigger header unchanged', () => {
       expect(withTriggerEvents('SELECT 1', 'AFTER', ['INSERT'])).toBe('SELECT 1');
+    });
+
+    it('replaces only the clause and keeps the text around it', () => {
+      const query = '-- note\nCREATE TRIGGER t AFTER INSERT ON emp FOR EACH ROW EXECUTE FUNCTION f();';
+      expect(withTriggerEvents(query, 'BEFORE', ['UPDATE'])).toBe(
+        '-- note\nCREATE TRIGGER t BEFORE UPDATE ON emp FOR EACH ROW EXECUTE FUNCTION f();'
+      );
     });
   });
 

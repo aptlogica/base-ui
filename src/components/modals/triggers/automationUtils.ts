@@ -83,35 +83,58 @@ export const parseEvent = (event?: string): { timing: TriggerTiming; operations:
   return TRIGGER_TIMINGS.includes(timing) ? { timing, operations } : null;
 };
 
-// The "BEFORE INSERT OR UPDATE OF col" part of a CREATE TRIGGER query; the events may be missing
-// The events are matched word by word (any word but ON), so the regexp never backtracks over them
-const eventClauseRegexp = /(CREATE\s+(?:OR\s+REPLACE\s+)?TRIGGER\s+"?\w+"?\s+)(BEFORE|AFTER|INSTEAD\s+OF)\b(\S*(?:\s+(?!ON\s)\S+)*)(\s+ON\s+)/i;
+// The "BEFORE INSERT OR UPDATE OF col" part of a CREATE TRIGGER query; the events may be missing.
+// Matched in two steps to keep each regexp simple: the "CREATE TRIGGER name" head, then the timing,
+// events and " ON " right after it. The events are matched word by word (any word but ON), so the
+// regexp never backtracks over them.
+const triggerHeadRegexp = /CREATE\s+(?:OR\s+REPLACE\s+)?TRIGGER\s+"?\w+"?\s+/gi;
+const eventTailRegexp = /(BEFORE|AFTER|INSTEAD\s+OF)\b(\S*(?:\s+(?!ON\s)\S+)*)(\s+ON\s+)/iy;
+
+type EventClause = { start: number; end: number; head: string; timing: string; events: string; on: string };
+
+// The first CREATE TRIGGER head followed by a timing, events and " ON ", or null
+const findEventClause = (context: string): EventClause | null => {
+  triggerHeadRegexp.lastIndex = 0;
+  for (let head = triggerHeadRegexp.exec(context); head; head = triggerHeadRegexp.exec(context)) {
+    eventTailRegexp.lastIndex = head.index + head[0].length;
+    const tail = eventTailRegexp.exec(context);
+    if (tail) {
+      return { start: head.index, end: eventTailRegexp.lastIndex, head: head[0], timing: tail[1], events: tail[2], on: tail[3] };
+    }
+    // Look for the next head from the character after this one's start
+    triggerHeadRegexp.lastIndex = head.index + 1;
+  }
+  return null;
+};
 
 // " OR " between events; the lookbehind starts each match only at the first space of a run
 const orSeparatorRegexp = /(?<!\s)\s+OR\s+/i;
 
 // Timing and events written in a trigger query (used when an older entry has no stored event)
 export const parseQueryEvent = (context: string): { timing: TriggerTiming; operations: TriggerOperation[] } | null => {
-  const match = eventClauseRegexp.exec(context);
+  const match = findEventClause(context);
   if (!match) return null;
-  const operations = match[3]
+  const operations = match.events
     .trim()
     .split(orSeparatorRegexp)
     .map(part => part.trim().split(/\s+/)[0].toUpperCase() as TriggerOperation)
     .filter(op => TRIGGER_OPERATIONS.includes(op));
-  return { timing: match[2].replace(/\s+/g, ' ').toUpperCase() as TriggerTiming, operations };
+  return { timing: match.timing.replace(/\s+/g, ' ').toUpperCase() as TriggerTiming, operations };
 };
 
 // Writes the chosen timing and events into the trigger query, keeping an existing "UPDATE OF columns"
-export const withTriggerEvents = (context: string, timing: TriggerTiming, operations: TriggerOperation[]): string =>
-  context.replace(eventClauseRegexp, (_match, head: string, _timing: string, events: string, on: string) => {
-    const updatePart = events.trim().split(orSeparatorRegexp).find(part => /^UPDATE\b/i.test(part.trim())) || '';
-    const updateOf = /UPDATE\s+OF\s+(\S[\s\S]*)$/i.exec(updatePart.trim());
-    const sorted = TRIGGER_OPERATIONS.filter(op => operations.includes(op));
-    const updateEvent = updateOf ? `UPDATE OF ${updateOf[1].trim()}` : 'UPDATE';
-    const newEvents = sorted.map(op => (op === 'UPDATE' ? updateEvent : op)).join(' OR ');
-    return `${head}${timing} ${newEvents}${on.replace(/^[ \t]+/, ' ')}`;
-  });
+export const withTriggerEvents = (context: string, timing: TriggerTiming, operations: TriggerOperation[]): string => {
+  const match = findEventClause(context);
+  if (!match) return context;
+  const { head, events, on } = match;
+  const updatePart = events.trim().split(orSeparatorRegexp).find(part => /^UPDATE\b/i.test(part.trim())) || '';
+  const updateOf = /UPDATE\s+OF\s+(\S[\s\S]*)$/i.exec(updatePart.trim());
+  const sorted = TRIGGER_OPERATIONS.filter(op => operations.includes(op));
+  const updateEvent = updateOf ? `UPDATE OF ${updateOf[1].trim()}` : 'UPDATE';
+  const newEvents = sorted.map(op => (op === 'UPDATE' ? updateEvent : op)).join(' OR ');
+  const clause = `${head}${timing} ${newEvents}${on.replace(/^[ \t]+/, ' ')}`;
+  return context.slice(0, match.start) + clause + context.slice(match.end);
+};
 
 export const displayTitle = (item: Automation): string => item.title || nameFromContext(item.context);
 
