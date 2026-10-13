@@ -1142,3 +1142,116 @@ export async function updateOrganizationService(orgId: string, updateData: { nam
 }
 
 
+
+// =========================
+// Automations (triggers & webhooks)
+// =========================
+
+export interface Automation {
+  id: string;
+  model_id: string;
+  title?: string;
+  type: 'trigger' | 'webhook' | 'function';
+  context: string;
+  // Triggers only: timing + events chosen in the form, e.g. "BEFORE INSERT, BEFORE UPDATE"
+  event?: string;
+  created_by?: string;
+  last_modified_by?: string;
+  created_time?: string;
+  last_modified_time?: string;
+}
+
+// The SDK has no automation resource yet, so these use its authenticated HTTP client directly
+export async function getAutomationsService(tableId: string): Promise<{ data: Automation[] }> {
+  return await makeAuthenticatedCall(() => (client as any).http.get('/automation', { params: { model_id: tableId } }));
+}
+
+export async function createAutomationService(params: Omit<Automation, 'id'>): Promise<{ data: Automation }> {
+  return await makeAuthenticatedCall(() => (client as any).http.post('/automation/create', params));
+}
+
+export async function updateAutomationService({ id, ...params }: { id: string; title: string; context: string; event?: string }): Promise<{ data: Automation }> {
+  return await makeAuthenticatedCall(() => (client as any).http.put(`/automation/${id}`, params));
+}
+
+// Applies the saved query in Postgres
+export async function runAutomationService(id: string): Promise<{ data: Automation }> {
+  return await makeAuthenticatedCall(() => (client as any).http.post(`/automation/${id}/run`));
+}
+
+// Whether Postgres accepts a trigger or function query; message is Postgres' reason when not
+export interface AutomationValidationResult {
+  valid: boolean;
+  message?: string;
+}
+
+// Runs the query as typed (saved or not) in a rolled-back transaction; nothing is changed.
+// id is set when editing, so the query is checked as a replacement of what that entry installed.
+export async function validateAutomationService(params: { model_id: string; id?: string; type: 'trigger' | 'function'; context: string; event?: string }): Promise<{ data: AutomationValidationResult }> {
+  return await makeAuthenticatedCall(() => (client as any).http.post('/automation/validate', params));
+}
+
+export async function deleteAutomationService(id: string) {
+  return await makeAuthenticatedCall(() => (client as any).http.delete(`/automation/${id}`));
+}
+
+// =========================
+// Table constraints (unique keys; later primary key and check)
+// =========================
+
+export type TableConstraintType = 'unique' | 'primary' | 'check';
+
+export interface ConstraintColumn {
+  id: string;
+  title: string;
+}
+
+export interface TableConstraintOptions {
+  // Empty values count as equal, so only one record may leave the columns empty
+  nulls_not_distinct?: boolean;
+}
+
+export interface TableConstraint {
+  id: string;
+  title: string;
+  // Name of the constraint in Postgres
+  constraint_name: string;
+  // Columns of the key, in order
+  columns: ConstraintColumn[];
+  options: TableConstraintOptions;
+  // 'missing' when the Postgres constraint no longer exists
+  status: 'ok' | 'missing';
+}
+
+export interface TableConstraintInput {
+  title: string;
+  column_ids: string[];
+  options?: TableConstraintOptions;
+}
+
+// Whether records already share values in the chosen columns; message names the columns when not
+export interface ConstraintCheckResult {
+  valid: boolean;
+  message?: string;
+}
+
+export async function getTableConstraintsService(tableId: string, type: TableConstraintType): Promise<{ data: TableConstraint[] }> {
+  return await makeAuthenticatedCall(() => (client as any).http.get('/table-constraint', { params: { model_id: tableId, type } }));
+}
+
+// Checks existing records against the columns without changing anything
+export async function checkTableConstraintService(params: { model_id: string; column_ids: string[]; options?: TableConstraintOptions }): Promise<{ data: ConstraintCheckResult }> {
+  return await makeAuthenticatedCall(() => (client as any).http.post('/table-constraint/check', params));
+}
+
+export async function createTableConstraintService(params: TableConstraintInput & { model_id: string; type: TableConstraintType }): Promise<{ data: TableConstraint }> {
+  return await makeAuthenticatedCall(() => (client as any).http.post('/table-constraint/create', params));
+}
+
+export async function updateTableConstraintService({ id, ...params }: TableConstraintInput & { id: string }): Promise<{ data: TableConstraint }> {
+  return await makeAuthenticatedCall(() => (client as any).http.put(`/table-constraint/${id}`, params));
+}
+
+export async function deleteTableConstraintService(id: string) {
+  return await makeAuthenticatedCall(() => (client as any).http.delete(`/table-constraint/${id}`));
+}

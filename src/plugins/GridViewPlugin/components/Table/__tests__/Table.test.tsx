@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { ToastProvider } from '../../../../../components/common/Toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { applyFilters } from '../../../../../utils/filterUtils';
@@ -468,6 +468,35 @@ describe('Table', () => {
       ({ Table } = await import('../Table'));
     }
   }, 30000);
+
+  it('titles a rejected cell save that repeats a unique key, and shows the server message', () => {
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+    const { onSaveError } = mockUseCellEditing.mock.calls.at(-1)![0];
+
+    act(() => {
+      onSaveError({
+        rowId: '1',
+        columnKey: 'name',
+        error: Object.assign(new Error('A record with Customer Id = abc already exists'), { code: 'TCN_1012' }),
+      });
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      'A record with Customer Id = abc already exists',
+      expect.objectContaining({ title: 'Duplicate value not allowed' })
+    );
+  });
+
+  it('uses a general heading for other rejected cell saves', () => {
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+    const { onSaveError } = mockUseCellEditing.mock.calls.at(-1)![0];
+
+    act(() => {
+      onSaveError({ rowId: '1', columnKey: 'name', error: new Error('Something went wrong') });
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith('Something went wrong', expect.objectContaining({ title: 'Not saved' }));
+  });
 
   it('renders add row button and selection checkbox when editable', () => {
     renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);

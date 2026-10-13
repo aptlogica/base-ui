@@ -69,6 +69,9 @@ interface TableProps {
   actions?: TableActions;
 }
 
+
+// Server code for a record that repeats the values of a unique key
+const UNIQUE_KEY_VIOLATION = 'TCN_1012';
 // Input types treated as text fields for "Enter on last row adds a row"
 const TEXT_INPUT_TYPES = new Set(['text', 'number', 'email', 'tel', 'url', 'search']);
 
@@ -557,6 +560,36 @@ export const Table: React.FC<TableProps> = ({
     initialPage: 1,
   });
 
+  // A failed cell save (e.g. the value breaks a unique key) shows the server's reason and
+  // remounts that cell, so it shows the saved value again instead of what was typed
+  const [cellResets, setCellResets] = useState<Record<string, number>>({});
+  const [saveErrorCells, setSaveErrorCells] = useState<Set<string>>(() => new Set());
+  const saveErrorTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const handleCellSaveError = useCallback(({ rowId, columnKey, error }: { rowId: string; columnKey: string; error: unknown }) => {
+    const { message, code } = (error ?? {}) as { message?: string; code?: string };
+    // TCN_1012: the value repeats a unique key (Settings > Unique Key)
+    const title = code === UNIQUE_KEY_VIOLATION ? 'Duplicate value not allowed' : 'Not saved';
+    toast.error(message || 'The value could not be saved', { title, duration: 5000 });
+    const cellKey = `${rowId}-${columnKey}`;
+    setCellResets(prev => ({ ...prev, [cellKey]: (prev[cellKey] ?? 0) + 1 }));
+    // Box the cell in red while the toast is shown
+    setSaveErrorCells(prev => new Set(prev).add(cellKey));
+    clearTimeout(saveErrorTimeouts.current.get(cellKey));
+    saveErrorTimeouts.current.set(cellKey, setTimeout(() => {
+      saveErrorTimeouts.current.delete(cellKey);
+      setSaveErrorCells(prev => {
+        const next = new Set(prev);
+        next.delete(cellKey);
+        return next;
+      });
+    }, 5000));
+  }, [toast]);
+
+  useEffect(() => {
+    const timeouts = saveErrorTimeouts.current;
+    return () => timeouts.forEach(clearTimeout);
+  }, []);
+
   const { handleCellChange } = useCellEditing({
     data: paginatedData,
     columns,
@@ -564,6 +597,7 @@ export const Table: React.FC<TableProps> = ({
     insertRowDataMutation: actions?.insertRowData,
     bulkUpdateColumnMutation: actions?.bulkUpdateColumn,
     onRecordsUpdate: () => { },
+    onSaveError: handleCellSaveError,
   });
 
   // Measure table body container height
@@ -1179,6 +1213,8 @@ export const Table: React.FC<TableProps> = ({
                 selectedRows={selectedRows}
                 onRowSelect={handleRowSelect}
                 onCellChange={handleCellChange}
+                cellResets={cellResets}
+                saveErrorCells={saveErrorCells}
                 onContextMenu={handleContextMenu}
                 activeCell={activeCell}
                 setActiveCell={setActiveCell}

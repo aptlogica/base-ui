@@ -32,6 +32,10 @@ interface VirtualizedTableBodyProps {
   canSelectRows?: boolean;
   pinnedColumnIds?: string[];
   pinnedColumnOffsets?: Record<string, number>;
+  // Bumped per cell ("<rowId>-<columnKey>") when its save fails, to show the saved value again
+  cellResets?: Record<string, number>;
+  // Cells ("<rowId>-<columnKey>") whose last save failed; boxed in red
+  saveErrorCells?: Set<string>;
 }
 
 const ROW_HEIGHT = 40; // Row height in pixels
@@ -142,6 +146,8 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
   allColumns,
   pinnedColumnIds = [],
   pinnedColumnOffsets = {},
+  cellResets,
+  saveErrorCells,
 }) => {
   // Calculate total table width (selector + columns + add column button)
   const totalWidth = 48 + columnWidths.reduce((sum, w) => sum + w, 0);
@@ -430,9 +436,11 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
         canEdit={canEdit}
         pinnedColumnIds={pinnedColumnIds}
         pinnedColumnOffsets={pinnedColumnOffsets}
+        cellResets={cellResets}
+        saveErrorCells={saveErrorCells}
       />
     );
-  }, [columns, columnWidths, selectedRows, onRowSelect, onCellChange, onContextMenu, activeCell, setActiveCell, tableId, allColumns, canEdit, pinnedColumnIds, pinnedColumnOffsets]);
+  }, [columns, columnWidths, selectedRows, onRowSelect, onCellChange, onContextMenu, activeCell, setActiveCell, tableId, allColumns, canEdit, pinnedColumnIds, pinnedColumnOffsets, cellResets, saveErrorCells]);
 
   const virtualItems = virtualizer.getVirtualItems();
 

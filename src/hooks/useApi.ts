@@ -81,7 +81,20 @@ import {
   getOrganizationService,
   updateOrganizationService,
   mergeColumnsService,
-  splitColumnService
+  splitColumnService,
+  getAutomationsService,
+  createAutomationService,
+  updateAutomationService,
+  runAutomationService,
+  validateAutomationService,
+  deleteAutomationService,
+  getTableConstraintsService,
+  checkTableConstraintService,
+  createTableConstraintService,
+  updateTableConstraintService,
+  deleteTableConstraintService,
+  type TableConstraintType,
+  type TableConstraintInput,
 } from '../service/clientService';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
 
@@ -1961,5 +1974,114 @@ export const useUpdateOrganization = (organizationId: string) => {
     onError: (error: any) => {
       console.error('❌ Update organization failed:', error);
     }
+  });
+};
+
+// =========================
+// Automations (triggers & webhooks)
+// =========================
+
+export const useAutomations = (tableId: string) => {
+  return useQuery({
+    queryKey: ['tables', tableId, 'automations'],
+    queryFn: () => getAutomationsService(tableId),
+    enabled: !!tableId,
+    select: (res) => res?.data ?? [],
+  });
+};
+
+export const useCreateAutomation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createAutomationService,
+    onSuccess: (_, params) => {
+      void queryClient.invalidateQueries({ queryKey: ['tables', params.model_id, 'automations'] });
+    },
+  });
+};
+
+export const useUpdateAutomation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ tableId: _tableId, ...params }: { id: string; tableId: string; title: string; context: string; event?: string }) => updateAutomationService(params),
+    onSuccess: (_, { tableId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
+    },
+  });
+};
+
+export const useRunAutomation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string; tableId: string }) => runAutomationService(id),
+    onSuccess: (_, { tableId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
+    },
+  });
+};
+
+// Nothing is changed, so no queries are invalidated
+export const useValidateAutomation = () =>
+  useMutation({ mutationFn: validateAutomationService });
+
+export const useDeleteAutomation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string; tableId: string }) => deleteAutomationService(id),
+    onSuccess: (_, { tableId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
+    },
+  });
+};
+
+// Table constraints: unique keys (later primary key and check)
+export const useTableConstraints = (tableId: string, type: TableConstraintType) => {
+  return useQuery({
+    queryKey: ['tables', tableId, 'constraints', type],
+    queryFn: () => getTableConstraintsService(tableId, type),
+    enabled: !!tableId,
+    select: (res) => res?.data ?? [],
+    retry: false,
+  });
+};
+
+// Nothing is changed, so no queries are invalidated
+export const useCheckTableConstraint = () =>
+  useMutation({ mutationFn: checkTableConstraintService });
+
+export const useCreateTableConstraint = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createTableConstraintService,
+    onSuccess: (_, params) => {
+      void queryClient.invalidateQueries({ queryKey: ['tables', params.model_id, 'constraints'] });
+    },
+  });
+};
+
+export const useUpdateTableConstraint = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ tableId: _tableId, ...params }: TableConstraintInput & { id: string; tableId: string }) => updateTableConstraintService(params),
+    onSuccess: (_, { tableId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'constraints'] });
+    },
+  });
+};
+
+export const useDeleteTableConstraint = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string; tableId: string }) => deleteTableConstraintService(id),
+    onSuccess: (_, { tableId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'constraints'] });
+    },
   });
 };
