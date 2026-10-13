@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { X, Settings, Zap, KeyRound, Key, ShieldCheck } from 'lucide-react';
 import TableTriggersModal from './TableTriggersModal';
+import UniqueKeysPanel from './constraints/UniqueKeysPanel';
 
 interface TableSettingsModalProps {
   table: any;
@@ -79,6 +80,7 @@ const TableSettingsModal: React.FC<TableSettingsModalProps> = ({ table, onClose 
 
           {/* Right panel: the selected section; remounts on switch so search and page reset */}
           <div className="flex-1 min-w-0">
+            {section === 'uniqueKey' && <UniqueKeysPanel table={table} />}
             {(section === 'triggers' || section === 'webhooks') && (
               <TableTriggersModal key={section} embedded table={table} view={section} />
             )}

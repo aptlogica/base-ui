@@ -9,6 +9,10 @@ vi.mock('../TableTriggersModal', () => ({
   ),
 }));
 
+vi.mock('../constraints/UniqueKeysPanel', () => ({
+  default: ({ table }: { table: { id: string } }) => <div data-testid="unique-keys-panel">{`unique:${table.id}`}</div>,
+}));
+
 const table = { id: 't1', title: 'Employee' };
 
 describe('TableSettingsModal', () => {
@@ -42,13 +46,21 @@ describe('TableSettingsModal', () => {
     expect(screen.getByTestId('triggers-panel')).toHaveTextContent('triggers:embedded:t1');
   });
 
+  it('shows the unique constraints of the table under Unique Key', async () => {
+    render(<TableSettingsModal table={table} onClose={onClose} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Unique Key' }));
+    expect(screen.getByTestId('unique-keys-panel')).toHaveTextContent('unique:t1');
+    expect(screen.queryByTestId('triggers-panel')).not.toBeInTheDocument();
+  });
+
   it('shows an empty right side for sections that are not built yet', async () => {
     render(<TableSettingsModal table={table} onClose={onClose} />);
-    for (const label of ['Primary Key', 'Unique Key', 'Check Constraints']) {
+    for (const label of ['Primary Key', 'Check Constraints']) {
       await userEvent.click(screen.getByRole('button', { name: label }));
       expect(screen.getByRole('button', { name: label })).toHaveAttribute('aria-current', 'page');
       expect(screen.getByRole('button', { name: 'Triggers & Functions' })).not.toHaveAttribute('aria-current');
       expect(screen.queryByTestId('triggers-panel')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('unique-keys-panel')).not.toBeInTheDocument();
     }
 
     await userEvent.click(screen.getByRole('button', { name: 'Triggers & Functions' }));

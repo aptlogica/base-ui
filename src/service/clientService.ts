@@ -1165,3 +1165,64 @@ export async function runAutomationService(id: string): Promise<{ data: Automati
 export async function deleteAutomationService(id: string) {
   return await makeAuthenticatedCall(() => (client as any).http.delete(`/automation/${id}`));
 }
+
+// =========================
+// Table constraints (unique keys; later primary key and check)
+// =========================
+
+export type TableConstraintType = 'unique' | 'primary' | 'check';
+
+export interface ConstraintColumn {
+  id: string;
+  title: string;
+}
+
+export interface TableConstraintOptions {
+  // Empty values count as equal, so only one record may leave the columns empty
+  nulls_not_distinct?: boolean;
+}
+
+export interface TableConstraint {
+  id: string;
+  title: string;
+  // Name of the constraint in Postgres
+  constraint_name: string;
+  // Columns of the key, in order
+  columns: ConstraintColumn[];
+  options: TableConstraintOptions;
+  // 'missing' when the Postgres constraint no longer exists
+  status: 'ok' | 'missing';
+}
+
+export interface TableConstraintInput {
+  title: string;
+  column_ids: string[];
+  options?: TableConstraintOptions;
+}
+
+// Whether records already share values in the chosen columns; message names the columns when not
+export interface ConstraintCheckResult {
+  valid: boolean;
+  message?: string;
+}
+
+export async function getTableConstraintsService(tableId: string, type: TableConstraintType): Promise<{ data: TableConstraint[] }> {
+  return await makeAuthenticatedCall(() => (client as any).http.get('/table-constraint', { params: { model_id: tableId, type } }));
+}
+
+// Checks existing records against the columns without changing anything
+export async function checkTableConstraintService(params: { model_id: string; column_ids: string[]; options?: TableConstraintOptions }): Promise<{ data: ConstraintCheckResult }> {
+  return await makeAuthenticatedCall(() => (client as any).http.post('/table-constraint/check', params));
+}
+
+export async function createTableConstraintService(params: TableConstraintInput & { model_id: string; type: TableConstraintType }): Promise<{ data: TableConstraint }> {
+  return await makeAuthenticatedCall(() => (client as any).http.post('/table-constraint/create', params));
+}
+
+export async function updateTableConstraintService({ id, ...params }: TableConstraintInput & { id: string }): Promise<{ data: TableConstraint }> {
+  return await makeAuthenticatedCall(() => (client as any).http.put(`/table-constraint/${id}`, params));
+}
+
+export async function deleteTableConstraintService(id: string) {
+  return await makeAuthenticatedCall(() => (client as any).http.delete(`/table-constraint/${id}`));
+}

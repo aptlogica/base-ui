@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { ToastProvider } from '../../../../../components/common/Toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { applyFilters } from '../../../../../utils/filterUtils';
@@ -10,6 +10,7 @@ const mockToastError = vi.fn();
 const mockToastSuccess = vi.fn();
 
 const mockUseAllViews = vi.fn();
+const mockUseTableConstraints = vi.fn();
 const mockUseTableViewConfig = vi.fn();
 const mockUseFrontendPagination = vi.fn();
 const mockUseCellEditing = vi.fn();
@@ -20,6 +21,7 @@ const mockUseGridDataOperationModal = vi.fn();
 
 vi.mock('../../../../../hooks/useApi', () => ({
   useAllViews: mockUseAllViews,
+  useTableConstraints: mockUseTableConstraints,
   useCaseNormalize: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
   useExtractSubstring: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
   useFindReplace: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
@@ -334,6 +336,7 @@ const tableData = {
 
 const setupDefaultMocks = () => {
   mockUseAllViews.mockReturnValue({ data: [] });
+  mockUseTableConstraints.mockReturnValue({ data: [] });
   mockUseBaseAccess.mockReturnValue({
     isBaseReadOnly: () => false,
     canCreateColumn: () => true,
@@ -454,6 +457,54 @@ describe('Table', () => {
       ({ Table } = await import('../Table'));
     }
   }, 30000);
+
+  it('marks columns that are part of a unique key with a key icon', () => {
+    mockUseTableConstraints.mockReturnValue({
+      data: [
+        { id: 'k1', title: 'Unique Name', constraint_name: 'uq_t_1', columns: [{ id: 'col-1', title: 'Name' }], options: {}, status: 'ok' },
+        { id: 'k2', title: 'Unique Name + Value', constraint_name: 'uq_t_2', columns: [{ id: 'col-1', title: 'Name' }, { id: 'col-2', title: 'Value' }], options: {}, status: 'ok' },
+      ],
+    });
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(mockUseTableConstraints).toHaveBeenCalledWith('tbl-1', 'unique');
+    expect(screen.getByRole('img', { name: 'Unique: Unique Name, Unique Name + Value' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Unique: Unique Name + Value' })).toBeInTheDocument();
+  });
+
+  it('titles a rejected cell save that repeats a unique key, and shows the server message', () => {
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+    const { onSaveError } = mockUseCellEditing.mock.calls.at(-1)![0];
+
+    act(() => {
+      onSaveError({
+        rowId: '1',
+        columnKey: 'name',
+        error: Object.assign(new Error('A record with Customer Id = abc already exists'), { code: 'TCN_1012' }),
+      });
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      'A record with Customer Id = abc already exists',
+      expect.objectContaining({ title: 'Duplicate value not allowed' })
+    );
+  });
+
+  it('uses a general heading for other rejected cell saves', () => {
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+    const { onSaveError } = mockUseCellEditing.mock.calls.at(-1)![0];
+
+    act(() => {
+      onSaveError({ rowId: '1', columnKey: 'name', error: new Error('Something went wrong') });
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith('Something went wrong', expect.objectContaining({ title: 'Not saved' }));
+  });
+
+  it('shows no key icon when the table has no unique keys', () => {
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+    expect(screen.queryByRole('img', { name: /^Unique:/ })).not.toBeInTheDocument();
+  });
 
   it('renders add row button and selection checkbox when editable', () => {
     renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);

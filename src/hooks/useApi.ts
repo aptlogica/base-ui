@@ -87,6 +87,13 @@ import {
   updateAutomationService,
   runAutomationService,
   deleteAutomationService,
+  getTableConstraintsService,
+  checkTableConstraintService,
+  createTableConstraintService,
+  updateTableConstraintService,
+  deleteTableConstraintService,
+  type TableConstraintType,
+  type TableConstraintInput,
 } from '../service/clientService';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
 
@@ -2021,6 +2028,54 @@ export const useDeleteAutomation = () => {
     mutationFn: ({ id }: { id: string; tableId: string }) => deleteAutomationService(id),
     onSuccess: (_, { tableId }) => {
       queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
+    },
+  });
+};
+
+// Table constraints: unique keys (later primary key and check)
+export const useTableConstraints = (tableId: string, type: TableConstraintType) => {
+  return useQuery({
+    queryKey: ['tables', tableId, 'constraints', type],
+    queryFn: () => getTableConstraintsService(tableId, type),
+    enabled: !!tableId,
+    select: (res) => res?.data ?? [],
+    retry: false,
+  });
+};
+
+// Nothing is changed, so no queries are invalidated
+export const useCheckTableConstraint = () =>
+  useMutation({ mutationFn: checkTableConstraintService });
+
+export const useCreateTableConstraint = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createTableConstraintService,
+    onSuccess: (_, params) => {
+      queryClient.invalidateQueries({ queryKey: ['tables', params.model_id, 'constraints'] });
+    },
+  });
+};
+
+export const useUpdateTableConstraint = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ tableId: _tableId, ...params }: TableConstraintInput & { id: string; tableId: string }) => updateTableConstraintService(params),
+    onSuccess: (_, { tableId }) => {
+      queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'constraints'] });
+    },
+  });
+};
+
+export const useDeleteTableConstraint = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string; tableId: string }) => deleteTableConstraintService(id),
+    onSuccess: (_, { tableId }) => {
+      queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'constraints'] });
     },
   });
 };

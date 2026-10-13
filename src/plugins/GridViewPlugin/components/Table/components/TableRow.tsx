@@ -24,6 +24,9 @@ interface TableRowProps {
   canSelectRows?: boolean;
   pinnedColumnIds?: string[];
   pinnedColumnOffsets?: Record<string, number>;
+  // Bumped per cell ("<rowId>-<columnKey>") when its save fails; part of the cell key, so the
+  // cell remounts and shows the saved value instead of what was typed
+  cellResets?: Record<string, number>;
 }
 
 // Helper to extract row ID
@@ -58,6 +61,7 @@ export const TableRow: React.FC<TableRowProps> = ({
   canSelectRows = true,
   pinnedColumnIds = [],
   pinnedColumnOffsets = {},
+  cellResets,
 }) => {
   // Memoize rowId to avoid recalculating on every render
   const rowId = useMemo(() => getRowId(row), [row]);
@@ -221,7 +225,7 @@ export const TableRow: React.FC<TableRowProps> = ({
         return (
           // eslint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role
           <div
-            key={`${column.id || column.key || 'column'}-${index}`}
+            key={`${column.id || column.key || 'column'}-${index}-${cellResets?.[`${rowId}-${column.key}`] ?? 0}`}
             className={borderClass}
             style={{
               height: '40px',
@@ -266,7 +270,8 @@ const compareBasicProps = (prevProps: TableRowProps, nextProps: TableRowProps): 
     prevProps.columns.length === nextProps.columns.length &&
     prevProps.columnWidths.length === nextProps.columnWidths.length &&
     prevProps.activeCell?.rowId === nextProps.activeCell?.rowId &&
-    prevProps.activeCell?.colKey === nextProps.activeCell?.colKey
+    prevProps.activeCell?.colKey === nextProps.activeCell?.colKey &&
+    prevProps.cellResets === nextProps.cellResets
   );
 };
 
