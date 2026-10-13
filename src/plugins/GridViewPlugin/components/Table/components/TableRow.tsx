@@ -5,6 +5,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { EditableTableCell } from '../../../../../components/shared/table/EditableTableCell';
 import { GridRecord as TableData, GridColumn as ColumnConfig } from '../../../types/grid.types';
+import { isDraftRowId, isDraftEditableColumn } from '../../../hooks/useDraftRows';
 
 interface TableRowProps {
   row: TableData;
@@ -26,6 +27,8 @@ interface TableRowProps {
   pinnedColumnOffsets?: Record<string, number>;
   // How often each cell (by column key) was reset after a rejected save
   cellResets?: Record<string, number>;
+  // Cells (by column key) to show in red, with the reason as tooltip
+  invalidCells?: Record<string, string>;
 }
 
 // Helper to extract row ID
@@ -61,6 +64,7 @@ export const TableRow: React.FC<TableRowProps> = ({
   pinnedColumnIds = [],
   pinnedColumnOffsets = {},
   cellResets,
+  invalidCells,
 }) => {
   // Memoize rowId to avoid recalculating on every render
   const rowId = useMemo(() => getRowId(row), [row]);
@@ -225,7 +229,7 @@ export const TableRow: React.FC<TableRowProps> = ({
           // eslint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role
           <div
             key={`${column.id || column.key || 'column'}-${index}`}
-            className={borderClass}
+            className={invalidCells?.[column.key] ? `${borderClass} bg-red-50 ring-1 ring-inset ring-red-500` : borderClass}
             style={{
               height: '40px',
               minHeight: '40px',
@@ -237,6 +241,8 @@ export const TableRow: React.FC<TableRowProps> = ({
               zIndex,
               boxShadow: props.isLastPinned ? '2px 0 4px -3px rgba(15,23,42,0.12)' : undefined,
             }}
+            title={invalidCells?.[column.key]}
+            data-invalid={invalidCells?.[column.key] ? 'true' : undefined}
             onClick={(e) => handleCellClick(e, column.key)}
             onKeyDown={(e) => handleCellKeyDown(e, column.key)}
             role="gridcell"
@@ -250,7 +256,7 @@ export const TableRow: React.FC<TableRowProps> = ({
               width={props.width}
               isLast={props.isLast}
               isSystemField={props.isSystemField}
-              allowEdit={canEdit}
+              allowEdit={canEdit && (!isDraftRowId(rowId) || isDraftEditableColumn(column))}
               currentRowId={props.currentRowId}
               rowData={row as any} // Pass entire row object for formula evaluation
               allColumns={allColumns || columns} // Pass all columns for formula field name mapping
@@ -418,6 +424,10 @@ export const MemoizedTableRow = React.memo(TableRow, (prevProps, nextProps) => {
   }
 
   if (prevProps.cellResets !== nextProps.cellResets) {
+    return false;
+  }
+
+  if (prevProps.invalidCells !== nextProps.invalidCells) {
     return false;
   }
 

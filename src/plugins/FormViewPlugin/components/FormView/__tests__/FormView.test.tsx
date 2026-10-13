@@ -12,6 +12,7 @@ const mockToastError = vi.fn();
 
 vi.mock('../../../../../hooks/useApi', () => ({
   useAllViews: () => ({ data: [] }),
+  usePrimaryKey: () => ({ data: undefined }),
 }));
 
 vi.mock('../../../../../utils/fieldUsageUtils', () => ({

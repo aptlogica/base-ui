@@ -1,16 +1,19 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { ToastProvider } from '../../../../../components/common/Toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { applyFilters } from '../../../../../utils/filterUtils';
 import { sortRowsByDataKey } from '../../../../../utils/sortUtils';
 let Table: typeof import('../Table').Table;
+import { clearDraftCache } from '../../../hooks/useDraftRows';
 const mockToastError = vi.fn();
 const mockToastSuccess = vi.fn();
 
 const mockUseAllViews = vi.fn();
 const mockUsePrimaryKey = vi.fn();
+const mockUpsertRow = vi.fn();
+const mockHandleCellChange = vi.fn();
 const mockUseTableViewConfig = vi.fn();
 const mockUseFrontendPagination = vi.fn();
 const mockUseCellEditing = vi.fn();
@@ -22,6 +25,7 @@ const mockUseGridDataOperationModal = vi.fn();
 vi.mock('../../../../../hooks/useApi', () => ({
   useAllViews: mockUseAllViews,
   usePrimaryKey: (...args: unknown[]) => mockUsePrimaryKey(...args),
+  useUpsertRow: () => ({ mutateAsync: mockUpsertRow }),
   useCaseNormalize: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
   useExtractSubstring: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
   useFindReplace: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
@@ -159,9 +163,18 @@ vi.mock('../components/VirtualizedTableBody', () => ({
     onScroll,
     setActiveCell,
     setExpandedGroups,
+    onCellChange,
+    invalidCells,
   }: any) => (
     <div data-testid="virtualized-body">
       <div data-testid="row-count">{data?.length ?? 0}</div>
+      <div data-testid="invalid-cells">{JSON.stringify(invalidCells ?? {})}</div>
+      <button type="button" onClick={() => onCellChange?.(data?.[data.length - 1]?.id, 'name', 'HR')}>
+        Fill Last Name
+      </button>
+      <button type="button" onClick={() => onCellChange?.('1', 'name', '')}>
+        Clear First Name
+      </button>
       <div data-testid="grouped-flag">{groupedData ? 'yes' : 'no'}</div>
       <button type="button" onClick={() => onRowSelect?.('1', true)}>
         Select First Row
@@ -380,7 +393,7 @@ const setupDefaultMocks = () => {
     isLoadingMore: false,
   });
 
-  mockUseCellEditing.mockReturnValue({ handleCellChange: vi.fn() });
+  mockUseCellEditing.mockReturnValue({ handleCellChange: mockHandleCellChange });
 
   mockUseColumnManagement.mockReturnValue({
     isColumnModalOpen: false,
@@ -1073,6 +1086,54 @@ describe('Table', () => {
     fireEvent.click(addButtons[0]);
 
     expect(mutateAsync).toHaveBeenCalledWith({ model_id: 'tbl-1' });
+  });
+
+  describe('custom primary key', () => {
+    beforeEach(() => {
+      clearDraftCache();
+      // Key: Name (col-1)
+      mockUsePrimaryKey.mockReturnValue({ data: { column_ids: ['col-1'] } });
+    });
+
+    it('adds a draft row in the grid instead of creating a record', () => {
+      const mutateAsync = vi.fn();
+      renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} actions={{ addRow: { mutateAsync } } as any} />);
+      const before = Number(screen.getByTestId('row-count').textContent);
+
+      fireEvent.click(screen.getAllByRole('button', { name: /add row/i })[0]);
+
+      expect(mutateAsync).not.toHaveBeenCalled();
+      expect(Number(screen.getByTestId('row-count').textContent)).toBe(before + 1);
+      // The empty key cell of the draft is shown in red
+      expect(screen.getByTestId('invalid-cells').textContent).toContain('"name":"Required: part of the primary key"');
+    });
+
+    it('inserts the draft once its key cells are filled in', async () => {
+      vi.useFakeTimers();
+      try {
+      mockUpsertRow.mockResolvedValue({ data: { record: { id: 7 } } });
+      const onRefresh = vi.fn();
+      renderWithToast(<Table tableData={tableData as any} onRefresh={onRefresh} actions={{ addRow: { mutateAsync: vi.fn() } } as any} />);
+
+      fireEvent.click(screen.getAllByRole('button', { name: /add row/i })[0]);
+      fireEvent.click(screen.getByRole('button', { name: 'Fill Last Name' }));
+      expect(screen.getByTestId('invalid-cells').textContent).toBe('{}');
+      await act(async () => { vi.advanceTimersByTime(600); });
+
+      expect(mockUpsertRow).toHaveBeenCalledWith({ model_id: 'tbl-1', values: { 'col-1': 'HR' } });
+      expect(onRefresh).toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('does not send an emptied key cell of a saved row', () => {
+      renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Clear First Name' }));
+
+      expect(mockHandleCellChange).not.toHaveBeenCalled();
+    });
   });
 
   it('invokes search handler to update search state', () => {

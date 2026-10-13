@@ -949,6 +949,16 @@ export async function addRow(params: {
   return await makeAuthenticatedCall(() => client.tableService.createRow(params));
 }
 
+// POST /row/data/insert as an upsert: without row_id it creates a record with values (column ID -> value;
+// every primary key field is required), with row_id it updates that record. All values are saved together.
+export async function upsertRowService(params: {
+  model_id: string;
+  row_id?: number;
+  values: Record<string, any>;
+}): Promise<{ data: { record: Record<string, any> } }> {
+  return await makeAuthenticatedCall(() => (client as any).http.post('/row/data/insert', params));
+}
+
 export async function deleteRowService(params: { model_id: string; row_id: number }) {
   return await makeAuthenticatedCall(() => client.tableService.deleteRow(params));
 }

@@ -15,6 +15,8 @@ import {
 } from '../../utils/standardFieldUtils';
 import { isFormulaField } from '../../utils/fieldUtils';
 import { apiErrorMessage } from '../../utils/apiErrors';
+import { useRequiredKeyFields } from '../../hooks/useRequiredKeyFields';
+import { isEmptyKeyValue, missingKeyColumnIds, missingKeyMessage } from '../../utils/primaryKeyFields';
 import { cachedTableRecords, linkItemIdentity, linkItems, linkRowIds } from '../../utils/linkValues';
 import { useQueryClient } from '@tanstack/react-query';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
@@ -65,6 +67,9 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   const removeAttachmentsMutation = useRemoveAttachments();
   const insertRelationMutation = useInsertRelationData();
   const toast = useToast();
+  // Primary key fields (without Id) can't be left empty
+  const keyColumnIds = useRequiredKeyFields(table?.id, fields);
+  const isKeyField = (field: any): boolean => keyColumnIds.includes(String(field.id));
   const queryClient = useQueryClient();
 
   // Close menu when clicking outside
@@ -110,13 +115,14 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
 
 
 
+  // Key fields are always shown, even when hidden in the view
   const visibleFields = useMemo(
-    () => (fields || []).filter(f => !f.is_hidden && !f.hidden && !isSystemField(f) && !isFormulaField(f)),
-    [fields]
+    () => (fields || []).filter(f => (keyColumnIds.includes(String(f.id)) || (!f.is_hidden && !f.hidden && !isSystemField(f))) && !isFormulaField(f)),
+    [fields, keyColumnIds]
   );
   const hiddenFields = useMemo(
-    () => (fields || []).filter(f => (f.is_hidden || f.hidden) && !isSystemField(f) && !isFormulaField(f)),
-    [fields]
+    () => (fields || []).filter(f => (f.is_hidden || f.hidden) && !isSystemField(f) && !isFormulaField(f) && !keyColumnIds.includes(String(f.id))),
+    [fields, keyColumnIds]
   );
 
   // Use standardized field default value utility
@@ -248,6 +254,12 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     }
 
     setFormError(null);
+    const missingKey = missingKeyColumnIds(keyColumnIds, id => rowData[id]);
+    if (missingKey.length) {
+      const titles = missingKey.map(id => getFieldDisplayName((fields || []).find(f => String(f.id) === id) ?? { title: id }));
+      setFormError(missingKeyMessage(titles));
+      return;
+    }
     const missing = validateRequired();
     if (missing.length) {
       setFormError('Required field(s) must not be left empty.');
@@ -389,6 +401,17 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  // A cleared key field is outlined in red; the wrapper stays the same so the input keeps focus
+  const renderKeyAwareField = (field: any) => {
+    const missing = isKeyField(field) && isEmptyKeyValue(rowData[field.id]);
+    return (
+      <div data-testid={missing ? `key-field-missing-${field.id}` : undefined}>
+        <div className={missing ? 'rounded-lg ring-1 ring-red-500 bg-red-50/40' : undefined}>{renderField(field)}</div>
+        {missing && <p className="mt-1 text-xs text-red-600">Required: part of the primary key</p>}
+      </div>
+    );
+  };
 
   const renderField = (field: any) => {
     let value = rowData[field.id];
@@ -538,10 +561,10 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                         getRelationTypeFromField(field)
                       )}
                       <span className="text-sm">{getFieldDisplayName(field)}</span>
-                      {field.required && <span className="text-red-500 ml-1 field-component-required">*</span>}
+                      {(field.required || isKeyField(field)) && <span className="text-red-500 ml-1 field-component-required">*</span>}
                     </div>
                     <div className="max-w-[560px] w-full">
-                      {renderField(field)}
+                      {renderKeyAwareField(field)}
                     </div>
                   </div>
                 );
@@ -575,9 +598,9 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                           getRelationTypeFromField(field)
                         )}
                         <span className="text-sm">{getFieldDisplayName(field)}</span>
-                        {field.required && <span className="text-red-500 ml-1 field-component-required">*</span>}
+                        {(field.required || isKeyField(field)) && <span className="text-red-500 ml-1 field-component-required">*</span>}
                       </div>
-                      <div className="max-w-[560px] w-full">{renderField(field)}</div>
+                      <div className="max-w-[560px] w-full">{renderKeyAwareField(field)}</div>
                     </div>
                   );
                 })}

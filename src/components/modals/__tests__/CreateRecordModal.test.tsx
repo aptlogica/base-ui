@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CreateRecordModal from '../CreateRecordModal';
@@ -7,12 +7,19 @@ import { useBaseAccess } from '../../../hooks/useBaseAccess';
 import { getFieldDefaultValue } from '../../../utils/standardFieldUtils';
 
 const addRowMutateAsyncMock = vi.fn(() => Promise.resolve({ id: 123 }));
+const upsertRowMutateAsyncMock = vi.fn(() => Promise.resolve({ data: { record: { id: 123 } } }));
+let primaryKeyColumnIds: string[] = [];
 const insertRowDataMutateAsyncMock = vi.fn(() => Promise.resolve({}));
 const addAttachmentMutateAsyncMock = vi.fn(() => Promise.resolve({}));
 const insertRelationMutateAsyncMock = vi.fn(() => Promise.resolve({}));
 
 // Mock hooks
 vi.mock('../../../hooks/useApi', () => ({
+  useUpsertRow: vi.fn(() => ({
+    mutateAsync: upsertRowMutateAsyncMock,
+    isPending: false,
+  })),
+  usePrimaryKey: vi.fn(() => ({ data: { column_ids: primaryKeyColumnIds } })),
   useAddRow: vi.fn(() => ({
     mutateAsync: addRowMutateAsyncMock,
     isPending: false,
@@ -433,6 +440,56 @@ describe('CreateRecordModal', () => {
       await waitFor(() => {
         expect(screen.getByText(/Required field\(s\) must not be left empty/i)).toBeInTheDocument();
       });
+      expect(upsertRowMutateAsyncMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('primary key fields', () => {
+    const keyFields = [
+      { id: 'field-1', name: 'title', title: 'Title', uidt: 'SingleLineText' },
+      { id: 'field-code', name: 'code', column_name: 'code', title: 'Code', uidt: 'SingleLineText' },
+      { id: 'field-year', name: 'yr', column_name: 'yr', title: 'Year', uidt: 'SingleLineText', hidden: true },
+    ];
+
+    beforeEach(() => {
+      primaryKeyColumnIds = ['field-code', 'field-year'];
+    });
+
+    afterEach(() => {
+      primaryKeyColumnIds = [];
+    });
+
+    it('shows key fields, even hidden ones, outlined in red while empty', () => {
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} fields={keyFields} />);
+
+      expect(screen.getByTestId('key-field-missing-field-code')).toHaveTextContent('Required: part of the primary key');
+      expect(screen.getByTestId('key-field-missing-field-year')).toBeInTheDocument();
+    });
+
+    it('names the empty key fields and does not save', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} fields={keyFields} />);
+
+      await user.type(screen.getByTestId('field-input-field-1'), 'A title');
+      await user.click(screen.getByRole('button', { name: 'Save record' }));
+
+      expect(await screen.findByText('Code and Year are required: they make up the primary key.')).toBeInTheDocument();
+      expect(upsertRowMutateAsyncMock).not.toHaveBeenCalled();
+    });
+
+    it('saves with insert (upsert) once every key field is filled in', async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} fields={keyFields} />);
+
+      await user.type(screen.getByTestId('field-input-field-code'), 'HR');
+      await user.type(screen.getByTestId('field-input-field-year'), '2026');
+      expect(screen.queryByTestId('key-field-missing-field-code')).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Save record' }));
+
+      await waitFor(() => expect(upsertRowMutateAsyncMock).toHaveBeenCalledWith({
+        model_id: 'table-123',
+        values: { 'field-code': 'HR', 'field-year': '2026' },
+      }));
       expect(addRowMutateAsyncMock).not.toHaveBeenCalled();
     });
   });

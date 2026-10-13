@@ -5,7 +5,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { X, CirclePlus } from 'lucide-react';
 import FieldRenderer from '../../plugins/FormViewPlugin/components/shared/FieldRenderer';
-import { useAddRow, useAddAttachment, useInsertRelationData } from '../../hooks/useApi';
+import { useUpsertRow, useAddAttachment, useInsertRelationData } from '../../hooks/useApi';
+import { useRequiredKeyFields } from '../../hooks/useRequiredKeyFields';
+import { isEmptyKeyValue, missingKeyColumnIds, missingKeyMessage } from '../../utils/primaryKeyFields';
 import { getFieldTypeIconWithMargin, getRelationTypeFromField } from '../../types/fieldTypes';
 import { getStandardFieldType, getFieldDisplayName, getFieldDefaultValue, createFieldRendererProps } from '../../utils/standardFieldUtils';
 import { isFormulaField } from '../../utils/fieldUtils';
@@ -46,7 +48,10 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const { canCreateRecord, isBaseReadOnly } = useBaseAccess(baseId);
     const isReadOnly = isBaseReadOnly();
 
-    const addRowMutation = useAddRow();
+    const upsertRowMutation = useUpsertRow();
+    // Primary key fields (without Id) must be filled in before the record can be saved
+    const keyColumnIds = useRequiredKeyFields(table?.id, fields);
+    const isKeyField = (field: any): boolean => keyColumnIds.includes(String(field.id));
     const addAttachmentMutation = useAddAttachment();
     const insertRelationMutation = useInsertRelationData();
     const toast = useToast();
@@ -73,14 +78,15 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
 
 
 
+    // Key fields are always shown, even when hidden in the view
     const visibleFields = useMemo(
-        () => (fields || []).filter(f => !f.is_hidden && !f.hidden && !isSystemField(f) && !isFormulaField(f)),
-        [fields]
+        () => (fields || []).filter(f => (keyColumnIds.includes(String(f.id)) || (!f.is_hidden && !f.hidden && !isSystemField(f))) && !isFormulaField(f)),
+        [fields, keyColumnIds]
     );
 
     const hiddenFields = useMemo(
-        () => (fields || []).filter(f => (f.is_hidden || f.hidden) && !isSystemField(f)),
-        [fields]
+        () => (fields || []).filter(f => (f.is_hidden || f.hidden) && !isSystemField(f) && !keyColumnIds.includes(String(f.id))),
+        [fields, keyColumnIds]
     );
 
     const getDefaultValueFromConfig = (field: any): any => {
@@ -291,6 +297,12 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         }
 
         setFormError(null);
+        const missingKey = missingKeyColumnIds(keyColumnIds, id => rowData[id]);
+        if (missingKey.length) {
+            const titles = missingKey.map(id => getFieldDisplayName((fields || []).find(f => String(f.id) === id) ?? { title: id }));
+            setFormError(missingKeyMessage(titles));
+            return;
+        }
         const missing = validateRequired();
         if (missing.length) {
             setFormError('Required field(s) must not be left empty.');
@@ -300,9 +312,10 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         try {
             setSubmitting(true);
             const rowPayload = buildRowPayload();
-            const created = await addRowMutation.mutateAsync({
+            // Insert as an upsert: no row id, so the record is created with all its values in one call
+            const created = await upsertRowMutation.mutateAsync({
                 model_id: String(table.id),
-                rows: Object.keys(rowPayload).length > 0 ? [rowPayload] : undefined
+                values: rowPayload,
             });
             const recordId = extractCreatedRowId(created);
             setCreatedRecordId(recordId);
@@ -397,6 +410,18 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         return <FieldRenderer key={field.id} {...rendererProps} {...attachmentProps} {...linksProps} />;
     };
 
+    // An empty key field is outlined in red until it is filled in. The wrapper stays the same either way, so
+    // the input keeps focus while the user types.
+    const renderKeyAwareField = (field: any) => {
+        const missing = isKeyField(field) && isEmptyKeyValue(rowData[field.id]);
+        return (
+            <div data-testid={missing ? `key-field-missing-${field.id}` : undefined}>
+                <div className={missing ? 'rounded-lg ring-1 ring-red-500 bg-red-50/40' : undefined}>{renderField(field)}</div>
+                {missing && <p className="mt-1 text-xs text-red-600">Required: part of the primary key</p>}
+            </div>
+        );
+    };
+
     return (
         <div className="bg-modal-backdrop relative">
             <button
@@ -434,10 +459,10 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                                               getRelationTypeFromField(field)
                                             )}
                                             <span className="text-sm">{getFieldDisplayName(field)}</span>
-                                            {field.required && <span className="text-red-500 ml-1 field-component-required">*</span>}
+                                            {(field.required || isKeyField(field)) && <span className="text-red-500 ml-1 field-component-required">*</span>}
                                         </div>
                                         <div className="max-w-[560px] w-full">
-                                            {renderField(field)}
+                                            {renderKeyAwareField(field)}
                                         </div>
                                     </div>
                                 );
@@ -471,9 +496,9 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                                                   getRelationTypeFromField(field)
                                                 )}
                                                 <span className="text-sm">{getFieldDisplayName(field)}</span>
-                                                {field.required && <span className="text-red-500 ml-1 field-component-required">*</span>}
+                                                {(field.required || isKeyField(field)) && <span className="text-red-500 ml-1 field-component-required">*</span>}
                                             </div>
-                                            <div className="max-w-[560px] w-full">{renderField(field)}</div>
+                                            <div className="max-w-[560px] w-full">{renderKeyAwareField(field)}</div>
                                         </div>
                                     );
                                 })}

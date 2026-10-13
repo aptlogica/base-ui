@@ -29,7 +29,10 @@ const NewColumnModal = lazy(() =>
   import('../../../../components/modals/NewColumnModal').then(m => ({ default: m.NewColumnModal }))
 );
 import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldConfirmModal';
-import { useAllViews, usePrimaryKey } from '../../../../hooks/useApi';
+import { useAllViews, usePrimaryKey, useUpsertRow } from '../../../../hooks/useApi';
+import { useRequiredKeyFields } from '../../../../hooks/useRequiredKeyFields';
+import { useDraftRows, isDraftRowId } from '../../hooks/useDraftRows';
+import { isEmptyKeyValue, missingKeyMessage } from '../../../../utils/primaryKeyFields';
 import { getFieldTypeIconComponent, getRelationTypeFromField } from '../../../../types/fieldTypes';
 import { ColumnDropdown } from './components/ColumnDropdown';
 import { Loader } from '../../../../components/ui/Loader';
@@ -303,6 +306,34 @@ export const Table: React.FC<TableProps> = ({
     handleCloseColMenu,
   } = useTableModals();
 
+  // Tables with a custom primary key add rows as drafts: nothing is saved until every key cell has a value,
+  // then the draft is inserted (upsert) in one call
+  const keyColumnIds = useRequiredKeyFields(tableId, columns);
+  const upsertRowMutation = useUpsertRow();
+  const draftRowsState = useDraftRows({
+    tableId,
+    columns,
+    keyColumnIds,
+    upsert: upsertRowMutation.mutateAsync,
+    onSaved: () => {
+      toast.success('Record added', { title: 'Success', duration: 3000 });
+      onRefresh?.();
+    },
+    onError: message => toast.error(message, { title: 'Not saved', duration: 6000 }),
+  });
+  const { draftRows, invalidCells, addDraft, updateDraft, removeDraft } = draftRowsState;
+
+  // Leaving or refreshing the page would lose unsaved drafts
+  useEffect(() => {
+    if (draftRows.length === 0) return undefined;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    globalThis.addEventListener('beforeunload', warn);
+    return () => globalThis.removeEventListener('beforeunload', warn);
+  }, [draftRows.length]);
+
   // Edit record modal state
   const [isEditRecordModalOpen, setIsEditRecordModalOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
@@ -310,10 +341,15 @@ export const Table: React.FC<TableProps> = ({
   const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
 
   const openEditRecordModal = useCallback((rowId: string) => {
+    if (isDraftRowId(rowId)) {
+      handleCloseContextMenu();
+      toast.info?.('Fill in the primary key cells to save this record first.', { title: 'Not saved yet' });
+      return;
+    }
     setSelectedRecordId(rowId);
     setIsEditRecordModalOpen(true);
     handleCloseContextMenu();
-  }, [handleCloseContextMenu]);
+  }, [handleCloseContextMenu, toast]);
 
   const closeEditRecordModal = useCallback(() => {
     setIsEditRecordModalOpen(false);
@@ -576,6 +612,36 @@ export const Table: React.FC<TableProps> = ({
     },
   });
 
+  // Drafts are shown after the saved rows (in their own group when the grid is grouped)
+  const rowsWithDrafts = useMemo(() => (draftRows.length ? [...paginatedData, ...draftRows] : paginatedData), [paginatedData, draftRows]);
+  const DRAFT_GROUP = { groupColumn: '__drafts', groupValue: 'New records' };
+  const groupedDataWithDrafts = useMemo(() => {
+    if (!groupedData || draftRows.length === 0) return groupedData;
+    return [...groupedData, { ...DRAFT_GROUP, groupDirection: 'asc', level: 0, rows: draftRows }];
+  }, [groupedData, draftRows]);
+  const expandedGroupsWithDrafts = useMemo(() => {
+    if (!groupedData || draftRows.length === 0) return expandedGroups;
+    return new Set([...expandedGroups, `${DRAFT_GROUP.groupColumn}-${DRAFT_GROUP.groupValue}-0`]);
+  }, [groupedData, draftRows.length, expandedGroups]);
+
+  // Draft cells stay in the browser; on saved rows a primary key cell can't be emptied
+  const handleGridCellChange = useCallback((rowId: string, columnKey: string, value: any) => {
+    if (isDraftRowId(rowId)) {
+      updateDraft(rowId, columnKey, value);
+      return;
+    }
+    const column = columns.find(c => c.key === columnKey);
+    if (column?.id && keyColumnIds.includes(String(column.id)) && isEmptyKeyValue(value)) {
+      toast.error(missingKeyMessage([column.title]), { title: 'Not saved', duration: 6000 });
+      setCellResets(prev => ({
+        ...prev,
+        [rowId]: { ...prev[rowId], [columnKey]: (prev[rowId]?.[columnKey] ?? 0) + 1 },
+      }));
+      return;
+    }
+    handleCellChange(rowId, columnKey, value);
+  }, [updateDraft, columns, keyColumnIds, toast, handleCellChange]);
+
   // Measure table body container height
   useEffect(() => {
     const element = tableRef.current;
@@ -642,6 +708,11 @@ export const Table: React.FC<TableProps> = ({
 
   // Add a new row via mutation; list refresh is handled via onRefresh/react-query
   const addNewRow = useCallback(async () => {
+    // Custom key: add a draft in the grid; it is inserted once its key cells are filled in
+    if (draftRowsState.enabled) {
+      addDraft();
+      return;
+    }
     try {
       if (!addRowMutation) return;
 
@@ -653,10 +724,15 @@ export const Table: React.FC<TableProps> = ({
       console.error('Failed to add row', err);
       toast.error(apiErrorMessage(err, 'Failed to add row'), { title: 'Error', duration: 3500 });
     }
-  }, [addRowMutation, tableId, toast, onRefresh]);
+  }, [addRowMutation, tableId, toast, onRefresh, draftRowsState.enabled, addDraft]);
 
   // Delete a row by id (memoized to prevent recreation)
   const handleDelete = useCallback(async (rowId: string) => {
+    // A draft was never saved: just drop it
+    if (isDraftRowId(rowId)) {
+      removeDraft(rowId);
+      return;
+    }
     try {
       const numericRowId = resolveNumericRowId(rowId);
       if (!tableId || numericRowId === null) {
@@ -672,7 +748,7 @@ export const Table: React.FC<TableProps> = ({
       console.error('[Delete] Failed to delete record:', rowId, err);
       alert('Failed to delete record. Please try again.');
     }
-  }, [deleteRecordMutation, tableId, toast, onRefresh, resolveNumericRowId]);
+  }, [deleteRecordMutation, tableId, toast, onRefresh, resolveNumericRowId, removeDraft]);
 
   // Bulk delete selected rows
   const handleBulkDelete = useCallback(async () => {
@@ -680,10 +756,19 @@ export const Table: React.FC<TableProps> = ({
       return;
     }
 
+    // Selected drafts were never saved: just drop them
+    const selectedDrafts = Array.from(selectedRows).filter(isDraftRowId);
+    selectedDrafts.forEach(removeDraft);
+    if (selectedDrafts.length === selectedRows.size) {
+      setSelectedRows(new Set());
+      return;
+    }
+
     try {
       // Convert selected row IDs to numeric IDs
       const rowIds: number[] = [];
       for (const rowId of selectedRows) {
+        if (isDraftRowId(rowId)) continue;
         const numericRowId = resolveNumericRowId(rowId);
         if (numericRowId !== null) {
           rowIds.push(numericRowId);
@@ -709,7 +794,7 @@ export const Table: React.FC<TableProps> = ({
       console.error('[Bulk Delete] Failed to delete records:', err);
       toast.error('Failed to delete records. Please try again.', { title: 'Error' });
     }
-  }, [selectedRows, tableId, bulkDeleteRecordsMutation, toast, onRefresh, setSelectedRows, resolveNumericRowId]);
+  }, [selectedRows, tableId, bulkDeleteRecordsMutation, toast, onRefresh, setSelectedRows, resolveNumericRowId, removeDraft]);
 
   const selectedRecordApiId = useMemo(() => {
     const resolvedId = resolveNumericRowId(selectedRecordId);
@@ -1087,23 +1172,24 @@ export const Table: React.FC<TableProps> = ({
 
             <div ref={tableBodyRef}>
               <VirtualizedTableBody
-                data={paginatedData}
+                data={rowsWithDrafts}
                 columns={visibleColumns}
                 columnWidths={columnWidths}
                 pinnedColumnIds={pinnedColumnIds}
                 pinnedColumnOffsets={pinnedColumnOffsets}
                 selectedRows={selectedRows}
                 onRowSelect={handleRowSelect}
-                onCellChange={handleCellChange}
+                onCellChange={handleGridCellChange}
                 cellResets={cellResets}
+                invalidCells={invalidCells}
                 onContextMenu={handleContextMenu}
                 activeCell={activeCell}
                 setActiveCell={setActiveCell}
                 tableId={tableId}
                 height={tableBodyHeight}
                 width={totalTableWidth}
-                groupedData={groupedData}
-                expandedGroups={expandedGroups}
+                groupedData={groupedDataWithDrafts}
+                expandedGroups={expandedGroupsWithDrafts}
                 setExpandedGroups={setExpandedGroups}
                 visibleColumns={visibleColumns}
                 outerRef={tableRef}

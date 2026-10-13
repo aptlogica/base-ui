@@ -11,7 +11,9 @@ const removeAttachmentsMutateAsyncMock = vi.fn(() => Promise.resolve({}));
 const insertRelationMutateAsyncMock = vi.fn(() => Promise.resolve({}));
 
 // Mock hooks
+let primaryKeyColumnIds: string[] = [];
 vi.mock('../../../hooks/useApi', () => ({
+  usePrimaryKey: vi.fn(() => ({ data: { column_ids: primaryKeyColumnIds } })),
   useUpdateRowData: vi.fn(() => ({
     mutateAsync: updateRowDataMutateAsyncMock,
     isPending: false,
@@ -495,6 +497,27 @@ describe('EditRecordModal', () => {
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
       expect(await screen.findByText(message)).toBeInTheDocument();
+    });
+  });
+
+  describe('primary key fields', () => {
+    it('blocks clearing a key field and names it', async () => {
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => true,
+        canDeleteRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+      primaryKeyColumnIds = ['field-1'];
+      const user = userEvent.setup();
+      renderWithQueryClient(<EditRecordModal {...defaultProps} />);
+
+      await user.clear(screen.getByTestId('field-input-field-1'));
+      expect(screen.getByTestId('key-field-missing-field-1')).toHaveTextContent('Required: part of the primary key');
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+      expect(await screen.findByText('Title is required: it is part of the primary key.')).toBeInTheDocument();
+      expect(updateRowDataMutateAsyncMock).not.toHaveBeenCalled();
+      primaryKeyColumnIds = [];
     });
   });
 

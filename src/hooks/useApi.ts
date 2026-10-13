@@ -89,6 +89,7 @@ import {
   deleteAutomationService,
   getPrimaryKeyService,
   updatePrimaryKeyService,
+  upsertRowService,
 } from '../service/clientService';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
 
@@ -207,6 +208,19 @@ export const useAddRow = () => {
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.views(model_id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
+// Creates a record with its values (no row_id) or updates one (row_id); see upsertRowService
+export const useUpsertRow = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: upsertRowService,
+    onSuccess: (_, { model_id }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id), refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: queryKeys.views(model_id) });
     },
   });
 };
