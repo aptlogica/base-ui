@@ -59,8 +59,8 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
     try {
       if (keyChanged) {
         const check = await checkConstraint.mutateAsync({ model_id: tableId, column_ids: columnIds });
-        if (!check.data.valid) {
-          setError(check.data.message || 'Duplicate data in these columns. Remove the duplicates and try again.');
+        if (!check.data?.valid) {
+          setError(check.data?.message || 'Duplicate data in these columns. Remove the duplicates and try again.');
           return;
         }
       }

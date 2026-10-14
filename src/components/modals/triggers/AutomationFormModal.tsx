@@ -131,11 +131,11 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
     setValidated(null);
     try {
       const result = await validateAutomation.mutateAsync({ model_id: tableId, id: item?.id, type, context: query, event });
-      if (result.data.valid) {
+      if (result.data?.valid) {
         setValidated(`${query}\n${event}`);
         setMessage({ ok: true, text: canRun ? 'Valid: Postgres accepts this query. You can run it now.' : 'Valid: Postgres accepts this query.' });
       } else {
-        setMessage({ ok: false, text: result.data.message || 'Postgres rejected this query' });
+        setMessage({ ok: false, text: result.data?.message || 'Postgres rejected this query' });
       }
     } catch (err: any) {
       setMessage({ ok: false, text: errorText(err, 'Failed to validate') });

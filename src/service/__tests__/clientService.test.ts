@@ -379,35 +379,17 @@ describe('clientService', () => {
     expect(client.organization.getAll).toHaveBeenCalled();
   });
 
-  it('sends base meta as JSON in the create-base form data', async () => {
+  it('passes base meta to the SDK create-base call', async () => {
     sessionStorage.setItem('user_id', 'u1');
-    const http = (client as any).http;
-    const postSpy = vi.spyOn(http, 'post').mockResolvedValue({ data: { id: 'b1' } });
+    const createSpy = vi.spyOn(client.baseService, 'create').mockResolvedValue({ success: true, data: { id: 'b1' } } as any);
     const meta = { dateFormat: 'DD/MM/YYYY', currencyLocale: 'en-IN', currencyType: 'INR' };
+    const params = { title: 'Base', description: 'd', workspace_id: 'w1', meta };
 
-    const result = await createBaseService({ title: 'Base', description: 'd', workspace_id: 'w1', meta });
+    const result = await createBaseService(params);
 
-    expect(result).toEqual({ data: { id: 'b1' } });
-    const [url, formData] = postSpy.mock.calls[0] as [string, FormData];
-    expect(url).toBe('/base/create');
-    expect(formData.get('title')).toBe('Base');
-    expect(formData.get('workspace_id')).toBe('w1');
-    expect(JSON.parse(formData.get('meta') as string)).toEqual(meta);
-    postSpy.mockRestore();
-  });
-
-  it('omits optional create-base fields that are not provided', async () => {
-    sessionStorage.setItem('user_id', 'u1');
-    const http = (client as any).http;
-    const postSpy = vi.spyOn(http, 'post').mockResolvedValue({ data: { id: 'b2' } });
-
-    await createBaseService({ title: 'Base', image: new File(['x'], 'x.png'), meta: { dateFormat: 'YYYY-MM-DD' } });
-
-    const formData = postSpy.mock.calls[0][1] as FormData;
-    expect(formData.has('description')).toBe(false);
-    expect(formData.has('workspace_id')).toBe(false);
-    expect(formData.get('image')).toBeInstanceOf(File);
-    postSpy.mockRestore();
+    expect(result).toEqual({ success: true, data: { id: 'b1' } });
+    expect(createSpy).toHaveBeenCalledWith(params);
+    createSpy.mockRestore();
   });
 
   it('continues base update when image upload fails', async () => {
