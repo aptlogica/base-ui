@@ -199,7 +199,7 @@ describe('AppearanceSettings', () => {
       expect(screen.getByText('Field Layout')).toBeInTheDocument();
     });
 
-    it('should render Card Style label', () => {
+    it('should not render Card Style control', () => {
       render(
         <AppearanceSettings
           appearance={defaultAppearance}
@@ -208,7 +208,7 @@ describe('AppearanceSettings', () => {
         { wrapper: createWrapper() }
       );
 
-      expect(screen.getByText('Card Style')).toBeInTheDocument();
+      expect(screen.queryByText('Card Style')).not.toBeInTheDocument();
     });
 
     it('should render Rounded Corners label', () => {
@@ -528,7 +528,6 @@ describe('AppearanceSettings', () => {
       fireEvent.click(group('Title Alignment').getByRole('button', { name: 'Right' }));
       fireEvent.click(screen.getByText('Left-Aligned Labels'));
       fireEvent.click(screen.getByText('Multi-Column'));
-      fireEvent.click(group('Card Style').getByRole('button', { name: 'Elevated' }));
       fireEvent.click(group('Rounded Corners').getByRole('button', { name: 'Small' }));
       fireEvent.click(screen.getByRole('button', { name: /Below Banner/ }));
 
@@ -536,7 +535,6 @@ describe('AppearanceSettings', () => {
       expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ align: 'right' }));
       expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ fieldLayout: 'list', labelPosition: 'left' }));
       expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ fieldLayout: 'grid-2', labelPosition: 'top' }));
-      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ cardStyle: 'elevated' }));
       expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ rounded: 'md' }));
       expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ logoPosition: 'below' }));
     });
