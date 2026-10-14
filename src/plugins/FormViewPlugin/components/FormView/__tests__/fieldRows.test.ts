@@ -35,8 +35,16 @@ describe('moveFieldOnDrop', () => {
     expect(result!.inlineFieldIds).toEqual(['c']);
   });
 
-  it('rejects a side drop on a row that is already full', () => {
-    expect(moveFieldOnDrop(fields, fields, ['b'], 'd', 'a', 'right')).toBeNull();
+  it('swaps the dragged field into a full row on a side drop', () => {
+    const result = moveFieldOnDrop(fields, fields, ['b'], 'd', 'a', 'right');
+    expect(ids(result!.fields)).toEqual(['d', 'b', 'c', 'a']);
+    expect(result!.inlineFieldIds).toEqual(['b']);
+  });
+
+  it('swaps fields between the columns of two full rows', () => {
+    const result = moveFieldOnDrop(fields, fields, ['b', 'd'], 'a', 'd', 'left');
+    expect(ids(result!.fields)).toEqual(['d', 'b', 'c', 'a']);
+    expect(result!.inlineFieldIds).toEqual(['b', 'a']);
   });
 
   it('swaps sides within the same row', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, beforeAll, afterAll } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { LongText } from '../LongText';
@@ -314,6 +314,184 @@ describe('LongText Component', () => {
       await waitFor(() => {
         expect(mockOnChange).not.toHaveBeenCalled();
       }, { timeout: 2000 });
+    });
+  });
+
+  describe('Inline Mode', () => {
+    it('should render the rich text editor in place without the preview input or expand button', () => {
+      const { container } = render(
+        <LongText value="" onChange={mockOnChange} inline />
+      );
+
+      expect(container.querySelector('input[type="text"]')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('View full content')).not.toBeInTheDocument();
+      expect(screen.getByTitle(/Bold/i)).toBeInTheDocument();
+      expect(getEditor()).toHaveClass('h-[4.75rem]');
+    });
+
+    it('should load the value into the editor, keeping plain text line breaks', () => {
+      render(
+        <LongText value={'Line 1\nLine 2 a < b & c'} onChange={mockOnChange} inline />
+      );
+
+      expect(getEditor().innerHTML).toBe('Line 1<br>Line 2 a &lt; b &amp; c');
+    });
+
+    it('should show the default value when the value is empty', () => {
+      render(
+        <LongText value="" onChange={mockOnChange} inline config={{ defaultValue: '<b>Default</b>' }} />
+      );
+
+      expect(getEditor().innerHTML).toBe('<b>Default</b>');
+    });
+
+    it('should emit sanitized changes as the user types', () => {
+      render(<LongText value="" onChange={mockOnChange} inline />);
+
+      const editor = getEditor();
+      editor.innerHTML = '<b>Hello</b><img src="x" onerror="alert(1)">';
+      fireEvent.input(editor);
+
+      expect(mockOnChange).toHaveBeenCalledWith('<b>Hello</b><img src="x">');
+    });
+
+    it('should not reset the editor when its own value is passed back', () => {
+      const { rerender } = render(<LongText value="" onChange={mockOnChange} inline />);
+
+      const editor = getEditor();
+      editor.innerHTML = 'Typed';
+      fireEvent.input(editor);
+      const textNode = editor.firstChild;
+
+      rerender(<LongText value="Typed" onChange={mockOnChange} inline />);
+
+      expect(editor.firstChild).toBe(textNode);
+    });
+
+    it('should update the editor when the value changes from outside', () => {
+      const { rerender } = render(<LongText value="Original" onChange={mockOnChange} inline />);
+
+      rerender(<LongText value="" onChange={mockOnChange} inline />);
+
+      expect(getEditor().innerHTML).toBe('');
+    });
+
+    it('should hide the toolbar and disable editing when read only', () => {
+      render(<LongText value="Read only" onChange={mockOnChange} inline readOnly />);
+
+      expect(screen.queryByTitle(/Bold/i)).not.toBeInTheDocument();
+      expect(document.querySelector('[contenteditable="false"]')).toHaveTextContent('Read only');
+    });
+
+    it('should show the required error on blur when empty', () => {
+      render(<LongText value="" onChange={mockOnChange} inline required />);
+
+      fireEvent.blur(getEditor());
+
+      expect(screen.getByText('This field is required')).toBeInTheDocument();
+    });
+  });
+
+  describe('Toolbar Active State', () => {
+    const placeCaretIn = (node: Node, offset = 1) => {
+      const range = document.createRange();
+      range.setStart(node, offset);
+      range.collapse(true);
+      const selection = globalThis.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      act(() => {
+        document.dispatchEvent(new Event('selectionchange'));
+      });
+    };
+
+    const isPressed = (title: RegExp) => screen.getByTitle(title).getAttribute('aria-pressed') === 'true';
+
+    it('should highlight the formats applied at the caret', () => {
+      render(<LongText value="<b><i>Styled</i></b> plain" onChange={mockOnChange} inline />);
+
+      placeCaretIn(getEditor().querySelector('i')!.firstChild!);
+
+      expect(isPressed(/Bold/)).toBe(true);
+      expect(isPressed(/Italic/)).toBe(true);
+      expect(isPressed(/Underline/)).toBe(false);
+      expect(screen.getByTitle(/Bold/)).toHaveClass('bg-[var(--color-brand-100)]');
+      expect(screen.getByTitle(/Underline/)).not.toHaveClass('bg-[var(--color-brand-100)]');
+    });
+
+    it('should clear the highlight when the caret moves to unformatted text', () => {
+      render(<LongText value="<b>Bold</b> plain" onChange={mockOnChange} inline />);
+      const editor = getEditor();
+
+      placeCaretIn(editor.querySelector('b')!.firstChild!);
+      expect(isPressed(/Bold/)).toBe(true);
+
+      placeCaretIn(editor.lastChild!, 2);
+      expect(isPressed(/Bold/)).toBe(false);
+    });
+
+    it('should highlight list, quote and link buttons', () => {
+      render(
+        <LongText
+          value={'<ul><li>Item</li></ul><blockquote><a href="https://example.com">Link</a></blockquote>'}
+          onChange={mockOnChange}
+          inline
+        />
+      );
+      const editor = getEditor();
+
+      placeCaretIn(editor.querySelector('li')!.firstChild!);
+      expect(isPressed(/Bullet List/)).toBe(true);
+      expect(isPressed(/Numbered List/)).toBe(false);
+
+      placeCaretIn(editor.querySelector('a')!.firstChild!);
+      expect(isPressed(/Quote/)).toBe(true);
+      expect(isPressed(/Link/)).toBe(true);
+      expect(isPressed(/Bullet List/)).toBe(false);
+    });
+
+    it('should clear all highlights when the selection leaves the editor', () => {
+      render(
+        <>
+          <p>Outside</p>
+          <LongText value="<b>Bold</b>" onChange={mockOnChange} inline />
+        </>
+      );
+
+      placeCaretIn(getEditor().querySelector('b')!.firstChild!);
+      expect(isPressed(/Bold/)).toBe(true);
+
+      placeCaretIn(screen.getByText('Outside').firstChild!);
+      expect(isPressed(/Bold/)).toBe(false);
+    });
+
+    it('should use the browser command state when available', () => {
+      const queryCommandState = vi.fn((command: string) => command === 'underline');
+      Object.defineProperty(document, 'queryCommandState', { value: queryCommandState, configurable: true });
+      try {
+        render(<LongText value="plain" onChange={mockOnChange} inline />);
+
+        placeCaretIn(getEditor().firstChild!);
+
+        expect(isPressed(/Underline/)).toBe(true);
+        expect(isPressed(/Bold/)).toBe(false);
+      } finally {
+        delete (document as any).queryCommandState;
+      }
+    });
+
+    it('should highlight formats in the expand modal editor too', async () => {
+      const { container } = render(
+        <LongText value="<b>Bold</b>" onChange={mockOnChange} config={{ richText: true }} />
+      );
+      await openModal(container);
+      await waitFor(() => {
+        expect(getEditor().innerHTML).toBe('<b>Bold</b>');
+      });
+
+      placeCaretIn(getEditor().querySelector('b')!.firstChild!);
+
+      expect(isPressed(/Bold/)).toBe(true);
     });
   });
 
