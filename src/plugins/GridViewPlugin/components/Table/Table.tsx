@@ -17,10 +17,11 @@ import { VirtualizedTableBody } from './components/VirtualizedTableBody';
 import { Search } from '../../../../components/shared/table/Search';
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
 import ReactDOM from 'react-dom';
-import { Plus, List, Lock } from 'lucide-react';
+import { Plus, List, Lock, KeyRound } from 'lucide-react';
 import EditRecordModal from '../../../../components/modals/EditRecordModal';
 import { buildInitialValuesForEdit } from '../../../../utils/initialValues';
 import { useToast } from '../../../../components/common/Toast';
+import { apiErrorMessage } from '../../../../utils/apiErrors';
 import { sortRowsByDataKey } from '../../../../utils/sortUtils';
 import { applyFilters } from '../../../../utils/filterUtils';
 import { formatCompactNumber } from '../../../../utils/helpers';
@@ -28,7 +29,10 @@ const NewColumnModal = lazy(() =>
   import('../../../../components/modals/NewColumnModal').then(m => ({ default: m.NewColumnModal }))
 );
 import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldConfirmModal';
-import { useAllViews } from '../../../../hooks/useApi';
+import { useAllViews, usePrimaryKey, useUpsertRow } from '../../../../hooks/useApi';
+import { useRequiredKeyFields } from '../../../../hooks/useRequiredKeyFields';
+import { useDraftRows, isDraftRowId } from '../../hooks/useDraftRows';
+import { isEmptyKeyValue } from '../../../../utils/primaryKeyFields';
 import { getFieldTypeIconComponent, getRelationTypeFromField } from '../../../../types/fieldTypes';
 import { ColumnDropdown } from './components/ColumnDropdown';
 import { Loader } from '../../../../components/ui/Loader';
@@ -103,6 +107,9 @@ export const Table: React.FC<TableProps> = ({
 
   // Extract IDs from tableData.model
   const tableId = useMemo(() => String(tableData?.model?.id ?? ''), [tableData?.model?.id]);
+  // Primary key fields get a key icon in their header; the position matters for composite keys
+  const { data: primaryKey } = usePrimaryKey(tableId);
+  const primaryKeyColumnIds = useMemo(() => primaryKey?.column_ids ?? [], [primaryKey]);
   const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
 
   // Check permissions for read-only access
@@ -308,6 +315,46 @@ export const Table: React.FC<TableProps> = ({
     handleCloseColMenu,
   } = useTableModals();
 
+  // Tables with a custom primary key add rows as drafts: nothing is saved until every key cell has a value,
+  // then the draft is inserted (upsert) in one call
+  const keyColumnIds = useRequiredKeyFields(tableId, columns);
+  const upsertRowMutation = useUpsertRow();
+  const draftRowsState = useDraftRows({
+    tableId,
+    columns,
+    savedRows: allRecords,
+    keyColumnIds,
+    keyIncludesId: primaryKeyColumnIds.some(id => columns.find(c => String(c.id) === id)?.key === 'id'),
+    upsert: upsertRowMutation.mutateAsync,
+    onSaved: () => {
+      toast.success('Record added', { title: 'Success', duration: 3000 });
+      onRefresh?.();
+    },
+    onError: message => toast.error(message, { title: 'Not saved', duration: 6000 }),
+  });
+  const { draftRows, invalidCells, addDraft, updateDraft, removeDraft, savedKeyProblem } = draftRowsState;
+
+  // Refreshing the page would lose unsaved drafts, so reload shortcuts (F5, Ctrl/Cmd+R) open our own confirm modal
+  const [reloadConfirmOpen, setReloadConfirmOpen] = useState(false);
+  useEffect(() => {
+    if (draftRows.length === 0) return undefined;
+    const interceptReload = (e: KeyboardEvent) => {
+      const isReload = e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r');
+      if (!isReload) return;
+      e.preventDefault();
+      setReloadConfirmOpen(true);
+    };
+    // Capture phase so cell editors that stop key propagation can't let the shortcut through to the browser
+    globalThis.addEventListener('keydown', interceptReload, true);
+    return () => {
+      globalThis.removeEventListener('keydown', interceptReload, true);
+    };
+  }, [draftRows.length]);
+
+  const handleConfirmReload = useCallback(() => {
+    globalThis.location.reload();
+  }, []);
+
   // Edit record modal state
   const [isEditRecordModalOpen, setIsEditRecordModalOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
@@ -315,10 +362,15 @@ export const Table: React.FC<TableProps> = ({
   const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
 
   const openEditRecordModal = useCallback((rowId: string) => {
+    if (isDraftRowId(rowId)) {
+      handleCloseContextMenu();
+      toast.info?.('Fill in the primary key cells to save this record first.', { title: 'Not saved yet' });
+      return;
+    }
     setSelectedRecordId(rowId);
     setIsEditRecordModalOpen(true);
     handleCloseContextMenu();
-  }, [handleCloseContextMenu]);
+  }, [handleCloseContextMenu, toast]);
 
   const closeEditRecordModal = useCallback(() => {
     setIsEditRecordModalOpen(false);
@@ -569,7 +621,7 @@ export const Table: React.FC<TableProps> = ({
     const { message, code } = (error ?? {}) as { message?: string; code?: string };
     // TCN_1012: the value repeats a unique key (Settings > Unique Key)
     const title = code === UNIQUE_KEY_VIOLATION ? 'Duplicate value not allowed' : 'Not saved';
-    toast.error(message || 'The value could not be saved', { title, duration: 5000 });
+    toast.error(apiErrorMessage(error, message || 'The value could not be saved'), { title, duration: 5000 });
     const cellKey = `${rowId}-${columnKey}`;
     setCellResets(prev => ({ ...prev, [cellKey]: (prev[cellKey] ?? 0) + 1 }));
     // Box the cell in red while the toast is shown
@@ -583,7 +635,9 @@ export const Table: React.FC<TableProps> = ({
         return next;
       });
     }, 5000));
-  }, [toast]);
+    // Reload the saved values (e.g. after a duplicate or empty primary key)
+    onRefresh?.();
+  }, [toast, onRefresh]);
 
   useEffect(() => {
     const timeouts = saveErrorTimeouts.current;
@@ -599,6 +653,33 @@ export const Table: React.FC<TableProps> = ({
     onRecordsUpdate: () => { },
     onSaveError: handleCellSaveError,
   });
+
+  // Drafts are shown after the saved rows (in their own group when the grid is grouped)
+  const rowsWithDrafts = useMemo(() => (draftRows.length ? [...paginatedData, ...draftRows] : paginatedData), [paginatedData, draftRows]);
+  const DRAFT_GROUP = { groupColumn: '__drafts', groupValue: 'New records' };
+  const groupedDataWithDrafts = useMemo(() => {
+    if (!groupedData || draftRows.length === 0) return groupedData;
+    return [...groupedData, { ...DRAFT_GROUP, groupDirection: 'asc', level: 0, rows: draftRows }];
+  }, [groupedData, draftRows]);
+  const expandedGroupsWithDrafts = useMemo(() => {
+    if (!groupedData || draftRows.length === 0) return expandedGroups;
+    return new Set([...expandedGroups, `${DRAFT_GROUP.groupColumn}-${DRAFT_GROUP.groupValue}-0`]);
+  }, [groupedData, draftRows.length, expandedGroups]);
+
+  // Draft cells stay in the browser. On saved rows a primary key cell is checked before it is sent: an empty
+  // value or one that repeats another row's key is not saved; the cell is boxed in red and shows the saved value.
+  const handleGridCellChange = useCallback((rowId: string, columnKey: string, value: any) => {
+    if (isDraftRowId(rowId)) {
+      updateDraft(rowId, columnKey, value);
+      return;
+    }
+    const problem = savedKeyProblem(rowId, columnKey, value);
+    if (problem) {
+      handleCellSaveError({ rowId, columnKey, error: { message: problem, code: isEmptyKeyValue(value) ? 'PKY_1007' : 'PKY_1008' } });
+      return;
+    }
+    void handleCellChange(rowId, columnKey, value);
+  }, [updateDraft, savedKeyProblem, handleCellSaveError, handleCellChange]);
 
   // Measure table body container height
   useEffect(() => {
@@ -666,6 +747,11 @@ export const Table: React.FC<TableProps> = ({
 
   // Add a new row via mutation; list refresh is handled via onRefresh/react-query
   const addNewRow = useCallback(async (): Promise<boolean> => {
+    // Custom key: add a draft in the grid; it is inserted once its key cells are filled in
+    if (draftRowsState.enabled) {
+      addDraft();
+      return false;
+    }
     try {
       if (!addRowMutation) return false;
 
@@ -676,10 +762,10 @@ export const Table: React.FC<TableProps> = ({
       return true;
     } catch (err) {
       console.error('Failed to add row', err);
-      toast.error('Failed to add row', { title: 'Error', duration: 3500 });
+      toast.error(apiErrorMessage(err, 'Failed to add row'), { title: 'Error', duration: 3500 });
       return false;
     }
-  }, [addRowMutation, tableId, toast, onRefresh]);
+  }, [addRowMutation, tableId, toast, onRefresh, draftRowsState.enabled, addDraft]);
 
   // Pressing Enter in a text field of the last row creates a new row; once that row
   // shows up in the data, its first cell is activated and opened for editing.
@@ -768,6 +854,11 @@ export const Table: React.FC<TableProps> = ({
 
   // Delete a row by id (memoized to prevent recreation)
   const handleDelete = useCallback(async (rowId: string) => {
+    // A draft was never saved: just drop it
+    if (isDraftRowId(rowId)) {
+      removeDraft(rowId);
+      return;
+    }
     try {
       const numericRowId = resolveNumericRowId(rowId);
       if (!tableId || numericRowId === null) {
@@ -783,7 +874,7 @@ export const Table: React.FC<TableProps> = ({
       console.error('[Delete] Failed to delete record:', rowId, err);
       alert('Failed to delete record. Please try again.');
     }
-  }, [deleteRecordMutation, tableId, toast, onRefresh, resolveNumericRowId]);
+  }, [deleteRecordMutation, tableId, toast, onRefresh, resolveNumericRowId, removeDraft]);
 
   // Bulk delete selected rows
   const handleBulkDelete = useCallback(async () => {
@@ -791,10 +882,19 @@ export const Table: React.FC<TableProps> = ({
       return;
     }
 
+    // Selected drafts were never saved: just drop them
+    const selectedDrafts = Array.from(selectedRows).filter(isDraftRowId);
+    selectedDrafts.forEach(removeDraft);
+    if (selectedDrafts.length === selectedRows.size) {
+      setSelectedRows(new Set());
+      return;
+    }
+
     try {
       // Convert selected row IDs to numeric IDs
       const rowIds: number[] = [];
       for (const rowId of selectedRows) {
+        if (isDraftRowId(rowId)) continue;
         const numericRowId = resolveNumericRowId(rowId);
         if (numericRowId !== null) {
           rowIds.push(numericRowId);
@@ -820,7 +920,7 @@ export const Table: React.FC<TableProps> = ({
       console.error('[Bulk Delete] Failed to delete records:', err);
       toast.error('Failed to delete records. Please try again.', { title: 'Error' });
     }
-  }, [selectedRows, tableId, bulkDeleteRecordsMutation, toast, onRefresh, setSelectedRows, resolveNumericRowId]);
+  }, [selectedRows, tableId, bulkDeleteRecordsMutation, toast, onRefresh, setSelectedRows, resolveNumericRowId, removeDraft]);
 
   const selectedRecordApiId = useMemo(() => {
     const resolvedId = resolveNumericRowId(selectedRecordId);
@@ -1003,6 +1103,17 @@ export const Table: React.FC<TableProps> = ({
                 <Lock className="w-3 h-3 ml-1 inline text-tertiary" />
               )}
             </span>
+            {/* Primary key marker */}
+            {column.id && primaryKeyColumnIds.includes(String(column.id)) && (() => {
+              const label = primaryKeyColumnIds.length > 1
+                ? `Primary key field ${primaryKeyColumnIds.indexOf(String(column.id)) + 1} of ${primaryKeyColumnIds.length}`
+                : 'Primary key';
+              return (
+                <span title={label} aria-label={label} role="img" className="flex-shrink-0 inline-flex" data-testid={`primary-key-icon-${column.id}`}>
+                  <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+                </span>
+              );
+            })()}
           </div>
           {/* Column dropdown - hide for readonly users */}
           {canShowColumnDropdown(column) && (
@@ -1037,7 +1148,8 @@ export const Table: React.FC<TableProps> = ({
     canShowColumnDropdown,
     canUpdateColumn,
     getColumnHeaderClassName,
-    setOpenColumnDropdownIndex
+    setOpenColumnDropdownIndex,
+    primaryKeyColumnIds
   ]);
 
   const getEstimatedItemCount = useCallback(() => {
@@ -1205,15 +1317,16 @@ export const Table: React.FC<TableProps> = ({
             {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
             <div ref={tableBodyRef} onKeyDown={handleTableBodyKeyDown}>
               <VirtualizedTableBody
-                data={paginatedData}
+                data={rowsWithDrafts}
                 columns={visibleColumns}
                 columnWidths={columnWidths}
                 pinnedColumnIds={pinnedColumnIds}
                 pinnedColumnOffsets={pinnedColumnOffsets}
                 selectedRows={selectedRows}
                 onRowSelect={handleRowSelect}
-                onCellChange={handleCellChange}
+                onCellChange={handleGridCellChange}
                 cellResets={cellResets}
+                invalidCells={invalidCells}
                 saveErrorCells={saveErrorCells}
                 onContextMenu={handleContextMenu}
                 activeCell={activeCell}
@@ -1221,8 +1334,8 @@ export const Table: React.FC<TableProps> = ({
                 tableId={tableId}
                 height={tableBodyHeight}
                 width={totalTableWidth}
-                groupedData={groupedData}
-                expandedGroups={expandedGroups}
+                groupedData={groupedDataWithDrafts}
+                expandedGroups={expandedGroupsWithDrafts}
                 setExpandedGroups={setExpandedGroups}
                 visibleColumns={visibleColumns}
                 outerRef={tableRef}
@@ -1397,6 +1510,15 @@ export const Table: React.FC<TableProps> = ({
           title="Delete Column"
         />
       )}
+
+      <DeleteConfirmModal
+        isOpen={reloadConfirmOpen}
+        title="Unsaved changes"
+        message="You have unsaved changes on this page. Reloading now will discard them. Do you want to continue?"
+        confirmLabel="Reload"
+        onClose={() => setReloadConfirmOpen(false)}
+        onConfirm={handleConfirmReload}
+      />
 
       {updateFieldConfirmModalOpen &&
         <UpdateFieldConfirmModal

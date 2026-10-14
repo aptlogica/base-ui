@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { X, Settings, Zap, KeyRound, Key, ShieldCheck } from 'lucide-react';
 import TableTriggersModal from './TableTriggersModal';
+import PrimaryKeyPanel from './tableSettings/PrimaryKeyPanel';
 import UniqueKeysPanel from './constraints/UniqueKeysPanel';
 
 interface TableSettingsModalProps {
@@ -27,7 +28,7 @@ const SECTIONS: { key: Section; label: string; icon: React.ElementType }[] = [
 // Table settings: sections on the left, the selected section's content on the right
 const TableSettingsModal: React.FC<TableSettingsModalProps> = ({ table, onClose }) => {
   const tableTitle: string = table?.title || table?.name || '';
-  const [section, setSection] = useState<Section>('uniqueKey');
+  const [section, setSection] = useState<Section>('primaryKey');
 
   return (
     <div //NOSONAR
@@ -44,7 +45,7 @@ const TableSettingsModal: React.FC<TableSettingsModalProps> = ({ table, onClose 
             </div>
             <div className="min-w-0">
               <h2 className="text-xl font-semibold text-primary truncate">{tableTitle} - Settings</h2>
-              <p className="text-sm text-secondary truncate">Manage automations for this table</p>
+              <p className="text-sm text-secondary truncate">Manage keys, constraints and automations for this table</p>
             </div>
           </div>
           <button
@@ -80,6 +81,7 @@ const TableSettingsModal: React.FC<TableSettingsModalProps> = ({ table, onClose 
 
           {/* Right panel: the selected section; remounts on switch so search and page reset */}
           <div className="flex-1 min-w-0">
+            {section === 'primaryKey' && <PrimaryKeyPanel table={table} />}
             {section === 'uniqueKey' && <UniqueKeysPanel table={table} />}
             {(section === 'triggers' || section === 'webhooks') && (
               <TableTriggersModal key={section} embedded table={table} view={section} />

@@ -6,11 +6,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { applyFilters } from '../../../../../utils/filterUtils';
 import { sortRowsByDataKey } from '../../../../../utils/sortUtils';
 let Table: typeof import('../Table').Table;
+import { clearDraftCache } from '../../../hooks/useDraftRows';
 const mockToastError = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockCellEditClick = vi.fn();
 
 const mockUseAllViews = vi.fn();
+const mockUsePrimaryKey = vi.fn();
+const mockUpsertRow = vi.fn();
+const mockHandleCellChange = vi.fn();
 const mockUseTableViewConfig = vi.fn();
 const mockUseFrontendPagination = vi.fn();
 const mockUseCellEditing = vi.fn();
@@ -21,6 +25,8 @@ const mockUseGridDataOperationModal = vi.fn();
 
 vi.mock('../../../../../hooks/useApi', () => ({
   useAllViews: mockUseAllViews,
+  usePrimaryKey: (...args: unknown[]) => mockUsePrimaryKey(...args),
+  useUpsertRow: () => ({ mutateAsync: mockUpsertRow }),
   useCaseNormalize: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
   useExtractSubstring: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
   useFindReplace: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), mutate: vi.fn(), isLoading: false }),
@@ -158,9 +164,21 @@ vi.mock('../components/VirtualizedTableBody', () => ({
     onScroll,
     setActiveCell,
     setExpandedGroups,
+    onCellChange,
+    invalidCells,
   }: any) => (
     <div data-testid="virtualized-body">
       <div data-testid="row-count">{data?.length ?? 0}</div>
+      <div data-testid="invalid-cells">{JSON.stringify(invalidCells ?? {})}</div>
+      <button type="button" onClick={() => onCellChange?.(data?.[data.length - 1]?.id, 'name', 'HR')}>
+        Fill Last Name
+      </button>
+      <button type="button" onClick={() => onCellChange?.('1', 'name', '')}>
+        Clear First Name
+      </button>
+      <button type="button" onClick={() => onCellChange?.('2', 'name', 'Row 1')}>
+        Copy First Name To Second
+      </button>
       {(data ?? []).map((row: any) => {
         const rowId = String(row?._meta?.id || row?.id || '');
         return (
@@ -348,6 +366,7 @@ const tableData = {
 
 const setupDefaultMocks = () => {
   mockUseAllViews.mockReturnValue({ data: [] });
+  mockUsePrimaryKey.mockReturnValue({ data: undefined });
   mockUseBaseAccess.mockReturnValue({
     isBaseReadOnly: () => false,
     canCreateColumn: () => true,
@@ -391,7 +410,7 @@ const setupDefaultMocks = () => {
     isLoadingMore: false,
   });
 
-  mockUseCellEditing.mockReturnValue({ handleCellChange: vi.fn() });
+  mockUseCellEditing.mockReturnValue({ handleCellChange: mockHandleCellChange });
 
   mockUseColumnManagement.mockReturnValue({
     isColumnModalOpen: false,
@@ -503,6 +522,23 @@ describe('Table', () => {
 
     expect(screen.getAllByRole('button', { name: /add row/i }).length).toBeGreaterThan(0);
     expect(screen.getByRole('checkbox')).toBeInTheDocument();
+  });
+
+  it('marks primary key columns with a key icon', () => {
+    mockUsePrimaryKey.mockReturnValue({ data: { column_ids: ['col-1'] } });
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(mockUsePrimaryKey).toHaveBeenCalledWith('tbl-1');
+    expect(screen.getByTestId('primary-key-icon-col-1')).toHaveAttribute('title', 'Primary key');
+    expect(screen.queryByTestId('primary-key-icon-col-2')).not.toBeInTheDocument();
+  });
+
+  it('numbers the fields of a composite primary key', () => {
+    mockUsePrimaryKey.mockReturnValue({ data: { column_ids: ['col-2', 'col-1'] } });
+    renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+    expect(screen.getByTestId('primary-key-icon-col-2')).toHaveAttribute('title', 'Primary key field 1 of 2');
+    expect(screen.getByTestId('primary-key-icon-col-1')).toHaveAttribute('title', 'Primary key field 2 of 2');
   });
 
   it('hides add row button when read-only', () => {
@@ -1096,6 +1132,64 @@ describe('Table', () => {
     fireEvent.click(addButtons[0]);
 
     expect(mutateAsync).toHaveBeenCalledWith({ model_id: 'tbl-1' });
+  });
+
+  describe('custom primary key', () => {
+    beforeEach(() => {
+      clearDraftCache();
+      // Key: Name (col-1)
+      mockUsePrimaryKey.mockReturnValue({ data: { column_ids: ['col-1'] } });
+    });
+
+    it('adds a draft row in the grid instead of creating a record', () => {
+      const mutateAsync = vi.fn();
+      renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} actions={{ addRow: { mutateAsync } } as any} />);
+      const before = Number(screen.getByTestId('row-count').textContent);
+
+      fireEvent.click(screen.getAllByRole('button', { name: /add row/i })[0]);
+
+      expect(mutateAsync).not.toHaveBeenCalled();
+      expect(Number(screen.getByTestId('row-count').textContent)).toBe(before + 1);
+      // The empty key cell of the draft is shown in red
+      expect(screen.getByTestId('invalid-cells').textContent).toContain('"name":"Required: part of the primary key"');
+    });
+
+    it('inserts the draft once its key cells are filled in', async () => {
+      vi.useFakeTimers();
+      try {
+      mockUpsertRow.mockResolvedValue({ data: { record: { id: 7 } } });
+      const onRefresh = vi.fn();
+      renderWithToast(<Table tableData={tableData as any} onRefresh={onRefresh} actions={{ addRow: { mutateAsync: vi.fn() } } as any} />);
+
+      fireEvent.click(screen.getAllByRole('button', { name: /add row/i })[0]);
+      fireEvent.click(screen.getByRole('button', { name: 'Fill Last Name' }));
+      expect(screen.getByTestId('invalid-cells').textContent).toBe('{}');
+      await act(async () => { vi.advanceTimersByTime(600); });
+
+      expect(mockUpsertRow).toHaveBeenCalledWith({ model_id: 'tbl-1', values: { 'col-1': 'HR' } });
+      expect(onRefresh).toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('does not send a key value that repeats another row', () => {
+      const twoRows = { ...tableData, records: [...tableData.records, { id: '2', name: 'Row 2', value: 20 }] };
+      renderWithToast(<Table tableData={twoRows as any} onRefresh={vi.fn()} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Copy First Name To Second' }));
+
+      expect(mockHandleCellChange).not.toHaveBeenCalled();
+      expect(mockToastError).toHaveBeenCalledWith('Name = "Row 1" is already used by record #1.', expect.anything());
+    });
+
+    it('does not send an emptied key cell of a saved row', () => {
+      renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Clear First Name' }));
+
+      expect(mockHandleCellChange).not.toHaveBeenCalled();
+    });
   });
 
   it('invokes search handler to update search state', () => {

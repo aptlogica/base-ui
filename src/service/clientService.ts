@@ -2,8 +2,17 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-// @ts-ignore - SDK module does not have type declarations
 import { SereniBaseClient } from 'serenibase-sdk';
+import type {
+  CreateAutomation,
+  CreateTableConstraint,
+  StandardResponse,
+  TableConstraintType,
+  UpdateTableConstraint,
+  UpsertRow,
+  UpsertRowResult,
+  ValidateAutomation,
+} from 'serenibase-sdk';
 import { WorkspaceBaseInput } from "../types/interfaces/workspace.interface.js";
 import { decodeJwt } from 'jose';
 import { LoginParams, VerifyOtpParams, ResendOtpParams } from '../types/interfaces/auth.js';
@@ -393,15 +402,13 @@ export const client = new SereniBaseClient({
  * The SDK's HttpClient emits 'response-error' events BEFORE formatting errors,
  * allowing us to catch 401 errors and refresh tokens automatically
  */
-if ((client as any).http) {
-  const httpClient = (client as any).http;
-
+{
   // Track if we're already refreshing to prevent multiple refresh calls
   let isRefreshingToken = false;
   let failedQueue: Array<{ resolve: (value: any) => void; reject: (error: any) => void }> = [];
 
   // Listen to SDK's response-error event (fires BEFORE error formatting)
-  httpClient.on('response-error', async (error: any) => {
+  client.on('response-error', async (error: any) => {
     // Check if it's a 401 token expiry error
     const is401 = error.response?.status === 401;
     const isTokenExpired = is401 && (
@@ -447,8 +454,6 @@ if ((client as any).http) {
       }
     }
   });
-} else {
-  console.error('Failed to access SDK HttpClient for token refresh setup');
 }
 
 /**
@@ -687,25 +692,9 @@ export async function removeUserFromWorkspaceService(workspaceId: string, params
 }
 
 // BaseService wrappers with auth/tenant headers
+// meta (base-level format defaults) is sent by the SDK as a JSON string form field
 export async function createBaseService(params: any) {
-  if (!params?.meta) {
-    return await makeAuthenticatedCall(() => client.baseService.create(params));
-  }
-  // The SDK's create() only forwards title/description/workspace_id/image, so build the
-  // same multipart request here to also send `meta` (base-level format defaults)
-  return await makeAuthenticatedCall(() => {
-    const httpClient = (client as any).http;
-    const formData = new FormData();
-    formData.append('title', params.title);
-    if (params.description) formData.append('description', params.description);
-    if (params.workspace_id) formData.append('workspace_id', params.workspace_id);
-    if (params.image) formData.append('image', params.image);
-    formData.append('meta', JSON.stringify(params.meta));
-    return httpClient.post('/base/create', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      ...httpClient.getUploadLimits?.(false),
-    });
-  });
+  return await makeAuthenticatedCall(() => client.baseService.create(params));
 }
 
 export async function getBaseByIdService(id: string) {
@@ -966,6 +955,12 @@ export async function addRow(params: {
   return await makeAuthenticatedCall(() => client.tableService.createRow(params));
 }
 
+// POST /row/data/insert as an upsert: without row_id it creates a record with values (column ID -> value;
+// every primary key field is required), with row_id it updates that record. All values are saved together.
+export async function upsertRowService(params: UpsertRow): Promise<StandardResponse<UpsertRowResult>> {
+  return await makeAuthenticatedCall(() => client.rowService.upsert(params));
+}
+
 export async function deleteRowService(params: { model_id: string; row_id: number }) {
   return await makeAuthenticatedCall(() => client.tableService.deleteRow(params));
 }
@@ -1147,111 +1142,75 @@ export async function updateOrganizationService(orgId: string, updateData: { nam
 // Automations (triggers & webhooks)
 // =========================
 
-export interface Automation {
-  id: string;
-  model_id: string;
-  title?: string;
-  type: 'trigger' | 'webhook' | 'function';
-  context: string;
-  // Triggers only: timing + events chosen in the form, e.g. "BEFORE INSERT, BEFORE UPDATE"
-  event?: string;
-  created_by?: string;
-  last_modified_by?: string;
-  created_time?: string;
-  last_modified_time?: string;
+export type { Automation, AutomationValidationResult } from 'serenibase-sdk';
+
+export async function getAutomationsService(tableId: string) {
+  return await makeAuthenticatedCall(() => client.automationService.list(tableId));
 }
 
-// The SDK has no automation resource yet, so these use its authenticated HTTP client directly
-export async function getAutomationsService(tableId: string): Promise<{ data: Automation[] }> {
-  return await makeAuthenticatedCall(() => (client as any).http.get('/automation', { params: { model_id: tableId } }));
+export async function createAutomationService(params: CreateAutomation) {
+  return await makeAuthenticatedCall(() => client.automationService.create(params));
 }
 
-export async function createAutomationService(params: Omit<Automation, 'id'>): Promise<{ data: Automation }> {
-  return await makeAuthenticatedCall(() => (client as any).http.post('/automation/create', params));
-}
-
-export async function updateAutomationService({ id, ...params }: { id: string; title: string; context: string; event?: string }): Promise<{ data: Automation }> {
-  return await makeAuthenticatedCall(() => (client as any).http.put(`/automation/${id}`, params));
+export async function updateAutomationService({ id, ...params }: { id: string; title: string; context: string; event?: string }) {
+  return await makeAuthenticatedCall(() => client.automationService.update(id, params));
 }
 
 // Applies the saved query in Postgres
-export async function runAutomationService(id: string): Promise<{ data: Automation }> {
-  return await makeAuthenticatedCall(() => (client as any).http.post(`/automation/${id}/run`));
-}
-
-// Whether Postgres accepts a trigger or function query; message is Postgres' reason when not
-export interface AutomationValidationResult {
-  valid: boolean;
-  message?: string;
+export async function runAutomationService(id: string) {
+  return await makeAuthenticatedCall(() => client.automationService.run(id));
 }
 
 // Runs the query as typed (saved or not) in a rolled-back transaction; nothing is changed.
 // id is set when editing, so the query is checked as a replacement of what that entry installed.
-export async function validateAutomationService(params: { model_id: string; id?: string; type: 'trigger' | 'function'; context: string; event?: string }): Promise<{ data: AutomationValidationResult }> {
-  return await makeAuthenticatedCall(() => (client as any).http.post('/automation/validate', params));
+export async function validateAutomationService(params: ValidateAutomation) {
+  return await makeAuthenticatedCall(() => client.automationService.validate(params));
 }
 
 export async function deleteAutomationService(id: string) {
-  return await makeAuthenticatedCall(() => (client as any).http.delete(`/automation/${id}`));
+  return await makeAuthenticatedCall(() => client.automationService.delete(id));
+}
+
+// =========================
+// Primary key
+// =========================
+
+// PrimaryKeyViolation is returned in error.details (PKY_1004) when existing records don't satisfy a new key
+export type { PrimaryKey, PrimaryKeyColumn, PrimaryKeyViolation } from 'serenibase-sdk';
+
+export async function getPrimaryKeyService(tableId: string) {
+  return await makeAuthenticatedCall(() => client.tableService.getPrimaryKey(tableId));
+}
+
+export async function updatePrimaryKeyService({ tableId, columnIds }: { tableId: string; columnIds: string[] }) {
+  return await makeAuthenticatedCall(() => client.tableService.updatePrimaryKey(tableId, columnIds));
 }
 
 // =========================
 // Table constraints (unique keys; later primary key and check)
 // =========================
 
-export type TableConstraintType = 'unique' | 'primary' | 'check';
+export type { TableConstraint, TableConstraintType, ConstraintCheckResult } from 'serenibase-sdk';
+export type TableConstraintInput = UpdateTableConstraint;
+export type { ConstraintColumn } from 'serenibase-sdk';
 
-export interface ConstraintColumn {
-  id: string;
-  title: string;
-}
-
-export interface TableConstraintOptions {
-  // Empty values count as equal, so only one record may leave the columns empty
-  nulls_not_distinct?: boolean;
-}
-
-export interface TableConstraint {
-  id: string;
-  title: string;
-  // Name of the constraint in Postgres
-  constraint_name: string;
-  // Columns of the key, in order
-  columns: ConstraintColumn[];
-  options: TableConstraintOptions;
-  // 'missing' when the Postgres constraint no longer exists
-  status: 'ok' | 'missing';
-}
-
-export interface TableConstraintInput {
-  title: string;
-  column_ids: string[];
-  options?: TableConstraintOptions;
-}
-
-// Whether records already share values in the chosen columns; message names the columns when not
-export interface ConstraintCheckResult {
-  valid: boolean;
-  message?: string;
-}
-
-export async function getTableConstraintsService(tableId: string, type: TableConstraintType): Promise<{ data: TableConstraint[] }> {
-  return await makeAuthenticatedCall(() => (client as any).http.get('/table-constraint', { params: { model_id: tableId, type } }));
+export async function getTableConstraintsService(tableId: string, type: TableConstraintType) {
+  return await makeAuthenticatedCall(() => client.constraintService.list(tableId, type));
 }
 
 // Checks existing records against the columns without changing anything
-export async function checkTableConstraintService(params: { model_id: string; column_ids: string[]; options?: TableConstraintOptions }): Promise<{ data: ConstraintCheckResult }> {
-  return await makeAuthenticatedCall(() => (client as any).http.post('/table-constraint/check', params));
+export async function checkTableConstraintService(params: { model_id: string; column_ids: string[] }) {
+  return await makeAuthenticatedCall(() => client.constraintService.check(params));
 }
 
-export async function createTableConstraintService(params: TableConstraintInput & { model_id: string; type: TableConstraintType }): Promise<{ data: TableConstraint }> {
-  return await makeAuthenticatedCall(() => (client as any).http.post('/table-constraint/create', params));
+export async function createTableConstraintService(params: CreateTableConstraint) {
+  return await makeAuthenticatedCall(() => client.constraintService.create(params));
 }
 
-export async function updateTableConstraintService({ id, ...params }: TableConstraintInput & { id: string }): Promise<{ data: TableConstraint }> {
-  return await makeAuthenticatedCall(() => (client as any).http.put(`/table-constraint/${id}`, params));
+export async function updateTableConstraintService({ id, ...params }: UpdateTableConstraint & { id: string }) {
+  return await makeAuthenticatedCall(() => client.constraintService.update(id, params));
 }
 
 export async function deleteTableConstraintService(id: string) {
-  return await makeAuthenticatedCall(() => (client as any).http.delete(`/table-constraint/${id}`));
+  return await makeAuthenticatedCall(() => client.constraintService.delete(id));
 }

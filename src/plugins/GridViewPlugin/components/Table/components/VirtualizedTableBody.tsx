@@ -15,6 +15,8 @@ interface VirtualizedTableBodyProps {
   selectedRows: Set<string>;
   onRowSelect: (rowId: string, selected: boolean) => void;
   onCellChange: (rowId: string, columnKey: string, value: any) => void;
+  // Cells to show in red with the reason: rowId -> columnKey -> message
+  invalidCells?: Record<string, Record<string, string>>;
   onContextMenu: (e: React.MouseEvent, rowId: string) => void;
   activeCell: { rowId: string; colKey: string } | null;
   setActiveCell: React.Dispatch<React.SetStateAction<{ rowId: string; colKey: string } | null>>;
@@ -129,6 +131,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
   selectedRows,
   onRowSelect,
   onCellChange,
+  invalidCells,
   onContextMenu,
   activeCell,
   setActiveCell,
@@ -428,6 +431,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
         onSelect={onRowSelect}
         canSelectRows={canSelectRows}
         onCellChange={onCellChange}
+        invalidCells={invalidCells?.[rowId]}
         onContextMenu={e => onContextMenu(e, rowId)}
         activeCell={activeCell}
         setActiveCell={setActiveCell}
@@ -440,7 +444,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
         saveErrorCells={saveErrorCells}
       />
     );
-  }, [columns, columnWidths, selectedRows, onRowSelect, onCellChange, onContextMenu, activeCell, setActiveCell, tableId, allColumns, canEdit, pinnedColumnIds, pinnedColumnOffsets, cellResets, saveErrorCells]);
+  }, [columns, columnWidths, selectedRows, onRowSelect, onCellChange, invalidCells, onContextMenu, activeCell, setActiveCell, tableId, allColumns, canEdit, pinnedColumnIds, pinnedColumnOffsets, cellResets, saveErrorCells]);
 
   const virtualItems = virtualizer.getVirtualItems();
 
