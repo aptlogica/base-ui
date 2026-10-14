@@ -334,34 +334,24 @@ export const Table: React.FC<TableProps> = ({
   });
   const { draftRows, invalidCells, addDraft, updateDraft, removeDraft, savedKeyProblem } = draftRowsState;
 
-  // Leaving or refreshing the page would lose unsaved drafts. Reload shortcuts (F5, Ctrl/Cmd+R) open our own
-  // confirm modal; the browser's reload button and closing the tab can only show the native prompt.
+  // Refreshing the page would lose unsaved drafts, so reload shortcuts (F5, Ctrl/Cmd+R) open our own confirm modal
   const [reloadConfirmOpen, setReloadConfirmOpen] = useState(false);
-  const reloadConfirmedRef = useRef(false);
   useEffect(() => {
     if (draftRows.length === 0) return undefined;
-    const warn = (e: BeforeUnloadEvent) => {
-      if (reloadConfirmedRef.current) return;
-      e.preventDefault();
-      e.returnValue = '';
-    };
     const interceptReload = (e: KeyboardEvent) => {
       const isReload = e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r');
       if (!isReload) return;
       e.preventDefault();
       setReloadConfirmOpen(true);
     };
-    globalThis.addEventListener('beforeunload', warn);
     // Capture phase so cell editors that stop key propagation can't let the shortcut through to the browser
     globalThis.addEventListener('keydown', interceptReload, true);
     return () => {
-      globalThis.removeEventListener('beforeunload', warn);
       globalThis.removeEventListener('keydown', interceptReload, true);
     };
   }, [draftRows.length]);
 
   const handleConfirmReload = useCallback(() => {
-    reloadConfirmedRef.current = true;
     globalThis.location.reload();
   }, []);
 
