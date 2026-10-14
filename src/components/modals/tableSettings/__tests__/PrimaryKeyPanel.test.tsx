@@ -60,14 +60,38 @@ describe('PrimaryKeyPanel', () => {
     expect(screen.queryByText('Links')).not.toBeInTheDocument();
   });
 
-  it('explains the starting values new records get once the key uses other fields', async () => {
+  it('describes composite keys under the title', () => {
     mockKey(key());
     render(<PrimaryKeyPanel table={{ id: 't1' }} />);
-    expect(screen.queryByTestId('primary-key-new-rows')).not.toBeInTheDocument();
 
-    await userEvent.click(checkbox('Code'));
+    expect(screen.getByText('Select fields that uniquely identify each record. Multiple fields create a composite key.')).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /combined values/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/starting value/)).not.toBeInTheDocument();
+  });
 
-    expect(screen.getByTestId('primary-key-new-rows')).toHaveTextContent('code_20261013101523123456_42');
+  it('shows key fields as numbered pills on highlighted rows', () => {
+    mockKey(key({ column_ids: ['c-code', 'c-dept'] }));
+    render(<PrimaryKeyPanel table={{ id: 't1' }} />);
+
+    expect(screen.getByTestId('key-order-c-code')).toHaveTextContent('1 · Code');
+    expect(screen.getByTestId('key-order-c-dept')).toHaveTextContent('2 · Dept');
+    expect(checkbox('Code').closest('tr')).toHaveAttribute('data-selected', 'true');
+    expect(checkbox('Id').closest('tr')).not.toHaveAttribute('data-selected');
+  });
+
+  it('selects every eligible field from the header checkbox, and back to the first', async () => {
+    mockKey(key());
+    render(<PrimaryKeyPanel table={{ id: 't1' }} />);
+    const all = screen.getByRole('checkbox', { name: 'Select all eligible fields' });
+
+    await userEvent.click(all);
+    expect(screen.getByTestId('primary-key-summary')).toHaveTextContent('Id + Code + Dept');
+    expect(checkbox('Tags')).not.toBeChecked();
+    expect(all).toBeChecked();
+
+    await userEvent.click(all);
+    expect(screen.getByTestId('primary-key-summary')).toHaveTextContent('Id');
+    expect(checkbox('Code')).not.toBeChecked();
   });
 
   it('keeps at least one key field selected', () => {
@@ -98,8 +122,8 @@ describe('PrimaryKeyPanel', () => {
     await userEvent.click(checkbox('Id'));
 
     expect(screen.getByTestId('primary-key-summary')).toHaveTextContent('Dept + Code');
-    expect(screen.getByText('Key field 1')).toBeInTheDocument();
-    expect(screen.getByText('Key field 2')).toBeInTheDocument();
+    expect(screen.getByTestId('key-order-c-dept')).toHaveTextContent('1 · Dept');
+    expect(screen.getByTestId('key-order-c-code')).toHaveTextContent('2 · Code');
 
     await userEvent.click(save);
 

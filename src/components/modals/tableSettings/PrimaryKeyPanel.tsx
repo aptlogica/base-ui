@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CheckCircle2, KeyRound, Lock, UserRound, UserRoundPen } from 'lucide-react';
 import { usePrimaryKey, useUpdatePrimaryKey } from '../../../hooks/useApi';
 import type { PrimaryKeyColumn, PrimaryKeyViolation } from '../../../service/clientService';
@@ -75,10 +75,22 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
     [columns],
   );
   const keyTitles = selected.map(id => columns.find(c => c.id === id)?.title).filter(Boolean);
-  // Rows are added empty, so key fields other than id get a starting value (see key_fill_defaults)
-  const selectedColumns = selected.map(id => columns.find(c => c.id === id)).filter(Boolean) as PrimaryKeyColumn[];
-  const customKey = selectedColumns.some(c => c.column_name !== 'id');
-  const sampleColumn = selectedColumns.find(c => c.column_name !== 'id')?.column_name ?? 'code';
+
+  // Header checkbox: select every eligible field, or go back to the first key field (a key needs one)
+  const eligibleIds = columns.filter(c => c.eligible).map(c => c.id);
+  const allSelected = eligibleIds.length > 0 && eligibleIds.every(id => selected.includes(id));
+  const someSelected = selected.length > 0 && !allSelected;
+  const selectAllRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (selectAllRef.current) selectAllRef.current.indeterminate = someSelected;
+  }, [someSelected]);
+  const toggleAll = () => {
+    setMessage(null);
+    setViolation(null);
+    setSelected(current => (allSelected
+      ? current.slice(0, 1)
+      : [...current, ...eligibleIds.filter(id => !current.includes(id))]));
+  };
 
   const toggle = (column: PrimaryKeyColumn) => {
     setMessage(null);
@@ -120,10 +132,8 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="px-4 pt-4 flex-shrink-0">
-        <h3 className="text-base font-semibold text-primary">Primary Key</h3>
-        <p className="text-sm text-secondary">
-          The fields that identify each record. Select several fields for a composite key; their combined values must be filled in and unique.
-        </p>
+        <h3 className="text-lg font-semibold text-primary">Primary Key</h3>
+        <p className="mt-1 text-sm text-secondary">Select fields that uniquely identify each record. Multiple fields create a composite key.</p>
       </div>
 
       {locked && (
@@ -150,23 +160,25 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
         )}
       </div>
 
-      {customKey && (
-        <p className="mx-4 mt-1 text-xs text-secondary flex-shrink-0" data-testid="primary-key-new-rows">
-          New records get a starting value in empty key fields, which you then replace: text fields get the field name with a
-          timestamp and record id (e.g. <span className="font-mono">{sampleColumn}_20261013101523123456_42</span>), numbers the
-          record id, dates today and checkboxes unchecked.
-        </p>
-      )}
-
       <div className="flex-1 min-h-0 flex flex-col mx-4 mt-3 border rounded-xl overflow-hidden">
         <div className="flex-1 min-h-0 overflow-y-auto">
           <table className="w-full table-fixed">
             <thead className="bg-gray-50 border-b sticky top-0 z-10">
               <tr>
-                <th className="w-14 px-4 py-3" aria-label="In key" />
-                <th className="px-4 py-3 text-xs text-gray-700 font-semibold text-left">Field</th>
-                <th className="w-[30%] px-4 py-3 text-xs text-gray-700 font-semibold text-left">Type</th>
-                <th className="w-[30%] px-4 py-3 text-xs text-gray-700 font-semibold text-left">Key order</th>
+                <th className="w-14 px-4 py-3 text-center">
+                  <input
+                    ref={selectAllRef}
+                    type="checkbox"
+                    className="w-4 h-4 accent-green-600 cursor-pointer disabled:cursor-not-allowed align-middle"
+                    checked={allSelected}
+                    disabled={locked || eligibleIds.length === 0}
+                    onChange={toggleAll}
+                    aria-label="Select all eligible fields"
+                  />
+                </th>
+                <th className="px-4 py-3 text-sm text-gray-700 font-semibold text-left">Field</th>
+                <th className="w-[30%] px-4 py-3 text-sm text-gray-700 font-semibold text-left">Type</th>
+                <th className="w-[25%] px-4 py-3 text-sm text-gray-700 font-semibold text-left">Key order</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -178,7 +190,12 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
                 const disabled = locked || !column.eligible || lastOne;
                 const hint = locked ? 'Locked by link fields' : !column.eligible ? column.reason : lastOne ? 'At least one key field is required' : undefined;
                 return (
-                  <tr key={column.id} className={`bg-card ${disabled ? '' : 'hover:bg-gray-50'} transition-colors`} title={hint}>
+                  <tr
+                    key={column.id}
+                    className={`${checked ? 'bg-green-50' : `bg-card ${disabled ? '' : 'hover:bg-gray-50'}`} transition-colors`}
+                    title={hint}
+                    data-selected={checked ? 'true' : undefined}
+                  >
                     <td className="px-4 py-3 text-center">
                       <input
                         type="checkbox"
@@ -199,10 +216,19 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      {checked && (
-                        <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-xs font-medium whitespace-nowrap">
-                          {selected.length > 1 ? `Key field ${position + 1}` : 'Key field'}
+                      {checked ? (
+                        <span
+                          data-testid={`key-order-${column.id}`}
+                          aria-label={`Key field ${position + 1}: ${column.title}`}
+                          className="inline-flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium whitespace-nowrap max-w-full"
+                        >
+                          <span className="w-5 h-5 rounded-full bg-[var(--color-brand-600)] text-white text-xs font-semibold flex items-center justify-center flex-shrink-0" aria-hidden="true">
+                            {position + 1}
+                          </span>
+                          <span className="truncate">{position + 1} · {column.title}</span>
                         </span>
+                      ) : (
+                        <span className="text-gray-400" aria-hidden="true">—</span>
                       )}
                     </td>
                   </tr>
@@ -269,7 +295,7 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-3 p-4 flex-shrink-0">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 mt-3 border-t flex-shrink-0">
         <div className="min-w-0">
           {message && (
             <div className={`text-sm flex items-center gap-1 ${message.ok ? 'text-green-600' : 'text-red-600'}`}>
@@ -296,7 +322,7 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
               type="button"
               onClick={save}
               disabled={!changed || selected.length === 0 || updatePrimaryKey.isPending}
-              className="px-4 h-10 rounded-xl btn-primary text-primary text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-5 h-10 rounded-xl bg-[var(--color-brand-600)] hover:bg-[var(--color-brand-700)] text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {updatePrimaryKey.isPending ? 'Saving…' : 'Save primary key'}
             </button>
