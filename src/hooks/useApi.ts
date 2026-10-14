@@ -226,9 +226,9 @@ export const useUpsertRow = () => {
   return useMutation({
     mutationFn: upsertRowService,
     onSuccess: (_, { model_id }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id), refetchType: 'active' });
-      queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)], refetchType: 'active' });
-      queryClient.invalidateQueries({ queryKey: queryKeys.views(model_id) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id), refetchType: 'active' });
+      void queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)], refetchType: 'active' });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.views(model_id) });
     },
   });
 };

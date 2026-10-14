@@ -51,6 +51,6 @@ export const missingKeyColumnIds = (keyIds: string[], valueOf: (columnId: string
 export const missingKeyMessage = (titles: string[]): string => {
   if (titles.length === 0) return '';
   if (titles.length === 1) return `${titles[0]} is required: it is part of the primary key.`;
-  const list = `${titles.slice(0, -1).join(', ')} and ${titles[titles.length - 1]}`;
+  const list = `${titles.slice(0, -1).join(', ')} and ${titles.at(-1)}`;
   return `${list} are required: they make up the primary key.`;
 };

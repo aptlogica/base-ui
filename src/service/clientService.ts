@@ -4,13 +4,9 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import { SereniBaseClient } from 'serenibase-sdk';
 import type {
-  Automation,
-  AutomationValidationResult,
-  ConstraintCheckResult,
   CreateAutomation,
   CreateTableConstraint,
   StandardResponse,
-  TableConstraint,
   TableConstraintType,
   UpdateTableConstraint,
   UpsertRow,
@@ -1146,7 +1142,7 @@ export async function updateOrganizationService(orgId: string, updateData: { nam
 // Automations (triggers & webhooks)
 // =========================
 
-export type { Automation, AutomationValidationResult };
+export type { Automation, AutomationValidationResult } from 'serenibase-sdk';
 
 export async function getAutomationsService(tableId: string) {
   return await makeAuthenticatedCall(() => client.automationService.list(tableId));
@@ -1194,7 +1190,7 @@ export async function updatePrimaryKeyService({ tableId, columnIds }: { tableId:
 // Table constraints (unique keys; later primary key and check)
 // =========================
 
-export type { TableConstraint, TableConstraintType, ConstraintCheckResult };
+export type { TableConstraint, TableConstraintType, ConstraintCheckResult } from 'serenibase-sdk';
 export type TableConstraintInput = UpdateTableConstraint;
 export type { ConstraintColumn } from 'serenibase-sdk';
 

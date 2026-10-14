@@ -53,7 +53,7 @@ export interface UseDraftRowsOptions {
 
 export const useDraftRows = ({ tableId, columns, savedRows = [], keyColumnIds, keyIncludesId = false, upsert, onSaved, onError }: UseDraftRowsOptions) => {
   const enabled = keyColumnIds.length > 0;
-  const [drafts, setDraftsState] = useState<DraftRow[]>(() => draftCache.get(tableId) ?? []);
+  const [drafts, setDrafts] = useState<DraftRow[]>(() => draftCache.get(tableId) ?? []);
   const draftsRef = useRef(drafts);
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
@@ -61,7 +61,7 @@ export const useDraftRows = ({ tableId, columns, savedRows = [], keyColumnIds, k
   useEffect(() => {
     const cached = draftCache.get(tableId) ?? [];
     draftsRef.current = cached;
-    setDraftsState(cached);
+    setDrafts(cached);
   }, [tableId]);
 
   useEffect(() => () => {
@@ -69,12 +69,12 @@ export const useDraftRows = ({ tableId, columns, savedRows = [], keyColumnIds, k
     timers.current.clear();
   }, []);
 
-  const setDrafts = useCallback((update: (prev: DraftRow[]) => DraftRow[]) => {
+  const updateDrafts = useCallback((update: (prev: DraftRow[]) => DraftRow[]) => {
     const next = update(draftsRef.current);
     draftsRef.current = next;
     if (next.length > 0) draftCache.set(tableId, next);
     else draftCache.delete(tableId);
-    setDraftsState(next);
+    setDrafts(next);
   }, [tableId]);
 
   const keyColumns = useMemo(
@@ -141,7 +141,9 @@ export const useDraftRows = ({ tableId, columns, savedRows = [], keyColumnIds, k
     if (!other && !usedByDraft) return null;
     const pairs = keyColumns.map(c => {
       const v = valueOf(c.key);
-      return `${c.title} = ${typeof v === 'number' || /^-?\d+(\.\d+)?$/.test(String(v).trim()) ? String(v).trim() : `"${String(v).trim()}"`}`;
+      const text = String(v as string | number).trim();
+      const shown = typeof v === 'number' || /^-?\d+(\.\d+)?$/.test(text) ? text : '"' + text + '"';
+      return `${c.title} = ${shown}`;
     });
     const subject = keyColumns.length > 1 ? `The combination ${pairs.join(', ')}` : pairs[0];
     return `${subject} is already used by ${other ? `record #${other}` : 'a new row'}.`;
@@ -170,12 +172,12 @@ export const useDraftRows = ({ tableId, columns, savedRows = [], keyColumnIds, k
     if (!draft || draft.saving || missingKeyColumns(draft).length > 0 || duplicateReason(draft, draftsRef.current)) return;
 
     const submitted = insertValues(draft);
-    setDrafts(prev => prev.map(d => (d.id === draftId ? { ...d, saving: true, error: undefined, duplicate: false } : d)));
+    updateDrafts(prev => prev.map(d => (d.id === draftId ? { ...d, saving: true, error: undefined, duplicate: false } : d)));
     try {
       const created = await upsert({ model_id: tableId, values: submitted });
       const current = draftsRef.current.find(d => d.id === draftId);
       removeTimer(draftId);
-      setDrafts(prev => prev.filter(d => d.id !== draftId));
+      updateDrafts(prev => prev.filter(d => d.id !== draftId));
       // Values typed while the insert was running go to the new record as an update
       const rowId = Number((created as { data?: { record?: { id?: unknown } } } | null)?.data?.record?.id);
       if (current && Number.isFinite(rowId)) {
@@ -191,10 +193,10 @@ export const useDraftRows = ({ tableId, columns, savedRows = [], keyColumnIds, k
     } catch (err) {
       const message = apiErrorMessage(err, 'Failed to save the record');
       const duplicate = (err as { code?: string } | null)?.code === 'PKY_1008';
-      setDrafts(prev => prev.map(d => (d.id === draftId ? { ...d, saving: false, error: message, duplicate } : d)));
+      updateDrafts(prev => prev.map(d => (d.id === draftId ? { ...d, saving: false, error: message, duplicate } : d)));
       onError?.(message);
     }
-  }, [missingKeyColumns, duplicateReason, insertValues, setDrafts, upsert, tableId, onSaved, onError]);
+  }, [missingKeyColumns, duplicateReason, insertValues, updateDrafts, upsert, tableId, onSaved, onError]);
 
   const scheduleSave = useCallback((draftId: string) => {
     const existing = timers.current.get(draftId);
@@ -208,12 +210,12 @@ export const useDraftRows = ({ tableId, columns, savedRows = [], keyColumnIds, k
   const addDraft = useCallback((): string => {
     draftCounter += 1;
     const id = `${DRAFT_ID_PREFIX}${Date.now()}-${draftCounter}`;
-    setDrafts(prev => [...prev, { id, values: {} }]);
+    updateDrafts(prev => [...prev, { id, values: {} }]);
     return id;
-  }, [setDrafts]);
+  }, [updateDrafts]);
 
   const updateDraft = useCallback((draftId: string, columnKey: string, value: unknown) => {
-    setDrafts(prev => prev.map(d => (d.id === draftId
+    updateDrafts(prev => prev.map(d => (d.id === draftId
       ? { ...d, values: { ...d.values, [columnKey]: value }, error: undefined, duplicate: false }
       : d)));
     // Saved once the key is complete and unique; other drafts waiting on this key may now be free too
@@ -222,12 +224,12 @@ export const useDraftRows = ({ tableId, columns, savedRows = [], keyColumnIds, k
         scheduleSave(draft.id);
       }
     }
-  }, [setDrafts, missingKeyColumns, duplicateReason, scheduleSave]);
+  }, [updateDrafts, missingKeyColumns, duplicateReason, scheduleSave]);
 
   const removeDraft = useCallback((draftId: string) => {
     removeTimer(draftId);
-    setDrafts(prev => prev.filter(d => d.id !== draftId));
-  }, [setDrafts]);
+    updateDrafts(prev => prev.filter(d => d.id !== draftId));
+  }, [updateDrafts]);
 
   // Draft rows in the grid's row shape
   const draftRows = useMemo<GridRecord[]>(() => drafts.map(d => ({
@@ -262,9 +264,8 @@ export const useDraftRows = ({ tableId, columns, savedRows = [], keyColumnIds, k
       const key = keyOf(k => savedValue(row, k));
       if (key === null) {
         cells[rowId] = {};
-        keyColumns.forEach(c => {
-          if (isEmptyKeyValue(savedValue(row, c.key))) cells[rowId][c.key] = 'Required: part of the primary key';
-        });
+        keyColumns.filter(c => isEmptyKeyValue(savedValue(row, c.key)))
+          .forEach(c => { cells[rowId][c.key] = 'Required: part of the primary key'; });
         continue;
       }
       if (keyIncludesId) continue;

@@ -47,10 +47,22 @@ const parseViolation = (err: any): PrimaryKeyViolation | null => {
   }
 };
 
+const formatValue = (value: unknown): string => {
+  if (value === null || value === '') return '(empty)';
+  if (typeof value === 'string') return '"' + value + '"';
+  return String(value as number | boolean);
+};
+
 const formatValues = (values: Record<string, unknown>, titles: Record<string, string>) =>
   Object.entries(values)
-    .map(([name, value]) => `${titles[name] ?? name} = ${value === null || value === '' ? '(empty)' : typeof value === 'string' ? `"${value}"` : String(value)}`)
+    .map(([name, value]) => `${titles[name] ?? name} = ${formatValue(value)}`)
     .join(', ');
+
+const formatHolders = (ids: Array<string | number>, count: number) => {
+  const list = ids.map(id => `#${id}`).join(', ');
+  const more = count > ids.length ? ` and ${count - ids.length} more` : '';
+  return `: ${list}${more}`;
+};
 
 // Primary key settings: pick one or more fields; the order they are picked in is the key order
 const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
@@ -188,11 +200,15 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
                 // The last key field can't be unchecked: a table always has a primary key
                 const lastOne = checked && selected.length === 1;
                 const disabled = locked || !column.eligible || lastOne;
-                const hint = locked ? 'Locked by link fields' : !column.eligible ? column.reason : lastOne ? 'At least one key field is required' : undefined;
+                let hint: string | undefined;
+                if (locked) hint = 'Locked by link fields';
+                else if (!column.eligible) hint = column.reason;
+                else if (lastOne) hint = 'At least one key field is required';
+                const rowBg = checked ? 'bg-green-50' : `bg-card ${disabled ? '' : 'hover:bg-gray-50'}`;
                 return (
                   <tr
                     key={column.id}
-                    className={`${checked ? 'bg-green-50' : `bg-card ${disabled ? '' : 'hover:bg-gray-50'}`} transition-colors`}
+                    className={`${rowBg} transition-colors`}
                     title={hint}
                     data-selected={checked ? 'true' : undefined}
                   >
@@ -282,7 +298,7 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
                   return (
                     <li key={JSON.stringify(d.values)}>
                       {formatValues(d.values, titleByName)} — used by {d.count} records
-                      {ids.length > 0 && `: ${ids.map(id => `#${id}`).join(', ')}${d.count > ids.length ? ` and ${d.count - ids.length} more` : ''}`}
+                      {ids.length > 0 && formatHolders(ids, d.count)}
                     </li>
                   );
                 })}

@@ -678,7 +678,7 @@ export const Table: React.FC<TableProps> = ({
       handleCellSaveError({ rowId, columnKey, error: { message: problem, code: isEmptyKeyValue(value) ? 'PKY_1007' : 'PKY_1008' } });
       return;
     }
-    handleCellChange(rowId, columnKey, value);
+    void handleCellChange(rowId, columnKey, value);
   }, [updateDraft, savedKeyProblem, handleCellSaveError, handleCellChange]);
 
   // Measure table body container height

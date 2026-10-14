@@ -7,7 +7,6 @@
 // [{"code": "IN", "dept": "HR"}] for a composite key. Cells edited in the UI may also hold full records,
 // and older cells plain ids; these helpers accept all three.
 
-type LinkItem = unknown;
 type LinkRecord = { id?: unknown; [key: string]: unknown };
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -16,7 +15,7 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
 const hasId = (item: Record<string, unknown>) => item.id !== undefined && item.id !== null && item.id !== '';
 
 // Normalizes a cell value to a list of items
-export const linkItems = (value: unknown): LinkItem[] => {
+export const linkItems = (value: unknown): unknown[] => {
   if (value === null || value === undefined || value === '') return [];
   if (Array.isArray(value)) return value.filter(item => item !== null && item !== undefined);
   if (isObject(value)) return Object.keys(value).length === 0 ? [] : [value];
@@ -26,11 +25,11 @@ export const linkItems = (value: unknown): LinkItem[] => {
 // Whether a stored key object identifies this record: every key field has the same value
 export const linkKeyMatches = (key: Record<string, unknown>, record: LinkRecord): boolean => {
   const entries = Object.entries(key);
-  return entries.length > 0 && entries.every(([name, value]) => record[name] !== undefined && String(record[name]) === String(value));
+  return entries.length > 0 && entries.every(([name, value]) => record[name] !== undefined && String(record[name] as string | number) === String(value as string | number));
 };
 
 // The row id of a linked item, using records of the linked table to resolve composite keys
-export const resolveLinkRowId = (item: LinkItem, records: LinkRecord[] = []): string | undefined => {
+export const resolveLinkRowId = (item: unknown, records: LinkRecord[] = []): string | undefined => {
   if (item === null || item === undefined) return undefined;
   if (!isObject(item)) return String(item);
   if (hasId(item)) return String(item.id);
@@ -39,14 +38,14 @@ export const resolveLinkRowId = (item: LinkItem, records: LinkRecord[] = []): st
 };
 
 // A readable label for an item whose record isn't loaded, e.g. "IN / HR"
-export const linkItemLabel = (item: LinkItem): string => {
-  if (!isObject(item)) return String(item);
+export const linkItemLabel = (item: unknown): string => {
+  if (!isObject(item)) return String(item as string | number);
   if (typeof item.title === 'string' && item.title) return item.title;
-  return Object.values(item).map(v => String(v)).join(' / ');
+  return Object.values(item).map(String).join(' / ');
 };
 
 // A stable identity for an item: its row id when known, otherwise its key values
-export const linkItemIdentity = (item: LinkItem, records: LinkRecord[] = []): string =>
+export const linkItemIdentity = (item: unknown, records: LinkRecord[] = []): string =>
   resolveLinkRowId(item, records) ?? `key:${JSON.stringify(item)}`;
 
 // Records of a table as cached by useTable (query key ['tables', tableId]); empty when not loaded
