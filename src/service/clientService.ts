@@ -1267,11 +1267,6 @@ export interface ConstraintColumn {
   title: string;
 }
 
-export interface TableConstraintOptions {
-  // Empty values count as equal, so only one record may leave the columns empty
-  nulls_not_distinct?: boolean;
-}
-
 export interface TableConstraint {
   id: string;
   title: string;
@@ -1279,7 +1274,6 @@ export interface TableConstraint {
   constraint_name: string;
   // Columns of the key, in order
   columns: ConstraintColumn[];
-  options: TableConstraintOptions;
   // 'missing' when the Postgres constraint no longer exists
   status: 'ok' | 'missing';
 }
@@ -1287,7 +1281,6 @@ export interface TableConstraint {
 export interface TableConstraintInput {
   title: string;
   column_ids: string[];
-  options?: TableConstraintOptions;
 }
 
 // Whether records already share values in the chosen columns; message names the columns when not
@@ -1301,7 +1294,7 @@ export async function getTableConstraintsService(tableId: string, type: TableCon
 }
 
 // Checks existing records against the columns without changing anything
-export async function checkTableConstraintService(params: { model_id: string; column_ids: string[]; options?: TableConstraintOptions }): Promise<{ data: ConstraintCheckResult }> {
+export async function checkTableConstraintService(params: { model_id: string; column_ids: string[] }): Promise<{ data: ConstraintCheckResult }> {
   return await makeAuthenticatedCall(() => (client as any).http.post('/table-constraint/check', params));
 }
 
