@@ -31,7 +31,7 @@ export const linkKeyMatches = (key: Record<string, unknown>, record: LinkRecord)
 // The row id of a linked item, using records of the linked table to resolve composite keys
 export const resolveLinkRowId = (item: unknown, records: LinkRecord[] = []): string | undefined => {
   if (item === null || item === undefined) return undefined;
-  if (!isObject(item)) return String(item);
+  if (!isObject(item)) return String(item as string | number);
   if (hasId(item)) return String(item.id);
   const record = records.find(r => linkKeyMatches(item, r));
   return record ? String(record.id) : undefined;

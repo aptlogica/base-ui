@@ -204,7 +204,8 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
                 if (locked) hint = 'Locked by link fields';
                 else if (!column.eligible) hint = column.reason;
                 else if (lastOne) hint = 'At least one key field is required';
-                const rowBg = checked ? 'bg-green-50' : `bg-card ${disabled ? '' : 'hover:bg-gray-50'}`;
+                const hover = disabled ? '' : 'hover:bg-gray-50';
+                const rowBg = checked ? 'bg-green-50' : `bg-card ${hover}`;
                 return (
                   <tr
                     key={column.id}

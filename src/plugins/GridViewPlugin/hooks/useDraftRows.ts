@@ -146,7 +146,8 @@ export const useDraftRows = ({ tableId, columns, savedRows = [], keyColumnIds, k
       return `${c.title} = ${shown}`;
     });
     const subject = keyColumns.length > 1 ? `The combination ${pairs.join(', ')}` : pairs[0];
-    return `${subject} is already used by ${other ? `record #${other}` : 'a new row'}.`;
+    const holder = other ? `record #${other}` : 'a new row';
+    return `${subject} is already used by ${holder}.`;
   }, [keyColumns, keyIncludesId, savedRows, keyOf, savedKeys, drafts]);
 
   // Values by column ID for the insert; only fields a new record can be given
@@ -238,9 +239,8 @@ export const useDraftRows = ({ tableId, columns, savedRows = [], keyColumnIds, k
     data: { ...d.values },
   })), [drafts]);
 
-  // Key cells to show in red, with the reason: rowId -> columnKey -> message. Empty key cells and keys used by
-  // more than one row, on drafts and saved rows alike.
-  const invalidCells = useMemo(() => {
+  // Key cells to show in red on drafts: rowId -> columnKey -> message
+  const draftInvalidCells = useMemo(() => {
     const cells: Record<string, Record<string, string>> = {};
     if (keyColumns.length === 0) return cells;
     const markKey = (rowId: string, message: string) => {
@@ -258,6 +258,18 @@ export const useDraftRows = ({ tableId, columns, savedRows = [], keyColumnIds, k
         missing.forEach(c => { cells[draft.id][c.key] = 'Required: part of the primary key'; });
       }
     }
+    return cells;
+  }, [drafts, keyColumns, duplicateReason, missingKeyColumns]);
+
+  // Key cells to show in red, with the reason: rowId -> columnKey -> message. Empty key cells and keys used by
+  // more than one row, on drafts and saved rows alike.
+  const invalidCells = useMemo(() => {
+    const cells: Record<string, Record<string, string>> = { ...draftInvalidCells };
+    if (keyColumns.length === 0) return cells;
+    const markKey = (rowId: string, message: string) => {
+      cells[rowId] = { ...cells[rowId] };
+      keyColumns.forEach(c => { cells[rowId][c.key] = message; });
+    };
 
     for (const row of savedRows) {
       const rowId = String(row._meta?.id ?? row.id);
@@ -278,7 +290,7 @@ export const useDraftRows = ({ tableId, columns, savedRows = [], keyColumnIds, k
       }
     }
     return cells;
-  }, [drafts, savedRows, keyColumns, keyOf, savedKeys, duplicateReason, missingKeyColumns, keyIncludesId]);
+  }, [draftInvalidCells, drafts, savedRows, keyColumns, keyOf, savedKeys, keyIncludesId]);
 
   return { enabled, drafts, draftRows, invalidCells, addDraft, updateDraft, removeDraft, savedKeyProblem };
 };
