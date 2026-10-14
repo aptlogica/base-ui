@@ -8,6 +8,30 @@ import { createPortal } from 'react-dom';
 import { AlignLeft, Maximize2, X, Bold, Italic, Underline, Strikethrough, List, ListOrdered, Quote, Link2, ExternalLink, Trash2, Edit } from 'lucide-react';
 import { sanitizeExternalUrl } from '../../../utils/urlSecurity';
 
+type RichTextFormat = 'bold' | 'italic' | 'underline' | 'strikeThrough' | 'ul' | 'ol' | 'quote' | 'link';
+
+// How each toolbar format is detected at the selection. Inline styles prefer the browser's
+// command state, which also covers formatting toggled on at a collapsed caret before typing.
+const FORMAT_CHECKS: { format: RichTextFormat; command?: string; tags: string[] }[] = [
+  { format: 'bold', command: 'bold', tags: ['b', 'strong'] },
+  { format: 'italic', command: 'italic', tags: ['i', 'em'] },
+  { format: 'underline', command: 'underline', tags: ['u'] },
+  { format: 'strikeThrough', command: 'strikeThrough', tags: ['s', 'strike', 'del'] },
+  { format: 'ul', tags: ['ul'] },
+  { format: 'ol', tags: ['ol'] },
+  { format: 'quote', tags: ['blockquote'] },
+  { format: 'link', tags: ['a'] },
+];
+
+// Returns null when the browser can't report the state, so callers fall back to inspecting tags
+const queryCommandStateSafe = (command: string): boolean | null => {
+  try {
+    return typeof document.queryCommandState === 'function' ? document.queryCommandState(command) : null; //NOSONAR
+  } catch {
+    return null;
+  }
+};
+
 interface LongTextProps {
   label?: string;
   value: string;
@@ -22,6 +46,8 @@ interface LongTextProps {
   helperText?: string;
   onModalOpen?: (modalRef: React.RefObject<HTMLDivElement | null>) => void;
   onModalClose?: () => void;
+  // Render the rich text editor in place (3 rows tall) instead of a preview input + expand modal
+  inline?: boolean;
   config?: {
     defaultValue?: string;
     maxLength?: number;
@@ -46,9 +72,14 @@ export const LongText: React.FC<LongTextProps> = ({
   helperText,
   onModalOpen,
   onModalClose,
+  inline = false,
   config = {}
 }) => {
-  const { defaultValue = '', placeholder: configPlaceholder = placeholder, richText = false, hideMaximizeButton = false } = config;
+  const { defaultValue = '', placeholder: configPlaceholder = placeholder, richText: richTextConfig = false, hideMaximizeButton = false } = config;
+  // The inline editor is always rich text
+  const richText = inline || richTextConfig;
+  // Last HTML emitted by the inline editor, so echoing it back through `value` doesn't reset the cursor
+  const lastInlineValueRef = useRef<string | null>(null);
   const [localValue, setLocalValue] = useState(value || '');
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -65,6 +96,7 @@ export const LongText: React.FC<LongTextProps> = ({
   });
   const linkPopupRef = useRef<HTMLDivElement>(null);
   const savedLinkSelectionRef = useRef<Range | null>(null);
+  const [activeFormats, setActiveFormats] = useState<Set<RichTextFormat>>(() => new Set());
 
   // Helper to strip HTML tags for length validation
   const stripHTML = (html: string): string => {
@@ -81,6 +113,17 @@ export const LongText: React.FC<LongTextProps> = ({
     } catch {
       return html;
     }
+  };
+
+  // Plain-text values (e.g. a default value) need their line breaks converted,
+  // otherwise contentEditable collapses them into a single line
+  const toEditorHtml = (val: string): string => {
+    if (!val || /<[a-z][\s\S]*>/i.test(val)) return val;
+    return val
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('\n', '<br>');
   };
 
   const sanitizeRichTextHtml = (html: string): string => {
@@ -189,6 +232,19 @@ export const LongText: React.FC<LongTextProps> = ({
     }
   }, [isModalOpen, value, richText]);
 
+  // Load the value into the inline editor, unless it is the value the editor just emitted
+  useEffect(() => {
+    if (!inline || !richTextEditorRef.current) return;
+    const currentValue = (value !== null && value !== undefined && value !== '') ? value : (defaultValue || '');
+    if (currentValue === lastInlineValueRef.current) return;
+    const safeValue = sanitizeRichTextHtml(toEditorHtml(currentValue));
+    if (richTextEditorRef.current.innerHTML !== safeValue) {
+      richTextEditorRef.current.innerHTML = safeValue;
+      enhanceLinks(richTextEditorRef.current);
+    }
+    lastInlineValueRef.current = currentValue;
+  }, [inline, value, defaultValue]);
+
   const validate = (val: string) => {
     // For rich text, validate the text content length (without HTML tags)
     const textContent = richText ? stripHTML(val) : val;
@@ -278,6 +334,19 @@ export const LongText: React.FC<LongTextProps> = ({
       // Don't set innerHTML here to avoid cursor jumping - just normalize the value
     }
     setModalValue(htmlContent);
+    updateActiveFormats();
+
+    // The inline editor has no Save step, so changes are emitted as they are typed
+    if (inline) {
+      const safeValue = htmlContent ? sanitizeRichTextHtml(htmlContent) : '';
+      lastInlineValueRef.current = safeValue;
+      if (error) setError(validate(safeValue));
+      onChange(safeValue);
+    }
+  };
+
+  const handleInlineBlur = () => {
+    setError(validate(richTextEditorRef.current ? sanitizeRichTextHtml(richTextEditorRef.current.innerHTML) : ''));
   };
 
   const isSelectionInsideTag = (tagName: string): boolean => {
@@ -296,6 +365,39 @@ export const LongText: React.FC<LongTextProps> = ({
     }
     return false;
   };
+
+  // Recomputes which toolbar formats apply at the current selection, so their buttons can be highlighted
+  const updateActiveFormats = () => {
+    const editor = richTextEditorRef.current;
+    const selection = globalThis.getSelection();
+    if (!editor || !selection || selection.rangeCount === 0 || !editor.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+      setActiveFormats(prev => (prev.size === 0 ? prev : new Set()));
+      return;
+    }
+
+    const next = new Set(
+      FORMAT_CHECKS
+        .filter(({ command, tags }) =>
+          (command && queryCommandStateSafe(command)) ?? tags.some(tag => isSelectionInsideTag(tag))
+        )
+        .map(({ format }) => format)
+    );
+
+    setActiveFormats(prev =>
+      prev.size === next.size && [...next].every(format => prev.has(format)) ? prev : next
+    );
+  };
+
+  // Keep toolbar highlights in sync with the caret while an editor is on screen
+  const updateActiveFormatsRef = useRef(updateActiveFormats);
+  updateActiveFormatsRef.current = updateActiveFormats;
+  const isEditorVisible = richText && !readOnly && (inline || isModalOpen);
+  useEffect(() => {
+    if (!isEditorVisible) return;
+    const handleSelectionChange = () => updateActiveFormatsRef.current();
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, [isEditorVisible]);
 
   const getClosestAncestorTag = (startNode: Node | null, tagName: string): HTMLElement | null => {
     if (!startNode || !richTextEditorRef.current) return null;
@@ -726,6 +828,185 @@ export const LongText: React.FC<LongTextProps> = ({
     }
   }, [isLinkPopupOpen]);
 
+  const getToolbarButtonProps = (format: RichTextFormat) => {
+    const isActive = activeFormats.has(format);
+    return {
+      'aria-pressed': isActive,
+      className: `p-1.5 rounded transition-colors ${isActive
+        ? 'bg-[var(--color-brand-100)] text-[var(--color-brand-700)] hover:bg-[var(--color-brand-200)]'
+        : 'text-primary hover:bg-gray-200'}`,
+    };
+  };
+
+  const toolbarButtons = (
+    <>
+      <button
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); execCommand('bold', null, e); }}
+        {...getToolbarButtonProps('bold')}
+        title="Bold (Ctrl+B)"
+      >
+        <Bold className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); execCommand('italic', null, e); }}
+        {...getToolbarButtonProps('italic')}
+        title="Italic (Ctrl+I)"
+      >
+        <Italic className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); execCommand('underline', null, e); }}
+        {...getToolbarButtonProps('underline')}
+        title="Underline (Ctrl+U)"
+      >
+        <Underline className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); execCommand('strikeThrough', null, e); }}
+        {...getToolbarButtonProps('strikeThrough')}
+        title="Strikethrough"
+      >
+        <Strikethrough className="w-4 h-4" />
+      </button>
+      <div className="w-px h-6 bg-gray-300 mx-1" />
+      <button
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); insertList('ul', e); }}
+        {...getToolbarButtonProps('ul')}
+        title="Bullet List"
+      >
+        <List className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); insertList('ol', e); }}
+        {...getToolbarButtonProps('ol')}
+        title="Numbered List"
+      >
+        <ListOrdered className="w-4 h-4" />
+      </button>
+      <div className="w-px h-6 bg-gray-300 mx-1" />
+      <button
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); execCommand('formatBlock', 'blockquote', e); }}
+        {...getToolbarButtonProps('quote')}
+        title="Quote"
+      >
+        <Quote className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        onMouseDown={insertLink}
+        {...getToolbarButtonProps('link')}
+        title="Link"
+        disabled={!richText}
+      >
+        <Link2 className="w-4 h-4" />
+      </button>
+    </>
+  );
+
+  const renderRichTextEditor = (editorClassName: string) => (
+    <div //NOSONAR
+      ref={richTextEditorRef}
+      contentEditable={!readOnly}
+      suppressContentEditableWarning
+      onInput={readOnly ? undefined : handleRichTextChange}
+      onPaste={readOnly ? undefined : handlePaste}
+      onBlur={inline ? handleInlineBlur : undefined}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        // Handle keyboard shortcuts
+        if (e.ctrlKey || e.metaKey) {
+          if (e.key === 'b') {
+            e.preventDefault();
+            execCommand('bold', null, e as any);
+          } else if (e.key === 'i') {
+            e.preventDefault();
+            execCommand('italic', null, e as any);
+          } else if (e.key === 'u') {
+            e.preventDefault();
+            execCommand('underline', null, e as any);
+          }
+        }
+      }}
+      onClick={(e) => {
+        // Make links clickable (only in rich text mode)
+        if (!richText) return;
+
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'A' && target instanceof HTMLAnchorElement) {
+          const href = target.getAttribute('href');
+          if (href) {
+            // Ctrl/Cmd+Click - let browser handle (opens in new tab)
+            if (e.ctrlKey || e.metaKey) {
+              return; // Let browser handle it
+            }
+            // Regular click - show popup
+            e.preventDefault();
+            e.stopPropagation();
+            showLinkPopup(target);
+          }
+        }
+      }}
+      className={editorClassName}
+      style={{
+        outline: 'none'
+      }}
+      data-placeholder={(inline ? configPlaceholder : placeholder) || 'Start typing...'}
+    />
+  );
+
+  const richTextStyles = (
+    <style>{`
+      [contenteditable][data-placeholder]:empty:before {
+        content: attr(data-placeholder);
+        color: var(--color-gray-400);
+        pointer-events: none;
+      }
+      [contenteditable][data-placeholder]:focus:empty:before {
+        content: attr(data-placeholder);
+        color: var(--color-gray-400);
+        pointer-events: none;
+      }
+      [contenteditable] a {
+        color: #2563eb;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+      [contenteditable] a:hover {
+        color: #1d4ed8;
+        text-decoration: underline;
+      }
+      [contenteditable] a:visited {
+        color: #7c3aed;
+      }
+      [contenteditable] ul {
+        list-style-type: disc;
+        margin: 0.5rem 0;
+        padding-left: 1.5rem;
+      }
+      [contenteditable] ol {
+        list-style-type: decimal;
+        margin: 0.5rem 0;
+        padding-left: 1.5rem;
+      }
+      [contenteditable] li {
+        margin: 0.25rem 0;
+      }
+      [contenteditable] blockquote {
+        border-left: 3px solid var(--color-border-secondary);
+        margin: 0.5rem 0;
+        padding: 0.25rem 0 0.25rem 0.75rem;
+        color: var(--color-text-secondary);
+      }
+    `}</style>
+  );
+
   return (
     <div className="w-full">
 
@@ -736,44 +1017,57 @@ export const LongText: React.FC<LongTextProps> = ({
         </label>
       )}
 
-      <div className={`relative flex items-center ${className} ${isBorder ? "field-component-border" : ""}`}>
-        <input
-          type="text"
-          value={localValue}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          placeholder={configPlaceholder}
-          disabled={false}
-          className={`field-component ${error ? 'border-red-500 bg-red-50' : ''
-            } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'} truncate`}
-          readOnly
-          style={readOnly ? { cursor: 'default' } : { cursor: 'pointer' }}
-          onDoubleClick={readOnly ? undefined : openModal}
-        />
-        {!readOnly && !hideMaximizeButton && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); openModal(); }}
-            className="mx-2 w-8 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-colors z-0"
-            tabIndex={-1}
-            disabled={disabled}
-          >
-            <Maximize2 className="w-4 h-4" />
-          </button>
-        )}
-        {readOnly && !hideMaximizeButton && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); openModal(); }}
-            className="mx-2 w-8 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-colors z-0"
-            tabIndex={-1}
+      {inline ? (
+        <div className={`w-full field-component-border bg-[--color-alpha-white] overflow-hidden transition-colors focus-within:border-[var(--color-brand-600)] ${error ? 'border-red-500' : ''} ${className}`}>
+          {!readOnly && (
+            <div className="flex flex-wrap items-center gap-0.5 px-1.5 py-1 border-b">
+              {toolbarButtons}
+            </div>
+          )}
+          {/* 3 rows of text: 3 x 1.25rem line height + 1rem vertical padding */}
+          {renderRichTextEditor(`w-full h-[4.75rem] min-h-[4.75rem] px-3 py-2 text-xs leading-5 text-[var(--color-text-primary)] overflow-y-auto resize-y ${readOnly ? 'cursor-default' : 'cursor-text'}`)}
+          {richTextStyles}
+        </div>
+      ) : (
+        <div className={`relative flex items-center ${className} ${isBorder ? "field-component-border" : ""}`}>
+          <input
+            type="text"
+            value={localValue}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            placeholder={configPlaceholder}
             disabled={false}
-            title="View full content"
-          >
-            <Maximize2 className="w-4 h-4" />
-          </button>
-        )}
-      </div>
+            className={`field-component ${error ? 'border-red-500 bg-red-50' : ''
+              } ${disabled || readOnly ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'} truncate`}
+            readOnly
+            style={readOnly ? { cursor: 'default' } : { cursor: 'pointer' }}
+            onDoubleClick={readOnly ? undefined : openModal}
+          />
+          {!readOnly && !hideMaximizeButton && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); openModal(); }}
+              className="mx-2 w-8 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-colors z-0"
+              tabIndex={-1}
+              disabled={disabled}
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          )}
+          {readOnly && !hideMaximizeButton && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); openModal(); }}
+              className="mx-2 w-8 h-7 text-gray-400 flex items-center justify-center rounded-lg border shadow-xs hover:bg-gray-200 transition-colors z-0"
+              tabIndex={-1}
+              disabled={false}
+              title="View full content"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
 
 
       {/* Error*/}
@@ -800,73 +1094,7 @@ export const LongText: React.FC<LongTextProps> = ({
               <span className="text-lg font-medium text-secondary">Long Text</span>
               {richText && !readOnly && (
                 <div className="flex items-center gap-1 ml-4 px-2 py-1 bg-gray-100 rounded-xl">
-                  <button
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); execCommand('bold', null, e); }}
-                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
-                    title="Bold (Ctrl+B)"
-                  >
-                    <Bold className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); execCommand('italic', null, e); }}
-                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
-                    title="Italic (Ctrl+I)"
-                  >
-                    <Italic className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); execCommand('underline', null, e); }}
-                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
-                    title="Underline (Ctrl+U)"
-                  >
-                    <Underline className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); execCommand('strikeThrough', null, e); }}
-                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
-                    title="Strikethrough"
-                  >
-                    <Strikethrough className="w-4 h-4" />
-                  </button>
-                  <div className="w-px h-6 bg-gray-300 mx-1" />
-                  <button
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); insertList('ul', e); }}
-                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
-                    title="Bullet List"
-                  >
-                    <List className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); insertList('ol', e); }}
-                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
-                    title="Numbered List"
-                  >
-                    <ListOrdered className="w-4 h-4" />
-                  </button>
-                  <div className="w-px h-6 bg-gray-300 mx-1" />
-                  <button
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); execCommand('formatBlock', 'blockquote', e); }}
-                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
-                    title="Quote"
-                  >
-                    <Quote className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onMouseDown={insertLink}
-                    className="p-1.5 hover:bg-gray-200 rounded text-primary transition-colors"
-                    title="Link"
-                    disabled={!richText}
-                  >
-                    <Link2 className="w-4 h-4" />
-                  </button>
+                  {toolbarButtons}
                 </div>
               )}
               <button
@@ -880,96 +1108,8 @@ export const LongText: React.FC<LongTextProps> = ({
             </div>
             {richText ? (
               <div className="w-full flex-1 flex flex-col min-h-0">
-                <div //NOSONAR
-                  ref={richTextEditorRef}
-                  contentEditable={!readOnly}
-                  suppressContentEditableWarning
-                  onInput={readOnly ? undefined : handleRichTextChange}
-                  onPaste={readOnly ? undefined : handlePaste}
-                  onKeyDown={(e) => {
-                    e.stopPropagation();
-                    // Handle keyboard shortcuts
-                    if (e.ctrlKey || e.metaKey) {
-                      if (e.key === 'b') {
-                        e.preventDefault();
-                        execCommand('bold', null, e as any);
-                      } else if (e.key === 'i') {
-                        e.preventDefault();
-                        execCommand('italic', null, e as any);
-                      } else if (e.key === 'u') {
-                        e.preventDefault();
-                        execCommand('underline', null, e as any);
-                      }
-                    }
-                  }}
-                  onClick={(e) => {
-                    // Make links clickable (only in rich text mode)
-                    if (!richText) return;
-
-                    const target = e.target as HTMLElement;
-                    if (target.tagName === 'A' && target instanceof HTMLAnchorElement) {
-                      const href = target.getAttribute('href');
-                      if (href) {
-                        // Ctrl/Cmd+Click - let browser handle (opens in new tab)
-                        if (e.ctrlKey || e.metaKey) {
-                          return; // Let browser handle it
-                        }
-                        // Regular click - show popup
-                        e.preventDefault();
-                        e.stopPropagation();
-                        showLinkPopup(target);
-                      }
-                    }
-                  }}
-                  className="w-full flex-1 min-h-0 bg-[var(--background)] border rounded-xl p-3 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand-600)] transition-all overflow-y-auto"
-                  style={{
-                    outline: 'none'
-                  }}
-                  data-placeholder={placeholder || 'Start typing...'}
-                />
-                <style>{`
-                  [contenteditable][data-placeholder]:empty:before {
-                    content: attr(data-placeholder);
-                    color: var(--color-gray-400);
-                    pointer-events: none;
-                  }
-                  [contenteditable][data-placeholder]:focus:empty:before {
-                    content: attr(data-placeholder);
-                    color: var(--color-gray-400);
-                    pointer-events: none;
-                  }
-                  [contenteditable] a {
-                    color: #2563eb;
-                    text-decoration: underline;
-                    cursor: pointer;
-                  }
-                  [contenteditable] a:hover {
-                    color: #1d4ed8;
-                    text-decoration: underline;
-                  }
-                  [contenteditable] a:visited {
-                    color: #7c3aed;
-                  }
-                  [contenteditable] ul {
-                    list-style-type: disc;
-                    margin: 0.5rem 0;
-                    padding-left: 1.5rem;
-                  }
-                  [contenteditable] ol {
-                    list-style-type: decimal;
-                    margin: 0.5rem 0;
-                    padding-left: 1.5rem;
-                  }
-                  [contenteditable] li {
-                    margin: 0.25rem 0;
-                  }
-                  [contenteditable] blockquote {
-                    border-left: 3px solid var(--color-border-secondary);
-                    margin: 0.5rem 0;
-                    padding: 0.25rem 0 0.25rem 0.75rem;
-                    color: var(--color-text-secondary);
-                  }
-                `}</style>
+                {renderRichTextEditor("w-full flex-1 min-h-0 bg-[var(--background)] border rounded-xl p-3 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand-600)] transition-all overflow-y-auto")}
+                {richTextStyles}
               </div>
             ) : (
               <textarea

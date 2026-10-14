@@ -4,9 +4,10 @@ import { SortableFormField } from '../SortableFormField';
 import type { FormField } from '../../../../../types/form';
 
 vi.mock('../../shared/FieldRenderer', () => ({
-  default: (props: { type?: string; value?: unknown; onChange?: (v: unknown) => void }) => (
+  default: (props: { type?: string; value?: unknown; inline?: boolean; onChange?: (v: unknown) => void }) => (
     <div data-testid="field-renderer">
       <span data-testid="field-type">{props.type ?? 'unknown'}</span>
+      <span data-testid="field-inline">{String(!!props.inline)}</span>
       <input
         data-testid="field-input"
         value={String(props.value ?? '')}
@@ -105,6 +106,22 @@ describe('SortableFormField', () => {
       expect(screen.getByText('See more')).toBeInTheDocument();
       fireEvent.click(screen.getByText('See more'));
       expect(screen.getByText('See less')).toBeInTheDocument();
+    });
+  });
+
+  describe('Long text', () => {
+    it('renders long text fields with the inline rich text editor', () => {
+      const longTextField: FormField = { ...mockField, type: 'longText' };
+      render(<SortableFormField field={longTextField} value="" onChange={mockOnChange} />);
+
+      expect(screen.getByTestId('field-type')).toHaveTextContent('longText');
+      expect(screen.getByTestId('field-inline')).toHaveTextContent('true');
+    });
+
+    it('does not render other fields inline', () => {
+      render(<SortableFormField field={mockField} value="" onChange={mockOnChange} />);
+
+      expect(screen.getByTestId('field-inline')).toHaveTextContent('false');
     });
   });
 

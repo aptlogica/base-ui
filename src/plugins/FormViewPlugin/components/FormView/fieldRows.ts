@@ -44,10 +44,36 @@ const getCenterInsertIndex = (
     : remaining.findIndex(f => f.id === rowIds[0]);
 };
 
+// Exchanges the two fields' positions; each takes over the other's slot (and column) in the layout
+const swapFields = (
+  fields: FormField[],
+  visibleFields: FormField[],
+  inline: Set<string>,
+  draggedId: string,
+  targetId: string
+): FieldDropResult => {
+  const draggedIndex = fields.findIndex(f => f.id === draggedId);
+  const targetIndex = fields.findIndex(f => f.id === targetId);
+  const updated = [...fields];
+  [updated[draggedIndex], updated[targetIndex]] = [updated[targetIndex], updated[draggedIndex]];
+
+  const draggedInline = inline.has(draggedId);
+  const targetInline = inline.has(targetId);
+  const swappedInline = new Set(inline);
+  swappedInline.delete(draggedId);
+  swappedInline.delete(targetId);
+  if (draggedInline) swappedInline.add(targetId);
+  if (targetInline) swappedInline.add(draggedId);
+
+  const visibleIds = new Set(visibleFields.map(f => f.id));
+  const updatedRows = buildFieldRows(updated.filter(f => visibleIds.has(f.id)), [...swappedInline]);
+  return { fields: updated, inlineFieldIds: getInlineIds(updatedRows) };
+};
+
 /**
  * Moves the dragged field relative to the target. Dropping on the target's left/right edge puts both
  * fields in the same row; dropping on its middle moves the dragged field to its own row.
- * Returns null when the drop is not allowed (e.g. the target row already holds two fields).
+ * When the target's row already holds two fields, an edge drop swaps the dragged field with the target.
  */
 export const moveFieldOnDrop = (
   fields: FormField[],
@@ -65,10 +91,12 @@ export const moveFieldOnDrop = (
   const targetRow = findRow(targetId);
   const dragged = fields.find(f => f.id === draggedId);
   if (!dragged || !draggedRow || !targetRow) return null;
-  if (position !== 'center' && targetRow.length === 2 && targetRow !== draggedRow) return null;
+  const inline = new Set(getInlineIds(rows));
+  if (position !== 'center' && targetRow.length === 2 && targetRow !== draggedRow) {
+    return swapFields(fields, visibleFields, inline, draggedId, targetId);
+  }
 
   // Leaving a row puts the dragged field's partner back on a row of its own
-  const inline = new Set(getInlineIds(rows));
   draggedRow.forEach(f => inline.delete(f.id));
 
   const remaining = fields.filter(f => f.id !== draggedId);
