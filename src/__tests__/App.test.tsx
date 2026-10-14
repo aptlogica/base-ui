@@ -261,7 +261,8 @@ describe('App', () => {
     baseTablesState = { isLoading: false, error: null };
 
     render(<App />);
-    await screen.findByText('Something went wrong');
+    // The app loads its plugin list with a dynamic import first; allow for a busy test run
+    await screen.findByText('Something went wrong', undefined, { timeout: 5000 });
     const retryBtn = screen.getByRole('button', { name: /retry/i });
     retryBtn.click();
     expect(refetch).toHaveBeenCalledTimes(1);

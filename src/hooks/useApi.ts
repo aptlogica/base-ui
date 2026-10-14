@@ -88,6 +88,9 @@ import {
   runAutomationService,
   validateAutomationService,
   deleteAutomationService,
+  getPrimaryKeyService,
+  updatePrimaryKeyService,
+  upsertRowService,
   getTableConstraintsService,
   checkTableConstraintService,
   createTableConstraintService,
@@ -213,6 +216,19 @@ export const useAddRow = () => {
       });
       void queryClient.invalidateQueries({ queryKey: queryKeys.views(model_id) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
+// Creates a record with its values (no row_id) or updates one (row_id); see upsertRowService
+export const useUpsertRow = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: upsertRowService,
+    onSuccess: (_, { model_id }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id), refetchType: 'active' });
+      void queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)], refetchType: 'active' });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.views(model_id) });
     },
   });
 };
@@ -2082,6 +2098,26 @@ export const useDeleteTableConstraint = () => {
     mutationFn: ({ id }: { id: string; tableId: string }) => deleteTableConstraintService(id),
     onSuccess: (_, { tableId }) => {
       void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'constraints'] });
+    },
+  });
+};
+
+export const usePrimaryKey = (tableId: string) => {
+  return useQuery({
+    queryKey: ['tables', tableId, 'primary-key'],
+    queryFn: () => getPrimaryKeyService(tableId),
+    enabled: !!tableId,
+    select: (res) => res?.data,
+  });
+};
+
+export const useUpdatePrimaryKey = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updatePrimaryKeyService,
+    onSuccess: (res, { tableId }) => {
+      queryClient.setQueryData(['tables', tableId, 'primary-key'], res);
     },
   });
 };

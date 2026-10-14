@@ -15,6 +15,7 @@ import { useFrontendPagination } from '../../../hooks/useFrontendPagination';
 import { Loader } from '../../ui/Loader';
 import { formatCompactNumber } from '../../../utils/helpers';
 import { calculateDropdownPosition } from '../../../utils/dropdownPosition';
+import { linkItemIdentity, linkItemLabel, linkItems, resolveLinkRowId } from '../../../utils/linkValues';
 
 interface LinksFieldProps {
     value?: any;
@@ -174,22 +175,16 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             return [];
         }
 
-        // Normalize value to array of IDs
-        const valueIds = Array.isArray(value)
-            ? value.map(item => {
-                if (typeof item === 'object' && item.id) {
-                    return item.id.toString();
-                }
-                return item.toString();
-            })
-            : [typeof value === 'object' && value.id ? value.id.toString() : value.toString()];
+        // Link cells hold the linked records' key values; resolve each to a row id
+        const items = linkItems(value);
 
         // If we have records loaded, try to match them
         if (records.length > 0) {
             const matchedRecords: RelatedRecord[] = [];
 
-            for (const id of valueIds) {
-                const foundRecord = recordsById.get(id.toString());
+            for (const item of items) {
+                const id = linkItemIdentity(item, records);
+                const foundRecord = recordsById.get(id);
                 if (foundRecord) {
                     matchedRecords.push(foundRecord);
                     continue;
@@ -198,7 +193,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                 // Create a placeholder with the ID
                 matchedRecords.push({
                     id,
-                    title: `Record ${id}`,
+                    title: `Record ${resolveLinkRowId(item) ?? linkItemLabel(item)}`,
                     _isPlaceholder: true
                 });
             }
@@ -207,8 +202,8 @@ export const LinksField: React.FC<LinksFieldProps> = ({
         }
 
         // If no records loaded yet, create placeholders
-        return valueIds.map(id => ({
-            id,
+        return items.map(item => ({
+            id: linkItemIdentity(item),
             title: 'Loading...',
             _isPlaceholder: true
         }));
@@ -386,10 +381,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             // Optimistically update the UI immediately
             // Preserve the original value format (IDs or objects)
             const currentValue = Array.isArray(value) ? value : [];
-            const optimisticValue = currentValue.filter((v: any) => {
-                const vId = typeof v === 'object' && v?.id ? v.id.toString() : v?.toString();
-                return vId !== recordId.toString();
-            });
+            const optimisticValue = currentValue.filter((v: any) => linkItemIdentity(v, records) !== recordId.toString());
 
             // Update via onChange to trigger UI update immediately
             if (onChange) {

@@ -124,9 +124,6 @@ const UniqueKeysPanel: React.FC<{ table: any }> = ({ table }) => {
                 <span className="px-2.5 py-0.5 rounded-full bg-green-50 border border-green-200 text-green-800 text-sm whitespace-nowrap">{name}</span>
               </React.Fragment>
             ))}
-            {item.options?.nulls_not_distinct && (
-              <span className="text-xs text-gray-500 whitespace-nowrap" title="Postgres NULLS NOT DISTINCT">empty counts as duplicate</span>
-            )}
           </div>
         </td>
         <td className="px-4 py-3">

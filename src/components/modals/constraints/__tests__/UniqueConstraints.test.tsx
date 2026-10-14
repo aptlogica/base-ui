@@ -46,7 +46,7 @@ const table = { id: 't1', base_id: 'b1', title: 'Employee' };
 const KEY: TableConstraint = {
   id: 'k1', title: 'Dept code', constraint_name: 'uq_employee_1a2b3c4d',
   columns: [{ id: 'c-code', title: 'Emp Code' }, { id: 'c-email', title: 'Email' }],
-  options: { nulls_not_distinct: true }, status: 'ok',
+  status: 'ok',
 };
 
 describe('constraintUtils', () => {
@@ -164,14 +164,13 @@ describe('UniqueKeyFormModal', () => {
 
     await choose(/Email/, /Emp Code/);
     expect(screen.getByLabelText(/Name/)).toHaveValue('Unique Email + Emp Code');
-    await userEvent.click(screen.getByRole('checkbox', { name: /Treat empty values as duplicates/ }));
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(createMutateAsync).toHaveBeenCalledWith({
       model_id: 't1', type: 'unique', title: 'Unique Email + Emp Code', column_ids: ['c-email', 'c-code'],
-      options: { nulls_not_distinct: true },
     }));
-    expect(checkMutateAsync).toHaveBeenCalledWith({ model_id: 't1', column_ids: ['c-email', 'c-code'], options: { nulls_not_distinct: true } });
+    expect(checkMutateAsync).toHaveBeenCalledWith({ model_id: 't1', column_ids: ['c-email', 'c-code'] });
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -215,7 +214,6 @@ describe('UniqueKeyFormModal', () => {
 
     await waitFor(() => expect(updateMutateAsync).toHaveBeenCalledWith({
       id: 'k1', tableId: 't1', title: 'Code per dept', column_ids: ['c-code', 'c-email'],
-      options: { nulls_not_distinct: true },
     }));
     expect(checkMutateAsync).not.toHaveBeenCalled();
   });
@@ -274,7 +272,7 @@ describe('UniqueKeysPanel', () => {
     // Columns of one key are joined with +
     expect(screen.getByText('+')).toBeInTheDocument();
     expect(screen.getByText('Emp Code')).toBeInTheDocument();
-    expect(screen.getByText('empty counts as duplicate')).toBeInTheDocument();
+    expect(screen.queryByText('empty counts as duplicate')).not.toBeInTheDocument();
   });
 
   it('opens the add popup with all non-deleted, non-system columns of the table', async () => {

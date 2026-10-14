@@ -36,7 +36,6 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
   const [name, setName] = useState(item?.title || '');
   // The name follows the columns until the user types one; an existing key keeps its name
   const [nameEdited, setNameEdited] = useState(!!item);
-  const [nullsNotDistinct, setNullsNotDistinct] = useState(!!item?.options?.nulls_not_distinct);
   const [error, setError] = useState('');
 
   const checkConstraint = useCheckTableConstraint();
@@ -46,7 +45,7 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
 
   const title = name.trim();
   // Records only need checking when the key itself changes, not its name
-  const keyChanged = !item || !sameList(columnIds, savedColumnIds) || nullsNotDistinct !== !!item.options?.nulls_not_distinct;
+  const keyChanged = !item || !sameList(columnIds, savedColumnIds);
   const canSave = columnIds.length > 0 && title !== '' && !isBusy && (keyChanged || title !== item?.title);
 
   const changeColumns = (ids: string[]) => {
@@ -59,17 +58,13 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
     setError('');
     try {
       if (keyChanged) {
-        const check = await checkConstraint.mutateAsync({ model_id: tableId, column_ids: columnIds, options: { nulls_not_distinct: nullsNotDistinct } });
-        if (!check.data.valid) {
-          setError(check.data.message || 'Duplicate data in these columns. Remove the duplicates and try again.');
+        const check = await checkConstraint.mutateAsync({ model_id: tableId, column_ids: columnIds });
+        if (!check.data?.valid) {
+          setError(check.data?.message || 'Duplicate data in these columns. Remove the duplicates and try again.');
           return;
         }
       }
-      const input = {
-        title,
-        column_ids: columnIds,
-        options: { nulls_not_distinct: nullsNotDistinct },
-      };
+      const input = { title, column_ids: columnIds };
       if (item) {
         await updateConstraint.mutateAsync({ id: item.id, tableId, ...input });
       } else {
@@ -160,22 +155,6 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
                 No two records can have the same value in these columns. With several columns, the combination must be unique.
               </p>
             </div>
-
-            <label className="flex items-start gap-2 text-sm text-primary cursor-pointer" title="Postgres NULLS NOT DISTINCT">
-              <input
-                type="checkbox"
-                checked={nullsNotDistinct}
-                onChange={e => {
-                  setNullsNotDistinct(e.target.checked);
-                  setError('');
-                }}
-                className="w-4 h-4 mt-0.5 accent-[var(--color-bg-brand-primary)]"
-              />
-              <span>
-                Treat empty values as duplicates{' '}
-                <span className="block text-xs text-gray-500">Only one record may leave these columns empty.</span>
-              </span>
-            </label>
 
             {error && (
               <div className="text-sm flex items-center gap-1 text-red-600" role="alert">

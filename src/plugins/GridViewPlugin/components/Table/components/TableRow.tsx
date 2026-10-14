@@ -5,6 +5,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { EditableTableCell } from '../../../../../components/shared/table/EditableTableCell';
 import { GridRecord as TableData, GridColumn as ColumnConfig } from '../../../types/grid.types';
+import { isDraftRowId, isDraftEditableColumn } from '../../../hooks/useDraftRows';
 
 interface TableRowProps {
   row: TableData;
@@ -24,6 +25,8 @@ interface TableRowProps {
   canSelectRows?: boolean;
   pinnedColumnIds?: string[];
   pinnedColumnOffsets?: Record<string, number>;
+  // Cells (by column key) to show in red, with the reason as tooltip
+  invalidCells?: Record<string, string>;
   // Bumped per cell ("<rowId>-<columnKey>") when its save fails; part of the cell key, so the
   // cell remounts and shows the saved value instead of what was typed
   cellResets?: Record<string, number>;
@@ -46,6 +49,10 @@ const getColumnIdentity = (column: ColumnConfig): string => {
   return String(column.id || column.key || '');
 };
 
+// Red cell for a primary key problem. The editor inside paints its own background, and a clicked row forces a
+// blue one, so the red is forced onto the editor too and wins over the active cell and row styles.
+const INVALID_CELL_CLASS = 'border border-red-500 bg-red-50 [&>div]:!bg-red-50 [&_.field-component]:!bg-red-50 [&_.field-component-focus]:!bg-red-50';
+
 export const TableRow: React.FC<TableRowProps> = ({
   row,
   rowIndex,
@@ -65,6 +72,7 @@ export const TableRow: React.FC<TableRowProps> = ({
   pinnedColumnIds = [],
   pinnedColumnOffsets = {},
   cellResets,
+  invalidCells,
   saveErrorCells,
 }) => {
   // Memoize rowId to avoid recalculating on every render
@@ -207,8 +215,8 @@ export const TableRow: React.FC<TableRowProps> = ({
         const column = columns[index];
         const cellKey = `${rowId}-${column.key}`;
         let borderClass: string;
-        if (saveErrorCells?.has(cellKey)) {
-          borderClass = 'border border-red-500';
+        if (invalidCells?.[column.key] || saveErrorCells?.has(cellKey)) {
+          borderClass = INVALID_CELL_CLASS;
         } else if (props.isActive) {
           // Selected cell: green border, default background
           borderClass = 'border border-[var(--color-brand-600)]';
@@ -240,6 +248,8 @@ export const TableRow: React.FC<TableRowProps> = ({
               zIndex,
               boxShadow: props.isLastPinned ? '2px 0 4px -3px rgba(15,23,42,0.12)' : undefined,
             }}
+            title={invalidCells?.[column.key]}
+            data-invalid={invalidCells?.[column.key] ? 'true' : undefined}
             onClick={(e) => handleCellClick(e, column.key)}
             onKeyDown={(e) => handleCellKeyDown(e, column.key)}
             role="gridcell"
@@ -253,7 +263,7 @@ export const TableRow: React.FC<TableRowProps> = ({
               width={props.width}
               isLast={props.isLast}
               isSystemField={props.isSystemField}
-              allowEdit={canEdit}
+              allowEdit={canEdit && (!isDraftRowId(rowId) || isDraftEditableColumn(column))}
               currentRowId={props.currentRowId}
               rowData={row as any} // Pass entire row object for formula evaluation
               allColumns={allColumns || columns} // Pass all columns for formula field name mapping
@@ -419,6 +429,10 @@ export const MemoizedTableRow = React.memo(TableRow, (prevProps, nextProps) => {
   }
 
   if (!compareRowIds(prevProps, nextProps)) {
+    return false;
+  }
+
+  if (prevProps.invalidCells !== nextProps.invalidCells) {
     return false;
   }
 

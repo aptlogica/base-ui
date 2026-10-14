@@ -65,7 +65,7 @@ describe('automation hooks', () => {
 
   describe('useAutomations', () => {
     it('loads the automations of the table', async () => {
-      vi.mocked(getAutomationsService).mockResolvedValue({ data: [] });
+      vi.mocked(getAutomationsService).mockResolvedValue({ success: true, data: [] });
       const opts = queryOptions(() => useAutomations('t1'));
 
       expect(opts.queryKey).toEqual(AUTOMATIONS_KEY);
@@ -97,7 +97,7 @@ describe('automation hooks', () => {
   });
 
   it('useUpdateAutomation sends the update without the table id', async () => {
-    vi.mocked(updateAutomationService).mockResolvedValue({ data: {} as any });
+    vi.mocked(updateAutomationService).mockResolvedValue({ success: true, data: {} as any });
     const opts = mutationOptions(() => useUpdateAutomation());
 
     await opts.mutationFn({ id: 'a1', tableId: 't1', title: 'Log', context: 'q', event: 'AFTER INSERT' });
@@ -108,7 +108,7 @@ describe('automation hooks', () => {
   });
 
   it('useRunAutomation runs by id and refreshes the table list', async () => {
-    vi.mocked(runAutomationService).mockResolvedValue({ data: {} as any });
+    vi.mocked(runAutomationService).mockResolvedValue({ success: true, data: {} as any });
     const opts = mutationOptions(() => useRunAutomation());
 
     await opts.mutationFn({ id: 'a1', tableId: 't1' });
@@ -119,7 +119,7 @@ describe('automation hooks', () => {
   });
 
   it('useDeleteAutomation deletes by id and refreshes the table list', async () => {
-    vi.mocked(deleteAutomationService).mockResolvedValue({});
+    vi.mocked(deleteAutomationService).mockResolvedValue({ success: true });
     const opts = mutationOptions(() => useDeleteAutomation());
 
     await opts.mutationFn({ id: 'a1', tableId: 't1' });

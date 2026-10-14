@@ -278,6 +278,32 @@ describe('useCellEditing', () => {
       });
     });
 
+    it('reports a save the backend rejected, e.g. a used primary key value', async () => {
+      const rejection = Object.assign(new Error('Code = "HR" is already used by record #4 (Acme). Each record needs a unique primary key.'), { code: 'PKY_1008' });
+      const testMutation = { mutateAsync: vi.fn().mockRejectedValue(rejection) };
+      const onSaveError = vi.fn();
+      const props = {
+        data: [{ id: '1', name: 'Old', _meta: { id: '1', created_at: '2020-01-01', updated_at: '2020-01-01', deleted_at: null, position: 1 } }],
+        columns: [{ id: 'col-1', title: 'Name', type: 'text' as const, key: 'name' }],
+        tableId: 'table-1',
+        insertRowDataMutation: testMutation,
+        onRecordsUpdate: vi.fn(),
+        onSaveError,
+      };
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      const { result } = renderHook(() => useCellEditing(props as any));
+      await act(async () => {
+        result.current.handleCellChange('1', 'name', 'HR');
+        vi.advanceTimersByTime(500);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(onSaveError).toHaveBeenCalledWith({ rowId: '1', columnKey: 'name', error: rejection });
+      expect(props.onRecordsUpdate).not.toHaveBeenCalled();
+    });
+
     it('should handle special characters in values', async () => {
       const testMutation = createMockMutation();
       const propsWithStringIds = {
