@@ -772,6 +772,17 @@ export const Table: React.FC<TableProps> = ({
   const pendingNewRowRef = useRef<{ previousRowIds: Set<string> } | null>(null);
   const [newRowFocusTarget, setNewRowFocusTarget] = useState<{ rowId: string; colKey: string } | null>(null);
 
+  // Add a row and, once it shows up in the data, open its first cell for editing
+  const addNewRowAndFocus = useCallback(() => {
+    if (pendingNewRowRef.current) return;
+    if (!groupedData) {
+      pendingNewRowRef.current = { previousRowIds: new Set(allRecords.map(row => getRecordRowId(row))) };
+    }
+    void addNewRow().then((created) => {
+      if (!created) pendingNewRowRef.current = null;
+    });
+  }, [groupedData, allRecords, addNewRow]);
+
   const handleTableBodyKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return;
     const target = e.target;
@@ -1349,7 +1360,7 @@ export const Table: React.FC<TableProps> = ({
               {!isBaseReadOnly() && canCreateRecord() && (
                 <div className="relative" style={{ height: '40px', width: `${totalTableWidth}px`, minWidth: `${totalTableWidth}px` }}>
                   <div className="flex-shrink-0 w-[48px] h-10 border-r border-b border-border/30 flex items-center justify-center bg-gray-100 hover:bg-gray-200" style={{ height: '40px', position: 'sticky', left: 0, zIndex: 2, boxShadow: 'inset 1px 0 0 var(--color-border), 2px 0 4px -2px rgba(0,0,0,0.06)' }}>
-                    <button className="p-1 rounded hover:bg-muted/50 transition-colors" title="Add row" onClick={() => { setActiveCell(null); addNewRow(); }}>
+                    <button className="p-1 rounded hover:bg-muted/50 transition-colors" title="Add row" onClick={() => { setActiveCell(null); addNewRowAndFocus(); }}>
                       <Plus className="w-5 h-5 text-secondary" />
                     </button>
                   </div>
@@ -1371,7 +1382,7 @@ export const Table: React.FC<TableProps> = ({
       <div className="sticky bottom-0 z-30 bg-card border-t flex items-center px-4 h-12">
         {!isBaseReadOnly() && canCreateRecord() && (
           <button
-            onClick={() => { setActiveCell(null); addNewRow(); }}
+            onClick={() => { setActiveCell(null); addNewRowAndFocus(); }}
             className="flex items-center gap-2 px-5 py-1.5 text-sm font-medium btn-primary !rounded-lg transition-colors duration-200"
             title="Add new row"
           >
