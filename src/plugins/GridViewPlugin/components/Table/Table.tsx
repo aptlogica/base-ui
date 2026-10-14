@@ -769,8 +769,9 @@ export const Table: React.FC<TableProps> = ({
 
   // Pressing Enter in a text field of the last row creates a new row; once that row
   // shows up in the data, its first cell is activated and opened for editing.
-  const pendingNewRowRef = useRef<{ previousRowIds: Set<string> } | null>(null);
-  const [newRowFocusTarget, setNewRowFocusTarget] = useState<{ rowId: string; colKey: string } | null>(null);
+  const pendingNewRowRef = useRef<{ previousRowIds: Set<string>; colKey?: string } | null>(null);
+  // Cell to focus; `edit` opens it for editing, `rowIndex` (ungrouped data) helps scroll it into the virtualized window
+  const [newRowFocusTarget, setNewRowFocusTarget] = useState<{ rowId: string; colKey: string; edit: boolean; rowIndex?: number } | null>(null);
 
   // Add a row and, once it shows up in the data, open its first cell for editing
   const addNewRowAndFocus = useCallback(() => {
@@ -783,23 +784,106 @@ export const Table: React.FC<TableProps> = ({
     });
   }, [groupedData, allRecords, addNewRow]);
 
+  // Excel-like keyboard navigation:
+  //  - Enter / Shift+Enter (in a text input): edit the same column of the next / previous row;
+  //    on the last row, Enter creates a row through the usual flow when creation is allowed
+  //  - Tab / Shift+Tab: edit the next / previous cell, wrapping across rows
+  //  - Arrow keys: move between cells without editing (inside a text input only Up/Down, or Left/Right at the caret's edge)
+  // Only data cells take part; the row-number/checkbox and add-column cells are skipped.
+  // At the grid edges Tab/Shift+Tab leave the grid; Enter/Shift+Enter/arrows stay put.
   const handleTableBodyKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return;
+    const { key, shiftKey } = e;
+    const isEnter = key === 'Enter';
+    const isTab = key === 'Tab';
+    const isArrow = key.startsWith('Arrow');
+    if (!isEnter && !isTab && !isArrow) return;
+    if (e.nativeEvent.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (isArrow && shiftKey) return;
+
     const target = e.target;
-    if (!(target instanceof HTMLInputElement) || !TEXT_INPUT_TYPES.has(target.type)) return;
-    // Only when the last loaded row is the real last row of an ungrouped table
-    if (pendingNewRowRef.current || groupedData || hasMore) return;
-    if (isBaseReadOnly() || !canCreateRecord()) return;
-
-    const lastRow = paginatedData.at(-1);
+    if (!(target instanceof HTMLElement)) return;
+    // Portaled popovers/dropdowns are not DOM descendants of a cell, so they are ignored here
+    const colKey = target.closest<HTMLElement>('[data-col-key]')?.dataset.colKey;
     const rowId = target.closest<HTMLElement>('[data-row-id]')?.dataset.rowId;
-    if (!lastRow || !rowId || rowId !== getRecordRowId(lastRow)) return;
+    if (!colKey || !rowId) return;
 
-    pendingNewRowRef.current = { previousRowIds: new Set(allRecords.map(row => getRecordRowId(row))) };
-    void addNewRow().then((created) => {
-      if (!created) pendingNewRowRef.current = null;
-    });
-  }, [groupedData, hasMore, isBaseReadOnly, canCreateRecord, paginatedData, allRecords, addNewRow]);
+    const isTextInput = target instanceof HTMLInputElement && TEXT_INPUT_TYPES.has(target.type);
+    const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
+      || target instanceof HTMLSelectElement || target.isContentEditable;
+    if (isEnter && !isTextInput) return;
+    if (isArrow && isTyping) {
+      // In a single-line text input, Up/Down always navigate; Left/Right only at the caret's edge
+      if (!isTextInput) return;
+      if (key === 'ArrowLeft' || key === 'ArrowRight') {
+        const { selectionStart: start, selectionEnd: end, value } = target as HTMLInputElement;
+        if (start === null || start !== end) return;
+        if (key === 'ArrowLeft' ? start !== 0 : start !== value.length) return;
+      }
+    }
+
+    const colKeys = (visibleColumns ?? []).map(col => col.key);
+    const rowIds = groupedData
+      ? Array.from(tableRef.current?.querySelectorAll<HTMLElement>('[data-row-id]') ?? []).map(el => el.dataset.rowId ?? '')
+      : paginatedData.map(getRecordRowId);
+    let rowIdx = rowIds.indexOf(rowId);
+    let colIdx = colKeys.indexOf(colKey);
+    if (rowIdx < 0 || colKeys.length === 0) return;
+    if (colIdx < 0) {
+      // Cell's column is not a visible data column: only Enter continues, from the first column
+      if (!isEnter) return;
+      colIdx = 0;
+    }
+
+    let edit = !isArrow;
+    if (isEnter) {
+      rowIdx += shiftKey ? -1 : 1;
+    } else if (isTab) {
+      colIdx += shiftKey ? -1 : 1;
+      if (colIdx >= colKeys.length) {
+        colIdx = 0;
+        rowIdx += 1;
+      } else if (colIdx < 0) {
+        colIdx = colKeys.length - 1;
+        rowIdx -= 1;
+      }
+    } else {
+      if (key === 'ArrowUp') rowIdx -= 1;
+      else if (key === 'ArrowDown') rowIdx += 1;
+      else if (key === 'ArrowLeft') colIdx -= 1;
+      else colIdx += 1;
+      edit = false;
+    }
+
+    if (rowIdx < 0 || rowIdx >= rowIds.length) {
+      // Below the last row
+      if (rowIdx >= rowIds.length && (isEnter || isTab)) {
+        // Tab on the very last cell leaves the grid; Enter creates a row only when allowed
+        if (isEnter) {
+          e.preventDefault();
+          if (pendingNewRowRef.current || groupedData || hasMore) return;
+          if (isBaseReadOnly() || !canCreateRecord()) return;
+          pendingNewRowRef.current = { previousRowIds: new Set(allRecords.map(row => getRecordRowId(row))), colKey: colKeys[colIdx] };
+          void addNewRow().then((created) => {
+            if (!created) pendingNewRowRef.current = null;
+          });
+        }
+        return;
+      }
+      // Above the first row: Shift+Enter/arrows stay put, Shift+Tab leaves the grid
+      if (!isTab) e.preventDefault();
+      return;
+    }
+    if (colIdx < 0 || colIdx >= colKeys.length) {
+      e.preventDefault();
+      return;
+    }
+
+    e.preventDefault();
+    const nextRowId = rowIds[rowIdx];
+    const nextColKey = colKeys[colIdx];
+    setActiveCell({ rowId: nextRowId, colKey: nextColKey });
+    setNewRowFocusTarget({ rowId: nextRowId, colKey: nextColKey, edit, rowIndex: groupedData ? undefined : rowIdx });
+  }, [groupedData, hasMore, isBaseReadOnly, canCreateRecord, paginatedData, allRecords, addNewRow, visibleColumns]);
 
   // Resolve the pending new row once the refreshed records include it
   useEffect(() => {
@@ -822,10 +906,10 @@ export const Table: React.FC<TableProps> = ({
     }
 
     pendingNewRowRef.current = null;
-    const firstColumn = visibleColumns?.[0];
-    if (!firstColumn) return;
-    setActiveCell({ rowId: newRowId, colKey: firstColumn.key });
-    setNewRowFocusTarget({ rowId: newRowId, colKey: firstColumn.key });
+    const colKey = pending.colKey ?? visibleColumns?.[0]?.key;
+    if (!colKey) return;
+    setActiveCell({ rowId: newRowId, colKey });
+    setNewRowFocusTarget({ rowId: newRowId, colKey, edit: true });
   }, [allRecords, filteredAndSortedData, paginatedData, hasMore, loadNextPage, visibleColumns]);
 
   // Scroll the new row into view and put its first cell into edit mode
@@ -845,7 +929,7 @@ export const Table: React.FC<TableProps> = ({
         // Field components enter edit mode on click of their [role="button"] wrapper
         const editTrigger = cell.querySelector<HTMLElement>('[role="button"]');
         (editTrigger ?? cell).focus();
-        editTrigger?.click();
+        if (newRowFocusTarget.edit) editTrigger?.click();
         setNewRowFocusTarget(null);
         return;
       }
@@ -853,8 +937,12 @@ export const Table: React.FC<TableProps> = ({
         setNewRowFocusTarget(null);
         return;
       }
-      // Row is not rendered by the virtualizer yet; it is normally the last row, so scroll to the bottom
-      if (attempts === 0) container.scrollTop = container.scrollHeight;
+      // Row is not rendered by the virtualizer yet: scroll to it, or to the bottom for a new (last) row
+      if (attempts === 0) {
+        container.scrollTop = newRowFocusTarget.rowIndex === undefined
+          ? container.scrollHeight
+          : Math.max(0, newRowFocusTarget.rowIndex * 40 - container.clientHeight / 2);
+      }
       attempts++;
       frame = requestAnimationFrame(focusCell);
     };
