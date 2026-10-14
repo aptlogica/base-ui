@@ -244,7 +244,7 @@ const ActionButtons: React.FC<{
     {onDragStart && (
       <button
         type="button"
-        className="absolute left-0 top-1/2 -translate-y-1/2 py-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute left-0 top-1/2 -translate-y-1/2 py-1 text-[var(--color-gray-400)] hover:text-[var(--color-gray-600)] cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
         draggable={draggable}
         onDragStart={e => { e.stopPropagation(); onDragStart(); }}
         onDragEnd={e => { e.stopPropagation(); onDragEnd?.(); }}
@@ -258,7 +258,7 @@ const ActionButtons: React.FC<{
       {!field.isSystem && onEdit && (
         <button
           type="button"
-          className="p-1 text-gray-400 hover:text-gray-600 bg-[var(--color-alpha-white)] rounded shadow-sm"
+          className="p-1 text-[var(--color-gray-400)] hover:text-[var(--color-gray-600)] bg-[var(--color-alpha-white)] rounded shadow-sm"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -293,7 +293,7 @@ const getContainerClassName = (isSelected: boolean, isDragging: boolean, isDragO
   const spacing = labelPosition === 'left' ? 'space-y-7' : 'space-y-2';
   const isSideDrop = dropPosition === 'left' || dropPosition === 'right';
   return `relative group ${spacing} p-4 rounded-xl transition-all select-none
-    ${isSelected ? 'bg-[var(--color-utility-brand-50)] border-2 border-[var(--color-brand-200)] shadow-sm' : 'hover:bg-gray-50'}
+    ${isSelected ? 'bg-[var(--color-utility-brand-50)] border-2 border-[var(--color-brand-200)] shadow-sm' : 'hover:bg-[var(--color-hover-bg)]'}
     ${isDragging ? 'opacity-50 border-dashed border-2  border-[var(--color-brand-400)]' : ''}
     ${isDragOver && !isSideDrop ? 'ring-2 ring-[var(--ring-color-primary)]' : ''}`;
 };
