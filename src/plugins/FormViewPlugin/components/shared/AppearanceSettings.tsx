@@ -196,11 +196,6 @@ const alignOptions: { value: NonNullable<Appearance['align']>; label: string }[]
   { value: 'right', label: 'Right' },
 ];
 
-const cardStyleOptions: { value: NonNullable<Appearance['cardStyle']>; label: string }[] = [
-  { value: 'flat', label: 'Flat' },
-  { value: 'elevated', label: 'Elevated' },
-];
-
 const roundedOptions: { value: NonNullable<Appearance['rounded']>; label: string }[] = [
   { value: 'md', label: 'Small' },
   { value: 'lg', label: 'Medium' },
@@ -465,13 +460,6 @@ export const AppearanceSettings: React.FC<Readonly<AppearanceSettingsProps>> = (
         options={alignOptions}
         value={ap.align ?? 'left'}
         onChange={(align) => update({ align })}
-      />
-
-      <SegmentedControl
-        label="Card Style"
-        options={cardStyleOptions}
-        value={ap.cardStyle ?? 'flat'}
-        onChange={(cardStyle) => update({ cardStyle })}
       />
 
       <SegmentedControl

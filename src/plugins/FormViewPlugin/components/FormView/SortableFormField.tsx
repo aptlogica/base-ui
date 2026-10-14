@@ -208,6 +208,14 @@ const getFieldRendererProps = (
     };
   }
 
+  if (baseProps.type === 'longText') {
+    // Form View edits long text in place with the rich text editor
+    return {
+      ...baseProps,
+      inline: true
+    };
+  }
+
   return {
     ...baseProps,
     isBorder: true
@@ -223,7 +231,8 @@ const ActionButtons: React.FC<{
   onDragStart?: () => void;
   onDragEnd?: () => void;
   draggable: boolean;
-}> = ({ field, isReadOnly, onEdit, onDelete, onDragStart, onDragEnd, draggable }) => {
+  labelPosition?: string;
+}> = ({ field, isReadOnly, onEdit, onDelete, onDragStart, onDragEnd, draggable, labelPosition }) => {
   const hasActions = !isReadOnly && (onEdit || onDelete || (onDragStart && draggable));
   
   if (!hasActions) {
@@ -231,7 +240,21 @@ const ActionButtons: React.FC<{
   }
 
   return (
-    <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+    <>
+    {onDragStart && (
+      <button
+        type="button"
+        className="absolute left-0 top-1/2 -translate-y-1/2 py-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+        draggable={draggable}
+        onDragStart={e => { e.stopPropagation(); onDragStart(); }}
+        onDragEnd={e => { e.stopPropagation(); onDragEnd?.(); }}
+        aria-label="Drag to reorder field"
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+    )}
+    {/* With left-aligned labels the input sits on the first row, so lift the actions onto the top edge to avoid covering it */}
+    <div className={`absolute right-2 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${labelPosition === 'left' ? '-top-4' : 'top-2'}`}>
       {!field.isSystem && onEdit && (
         <button
           type="button"
@@ -244,18 +267,6 @@ const ActionButtons: React.FC<{
           aria-label="Edit field"
         >
           <SquarePen className="w-4 h-4" />
-        </button>
-      )}
-      {onDragStart && (
-        <button
-          type="button"
-          className="p-1 text-gray-400 hover:text-gray-600 bg-[var(--color-alpha-white)] rounded shadow-sm cursor-grab active:cursor-grabbing"
-          draggable={draggable}
-          onDragStart={e => { e.stopPropagation(); onDragStart(); }}
-          onDragEnd={e => { e.stopPropagation(); onDragEnd?.(); }}
-          aria-label="Drag to reorder field"
-        >
-          <GripVertical className="w-4 h-4" />
         </button>
       )}
       {!field.isSystem && onDelete && (
@@ -273,6 +284,7 @@ const ActionButtons: React.FC<{
         </button>
       )}
     </div>
+    </>
   );
 };
 
@@ -418,6 +430,7 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         draggable={draggable}
+        labelPosition={appearance?.labelPosition}
       />
       <FieldContent
         field={field}
