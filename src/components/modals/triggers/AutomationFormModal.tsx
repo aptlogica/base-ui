@@ -17,6 +17,8 @@ interface AutomationFormModalProps {
   table: any;
   // Set when editing; adds a new entry otherwise
   item?: Automation;
+  // Titles already used by other entries of this type; a title must be unique
+  existingTitles?: string[];
   onClose: () => void;
 }
 
@@ -34,9 +36,19 @@ const formError = (title: string, context: string, isTrigger: boolean, operation
   return null;
 };
 
+// A query without surrounding spaces and the trailing ; the server also removes when saving
+const normalizeQuery = (query: string): string => {
+  const trimmed = query.trim();
+  let end = trimmed.length;
+  while (end > 0 && trimmed[end - 1] === ';') end--;
+  return trimmed.slice(0, end);
+};
+
 // Whether the title, query or (for a trigger) event differ from the saved entry
 const differsFromSaved = (item: Automation, title: string, context: string, isTrigger: boolean, event: string): boolean =>
-  title.trim() !== (item.title || '') || context.trim() !== item.context.trim() || (isTrigger && event !== (item.event || ''));
+  title.trim() !== (item.title || '') || normalizeQuery(context) !== normalizeQuery(item.context) || (isTrigger && event !== (item.event || ''));
+
+const DUPLICATE_TITLE = 'This title is already used. Enter a unique title.';
 
 const errorText = (err: any, fallback: string): string => err?.message || fallback;
 
@@ -54,7 +66,7 @@ const FormMessage: React.FC<{ message: { ok: boolean; text: string } | null }> =
   );
 };
 
-const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, item, onClose }) => {
+const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, item, existingTitles = [], onClose }) => {
   const tableId: string = table?.id;
   const alias: string = table?.alias || 'table_name';
   const config = TYPE_CONFIG[type];
@@ -62,6 +74,8 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
 
   const [title, setTitle] = useState(item?.title || '');
   const titleInputRef = useRef<HTMLInputElement>(null);
+  // Set when Save is clicked with no title, so the field is highlighted in red
+  const [titleError, setTitleError] = useState('');
   const [context, setContext] = useState(item?.context || '');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   // Timing and events of a trigger: stored in the event column and written into the query
@@ -77,6 +91,16 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
     // With no event ticked the query keeps its events; Save asks for at least one
     if (nextOperations.length > 0) {
       setContext(prev => withTriggerEvents(prev, nextTiming, nextOperations));
+    }
+  };
+
+  // Typing or pasting a query that names its timing and events sets the controls to match it
+  const changeContext = (value: string) => {
+    setContext(value);
+    const written = isTrigger ? parseQueryEvent(value) : null;
+    if (written && written.operations.length > 0) {
+      setTiming(written.timing);
+      setOperations(written.operations);
     }
   };
 
@@ -100,10 +124,28 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
   const isValidated = validated !== null && validated === `${preparedQuery()}\n${event}`;
   const hasChanges = !!item && differsFromSaved(item, title, context, isTrigger, event);
 
+  const isTitleTaken = (value: string) =>
+    existingTitles.some(t => t.trim().toLowerCase() === value.trim().toLowerCase());
+
   const handleSave = async () => {
     const invalid = formError(title, context, isTrigger, operations, config.queryLabel);
     if (invalid) {
+      if (!title.trim()) {
+        setTitleError(invalid);
+        titleInputRef.current?.focus();
+      }
       setMessage({ ok: false, text: invalid });
+      return;
+    }
+    if (isTitleTaken(title)) {
+      setTitleError(DUPLICATE_TITLE);
+      titleInputRef.current?.focus();
+      setMessage({ ok: false, text: DUPLICATE_TITLE });
+      return;
+    }
+    // A trigger or function is saved only once the query as typed has passed Validate
+    if (canValidate && !isValidated) {
+      setMessage({ ok: false, text: 'Validate the query first' });
       return;
     }
     // The chosen timing and events win over what is typed in the query
@@ -119,7 +161,13 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
       await createAutomation.mutateAsync({ model_id: tableId, title: title.trim(), type, context: query, event });
       onClose();
     } catch (err: any) {
-      setMessage({ ok: false, text: errorText(err, 'Failed to save') });
+      const text = errorText(err, 'Failed to save');
+      // The server also checks the title is unique (409): show it on the field too
+      if (/title already exists/i.test(text)) {
+        setTitleError(DUPLICATE_TITLE);
+        titleInputRef.current?.focus();
+      }
+      setMessage({ ok: false, text });
     }
   };
 
@@ -199,19 +247,24 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
         <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="p-4 space-y-4">
             <div className="space-y-1">
-              <label htmlFor="automationTitle" className="field-component-label !text-primary">
+              <label htmlFor="automationTitle" className={`field-component-label ${titleError ? '!text-red-600' : '!text-primary'}`}>
                 Title <span className="field-component-required">*</span>
               </label>
               <input
                 id="automationTitle"
                 type="text"
                 value={title}
-                onChange={e => setTitle(e.target.value)}
+                onChange={e => {
+                  setTitle(e.target.value);
+                  setTitleError('');
+                }}
+                aria-invalid={!!titleError}
                 placeholder={config.titlePlaceholder}
                 maxLength={50}
                 ref={titleInputRef}
-                className="field-component field-component-border field-component-focus border"
+                className={`field-component field-component-focus border ${titleError ? '!border-red-500 focus:!border-red-500 bg-red-50' : 'field-component-border'}`}
               />
+              {titleError && <p className="text-xs text-red-600">{titleError}</p>}
               <p className="text-xs text-gray-500">{title.length}/50 characters</p>
             </div>
 
@@ -260,7 +313,7 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
             <MultiLineText
               label={config.queryLabel}
               value={context}
-              onChange={value => setContext(value)}
+              onChange={changeContext}
               placeholder={placeholderFor(type, alias)}
               rows={12}
               maxLength={5000}
@@ -312,9 +365,8 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
           <button
             type="button"
             onClick={handleSave}
-            // A trigger or function is saved only once the query as typed has passed Validate
-            disabled={isSaving || !title.trim() || !context.trim() || (isTrigger && operations.length === 0) || (!!item && !hasChanges) || (canValidate && !isValidated)}
-            title={canValidate && !isValidated ? 'Validate the query first' : undefined}
+            // Needs a query (and an event for a trigger); a missing title or validation is reported on click
+            disabled={isSaving || !context.trim() || (isTrigger && operations.length === 0) || (!!item && !hasChanges)}
             className="px-10 py-2 rounded-xl btn-primary text-primary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSaving ? (

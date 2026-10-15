@@ -296,7 +296,7 @@ export const Table: React.FC<TableProps> = ({
 
   // Memoized filter update handler to prevent recreation
   const handleUpdateFilter = useCallback((index: number, updates: Partial<any>) => {
-    handleUpdateFilterFromHook(index, updates);
+    void handleUpdateFilterFromHook(index, updates);
   }, [handleUpdateFilterFromHook]);
 
   // Memoized search handler to prevent recreation
@@ -971,7 +971,9 @@ export const Table: React.FC<TableProps> = ({
       try { onRefresh?.(); } catch { }
     } catch (err) {
       console.error('[Delete] Failed to delete record:', rowId, err);
-      alert('Failed to delete record. Please try again.');
+      // The server's reason, e.g. an error raised by a trigger on the table
+      const reason = err instanceof Error && err.message ? err.message : 'Please try again.';
+      toast.error(reason, { title: 'Failed to delete record', duration: 6000 });
     }
   }, [deleteRecordMutation, tableId, toast, onRefresh, resolveNumericRowId, removeDraft]);
 
@@ -1521,10 +1523,10 @@ export const Table: React.FC<TableProps> = ({
             // If multiple rows are selected, delete all selected rows using bulk delete
             // Otherwise, delete just the right-clicked row
             if (selectedRows.size > 1 && selectedRows.has(contextMenu.rowId!)) {
-              handleBulkDelete();
+              void handleBulkDelete();
             } else {
               // Delete just the right-clicked row
-              handleDelete(contextMenu.rowId!);
+              void handleDelete(contextMenu.rowId!);
             }
             handleCloseContextMenu();
           }}
@@ -1551,7 +1553,7 @@ export const Table: React.FC<TableProps> = ({
               handleCloseColMenu();
             }}
             onDelete={() => {
-              handleDeleteColumn(visibleColumns[colMenu.colIndex!].id!);
+              void handleDeleteColumn(visibleColumns[colMenu.colIndex!].id!);
               handleCloseColMenu();
             }}
             canUpdate={canUpdateColumn()}
