@@ -296,7 +296,7 @@ export const Table: React.FC<TableProps> = ({
 
   // Memoized filter update handler to prevent recreation
   const handleUpdateFilter = useCallback((index: number, updates: Partial<any>) => {
-    handleUpdateFilterFromHook(index, updates);
+    void handleUpdateFilterFromHook(index, updates);
   }, [handleUpdateFilterFromHook]);
 
   // Memoized search handler to prevent recreation
@@ -872,7 +872,9 @@ export const Table: React.FC<TableProps> = ({
       try { onRefresh?.(); } catch { }
     } catch (err) {
       console.error('[Delete] Failed to delete record:', rowId, err);
-      alert('Failed to delete record. Please try again.');
+      // The server's reason, e.g. an error raised by a trigger on the table
+      const reason = err instanceof Error && err.message ? err.message : 'Please try again.';
+      toast.error(reason, { title: 'Failed to delete record', duration: 6000 });
     }
   }, [deleteRecordMutation, tableId, toast, onRefresh, resolveNumericRowId, removeDraft]);
 
@@ -1349,7 +1351,7 @@ export const Table: React.FC<TableProps> = ({
               {!isBaseReadOnly() && canCreateRecord() && (
                 <div className="relative" style={{ height: '40px', width: `${totalTableWidth}px`, minWidth: `${totalTableWidth}px` }}>
                   <div className="flex-shrink-0 w-[48px] h-10 border-r border-b border-border/30 flex items-center justify-center bg-gray-100 hover:bg-gray-200" style={{ height: '40px', position: 'sticky', left: 0, zIndex: 2, boxShadow: 'inset 1px 0 0 var(--color-border), 2px 0 4px -2px rgba(0,0,0,0.06)' }}>
-                    <button className="p-1 rounded hover:bg-muted/50 transition-colors" title="Add row" onClick={() => { setActiveCell(null); addNewRow(); }}>
+                    <button className="p-1 rounded hover:bg-muted/50 transition-colors" title="Add row" onClick={() => { setActiveCell(null); void addNewRow(); }}>
                       <Plus className="w-5 h-5 text-secondary" />
                     </button>
                   </div>
@@ -1371,7 +1373,7 @@ export const Table: React.FC<TableProps> = ({
       <div className="sticky bottom-0 z-30 bg-card border-t flex items-center px-4 h-12">
         {!isBaseReadOnly() && canCreateRecord() && (
           <button
-            onClick={() => { setActiveCell(null); addNewRow(); }}
+            onClick={() => { setActiveCell(null); void addNewRow(); }}
             className="flex items-center gap-2 px-5 py-1.5 text-sm font-medium btn-primary !rounded-lg transition-colors duration-200"
             title="Add new row"
           >
@@ -1422,10 +1424,10 @@ export const Table: React.FC<TableProps> = ({
             // If multiple rows are selected, delete all selected rows using bulk delete
             // Otherwise, delete just the right-clicked row
             if (selectedRows.size > 1 && selectedRows.has(contextMenu.rowId!)) {
-              handleBulkDelete();
+              void handleBulkDelete();
             } else {
               // Delete just the right-clicked row
-              handleDelete(contextMenu.rowId!);
+              void handleDelete(contextMenu.rowId!);
             }
             handleCloseContextMenu();
           }}
@@ -1452,7 +1454,7 @@ export const Table: React.FC<TableProps> = ({
               handleCloseColMenu();
             }}
             onDelete={() => {
-              handleDeleteColumn(visibleColumns[colMenu.colIndex!].id!);
+              void handleDeleteColumn(visibleColumns[colMenu.colIndex!].id!);
               handleCloseColMenu();
             }}
             canUpdate={canUpdateColumn()}

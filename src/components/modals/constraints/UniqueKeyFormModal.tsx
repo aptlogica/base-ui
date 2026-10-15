@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { AlertCircle, Key, X } from 'lucide-react';
 import ColumnPicker from './ColumnPicker';
 import { useCheckTableConstraint, useCreateTableConstraint, useUpdateTableConstraint } from '../../../hooks/useApi';
@@ -37,6 +37,9 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
   // The name follows the columns until the user types one; an existing key keeps its name
   const [nameEdited, setNameEdited] = useState(!!item);
   const [error, setError] = useState('');
+  // Set when Save is clicked with no name, so the field is highlighted in red
+  const [nameError, setNameError] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const checkConstraint = useCheckTableConstraint();
   const createConstraint = useCreateTableConstraint();
@@ -46,16 +49,29 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
   const title = name.trim();
   // Records only need checking when the key itself changes, not its name
   const keyChanged = !item || !sameList(columnIds, savedColumnIds);
-  const canSave = columnIds.length > 0 && title !== '' && !isBusy && (keyChanged || title !== item?.title);
+  const canSave = !isBusy && (keyChanged || title !== item?.title);
 
   const changeColumns = (ids: string[]) => {
     setColumnIds(ids);
-    if (!nameEdited) setName(defaultKeyName(ids.map(id => titleOf.get(id) || 'column')));
+    if (!nameEdited) {
+      setName(defaultKeyName(ids.map(id => titleOf.get(id) || 'column')));
+      if (ids.length) setNameError(false);
+    }
     setError('');
   };
 
   const handleSave = async () => {
     setError('');
+    if (title === '') {
+      setNameError(true);
+      nameInputRef.current?.focus();
+      setError('Name is required');
+      return;
+    }
+    if (columnIds.length === 0) {
+      setError('Select at least one column');
+      return;
+    }
     try {
       if (keyChanged) {
         const check = await checkConstraint.mutateAsync({ model_id: tableId, column_ids: columnIds });
@@ -127,21 +143,23 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
         <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="p-5 space-y-6">
             <div className="space-y-1.5">
-              <label htmlFor="unique-key-name" className="field-component-label !text-primary">
+              <label htmlFor="unique-key-name" className={`field-component-label ${nameError ? '!text-red-600' : '!text-primary'}`}>
                 Name <span className="field-component-required">*</span>
               </label>
               <input
                 id="unique-key-name"
                 type="text"
                 value={name}
-                required
                 maxLength={MAX_NAME_LENGTH}
+                ref={nameInputRef}
+                aria-invalid={nameError}
                 placeholder="e.g. Unique email"
                 onChange={e => {
                   setName(e.target.value);
+                  if (e.target.value.trim()) setNameError(false);
                   setNameEdited(true);
                 }}
-                className="field-component field-component-border field-component-focus border"
+                className={`field-component field-component-focus border ${nameError ? '!border-red-500 focus:!border-red-500 bg-red-50' : 'field-component-border'}`}
               />
               <p className="text-xs text-gray-500">{name.length}/{MAX_NAME_LENGTH} characters</p>
             </div>

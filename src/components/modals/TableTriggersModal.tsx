@@ -303,6 +303,7 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
           key={form.item?.id || `new-${form.type}`}
           type={form.type}
           table={table}
+          existingTitles={automations.filter(a => a.type === form.type && a.id !== form.item?.id).map(a => a.title || '')}
           item={form.item && (automations.find(a => a.id === form.item?.id) ?? form.item)}
           onClose={() => setForm(null)}
         />,

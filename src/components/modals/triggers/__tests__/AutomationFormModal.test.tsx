@@ -71,21 +71,55 @@ describe('AutomationFormModal', () => {
       expect(screen.queryByRole('button', { name: /run/i })).not.toBeInTheDocument();
     });
 
-    it('keeps Save disabled until title and query are filled', async () => {
+    it('keeps Save disabled until there is a query, then reports what is missing when it is clicked', async () => {
       render(<AutomationFormModal type="trigger" table={table} onClose={onClose} />);
       const save = screen.getByRole('button', { name: 'Save' });
       expect(save).toBeDisabled();
 
-      await userEvent.type(screen.getByLabelText(/Title/), 'Log salary');
-      expect(save).toBeDisabled();
-
       typeQuery('Trigger query', TRIGGER_QUERY);
+      expect(save).toBeEnabled();
+
+      // No title: the field is highlighted in red
+      await userEvent.click(save);
+      expect(screen.getByLabelText(/Title/)).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getAllByText('Title is required').length).toBeGreaterThan(0);
+
+      // Typing a title clears the highlight
+      await userEvent.type(screen.getByLabelText(/Title/), 'Log salary');
+      expect(screen.getByLabelText(/Title/)).toHaveAttribute('aria-invalid', 'false');
+
       // Filled, but the query has not passed Validate yet
-      expect(save).toBeDisabled();
-      expect(save).toHaveAttribute('title', 'Validate the query first');
+      await userEvent.click(save);
+      expect(screen.getByText('Validate the query first')).toBeInTheDocument();
+      expect(createMutateAsync).not.toHaveBeenCalled();
 
       await validate();
-      expect(save).toBeEnabled();
+      await userEvent.click(save);
+      await waitFor(() => expect(createMutateAsync).toHaveBeenCalled());
+    });
+
+    it('rejects a title already used by another entry of the same type', async () => {
+      render(<AutomationFormModal type="trigger" table={table} existingTitles={['Audit']} onClose={onClose} />);
+      await userEvent.type(screen.getByLabelText(/Title/), ' audit ');
+      typeQuery('Trigger query', TRIGGER_QUERY);
+      await validate();
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      expect(screen.getByLabelText(/Title/)).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getAllByText('This title is already used. Enter a unique title.').length).toBeGreaterThan(0);
+      expect(createMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('highlights the title when the server says it already exists', async () => {
+      createMutateAsync.mockRejectedValueOnce(new Error('Title already exists'));
+      render(<AutomationFormModal type="trigger" table={table} onClose={onClose} />);
+      await userEvent.type(screen.getByLabelText(/Title/), 'Log salary');
+      typeQuery('Trigger query', TRIGGER_QUERY);
+      await validate();
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(screen.getByLabelText(/Title/)).toHaveAttribute('aria-invalid', 'true'));
+      expect(onClose).not.toHaveBeenCalled();
     });
 
     it('creates the trigger with the chosen timing and events written into the query', async () => {
@@ -110,7 +144,19 @@ describe('AutomationFormModal', () => {
       expect(onClose).toHaveBeenCalled();
     });
 
-    it('disables Save when no event is ticked', async () => {
+    it('sets the timing and events from a pasted query', async () => {
+      render(<AutomationFormModal type="trigger" table={table} onClose={onClose} />);
+      expect(screen.getByText(/Saved as: AFTER INSERT/)).toBeInTheDocument();
+
+      typeQuery('Trigger query', TRIGGER_QUERY.replace('AFTER INSERT', 'BEFORE DELETE'));
+
+      expect(screen.getByText(/Saved as: BEFORE DELETE/)).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: 'DELETE' })).toBeChecked();
+      expect(screen.getByRole('checkbox', { name: 'INSERT' })).not.toBeChecked();
+      expect(screen.getByRole('button', { name: 'BEFORE' })).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('asks for an event when none is ticked', async () => {
       render(<AutomationFormModal type="trigger" table={table} onClose={onClose} />);
       await userEvent.type(screen.getByLabelText(/Title/), 'Log salary');
       typeQuery('Trigger query', TRIGGER_QUERY);
@@ -168,9 +214,20 @@ describe('AutomationFormModal', () => {
       expect(save).toBeDisabled();
       await userEvent.type(screen.getByLabelText(/Title/), '!');
       // Changed, but not validated yet
-      expect(save).toBeDisabled();
+      await userEvent.click(save);
+      expect(screen.getByText('Validate the query first')).toBeInTheDocument();
+      expect(updateMutateAsync).not.toHaveBeenCalled();
       await validate();
       expect(save).toBeEnabled();
+    });
+
+    it('does not count the trailing ; the server removes as an unsaved change', async () => {
+      render(<AutomationFormModal type="trigger" table={table} item={savedTrigger} onClose={onClose} />);
+      const query = screen.getByLabelText('Trigger query');
+      await userEvent.type(query, ';');
+      await validate();
+      // Same query as saved apart from the ;, so Run is offered and enabled
+      expect(screen.getByRole('button', { name: 'Run' })).toBeEnabled();
     });
 
     it('takes timing and events from the query when the entry has no stored event', () => {
