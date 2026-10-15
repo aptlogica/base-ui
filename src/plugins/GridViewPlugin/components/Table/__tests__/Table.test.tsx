@@ -1628,6 +1628,70 @@ describe('Table', () => {
     expect(mockToastSuccess).toHaveBeenCalled();
   });
 
+  describe('bulk delete toast', () => {
+    const twoRows = [
+      { id: '1', _meta: { id: '1' }, data: { name: 'Row 1', value: 10 } },
+      { id: '2', _meta: { id: '2' }, data: { name: 'Row 2', value: 20 } },
+    ];
+
+    const bulkDeleteAndGetToast = async (response: unknown) => {
+      const mutateAsync = vi.fn().mockResolvedValue(response);
+      mockToastSuccess.mockClear();
+      mockUseFrontendPagination.mockReturnValue({
+        allLoadedData: twoRows,
+        loadNextPage: vi.fn(),
+        hasMore: false,
+        isLoadingMore: false,
+      });
+      mockUseTableModals.mockReturnValue({
+        contextMenu: { open: true, rowId: '1', x: 10, y: 10 },
+        handleContextMenu: vi.fn(),
+        handleCloseContextMenu: vi.fn(),
+        colMenu: { open: false, colIndex: null, x: 0, y: 0 },
+        handleColContextMenu: vi.fn(),
+        handleCloseColMenu: vi.fn(),
+      });
+
+      renderWithToast(
+        <Table
+          tableData={
+            {
+              ...tableData,
+              records: [
+                { id: '1', name: 'Row 1', value: 10, created_at: '2026-01-01', updated_at: '2026-01-02' },
+                { id: '2', name: 'Row 2', value: 20, created_at: '2026-01-01', updated_at: '2026-01-02' },
+              ],
+            } as any
+          }
+          onRefresh={vi.fn()}
+          actions={{ bulkDeleteRecords: { mutateAsync } } as any}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /^select first row$/i }));
+      fireEvent.click(screen.getByRole('button', { name: /select second row/i }));
+      fireEvent.click(screen.getByRole('button', { name: /context delete/i }));
+
+      await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+      return mockToastSuccess.mock.calls[0][0];
+    };
+
+    it('reports the count the server deleted, not the number of ids sent', async () => {
+      const message = await bulkDeleteAndGetToast({ success: true, data: { deleted_count: 1 } });
+      expect(message).toBe('1 row deleted');
+    });
+
+    it('reports the server count when it is more than one', async () => {
+      const message = await bulkDeleteAndGetToast({ data: { deleted_count: 2 } });
+      expect(message).toBe('2 rows deleted');
+    });
+
+    it('falls back to the number of ids sent when the response has no count', async () => {
+      const message = await bulkDeleteAndGetToast(undefined);
+      expect(message).toBe('2 rows deleted');
+    });
+  });
+
   it('shows error when bulk delete finds no valid numeric ids', async () => {
     mockUseFrontendPagination.mockReturnValue({
       allLoadedData: [
