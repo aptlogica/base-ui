@@ -29,3 +29,22 @@ export const columnBlockReason = (column: Column): string | null => {
   if (column.system && column.column_name !== 'title') return "System fields can't be part of a key";
   return null;
 };
+
+export const UNIQUE_DEFAULT_CONFLICT_MESSAGE =
+  'This column has a UNIQUE constraint. Its default value may be duplicated when inserting multiple rows. Remove the default value or the UNIQUE constraint to avoid duplicate-value errors.';
+
+// Whether a column meta carries a default value (same rule as the server)
+export const hasDefaultValue = (meta?: Record<string, any> | null): boolean => {
+  const value = meta?.defaultValue;
+  if (value === undefined || value === null) return false;
+  if (typeof value === 'string') return value.trim() !== '';
+  if (Array.isArray(value)) return value.length > 0;
+  return true;
+};
+
+// A key repeats its default in every new record when all of its columns have one
+export const keyHasDefaultConflict = (columnIds: string[], columns: Pick<Column, 'id' | 'meta'>[]): boolean => {
+  if (columnIds.length === 0) return false;
+  const byId = new Map(columns.map(c => [c.id, c]));
+  return columnIds.every(id => hasDefaultValue(byId.get(id)?.meta));
+};

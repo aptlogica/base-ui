@@ -1000,7 +1000,7 @@ export const Table: React.FC<TableProps> = ({
       await deleteRecordMutation.mutateAsync({ model_id: String(tableId), row_id: numericRowId });
 
       // We don't update local state directly; records will be refetched via react-query
-      toast.success('Row deleted', { title: 'Success' });
+      toast.success('1 row deleted', { title: 'Success' });
       try { onRefresh?.(); } catch { }
     } catch (err) {
       console.error('[Delete] Failed to delete record:', rowId, err);

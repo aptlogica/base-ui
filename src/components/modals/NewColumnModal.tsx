@@ -8,12 +8,13 @@ import { useClickOutside } from '../../hooks/useClickOutside';
 import { FIELD_TYPES } from '../../types/fieldTypes';
 import { timeZoneOptions } from '../../types/constants';
 import { FieldTypeDropdown } from '../common/dropdown/fieldDropdown/FieldTypeDropdown';
-import { useBaseTables, useBaseById, useTable, useAllViews, useResetField } from '../../hooks/useApi';
+import { useBaseTables, useBaseById, useTable, useAllViews, useResetField, useTableConstraints } from '../../hooks/useApi';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { useToast } from '../../components/common/Toast';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../utils/fieldUsageUtils';
 import { renderNewColumnConfigStep } from './NewColumnModalConfigStep';
 import { buildColumnPayload, buildFieldMeta, getUniqueColumnNameByUidt, isDuplicateFieldName, getBaseFormatDefaults } from './NewColumnModal.logic';
+import { UNIQUE_DEFAULT_CONFLICT_MESSAGE, hasDefaultValue, keyHasDefaultConflict } from './constraints/constraintUtils';
 import { validateFormula } from '../../utils/formulaHelper';
 
 interface FieldType {
@@ -85,6 +86,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   
   // Hook for resetting field data (used when formula is cleared)
   const resetField = useResetField();
+  const { data: uniqueKeys = [] } = useTableConstraints(currentTableId || '', 'unique');
   // Get all views for field usage validation (fallback)
   const { data: allViews = [] } = useAllViews();
 
@@ -1111,6 +1113,19 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     if (error) {
       toast.error(error);
       return;
+    }
+
+    // A default on a column of a unique key that has a default on every column repeats in each new record
+    if (initialValues?.id && hasDefaultValue(meta)) {
+      const columnsWithNewMeta = (fields || []).map((f: any) => (f.id === initialValues.id ? { ...f, meta } : f));
+      const conflict = uniqueKeys.some(
+        key => key.columns.some(c => c.id === initialValues.id) &&
+          keyHasDefaultConflict(key.columns.map(c => c.id), columnsWithNewMeta)
+      );
+      if (conflict) {
+        toast.error(UNIQUE_DEFAULT_CONFLICT_MESSAGE);
+        return;
+      }
     }
 
     const colConfig = buildColumnPayload({

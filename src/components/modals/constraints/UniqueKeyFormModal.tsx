@@ -8,6 +8,7 @@ import ColumnPicker from './ColumnPicker';
 import { useCheckTableConstraint, useCreateTableConstraint, useUpdateTableConstraint } from '../../../hooks/useApi';
 import type { TableConstraint } from '../../../service/clientService';
 import type { Column } from '../../../types/api.types';
+import { UNIQUE_DEFAULT_CONFLICT_MESSAGE, keyHasDefaultConflict } from './constraintUtils';
 
 interface UniqueKeyFormModalProps {
   table: any;
@@ -51,6 +52,9 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
   const keyChanged = !item || !sameList(columnIds, savedColumnIds);
   const canSave = !isBusy && (keyChanged || title !== item?.title);
 
+  // Shown as soon as the chosen columns all have a default; the server rejects it too
+  const defaultConflict = keyHasDefaultConflict(columnIds, columns);
+
   const changeColumns = (ids: string[]) => {
     setColumnIds(ids);
     if (!nameEdited) {
@@ -70,6 +74,10 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
     }
     if (columnIds.length === 0) {
       setError('Select at least one column');
+      return;
+    }
+    if (keyChanged && defaultConflict) {
+      setError(UNIQUE_DEFAULT_CONFLICT_MESSAGE);
       return;
     }
     try {
@@ -173,6 +181,13 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
                 No two records can have the same value in these columns. With several columns, the combination must be unique.
               </p>
             </div>
+
+            {defaultConflict && !error && (
+              <div className="text-sm flex items-center gap-1 text-amber-600" role="alert">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{UNIQUE_DEFAULT_CONFLICT_MESSAGE}</span>
+              </div>
+            )}
 
             {error && (
               <div className="text-sm flex items-center gap-1 text-red-600" role="alert">
