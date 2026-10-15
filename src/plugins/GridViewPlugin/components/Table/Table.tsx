@@ -898,7 +898,8 @@ export const Table: React.FC<TableProps> = ({
       for (const rowId of selectedRows) {
         if (isDraftRowId(rowId)) continue;
         const numericRowId = resolveNumericRowId(rowId);
-        if (numericRowId !== null) {
+        // Several ids of the same row (e.g. its key and its record id) must not count twice
+        if (numericRowId !== null && !rowIds.includes(numericRowId)) {
           rowIds.push(numericRowId);
         }
       }
@@ -908,15 +909,18 @@ export const Table: React.FC<TableProps> = ({
         return;
       }
 
-      await bulkDeleteRecordsMutation.mutateAsync({
+      const result: any = await bulkDeleteRecordsMutation.mutateAsync({
         model_id: String(tableId),
         row_ids: rowIds
       });
+      // Report what the server deleted; fall back to what was sent
+      const reported = Number(result?.data?.deleted_count ?? result?.deleted_count);
+      const deletedCount = Number.isFinite(reported) ? reported : rowIds.length;
 
       // Clear selection after successful deletion
       setSelectedRows(new Set());
 
-      toast.success(`${rowIds.length} row${rowIds.length > 1 ? 's' : ''} deleted`, { title: 'Success' });
+      toast.success(`${deletedCount} row${deletedCount === 1 ? '' : 's'} deleted`, { title: 'Success' });
       try { onRefresh?.(); } catch { }
     } catch (err) {
       console.error('[Bulk Delete] Failed to delete records:', err);
