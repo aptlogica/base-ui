@@ -77,6 +77,15 @@ interface TableProps {
 // Server code for a record that repeats the values of a unique key
 const UNIQUE_KEY_VIOLATION = 'TCN_1012';
 // Input types treated as text fields for "Enter on last row adds a row"
+// Cell types that keyboard navigation only focuses: clicking their trigger would change the value
+// (checkbox, rating) or open a modal that keyboard navigation could not close again.
+const FOCUS_ONLY_TYPES = new Set(['boolean', 'rating', 'json', 'attachment', 'longText', 'lookup']);
+const opensOnKeyboardEdit = (column?: { type?: string; uidt?: string }): boolean =>
+  !FOCUS_ONLY_TYPES.has(normalizeFieldType(column?.type || column?.uidt || 'text'));
+
+// Opens a cell's editor/popup: inline fields use a role="button" wrapper, popup fields a plain button
+const CELL_EDIT_TRIGGER = '[role="button"], button:not([tabindex="-1"]):not([disabled])';
+
 const TEXT_INPUT_TYPES = new Set(['text', 'number', 'email', 'tel', 'url', 'search']);
 
 // Same id resolution as TableRow, so ids match the rendered data-row-id attribute
@@ -879,8 +888,11 @@ export const Table: React.FC<TableProps> = ({
     }
 
     e.preventDefault();
+    // Close any popup left open on the cell being left, as a click elsewhere would
+    document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     const nextRowId = rowIds[rowIdx];
     const nextColKey = colKeys[colIdx];
+    edit = edit && opensOnKeyboardEdit(visibleColumns?.find(col => col.key === nextColKey));
     setActiveCell({ rowId: nextRowId, colKey: nextColKey });
     setNewRowFocusTarget({ rowId: nextRowId, colKey: nextColKey, edit, rowIndex: groupedData ? undefined : rowIdx });
   }, [groupedData, hasMore, isBaseReadOnly, canCreateRecord, paginatedData, allRecords, addNewRow, visibleColumns]);
@@ -909,7 +921,7 @@ export const Table: React.FC<TableProps> = ({
     const colKey = pending.colKey ?? visibleColumns?.[0]?.key;
     if (!colKey) return;
     setActiveCell({ rowId: newRowId, colKey });
-    setNewRowFocusTarget({ rowId: newRowId, colKey, edit: true });
+    setNewRowFocusTarget({ rowId: newRowId, colKey, edit: opensOnKeyboardEdit(visibleColumns?.find(col => col.key === colKey)) });
   }, [allRecords, filteredAndSortedData, paginatedData, hasMore, loadNextPage, visibleColumns]);
 
   // Scroll the new row into view and put its first cell into edit mode
@@ -927,7 +939,7 @@ export const Table: React.FC<TableProps> = ({
       if (cell) {
         cell.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         // Field components enter edit mode on click of their [role="button"] wrapper
-        const editTrigger = cell.querySelector<HTMLElement>('[role="button"]');
+        const editTrigger = cell.querySelector<HTMLElement>(CELL_EDIT_TRIGGER);
         (editTrigger ?? cell).focus();
         if (newRowFocusTarget.edit) editTrigger?.click();
         setNewRowFocusTarget(null);
