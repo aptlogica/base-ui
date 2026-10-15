@@ -310,7 +310,7 @@ describe('FieldDisplay', () => {
       expect(screen.getByTestId('checkbox')).toHaveTextContent('false');
 
       rerender(<FieldDisplay field={{ uidt: 'boolean', title: 'B', meta: { checkboxDefault: true } }} value="legacy-text" />);
-      expect(screen.getByTestId('checkbox')).toHaveTextContent('true');
+      expect(screen.getByTestId('checkbox')).toHaveTextContent('false');
     });
 
     it('should render decimal and currency branches with precision config', () => {
@@ -331,14 +331,14 @@ describe('FieldDisplay', () => {
       expect(screen.getByTestId('currency')).toBeInTheDocument();
     });
 
-    it('should use default value from config when value is empty', () => {
+    it('should not render meta default value when value is null', () => {
       render(
         <FieldDisplay
           field={{ uidt: 'text', title: 'Name', meta: { defaultValue: 'Default Name' } }}
           value={null}
         />
       );
-      expect(screen.getByText('Default Name')).toBeInTheDocument();
+      expect(screen.queryByText('Default Name')).not.toBeInTheDocument();
     });
 
     it('should render remaining field branches', () => {

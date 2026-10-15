@@ -349,7 +349,7 @@ describe('SortableFormField', () => {
       expect(input).toHaveValue('');
     });
 
-    it('uses default duration value when value is undefined', () => {
+    it('does not apply a default duration value when value is undefined', () => {
       const durationField: FormField = {
         ...mockField,
         type: 'duration',
@@ -365,7 +365,7 @@ describe('SortableFormField', () => {
       );
 
       const input = screen.getByTestId('field-input');
-      expect(input).toHaveValue('15');
+      expect(input).not.toHaveValue('15');
     });
 
     it('keeps boolean false value instead of default', () => {

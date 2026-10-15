@@ -81,38 +81,21 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
     }
   })();
 
-  // Get default value helper (same as EditableTableCell)
-  const getDefaultValueFromConfig = (fieldConfig: any, fieldType: string): any => {
-    if (!fieldConfig || typeof fieldConfig !== 'object') return '';
-    if (fieldConfig.defaultValue !== undefined && fieldConfig.defaultValue !== null) {
-      return fieldConfig.defaultValue;
-    }
-
-    const normalizedType = normalizeFieldType(fieldType);
-    switch (normalizedType) {
+  // Cells render exactly what the backend returned: a null/empty value stays an empty cell and
+  // never falls back to meta.defaultValue (the DB applies the default on insert).
+  const getDefaultValueFromConfig = (_fieldConfig: any, fieldType: string): any => {
+    switch (normalizeFieldType(fieldType)) {
       case 'boolean':
-        return fieldConfig.checkboxDefault || false;
+        return false;
       case 'rating':
-        return fieldConfig.ratingDefault || 0;
-      case 'number':
-      case 'decimal':
-      case 'currency':
-      case 'percent':
-        return fieldConfig.defaultValue || '';
-      case 'select':
-        return fieldConfig.singleDefault || '';
+        return 0;
       case 'multiSelect':
-        return fieldConfig.multiDefault || [];
-      case 'datetime':
-        return fieldConfig.dateTimeDefault || '';
+        return [];
       case 'date':
-        return fieldConfig.dateDefault || null;
-      case 'time':
-        return fieldConfig.timeDefault || '';
       case 'year':
-        return fieldConfig.yearDefault || null;
+        return null;
       default:
-        return fieldConfig.defaultValue || '';
+        return '';
     }
   };
 
