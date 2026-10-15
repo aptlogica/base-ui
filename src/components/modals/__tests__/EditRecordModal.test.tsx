@@ -173,10 +173,17 @@ describe('EditRecordModal', () => {
       expect(screen.getByRole('button', { name: 'Update Item' })).toBeInTheDocument();
     });
 
-    it('renders cancel button', () => {
+    it('renders save button in the header and no footer cancel button', () => {
       renderWithQueryClient(<EditRecordModal {...defaultProps} />);
 
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+    });
+
+    it('renders the title passed as a prop', () => {
+      renderWithQueryClient(<EditRecordModal {...defaultProps} title="New record" />);
+
+      expect(screen.getByRole('heading', { name: 'New record' })).toBeInTheDocument();
     });
 
     it('displays initial values in form fields', () => {
@@ -188,17 +195,6 @@ describe('EditRecordModal', () => {
   });
 
   describe('interactions', () => {
-    it('calls onClose when Cancel button is clicked', async () => {
-      const user = userEvent.setup();
-      const onClose = vi.fn();
-
-      renderWithQueryClient(<EditRecordModal {...defaultProps} onClose={onClose} />);
-
-      await user.click(screen.getByRole('button', { name: 'Cancel' }));
-
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
     it('calls onClose when X button is clicked', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
@@ -241,7 +237,7 @@ describe('EditRecordModal', () => {
 
   describe('actions menu', () => {
     it('renders more options button', () => {
-      renderWithQueryClient(<EditRecordModal {...defaultProps} />);
+      renderWithQueryClient(<EditRecordModal {...defaultProps} onDelete={vi.fn()} />);
 
       const moreButton = screen.getByLabelText('Record menu');
       expect(moreButton).toBeInTheDocument();
@@ -266,7 +262,7 @@ describe('EditRecordModal', () => {
       });
     });
 
-    it('does not render duplicate option in menu', async () => {
+    it('calls onDuplicate when duplicate option is clicked', async () => {
       const user = userEvent.setup();
       const onDuplicate = vi.fn();
 
@@ -281,10 +277,8 @@ describe('EditRecordModal', () => {
       const moreButton = screen.getByLabelText('Record menu');
       await user.click(moreButton);
 
-      await waitFor(() => {
-        expect(screen.queryByText(/Duplicate/i)).not.toBeInTheDocument();
-      });
-      expect(onDuplicate).not.toHaveBeenCalled();
+      await user.click(await screen.findByText('Duplicate record'));
+      expect(onDuplicate).toHaveBeenCalledWith(defaultProps.recordId);
     });
 
     it('calls onDelete when delete option is clicked', async () => {
@@ -437,10 +431,8 @@ describe('EditRecordModal', () => {
 
       renderWithQueryClient(<EditRecordModal {...defaultProps} />);
 
-      const cancelButton = screen.getByRole('button', { name: 'Cancel' });
       const submitButton = screen.getByRole('button', { name: 'Save changes' });
 
-      expect(cancelButton).toHaveAttribute('type', 'button');
       expect(submitButton).toHaveAttribute('type', 'button');
     });
   });
@@ -458,6 +450,22 @@ describe('EditRecordModal', () => {
 
       const submitButton = screen.getByRole('button', { name: 'Save changes' });
       expect(submitButton).toBeDisabled();
+    });
+
+    it('enables save immediately on input, before the field is blurred', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => true,
+        canDeleteRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      renderWithQueryClient(<EditRecordModal {...defaultProps} />);
+
+      const submitButton = screen.getByRole('button', { name: 'Save changes' });
+      expect(submitButton).toBeDisabled();
+      fireEvent.input(screen.getByTestId('field-input-field-1'), { target: { value: 'x' } });
+      expect(submitButton).toBeEnabled();
     });
 
     it('enables save when a field value is updated', async () => {

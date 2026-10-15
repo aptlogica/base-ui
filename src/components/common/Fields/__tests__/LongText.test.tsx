@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { LongText } from '../LongText';
 
+const RICH = { richText: true };
+
 describe('LongText Component', () => {
   let mockOnChange: ReturnType<typeof vi.fn>;
   let mockExecCommand: ReturnType<typeof vi.fn>;
@@ -320,7 +322,7 @@ describe('LongText Component', () => {
   describe('Inline Mode', () => {
     it('should render the rich text editor in place without the preview input or expand button', () => {
       const { container } = render(
-        <LongText value="" onChange={mockOnChange} inline />
+        <LongText value="" onChange={mockOnChange} inline config={RICH} />
       );
 
       expect(container.querySelector('input[type="text"]')).not.toBeInTheDocument();
@@ -331,7 +333,7 @@ describe('LongText Component', () => {
 
     it('should load the value into the editor, keeping plain text line breaks', () => {
       render(
-        <LongText value={'Line 1\nLine 2 a < b & c'} onChange={mockOnChange} inline />
+        <LongText value={'Line 1\nLine 2 a < b & c'} onChange={mockOnChange} inline config={RICH} />
       );
 
       expect(getEditor().innerHTML).toBe('Line 1<br>Line 2 a &lt; b &amp; c');
@@ -339,14 +341,14 @@ describe('LongText Component', () => {
 
     it('should show the default value when the value is empty', () => {
       render(
-        <LongText value="" onChange={mockOnChange} inline config={{ defaultValue: '<b>Default</b>' }} />
+        <LongText value="" onChange={mockOnChange} inline config={{ richText: true, defaultValue: '<b>Default</b>' }} />
       );
 
       expect(getEditor().innerHTML).toBe('<b>Default</b>');
     });
 
     it('should emit sanitized changes as the user types', () => {
-      render(<LongText value="" onChange={mockOnChange} inline />);
+      render(<LongText value="" onChange={mockOnChange} inline config={RICH} />);
 
       const editor = getEditor();
       editor.innerHTML = '<b>Hello</b><img src="x" onerror="alert(1)">';
@@ -356,37 +358,71 @@ describe('LongText Component', () => {
     });
 
     it('should not reset the editor when its own value is passed back', () => {
-      const { rerender } = render(<LongText value="" onChange={mockOnChange} inline />);
+      const { rerender } = render(<LongText value="" onChange={mockOnChange} inline config={RICH} />);
 
       const editor = getEditor();
       editor.innerHTML = 'Typed';
       fireEvent.input(editor);
       const textNode = editor.firstChild;
 
-      rerender(<LongText value="Typed" onChange={mockOnChange} inline />);
+      rerender(<LongText value="Typed" onChange={mockOnChange} inline config={RICH} />);
 
       expect(editor.firstChild).toBe(textNode);
     });
 
     it('should update the editor when the value changes from outside', () => {
-      const { rerender } = render(<LongText value="Original" onChange={mockOnChange} inline />);
+      const { rerender } = render(<LongText value="Original" onChange={mockOnChange} inline config={RICH} />);
 
-      rerender(<LongText value="" onChange={mockOnChange} inline />);
+      rerender(<LongText value="" onChange={mockOnChange} inline config={RICH} />);
 
       expect(getEditor().innerHTML).toBe('');
     });
 
     it('should hide the toolbar and disable editing when read only', () => {
-      render(<LongText value="Read only" onChange={mockOnChange} inline readOnly />);
+      render(<LongText value="Read only" onChange={mockOnChange} inline config={RICH} readOnly />);
 
       expect(screen.queryByTitle(/Bold/i)).not.toBeInTheDocument();
       expect(document.querySelector('[contenteditable="false"]')).toHaveTextContent('Read only');
     });
 
     it('should show the required error on blur when empty', () => {
-      render(<LongText value="" onChange={mockOnChange} inline required />);
+      render(<LongText value="" onChange={mockOnChange} inline config={RICH} required />);
 
       fireEvent.blur(getEditor());
+
+      expect(screen.getByText('This field is required')).toBeInTheDocument();
+    });
+  });
+
+  describe('Inline Mode without rich text', () => {
+    it('should render a plain textarea without the rich text toolbar', () => {
+      const { container } = render(<LongText value={'Line 1\nLine 2'} onChange={mockOnChange} inline />);
+
+      const textarea = container.querySelector('textarea');
+      expect(textarea).toBeInTheDocument();
+      expect(textarea).toHaveValue('Line 1\nLine 2');
+      expect(screen.queryByTitle(/Bold/i)).not.toBeInTheDocument();
+      expect(container.querySelector('[contenteditable]')).not.toBeInTheDocument();
+    });
+
+    it('should emit plain text changes as the user types', () => {
+      const { container } = render(<LongText value="" onChange={mockOnChange} inline config={{ richText: false }} />);
+
+      fireEvent.change(container.querySelector('textarea')!, { target: { value: '<b>Hi</b>' } });
+
+      expect(mockOnChange).toHaveBeenCalledWith('<b>Hi</b>');
+    });
+
+    it('should show the default value when the value is empty', () => {
+      const { container } = render(<LongText value="" onChange={mockOnChange} inline config={{ defaultValue: 'Default' }} />);
+
+      expect(container.querySelector('textarea')).toHaveValue('Default');
+    });
+
+    it('should show the required error on blur when empty', () => {
+      const { container } = render(<LongText value="" onChange={mockOnChange} inline required />);
+
+      fireEvent.blur(container.querySelector('textarea')!);
 
       expect(screen.getByText('This field is required')).toBeInTheDocument();
     });
@@ -408,7 +444,7 @@ describe('LongText Component', () => {
     const isPressed = (title: RegExp) => screen.getByTitle(title).getAttribute('aria-pressed') === 'true';
 
     it('should highlight the formats applied at the caret', () => {
-      render(<LongText value="<b><i>Styled</i></b> plain" onChange={mockOnChange} inline />);
+      render(<LongText value="<b><i>Styled</i></b> plain" onChange={mockOnChange} inline config={RICH} />);
 
       placeCaretIn(getEditor().querySelector('i')!.firstChild!);
 
@@ -420,7 +456,7 @@ describe('LongText Component', () => {
     });
 
     it('should clear the highlight when the caret moves to unformatted text', () => {
-      render(<LongText value="<b>Bold</b> plain" onChange={mockOnChange} inline />);
+      render(<LongText value="<b>Bold</b> plain" onChange={mockOnChange} inline config={RICH} />);
       const editor = getEditor();
 
       placeCaretIn(editor.querySelector('b')!.firstChild!);
@@ -435,7 +471,7 @@ describe('LongText Component', () => {
         <LongText
           value={'<ul><li>Item</li></ul><blockquote><a href="https://example.com">Link</a></blockquote>'}
           onChange={mockOnChange}
-          inline
+          inline config={RICH}
         />
       );
       const editor = getEditor();
@@ -454,7 +490,7 @@ describe('LongText Component', () => {
       render(
         <>
           <p>Outside</p>
-          <LongText value="<b>Bold</b>" onChange={mockOnChange} inline />
+          <LongText value="<b>Bold</b>" onChange={mockOnChange} inline config={RICH} />
         </>
       );
 
@@ -469,7 +505,7 @@ describe('LongText Component', () => {
       const queryCommandState = vi.fn((command: string) => command === 'underline');
       Object.defineProperty(document, 'queryCommandState', { value: queryCommandState, configurable: true });
       try {
-        render(<LongText value="plain" onChange={mockOnChange} inline />);
+        render(<LongText value="plain" onChange={mockOnChange} inline config={RICH} />);
 
         placeCaretIn(getEditor().firstChild!);
 
