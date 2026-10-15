@@ -310,7 +310,7 @@ describe('FieldDisplay', () => {
       expect(screen.getByTestId('checkbox')).toHaveTextContent('false');
 
       rerender(<FieldDisplay field={{ uidt: 'boolean', title: 'B', meta: { checkboxDefault: true } }} value="legacy-text" />);
-      expect(screen.getByTestId('checkbox')).toHaveTextContent('true');
+      expect(screen.getByTestId('checkbox')).toHaveTextContent('false');
     });
 
     it('should render decimal and currency branches with precision config', () => {
@@ -331,14 +331,14 @@ describe('FieldDisplay', () => {
       expect(screen.getByTestId('currency')).toBeInTheDocument();
     });
 
-    it('should use default value from config when value is empty', () => {
+    it('should not render meta default value when value is null', () => {
       render(
         <FieldDisplay
           field={{ uidt: 'text', title: 'Name', meta: { defaultValue: 'Default Name' } }}
           value={null}
         />
       );
-      expect(screen.getByText('Default Name')).toBeInTheDocument();
+      expect(screen.queryByText('Default Name')).not.toBeInTheDocument();
     });
 
     it('should render remaining field branches', () => {
@@ -423,4 +423,30 @@ describe('FieldDisplay', () => {
       consoleWarnSpy.mockRestore();
     });
   });
+  describe('null values do not fall back to meta defaults', () => {
+    it.each([
+    ['text', 'single-line-text', { defaultValue: 'DEFAULT' }, 'DEFAULT'],
+    ['number', 'number-field', { defaultValue: '77' }, '77'],
+    ['date', 'date-field', { dateDefault: '2031-01-01' }, '2031-01-01'],
+    ['year', 'year', { yearDefault: 2031 }, '2031'],
+    ['rating', 'rating', { ratingDefault: 4 }, '4'],
+    ['multiSelect', 'multi-select', { multiDefault: ['DEFAULT'] }, 'DEFAULT'],
+  ])('renders %s field without its meta default', (uidt, testId, meta, defaultText) => {
+      render(<FieldDisplay field={{ uidt, title: 'F', meta }} value={null} />);
+      const el = screen.queryByTestId(testId);
+      if (el) expect(el).not.toHaveTextContent(defaultText);
+      expect(screen.queryByText(defaultText)).not.toBeInTheDocument();
+    });
+
+    it.each([null, '', 'false', 'xyz'])('renders an unchecked checkbox for boolean value %p', (value) => {
+      render(
+        <FieldDisplay
+          field={{ uidt: 'boolean', title: 'B', meta: { checkboxDefault: true, defaultValue: true } }}
+          value={value}
+        />
+      );
+      expect(screen.getByTestId('checkbox')).toHaveTextContent('false');
+    });
+  });
+
 });

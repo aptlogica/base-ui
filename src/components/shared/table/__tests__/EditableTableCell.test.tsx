@@ -406,7 +406,7 @@ describe('EditableTableCell', () => {
       expect(screen.getByTestId('number-field')).toHaveTextContent('1234');
     });
 
-    it('should use default numeric value when number input is invalid', () => {
+    it('should not fall back to meta default when number input is invalid', () => {
       render(
         <EditableTableCell
           column={{ ...defaultColumn, uidt: 'number', meta: { defaultValue: '5' } }}
@@ -415,10 +415,10 @@ describe('EditableTableCell', () => {
           width={200}
         />
       );
-      expect(screen.getByTestId('number-field')).toHaveTextContent('5');
+      expect(screen.getByTestId('number-field')).not.toHaveTextContent('5');
     });
 
-    it('should normalize date values and fall back to dateDefault', () => {
+    it('should not fall back to dateDefault for invalid date values', () => {
       render(
         <EditableTableCell
           column={{ ...defaultColumn, uidt: 'date', meta: { dateDefault: '2024-01-01' } }}
@@ -427,10 +427,10 @@ describe('EditableTableCell', () => {
           width={200}
         />
       );
-      expect(screen.getByTestId('date-field')).toHaveTextContent('2024-01-01');
+      expect(screen.getByTestId('date-field')).not.toHaveTextContent('2024-01-01');
     });
 
-    it('should normalize time values and fall back to timeDefault', () => {
+    it('should not fall back to timeDefault for invalid time values', () => {
       render(
         <EditableTableCell
           column={{ ...defaultColumn, uidt: 'time', meta: { timeDefault: '12:30' } }}
@@ -439,10 +439,10 @@ describe('EditableTableCell', () => {
           width={200}
         />
       );
-      expect(screen.getByTestId('time')).toHaveTextContent('12:30');
+      expect(screen.getByTestId('time')).not.toHaveTextContent('12:30');
     });
 
-    it('should normalize year values and fall back to yearDefault', () => {
+    it('should not fall back to yearDefault for invalid year values', () => {
       render(
         <EditableTableCell
           column={{ ...defaultColumn, uidt: 'year', meta: { yearDefault: 2020 } }}
@@ -451,10 +451,10 @@ describe('EditableTableCell', () => {
           width={200}
         />
       );
-      expect(screen.getByTestId('year')).toHaveTextContent('2020');
+      expect(screen.getByTestId('year')).not.toHaveTextContent('2020');
     });
 
-    it('should use checkbox default when boolean value is "false"', () => {
+    it('should not use checkbox default when boolean value is "false"', () => {
       render(
         <EditableTableCell
           column={{ ...defaultColumn, uidt: 'boolean', meta: { checkboxDefault: true } }}
@@ -463,7 +463,7 @@ describe('EditableTableCell', () => {
           width={200}
         />
       );
-      expect(screen.getByTestId('checkbox')).toHaveTextContent('true');
+      expect(screen.getByTestId('checkbox')).toHaveTextContent('false');
     });
 
     it('should accept boolean string "true"', () => {
@@ -514,7 +514,7 @@ describe('EditableTableCell', () => {
       expect(screen.getByTestId('time')).toHaveTextContent('1:23 PM');
     });
 
-    it('should fall back to default year when out of range', () => {
+    it('should not fall back to default year when out of range', () => {
       render(
         <EditableTableCell
           column={{ ...defaultColumn, uidt: 'year', meta: { yearDefault: 2022 } }}
@@ -523,7 +523,7 @@ describe('EditableTableCell', () => {
           width={200}
         />
       );
-      expect(screen.getByTestId('year')).toHaveTextContent('2022');
+      expect(screen.getByTestId('year')).not.toHaveTextContent('2022');
     });
 
     it('should format system datetime fields using selected timezone', () => {
@@ -608,4 +608,49 @@ describe('EditableTableCell', () => {
       expect(container.firstChild).toBeInTheDocument();
     });
   });
+  describe('null values do not fall back to meta defaults', () => {
+    it.each([
+    ['text', 'single-line-text', { defaultValue: 'DEFAULT' }, 'DEFAULT'],
+    ['number', 'number-field', { defaultValue: '77' }, '77'],
+    ['date', 'date-field', { dateDefault: '2031-01-01' }, '2031-01-01'],
+    ['year', 'year', { yearDefault: 2031 }, '2031'],
+    ['rating', 'rating', { ratingDefault: 4 }, '4'],
+    ['multiSelect', 'multi-select', { multiDefault: ['DEFAULT'] }, 'DEFAULT'],
+  ])('renders %s cell without its meta default', (uidt, testId, meta, defaultText) => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt, meta }}
+          value={null}
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId(testId)).not.toHaveTextContent(defaultText);
+    });
+
+    it('renders an unchecked checkbox for a null boolean even with checkboxDefault', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'boolean', meta: { checkboxDefault: true, defaultValue: true } }}
+          value={null}
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('checkbox')).toHaveTextContent('false');
+    });
+
+    it('renders an unchecked checkbox for an unrecognised boolean string', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'boolean', meta: { checkboxDefault: true } }}
+          value="xyz"
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('checkbox')).toHaveTextContent('false');
+    });
+  });
+
 });
