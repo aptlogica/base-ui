@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type React from 'react';
-import { FormPreview } from '../FormPreview';
+import { FormPreview, getLogoFrameWidth } from '../FormPreview';
 import type { FormConfig, FormField } from '../../../../../types/form';
 
 vi.mock('../SortableFormField', () => ({
@@ -663,6 +663,43 @@ describe('FormPreview', () => {
     it('places the logo below the banner when configured', () => {
       renderWith({ logoUrl: '/logo.png', logoPosition: 'below' });
       expect(screen.getByAltText('Logo').parentElement?.parentElement).toHaveClass('mb-6', 'flex');
+    });
+
+    it('overlaps the banner with the logo when a banner image is shown', () => {
+      renderWith({ logoUrl: '/logo.png', bannerUrl: '/banner.png' });
+      expect(screen.getByTestId('form-logo-frame').parentElement).toHaveClass('absolute', '-translate-y-1/2');
+    });
+
+    it('keeps the logo in flow when there is no banner image to overlap', () => {
+      renderWith({ logoUrl: '/logo.png', logoPosition: 'banner' });
+      expect(screen.getByTestId('form-logo-frame').parentElement).toHaveClass('mb-6', 'flex');
+      expect(screen.getByTestId('form-logo-frame').parentElement).not.toHaveClass('absolute');
+    });
+
+    it('sizes the logo frame to the loaded image aspect ratio', () => {
+      renderWith({ logoUrl: '/logo.png' });
+      const frame = screen.getByTestId('form-logo-frame');
+      expect(frame).toHaveStyle({ width: '64px', height: '64px' });
+
+      const img = screen.getByAltText('Logo');
+      Object.defineProperty(img, 'naturalWidth', { value: 400 });
+      Object.defineProperty(img, 'naturalHeight', { value: 200 });
+      fireEvent.load(img);
+
+      expect(frame).toHaveStyle({ width: '128px', height: '64px' });
+      expect(img).toHaveClass('object-contain', 'w-full', 'h-full');
+    });
+  });
+
+  describe('getLogoFrameWidth', () => {
+    it.each([
+      [400, 200, 128],
+      [100, 100, 64],
+      [100, 400, 64],
+      [2000, 100, 160],
+      [0, 0, 64],
+    ])('returns a frame width for a %ix%i logo', (width, height, expected) => {
+      expect(getLogoFrameWidth(width, height)).toBe(expected);
     });
   });
 

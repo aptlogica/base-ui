@@ -640,4 +640,85 @@ describe('AppearanceSettings', () => {
       expect(screen.getByRole('button', { name: /Left-Aligned Labels/ })).toHaveAttribute('aria-pressed', 'true');
     });
   });
+
+  describe('Banner URL size validation', () => {
+    // jsdom never loads images, so stub Image with sizes keyed by URL
+    const sizes: Record<string, { width: number; height: number } | null> = {
+      'https://img/small.png': { width: 800, height: 400 },
+      'https://img/4k.png': { width: 3840, height: 2160 },
+      'https://img/broken.png': null,
+    };
+
+    beforeEach(() => {
+      class FakeImage {
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        naturalWidth = 0;
+        naturalHeight = 0;
+        set src(value: string) {
+          const size = sizes[value];
+          queueMicrotask(() => {
+            if (!size) return this.onerror?.();
+            this.naturalWidth = size.width;
+            this.naturalHeight = size.height;
+            this.onload?.();
+          });
+        }
+      }
+      vi.stubGlobal('Image', FakeImage);
+    });
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    const typeBannerUrl = (value: string) => {
+      render(<AppearanceSettings appearance={defaultAppearance} onChange={mockOnChange} />, { wrapper: createWrapper() });
+      fireEvent.click(screen.getAllByText('Insert via URL')[0]);
+      const input = screen.getByPlaceholderText('https://...');
+      fireEvent.change(input, { target: { value } });
+      return input;
+    };
+
+    it('tells users the supported banner size', () => {
+      render(<AppearanceSettings appearance={defaultAppearance} onChange={mockOnChange} />, { wrapper: createWrapper() });
+      expect(screen.getByText('SVG, PNG, JPG or GIF (max. 800 × 400px)')).toBeInTheDocument();
+    });
+
+    it('rejects a banner larger than 800 × 400px', async () => {
+      const input = typeBannerUrl('https://img/4k.png');
+      expect(screen.getByText('Checking image…')).toBeInTheDocument();
+      expect(await screen.findByText('Image is 3840 × 2160px. Banner images must be at most 800 × 400px.')).toBeInTheDocument();
+      expect(input).toHaveAttribute('aria-invalid', 'true');
+      expect(input).toHaveValue('https://img/4k.png');
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
+
+    it('applies a banner within the size limit', async () => {
+      typeBannerUrl('https://img/small.png');
+      await waitFor(() => {
+        expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ bannerUrl: 'https://img/small.png' }));
+      });
+      expect(screen.queryByText('Checking image…')).not.toBeInTheDocument();
+    });
+
+    it('rejects a URL that does not load as an image', async () => {
+      typeBannerUrl('https://img/broken.png');
+      expect(await screen.findByText('Could not load an image from this URL')).toBeInTheDocument();
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
+
+    it('ignores a stale check when the URL changes mid-load', async () => {
+      const input = typeBannerUrl('https://img/4k.png');
+      fireEvent.change(input, { target: { value: 'https://img/small.png' } });
+      await waitFor(() => {
+        expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ bannerUrl: 'https://img/small.png' }));
+      });
+      expect(screen.queryByText(/Banner images must be at most/)).not.toBeInTheDocument();
+    });
+
+    it('clears the banner when the URL is emptied', () => {
+      const input = typeBannerUrl('https://img/4k.png');
+      fireEvent.change(input, { target: { value: '' } });
+      expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ bannerUrl: '' }));
+    });
+  });
 });
