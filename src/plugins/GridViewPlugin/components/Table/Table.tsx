@@ -91,6 +91,91 @@ const TEXT_INPUT_TYPES = new Set(['text', 'number', 'email', 'tel', 'url', 'sear
 // Same id resolution as TableRow, so ids match the rendered data-row-id attribute
 const getRecordRowId = (row: TableData): string => String((row as any)?._meta?.id || (row as any)?.id || '');
 
+// --- Keyboard navigation helpers (see handleTableBodyKeyDown) ---
+
+type KeyMove =
+  | { action: 'move'; rowIdx: number; colIdx: number }
+  | { action: 'create'; colKey: string }
+  | { action: 'stay' } // swallow the key, nothing moves
+  | { action: 'leave' }; // let the browser handle the key (e.g. Tab out of the grid)
+
+const ARROW_STEPS: Record<string, [number, number]> = {
+  ArrowUp: [-1, 0],
+  ArrowDown: [1, 0],
+  ArrowLeft: [0, -1],
+  ArrowRight: [0, 1],
+};
+
+const isTypingTarget = (target: HTMLElement): boolean =>
+  target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
+  || target instanceof HTMLSelectElement || target.isContentEditable;
+
+// Left/Right only leave a text input when the caret is at that edge with nothing selected
+const isCaretAtEdge = (input: HTMLInputElement, key: string): boolean => {
+  const { selectionStart: start, selectionEnd: end, value } = input;
+  if (start === null || start !== end) return false;
+  return key === 'ArrowLeft' ? start === 0 : start === value.length;
+};
+
+// Whether this key press, coming from `target`, should move the grid selection
+const shouldNavigate = (e: React.KeyboardEvent, target: HTMLElement): boolean => {
+  const { key, shiftKey } = e;
+  const isArrow = key.startsWith('Arrow');
+  if (key !== 'Enter' && key !== 'Tab' && !isArrow) return false;
+  if (e.nativeEvent.isComposing || e.ctrlKey || e.metaKey || e.altKey) return false;
+  if (isArrow && shiftKey) return false;
+
+  const isTextInput = target instanceof HTMLInputElement && TEXT_INPUT_TYPES.has(target.type);
+  if (key === 'Enter') return isTextInput;
+  if (!isArrow || !isTypingTarget(target)) return true;
+  // In a single-line text input, Up/Down always navigate; Left/Right only at the caret's edge
+  if (!isTextInput) return false;
+  return key === 'ArrowUp' || key === 'ArrowDown' || isCaretAtEdge(target as HTMLInputElement, key);
+};
+
+// The data cell a navigation key came from; portaled popovers are not DOM descendants of a cell, so they yield null
+const getKeyboardCell = (e: React.KeyboardEvent): { colKey: string; rowId: string } | null => {
+  const target = e.target;
+  if (!(target instanceof HTMLElement) || !shouldNavigate(e, target)) return null;
+  const colKey = target.closest<HTMLElement>('[data-col-key]')?.dataset.colKey;
+  const rowId = target.closest<HTMLElement>('[data-row-id]')?.dataset.rowId;
+  return colKey && rowId ? { colKey, rowId } : null;
+};
+
+const getNextPosition = (key: string, shiftKey: boolean, rowIdx: number, colIdx: number, colCount: number) => {
+  const step = shiftKey ? -1 : 1;
+  if (key === 'Enter') return { rowIdx: rowIdx + step, colIdx };
+  if (key === 'Tab') {
+    const next = colIdx + step;
+    if (next >= colCount) return { rowIdx: rowIdx + 1, colIdx: 0 };
+    if (next < 0) return { rowIdx: rowIdx - 1, colIdx: colCount - 1 };
+    return { rowIdx, colIdx: next };
+  }
+  const [rowStep, colStep] = ARROW_STEPS[key];
+  return { rowIdx: rowIdx + rowStep, colIdx: colIdx + colStep };
+};
+
+// Decide what a navigation key does: only data cells take part; at the grid edges Tab/Shift+Tab leave the grid,
+// Enter on the last row creates a row, and Shift+Enter/arrows stay put.
+const planKeyMove = (
+  key: string,
+  shiftKey: boolean,
+  rowIds: string[],
+  colKeys: string[],
+  cell: { colKey: string; rowId: string },
+): KeyMove => {
+  const rowIdx = rowIds.indexOf(cell.rowId);
+  const colIdx = colKeys.indexOf(cell.colKey);
+  // A cell whose column is not visible can only continue with Enter, from the first column
+  if (rowIdx < 0 || colKeys.length === 0 || (colIdx < 0 && key !== 'Enter')) return { action: 'leave' };
+
+  const next = getNextPosition(key, shiftKey, rowIdx, Math.max(colIdx, 0), colKeys.length);
+  if (next.rowIdx >= rowIds.length && key === 'Enter') return { action: 'create', colKey: colKeys[next.colIdx] };
+  if (next.rowIdx < 0 || next.rowIdx >= rowIds.length) return { action: key === 'Tab' ? 'leave' : 'stay' };
+  if (next.colIdx < 0 || next.colIdx >= colKeys.length) return { action: 'stay' };
+  return { action: 'move', ...next };
+};
+
 export const Table: React.FC<TableProps> = ({
   tableData,
   viewId,
@@ -793,6 +878,16 @@ export const Table: React.FC<TableProps> = ({
     });
   }, [groupedData, allRecords, addNewRow]);
 
+  // Enter on the last row creates a row through the usual flow, only when creation is allowed
+  const createRowAfterLast = useCallback((colKey: string) => {
+    if (pendingNewRowRef.current || groupedData || hasMore) return;
+    if (isBaseReadOnly() || !canCreateRecord()) return;
+    pendingNewRowRef.current = { previousRowIds: new Set(allRecords.map(row => getRecordRowId(row))), colKey };
+    void addNewRow().then((created) => {
+      if (!created) pendingNewRowRef.current = null;
+    });
+  }, [groupedData, hasMore, isBaseReadOnly, canCreateRecord, allRecords, addNewRow]);
+
   // Excel-like keyboard navigation:
   //  - Enter / Shift+Enter (in a text input): edit the same column of the next / previous row;
   //    on the last row, Enter creates a row through the usual flow when creation is allowed
@@ -801,101 +896,27 @@ export const Table: React.FC<TableProps> = ({
   // Only data cells take part; the row-number/checkbox and add-column cells are skipped.
   // At the grid edges Tab/Shift+Tab leave the grid; Enter/Shift+Enter/arrows stay put.
   const handleTableBodyKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    const { key, shiftKey } = e;
-    const isEnter = key === 'Enter';
-    const isTab = key === 'Tab';
-    const isArrow = key.startsWith('Arrow');
-    if (!isEnter && !isTab && !isArrow) return;
-    if (e.nativeEvent.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (isArrow && shiftKey) return;
-
-    const target = e.target;
-    if (!(target instanceof HTMLElement)) return;
-    // Portaled popovers/dropdowns are not DOM descendants of a cell, so they are ignored here
-    const colKey = target.closest<HTMLElement>('[data-col-key]')?.dataset.colKey;
-    const rowId = target.closest<HTMLElement>('[data-row-id]')?.dataset.rowId;
-    if (!colKey || !rowId) return;
-
-    const isTextInput = target instanceof HTMLInputElement && TEXT_INPUT_TYPES.has(target.type);
-    const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
-      || target instanceof HTMLSelectElement || target.isContentEditable;
-    if (isEnter && !isTextInput) return;
-    if (isArrow && isTyping) {
-      // In a single-line text input, Up/Down always navigate; Left/Right only at the caret's edge
-      if (!isTextInput) return;
-      if (key === 'ArrowLeft' || key === 'ArrowRight') {
-        const { selectionStart: start, selectionEnd: end, value } = target as HTMLInputElement;
-        if (start === null || start !== end) return;
-        if (key === 'ArrowLeft' ? start !== 0 : start !== value.length) return;
-      }
-    }
+    const cell = getKeyboardCell(e);
+    if (!cell) return;
 
     const colKeys = (visibleColumns ?? []).map(col => col.key);
     const rowIds = groupedData
       ? Array.from(tableRef.current?.querySelectorAll<HTMLElement>('[data-row-id]') ?? []).map(el => el.dataset.rowId ?? '')
       : paginatedData.map(getRecordRowId);
-    let rowIdx = rowIds.indexOf(rowId);
-    let colIdx = colKeys.indexOf(colKey);
-    if (rowIdx < 0 || colKeys.length === 0) return;
-    if (colIdx < 0) {
-      // Cell's column is not a visible data column: only Enter continues, from the first column
-      if (!isEnter) return;
-      colIdx = 0;
-    }
-
-    let edit = !isArrow;
-    if (isEnter) {
-      rowIdx += shiftKey ? -1 : 1;
-    } else if (isTab) {
-      colIdx += shiftKey ? -1 : 1;
-      if (colIdx >= colKeys.length) {
-        colIdx = 0;
-        rowIdx += 1;
-      } else if (colIdx < 0) {
-        colIdx = colKeys.length - 1;
-        rowIdx -= 1;
-      }
-    } else {
-      if (key === 'ArrowUp') rowIdx -= 1;
-      else if (key === 'ArrowDown') rowIdx += 1;
-      else if (key === 'ArrowLeft') colIdx -= 1;
-      else colIdx += 1;
-      edit = false;
-    }
-
-    if (rowIdx < 0 || rowIdx >= rowIds.length) {
-      // Below the last row
-      if (rowIdx >= rowIds.length && (isEnter || isTab)) {
-        // Tab on the very last cell leaves the grid; Enter creates a row only when allowed
-        if (isEnter) {
-          e.preventDefault();
-          if (pendingNewRowRef.current || groupedData || hasMore) return;
-          if (isBaseReadOnly() || !canCreateRecord()) return;
-          pendingNewRowRef.current = { previousRowIds: new Set(allRecords.map(row => getRecordRowId(row))), colKey: colKeys[colIdx] };
-          void addNewRow().then((created) => {
-            if (!created) pendingNewRowRef.current = null;
-          });
-        }
-        return;
-      }
-      // Above the first row: Shift+Enter/arrows stay put, Shift+Tab leaves the grid
-      if (!isTab) e.preventDefault();
-      return;
-    }
-    if (colIdx < 0 || colIdx >= colKeys.length) {
-      e.preventDefault();
-      return;
-    }
+    const move = planKeyMove(e.key, e.shiftKey, rowIds, colKeys, cell);
+    if (move.action === 'leave') return;
 
     e.preventDefault();
+    if (move.action === 'create') createRowAfterLast(move.colKey);
+    if (move.action !== 'move') return;
+
     // Close any popup left open on the cell being left, as a click elsewhere would
     document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    const nextRowId = rowIds[rowIdx];
-    const nextColKey = colKeys[colIdx];
-    edit = edit && opensOnKeyboardEdit(visibleColumns?.find(col => col.key === nextColKey));
-    setActiveCell({ rowId: nextRowId, colKey: nextColKey });
-    setNewRowFocusTarget({ rowId: nextRowId, colKey: nextColKey, edit, rowIndex: groupedData ? undefined : rowIdx });
-  }, [groupedData, hasMore, isBaseReadOnly, canCreateRecord, paginatedData, allRecords, addNewRow, visibleColumns]);
+    const nextColKey = colKeys[move.colIdx];
+    const edit = !e.key.startsWith('Arrow') && opensOnKeyboardEdit(visibleColumns?.find(col => col.key === nextColKey));
+    setActiveCell({ rowId: rowIds[move.rowIdx], colKey: nextColKey });
+    setNewRowFocusTarget({ rowId: rowIds[move.rowIdx], colKey: nextColKey, edit, rowIndex: groupedData ? undefined : move.rowIdx });
+  }, [groupedData, paginatedData, visibleColumns, createRowAfterLast]);
 
   // Resolve the pending new row once the refreshed records include it
   useEffect(() => {

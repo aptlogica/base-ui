@@ -2568,6 +2568,108 @@ describe('Table - keyboard navigation', () => {
     expect(mutateAsync).not.toHaveBeenCalled();
   });
 
+  it('reads the column type from uidt and defaults to text when none is set', async () => {
+    const base = mockUseTableViewConfig();
+    mockUseTableViewConfig.mockReturnValue({
+      ...base,
+      visibleColumns: [
+        { id: 'col-1', key: 'name', column_name: 'name', title: 'Name', uidt: 'rating', isSystem: false, system: false },
+        { id: 'col-2', key: 'value', column_name: 'value', title: 'Value', isSystem: false, system: false },
+      ],
+    });
+    renderGrid();
+    press('input-name-1', 'Enter');
+    await expectFocus('edit-name-2');
+    expect(mockCellEditClick).not.toHaveBeenCalled();
+  });
+
+  it('navigates grouped tables through the rendered rows and never creates a row', async () => {
+    const base = mockUseTableViewConfig();
+    mockUseTableViewConfig.mockReturnValue({
+      ...base,
+      viewConfigState: { filters: [], sorts: [], groupBy: [{ column: 'name', direction: 'asc' }], columnWidths: {} },
+    });
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    renderGrid({ actions: { addRow: { mutateAsync } } });
+    expect(screen.getByTestId('grouped-flag')).toHaveTextContent('yes');
+
+    press('input-name-1', 'Enter');
+    await waitFor(() => expect(mockCellEditClick).toHaveBeenCalledWith('2', 'name'));
+    press('input-name-3', 'Enter');
+    await new Promise(resolve => setTimeout(resolve, 30));
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('Add row button creates a row once and opens its first cell for editing', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = renderGrid({ actions: { addRow: { mutateAsync } } });
+    const addButton = screen.getAllByTitle('Add row')[0];
+
+    fireEvent.click(addButton);
+    fireEvent.click(addButton); // ignored while the first request is pending
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+
+    const withNewRow = { ...threeRecords, records: [...threeRecords.records, { id: '4', name: 'Row 4', value: 40 }] };
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <Table tableData={withNewRow as any} onRefresh={vi.fn()} actions={{ addRow: { mutateAsync } } as any} />
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+    await waitFor(() => expect(mockCellEditClick).toHaveBeenCalledWith('4', 'name'));
+  });
+
+  it('Add row button stops waiting when the row could not be created', async () => {
+    const mutateAsync = vi.fn().mockRejectedValue(new Error('nope'));
+    renderGrid({ actions: { addRow: { mutateAsync } } });
+    fireEvent.click(screen.getAllByTitle('Add row')[0]);
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+    await new Promise(resolve => setTimeout(resolve, 30));
+    // pending state was cleared, so the button works again
+    fireEvent.click(screen.getAllByTitle('Add row')[0]);
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(2));
+  });
+
+  it('ignores a refresh that brings no new row, and has nothing to focus without columns', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    const wrap = (data: any) => (
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <Table tableData={data} onRefresh={vi.fn()} actions={{ addRow: { mutateAsync } } as any} />
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+    const { rerender } = render(wrap(threeRecords));
+    fireEvent.click(screen.getAllByTitle('Add row')[0]);
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+
+    rerender(wrap({ ...threeRecords, records: [...threeRecords.records] })); // same rows
+    const base = mockUseTableViewConfig();
+    mockUseTableViewConfig.mockReturnValue({ ...base, visibleColumns: [] });
+    rerender(wrap({ ...threeRecords, records: [...threeRecords.records, { id: '4', name: 'Row 4', value: 40 }] }));
+
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(mockCellEditClick).not.toHaveBeenCalled();
+  });
+
+  it('scrolls to a row that is not rendered yet and gives up after retrying', async () => {
+    const base = mockUseTableViewConfig();
+    mockUseTableViewConfig.mockReturnValue({
+      ...base,
+      visibleColumns: [
+        base.visibleColumns[0],
+        { id: 'col-x', key: 'missing', column_name: 'missing', title: 'Missing', type: 'text', isSystem: false, system: false },
+      ],
+    });
+    const rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame');
+    renderGrid();
+    press('input-name-1', 'Tab');
+    await waitFor(() => expect(rafSpy.mock.calls.length).toBeGreaterThanOrEqual(11), { timeout: 3000 });
+    expect(mockCellEditClick).not.toHaveBeenCalled();
+    rafSpy.mockRestore();
+  });
+
   it('Enter on the last row creates a row in the same column through the usual flow', async () => {
     const mutateAsync = vi.fn().mockResolvedValue(undefined);
     renderGrid({ actions: { addRow: { mutateAsync } } });
