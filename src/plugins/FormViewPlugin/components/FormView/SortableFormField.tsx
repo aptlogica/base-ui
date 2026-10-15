@@ -209,7 +209,7 @@ const getFieldRendererProps = (
   }
 
   if (baseProps.type === 'longText') {
-    // Form View edits long text in place with the rich text editor
+    // Form View edits long text in place (rich text editor or plain textarea, per the field config)
     return {
       ...baseProps,
       inline: true
@@ -349,7 +349,7 @@ const FieldContent: React.FC<{
           {getFieldDisplayName(field)}
           {field.required && <span className="ml-1 field-component-required">*</span>}
         </label>
-        <div className={`flex-1 ${isSystemField || isSubmitting ? 'pointer-events-none cursor-not-allowed opacity-60' : ''} ${appearance?.labelPosition === 'left' ? 'relative' : ''}`}>
+        <div className={`flex-1 min-w-0 ${isSystemField || isSubmitting ? 'pointer-events-none cursor-not-allowed opacity-60' : ''} ${appearance?.labelPosition === 'left' ? 'relative' : ''}`}>
           <FieldRenderer
             {...fieldRendererProps}
             onChange={isReadOnly || isSubmitting ? undefined : onChange}

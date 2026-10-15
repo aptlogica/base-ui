@@ -4,7 +4,13 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useRef } from 'react';
 import { FormConfig } from '../../../../types/form';
-import { useImageUpload } from './useImageUpload';
+import {
+  useImageUpload,
+  loadImageDimensions,
+  getBannerDimensionError,
+  BANNER_MAX_WIDTH,
+  BANNER_MAX_HEIGHT
+} from './useImageUpload';
 import { Upload, Link2, ImageUp, Trash2 } from 'lucide-react';
 
 type Appearance = NonNullable<FormConfig['appearance']>;
@@ -214,6 +220,10 @@ const ImageSettingField: React.FC<Readonly<ImageSettingFieldProps>> = ({ kind, l
   // Show the URL input only for a persisted URL that didn't come from a file upload
   const [showUrlInput, setShowUrlInput] = React.useState<boolean>(() => !!url && !isFileUploadUrl(url));
   const [fromBrowse, setFromBrowse] = React.useState<boolean>(() => !!url && isFileUploadUrl(url));
+  // Typed URL is held locally so a banner can be size-checked before it is applied
+  const [urlDraft, setUrlDraft] = React.useState<string>(url || '');
+  const [checkingUrl, setCheckingUrl] = React.useState(false);
+  const latestUrlRef = useRef<string>('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
@@ -241,8 +251,48 @@ const ImageSettingField: React.FC<Readonly<ImageSettingFieldProps>> = ({ kind, l
 
   const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => { void upload(event.target.files?.[0]); };
 
+  const commitUrl = (value: string) => {
+    setError(null);
+    onUrlChange(value);
+    setFromBrowse(false);
+  };
+
+  const handleUrlInput = async (value: string) => {
+    setUrlDraft(value);
+    latestUrlRef.current = value;
+    if (!validateUrl(value)) {
+      setCheckingUrl(false);
+      setError('Invalid URL');
+      return;
+    }
+    if (kind !== 'banner' || !value) {
+      setCheckingUrl(false);
+      commitUrl(value);
+      return;
+    }
+
+    setError(null);
+    setCheckingUrl(true);
+    let dimensionError: string | null;
+    try {
+      dimensionError = getBannerDimensionError(await loadImageDimensions(value));
+    } catch {
+      dimensionError = 'Could not load an image from this URL';
+    }
+    // Ignore results for a URL the user has since replaced
+    if (latestUrlRef.current !== value) return;
+    setCheckingUrl(false);
+    if (dimensionError) {
+      setError(dimensionError);
+    } else {
+      commitUrl(value);
+    }
+  };
+
   const handleRemove = () => {
     onUrlChange('');
+    setUrlDraft('');
+    setError(null);
     setShowUrlInput(false);
     setFromBrowse(false);
   };
@@ -261,17 +311,9 @@ const ImageSettingField: React.FC<Readonly<ImageSettingFieldProps>> = ({ kind, l
               id={inputId}
               type="url"
               placeholder="https://..."
-              value={url || ''}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (validateUrl(v)) {
-                  setError(null);
-                  onUrlChange(v);
-                  setFromBrowse(false);
-                } else {
-                  setError('Invalid URL');
-                }
-              }}
+              value={urlDraft}
+              aria-invalid={!!error}
+              onChange={(e) => { void handleUrlInput(e.target.value); }}
               ref={urlInputRef}
               className={`flex-1 w-full field-component field-component-border field-component-focus ${error ? 'border-red-500' : ''}`}
             />
@@ -311,7 +353,13 @@ const ImageSettingField: React.FC<Readonly<ImageSettingFieldProps>> = ({ kind, l
           )}
         </div>
       )}
+      {checkingUrl && <p className="text-xs text-[var(--color-gray-500)] mt-1">Checking image…</p>}
       {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+      {kind === 'banner' && !hasPreview && (
+        <p className="text-xs text-[var(--color-gray-500)] mt-1">
+          SVG, PNG, JPG or GIF (max. {BANNER_MAX_WIDTH} × {BANNER_MAX_HEIGHT}px)
+        </p>
+      )}
       {hasPreview && (
         <div className="mt-2 bg-card rounded-lg p-1.5 border flex items-center gap-3">
           <img

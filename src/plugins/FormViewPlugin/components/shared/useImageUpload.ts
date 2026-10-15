@@ -26,6 +26,23 @@ export const getImageFileError = (file: File): { title: string; message: string 
   return null;
 };
 
+export const BANNER_MAX_WIDTH = 800;
+export const BANNER_MAX_HEIGHT = 400;
+
+// Resolves with the natural size of the image at src, rejecting if it cannot be loaded
+export const loadImageDimensions = (src: string): Promise<{ width: number; height: number }> =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => reject(new Error('Image failed to load'));
+    img.src = src;
+  });
+
+export const getBannerDimensionError = ({ width, height }: { width: number; height: number }): string | null => {
+  if (width <= BANNER_MAX_WIDTH && height <= BANNER_MAX_HEIGHT) return null;
+  return `Image is ${width} × ${height}px. Banner images must be at most ${BANNER_MAX_WIDTH} × ${BANNER_MAX_HEIGHT}px.`;
+};
+
 // Uploads an image file and returns its hosted URL via onUploaded
 export const useImageUpload = (onUploaded: (url: string) => void, successMessage?: string) => {
   const addImageMutation = useAddImage();

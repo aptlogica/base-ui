@@ -76,8 +76,7 @@ export const LongText: React.FC<LongTextProps> = ({
   config = {}
 }) => {
   const { defaultValue = '', placeholder: configPlaceholder = placeholder, richText: richTextConfig = false, hideMaximizeButton = false } = config;
-  // The inline editor is always rich text
-  const richText = inline || richTextConfig;
+  const richText = richTextConfig;
   // Last HTML emitted by the inline editor, so echoing it back through `value` doesn't reset the cursor
   const lastInlineValueRef = useRef<string | null>(null);
   const [localValue, setLocalValue] = useState(value || '');
@@ -347,6 +346,15 @@ export const LongText: React.FC<LongTextProps> = ({
 
   const handleInlineBlur = () => {
     setError(validate(richTextEditorRef.current ? sanitizeRichTextHtml(richTextEditorRef.current.innerHTML) : ''));
+  };
+
+  // Plain (non rich text) inline editor
+  const inlineTextValue = (value !== null && value !== undefined && value !== '') ? value : (defaultValue || '');
+
+  const handleInlineTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    if (error) setError(validate(newValue));
+    onChange(newValue);
   };
 
   const isSelectionInsideTag = (tagName: string): boolean => {
@@ -1017,15 +1025,27 @@ export const LongText: React.FC<LongTextProps> = ({
         </label>
       )}
 
-      {inline ? (
-        <div className={`w-full field-component-border bg-[--color-alpha-white] overflow-hidden transition-colors focus-within:border-[var(--color-brand-600)] ${error ? 'border-red-500' : ''} ${className}`}>
+      {inline && !richText ? (
+        <textarea
+          value={inlineTextValue}
+          onChange={handleInlineTextChange}
+          onBlur={(e) => setError(validate(e.target.value))}
+          onKeyDown={(e) => e.stopPropagation()}
+          placeholder={configPlaceholder || 'Start typing...'}
+          readOnly={readOnly}
+          disabled={disabled}
+          rows={3}
+          className={`w-full field-component-border bg-[--color-alpha-white] px-3 py-2 text-xs leading-5 [overflow-wrap:anywhere] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand-600)] transition-colors resize-y ${readOnly ? 'cursor-default' : 'cursor-text'} ${error ? 'border-red-500' : ''} ${className}`}
+        />
+      ) : inline ? (
+        <div className={`w-full min-w-0 field-component-border bg-[--color-alpha-white] overflow-hidden transition-colors focus-within:border-[var(--color-brand-600)] ${error ? 'border-red-500' : ''} ${className}`}>
           {!readOnly && (
             <div className="flex flex-wrap items-center gap-0.5 px-1.5 py-1 border-b">
               {toolbarButtons}
             </div>
           )}
           {/* 3 rows of text: 3 x 1.25rem line height + 1rem vertical padding */}
-          {renderRichTextEditor(`w-full h-[4.75rem] min-h-[4.75rem] px-3 py-2 text-xs leading-5 text-[var(--color-text-primary)] overflow-y-auto resize-y ${readOnly ? 'cursor-default' : 'cursor-text'}`)}
+          {renderRichTextEditor(`w-full h-[4.75rem] min-h-[4.75rem] px-3 py-2 text-xs leading-5 [overflow-wrap:anywhere] text-[var(--color-text-primary)] overflow-y-auto resize-y ${readOnly ? 'cursor-default' : 'cursor-text'}`)}
           {richTextStyles}
         </div>
       ) : (
@@ -1108,7 +1128,7 @@ export const LongText: React.FC<LongTextProps> = ({
             </div>
             {richText ? (
               <div className="w-full flex-1 flex flex-col min-h-0">
-                {renderRichTextEditor("w-full flex-1 min-h-0 bg-[var(--background)] border rounded-xl p-3 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand-600)] transition-all overflow-y-auto")}
+                {renderRichTextEditor("w-full flex-1 min-h-0 [overflow-wrap:anywhere] bg-[var(--background)] border rounded-xl p-3 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand-600)] transition-all overflow-y-auto")}
                 {richTextStyles}
               </div>
             ) : (
