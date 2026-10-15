@@ -16,9 +16,13 @@ interface MockMutationResult {
   mutateAsync: ReturnType<typeof vi.fn>;
 }
 
+const mocks = vi.hoisted(() => ({ useAddRow: null as unknown }));
 vi.mock('../../../../hooks/useApi', () => ({
   useTable: vi.fn(),
   useAddRow: vi.fn(),
+  // Records are created through the insert (upsert) call; it shares the add-row mock set up by each test
+  useUpsertRow: vi.fn((...args: unknown[]) => (mocks.useAddRow as any)(...args)),
+  usePrimaryKey: vi.fn(() => ({ data: undefined })),
   useDeleteRecord: vi.fn(),
   useInsertRowData: vi.fn(),
   useUpdateField: vi.fn(),
@@ -40,6 +44,7 @@ vi.mock('../../../../utils/fieldUtils', () => ({
 
 const mockUseTable = vi.mocked(await import('../../../../hooks/useApi').then(m => m.useTable));
 const mockUseAddRow = vi.mocked(await import('../../../../hooks/useApi').then(m => m.useAddRow));
+mocks.useAddRow = mockUseAddRow;
 const mockUseInsertRowData = vi.mocked(await import('../../../../hooks/useApi').then(m => m.useInsertRowData));
 const mockUseDeleteRecord = vi.mocked(await import('../../../../hooks/useApi').then(m => m.useDeleteRecord));
 const mockUseUpdateField = vi.mocked(await import('../../../../hooks/useApi').then(m => m.useUpdateField));
@@ -329,6 +334,31 @@ describe('useFormData', () => {
   });
 
   describe('submitForm', () => {
+    it('names the empty primary key fields', async () => {
+      const usePrimaryKeyMock = vi.mocked(await import('../../../../hooks/useApi').then(m => m.usePrimaryKey));
+      usePrimaryKeyMock.mockReturnValue({ data: { column_ids: ['f-code', 'f-year'] } } as any);
+      mockUseTable.mockReturnValue({
+        data: {
+          model: { id: 'm1' },
+          columns: [
+            { id: 'f-code', column_name: 'code', title: 'Code' },
+            { id: 'f-year', column_name: 'yr', title: 'Year' },
+          ],
+          records: [],
+        },
+        isLoading: false,
+        error: null,
+        refetch: mockRefetch,
+      } as unknown as ReturnType<typeof mockUseTable>);
+
+      const { result } = renderHook(() => useFormData({ tableId: 't1' }), { wrapper: createWrapper() });
+
+      await expect(result.current.submitForm({ 'f-code': 'HR' }, [])).rejects.toThrow(
+        'Year is required: it is part of the primary key.'
+      );
+      usePrimaryKeyMock.mockReturnValue({ data: undefined } as any);
+    });
+
     it('should throw error when required fields are missing', async () => {
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       mockUseTable.mockReturnValue({
@@ -573,12 +603,12 @@ describe('useFormData', () => {
 
       expect(addRowMutate).toHaveBeenCalledWith({
         model_id: 'm1',
-        rows: [{
+        values: {
           f1: 'Hello',
           f2: '2024-01-02',
           f3: '2024-01-03T10:00:00Z',
           f4: JSON.stringify({ a: 1 }),
-        }]
+        }
       });
       expect(insertRowDataMutate).not.toHaveBeenCalled();
 

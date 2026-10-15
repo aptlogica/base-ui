@@ -15,6 +15,7 @@ import { useFrontendPagination } from '../../../hooks/useFrontendPagination';
 import { Loader } from '../../ui/Loader';
 import { formatCompactNumber } from '../../../utils/helpers';
 import { calculateDropdownPosition } from '../../../utils/dropdownPosition';
+import { linkItemIdentity, linkItemLabel, linkItems, resolveLinkRowId } from '../../../utils/linkValues';
 
 interface LinksFieldProps {
     value?: any;
@@ -27,6 +28,8 @@ interface LinksFieldProps {
                 with: string;
                 type: 'one-to-one' | 'has-many' | 'many-to-many';
             };
+            entity_role?: 'source' | 'target';
+            is_self_link?: boolean;
         };
     };
     disabled?: boolean;
@@ -123,6 +126,10 @@ export const LinksField: React.FC<LinksFieldProps> = ({
     // Get relation info from field meta
     const targetTableId = field?.meta?.relation?.with;
     const relationType = field?.meta?.relation?.type || 'one-to-one';
+    const entityRole = field?.meta?.entity_role || 'source';
+    const isSelfLink = !!field?.meta?.is_self_link || (!!targetTableId && targetTableId === currentTableId);
+    // This side stores a single ID in one-to-one, and on the child (target) side of has-many.
+    const isSingleSelect = relationType === 'one-to-one' || (relationType === 'has-many' && entityRole === 'target');
 
     const { data: tableData, isLoading: isTableLoading } = useTable(targetTableId || '');
     const insertRelationMutation = useInsertRelationData();
@@ -132,11 +139,14 @@ export const LinksField: React.FC<LinksFieldProps> = ({
         if (!data?.data?.records || !Array.isArray(data.data.records)) {
             return [];
         }
-        return data.data.records.map((record: any) => ({
-            id: record.id.toString(),
-            ...record
-        }));
-    }, [tableData]);
+        return data.data.records
+            .map((record: any) => ({
+                id: record.id.toString(),
+                ...record
+            }))
+            // On a self-link a record can't link to itself.
+            .filter((record: RelatedRecord) => !(isSelfLink && currentRowId !== undefined && String(record.id) === String(currentRowId)));
+    }, [tableData, isSelfLink, currentRowId]);
 
     const recordsById = useMemo(() => {
         const map = new Map<string, RelatedRecord>();
@@ -165,22 +175,16 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             return [];
         }
 
-        // Normalize value to array of IDs
-        const valueIds = Array.isArray(value)
-            ? value.map(item => {
-                if (typeof item === 'object' && item.id) {
-                    return item.id.toString();
-                }
-                return item.toString();
-            })
-            : [typeof value === 'object' && value.id ? value.id.toString() : value.toString()];
+        // Link cells hold the linked records' key values; resolve each to a row id
+        const items = linkItems(value);
 
         // If we have records loaded, try to match them
         if (records.length > 0) {
             const matchedRecords: RelatedRecord[] = [];
 
-            for (const id of valueIds) {
-                const foundRecord = recordsById.get(id.toString());
+            for (const item of items) {
+                const id = linkItemIdentity(item, records);
+                const foundRecord = recordsById.get(id);
                 if (foundRecord) {
                     matchedRecords.push(foundRecord);
                     continue;
@@ -189,7 +193,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                 // Create a placeholder with the ID
                 matchedRecords.push({
                     id,
-                    title: `Record ${id}`,
+                    title: `Record ${resolveLinkRowId(item) ?? linkItemLabel(item)}`,
                     _isPlaceholder: true
                 });
             }
@@ -198,8 +202,8 @@ export const LinksField: React.FC<LinksFieldProps> = ({
         }
 
         // If no records loaded yet, create placeholders
-        return valueIds.map(id => ({
-            id,
+        return items.map(item => ({
+            id: linkItemIdentity(item),
             title: 'Loading...',
             _isPlaceholder: true
         }));
@@ -322,12 +326,19 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             // Optimistically update the UI immediately
             // Preserve the original value format (IDs or objects)
             const currentValue = Array.isArray(value) ? value : [];
-            const optimisticValue = isAlreadySelected
-                ? currentValue.filter((v: any) => {
+            let optimisticValue: any[];
+            if (isAlreadySelected) {
+                optimisticValue = currentValue.filter((v: any) => {
                     const vId = typeof v === 'object' && v?.id ? v.id.toString() : v?.toString();
                     return vId !== record.id.toString();
-                })
-                : [...currentValue, record]; // Add the full record object
+                });
+            } else {
+                // A single-value side replaces its current link; the server unlinks the old one.
+                optimisticValue = isSingleSelect ? [record] : [...currentValue, record];
+            }
+            if (isSingleSelect && !isAlreadySelected) {
+                setIsOpen(false);
+            }
 
             // Update via onChange to trigger UI update immediately
             if (onChange) {
@@ -350,15 +361,18 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             }
         } else {
             // Update local state only (for form view)
-            const newSelectedRecords = isAlreadySelected
-                ? selectedRecords.filter(r => r.id !== record.id)
-                : [...selectedRecords, record];
+            let newSelectedRecords: RelatedRecord[];
+            if (isAlreadySelected) {
+                newSelectedRecords = selectedRecords.filter(r => r.id !== record.id);
+            } else {
+                newSelectedRecords = isSingleSelect ? [record] : [...selectedRecords, record];
+            }
 
             if (onChange) {
                 onChange(newSelectedRecords);
             }
         }
-    }, [disabled, selectedRecords, persistImmediately, persistRelation, onChange, toast, value, currentTableId, queryClient]);
+    }, [disabled, selectedRecords, persistImmediately, persistRelation, onChange, toast, value, currentTableId, queryClient, isSingleSelect]);
 
     const handleRemoveRecord = useCallback(async (recordId: string) => {
         if (disabled) return;
@@ -367,10 +381,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
             // Optimistically update the UI immediately
             // Preserve the original value format (IDs or objects)
             const currentValue = Array.isArray(value) ? value : [];
-            const optimisticValue = currentValue.filter((v: any) => {
-                const vId = typeof v === 'object' && v?.id ? v.id.toString() : v?.toString();
-                return vId !== recordId.toString();
-            });
+            const optimisticValue = currentValue.filter((v: any) => linkItemIdentity(v, records) !== recordId.toString());
 
             // Update via onChange to trigger UI update immediately
             if (onChange) {

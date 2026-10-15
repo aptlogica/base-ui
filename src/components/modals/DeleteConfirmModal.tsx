@@ -11,9 +11,10 @@ interface DeleteConfirmModalProps {
   message: string;
   onClose: () => void;
   onConfirm: () => void;
+  confirmLabel?: string;
 }
 
-const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({ isOpen, title, message, onClose, onConfirm }) => {
+const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({ isOpen, title, message, onClose, onConfirm, confirmLabel = 'Delete' }) => {
   if (!isOpen) return null;
 
   return (
@@ -50,7 +51,7 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({ isOpen, title, 
             className="px-16 py-2 w-full rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 focus:ring-1 focus:ring-red-500 transition-all"
             onClick={onConfirm}
           >
-            Delete
+            {confirmLabel}
           </button>
         </div>
       </div>

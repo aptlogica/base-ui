@@ -11,7 +11,9 @@ const removeAttachmentsMutateAsyncMock = vi.fn(() => Promise.resolve({}));
 const insertRelationMutateAsyncMock = vi.fn(() => Promise.resolve({}));
 
 // Mock hooks
+let primaryKeyColumnIds: string[] = [];
 vi.mock('../../../hooks/useApi', () => ({
+  usePrimaryKey: vi.fn(() => ({ data: { column_ids: primaryKeyColumnIds } })),
   useUpdateRowData: vi.fn(() => ({
     mutateAsync: updateRowDataMutateAsyncMock,
     isPending: false,
@@ -91,8 +93,7 @@ const createTestQueryClient = () =>
     },
   });
 
-const renderWithQueryClient = (ui: React.ReactElement) => {
-  const queryClient = createTestQueryClient();
+const renderWithQueryClient = (ui: React.ReactElement, queryClient = createTestQueryClient()) => {
   return render(
     <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
   );
@@ -172,10 +173,17 @@ describe('EditRecordModal', () => {
       expect(screen.getByRole('button', { name: 'Update Item' })).toBeInTheDocument();
     });
 
-    it('renders cancel button', () => {
+    it('renders save button in the header and no footer cancel button', () => {
       renderWithQueryClient(<EditRecordModal {...defaultProps} />);
 
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+    });
+
+    it('renders the title passed as a prop', () => {
+      renderWithQueryClient(<EditRecordModal {...defaultProps} title="New record" />);
+
+      expect(screen.getByRole('heading', { name: 'New record' })).toBeInTheDocument();
     });
 
     it('displays initial values in form fields', () => {
@@ -187,17 +195,6 @@ describe('EditRecordModal', () => {
   });
 
   describe('interactions', () => {
-    it('calls onClose when Cancel button is clicked', async () => {
-      const user = userEvent.setup();
-      const onClose = vi.fn();
-
-      renderWithQueryClient(<EditRecordModal {...defaultProps} onClose={onClose} />);
-
-      await user.click(screen.getByRole('button', { name: 'Cancel' }));
-
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
     it('calls onClose when X button is clicked', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
@@ -240,7 +237,7 @@ describe('EditRecordModal', () => {
 
   describe('actions menu', () => {
     it('renders more options button', () => {
-      renderWithQueryClient(<EditRecordModal {...defaultProps} />);
+      renderWithQueryClient(<EditRecordModal {...defaultProps} onDelete={vi.fn()} />);
 
       const moreButton = screen.getByLabelText('Record menu');
       expect(moreButton).toBeInTheDocument();
@@ -265,7 +262,7 @@ describe('EditRecordModal', () => {
       });
     });
 
-    it('does not render duplicate option in menu', async () => {
+    it('calls onDuplicate when duplicate option is clicked', async () => {
       const user = userEvent.setup();
       const onDuplicate = vi.fn();
 
@@ -280,10 +277,8 @@ describe('EditRecordModal', () => {
       const moreButton = screen.getByLabelText('Record menu');
       await user.click(moreButton);
 
-      await waitFor(() => {
-        expect(screen.queryByText(/Duplicate/i)).not.toBeInTheDocument();
-      });
-      expect(onDuplicate).not.toHaveBeenCalled();
+      await user.click(await screen.findByText('Duplicate record'));
+      expect(onDuplicate).toHaveBeenCalledWith(defaultProps.recordId);
     });
 
     it('calls onDelete when delete option is clicked', async () => {
@@ -436,10 +431,8 @@ describe('EditRecordModal', () => {
 
       renderWithQueryClient(<EditRecordModal {...defaultProps} />);
 
-      const cancelButton = screen.getByRole('button', { name: 'Cancel' });
       const submitButton = screen.getByRole('button', { name: 'Save changes' });
 
-      expect(cancelButton).toHaveAttribute('type', 'button');
       expect(submitButton).toHaveAttribute('type', 'button');
     });
   });
@@ -457,6 +450,22 @@ describe('EditRecordModal', () => {
 
       const submitButton = screen.getByRole('button', { name: 'Save changes' });
       expect(submitButton).toBeDisabled();
+    });
+
+    it('enables save immediately on input, before the field is blurred', () => {
+      vi.clearAllMocks();
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => true,
+        canDeleteRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+
+      renderWithQueryClient(<EditRecordModal {...defaultProps} />);
+
+      const submitButton = screen.getByRole('button', { name: 'Save changes' });
+      expect(submitButton).toBeDisabled();
+      fireEvent.input(screen.getByTestId('field-input-field-1'), { target: { value: 'x' } });
+      expect(submitButton).toBeEnabled();
     });
 
     it('enables save when a field value is updated', async () => {
@@ -477,6 +486,46 @@ describe('EditRecordModal', () => {
       await user.type(screen.getByTestId('field-input-field-1'), 'Updated Title');
 
       expect(submitButton).not.toBeDisabled();
+    });
+
+    it('shows the exact reason when the backend rejects the save', async () => {
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => true,
+        canDeleteRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+      const message = 'The combination Code = "HR", Year = 2026 is already used by record #4 (Acme). Each record needs a unique primary key (Code + Year).';
+      updateRowDataMutateAsyncMock.mockRejectedValueOnce(Object.assign(new Error(message), { code: 'PKY_1008' }) as never);
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      const user = userEvent.setup();
+      renderWithQueryClient(<EditRecordModal {...defaultProps} />);
+      await user.clear(screen.getByTestId('field-input-field-1'));
+      await user.type(screen.getByTestId('field-input-field-1'), 'HR');
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+      expect(await screen.findByText(message)).toBeInTheDocument();
+    });
+  });
+
+  describe('primary key fields', () => {
+    it('blocks clearing a key field and names it', async () => {
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canUpdateRecord: () => true,
+        canDeleteRecord: () => true,
+        isBaseReadOnly: () => false,
+      } as any));
+      primaryKeyColumnIds = ['field-1'];
+      const user = userEvent.setup();
+      renderWithQueryClient(<EditRecordModal {...defaultProps} />);
+
+      await user.clear(screen.getByTestId('field-input-field-1'));
+      expect(screen.getByTestId('key-field-missing-field-1')).toHaveTextContent('Required: part of the primary key');
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+      expect(await screen.findByText('Title is required: it is part of the primary key.')).toBeInTheDocument();
+      expect(updateRowDataMutateAsyncMock).not.toHaveBeenCalled();
+      primaryKeyColumnIds = [];
     });
   });
 
@@ -556,6 +605,38 @@ describe('EditRecordModal', () => {
           ([payload]) => Boolean(payload?.values?.['field-links'])
         )
       ).toBe(false);
+    });
+
+    it('unlinks records stored by their composite primary key', async () => {
+      const user = userEvent.setup();
+      const fieldsWithLinks = [
+        { id: 'field-1', name: 'title', title: 'Title', uidt: 'SingleLineText' },
+        { id: 'field-links', name: 'links', title: 'Links', uidt: 'links', type: 'links', meta: { relation: { with: 'table-org' } } },
+      ];
+      // The linked table's records, as loaded by the links field
+      const queryClient = createTestQueryClient();
+      queryClient.setQueryData(['tables', 'table-org'], {
+        data: { records: [{ id: 7, code: 'IN', dept: 'HR' }, { id: 8, code: 'US', dept: 'HR' }] },
+      });
+
+      renderWithQueryClient(
+        <EditRecordModal
+          {...defaultProps}
+          recordId="123"
+          fields={fieldsWithLinks}
+          initialValues={{ 'field-1': 'Existing Title', 'field-links': [{ code: 'US', dept: 'HR' }] }}
+        />,
+        queryClient,
+      );
+
+      await user.clear(screen.getByTestId('field-input-field-links'));
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+      await waitFor(() => {
+        expect(insertRelationMutateAsyncMock).toHaveBeenCalledWith(
+          expect.objectContaining({ column_id: 'field-links', source_row_id: 123, target_row_id: 8, action: 'unlink' })
+        );
+      });
     });
   });
 });

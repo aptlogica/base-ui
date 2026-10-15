@@ -50,172 +50,25 @@ describe('fieldUtils', () => {
   });
 
   describe('getFieldDefaultValue', () => {
-    it('should return type default when no meta provided', () => {
-      const field = { type: 'text' };
-      expect(getFieldDefaultValue(field)).toBe('');
+    it('should return the type empty value when no meta provided', () => {
+      expect(getFieldDefaultValue({ type: 'text' })).toBe('');
     });
 
-    it('should use defaultValue from meta when provided', () => {
-      const field = {
-        type: 'text',
-        meta: { defaultValue: 'Default Text' },
-      };
-      expect(getFieldDefaultValue(field)).toBe('Default Text');
+    it('should ignore meta defaults and return the type empty value', () => {
+      expect(getFieldDefaultValue({ type: 'text', meta: { defaultValue: 'Default Text' } })).toBe('');
+      expect(getFieldDefaultValue({ type: 'number', meta: { defaultValue: 0 } })).toBe('');
+      expect(getFieldDefaultValue({ type: 'checkbox', meta: { checkboxDefault: true, defaultValue: true } })).toBe(false);
+      expect(getFieldDefaultValue({ type: 'rating', meta: { ratingDefault: 3 } })).toBe(0);
+      expect(getFieldDefaultValue({ type: 'select', meta: { singleDefault: 'option1' } })).toBe('');
+      expect(getFieldDefaultValue({ type: 'multiSelect', meta: { multiDefault: ['a'] } })).toEqual([]);
+      expect(getFieldDefaultValue({ type: 'links', meta: { linksDefault: ['l'] } })).toEqual([]);
+      expect(getFieldDefaultValue({ type: 'date', meta: { dateDefault: '2024-01-01' } })).toBe('');
+      expect(getFieldDefaultValue({ type: 'duration', meta: { durationDefault: '01:30:00' } })).toBe('');
     });
 
-    it('should handle boolean defaults', () => {
-      const field = {
-        type: 'checkbox',
-        meta: { checkboxDefault: true },
-      };
-      expect(getFieldDefaultValue(field)).toBe(true);
-    });
-
-    it('should handle rating defaults', () => {
-      const field = {
-        type: 'rating',
-        meta: { ratingDefault: 3 },
-      };
-      expect(getFieldDefaultValue(field)).toBe(3);
-    });
-
-    it('should handle select defaults', () => {
-      const field = {
-        type: 'select',
-        meta: { singleDefault: 'option1' },
-      };
-      expect(getFieldDefaultValue(field)).toBe('option1');
-    });
-
-    it('should handle multiSelect defaults', () => {
-      const field = {
-        type: 'multiSelect',
-        meta: { multiDefault: ['opt1', 'opt2'] },
-      };
-      expect(getFieldDefaultValue(field)).toEqual(['opt1', 'opt2']);
-    });
-
-    it('should handle datetime defaults', () => {
-      const field = {
-        type: 'datetime',
-        meta: { dateTimeDefault: '2024-01-01T10:00:00' },
-      };
-      expect(getFieldDefaultValue(field)).toBe('2024-01-01T10:00:00');
-    });
-
-    it('should handle date defaults', () => {
-      const field = {
-        type: 'date',
-        meta: { dateDefault: '2024-01-01' },
-      };
-      expect(getFieldDefaultValue(field)).toBe('2024-01-01');
-    });
-
-    it('should handle time defaults', () => {
-      const field = {
-        type: 'time',
-        meta: { timeDefault: '10:00' },
-      };
-      expect(getFieldDefaultValue(field)).toBe('10:00');
-    });
-
-    it('should handle year defaults', () => {
-      const field = {
-        type: 'year',
-        meta: { yearDefault: '2024' },
-      };
-      expect(getFieldDefaultValue(field)).toBe('2024');
-    });
-
-    it('should handle email defaults', () => {
-      const field = {
-        type: 'email',
-        meta: { emailDefault: 'test@example.com' },
-      };
-      expect(getFieldDefaultValue(field)).toBe('test@example.com');
-    });
-
-    it('should handle phone defaults', () => {
-      const field = {
-        type: 'phoneNumber',
-        meta: { phoneDefault: '+1234567890' },
-      };
-      expect(getFieldDefaultValue(field)).toBe('+1234567890');
-    });
-
-    it('should handle url defaults', () => {
-      const field = {
-        type: 'url',
-        meta: { urlDefault: 'https://example.com' },
-      };
-      expect(getFieldDefaultValue(field)).toBe('https://example.com');
-    });
-
-    it('should handle duration defaults', () => {
-      const field = {
-        type: 'duration',
-        meta: { durationDefault: '01:30:00' },
-      };
-      expect(getFieldDefaultValue(field)).toBe('01:30:00');
-    });
-
-    it('should handle links defaults', () => {
-      const field = {
-        type: 'links',
-        meta: { linksDefault: ['link1', 'link2'] },
-      };
-      expect(getFieldDefaultValue(field)).toEqual(['link1', 'link2']);
-    });
-
-    it('should return type default when meta exists but no default value', () => {
-      const field = {
-        type: 'boolean',
-        meta: {},
-      };
-      expect(getFieldDefaultValue(field)).toBe(false);
-    });
-
-    it('should handle null defaultValue', () => {
-      const field = {
-        type: 'text',
-        meta: { defaultValue: null },
-      };
-      // null defaultValue should fallback to type default
-      expect(getFieldDefaultValue(field)).toBe('');
-    });
-
-    it('should return zero defaultValue when explicitly provided', () => {
-      const field = {
-        type: 'number',
-        meta: { defaultValue: 0 },
-      };
-      expect(getFieldDefaultValue(field)).toBe(0);
-    });
-
-    it('should prioritize defaultValue over type-specific defaults', () => {
-      const field = {
-        type: 'checkbox',
-        meta: {
-          checkboxDefault: true,
-          defaultValue: false,
-        },
-      };
-      expect(getFieldDefaultValue(field)).toBe(false);
-    });
-
-    it('should handle empty meta object', () => {
-      const field = {
-        type: 'number',
-        meta: {},
-      };
-      expect(getFieldDefaultValue(field)).toBe('');
-    });
-
-    it('should handle field without type', () => {
-      const field: any = {
-        meta: { defaultValue: 'test' },
-      };
-      expect(getFieldDefaultValue(field)).toBe('test');
+    it('should handle null defaultValue and field without type', () => {
+      expect(getFieldDefaultValue({ type: 'text', meta: { defaultValue: null } })).toBe('');
+      expect(getFieldDefaultValue({ meta: { defaultValue: 'test' } } as any)).toBe('');
     });
   });
 

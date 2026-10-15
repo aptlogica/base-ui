@@ -133,7 +133,7 @@ export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({
                 value={splitMaxColumns}
                 onChange={(event) => onSplitMaxColumnsChange(event.target.value)}
                 placeholder="10"
-                className="h-11 w-full rounded-xl border bg-alpha-white px-4 transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500"
+                className="h-11 w-full rounded-xl border bg-alpha-white px-4 transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 text-[var(--color-text-primary)]"
               />
               <div className="text-xs text-secondary">
                 Additional values will be added in the last column.
@@ -155,7 +155,7 @@ export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({
                 value={splitCharacterCount}
                 onChange={(event) => onSplitCharacterCountChange(event.target.value)}
                 placeholder="Enter number of characters"
-                className="h-11 w-full rounded-xl border bg-alpha-white px-4 transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500"
+                className="h-11 w-full rounded-xl border bg-alpha-white px-4 transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 text-[var(--color-text-primary)]"
               />
             </div>
           </div>

@@ -82,7 +82,7 @@ describe('FieldsList', () => {
         />
       );
 
-      expect(screen.getByText(/Selected fields/)).toBeInTheDocument();
+      expect(screen.getByText(/selected/)).toBeInTheDocument();
     });
 
     it('should render Select all checkbox label', () => {
