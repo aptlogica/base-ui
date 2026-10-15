@@ -5,7 +5,7 @@ import { useState } from 'react';
 import ColumnPicker from '../ColumnPicker';
 import UniqueKeyFormModal, { defaultKeyName } from '../UniqueKeyFormModal';
 import UniqueKeysPanel from '../UniqueKeysPanel';
-import { columnBlockReason } from '../constraintUtils';
+import { columnBlockReason, UNIQUE_DEFAULT_CONFLICT_MESSAGE } from '../constraintUtils';
 import { useTable, useTableConstraints } from '../../../../hooks/useApi';
 import { useBaseAccess } from '../../../../hooks/useBaseAccess';
 import type { TableConstraint } from '../../../../service/clientService';
@@ -374,5 +374,63 @@ describe('UniqueKeysPanel', () => {
     render(<UniqueKeysPanel table={table} />);
     expect(screen.queryByRole('button', { name: 'Add unique key' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit Dept code' })).not.toBeInTheDocument();
+  });
+});
+
+describe('unique key and default value conflict', () => {
+  const col = (id: string, defaultValue?: any) => ({ id, meta: defaultValue === undefined ? {} : { defaultValue } }) as any;
+
+  it('detects a key whose columns all have a default', async () => {
+    const { keyHasDefaultConflict } = await import('../constraintUtils');
+    expect(keyHasDefaultConflict(['a'], [col('a', 'x')])).toBe(true);
+    expect(keyHasDefaultConflict(['a', 'b'], [col('a', 'x'), col('b')])).toBe(false);
+    expect(keyHasDefaultConflict(['a'], [col('a', '')])).toBe(false);
+    expect(keyHasDefaultConflict([], [])).toBe(false);
+  });
+});
+
+describe('UniqueKeyFormModal with default values', () => {
+  const onClose = vi.fn();
+  const withDefaults = COLUMNS.filter(c => !c.deleted).map(c => (
+    c.id === 'c-email' ? { ...c, meta: { defaultValue: 'a@b.c' } } : c
+  ));
+  const choose = async (...names: RegExp[]) => {
+    await userEvent.click(screen.getByRole('button', { name: /Choose columns|Add column/ }));
+    for (const name of names) await userEvent.click(screen.getByRole('menuitemcheckbox', { name }));
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    checkMutateAsync.mockResolvedValue({ data: { valid: true } });
+    createMutateAsync.mockResolvedValue({});
+  });
+
+  it('warns and does not save when the chosen column has a default value', async () => {
+    render(<UniqueKeyFormModal table={table} columns={withDefaults} onClose={onClose} />);
+    await choose(/Email/);
+    expect(screen.getByRole('alert')).toHaveTextContent(UNIQUE_DEFAULT_CONFLICT_MESSAGE);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(UNIQUE_DEFAULT_CONFLICT_MESSAGE);
+    expect(checkMutateAsync).not.toHaveBeenCalled();
+    expect(createMutateAsync).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('does not warn when another column of the key has no default', async () => {
+    render(<UniqueKeyFormModal table={table} columns={withDefaults} onClose={onClose} />);
+    await choose(/Email/, /Emp Code/);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(createMutateAsync).toHaveBeenCalled());
+  });
+
+  it('shows the server message when the server rejects the default conflict', async () => {
+    createMutateAsync.mockRejectedValue(new Error(UNIQUE_DEFAULT_CONFLICT_MESSAGE));
+    render(<UniqueKeyFormModal table={table} columns={COLUMNS.filter(c => !c.deleted)} onClose={onClose} />);
+    await choose(/Email/);
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText(UNIQUE_DEFAULT_CONFLICT_MESSAGE)).toBeInTheDocument();
   });
 });

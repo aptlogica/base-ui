@@ -8,6 +8,7 @@ import { validateFormula } from '../../../utils/formulaHelper';
 const toast = { error: vi.fn(), success: vi.fn() };
 const mockUseBaseTables = vi.fn(() => ({ data: null }));
 const mockUseResetField = vi.fn(() => ({ mutate: vi.fn() }));
+const mockUseTableConstraints = vi.fn((..._args: any[]): { data: any[] } => ({ data: [] }));
 const mockUseBaseById = vi.fn((): { data: any } => ({ data: null }));
 
 vi.mock('../../common/Toast', () => ({
@@ -21,6 +22,7 @@ vi.mock('../../../hooks/useApi', () => ({
   useTable: () => ({ data: null, isLoading: false }),
   useAllViews: () => ({ data: [] }),
   useResetField: (...args: any[]) => mockUseResetField(...args),
+  useTableConstraints: (...args: any[]) => mockUseTableConstraints(...args),
 }));
 
 vi.mock('../../../stores/navigationStore', () => ({
@@ -201,6 +203,51 @@ describe('NewColumnModal', () => {
 
     fireEvent.click(screen.getByText('Save Field'));
     expect(onSave).toHaveBeenCalled();
+  });
+
+  describe('unique key and default value', () => {
+    const KEY = { id: 'k1', title: 'Unique code', constraint_name: 'uq', status: 'ok', columns: [{ id: 'c1', title: 'Code' }, { id: 'c2', title: 'Other' }] };
+    const renderEdit = (meta: any, otherMeta: any) => {
+      const onSave = vi.fn();
+      render(
+        <NewColumnModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={onSave}
+          currentTableId="t1"
+          fields={[{ id: 'c1', title: 'Code', meta }, { id: 'c2', title: 'Other', meta: otherMeta }]}
+          initialValues={{ id: 'c1', title: 'Code', type: 'text', meta }}
+        />
+      );
+      fireEvent.click(screen.getByText('Save Field'));
+      return onSave;
+    };
+
+    beforeEach(() => {
+      mockUseTableConstraints.mockReturnValue({ data: [KEY] });
+    });
+
+    it('blocks saving a default on a column of a unique key whose columns all have defaults', () => {
+      const onSave = renderEdit({ defaultValue: 'abc' }, { defaultValue: 'x' });
+      expect(onSave).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('This column has a UNIQUE constraint'));
+    });
+
+    it('saves when another column of the key has no default', () => {
+      const onSave = renderEdit({ defaultValue: 'abc' }, {});
+      expect(onSave).toHaveBeenCalled();
+    });
+
+    it('saves when the column has no default', () => {
+      const onSave = renderEdit({}, { defaultValue: 'x' });
+      expect(onSave).toHaveBeenCalled();
+    });
+
+    it('saves when the column is in no unique key', () => {
+      mockUseTableConstraints.mockReturnValue({ data: [] });
+      const onSave = renderEdit({ defaultValue: 'abc' }, { defaultValue: 'x' });
+      expect(onSave).toHaveBeenCalled();
+    });
   });
 
   it('blocks saving links field without target table', () => {
