@@ -2368,6 +2368,214 @@ describe('Table - Enter on last row adds a row', () => {
   });
 });
 
+describe('Table - keyboard navigation', () => {
+  const threeRecords = {
+    ...tableData,
+    records: [
+      ...tableData.records,
+      { id: '2', name: 'Row 2', value: 20 },
+      { id: '3', name: 'Row 3', value: 30 },
+    ],
+  };
+
+  const renderGrid = (props: Record<string, unknown> = {}) => {
+    const qc = new QueryClient();
+    return render(
+      <QueryClientProvider client={qc}>
+        <ToastProvider>
+          <Table tableData={threeRecords as any} onRefresh={vi.fn()} {...props} />
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+  };
+
+  const press = (label: string, key: string, init: Record<string, unknown> = {}) =>
+    fireEvent.keyDown(screen.getByLabelText(label), { key, ...init });
+
+  const expectFocus = (label: string) =>
+    waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText(label)));
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    setupDefaultMocks();
+    (globalThis as any).ResizeObserver = class {
+      observe() {}
+      disconnect() {}
+    };
+    if (!(globalThis as any).CSS?.escape) {
+      (globalThis as any).CSS = { ...(globalThis as any).CSS, escape: (s: string) => s };
+    }
+    Element.prototype.scrollIntoView = vi.fn() as any;
+    mockUseFrontendPagination.mockImplementation(({ data }: any) => ({
+      allLoadedData: data,
+      loadNextPage: vi.fn(),
+      hasMore: false,
+      isLoadingMore: false,
+    }));
+    if (!Table) {
+      ({ Table } = await import('../Table'));
+    }
+  }, 30000);
+
+  it('Enter moves to the same column of the next row and opens it for editing', async () => {
+    renderGrid();
+    expect(press('input-name-1', 'Enter')).toBe(false);
+    await waitFor(() => expect(mockCellEditClick).toHaveBeenCalledWith('2', 'name'));
+    await expectFocus('edit-name-2');
+  });
+
+  it('Shift+Enter moves to the previous row and opens it for editing', async () => {
+    renderGrid();
+    press('input-name-3', 'Enter', { shiftKey: true });
+    await waitFor(() => expect(mockCellEditClick).toHaveBeenCalledWith('2', 'name'));
+    await expectFocus('edit-name-2');
+  });
+
+  it('Shift+Enter on the first row stays put', async () => {
+    renderGrid();
+    expect(press('input-name-1', 'Enter', { shiftKey: true })).toBe(false);
+    await new Promise(resolve => setTimeout(resolve, 30));
+    expect(mockCellEditClick).not.toHaveBeenCalled();
+  });
+
+  it('Tab moves to the next cell, wraps to the next row, and Shift+Tab reverses it', async () => {
+    renderGrid();
+    press('input-name-1', 'Tab');
+    await expectFocus('cell-value-1');
+    // last column wraps to the first column of the next row
+    press('cell-value-1', 'Tab');
+    await waitFor(() => expect(mockCellEditClick).toHaveBeenCalledWith('2', 'name'));
+    // first column wraps back to the last column of the previous row
+    press('input-name-2', 'Tab', { shiftKey: true });
+    await expectFocus('cell-value-1');
+    press('cell-value-2', 'Tab', { shiftKey: true });
+    await expectFocus('edit-name-2');
+  });
+
+  it('Tab on the very last cell and Shift+Tab on the very first cell leave the grid', () => {
+    renderGrid();
+    expect(press('cell-value-3', 'Tab')).toBe(true);
+    expect(press('input-name-1', 'Tab', { shiftKey: true })).toBe(true);
+    expect(mockCellEditClick).not.toHaveBeenCalled();
+  });
+
+  it('arrow keys move between cells without entering edit mode', async () => {
+    renderGrid();
+    press('input-name-1', 'ArrowDown');
+    await expectFocus('edit-name-2');
+    press('input-name-2', 'ArrowRight'); // empty input: caret is at both edges
+    await expectFocus('cell-value-2');
+    press('cell-value-2', 'ArrowUp');
+    await expectFocus('cell-value-1');
+    press('cell-value-1', 'ArrowLeft');
+    await expectFocus('edit-name-1');
+    expect(mockCellEditClick).not.toHaveBeenCalled();
+  });
+
+  it('arrow keys stay put at the grid edges', async () => {
+    renderGrid();
+    expect(press('edit-name-1', 'ArrowUp')).toBe(false);
+    expect(press('edit-name-1', 'ArrowLeft')).toBe(false);
+    expect(press('cell-value-3', 'ArrowDown')).toBe(false);
+    expect(press('cell-value-3', 'ArrowRight')).toBe(false);
+    await new Promise(resolve => setTimeout(resolve, 30));
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it('Left/Right only navigate from a text input at the caret edge', () => {
+    renderGrid();
+    const input = screen.getByLabelText('input-name-2') as HTMLInputElement;
+    input.value = 'abc';
+
+    input.setSelectionRange(1, 1);
+    expect(fireEvent.keyDown(input, { key: 'ArrowLeft' })).toBe(true);
+    expect(fireEvent.keyDown(input, { key: 'ArrowRight' })).toBe(true);
+    input.setSelectionRange(0, 3);
+    expect(fireEvent.keyDown(input, { key: 'ArrowLeft' })).toBe(true);
+    input.setSelectionRange(0, 0);
+    expect(fireEvent.keyDown(input, { key: 'ArrowRight' })).toBe(true);
+    input.setSelectionRange(3, 3);
+    expect(fireEvent.keyDown(input, { key: 'ArrowLeft' })).toBe(true);
+
+    input.setSelectionRange(0, 0);
+    expect(fireEvent.keyDown(input, { key: 'ArrowLeft' })).toBe(false);
+    input.setSelectionRange(3, 3);
+    expect(fireEvent.keyDown(input, { key: 'ArrowRight' })).toBe(false);
+  });
+
+  it('ignores arrows from non-text inputs and with Shift', () => {
+    renderGrid();
+    expect(press('color-name-2', 'ArrowDown')).toBe(true);
+    expect(press('input-name-2', 'ArrowDown', { shiftKey: true })).toBe(true);
+  });
+
+  it('ignores unrelated keys, modifier combos, composition and keys outside a cell', () => {
+    renderGrid();
+    expect(press('input-name-1', 'a')).toBe(true);
+    expect(press('input-name-1', 'Enter', { ctrlKey: true })).toBe(true);
+    expect(press('input-name-1', 'Enter', { isComposing: true })).toBe(true);
+    expect(fireEvent.keyDown(screen.getByText('Fill Last Name'), { key: 'Tab' })).toBe(true);
+    expect(press('color-name-1', 'Enter')).toBe(true);
+    expect(press('edit-name-1', 'Enter')).toBe(true);
+    expect(mockCellEditClick).not.toHaveBeenCalled();
+  });
+
+  it('closes popups left open on the cell being left', () => {
+    renderGrid();
+    const onMouseDown = vi.fn();
+    document.addEventListener('mousedown', onMouseDown);
+    press('input-name-1', 'Tab');
+    document.removeEventListener('mousedown', onMouseDown);
+    expect(onMouseDown).toHaveBeenCalledTimes(1);
+  });
+
+  it('only focuses cells whose editor would change the value or open a modal', async () => {
+    const base = mockUseTableViewConfig();
+    mockUseTableViewConfig.mockReturnValue({
+      ...base,
+      visibleColumns: [
+        { id: 'col-1', key: 'name', column_name: 'name', title: 'Name', type: 'rating', isSystem: false, system: false },
+        base.visibleColumns[1],
+      ],
+    });
+    renderGrid();
+    press('input-name-1', 'Enter');
+    await expectFocus('edit-name-2');
+    expect(mockCellEditClick).not.toHaveBeenCalled();
+  });
+
+  it('Enter continues from the first column when the cell column is not visible', async () => {
+    const base = mockUseTableViewConfig();
+    mockUseTableViewConfig.mockReturnValue({ ...base, visibleColumns: [base.visibleColumns[1]] });
+    renderGrid();
+    press('input-name-1', 'Enter');
+    await expectFocus('cell-value-2');
+    expect(press('input-name-1', 'Tab')).toBe(true);
+  });
+
+  it('does nothing when there are no visible columns', () => {
+    const base = mockUseTableViewConfig();
+    mockUseTableViewConfig.mockReturnValue({ ...base, visibleColumns: [] });
+    renderGrid();
+    expect(press('input-name-1', 'Enter')).toBe(true);
+  });
+
+  it('Enter on the last row does not create a row when it is not allowed', () => {
+    mockUseBaseAccess.mockReturnValue({ ...mockUseBaseAccess(), canCreateRecord: () => false });
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    renderGrid({ actions: { addRow: { mutateAsync } } });
+    expect(press('input-name-3', 'Enter')).toBe(false);
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('Enter on the last row creates a row in the same column through the usual flow', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    renderGrid({ actions: { addRow: { mutateAsync } } });
+    press('input-name-3', 'Enter');
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ model_id: 'tbl-1' }));
+  });
+});
+
 describe('Table - column header double click', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
