@@ -158,9 +158,12 @@ describe('UniqueKeyFormModal', () => {
 
   it('fills in the required name from the columns and saves after checking the records', async () => {
     render(<UniqueKeyFormModal table={table} columns={columns} onClose={onClose} />);
-    expect(screen.getByLabelText(/Name/)).toBeRequired();
     expect(screen.getByLabelText(/Name/)).toHaveValue('');
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    // Nothing filled in: Save reports the missing name and highlights the field
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(screen.getByLabelText(/Name/)).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('alert')).toHaveTextContent('Name is required');
+    expect(createMutateAsync).not.toHaveBeenCalled();
 
     await choose(/Email/, /Emp Code/);
     expect(screen.getByLabelText(/Name/)).toHaveValue('Unique Email + Emp Code');
@@ -178,13 +181,24 @@ describe('UniqueKeyFormModal', () => {
     render(<UniqueKeyFormModal table={table} columns={columns} onClose={onClose} />);
     await choose(/Email/);
     await userEvent.clear(screen.getByLabelText(/Name/));
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(screen.getByLabelText(/Name/)).toHaveAttribute('aria-invalid', 'true');
+    expect(createMutateAsync).not.toHaveBeenCalled();
 
     await userEvent.type(screen.getByLabelText(/Name/), '  Email once ');
+    expect(screen.getByLabelText(/Name/)).toHaveAttribute('aria-invalid', 'false');
     await choose(/Emp Code/);
     expect(screen.getByLabelText(/Name/)).toHaveValue('  Email once ');
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(createMutateAsync).toHaveBeenCalledWith(expect.objectContaining({ title: 'Email once' })));
+  });
+
+  it('asks for a column when none is chosen', async () => {
+    render(<UniqueKeyFormModal table={table} columns={columns} onClose={onClose} />);
+    await userEvent.type(screen.getByLabelText(/Name/), 'Email once');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Select at least one column');
+    expect(createMutateAsync).not.toHaveBeenCalled();
   });
 
   it('shows which column has duplicate data, and does not save', async () => {

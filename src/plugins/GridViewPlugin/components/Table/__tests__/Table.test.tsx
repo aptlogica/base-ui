@@ -1550,8 +1550,9 @@ describe('Table', () => {
     );
   });
 
-  it('alerts when delete mutation fails', async () => {
+  it('shows the reason in a toast, not an alert, when delete fails', async () => {
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    mockToastError.mockClear();
     const mutateAsync = vi.fn().mockRejectedValue(new Error('boom'));
     mockUseTableModals.mockReturnValue({
       contextMenu: { open: true, rowId: '1', x: 10, y: 10 },
@@ -1571,7 +1572,10 @@ describe('Table', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: /context delete/i }));
-    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith('boom', expect.objectContaining({ title: 'Failed to delete record' }))
+    );
+    expect(alertSpy).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
 
