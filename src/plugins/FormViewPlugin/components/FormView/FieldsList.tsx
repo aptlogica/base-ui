@@ -17,6 +17,13 @@ interface FieldsListProps {
   setVisibleAllFields?: (newState: boolean) => void;
 }
 
+// Title is always shown on the form (even when flagged as system), so it must be listed too
+const isTitleField = (field: FormField): boolean =>
+  field.column_name === 'title' || Boolean(field.title?.toLowerCase().includes('title'));
+
+const isListable = (field: FormField): boolean =>
+  (!field.system && !field.isSystem) || isTitleField(field);
+
 export const FieldsList: React.FC<FieldsListProps> = ({
   fields,
   selectedFieldId,
@@ -29,11 +36,11 @@ export const FieldsList: React.FC<FieldsListProps> = ({
   const [draggedFieldId, setDraggedFieldId] = useState<string | null>(null);
   const [dragOverFieldId, setDragOverFieldId] = useState<string | null>(null);
 
-  const enabledFields = fields.filter(field => !field.is_hidden && !field.system && !field.isSystem);
-  const nonSystemFields = fields.filter(field => !field.system && !field.isSystem);
+  const enabledFields = fields.filter(field => !field.is_hidden && isListable(field));
+  const nonSystemFields = fields.filter(isListable);
   const selectedCount = enabledFields.length;
   const totalCount = nonSystemFields.length;
-  const allFieldsEnabled = selectedCount === totalCount;
+  const allFieldsEnabled = totalCount > 0 && selectedCount === totalCount;
   
   const handleSelectAllToggle = () => {
     if (!setVisibleAllFields) return;
@@ -74,7 +81,7 @@ export const FieldsList: React.FC<FieldsListProps> = ({
 
   const filteredFields = fields.filter(
     (field: FormField) => {
-      return field?.name?.toLowerCase().includes(searchTerm.toLowerCase()) && !field.system && !field.isSystem;
+      return field?.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isListable(field);
     }
   );
 
@@ -98,7 +105,7 @@ export const FieldsList: React.FC<FieldsListProps> = ({
       <div className="px-4 pb-2 flex-shrink-0">
         <div className="rounded-xl p-3 bg-muted/50">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">Selected fields {selectedCount}/{totalCount}</span>
+            <span className="text-sm font-medium text-foreground">{selectedCount}/{totalCount} selected</span>
             <label className={`inline-flex items-center gap-2 ${setVisibleAllFields ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
               <input
                 type="checkbox"

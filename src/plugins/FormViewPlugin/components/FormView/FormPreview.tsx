@@ -154,7 +154,7 @@ const EditableTitle: React.FC<Readonly<EditableTitleProps>> = ({
     return (
       <button
         type="button"
-        className="mb-2 -mx-2 px-2 py-1 [text-align:inherit] text-[1.25rem] text-[var(--color-text-primary)] font-semibold rounded-lg cursor-pointer hover:bg-[var(--color-hover-bg)] transition-colors w-[calc(100%+1rem)]"
+        className="mb-2 -mx-2 px-2 py-1 [text-align:inherit] text-[1.25rem] text-[var(--color-text-primary)] font-semibold [overflow-wrap:anywhere] rounded-lg cursor-pointer hover:bg-[var(--color-hover-bg)] transition-colors w-[calc(100%+1rem)]"
         style={getTextStyle(textColor)}
         onClick={onStartEdit}
         onKeyDown={(e) => handleViewKeyDown(e, onStartEdit)}
@@ -167,7 +167,7 @@ const EditableTitle: React.FC<Readonly<EditableTitleProps>> = ({
 
   return (
     <h1
-      className="mb-2 text-xl font-semibold py-1 text-[var(--color-text-primary)]"
+      className="mb-2 text-xl font-semibold py-1 [overflow-wrap:anywhere] text-[var(--color-text-primary)]"
       style={getTextStyle(textColor)}
     >
       {title}
@@ -190,7 +190,7 @@ const handleDescriptionKeyDown = (e: React.KeyboardEvent, onCancel: () => void) 
 const renderDescriptionContent = (description: string | null | undefined, textColor?: string) => {
   if (description) {
     return (
-      <p className="text-sm leading-relaxed text-[var(--color-gray-600)]" style={getTextStyle(textColor)}>
+      <p className="text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere] text-[var(--color-gray-600)]" style={getTextStyle(textColor)}>
         {description}
       </p>
     );
@@ -725,9 +725,23 @@ interface FormLogoProps {
   onRemove: () => void;
 }
 
+const LOGO_HEIGHT = 64;
+const LOGO_MAX_WIDTH = 160;
+
+// Frame width that keeps the logo's aspect ratio at a fixed height, clamped between square and the max width
+export const getLogoFrameWidth = (naturalWidth: number, naturalHeight: number): number => {
+  if (!naturalWidth || !naturalHeight) return LOGO_HEIGHT;
+  return Math.round(Math.min(LOGO_MAX_WIDTH, Math.max(LOGO_HEIGHT, (LOGO_HEIGHT * naturalWidth) / naturalHeight)));
+};
+
 const FormLogo: React.FC<Readonly<FormLogoProps>> = ({ logoUrl, canEdit, overlapBanner, onUpload, onRemove }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const { upload, uploading } = useImageUpload(onUpload);
+  const [frameWidth, setFrameWidth] = useState(LOGO_HEIGHT);
+
+  useEffect(() => {
+    setFrameWidth(LOGO_HEIGHT);
+  }, [logoUrl]);
 
   if (!logoUrl && !canEdit) return null;
 
@@ -738,8 +752,17 @@ const FormLogo: React.FC<Readonly<FormLogoProps>> = ({ logoUrl, canEdit, overlap
   return (
     <div className={positionClass}>
       {logoUrl ? (
-        <div className="relative group inline-flex">
-          <img src={logoUrl} alt="Logo" className="h-16 max-w-[10rem] object-contain rounded-lg bg-[var(--color-card)] border border-[var(--color-border-primary)] p-1" />
+        <div
+          data-testid="form-logo-frame"
+          className="relative group shrink-0 overflow-hidden rounded-lg bg-[var(--color-card)] border border-[var(--color-border-primary)] p-1 shadow-xs"
+          style={{ width: frameWidth, height: LOGO_HEIGHT }}
+        >
+          <img
+            src={logoUrl}
+            alt="Logo"
+            className="block w-full h-full max-w-none object-contain"
+            onLoad={(e) => setFrameWidth(getLogoFrameWidth(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight))}
+          />
           {canEdit && (
             <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/20 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
               <button
@@ -860,7 +883,8 @@ export const FormPreview: React.FC<Readonly<FormPreviewProps>> = ({
   }, [config.description]);
 
   const canEdit = !!onConfigChange;
-  const logoOnBanner = !appearance.hideBanner && appearance.logoPosition !== 'below';
+  // Only overlap the banner when a banner image is actually shown, otherwise the logo is clipped by the card edge
+  const logoOnBanner = !appearance.hideBanner && !!appearance.bannerUrl && appearance.logoPosition !== 'below';
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: appearance.backgroundColor || undefined }}>
@@ -912,6 +936,11 @@ export const FormPreview: React.FC<Readonly<FormPreviewProps>> = ({
                 e.preventDefault();
               })}
             >
+              {visibleFields.length === 0 && (
+                <p className="text-sm text-center text-secondary py-8" data-testid="form-empty-fields">
+                  Select fields from the right panel to add here.
+                </p>
+              )}
               <FormFieldsList
                 fields={visibleFields}
                 selectedFieldId={selectedFieldId}
