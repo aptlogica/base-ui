@@ -1,6 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { extractImageUrl, getImageFileError, useImageUpload } from '../useImageUpload';
+import {
+  extractImageUrl,
+  getImageFileError,
+  useImageUpload,
+  getBannerDimensionError,
+  loadImageDimensions
+} from '../useImageUpload';
 
 const mutateAsyncMock = vi.fn();
 vi.mock('../../../../../hooks/useApi', () => ({
@@ -27,6 +33,52 @@ describe('extractImageUrl', () => {
     [undefined, ''],
   ])('extracts the url from %j', (response, expected) => {
     expect(extractImageUrl(response)).toBe(expected);
+  });
+});
+
+describe('getBannerDimensionError', () => {
+  it.each([
+    [800, 400],
+    [640, 200],
+  ])('accepts %ix%i', (width, height) => {
+    expect(getBannerDimensionError({ width, height })).toBeNull();
+  });
+
+  it.each([
+    [3840, 2160],
+    [801, 400],
+    [800, 401],
+  ])('rejects %ix%i', (width, height) => {
+    expect(getBannerDimensionError({ width, height })).toBe(
+      `Image is ${width} × ${height}px. Banner images must be at most 800 × 400px.`
+    );
+  });
+});
+
+describe('loadImageDimensions', () => {
+  const stubImage = (outcome: 'load' | 'error') => {
+    class FakeImage {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      naturalWidth = 1200;
+      naturalHeight = 600;
+      set src(_value: string) {
+        queueMicrotask(() => (outcome === 'load' ? this.onload?.() : this.onerror?.()));
+      }
+    }
+    vi.stubGlobal('Image', FakeImage);
+  };
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('resolves with the natural size of the image', async () => {
+    stubImage('load');
+    await expect(loadImageDimensions('https://img/a.png')).resolves.toEqual({ width: 1200, height: 600 });
+  });
+
+  it('rejects when the image fails to load', async () => {
+    stubImage('error');
+    await expect(loadImageDimensions('https://img/a.png')).rejects.toThrow('Image failed to load');
   });
 });
 

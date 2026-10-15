@@ -3,7 +3,7 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { X, Pencil, MoreHorizontal, Trash2 } from 'lucide-react';
+import { X, Table2, MoreVertical, Trash2, Copy } from 'lucide-react';
 import FieldRenderer from '../../plugins/FormViewPlugin/components/shared/FieldRenderer';
 import { useUpdateRowData, useAddAttachment, useRemoveAttachments, useInsertRelationData } from '../../hooks/useApi';
 import { getFieldTypeIconWithMargin, getRelationTypeFromField } from '../../types/fieldTypes';
@@ -46,7 +46,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   title = 'Edit record',
   submitLabel = 'Save changes',
   initialValues = {},
-  // onDuplicate,
+  onDuplicate,
   onDelete,
 }) => {
   const [showHidden, setShowHidden] = useState(false);
@@ -55,6 +55,8 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   const [rowData, setRowData] = useState<Record<string, any>>({});
   const [originalData, setOriginalData] = useState<Record<string, any>>({});
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
+  // Most inputs only commit their value on blur, so typing anywhere in the form counts as an edit right away
+  const [hasTyped, setHasTyped] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Get base_id from table (could be table.base_id or table.model.base_id)
@@ -151,6 +153,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     setShowHidden(false);
     setFormError(null);
     setSubmitting(false);
+    setHasTyped(false);
   }, [isOpen, fields, JSON.stringify(initialValues)]);
 
   const handleFieldChange = (field: any, value: unknown) => {
@@ -244,7 +247,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     });
   }, [fields, originalData, rowData]);
 
-  const isSaveDisabled = submitting || !hasChanges;
+  const isSaveDisabled = submitting || !(hasChanges || hasTyped);
 
   const handleSave = async () => {
     // Check permission before saving
@@ -477,70 +480,94 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
         onClick={onClose}
       />
       <div //NOSONAR 
-        className="bg-modal w-full relative !p-0 flex flex-col overflow-hidden"
+        className="bg-modal w-full h-full relative !p-0 !max-w-[99rem] !max-h-[45rem] flex flex-col overflow-hidden !rounded-[1.5rem]"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+        <div className="min-h-7 h-24 flex items-center justify-between px-6 py-3 border-b flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <Pencil className="w-5 h-5 icons-primary flex-shrink-0" />
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded truncate max-w-[150px] flex-shrink-0">{table?.title}</span>
-              <h2 className="text-2xl font-semibold truncate">{title}</h2>
-            </div>
+            <span className="inline-flex items-center gap-2 text-2xl font-medium bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg max-w-[200px] flex-shrink-0">
+              <Table2 className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{table?.title}</span>
+            </span>
+            <h2 className="text-3xl font-semibold truncate">{title}</h2>
           </div>
           <div className="flex items-center gap-2 relative flex-shrink-0">
-            {/* Menu button for duplicate/delete */}
-            <div className="relative" ref={menuRef}>
+            {canUpdateRecord() && (
               <button
                 type="button"
-                className="p-2 rounded hover:bg-gray-100"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setMenuOpen(v => !v);
-                }}
-                aria-label="Record menu"
+                disabled={isSaveDisabled}
+                onClick={handleSave}
+                className={`px-3 py-1.5 text-sm rounded-lg btn-primary ${isSaveDisabled ? 'btn-disabled' : ''}`}
               >
-                <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                {submitLabel}
               </button>
-              {menuOpen && (
-                <div //NOSONAR
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    right: 0,
-                    zIndex: 10000,
-                    minWidth: 180,
-                    background: 'var(--color-alpha-white)',
-                    borderRadius: 8,
-                    boxShadow: '0 4px 24px 0 rgba(0,0,0,0.12)',
-                    padding: 5,
-                    overflow: 'hidden'
+            )}
+            {(onDuplicate || (canDeleteRecord() && onDelete)) && (
+              <div className="relative" ref={menuRef}>
+                <button
+                  type="button"
+                  className="p-2 rounded hover:bg-gray-100"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setMenuOpen(v => !v);
                   }}
-                  className="select-none border p-2 space-y-1 animate-fade-in"
-                  onClick={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => e.stopPropagation()}
+                  aria-label="Record menu"
                 >
-                  {canDeleteRecord() && onDelete && (
-                    <button
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black transition-colors"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (onDelete && recordId) {
-                          onDelete(recordId);
-                        }
-                        setMenuOpen(false);
-                      }}
-                    >
-                      <Trash2 className="w-5 h-5" /> Delete record
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+                  <MoreVertical className="w-5 h-5 text-gray-500" />
+                </button>
+                {menuOpen && (
+                  <div //NOSONAR
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      zIndex: 10000,
+                      minWidth: 180,
+                      background: 'var(--color-alpha-white)',
+                      borderRadius: 8,
+                      boxShadow: '0 4px 24px 0 rgba(0,0,0,0.12)',
+                      padding: 5,
+                      overflow: 'hidden'
+                    }}
+                    className="select-none border p-2 space-y-1 animate-fade-in"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    {onDuplicate && canUpdateRecord() && (
+                      <button
+                        type="button"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (recordId) onDuplicate(recordId);
+                          setMenuOpen(false);
+                        }}
+                      >
+                        <Copy className="w-4 h-4" /> Duplicate record
+                      </button>
+                    )}
+                    {canDeleteRecord() && onDelete && (
+                      <button
+                        type="button"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (recordId) onDelete(recordId);
+                          setMenuOpen(false);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" /> Delete record
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             <button type="button" className="p-2 flex-shrink-0" onClick={onClose} aria-label="Close">
               <X className="w-5 h-5 text-gray-500" />
             </button>
@@ -548,13 +575,13 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
         </div>
 
         {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
-          <div className="p-6">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" onInput={() => setHasTyped(true)}>
+          <div className="px-6 py-6 mx-auto w-full max-w-[820px]">
             {/* Visible fields */}
             <div className="space-y-4">
               {visibleFields.map((field) => {
                 return (
-                  <div key={field.id} className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-4 items-center">
+                  <div key={field.id} className="grid grid-cols-1 md:grid-cols-[160px_minmax(0,1fr)] gap-4 items-center">
                     <div className="text-gray-600 flex items-center gap-2">
                       {getFieldTypeIconWithMargin(
                         getStandardFieldType(field),
@@ -563,7 +590,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                       <span className="text-sm">{getFieldDisplayName(field)}</span>
                       {(field.required || isKeyField(field)) && <span className="text-red-500 ml-1 field-component-required">*</span>}
                     </div>
-                    <div className="max-w-[560px] w-full">
+                    <div className="w-full">
                       {renderKeyAwareField(field)}
                     </div>
                   </div>
@@ -591,7 +618,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
               <div className="space-y-4">
                 {hiddenFields.map((field) => {
                   return (
-                    <div key={field.id} className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-4 items-center">
+                    <div key={field.id} className="grid grid-cols-1 md:grid-cols-[160px_minmax(0,1fr)] gap-4 items-center">
                       <div className="text-gray-600 flex items-center gap-2">
                         {getFieldTypeIconWithMargin(
                           getStandardFieldType(field),
@@ -600,7 +627,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                         <span className="text-sm">{getFieldDisplayName(field)}</span>
                         {(field.required || isKeyField(field)) && <span className="text-red-500 ml-1 field-component-required">*</span>}
                       </div>
-                      <div className="max-w-[560px] w-full">{renderKeyAwareField(field)}</div>
+                      <div className="w-full">{renderKeyAwareField(field)}</div>
                     </div>
                   );
                 })}
@@ -612,29 +639,6 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
             )}
           </div>
         </div>
-
-        {/* Footer - Fixed at Bottom */}
-        {canUpdateRecord() && (
-          <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={submitting}
-              className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={isSaveDisabled}
-              onClick={handleSave}
-              className={`px-16 py-2 rounded-xl btn-primary ${isSaveDisabled ? 'btn-disabled' : ''
-                }`}
-            >
-              {submitLabel}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
