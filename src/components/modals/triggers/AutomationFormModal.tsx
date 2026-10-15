@@ -37,7 +37,12 @@ const formError = (title: string, context: string, isTrigger: boolean, operation
 };
 
 // A query without surrounding spaces and the trailing ; the server also removes when saving
-const normalizeQuery = (query: string): string => query.trim().replace(/;+\s*$/, '');
+const normalizeQuery = (query: string): string => {
+  const trimmed = query.trim();
+  let end = trimmed.length;
+  while (end > 0 && trimmed[end - 1] === ';') end--;
+  return trimmed.slice(0, end);
+};
 
 // Whether the title, query or (for a trigger) event differ from the saved entry
 const differsFromSaved = (item: Automation, title: string, context: string, isTrigger: boolean, event: string): boolean =>

@@ -156,6 +156,16 @@ describe('AutomationFormModal', () => {
       expect(screen.getByRole('button', { name: 'BEFORE' })).toHaveAttribute('aria-pressed', 'true');
     });
 
+    it('sets the timing and events from a multi-line query with UPDATE OF', async () => {
+      render(<AutomationFormModal type="trigger" table={table} onClose={onClose} />);
+      typeQuery('Trigger query', 'CREATE TRIGGER trg_update_salary_columns\nBEFORE UPDATE OF old_salary_1791898385_0536\nON public.salary_history_1791898385_9132\nFOR EACH ROW\nEXECUTE FUNCTION update_salary_columns();');
+
+      expect(screen.getByText(/Saved as: BEFORE UPDATE/)).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: 'UPDATE' })).toBeChecked();
+      expect(screen.getByRole('checkbox', { name: 'INSERT' })).not.toBeChecked();
+      expect(screen.getByRole('button', { name: 'BEFORE' })).toHaveAttribute('aria-pressed', 'true');
+    });
+
     it('asks for an event when none is ticked', async () => {
       render(<AutomationFormModal type="trigger" table={table} onClose={onClose} />);
       await userEvent.type(screen.getByLabelText(/Title/), 'Log salary');
