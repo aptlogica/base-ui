@@ -608,4 +608,49 @@ describe('EditableTableCell', () => {
       expect(container.firstChild).toBeInTheDocument();
     });
   });
+  describe('null values do not fall back to meta defaults', () => {
+    it.each([
+    ['text', 'single-line-text', { defaultValue: 'DEFAULT' }, 'DEFAULT'],
+    ['number', 'number-field', { defaultValue: '77' }, '77'],
+    ['date', 'date-field', { dateDefault: '2031-01-01' }, '2031-01-01'],
+    ['year', 'year', { yearDefault: 2031 }, '2031'],
+    ['rating', 'rating', { ratingDefault: 4 }, '4'],
+    ['multiSelect', 'multi-select', { multiDefault: ['DEFAULT'] }, 'DEFAULT'],
+  ])('renders %s cell without its meta default', (uidt, testId, meta, defaultText) => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt, meta }}
+          value={null}
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId(testId)).not.toHaveTextContent(defaultText);
+    });
+
+    it('renders an unchecked checkbox for a null boolean even with checkboxDefault', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'boolean', meta: { checkboxDefault: true, defaultValue: true } }}
+          value={null}
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('checkbox')).toHaveTextContent('false');
+    });
+
+    it('renders an unchecked checkbox for an unrecognised boolean string', () => {
+      render(
+        <EditableTableCell
+          column={{ ...defaultColumn, uidt: 'boolean', meta: { checkboxDefault: true } }}
+          value="xyz"
+          onChange={mockOnChange}
+          width={200}
+        />
+      );
+      expect(screen.getByTestId('checkbox')).toHaveTextContent('false');
+    });
+  });
+
 });
