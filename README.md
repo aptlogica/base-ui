@@ -9,6 +9,7 @@
 <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/Vite-Build_Tool-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite"></a>
 <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/TailwindCSS-Styling-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="TailwindCSS"></a>
 <a href="https://tanstack.com/query"><img src="https://img.shields.io/badge/React_Query-Data-FF4154?style=for-the-badge&logo=reactquery&logoColor=white" alt="React Query"></a>
+<a href="https://app.fossa.com/projects/git%2Bgithub.com%2Faptlogica%2Fbase-ui?ref=badge_shield" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2Faptlogica%2Fbase-ui.svg?type=shield"/></a>
 
 </p>
 
@@ -174,3 +175,6 @@ MIT License. Copyright (c) 2026 Aptlogica Technologies Private Limited.
 - [Documentation](https://docs.serenibase.com)
 - [Community Discord](https://discord.gg/serenibase)
 - [Report Issues](https://github.com/aptlogica/base-ui/issues)
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Faptlogica%2Fbase-ui.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Faptlogica%2Fbase-ui?ref=badge_large)
