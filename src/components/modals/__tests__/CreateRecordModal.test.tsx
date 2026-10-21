@@ -180,6 +180,50 @@ describe('CreateRecordModal', () => {
     });
   });
 
+  describe('record layout', () => {
+    it('shows the title and save button in the header with no footer', () => {
+      renderWithQueryClient(
+        <CreateRecordModal {...defaultProps} layout="record" title="New row" submitLabel="Save row" />
+      );
+
+      expect(screen.getByRole('heading', { name: 'New row' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save row' })).toBeDisabled();
+      expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+    });
+
+    it('closes from the close button', () => {
+      const onClose = vi.fn();
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} layout="record" onClose={onClose} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it('duplicates from the record menu: saves and keeps the form open with the same values', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      const onSuccess = vi.fn();
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} layout="record" onClose={onClose} onSuccess={onSuccess} />);
+
+      await user.click(screen.getByRole('button', { name: 'Record menu' }));
+      expect(screen.getByRole('button', { name: /duplicate record/i })).toBeDisabled();
+
+      await user.type(screen.getByTestId('field-input-field-1'), 'Hello');
+      await user.click(screen.getByRole('button', { name: 'Record menu' }));
+      await user.click(screen.getByRole('button', { name: /duplicate record/i }));
+
+      await waitFor(() => expect(upsertRowMutateAsyncMock).toHaveBeenCalledWith({
+        model_id: 'table-123',
+        values: { 'field-1': 'Hello' },
+      }));
+      await waitFor(() => expect(onSuccess).toHaveBeenCalledWith({ recordId: '123' }));
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByTestId('field-input-field-1')).toHaveValue('Hello');
+      expect(screen.queryByRole('button', { name: /duplicate record/i })).not.toBeInTheDocument();
+    });
+  });
+
   describe('interactions', () => {
     it('calls onClose when Close button is clicked', async () => {
       const user = userEvent.setup();

@@ -19,6 +19,8 @@ import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal
 import ReactDOM from 'react-dom';
 import { Plus, List, Lock, KeyRound } from 'lucide-react';
 import EditRecordModal from '../../../../components/modals/EditRecordModal';
+import CreateRecordModal from '../../../../components/modals/CreateRecordModal';
+import { NewRowSplitButton } from './components/NewRowSplitButton';
 import { buildInitialValuesForEdit } from '../../../../utils/initialValues';
 import { useToast } from '../../../../components/common/Toast';
 import { apiErrorMessage } from '../../../../utils/apiErrors';
@@ -451,6 +453,8 @@ export const Table: React.FC<TableProps> = ({
 
   // Edit record modal state
   const [isEditRecordModalOpen, setIsEditRecordModalOpen] = useState(false);
+  // "New row - Form" modal state
+  const [isCreateRecordModalOpen, setIsCreateRecordModalOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
@@ -1508,14 +1512,10 @@ export const Table: React.FC<TableProps> = ({
       {/* Fixed Footer */}
       <div className="sticky bottom-0 z-30 bg-card border-t flex items-center px-4 h-12">
         {!isBaseReadOnly() && canCreateRecord() && (
-          <button
-            onClick={() => { setActiveCell(null); addNewRowAndFocus(); }}
-            className="flex items-center gap-2 px-5 py-1.5 text-sm font-medium btn-primary !rounded-lg transition-colors duration-200"
-            title="Add new row"
-          >
-            <Plus className="w-5 h-5" />
-            Add Row
-          </button>
+          <NewRowSplitButton
+            onAddGridRow={() => { setActiveCell(null); addNewRowAndFocus(); }}
+            onAddFormRow={() => { setActiveCell(null); setIsCreateRecordModalOpen(true); }}
+          />
         )}
         <div className="ml-auto flex items-center gap-3 text-sm">
           {/* Virtualization is always enabled - indicator removed to reduce UI clutter */}
@@ -1690,6 +1690,18 @@ export const Table: React.FC<TableProps> = ({
         }}
         title="Edit record"
         submitLabel="Update record"
+      />
+
+      {/* New Row Form Modal */}
+      <CreateRecordModal
+        isOpen={isCreateRecordModalOpen}
+        onClose={() => setIsCreateRecordModalOpen(false)}
+        onSuccess={() => { try { onRefresh?.(); } catch { } }}
+        table={tableData?.model}
+        fields={tableData?.columns || []}
+        title="New row"
+        submitLabel="Save row"
+        layout="record"
       />
     </div>
 

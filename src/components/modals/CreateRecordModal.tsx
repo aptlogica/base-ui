@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-import React, { useEffect, useMemo, useState } from 'react';
-import { X, CirclePlus } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { X, CirclePlus, Table2, MoreVertical, Copy } from 'lucide-react';
 import FieldRenderer from '../../plugins/FormViewPlugin/components/shared/FieldRenderer';
 import { useUpsertRow, useAddAttachment, useInsertRelationData } from '../../hooks/useApi';
 import { useRequiredKeyFields } from '../../hooks/useRequiredKeyFields';
@@ -24,6 +24,8 @@ type CreateRecordModalProps = {
     title?: string;
     submitLabel?: string;
     initialValues?: Record<string, any>; // keyed by field.id or field.name
+    // 'record' uses the Edit record popup layout, with the save button in the header
+    layout?: 'default' | 'record';
 };
 
 const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
@@ -35,6 +37,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     title = 'New record',
     submitLabel = 'Save record',
     initialValues = {},
+    layout = 'default',
 }) => {
     const [showHidden, setShowHidden] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -42,6 +45,20 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const [rowData, setRowData] = useState<Record<string, any>>({});
     const [createdRecordId, setCreatedRecordId] = useState<string | null>(null);
     const [initialRowData, setInitialRowData] = useState<Record<string, any>>({});
+    const [menuOpen, setMenuOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    // Close the record menu when clicking outside it
+    useEffect(() => {
+        if (!menuOpen) return;
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [menuOpen]);
 
     // Get base_id from table (could be table.base_id or table.model.base_id)
     const baseId = table?.base_id || table?.model?.base_id;
@@ -118,6 +135,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         setFormError(null);
         setSubmitting(false);
         setCreatedRecordId(null); // Reset created record ID
+        setMenuOpen(false);
     }, [isOpen, fields, JSON.stringify(initialValues)]);
 
     const handleFieldChange = (field: any, value: unknown) => {
@@ -289,7 +307,8 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         }
     };
 
-    const handleSave = async () => {
+    // keepOpen (Duplicate record) saves the record and leaves the form filled in, ready to save a copy
+    const handleSave = async ({ keepOpen = false }: { keepOpen?: boolean } = {}) => {
         // Check permission before saving
         if (!canCreateRecord()) {
             setFormError('You do not have permission to create records.');
@@ -325,6 +344,10 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             setSubmitting(false);
             toast.success('Record created successfully');
             onSuccess?.({ recordId });
+            if (keepOpen) {
+                setCreatedRecordId(null);
+                return;
+            }
             onClose();
         } catch (err) {
             console.error('Failed to create record', err);
@@ -421,6 +444,146 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             </div>
         );
     };
+
+    const renderRecordLayoutField = (field: any) => (
+        <div key={field.id} className="grid grid-cols-1 md:grid-cols-[160px_minmax(0,1fr)] gap-4 items-center">
+            <div className="text-gray-600 flex items-center gap-2">
+                {getFieldTypeIconWithMargin(
+                  getStandardFieldType(field),
+                  getRelationTypeFromField(field)
+                )}
+                <span className="text-sm">{getFieldDisplayName(field)}</span>
+                {(field.required || isKeyField(field)) && <span className="text-red-500 ml-1 field-component-required">*</span>}
+            </div>
+            <div className="w-full">{renderKeyAwareField(field)}</div>
+        </div>
+    );
+
+    if (layout === 'record') {
+        return (
+            <div //NOSONAR
+                className="bg-modal-backdrop relative"
+                onClick={(e) => e.target === e.currentTarget && onClose()}
+                onKeyDown={(e) => e.stopPropagation()}
+            >
+                <button
+                    type="button"
+                    aria-label="Close modal"
+                    className="absolute inset-0"
+                    onClick={onClose}
+                />
+                <div //NOSONAR
+                    className="bg-modal w-full h-full relative !p-0 !max-w-[99rem] !max-h-[45rem] flex flex-col overflow-hidden !rounded-[1.5rem]"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                >
+                    {/* Header */}
+                    <div className="min-h-7 h-24 flex items-center justify-between px-6 py-3 border-b flex-shrink-0">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <span className="inline-flex items-center gap-2 text-2xl font-medium bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg max-w-[200px] flex-shrink-0">
+                                <Table2 className="w-4 h-4 flex-shrink-0" />
+                                <span className="truncate">{table?.title}</span>
+                            </span>
+                            <h2 className="text-3xl font-semibold truncate">{title}</h2>
+                        </div>
+                        <div className="flex items-center gap-2 relative flex-shrink-0">
+                            {canCreateRecord() && (
+                                <button
+                                    type="button"
+                                    disabled={isSaveDisabled}
+                                    onClick={() => handleSave()}
+                                    className={`px-3 py-1.5 text-sm rounded-lg btn-primary ${isSaveDisabled ? 'btn-disabled' : ''}`}
+                                >
+                                    {submitLabel}
+                                </button>
+                            )}
+                            {canCreateRecord() && (
+                                <div className="relative" ref={menuRef}>
+                                    <button
+                                        type="button"
+                                        className="p-2 rounded hover:bg-gray-100"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setMenuOpen(v => !v);
+                                        }}
+                                        aria-label="Record menu"
+                                    >
+                                        <MoreVertical className="w-5 h-5 text-gray-500" />
+                                    </button>
+                                    {menuOpen && (
+                                        <div //NOSONAR
+                                            style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                right: 0,
+                                                zIndex: 10000,
+                                                minWidth: 180,
+                                                background: 'var(--color-alpha-white)',
+                                                borderRadius: 8,
+                                                boxShadow: '0 4px 24px 0 rgba(0,0,0,0.12)',
+                                                padding: 5,
+                                                overflow: 'hidden'
+                                            }}
+                                            className="select-none border p-2 space-y-1 animate-fade-in"
+                                            onClick={(e) => e.stopPropagation()}
+                                            onKeyDown={(e) => e.stopPropagation()}
+                                        >
+                                            <button
+                                                type="button"
+                                                disabled={isSaveDisabled}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    setMenuOpen(false);
+                                                    void handleSave({ keepOpen: true });
+                                                }}
+                                            >
+                                                <Copy className="w-4 h-4" /> Duplicate record
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            <button type="button" className="p-2 flex-shrink-0" onClick={onClose} aria-label="Close">
+                                <X className="w-5 h-5 text-gray-500" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Scrollable Content Area */}
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+                        <div className="px-6 py-6 mx-auto w-full max-w-[820px]">
+                            <div className="space-y-4">{visibleFields.map(renderRecordLayoutField)}</div>
+
+                            {hiddenFields.length > 0 && (
+                                <div className="flex items-center gap-3 my-8">
+                                    <div className="h-px bg-gray-200 flex-1" />
+                                    <button
+                                        type="button"
+                                        className="px-4 py-2 rounded-full border text-sm text-primary bg-card hover:bg-gray-50"
+                                        onClick={() => setShowHidden(v => !v)}
+                                    >
+                                        {showHidden ? `Hide ${hiddenFields.length} hidden fields` : `Show ${hiddenFields.length} hidden fields`}
+                                    </button>
+                                    <div className="h-px bg-gray-200 flex-1" />
+                                </div>
+                            )}
+
+                            {showHidden && hiddenFields.length > 0 && (
+                                <div className="space-y-4">{hiddenFields.map(renderRecordLayoutField)}</div>
+                            )}
+
+                            {formError && (
+                                <div className="mt-4 text-red-600 text-sm">{formError}</div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-modal-backdrop relative">
@@ -525,7 +688,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                         <button
                             type="button"
                             disabled={isSaveDisabled}
-                            onClick={handleSave}
+                            onClick={() => handleSave()}
                             className={`px-16 py-2 rounded-xl btn-primary ${isSaveDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
                         >
                             {submitLabel}
