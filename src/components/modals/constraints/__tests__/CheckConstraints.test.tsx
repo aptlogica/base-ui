@@ -111,9 +111,9 @@ describe('CheckConstraintFormModal', () => {
     updateMutateAsync.mockResolvedValue({});
   });
 
-  const renderForm = (item?: TableConstraint) => {
+  const renderForm = (item?: TableConstraint, existingTitles: string[] = []) => {
     const onClose = vi.fn();
-    render(<CheckConstraintFormModal table={table} columns={COLUMNS} tableName={TABLE_NAME} item={item} onClose={onClose} />);
+    render(<CheckConstraintFormModal table={table} columns={COLUMNS} tableName={TABLE_NAME} item={item} existingTitles={existingTitles} onClose={onClose} />);
     return onClose;
   };
   const preview = () => screen.getByLabelText('SQL preview').textContent;
@@ -308,6 +308,39 @@ describe('CheckConstraintFormModal', () => {
     await pick('Select a condition', 'Greater than zero');
     await toCategory('Custom SQL Expression');
     expect((screen.getByLabelText(/^SQL/) as HTMLTextAreaElement).value).toContain('CHECK (Age > 0);');
+  });
+
+  it('highlights the name and refuses it when empty or already used, like the unique key form', async () => {
+    renderForm(undefined, ['Age · Maximum']);
+    await pick('Select a field', 'Age');
+    await pick('Select a condition', 'Greater than zero');
+    const name = screen.getByLabelText(/Name/);
+
+    // Empty name
+    await userEvent.clear(name);
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Name is required');
+    expect(name).toHaveAttribute('aria-invalid', 'true');
+    expect(name.className).toContain('!border-red-500');
+
+    // Typing clears the highlight; a name that is taken (any letter case) is refused
+    await userEvent.type(name, 'age · maximum');
+    expect(name).toHaveAttribute('aria-invalid', 'false');
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('A check constraint named "age · maximum" already exists');
+    expect(name).toHaveAttribute('aria-invalid', 'true');
+    expect(createMutateAsync).not.toHaveBeenCalled();
+
+    // Another name goes through
+    await userEvent.type(name, ' 2');
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(createMutateAsync).toHaveBeenCalled();
+  });
+
+  it('lets an edited constraint keep its own name', async () => {
+    renderForm(CHECK, []);
+    await userEvent.click(screen.getByRole('button', { name: 'Apply changes' }));
+    expect(updateMutateAsync).toHaveBeenCalled();
   });
 
   it('shows why the server refused and stays open', async () => {

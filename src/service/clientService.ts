@@ -5,11 +5,11 @@
 import { SereniBaseClient } from 'serenibase-sdk';
 import type {
   CheckTableConstraint,
-  ConstraintCheckResult as SdkConstraintCheckResult,
+  ConstraintCheckResult,
   CreateAutomation,
-  CreateTableConstraint as SdkCreateTableConstraint,
+  CreateTableConstraint,
   StandardResponse,
-  TableConstraint as SdkTableConstraint,
+  TableConstraint,
   TableConstraintType,
   UpdateTableConstraint,
   UpsertRow,
@@ -1190,50 +1190,26 @@ export async function updatePrimaryKeyService({ tableId, columnIds }: { tableId:
 }
 
 // =========================
-// Table constraints (unique keys; later primary key and check)
+// Table constraints (unique keys and check constraints)
 // =========================
 
-// What a check constraint adds: the user's SQL condition and its category
-export interface CheckConstraintFields {
-  category?: string;
-  condition?: string;
-}
-export type TableConstraint = SdkTableConstraint & CheckConstraintFields & {
-  // Schema-qualified Postgres table, for the SQL preview
-  table_name?: string;
-  // The constraint as Postgres has it
-  definition?: string;
-};
-// A unique key sends column_ids; a check constraint sends a condition
-export type TableConstraintInput = Omit<UpdateTableConstraint, 'column_ids'> & { column_ids?: string[] } & CheckConstraintFields;
-export type CreateTableConstraint = Omit<SdkCreateTableConstraint, 'column_ids'> & TableConstraintInput & {
-  // Check constraints: the ID the SQL preview's constraint name was made from
-  id?: string;
-};
-export type CheckTableConstraintInput = { model_id: string; type?: TableConstraintType; column_ids?: string[] } & CheckConstraintFields;
-export type ConstraintCheckResult = SdkConstraintCheckResult & {
-  // Check constraints: how many records break the condition
-  violations?: number;
-};
-export type { TableConstraintType };
-export type { ConstraintColumn } from 'serenibase-sdk';
+export type { TableConstraint, TableConstraintType, ConstraintCheckResult, ConstraintColumn } from 'serenibase-sdk';
 
-// The SDK sends the body as given; its types only know unique keys, so check fields are cast through
 export async function getTableConstraintsService(tableId: string, type: TableConstraintType) {
   return await makeAuthenticatedCall(() => client.constraintService.list(tableId, type)) as StandardResponse<TableConstraint[]>;
 }
 
 // Checks existing records against the columns, or the check condition, without changing anything
-export async function checkTableConstraintService(params: CheckTableConstraintInput) {
-  return await makeAuthenticatedCall(() => client.constraintService.check(params as CheckTableConstraint)) as StandardResponse<ConstraintCheckResult>;
+export async function checkTableConstraintService(params: CheckTableConstraint) {
+  return await makeAuthenticatedCall(() => client.constraintService.check(params)) as StandardResponse<ConstraintCheckResult>;
 }
 
 export async function createTableConstraintService(params: CreateTableConstraint) {
-  return await makeAuthenticatedCall(() => client.constraintService.create(params as SdkCreateTableConstraint)) as StandardResponse<TableConstraint>;
+  return await makeAuthenticatedCall(() => client.constraintService.create(params)) as StandardResponse<TableConstraint>;
 }
 
-export async function updateTableConstraintService({ id, ...params }: TableConstraintInput & { id: string }) {
-  return await makeAuthenticatedCall(() => client.constraintService.update(id, params as UpdateTableConstraint)) as StandardResponse<TableConstraint>;
+export async function updateTableConstraintService({ id, ...params }: UpdateTableConstraint & { id: string }) {
+  return await makeAuthenticatedCall(() => client.constraintService.update(id, params)) as StandardResponse<TableConstraint>;
 }
 
 export async function deleteTableConstraintService(id: string) {

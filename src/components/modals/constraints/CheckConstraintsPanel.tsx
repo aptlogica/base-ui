@@ -343,6 +343,9 @@ const CheckConstraintsPanel: React.FC<{ table: any }> = ({ table }) => {
             table={table}
             columns={columns}
             tableName={tableName}
+            existingTitles={constraints
+              .filter((c) => c.id !== form.item?.id)
+              .map((c) => c.title)}
             item={
               form.item &&
               (constraints.find((c) => c.id === form.item?.id) ?? form.item)

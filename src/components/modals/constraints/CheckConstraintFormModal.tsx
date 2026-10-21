@@ -8,7 +8,7 @@ import AdvancedDropdown from '../../common/dropdown/AdvancedDropdown';
 import { getFieldTypeIconComponent } from '../../../types/fieldTypes';
 import { useCreateTableConstraint, useUpdateTableConstraint } from '../../../hooks/useApi';
 import { useToast } from '../../common/Toast';
-import type { ValueSpec } from './checkCategories';
+import type { CheckExample, FieldKind, ValueSpec } from './checkCategories';
 import type { TableConstraint } from '../../../service/clientService';
 import type { Column } from '../../../types/api.types';
 import { CHECK_CATEGORIES, CUSTOM_CATEGORY, categoryByKey, examplesFor, fieldKind, savedCategoryKey } from './checkCategories';
@@ -24,6 +24,8 @@ interface CheckConstraintFormModalProps {
   tableName: string;
   // Set when editing; adds a new check constraint otherwise
   item?: TableConstraint;
+  // Titles of the table's check constraints, to refuse a name that is already used
+  existingTitles?: string[];
   onClose: () => void;
 }
 
@@ -39,7 +41,45 @@ const textareaClass = 'w-full text-[var(--color-text-primary)] p-3 rounded-[var(
 // a common condition and the value(s) it needs, and the SQL preview, which is the statement Apply
 // runs. Custom SQL Expression is one box with the whole statement. Apply validates on the server,
 // then applies.
-const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ table, columns, tableName, item, onClose }) => {
+// A new constraint starts with the first category (Single Field); a saved one with its own, or custom SQL
+const startCategory = (item: any, saved: ReturnType<typeof matchExample>): string => {
+  if (!item) return CHECK_CATEGORIES[0].key;
+  return saved ? saved.categoryKey : CUSTOM_CATEGORY;
+};
+
+// Another check constraint of this table with the same name (letter case aside) is refused
+const nameProblemOf = (value: string, existingTitles: string[]): string => {
+  if (value === '') return 'Name is required';
+  const taken = existingTitles.some(t => t.trim().toLowerCase() === value.toLowerCase());
+  return taken ? `A check constraint named "${value}" already exists` : '';
+};
+
+// The HTML input type for a value of this kind; a plain value follows the type of the first field
+const inputTypeOf = (kind: string, firstKind?: string): string => {
+  if (kind === 'number') return 'number';
+  if (kind !== 'value') return 'text';
+  return { number: 'number', date: 'date' }[firstKind as string] ?? 'text';
+};
+
+// The condition for the chosen example; empty while none is chosen
+const conditionOf = (
+  example: CheckExample | undefined, names: (string | undefined)[], values: string[], kind: FieldKind,
+  quote?: (name: string) => string,
+): { condition: string; complete: boolean } =>
+  example ? buildCondition(example, names, values, kind, quote) : { condition: '', complete: false };
+
+// The name a constraint gets from its first field and condition
+const autoNameOf = (field: string | undefined, label: string): string =>
+  (field ? `${field} · ${label}` : label).slice(0, MAX_NAME_LENGTH);
+
+// Where a field goes before the statement box was used: inside CHECK ( )
+const insideCheck = (statement: string): { start: number; end: number } => {
+  const open = /CHECK\s*\(/i.exec(statement);
+  const at = open ? open.index + open[0].length : statement.length;
+  return { start: at, end: at };
+};
+
+const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ table, columns, tableName, item, existingTitles = [], onClose }) => {
   const tableId: string = table?.id;
   const usable = checkableColumns(columns);
   const toast = useToast();
@@ -55,8 +95,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
     : null));
 
   // A new constraint starts with the first category (Single Field)
-  const [category, setCategory] = useState(
-    item ? (saved ? saved.categoryKey : CUSTOM_CATEGORY) : CHECK_CATEGORIES[0].key);
+  const [category, setCategory] = useState(() => startCategory(item, saved));
   const [fieldIds, setFieldIds] = useState<string[]>(
     () => [0, 1].map(i => (saved?.columnNames[i] ? columnOf(saved.columnNames[i])?.id ?? '' : '')));
   const [exampleLabel, setExampleLabel] = useState(saved?.example.label ?? '');
@@ -67,6 +106,9 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
   // The name follows the field and condition until the user types one; an existing constraint keeps its name
   const [nameEdited, setNameEdited] = useState(!!item);
   const [error, setError] = useState('');
+  // Set when Apply is clicked with no name or a name already used, so the field is highlighted in red
+  const [nameError, setNameError] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState(false);
   // Custom SQL box and where the cursor last was in it, for inserting a field
   const statementRef = useRef<HTMLTextAreaElement>(null);
@@ -88,9 +130,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
   // The conditions offered follow the type of the first field
   const offered = examplesFor(selected, fieldIds[0] ? firstFieldKind : undefined);
   const example = offered.find(e => e.label === exampleLabel);
-  const built = example
-    ? buildCondition(example, fieldIds.map(columnName), values, firstFieldKind)
-    : { condition: '', complete: false };
+  const built = conditionOf(example, fieldIds.map(columnName), values, firstFieldKind);
   const condition = built.condition;
 
   const title = name.trim();
@@ -98,17 +138,20 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
   const replacing = !!item && conditionChanged;
   // The SQL that runs, and the preview of it, which shows the field titles instead of the column names
   const sql = previewSql(tableName, constraintName, condition || '<condition>', replacing);
-  const shownCondition = example
-    ? buildCondition(example, fieldIds.map(id => usable.find(c => c.id === id)?.title), values, firstFieldKind, displayName).condition
-    : '';
+  const shownCondition = conditionOf(
+    example, fieldIds.map(id => usable.find(c => c.id === id)?.title), values, firstFieldKind, displayName).condition;
   const shownSql = previewSql(tableName, constraintName, shownCondition || '<condition>', replacing);
-  const canApply = title !== '' && (isCustom ? statement.trim() !== '' : built.complete) && !isBusy;
+  const applyLabel = item ? 'Apply changes' : 'Apply';
+  const actionWord = item ? 'Edit' : 'Add';
+  const copyLabel = copied ? 'Copied' : 'Copy';
+  const nameLabelClass = nameError ? '!text-red-600' : '!text-primary';
+  const nameInputClass = nameError ? '!border-red-500 focus:!border-red-500 bg-red-50' : 'field-component-border';
+  const canApply = (isCustom ? statement.trim() !== '' : built.complete) && !isBusy;
 
   // The name follows the first field and the condition, until it is typed in
   const autoName = (fieldId: string, label: string) => {
     if (nameEdited) return;
-    const field = usable.find(c => c.id === fieldId)?.title;
-    setName((field ? `${field} · ${label}` : label).slice(0, MAX_NAME_LENGTH));
+    setName(autoNameOf(usable.find(c => c.id === fieldId)?.title, label));
   };
 
   // Switching to Custom SQL Expression carries the condition into the statement
@@ -128,10 +171,10 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
     setError('');
     if (index !== 0) return;
     // A field of another type may not offer the chosen condition
-    const stillOffered = example && examplesFor(selected, fieldKind(usable.find(c => c.id === id)?.uidt)).includes(example);
-    if (stillOffered) {
+    if (!example) return;
+    if (examplesFor(selected, fieldKind(usable.find(c => c.id === id)?.uidt)).includes(example)) {
       autoName(id, example.label);
-    } else if (example) {
+    } else {
       setExampleLabel('');
       setValues(['', '']);
     }
@@ -153,15 +196,19 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
   // The server checks the condition and the records, and applies the constraint only if all pass
   const handleApply = async () => {
     setError('');
-    let applied = condition;
-    if (isCustom) {
-      const parsed = parseCheckStatement(statement, tableName);
-      if ('error' in parsed) {
-        setError(parsed.error);
-        return;
-      }
-      applied = toColumnNames(parsed.condition, usable);
+    const nameProblem = nameProblemOf(title, existingTitles);
+    if (nameProblem) {
+      setNameError(true);
+      nameInputRef.current?.focus();
+      setError(nameProblem);
+      return;
     }
+    const parsed = isCustom ? parseCheckStatement(statement, tableName) : { condition };
+    if ('error' in parsed) {
+      setError(parsed.error);
+      return;
+    }
+    const applied = isCustom ? toColumnNames(parsed.condition, usable) : parsed.condition;
     try {
       const input = { title, category: savedCategoryKey(category, firstFieldKind), condition: applied };
       if (item) {
@@ -180,12 +227,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
   const insertField = (id: string) => {
     const column = usable.find(c => c.id === id);
     if (!column) return;
-    let cursor = statementCursor.current;
-    if (!cursor) {
-      const open = /CHECK\s*\(/i.exec(statement);
-      const at = open ? open.index + open[0].length : statement.length;
-      cursor = { start: at, end: at };
-    }
+    const cursor = statementCursor.current ?? insideCheck(statement);
     const inserted = insertColumn(statement, column.title, cursor, displayName);
     setStatement(inserted.condition);
     setError('');
@@ -257,11 +299,6 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
   );
 
   const specs = example?.values ?? [];
-  const inputType = (kind: string) => {
-    if (kind === 'number') return 'number';
-    if (kind !== 'value') return 'text';
-    return { number: 'number', date: 'date' }[firstFieldKind as string] ?? 'text';
-  };
   const valueInput = (spec: ValueSpec, index: number, label: string) => {
     const invalid = values[index].trim() !== '' && valueSql(spec.kind, values[index], firstFieldKind) === null;
     return (
@@ -269,7 +306,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
         key={label}
         id={`check-value-${index}`}
         aria-label={label}
-        type={inputType(spec.kind)}
+        type={inputTypeOf(spec.kind, firstFieldKind)}
         value={values[index]}
         placeholder={spec.placeholder}
         aria-invalid={invalid}
@@ -308,7 +345,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
       {/* Name and category side by side */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1 min-w-0">
-          <label htmlFor="check-name" className={labelClass}>
+          <label htmlFor="check-name" className={`field-component-label ${nameLabelClass}`}>
             Name <span className="field-component-required">*</span>
           </label>
           <input
@@ -316,12 +353,18 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
             type="text"
             value={name}
             maxLength={MAX_NAME_LENGTH}
+            ref={nameInputRef}
+            aria-invalid={nameError}
             placeholder="e.g. Valid employee status"
             onChange={e => {
               setName(e.target.value);
               setNameEdited(true);
+              if (nameError) {
+                setNameError(false);
+                setError('');
+              }
             }}
-            className="field-component field-component-border field-component-focus border"
+            className={`field-component field-component-focus border ${nameInputClass}`}
           />
           <p className="text-xs text-gray-500">{name.length}/{MAX_NAME_LENGTH} characters</p>
         </div>
@@ -388,7 +431,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
               <p className={labelClass}>SQL preview</p>
               <button type="button" onClick={copySql} className="h-6 px-2 rounded-lg hover:bg-gray-100 flex items-center gap-1 text-xs text-gray-600">
                 <Copy className="w-3.5 h-3.5" />
-                {copied ? 'Copied' : 'Copy'}
+                {copyLabel}
               </button>
             </div>
             <pre aria-label="SQL preview" className="p-3 rounded-[var(--radius-lg)] bg-gray-50 border text-xs leading-relaxed font-mono text-gray-800 whitespace-pre-wrap break-all">{shownSql}</pre>
@@ -425,7 +468,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
             </div>
             <div className="min-w-0">
               <h2 id="check-constraint-form-title" className="text-xl font-semibold text-primary truncate">
-                {item ? 'Edit' : 'Add'} check constraint
+                {actionWord} check constraint
               </h2>
               <p className="text-sm text-secondary truncate">{table?.title || table?.name}</p>
             </div>
@@ -473,9 +516,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   Validating…
                 </>
-              ) : (
-                item ? 'Apply changes' : 'Apply'
-              )}
+              ) : applyLabel}
             </button>
           </div>
         </div>
