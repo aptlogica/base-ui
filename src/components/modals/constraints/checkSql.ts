@@ -3,6 +3,8 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import type { Column } from '../../../types/api.types';
+import type { CheckExample, FieldKind, ValueKind } from './checkCategories';
+import { CHECK_CATEGORIES } from './checkCategories';
 
 // Field types with no plain column a condition can use
 const COMPUTED_TYPES = new Set(['links', 'lookup', 'rollup', 'formula', 'button', 'attachment']);
@@ -29,6 +31,113 @@ export const fillExample = (sql: string, columnNames: (string | undefined)[]): s
     const name = columnNames[n ? Number(n) - 1 : 0];
     return name ? quoteIdent(name) : '<field>';
   });
+
+const NUMBER = /^-?\d+(\.\d+)?$/;
+const quoteText = (v: string) => `'${v.replace(/'/g, "''")}'`;
+const items = (v: string) => v.split(',').map(i => i.trim()).filter(Boolean);
+
+// A typed value as a SQL literal; null while it is empty or not valid for its kind
+export const valueSql = (kind: ValueKind, raw: string, field?: FieldKind): string | null => {
+  const v = raw.trim();
+  if (!v) return null;
+  switch (kind) {
+    case 'number': return NUMBER.test(v) ? v : null;
+    case 'text': return quoteText(v);
+    case 'list': return items(v).map(quoteText).join(', ');
+    default:
+      if (!field) return null;
+      if (field === 'number') return NUMBER.test(v) ? v : null;
+      if (field === 'date') return /^\d{4}-\d{2}-\d{2}$/.test(v) ? `DATE ${quoteText(v)}` : null;
+      return quoteText(v);
+  }
+};
+
+// Fills an example's fields and values. Anything missing or invalid stays <field> or <value>, and
+// `complete` is false.
+export const buildCondition = (
+  example: CheckExample, columnNames: (string | undefined)[], values: string[], fieldKind?: FieldKind,
+): { condition: string; complete: boolean } => {
+  let complete = true;
+  const condition = example.sql.replace(/\{(c[23]?|v[12])\}/g, (_, token: string) => {
+    if (token[0] === 'c') {
+      const name = columnNames[token.length > 1 ? Number(token[1]) - 1 : 0];
+      if (name) return quoteIdent(name);
+      complete = false;
+      return '<field>';
+    }
+    const index = Number(token[1]) - 1;
+    const sql = valueSql(example.values?.[index]?.kind ?? 'text', values[index] ?? '', fieldKind);
+    if (sql) return sql;
+    complete = false;
+    return '<value>';
+  });
+  return { condition, complete };
+};
+
+const unquote = (v: string) => (/^'.*'$/s.test(v) ? v.slice(1, -1).replace(/''/g, "'") : v);
+
+// A saved condition as a typed value again, the reverse of valueSql
+const rawValue = (kind: ValueKind, sql: string): string => {
+  switch (kind) {
+    case 'list': return sql.split(',').map(i => unquote(i.trim())).join(', ');
+    case 'value': return unquote(/^DATE\s+('.*')$/is.exec(sql)?.[1] ?? sql);
+    default: return unquote(sql);
+  }
+};
+
+const squash = (sql: string) => sql.replace(/\s+/g, ' ').trim();
+
+export interface ExampleMatch {
+  categoryKey: string;
+  example: CheckExample;
+  // Column names for {c}, {c2}
+  columnNames: string[];
+  values: string[];
+}
+
+// Finds the example a saved condition was made from (its saved category first), with its fields and
+// values; null when it is none of them, so the condition is shown as custom SQL
+export const matchExample = (
+  condition: string, savedCategory: string | undefined, columnNames: string[], kindOf: (columnName: string) => FieldKind,
+): ExampleMatch | null => {
+  const IDENT = String.raw`("(?:[^"]|"")+"|[A-Za-z_][\w$]*)`;
+  const categories = [...CHECK_CATEGORIES].sort((a, b) => Number(b.key === savedCategory) - Number(a.key === savedCategory));
+  for (const category of categories) {
+    for (const example of category.examples) {
+      const slots: string[] = [];
+      const pattern = example.sql.split(/(\{(?:c[23]?|v[12])\})/).map(part => {
+        const token = /^\{(c[23]?|v[12])\}$/.exec(part)?.[1];
+        if (!token) return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, String.raw`\s+`);
+        slots.push(token);
+        return token[0] === 'c' ? IDENT : '(.+?)';
+      }).join('');
+      const found = new RegExp(`^\\s*${pattern}\\s*$`, 'is').exec(condition);
+      if (!found) continue;
+      const names: string[] = [];
+      const values: string[] = [];
+      let known = true;
+      slots.forEach((token, i) => {
+        const text = found[i + 1];
+        if (token[0] === 'c') {
+          const name = text.startsWith('"') ? text.slice(1, -1).replace(/""/g, '"') : text;
+          const index = token.length > 1 ? Number(token[1]) - 1 : 0;
+          if (names[index] === undefined) names[index] = name;
+          known &&= columnNames.includes(name);
+        } else {
+          const index = Number(token[1]) - 1;
+          values[index] = rawValue(example.values?.[index]?.kind ?? 'text', text.trim());
+        }
+      });
+      if (!known) continue;
+      // The same condition again, or it is not really this example
+      const again = buildCondition(example, names, values, kindOf(names[0]));
+      if (again.complete && squash(again.condition) === squash(condition)) {
+        return { categoryKey: category.key, example, columnNames: names, values };
+      }
+    }
+  }
+  return null;
+};
 
 // Postgres name of a new check constraint, as the backend makes it: ck_<alias, max 50>_<8 hex of the id>
 export const checkConstraintName = (alias: string, id: string): string =>

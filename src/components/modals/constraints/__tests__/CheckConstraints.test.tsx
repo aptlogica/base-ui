@@ -83,9 +83,12 @@ describe('check SQL helpers', () => {
     expect(checkableColumns(COLUMNS).map(c => c.title)).toEqual(['Title', 'Age', 'Status', 'Start']);
   });
 
-  it('has 4 categories in order, custom last, and shows unknown ones as custom', () => {
-    expect(CHECK_CATEGORIES.map(c => c.key)).toEqual(['text', 'number_date', 'compare', 'custom']);
+  it('has 3 categories in order, custom last, and shows unknown ones as custom', () => {
+    expect(CHECK_CATEGORIES.map(c => c.key)).toEqual(['field', 'compare', 'custom']);
     expect(categoryByKey('range').key).toBe('custom');
+    // Constraints saved as Text or Number / Date show as Single Field
+    expect(categoryByKey('text').key).toBe('field');
+    expect(categoryByKey('number_date').key).toBe('field');
   });
 
   it('reads the condition out of a custom statement for this table', () => {
@@ -125,15 +128,15 @@ describe('CheckConstraintFormModal', () => {
     await userEvent.click(screen.getAllByText(option).find(e => e.closest('li')) as HTMLElement);
   };
 
-  it('puts Name first, starts with Text and has no Test button', async () => {
+  it('puts Name first, starts with Single Field and has no Test button', async () => {
     renderForm();
     const labels = screen.getAllByText(/^(Name|Category|Condition)/).map(e => e.textContent?.trim());
     expect(labels[0]).toMatch(/^Name/);
-    // A dropdown like the field picker, Text selected, the four categories in order
-    expect(categoryTrigger()).toHaveTextContent(/^Text/);
+    // A dropdown like the field picker, Single Field selected, the three categories in order
+    expect(categoryTrigger()).toHaveTextContent(/^Single Field/);
     await userEvent.click(categoryTrigger());
     const options = screen.getAllByRole('listitem').map(li => li.querySelector('.font-medium')?.textContent);
-    expect(options).toEqual(['Text', 'Number / Date', 'Compare Two Fields', 'Custom SQL Expression']);
+    expect(options).toEqual(['Single Field', 'Compare Two Fields', 'Custom SQL Expression']);
     expect(screen.queryByRole('button', { name: 'Test' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
   });
@@ -177,59 +180,83 @@ describe('CheckConstraintFormModal', () => {
     expect(createMutateAsync).not.toHaveBeenCalled();
   });
 
-  it('fills the condition from an example with the chosen field, names it and previews the SQL', async () => {
+  it('builds the condition from the field, the condition and the typed values, names it and previews the SQL', async () => {
     renderForm();
-    await toCategory('Number / Date');
-    // Number and date fields are listed first
-    await userEvent.click(screen.getByRole('button', { name: 'Select a field' }));
-    const options = screen.getAllByRole('listitem').map(o => o.textContent);
-    expect(options.slice(0, 2)).toEqual(['Age', 'Start']);
-    await userEvent.click(screen.getAllByText('Age').find(e => e.closest('li')) as HTMLElement);
-    await pick('Select an example', 'Between two values');
+    await pick('Select a field', 'Age');
+    await pick('Select a condition', 'Between two values');
 
-    expect(screen.getByLabelText(/Condition/)).toHaveValue('age_179 BETWEEN 0 AND 100');
+    // There is no free condition box, only the values; nothing is applied until they are typed
+    expect(screen.queryByLabelText(/Condition/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+    expect(preview()).toContain('CHECK (age_179 BETWEEN <value> AND <value>);');
+    await userEvent.type(screen.getByLabelText('From'), '0');
+    await userEvent.type(screen.getByLabelText('To'), '100');
+
     expect(screen.getByLabelText(/Name/)).toHaveValue('Age · Between two values');
     expect(preview()).toMatch(/^ALTER TABLE "tenant_1"\."employee_179"\n {2}ADD CONSTRAINT "ck_employee_179_[0-9a-f]{8}"\n {2}CHECK \(age_179 BETWEEN 0 AND 100\);$/);
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
   });
 
-  it('lists text fields first for Text, in table order, not alphabetically', async () => {
+  it('lists the fields in table order, not alphabetically', async () => {
     renderForm();
     await userEvent.click(screen.getByRole('button', { name: 'Select a field' }));
     const options = screen.getAllByRole('listitem').map(li => li.querySelector('.font-medium')?.textContent);
-    expect(options).toEqual(['Title', 'Status', 'Age', 'Start']);
+    expect(options).toEqual(['Title', 'Age', 'Status', 'Start']);
   });
 
-  it('fills the example placeholder when the field is chosen afterwards', async () => {
+  it('offers the conditions of the field type and saves a text or number / date category', async () => {
     renderForm();
-    await pick('Select an example', 'Only these');
-    expect(screen.getByLabelText(/Condition/)).toHaveValue("<field> IN ('active', 'inactive')");
+    const offered = async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Select a condition' }));
+      const labels = screen.getAllByRole('listitem').map(li => li.textContent);
+      await userEvent.keyboard('{Escape}');
+      return labels;
+    };
     await pick('Select a field', 'Status');
-    expect(screen.getByLabelText(/Condition/)).toHaveValue("status_179 IN ('active', 'inactive')");
+    expect(await offered()).toEqual(['Only these', 'Not these', 'Minimum length', 'Maximum length', 'Length between']);
+    await pick('Status', 'Age');
+    expect(await offered()).toEqual(['Between two values', 'Between, empty allowed', 'Minimum', 'Maximum', 'Greater than zero']);
   });
 
-  it('keeps the condition in step with the field and example until it is typed in', async () => {
+  it('drops the chosen condition when another field type does not offer it', async () => {
     renderForm();
-    await toCategory('Number / Date');
+    await pick('Select a field', 'Status');
+    await pick('Select a condition', 'Only these');
+    await pick('Status', 'Age');
+    expect(screen.getByRole('button', { name: 'Select a condition' })).toBeInTheDocument();
+  });
+
+  it('quotes text values and fills the field when it is chosen afterwards', async () => {
+    renderForm();
+    await pick('Select a condition', 'Only these');
+    await userEvent.type(screen.getByLabelText('Value'), 'active, in active');
+    expect(preview()).toContain("CHECK (<field> IN ('active', 'in active'));");
+    await pick('Select a field', 'Status');
+    expect(preview()).toContain("CHECK (status_179 IN ('active', 'in active'));");
+  });
+
+  it('follows the field and value, and a different condition starts with empty values', async () => {
+    renderForm();
     await pick('Select a field', 'Age');
-    await pick('Select an example', 'Maximum');
-    const box = screen.getByLabelText(/Condition/);
-    expect(box).toHaveValue('age_179 <= 100');
+    await pick('Select a condition', 'Maximum');
+    await userEvent.type(screen.getByLabelText('Value'), '100');
+    expect(preview()).toContain('CHECK (age_179 <= 100);');
     expect(screen.getByLabelText(/Name/)).toHaveValue('Age · Maximum');
 
-    // Another field: condition and name follow
+    // Another field: the condition and the name follow
     await pick('Age', 'Start');
-    expect(box).toHaveValue('start_179 <= 100');
+    expect(preview()).toContain("CHECK (start_179 <= <value>);");
     expect(screen.getByLabelText(/Name/)).toHaveValue('Start · Maximum');
 
-    // Typed changes are kept, and the old field is swapped for the new one
-    await userEvent.type(box, '0');
+    // A value that does not suit a number field is not used
     await pick('Start', 'Age');
-    expect(box).toHaveValue('age_179 <= 1000');
-    expect(screen.getByText(/Changed by hand/)).toBeInTheDocument();
+    await userEvent.clear(screen.getByLabelText('Value'));
+    await userEvent.type(screen.getByLabelText('Value'), '10');
+    expect(preview()).toContain('CHECK (age_179 <= 10);');
 
-    // Picking the example again follows it again
-    await pick('Maximum', 'Maximum');
-    expect(box).toHaveValue('age_179 <= 100');
+    await pick('Maximum', 'Minimum');
+    expect(screen.getByLabelText('Value')).toHaveValue(null);
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
   });
 
   it('compares two fields', async () => {
@@ -237,55 +264,58 @@ describe('CheckConstraintFormModal', () => {
     await toCategory('Compare Two Fields');
     await pick('Select a field', 'Start', 0);
     await pick('Select a field', 'Age', 0);
-    await pick('Select an example', 'First ≤ second');
-    expect(screen.getByLabelText(/Condition/)).toHaveValue('start_179 <= age_179');
+    await pick('Select a condition', 'First ≤ second');
+    expect(preview()).toContain('CHECK (start_179 <= age_179);');
 
-    // Another example replaces the condition without a browser alert
+    // Another condition replaces it without a browser alert
     const confirm = vi.spyOn(window, 'confirm');
     await pick('First ≤ second', 'Different');
-    expect(screen.getByLabelText(/Condition/)).toHaveValue('start_179 <> age_179');
+    expect(preview()).toContain('CHECK (start_179 <> age_179);');
     expect(confirm).not.toHaveBeenCalled();
   });
 
-  it('keeps the condition when switching to custom', async () => {
+  it('carries the condition over when switching to custom', async () => {
     renderForm();
-    await toCategory('Text');
-    const box = screen.getByLabelText(/Condition/);
-    expect(screen.queryByTestId('insert-field')).not.toBeInTheDocument();
-    await userEvent.type(box, 'status_179 IS NOT NULL OR age_179');
-    expect(preview()).toContain('CHECK (status_179 IS NOT NULL OR age_179);');
-
+    await pick('Select a field', 'Age');
+    await pick('Select a condition', 'Greater than zero');
     await toCategory('Custom SQL Expression');
-    expect((screen.getByLabelText(/^SQL/) as HTMLTextAreaElement).value).toContain('CHECK (status_179 IS NOT NULL OR age_179);');
+    expect((screen.getByLabelText(/^SQL/) as HTMLTextAreaElement).value).toContain('CHECK (age_179 > 0);');
   });
 
   it('shows why the server refused and stays open', async () => {
     createMutateAsync.mockRejectedValue(new Error('3 records break this condition. Fix them or change the condition.'));
     const onClose = renderForm();
-    await toCategory('Number / Date');
-    await userEvent.type(screen.getByLabelText(/Condition/), 'age_179 > 0');
+    await pick('Select a field', 'Age');
+    await pick('Select a condition', 'Greater than zero');
     await userEvent.type(screen.getByLabelText(/Name/), 'x');
     await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
 
+    expect(createMutateAsync.mock.calls[0][0]).toMatchObject({ category: 'number_date', condition: 'age_179 > 0' });
     expect(screen.getByRole('alert')).toHaveTextContent('3 records break this condition');
     expect(onClose).not.toHaveBeenCalled();
     expect(toastSuccess).not.toHaveBeenCalled();
   });
 
-  it('edits the saved condition and previews DROP + ADD', async () => {
+  it('opens a saved condition as its field and values, and previews DROP + ADD when a value changes', async () => {
     renderForm(CHECK);
-    expect(categoryTrigger()).toHaveTextContent(/^Number \/ Date/);
-    const box = screen.getByLabelText(/Condition/);
-    expect(box).toHaveValue('age_179 BETWEEN 18 AND 100');
+    expect(categoryTrigger()).toHaveTextContent(/^Single Field/);
+    expect(screen.getByLabelText('From')).toHaveValue(18);
+    expect(screen.getByLabelText('To')).toHaveValue(100);
 
-    await userEvent.clear(box);
-    await userEvent.type(box, 'age_179 BETWEEN 21 AND 100');
+    await userEvent.clear(screen.getByLabelText('From'));
+    await userEvent.type(screen.getByLabelText('From'), '21');
     expect(preview()).toContain('DROP CONSTRAINT IF EXISTS "ck_employee_179_1a2b3c4d";');
     await userEvent.click(screen.getByRole('button', { name: 'Apply changes' }));
 
     expect(updateMutateAsync).toHaveBeenCalledWith({
       id: 'k1', tableId: 't1', title: 'Age 18–100', category: 'number_date', condition: 'age_179 BETWEEN 21 AND 100',
     });
+  });
+
+  it('opens a saved condition that is none of the common ones as custom SQL', async () => {
+    renderForm({ ...CHECK, condition: 'age_179 > 5 AND age_179 < 9' });
+    expect(categoryTrigger()).toHaveTextContent(/^Custom SQL Expression/);
+    expect((screen.getByLabelText(/^SQL/) as HTMLTextAreaElement).value).toContain('CHECK (age_179 > 5 AND age_179 < 9);');
   });
 });
 
@@ -299,7 +329,7 @@ describe('CheckConstraintsPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     access(true);
-    constraints([CHECK, { ...CHECK, id: 'k2', title: 'Gone', category: 'text', condition: 'age_179 > 0', status: 'missing', definition: undefined }]);
+    constraints([CHECK, { ...CHECK, id: 'k2', title: 'Gone', category: 'compare', condition: 'age_179 > 0', status: 'missing', definition: undefined }]);
     vi.mocked(useTable).mockReturnValue({ data: { data: { columns: COLUMNS } } } as any);
     deleteMutateAsync.mockResolvedValue({});
   });
@@ -308,7 +338,7 @@ describe('CheckConstraintsPanel', () => {
     render(<CheckConstraintsPanel table={table} />);
     expect(useTableConstraints).toHaveBeenCalledWith('t1', 'check');
     expect(screen.getByText('Age 18–100')).toHaveAttribute('title', 'ck_employee_179_1a2b3c4d in Postgres');
-    expect(screen.getAllByText('Number / Date').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Single Field').length).toBeGreaterThan(0);
     expect(screen.getByText('age_179 BETWEEN 18 AND 100')).toBeInTheDocument();
   });
 
@@ -322,7 +352,7 @@ describe('CheckConstraintsPanel', () => {
   it('filters by category', async () => {
     render(<CheckConstraintsPanel table={table} />);
     await userEvent.click(screen.getByRole('button', { name: 'All categories' }));
-    await userEvent.click(screen.getAllByText('Text').find(e => e.closest('li')) as HTMLElement);
+    await userEvent.click(screen.getAllByText('Compare Two Fields').find(e => e.closest('li')) as HTMLElement);
     expect(screen.queryByText('Age 18–100')).not.toBeInTheDocument();
     expect(screen.getByText('Gone')).toBeInTheDocument();
   });

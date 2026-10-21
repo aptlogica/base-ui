@@ -6,10 +6,22 @@
 // Kinds of field an example suits, by lower-cased uidt
 export type FieldKind = 'number' | 'text' | 'date' | 'boolean' | 'json' | 'any';
 
+// How a typed value becomes SQL: by the field's type ('value'), a number, text, or a comma list of text
+export type ValueKind = 'value' | 'text' | 'number' | 'list';
+
+export interface ValueSpec {
+  kind: ValueKind;
+  // Hint in the empty input, also its label
+  placeholder: string;
+}
+
 export interface CheckExample {
   label: string;
-  // {c} and {c2} become the chosen fields' column names
+  // {c} and {c2} become the chosen fields' column names, {v1} and {v2} the typed values as SQL
   sql: string;
+  values?: ValueSpec[];
+  // Field types it is offered for; all fields when missing
+  kinds?: FieldKind[];
 }
 
 export interface CheckCategory {
@@ -33,24 +45,30 @@ export const CUSTOM_CATEGORY = 'custom';
 // condition stays editable, so any condition can be written in any category.
 export const CHECK_CATEGORIES: CheckCategory[] = [
   {
-    key: 'text', label: 'Text', hint: 'Allowed values, length', suits: ['text'], fields: 1,
-    description: 'Allowed values and the length of text.',
+    key: 'field', label: 'Single Field', hint: 'Values, length, range', suits: ['text', 'number', 'date'], fields: 1,
+    description: 'Limit one field. The conditions offered follow the field type: text or number / date.',
     examples: [
-      { label: 'Only these', sql: "{c} IN ('active', 'inactive')" },
-      { label: 'Not these', sql: "{c} NOT IN ('blocked', 'deleted')" },
-      { label: 'Minimum length', sql: 'char_length({c}) >= 3' },
-      { label: 'Maximum length', sql: 'char_length({c}) <= 100' },
-    ],
-  },
-  {
-    key: 'number_date', label: 'Number / Date', hint: 'Range, minimum, maximum', suits: ['number', 'date'], fields: 1,
-    description: 'Limit a number or a date: a range, a minimum or a maximum.',
-    examples: [
-      { label: 'Between two values', sql: '{c} BETWEEN 0 AND 100' },
-      { label: 'Between, empty allowed', sql: '{c} IS NULL OR {c} BETWEEN 1 AND 5' },
-      { label: 'Minimum', sql: '{c} >= 18' },
-      { label: 'Maximum', sql: '{c} <= 100' },
-      { label: 'Greater than zero', sql: '{c} > 0' },
+      // Text
+      { label: 'Only these', sql: '{c} IN ({v1})', values: [{ kind: 'list', placeholder: 'e.g. active, inactive' }], kinds: ['text'] },
+      { label: 'Not these', sql: '{c} NOT IN ({v1})', values: [{ kind: 'list', placeholder: 'e.g. blocked, deleted' }], kinds: ['text'] },
+      { label: 'Minimum length', sql: 'char_length({c}) >= {v1}', values: [{ kind: 'number', placeholder: 'e.g. 3' }], kinds: ['text'] },
+      { label: 'Maximum length', sql: 'char_length({c}) <= {v1}', values: [{ kind: 'number', placeholder: 'e.g. 100' }], kinds: ['text'] },
+      {
+        label: 'Length between', sql: 'char_length({c}) BETWEEN {v1} AND {v2}',
+        values: [{ kind: 'number', placeholder: 'Min' }, { kind: 'number', placeholder: 'Max' }], kinds: ['text'],
+      },
+      // Number / Date
+      {
+        label: 'Between two values', sql: '{c} BETWEEN {v1} AND {v2}',
+        values: [{ kind: 'value', placeholder: 'From' }, { kind: 'value', placeholder: 'To' }], kinds: ['number', 'date'],
+      },
+      {
+        label: 'Between, empty allowed', sql: '{c} IS NULL OR {c} BETWEEN {v1} AND {v2}',
+        values: [{ kind: 'value', placeholder: 'From' }, { kind: 'value', placeholder: 'To' }], kinds: ['number', 'date'],
+      },
+      { label: 'Minimum', sql: '{c} >= {v1}', values: [{ kind: 'value', placeholder: 'Value' }], kinds: ['number', 'date'] },
+      { label: 'Maximum', sql: '{c} <= {v1}', values: [{ kind: 'value', placeholder: 'Value' }], kinds: ['number', 'date'] },
+      { label: 'Greater than zero', sql: '{c} > 0', kinds: ['number'] },
     ],
   },
   {
@@ -70,9 +88,27 @@ export const CHECK_CATEGORIES: CheckCategory[] = [
   },
 ];
 
+// Text and Number / Date were one category each; constraints saved with those keys show as Single Field
+const SAVED_AS_FIELD = ['text', 'number_date'];
+
 // Unknown keys (e.g. constraints added outside the app) are shown as Custom SQL Expression
-export const categoryByKey = (key?: string): CheckCategory =>
-  CHECK_CATEGORIES.find(c => c.key === key) ?? CHECK_CATEGORIES.find(c => c.key === CUSTOM_CATEGORY)!;
+export const categoryByKey = (key?: string): CheckCategory => {
+  const wanted = SAVED_AS_FIELD.includes(key ?? '') ? 'field' : key;
+  return CHECK_CATEGORIES.find(c => c.key === wanted) ?? CHECK_CATEGORIES.find(c => c.key === CUSTOM_CATEGORY)!;
+};
+
+// The key a constraint is saved with: the backend lists Text and Number / Date, so Single Field is
+// saved as one of them by the field's type
+export const savedCategoryKey = (key: string, field: FieldKind): string => {
+  if (key !== 'field') return key;
+  return field === 'number' || field === 'date' ? 'number_date' : 'text';
+};
+
+// Conditions offered for a field type; all of them until a field is chosen or for types with none of their own
+export const examplesFor = (category: CheckCategory, field?: FieldKind): CheckExample[] => {
+  const own = category.examples.filter(e => field && e.kinds?.includes(field));
+  return own.length ? own : category.examples;
+};
 
 const KIND_BY_UIDT: Record<string, FieldKind> = {
   number: 'number', decimal: 'number', currency: 'number', percent: 'number', duration: 'number',

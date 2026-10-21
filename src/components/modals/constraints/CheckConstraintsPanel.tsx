@@ -73,7 +73,7 @@ const CheckConstraintsPanel: React.FC<{ table: any }> = ({ table }) => {
   const query = search.trim().toLowerCase();
   const items = constraints.filter(
     (item) =>
-      (!categoryFilter || item.category === categoryFilter) &&
+      (!categoryFilter || categoryByKey(item.category).key === categoryFilter) &&
       (!query ||
         [
           item.title,
@@ -286,6 +286,7 @@ const CheckConstraintsPanel: React.FC<{ table: any }> = ({ table }) => {
               ]}
               value={categoryFilter}
               placeholder="All categories"
+              sort={false}
               onChange={(value) => {
                 setCategoryFilter(String(value));
                 resetView();

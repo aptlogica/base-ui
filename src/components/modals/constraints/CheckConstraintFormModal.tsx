@@ -3,16 +3,17 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useState } from 'react';
-import { AlertCircle, ArrowLeftRight, Code2, Copy, Hash, ShieldCheck, Type, X } from 'lucide-react';
+import { AlertCircle, ArrowLeftRight, Code2, Copy, ListFilter, ShieldCheck, X } from 'lucide-react';
 import AdvancedDropdown from '../../common/dropdown/AdvancedDropdown';
 import { getFieldTypeIconComponent } from '../../../types/fieldTypes';
 import { useCreateTableConstraint, useUpdateTableConstraint } from '../../../hooks/useApi';
 import { useToast } from '../../common/Toast';
+import type { ValueSpec } from './checkCategories';
 import type { TableConstraint } from '../../../service/clientService';
 import type { Column } from '../../../types/api.types';
-import { CHECK_CATEGORIES, CUSTOM_CATEGORY, categoryByKey, fieldKind } from './checkCategories';
+import { CHECK_CATEGORIES, CUSTOM_CATEGORY, categoryByKey, examplesFor, fieldKind, savedCategoryKey } from './checkCategories';
 import {
-  checkConstraintName, checkableColumns, fillExample, parseCheckStatement, previewSql, quoteIdent,
+  buildCondition, checkConstraintName, checkableColumns, matchExample, parseCheckStatement, previewSql, valueSql,
 } from './checkSql';
 
 interface CheckConstraintFormModalProps {
@@ -27,16 +28,15 @@ interface CheckConstraintFormModalProps {
 }
 
 const MAX_NAME_LENGTH = 50;
-const MAX_CONDITION_LENGTH = 2000;
 const FIELD_LABELS = ['Field', 'Field 2'];
-const CATEGORY_ICONS: Record<string, React.ElementType> = { text: Type, number_date: Hash, compare: ArrowLeftRight, custom: Code2 };
+const CATEGORY_ICONS: Record<string, React.ElementType> = { field: ListFilter, compare: ArrowLeftRight, custom: Code2 };
 const labelClass = 'field-component-label !text-primary';
 // Same look as the query box of the trigger popup (MultiLineText)
 const textareaClass = 'w-full text-[var(--color-text-primary)] p-3 rounded-[var(--radius-lg)] font-mono !text-xs leading-relaxed resize-none overflow-y-auto whitespace-pre-wrap break-words transition-all duration-200 outline-none field-component-border field-component-focus border';
 
 
-// Popup to add or edit a check constraint: name, category, field(s) and an example to start from,
-// then the SQL condition, the fields to insert and the SQL preview, which is the statement Apply
+// Popup to add or edit a check constraint: name and category, then one filter-like row: the field(s),
+// a common condition and the value(s) it needs, and the SQL preview, which is the statement Apply
 // runs. Custom SQL Expression is one box with the whole statement. Apply validates on the server,
 // then applies.
 const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ table, columns, tableName, item, onClose }) => {
@@ -46,19 +46,26 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
   // A new constraint's Postgres name comes from this ID, so the SQL shows the real name
   const [newId] = useState(() => crypto.randomUUID());
   const constraintName = item?.constraint_name || checkConstraintName(table?.alias || 'table', newId);
+  const columnOf = (name: string) => usable.find(c => c.column_name === name);
 
-  // A new constraint starts with the first category (Text)
-  const [category, setCategory] = useState(item ? categoryByKey(item.category).key : CHECK_CATEGORIES[0].key);
-  const [fieldIds, setFieldIds] = useState<string[]>(['', '']);
-  const [condition, setCondition] = useState(item?.condition || '');
+  // A saved condition made from a common condition opens as that condition with its field and values;
+  // any other opens as custom SQL
+  const [saved] = useState(() => (item
+    ? matchExample(item.condition || '', item.category, usable.map(c => c.column_name), n => fieldKind(columnOf(n)?.uidt))
+    : null));
+
+  // A new constraint starts with the first category (Single Field)
+  const [category, setCategory] = useState(
+    item ? (saved ? saved.categoryKey : CUSTOM_CATEGORY) : CHECK_CATEGORIES[0].key);
+  const [fieldIds, setFieldIds] = useState<string[]>(
+    () => [0, 1].map(i => (saved?.columnNames[i] ? columnOf(saved.columnNames[i])?.id ?? '' : '')));
+  const [exampleLabel, setExampleLabel] = useState(saved?.example.label ?? '');
+  const [values, setValues] = useState<string[]>(() => [saved?.values[0] ?? '', saved?.values[1] ?? '']);
   // Custom SQL Expression: the whole statement
   const [statement, setStatement] = useState(() => previewSql(tableName, constraintName, item?.condition || ''));
   const [name, setName] = useState(item?.title || '');
-  // The name follows the example until the user types one; an existing constraint keeps its name
+  // The name follows the field and condition until the user types one; an existing constraint keeps its name
   const [nameEdited, setNameEdited] = useState(!!item);
-  // The chosen example; while the condition isn't typed in by hand it follows the example and the fields
-  const [exampleLabel, setExampleLabel] = useState('');
-  const [conditionEdited, setConditionEdited] = useState(!!item);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
 
@@ -72,87 +79,72 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
   const suits = (column: Column) => Number(selected.suits.includes(fieldKind(column.uidt)));
   const fieldOptions = [...usable].sort((a, b) => suits(b) - suits(a));
   const columnName = (id: string) => usable.find(c => c.id === id)?.column_name;
+  const firstFieldKind = fieldKind(usable.find(c => c.id === fieldIds[0])?.uidt);
+
+  // The condition follows the chosen example, fields and values
+  // The conditions offered follow the type of the first field
+  const offered = examplesFor(selected, fieldIds[0] ? firstFieldKind : undefined);
+  const example = offered.find(e => e.label === exampleLabel);
+  const built = example
+    ? buildCondition(example, fieldIds.map(columnName), values, firstFieldKind)
+    : { condition: '', complete: false };
+  const condition = built.condition;
 
   const title = name.trim();
-  const trimmed = condition.trim();
-  const conditionChanged = !item || trimmed !== (item.condition || '').trim();
-  const sql = previewSql(tableName, constraintName, condition, !!item && conditionChanged);
-  const canApply = title !== '' && (isCustom ? statement.trim() !== '' : trimmed !== '') && !isBusy;
+  const conditionChanged = !item || condition.trim() !== (item.condition || '').trim();
+  const sql = previewSql(tableName, constraintName, condition || '<condition>', !!item && conditionChanged);
+  const canApply = title !== '' && (isCustom ? statement.trim() !== '' : built.complete) && !isBusy;
 
-  const changeCondition = (value: string) => {
-    setCondition(value);
-    setError('');
+  // The name follows the first field and the condition, until it is typed in
+  const autoName = (fieldId: string, label: string) => {
+    if (nameEdited) return;
+    const field = usable.find(c => c.id === fieldId)?.title;
+    setName((field ? `${field} · ${label}` : label).slice(0, MAX_NAME_LENGTH));
   };
 
-  // Rebuilds the condition (and the name, until typed) from an example and the chosen fields
-  const followExample = (label: string, ids: string[]) => {
-    const example = selected.examples.find(e => e.label === label);
-    if (!example) return;
-    changeCondition(fillExample(example.sql, ids.map(columnName)));
-    if (!nameEdited) {
-      const field = usable.find(c => c.id === ids[0])?.title;
-      setName((field ? `${field} · ${example.label}` : example.label).slice(0, MAX_NAME_LENGTH));
-    }
-  };
-
-  // Switching to Custom SQL Expression carries the condition into the statement, and back
+  // Switching to Custom SQL Expression carries the condition into the statement
   const changeCategory = (key: string) => {
     if (key === CUSTOM_CATEGORY && !isCustom) {
-      setStatement(previewSql(tableName, constraintName, condition));
-    } else if (key !== CUSTOM_CATEGORY && isCustom) {
-      const parsed = parseCheckStatement(statement, tableName);
-      if ('condition' in parsed) setCondition(parsed.condition);
+      setStatement(previewSql(tableName, constraintName, built.complete ? condition : ''));
     }
     setCategory(key);
-    // Each category has its own examples
+    // Each category has its own conditions
     setExampleLabel('');
+    setValues(['', '']);
     setError('');
   };
 
-  // A new field updates the condition while it still follows the example
   const chooseField = (index: number, id: string) => {
-    const ids = fieldIds.map((v, i) => (i === index ? id : v));
-    setFieldIds(ids);
-    if (!exampleLabel) return;
-    if (!conditionEdited) {
-      followExample(exampleLabel, ids);
-      return;
-    }
-    // Typed condition: swap the previous field's column for the new one, and refresh the name
-    const before = columnName(fieldIds[index]);
-    const after = columnName(id);
-    if (before && after) {
-      const escaped = [before, quoteIdent(before)].map(v => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-      const pattern = new RegExp(`(?<![\\w"])(?:${escaped.join('|')})(?![\\w"])`, 'g');
-      if (pattern.test(condition)) {
-        pattern.lastIndex = 0;
-        changeCondition(condition.replace(pattern, () => quoteIdent(after)));
-      } else {
-        // The column was removed by hand: nothing to swap, so rebuild from the example
-        setConditionEdited(false);
-        followExample(exampleLabel, ids);
-        return;
-      }
-    }
-    if (!nameEdited && index === 0) {
-      const field = usable.find(c => c.id === id)?.title;
-      const label = selected.examples.find(e => e.label === exampleLabel)?.label ?? exampleLabel;
-      setName((field ? `${field} · ${label}` : label).slice(0, MAX_NAME_LENGTH));
+    setFieldIds(fieldIds.map((v, i) => (i === index ? id : v)));
+    setError('');
+    if (index !== 0) return;
+    // A field of another type may not offer the chosen condition
+    const stillOffered = example && examplesFor(selected, fieldKind(usable.find(c => c.id === id)?.uidt)).includes(example);
+    if (stillOffered) {
+      autoName(id, example.label);
+    } else if (example) {
+      setExampleLabel('');
+      setValues(['', '']);
     }
   };
 
-  // Picking an example (again) makes the condition follow it, replacing any typed changes
+  // A different condition needs different values, so they start empty
   const chooseExample = (label: string) => {
     setExampleLabel(label);
-    setConditionEdited(false);
-    followExample(label, fieldIds);
+    setValues(['', '']);
+    setError('');
+    autoName(fieldIds[0], label);
   };
 
+  const changeValue = (index: number, value: string) => {
+    setValues(values.map((v, i) => (i === index ? value : v)));
+    setError('');
+  };
 
   // The server checks the condition and the records, and applies the constraint only if all pass
   const handleApply = async () => {
     setError('');
-    let applied = trimmed;
+    let applied = condition;
     if (isCustom) {
       const parsed = parseCheckStatement(statement, tableName);
       if ('error' in parsed) {
@@ -162,7 +154,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
       applied = parsed.condition;
     }
     try {
-      const input = { title, category, condition: applied };
+      const input = { title, category: savedCategoryKey(category, firstFieldKind), condition: applied };
       if (item) {
         await updateConstraint.mutateAsync({ id: item.id, tableId, ...input });
       } else {
@@ -218,19 +210,66 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
     </div>
   ));
 
-  // Examples in a dropdown; the condition below shows the SQL of the chosen one
+  // Common conditions in a dropdown; the value inputs next to it are the ones the chosen one needs
   const exampleDropdown = (
     <div className="space-y-1 min-w-0">
-      <p className={labelClass}>Example</p>
+      <p className={labelClass}>Common conditions</p>
       <AdvancedDropdown
         id="check-example"
-        options={selected.examples.map(example => ({ label: example.label, value: example.label }))}
+        options={offered.map(e => ({ label: e.label, value: e.label }))}
         value={exampleLabel || undefined}
         onChange={value => chooseExample(String(value))}
-        placeholder="Select an example"
+        placeholder="Select a condition"
         portal
         sort={false}
       />
+    </div>
+  );
+
+  const specs = example?.values ?? [];
+  const inputType = (kind: string) => {
+    if (kind === 'number') return 'number';
+    if (kind !== 'value') return 'text';
+    return { number: 'number', date: 'date' }[firstFieldKind as string] ?? 'text';
+  };
+  const valueInput = (spec: ValueSpec, index: number, label: string) => {
+    const invalid = values[index].trim() !== '' && valueSql(spec.kind, values[index], firstFieldKind) === null;
+    return (
+      <input
+        key={label}
+        id={`check-value-${index}`}
+        aria-label={label}
+        type={inputType(spec.kind)}
+        value={values[index]}
+        placeholder={spec.placeholder}
+        aria-invalid={invalid}
+        onChange={e => changeValue(index, e.target.value)}
+        className={`field-component field-component-border field-component-focus border min-w-0 ${invalid ? '!border-red-500' : ''}`}
+      />
+    );
+  };
+
+  // Third cell of the row, always there so the row keeps one structure: the value(s) of the chosen
+  // condition, or the second field when comparing two fields
+  const thirdCell = selected.fields === 2 ? fieldDropdowns[1] : (
+    <div className="space-y-1 min-w-0">
+      <p className={labelClass}>Value</p>
+      {specs.length === 0 && (
+        <input
+          type="text"
+          aria-label="Value"
+          disabled
+          placeholder={example ? 'No value needed' : 'Value'}
+          className="field-component field-component-border border min-w-0 disabled:opacity-60"
+        />
+      )}
+      {specs.length === 1 && valueInput(specs[0], 0, 'Value')}
+      {specs.length === 2 && (
+        <div className="grid grid-cols-2 gap-2">
+          {valueInput(specs[0], 0, 'From')}
+          {valueInput(specs[1], 1, 'To')}
+        </div>
+      )}
     </div>
   );
 
@@ -247,7 +286,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
             type="text"
             value={name}
             maxLength={MAX_NAME_LENGTH}
-            placeholder="e.g. Age 18–100"
+            placeholder="e.g. Valid employee status"
             onChange={e => {
               setName(e.target.value);
               setNameEdited(true);
@@ -286,40 +325,14 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
         </div>
       ) : (
         <>
-          <div className={`grid gap-3 ${selected.fields === 1 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-            {fieldDropdowns}
+          {/* One row, like a filter: field, condition, value(s); the same three columns for every condition */}
+          <div className="grid grid-cols-3 gap-3">
+            {fieldDropdowns[0]}
             {exampleDropdown}
+            {thirdCell}
           </div>
           {selected.note && <p className="text-xs text-amber-700 -mt-3">{selected.note}</p>}
-
-          <div className="space-y-1">
-            <div className="flex items-center justify-between gap-3">
-              <label htmlFor="check-condition" className={labelClass}>
-                Condition <span className="field-component-required">*</span>
-              </label>
-            </div>
-            <textarea
-              id="check-condition"
-              value={condition}
-              maxLength={MAX_CONDITION_LENGTH}
-              spellCheck={false}
-              placeholder="Pick a field and an example above, or write your own, e.g. age BETWEEN 18 AND 100"
-              onChange={e => {
-                changeCondition(e.target.value);
-                setConditionEdited(true);
-              }}
-              className={`${textareaClass} h-24`}
-            />
-            <div className="flex justify-between gap-3 text-xs text-gray-400">
-              <span>
-                {exampleLabel && !conditionEdited
-                  ? 'Follows the field and example above. Type here to change it.'
-                  : exampleLabel ? 'Changed by hand. Pick the example again to reset it.' : ''}
-              </span>
-              <span className="flex-shrink-0">{condition.length}/{MAX_CONDITION_LENGTH}</span>
-            </div>
-            <p className="text-xs text-gray-500">A record is rejected only when the condition is false; empty (NULL) values pass.</p>
-          </div>
+          <p className="text-xs text-gray-500">A record is rejected only when the condition is false; empty (NULL) values pass.</p>
 
           <div className="space-y-1">
             <div className="flex items-center justify-between">
@@ -352,7 +365,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
         open
         aria-modal="true"
         aria-labelledby="check-constraint-form-title"
-        className="bg-modal !p-0 flex flex-col relative overflow-hidden !max-w-2xl h-[720px] !max-h-[90vh] text-inherit"
+        className="bg-modal !p-0 flex flex-col relative overflow-hidden !max-w-3xl h-[720px] !max-h-[90vh] text-inherit"
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
