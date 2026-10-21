@@ -18,6 +18,7 @@ import DeleteConfirmModal from "../DeleteConfirmModal";
 import AdvancedDropdown from "../../common/dropdown/AdvancedDropdown";
 import CheckConstraintFormModal from "./CheckConstraintFormModal";
 import { CHECK_CATEGORIES, categoryByKey } from "./checkCategories";
+import { toTitles } from "./checkSql";
 import {
   useDeleteTableConstraint,
   useTable,
@@ -70,6 +71,10 @@ const CheckConstraintsPanel: React.FC<{ table: any }> = ({ table }) => {
   const columnTitles = (item: TableConstraint): string[] =>
     item.columns.map((c) => c.title);
 
+  // The condition as the user reads it: field titles instead of column names
+  const shownCondition = (item: TableConstraint): string =>
+    toTitles(item.condition || "", columns);
+
   const query = search.trim().toLowerCase();
   const items = constraints.filter(
     (item) =>
@@ -79,6 +84,7 @@ const CheckConstraintsPanel: React.FC<{ table: any }> = ({ table }) => {
           item.title,
           item.constraint_name,
           item.condition,
+          shownCondition(item),
           ...columnTitles(item),
         ].some((text) => text?.toLowerCase().includes(query))),
   );
@@ -140,10 +146,10 @@ const CheckConstraintsPanel: React.FC<{ table: any }> = ({ table }) => {
         </td>
         <td className="px-4 py-3">
           <span
-            title={item.condition}
+            title={shownCondition(item)}
             className="block w-full text-left text-xs font-mono text-gray-800 truncate"
           >
-            {item.condition}
+            {shownCondition(item)}
           </span>
         </td>
         <td className="px-4 py-3">

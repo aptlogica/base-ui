@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { AlertCircle, ArrowLeftRight, Code2, Copy, ListFilter, ShieldCheck, X } from 'lucide-react';
 import AdvancedDropdown from '../../common/dropdown/AdvancedDropdown';
 import { getFieldTypeIconComponent } from '../../../types/fieldTypes';
@@ -13,7 +13,7 @@ import type { TableConstraint } from '../../../service/clientService';
 import type { Column } from '../../../types/api.types';
 import { CHECK_CATEGORIES, CUSTOM_CATEGORY, categoryByKey, examplesFor, fieldKind, savedCategoryKey } from './checkCategories';
 import {
-  buildCondition, checkConstraintName, checkableColumns, matchExample, parseCheckStatement, previewSql, valueSql,
+  buildCondition, checkConstraintName, displayName, checkableColumns, insertColumn, matchExample, parseCheckStatement, previewSql, toColumnNames, toTitles, valueSql,
 } from './checkSql';
 
 interface CheckConstraintFormModalProps {
@@ -62,12 +62,15 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
   const [exampleLabel, setExampleLabel] = useState(saved?.example.label ?? '');
   const [values, setValues] = useState<string[]>(() => [saved?.values[0] ?? '', saved?.values[1] ?? '']);
   // Custom SQL Expression: the whole statement
-  const [statement, setStatement] = useState(() => previewSql(tableName, constraintName, item?.condition || ''));
+  const [statement, setStatement] = useState(() => previewSql(tableName, constraintName, toTitles(item?.condition || '', usable)));
   const [name, setName] = useState(item?.title || '');
   // The name follows the field and condition until the user types one; an existing constraint keeps its name
   const [nameEdited, setNameEdited] = useState(!!item);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  // Custom SQL box and where the cursor last was in it, for inserting a field
+  const statementRef = useRef<HTMLTextAreaElement>(null);
+  const statementCursor = useRef<{ start: number; end: number } | null>(null);
 
   const createConstraint = useCreateTableConstraint();
   const updateConstraint = useUpdateTableConstraint();
@@ -92,7 +95,13 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
 
   const title = name.trim();
   const conditionChanged = !item || condition.trim() !== (item.condition || '').trim();
-  const sql = previewSql(tableName, constraintName, condition || '<condition>', !!item && conditionChanged);
+  const replacing = !!item && conditionChanged;
+  // The SQL that runs, and the preview of it, which shows the field titles instead of the column names
+  const sql = previewSql(tableName, constraintName, condition || '<condition>', replacing);
+  const shownCondition = example
+    ? buildCondition(example, fieldIds.map(id => usable.find(c => c.id === id)?.title), values, firstFieldKind, displayName).condition
+    : '';
+  const shownSql = previewSql(tableName, constraintName, shownCondition || '<condition>', replacing);
   const canApply = title !== '' && (isCustom ? statement.trim() !== '' : built.complete) && !isBusy;
 
   // The name follows the first field and the condition, until it is typed in
@@ -105,7 +114,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
   // Switching to Custom SQL Expression carries the condition into the statement
   const changeCategory = (key: string) => {
     if (key === CUSTOM_CATEGORY && !isCustom) {
-      setStatement(previewSql(tableName, constraintName, built.complete ? condition : ''));
+      setStatement(previewSql(tableName, constraintName, built.complete ? toTitles(condition, usable) : ''));
     }
     setCategory(key);
     // Each category has its own conditions
@@ -151,7 +160,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
         setError(parsed.error);
         return;
       }
-      applied = parsed.condition;
+      applied = toColumnNames(parsed.condition, usable);
     }
     try {
       const input = { title, category: savedCategoryKey(category, firstFieldKind), condition: applied };
@@ -165,6 +174,27 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
     } catch (err: any) {
       setError(err?.message || 'Failed to apply');
     }
+  };
+
+  // Puts the field's column name into the statement at the cursor; before the box was used, inside CHECK ( )
+  const insertField = (id: string) => {
+    const column = usable.find(c => c.id === id);
+    if (!column) return;
+    let cursor = statementCursor.current;
+    if (!cursor) {
+      const open = /CHECK\s*\(/i.exec(statement);
+      const at = open ? open.index + open[0].length : statement.length;
+      cursor = { start: at, end: at };
+    }
+    const inserted = insertColumn(statement, column.title, cursor, displayName);
+    setStatement(inserted.condition);
+    setError('');
+    statementCursor.current = { start: inserted.cursor, end: inserted.cursor };
+    // The box is controlled: the cursor is put back after the new text is shown
+    setTimeout(() => {
+      statementRef.current?.focus();
+      statementRef.current?.setSelectionRange(inserted.cursor, inserted.cursor);
+    });
   };
 
   const copySql = async () => {
@@ -305,13 +335,32 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
 
       {isCustom ? (
         <div className="space-y-1">
-          <label htmlFor="check-statement" className={labelClass}>
-            SQL <span className="field-component-required">*</span>
-          </label>
+          <div className="flex items-end justify-between gap-3">
+            <label htmlFor="check-statement" className={labelClass}>
+              SQL <span className="field-component-required">*</span>
+            </label>
+            {/* Adds the column name at the cursor, so the field name needn't be typed */}
+            <div className="w-56" data-testid="insert-field">
+              <AdvancedDropdown
+                id="check-insert-field"
+                options={usable.map(c => ({ label: c.title, value: c.id, icon: getFieldTypeIconComponent(c.uidt) }))}
+                value={undefined}
+                onChange={value => insertField(String(value))}
+                placeholder="Insert a field"
+                searchable
+                portal
+                sort={false}
+              />
+            </div>
+          </div>
           <textarea
             id="check-statement"
+            ref={statementRef}
             value={statement}
             spellCheck={false}
+            onSelect={e => {
+              statementCursor.current = { start: e.currentTarget.selectionStart, end: e.currentTarget.selectionEnd };
+            }}
             onChange={e => {
               setStatement(e.target.value);
               setError('');
@@ -319,7 +368,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
             className={`${textareaClass} h-56`}
           />
           <p className="text-xs text-gray-500">
-            One ALTER TABLE … ADD CONSTRAINT … CHECK (…) statement for this table. Only the condition inside CHECK ( ) is used.
+            One ALTER TABLE … ADD CONSTRAINT … CHECK (…) statement for this table. Use Insert a field to add a column name at the cursor. Only the condition inside CHECK ( ) is used.
             Empty (NULL) values pass. No ";" inside, no comments, no now() or CURRENT_DATE.
           </p>
         </div>
@@ -342,7 +391,8 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
                 {copied ? 'Copied' : 'Copy'}
               </button>
             </div>
-            <pre aria-label="SQL preview" className="p-3 rounded-[var(--radius-lg)] bg-gray-50 border text-xs leading-relaxed font-mono text-gray-800 whitespace-pre-wrap break-all">{sql}</pre>
+            <pre aria-label="SQL preview" className="p-3 rounded-[var(--radius-lg)] bg-gray-50 border text-xs leading-relaxed font-mono text-gray-800 whitespace-pre-wrap break-all">{shownSql}</pre>
+            <p className="text-xs text-gray-500">Field titles are shown here. The real column names are used when you apply, and Copy copies them.</p>
           </div>
         </>
       )}

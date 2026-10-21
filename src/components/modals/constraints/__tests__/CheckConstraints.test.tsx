@@ -167,6 +167,22 @@ describe('CheckConstraintFormModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('inserts a field into the custom statement: inside CHECK ( ) first, then at the cursor', async () => {
+    renderForm();
+    await toCategory('Custom SQL Expression');
+    const box = screen.getByLabelText(/^SQL/) as HTMLTextAreaElement;
+    expect(box.value).toContain('CHECK ();');
+
+    await pick('Insert a field', 'Age');
+    expect(box.value).toContain('CHECK (Age);');
+
+    // Typing after it and inserting again goes to the cursor
+    const at = box.value.indexOf(');');
+    await userEvent.type(box, ' > 0 AND ', { initialSelectionStart: at, initialSelectionEnd: at });
+    await pick('Insert a field', 'Start');
+    expect(box.value).toContain('CHECK (Age > 0 AND Start);');
+  });
+
   it('refuses a custom statement for another table without calling the server', async () => {
     renderForm();
     await toCategory('Custom SQL Expression');
@@ -188,13 +204,25 @@ describe('CheckConstraintFormModal', () => {
     // There is no free condition box, only the values; nothing is applied until they are typed
     expect(screen.queryByLabelText(/Condition/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
-    expect(preview()).toContain('CHECK (age_179 BETWEEN <value> AND <value>);');
+    expect(preview()).toContain('CHECK (Age BETWEEN <value> AND <value>);');
     await userEvent.type(screen.getByLabelText('From'), '0');
     await userEvent.type(screen.getByLabelText('To'), '100');
 
     expect(screen.getByLabelText(/Name/)).toHaveValue('Age · Between two values');
-    expect(preview()).toMatch(/^ALTER TABLE "tenant_1"\."employee_179"\n {2}ADD CONSTRAINT "ck_employee_179_[0-9a-f]{8}"\n {2}CHECK \(age_179 BETWEEN 0 AND 100\);$/);
+    expect(preview()).toMatch(/^ALTER TABLE "tenant_1"\."employee_179"\n {2}ADD CONSTRAINT "ck_employee_179_[0-9a-f]{8}"\n {2}CHECK \(Age BETWEEN 0 AND 100\);$/);
     expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+  });
+
+  it('shows field titles in the preview but the column names in what is copied', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    renderForm();
+    await pick('Select a field', 'Age');
+    await pick('Select a condition', 'Greater than zero');
+    expect(preview()).toContain('CHECK (Age > 0);');
+    expect(preview()).not.toContain('age_179');
+    await userEvent.click(screen.getByRole('button', { name: /Copy/ }));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('CHECK (age_179 > 0);'));
   });
 
   it('lists the fields in table order, not alphabetically', async () => {
@@ -232,7 +260,7 @@ describe('CheckConstraintFormModal', () => {
     await userEvent.type(screen.getByLabelText('Value'), 'active, in active');
     expect(preview()).toContain("CHECK (<field> IN ('active', 'in active'));");
     await pick('Select a field', 'Status');
-    expect(preview()).toContain("CHECK (status_179 IN ('active', 'in active'));");
+    expect(preview()).toContain("CHECK (Status IN ('active', 'in active'));");
   });
 
   it('follows the field and value, and a different condition starts with empty values', async () => {
@@ -240,19 +268,19 @@ describe('CheckConstraintFormModal', () => {
     await pick('Select a field', 'Age');
     await pick('Select a condition', 'Maximum');
     await userEvent.type(screen.getByLabelText('Value'), '100');
-    expect(preview()).toContain('CHECK (age_179 <= 100);');
+    expect(preview()).toContain('CHECK (Age <= 100);');
     expect(screen.getByLabelText(/Name/)).toHaveValue('Age · Maximum');
 
     // Another field: the condition and the name follow
     await pick('Age', 'Start');
-    expect(preview()).toContain("CHECK (start_179 <= <value>);");
+    expect(preview()).toContain("CHECK (Start <= <value>);");
     expect(screen.getByLabelText(/Name/)).toHaveValue('Start · Maximum');
 
     // A value that does not suit a number field is not used
     await pick('Start', 'Age');
     await userEvent.clear(screen.getByLabelText('Value'));
     await userEvent.type(screen.getByLabelText('Value'), '10');
-    expect(preview()).toContain('CHECK (age_179 <= 10);');
+    expect(preview()).toContain('CHECK (Age <= 10);');
 
     await pick('Maximum', 'Minimum');
     expect(screen.getByLabelText('Value')).toHaveValue(null);
@@ -265,12 +293,12 @@ describe('CheckConstraintFormModal', () => {
     await pick('Select a field', 'Start', 0);
     await pick('Select a field', 'Age', 0);
     await pick('Select a condition', 'First ≤ second');
-    expect(preview()).toContain('CHECK (start_179 <= age_179);');
+    expect(preview()).toContain('CHECK (Start <= Age);');
 
     // Another condition replaces it without a browser alert
     const confirm = vi.spyOn(window, 'confirm');
     await pick('First ≤ second', 'Different');
-    expect(preview()).toContain('CHECK (start_179 <> age_179);');
+    expect(preview()).toContain('CHECK (Start <> Age);');
     expect(confirm).not.toHaveBeenCalled();
   });
 
@@ -279,7 +307,7 @@ describe('CheckConstraintFormModal', () => {
     await pick('Select a field', 'Age');
     await pick('Select a condition', 'Greater than zero');
     await toCategory('Custom SQL Expression');
-    expect((screen.getByLabelText(/^SQL/) as HTMLTextAreaElement).value).toContain('CHECK (age_179 > 0);');
+    expect((screen.getByLabelText(/^SQL/) as HTMLTextAreaElement).value).toContain('CHECK (Age > 0);');
   });
 
   it('shows why the server refused and stays open', async () => {
@@ -315,7 +343,7 @@ describe('CheckConstraintFormModal', () => {
   it('opens a saved condition that is none of the common ones as custom SQL', async () => {
     renderForm({ ...CHECK, condition: 'age_179 > 5 AND age_179 < 9' });
     expect(categoryTrigger()).toHaveTextContent(/^Custom SQL Expression/);
-    expect((screen.getByLabelText(/^SQL/) as HTMLTextAreaElement).value).toContain('CHECK (age_179 > 5 AND age_179 < 9);');
+    expect((screen.getByLabelText(/^SQL/) as HTMLTextAreaElement).value).toContain('CHECK (Age > 5 AND Age < 9);');
   });
 });
 
@@ -339,7 +367,8 @@ describe('CheckConstraintsPanel', () => {
     expect(useTableConstraints).toHaveBeenCalledWith('t1', 'check');
     expect(screen.getByText('Age 18–100')).toHaveAttribute('title', 'ck_employee_179_1a2b3c4d in Postgres');
     expect(screen.getAllByText('Single Field').length).toBeGreaterThan(0);
-    expect(screen.getByText('age_179 BETWEEN 18 AND 100')).toBeInTheDocument();
+    // Field titles, not column names
+    expect(screen.getByText('Age BETWEEN 18 AND 100')).toBeInTheDocument();
   });
 
   it('does not show SQL or a copy button in the list', () => {
