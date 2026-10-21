@@ -89,11 +89,11 @@ export const CHECK_CATEGORIES: CheckCategory[] = [
 ];
 
 // Text and Number / Date were one category each; constraints saved with those keys show as Single Field
-const SAVED_AS_FIELD = ['text', 'number_date'];
+const SAVED_AS_FIELD = new Set(['text', 'number_date']);
 
 // Unknown keys (e.g. constraints added outside the app) are shown as Custom SQL Expression
 export const categoryByKey = (key?: string): CheckCategory => {
-  const wanted = SAVED_AS_FIELD.includes(key ?? '') ? 'field' : key;
+  const wanted = SAVED_AS_FIELD.has(key ?? '') ? 'field' : key;
   return CHECK_CATEGORIES.find(c => c.key === wanted) ?? CHECK_CATEGORIES.find(c => c.key === CUSTOM_CATEGORY)!;
 };
 
