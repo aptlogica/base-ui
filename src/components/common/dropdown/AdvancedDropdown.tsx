@@ -41,6 +41,8 @@ interface AdvancedDropdownProps<T = string | number> {
   readonly validate?: (value: T | T[] | undefined) => string | undefined;
   readonly portal?: boolean;
   readonly isImport?: boolean;
+  // Options are listed alphabetically unless this is false; then they keep the given order
+  readonly sort?: boolean;
 }
 
 export function AdvancedDropdown<T extends string | number>({
@@ -63,6 +65,7 @@ export function AdvancedDropdown<T extends string | number>({
   validate,
   portal = false,
   isImport = false,
+  sort = true,
 }: AdvancedDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -100,7 +103,7 @@ export function AdvancedDropdown<T extends string | number>({
       option.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
       option.description?.toLowerCase().includes(searchQuery.toLowerCase())
       ) : options
-  ).sort((a, b) => a.label.localeCompare(b.label));
+  ).sort((a, b) => (sort ? a.label.localeCompare(b.label) : 0));
 
   // Calculate dropdown position based on available space
   const calculateDropdownPosition = useCallback(() => {

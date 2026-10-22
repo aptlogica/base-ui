@@ -17,6 +17,10 @@ vi.mock('../constraints/UniqueKeysPanel', () => ({
   default: ({ table }: { table: { id: string } }) => <div data-testid="unique-keys-panel">{`unique:${table.id}`}</div>,
 }));
 
+vi.mock('../constraints/CheckConstraintsPanel', () => ({
+  default: ({ table }: { table: { id: string } }) => <div data-testid="check-constraints-panel">{`check:${table.id}`}</div>,
+}));
+
 const table = { id: 't1', title: 'Employee' };
 
 describe('TableSettingsModal', () => {
@@ -69,10 +73,11 @@ describe('TableSettingsModal', () => {
     expect(screen.queryByTestId('unique-keys-panel')).not.toBeInTheDocument();
   });
 
-  it('shows an empty right side for sections that are not built yet', async () => {
+  it('shows the check constraints panel for Check Constraints', async () => {
     render(<TableSettingsModal table={table} onClose={onClose} />);
     await userEvent.click(screen.getByRole('button', { name: 'Check Constraints' }));
     expect(screen.getByRole('button', { name: 'Check Constraints' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByTestId('check-constraints-panel')).toHaveTextContent('check:t1');
     expect(screen.queryByTestId('triggers-panel')).not.toBeInTheDocument();
     expect(screen.queryByTestId('primary-key-panel')).not.toBeInTheDocument();
     expect(screen.queryByTestId('unique-keys-panel')).not.toBeInTheDocument();
