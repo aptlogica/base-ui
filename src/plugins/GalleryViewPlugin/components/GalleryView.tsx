@@ -294,7 +294,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         table={tableData?.model}
         fields={galleryData.columns}
         title="New record"
-        submitLabel="Save record"
+        submitLabel="Save Record"
       />
 
       <EditRecordModal

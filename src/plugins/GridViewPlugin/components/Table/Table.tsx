@@ -455,6 +455,8 @@ export const Table: React.FC<TableProps> = ({
   const [isEditRecordModalOpen, setIsEditRecordModalOpen] = useState(false);
   // "New row - Form" modal state
   const [isCreateRecordModalOpen, setIsCreateRecordModalOpen] = useState(false);
+  // Existing record shown in the "New row - Form" via Previous / Next; null shows the blank new-row form
+  const [formRecordId, setFormRecordId] = useState<string | null>(null);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
@@ -1070,6 +1072,47 @@ export const Table: React.FC<TableProps> = ({
     return selectedRecordId || '';
   }, [resolveNumericRowId, selectedRecordId]);
 
+  // "New row - Form" navigation: the form opens blank (formRecordId null); Previous / Next step through the
+  // saved records in the grid's current filter and sort order, and Next past the last record returns to the blank form
+  const formRecordIds = useMemo(
+    () => filteredAndSortedData.map(row => String(row.id)).filter(id => !isDraftRowId(id)),
+    [filteredAndSortedData]
+  );
+  const formRecordIndex = formRecordId === null ? -1 : formRecordIds.indexOf(formRecordId);
+  const formRecordApiId = useMemo(() => {
+    const resolvedId = resolveNumericRowId(formRecordId);
+    if (resolvedId !== null) return String(resolvedId);
+    return formRecordId || '';
+  }, [resolveNumericRowId, formRecordId]);
+
+  const closeRecordForm = useCallback(() => {
+    setIsCreateRecordModalOpen(false);
+    setFormRecordId(null);
+  }, []);
+
+  const showPreviousFormRecord = useCallback(() => {
+    if (formRecordIds.length === 0) return;
+    // From the blank form (or a record no longer in the grid) go to the last record
+    const nextIndex = formRecordIndex === -1 ? formRecordIds.length - 1 : formRecordIndex - 1;
+    if (nextIndex >= 0) setFormRecordId(formRecordIds[nextIndex]);
+  }, [formRecordIds, formRecordIndex]);
+
+  const showNextFormRecord = useCallback(() => {
+    const nextIndex = formRecordIndex + 1;
+    setFormRecordId(formRecordIndex !== -1 && nextIndex < formRecordIds.length ? formRecordIds[nextIndex] : null);
+  }, [formRecordIds, formRecordIndex]);
+
+  // "Edit record" navigation: Previous / Next step through the saved records in the grid's current filter and sort order
+  const selectedRecordIndex = selectedRecordId === null ? -1 : formRecordIds.indexOf(selectedRecordId);
+
+  const showPreviousEditRecord = useCallback(() => {
+    if (selectedRecordIndex > 0) setSelectedRecordId(formRecordIds[selectedRecordIndex - 1]);
+  }, [formRecordIds, selectedRecordIndex]);
+
+  const showNextEditRecord = useCallback(() => {
+    if (selectedRecordIndex !== -1 && selectedRecordIndex < formRecordIds.length - 1) setSelectedRecordId(formRecordIds[selectedRecordIndex + 1]);
+  }, [formRecordIds, selectedRecordIndex]);
+
   // Column drag and drop handler wrapper (uses hook's handleColumnDragEnd with proper params)
   const handleColumnDragStart = useCallback((index: number) => {
     if (!canReorderColumns) return;
@@ -1514,7 +1557,7 @@ export const Table: React.FC<TableProps> = ({
         {!isBaseReadOnly() && canCreateRecord() && (
           <NewRowSplitButton
             onAddGridRow={() => { setActiveCell(null); addNewRowAndFocus(); }}
-            onAddFormRow={() => { setActiveCell(null); setIsCreateRecordModalOpen(true); }}
+            onAddFormRow={() => { setActiveCell(null); setFormRecordId(null); setIsCreateRecordModalOpen(true); }}
           />
         )}
         <div className="ml-auto flex items-center gap-3 text-sm">
@@ -1690,18 +1733,51 @@ export const Table: React.FC<TableProps> = ({
         }}
         title="Edit record"
         submitLabel="Update record"
+        onPrevious={showPreviousEditRecord}
+        onNext={showNextEditRecord}
+        hasPrevious={selectedRecordIndex > 0}
+        hasNext={selectedRecordIndex !== -1 && selectedRecordIndex < formRecordIds.length - 1}
       />
 
       {/* New Row Form Modal */}
       <CreateRecordModal
-        isOpen={isCreateRecordModalOpen}
-        onClose={() => setIsCreateRecordModalOpen(false)}
+        isOpen={isCreateRecordModalOpen && formRecordId === null}
+        onClose={closeRecordForm}
         onSuccess={() => { try { onRefresh?.(); } catch { } }}
         table={tableData?.model}
         fields={tableData?.columns || []}
         title="New row"
         submitLabel="Save row"
         layout="record"
+        onPrevious={showPreviousFormRecord}
+        onNext={showNextFormRecord}
+        hasPrevious={formRecordIds.length > 0}
+        hasNext={false}
+      />
+
+      {/* Existing record reached from the "New row - Form" via Previous / Next */}
+      <EditRecordModal
+        isOpen={isCreateRecordModalOpen && formRecordId !== null}
+        onClose={closeRecordForm}
+        onSuccess={() => { try { onRefresh?.(); } catch { } }}
+        recordId={formRecordApiId}
+        table={tableData?.model}
+        fields={tableData?.columns || []}
+        initialValues={buildInitialValuesForEdit({ recordId: formRecordId ?? undefined, columns: tableData?.columns || [], rawRecords: tableData?.records || [] })}
+        onDelete={async (id: string) => {
+          try {
+            await handleDelete(id);
+          } catch { }
+          finally {
+            closeRecordForm();
+          }
+        }}
+        title="Edit record"
+        submitLabel="Update record"
+        onPrevious={showPreviousFormRecord}
+        onNext={showNextFormRecord}
+        hasPrevious={formRecordIndex > 0}
+        hasNext={formRecordIndex !== -1}
       />
     </div>
 

@@ -209,9 +209,11 @@ const getFieldRendererProps = (
   }
 
   if (baseProps.type === 'longText') {
-    // Form View edits long text in place (rich text editor or plain textarea, per the field config)
+    // Form View edits long text in place (rich text editor or plain textarea, per the field config).
+    // Rich text is on by default here unless the field explicitly disables it.
     return {
       ...baseProps,
+      config: { ...baseProps.config, richText: baseProps.config.richText ?? true },
       inline: true
     };
   }

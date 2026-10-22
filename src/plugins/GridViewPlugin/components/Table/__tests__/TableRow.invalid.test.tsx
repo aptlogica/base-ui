@@ -55,7 +55,7 @@ describe('TableRow primary key cells', () => {
 
     // Other cells of the clicked row keep the row highlight
     const emps = screen.getByTestId('cell-emps').closest('[role="gridcell"]') as HTMLElement;
-    expect(emps.className).toContain('color-blue-50');
+    expect(emps.className).toContain('color-row-highlight-bg');
   });
 
   it('keeps link cells of a draft read-only until it is saved', () => {

@@ -3,7 +3,7 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { X, Table2, MoreVertical, Trash2, Copy } from 'lucide-react';
+import { Table2, MoreVertical, Trash2, Copy } from 'lucide-react';
 import FieldRenderer from '../../plugins/FormViewPlugin/components/shared/FieldRenderer';
 import { useUpdateRowData, useAddAttachment, useRemoveAttachments, useInsertRelationData } from '../../hooks/useApi';
 import { getFieldTypeIconWithMargin, getRelationTypeFromField } from '../../types/fieldTypes';
@@ -21,6 +21,8 @@ import { cachedTableRecords, linkItemIdentity, linkItems, linkRowIds } from '../
 import { useQueryClient } from '@tanstack/react-query';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
 import { useToast } from '../../components/common/Toast';
+import RecordNavButtons from './RecordNavButtons';
+import UnsavedChangesDialog from './UnsavedChangesDialog';
 
 type EditRecordModalProps = {
   isOpen: boolean;
@@ -34,6 +36,11 @@ type EditRecordModalProps = {
   initialValues?: Record<string, any>; // keyed by field.id or field.name
   onDuplicate?: (recordId: string) => void;
   onDelete?: (recordId: string) => void;
+  // Previous / Next buttons, to step through the table's records
+  onPrevious?: () => void;
+  onNext?: () => void;
+  hasPrevious?: boolean;
+  hasNext?: boolean;
 };
 
 const EditRecordModal: React.FC<EditRecordModalProps> = ({
@@ -44,10 +51,14 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   onClose,
   onSuccess,
   title = 'Edit record',
-  submitLabel = 'Save changes',
+  submitLabel = 'Save Changes',
   initialValues = {},
   onDuplicate,
   onDelete,
+  onPrevious,
+  onNext,
+  hasPrevious = false,
+  hasNext = false,
 }) => {
   const [showHidden, setShowHidden] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -57,6 +68,7 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   // Most inputs only commit their value on blur, so typing anywhere in the form counts as an edit right away
   const [hasTyped, setHasTyped] = useState(false);
+  const [showUnsavedPrompt, setShowUnsavedPrompt] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Get base_id from table (could be table.base_id or table.model.base_id)
@@ -101,8 +113,10 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     const fieldName = field.name?.toLowerCase() || '';
     const fieldTitle = field.title?.toLowerCase() || '';
 
-    // Keep Title field visible (it's required for records) - check both name and title
-    if (fieldName.includes('title') || fieldTitle.includes('title')) {
+    const columnName = field.column_name?.toLowerCase() || '';
+
+    // Keep Title field visible (it's required for records), even after it is renamed - check column_name, name and title
+    if (columnName === 'title' || fieldName.includes('title') || fieldTitle.includes('title')) {
       return false;
     }
 
@@ -154,7 +168,9 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
     setFormError(null);
     setSubmitting(false);
     setHasTyped(false);
-  }, [isOpen, fields, JSON.stringify(initialValues)]);
+    setShowUnsavedPrompt(false);
+  // recordId resets the form when stepping to another record, even one with identical values
+  }, [isOpen, recordId, fields, JSON.stringify(initialValues)]);
 
   const handleFieldChange = (field: any, value: unknown) => {
     setRowData(prev => ({ ...prev, [field.id]: value }));
@@ -248,6 +264,15 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   }, [fields, originalData, rowData]);
 
   const isSaveDisabled = submitting || !(hasChanges || hasTyped);
+
+  // Closing with unsaved edits asks whether to save or discard them first
+  const requestClose = () => {
+    if (canUpdateRecord() && !isSaveDisabled) {
+      setShowUnsavedPrompt(true);
+      return;
+    }
+    onClose();
+  };
 
   const handleSave = async () => {
     // Check permission before saving
@@ -470,14 +495,14 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   return (
     <div //NOSONAR
       className="bg-modal-backdrop relative"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onClick={(e) => e.target === e.currentTarget && requestClose()}
       onKeyDown={(e) => e.stopPropagation()}
     >
       <button
         type="button"
         aria-label="Close modal"
         className="absolute inset-0"
-        onClick={onClose}
+        onClick={requestClose}
       />
       <div //NOSONAR 
         className="bg-modal w-full h-full relative !p-0 !max-w-[99rem] !max-h-[45rem] flex flex-col overflow-hidden !rounded-[1.5rem]"
@@ -485,15 +510,16 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
         onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="min-h-7 h-24 flex items-center justify-between px-6 py-3 border-b flex-shrink-0">
+        <div className="min-h-7 h-20 flex items-center justify-between px-6 py-3 border-b flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <span className="inline-flex items-center gap-2 text-2xl font-medium bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg max-w-[200px] flex-shrink-0">
               <Table2 className="w-4 h-4 flex-shrink-0" />
               <span className="truncate">{table?.title}</span>
             </span>
-            <h2 className="text-3xl font-semibold truncate">{title}</h2>
+            <h2 className="text-2xl font-semibold truncate">{title}</h2>
           </div>
           <div className="flex items-center gap-2 relative flex-shrink-0">
+            <RecordNavButtons onPrevious={onPrevious} onNext={onNext} hasPrevious={hasPrevious} hasNext={hasNext} disabled={submitting} showSeparator={canUpdateRecord()} />
             {canUpdateRecord() && (
               <button
                 type="button"
@@ -568,8 +594,12 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
                 )}
               </div>
             )}
-            <button type="button" className="p-2 flex-shrink-0" onClick={onClose} aria-label="Close">
-              <X className="w-5 h-5 text-gray-500" />
+            <button
+              type="button"
+              className="px-3 py-1.5 text-sm rounded-lg border bg-card hover:bg-gray-50 text-gray-700 flex-shrink-0"
+              onClick={requestClose}
+            >
+              Cancel
             </button>
           </div>
         </div>
@@ -640,6 +670,19 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
           </div>
         </div>
       </div>
+
+      <UnsavedChangesDialog
+        isOpen={showUnsavedPrompt}
+        onCancel={() => setShowUnsavedPrompt(false)}
+        onDiscard={() => {
+          setShowUnsavedPrompt(false);
+          onClose();
+        }}
+        onSave={() => {
+          setShowUnsavedPrompt(false);
+          handleSave();
+        }}
+      />
     </div>
   );
 };

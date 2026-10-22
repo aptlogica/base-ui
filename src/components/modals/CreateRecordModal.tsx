@@ -14,6 +14,8 @@ import { isFormulaField } from '../../utils/fieldUtils';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
 import { useToast } from '../common/Toast';
 import { apiErrorMessage } from '../../utils/apiErrors';
+import RecordNavButtons from './RecordNavButtons';
+import UnsavedChangesDialog from './UnsavedChangesDialog';
 
 type CreateRecordModalProps = {
     isOpen: boolean;
@@ -26,6 +28,11 @@ type CreateRecordModalProps = {
     initialValues?: Record<string, any>; // keyed by field.id or field.name
     // 'record' uses the Edit record popup layout, with the save button in the header
     layout?: 'default' | 'record';
+    // Previous / Next buttons (record layout only), to step through the table's existing records
+    onPrevious?: () => void;
+    onNext?: () => void;
+    hasPrevious?: boolean;
+    hasNext?: boolean;
 };
 
 const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
@@ -35,9 +42,13 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     onClose,
     onSuccess,
     title = 'New record',
-    submitLabel = 'Save record',
+    submitLabel = 'Save Record',
     initialValues = {},
     layout = 'default',
+    onPrevious,
+    onNext,
+    hasPrevious = false,
+    hasNext = false,
 }) => {
     const [showHidden, setShowHidden] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -46,6 +57,8 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const [createdRecordId, setCreatedRecordId] = useState<string | null>(null);
     const [initialRowData, setInitialRowData] = useState<Record<string, any>>({});
     const [menuOpen, setMenuOpen] = useState(false);
+    const [hasTyped, setHasTyped] = useState(false);
+    const [showUnsavedPrompt, setShowUnsavedPrompt] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
     // Close the record menu when clicking outside it
@@ -82,8 +95,9 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const isSystemField = (field: any): boolean => {
         const fieldName = field.name?.toLowerCase() || '';
         const fieldTitle = field.title?.toLowerCase() || '';
-        // Keep Title field visible (it's required for records) - check both name and title
-        if (fieldName.includes('title') || fieldTitle.includes('title')) {
+        const columnName = field.column_name?.toLowerCase() || '';
+        // Keep Title field visible (it's required for records), even after it is renamed - check column_name, name and title
+        if (columnName === 'title' || fieldName.includes('title') || fieldTitle.includes('title')) {
             return false;
         }
         // Hide audit fields completely - backend will auto-assign them
@@ -136,6 +150,8 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         setSubmitting(false);
         setCreatedRecordId(null); // Reset created record ID
         setMenuOpen(false);
+        setHasTyped(false);
+        setShowUnsavedPrompt(false);
     }, [isOpen, fields, JSON.stringify(initialValues)]);
 
     const handleFieldChange = (field: any, value: unknown) => {
@@ -164,8 +180,34 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         return (fields || []).some(field => !isValueEqual(rowData[field.id], initialRowData[field.id]));
     }, [fields, rowData, initialRowData]);
 
-    const canSave = hasChanges;
-    const isSaveDisabled = submitting || !canSave;
+    // hasTyped catches text that is still being typed and has not reached rowData yet, so Save
+    // enables on the first keystroke instead of waiting for the field to blur.
+    const isDirty = hasChanges || hasTyped;
+    const isSaveDisabled = submitting || !isDirty;
+
+    // Closing with unsaved edits asks whether to save or discard them first
+    const requestClose = () => {
+        if (canCreateRecord() && !submitting && isDirty) {
+            setShowUnsavedPrompt(true);
+            return;
+        }
+        onClose();
+    };
+
+    const unsavedChangesDialog = (
+        <UnsavedChangesDialog
+            isOpen={showUnsavedPrompt}
+            onCancel={() => setShowUnsavedPrompt(false)}
+            onDiscard={() => {
+                setShowUnsavedPrompt(false);
+                onClose();
+            }}
+            onSave={() => {
+                setShowUnsavedPrompt(false);
+                void handleSave();
+            }}
+        />
+    );
 
     const validateRequired = (): string[] => {
         const missing = (fields || [])
@@ -463,14 +505,14 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         return (
             <div //NOSONAR
                 className="bg-modal-backdrop relative"
-                onClick={(e) => e.target === e.currentTarget && onClose()}
+                onClick={(e) => e.target === e.currentTarget && requestClose()}
                 onKeyDown={(e) => e.stopPropagation()}
             >
                 <button
                     type="button"
                     aria-label="Close modal"
                     className="absolute inset-0"
-                    onClick={onClose}
+                    onClick={requestClose}
                 />
                 <div //NOSONAR
                     className="bg-modal w-full h-full relative !p-0 !max-w-[99rem] !max-h-[45rem] flex flex-col overflow-hidden !rounded-[1.5rem]"
@@ -478,15 +520,16 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                     onKeyDown={(e) => e.stopPropagation()}
                 >
                     {/* Header */}
-                    <div className="min-h-7 h-24 flex items-center justify-between px-6 py-3 border-b flex-shrink-0">
+                    <div className="min-h-7 h-20 flex items-center justify-between px-6 py-3 border-b flex-shrink-0">
                         <div className="flex items-center gap-3 min-w-0">
                             <span className="inline-flex items-center gap-2 text-2xl font-medium bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg max-w-[200px] flex-shrink-0">
                                 <Table2 className="w-4 h-4 flex-shrink-0" />
                                 <span className="truncate">{table?.title}</span>
                             </span>
-                            <h2 className="text-3xl font-semibold truncate">{title}</h2>
+                            <h2 className="text-2xl font-semibold truncate">{title}</h2>
                         </div>
                         <div className="flex items-center gap-2 relative flex-shrink-0">
+                            <RecordNavButtons onPrevious={onPrevious} onNext={onNext} hasPrevious={hasPrevious} hasNext={hasNext} disabled={submitting} showSeparator={canCreateRecord()} />
                             {canCreateRecord() && (
                                 <button
                                     type="button"
@@ -546,14 +589,18 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                                     )}
                                 </div>
                             )}
-                            <button type="button" className="p-2 flex-shrink-0" onClick={onClose} aria-label="Close">
-                                <X className="w-5 h-5 text-gray-500" />
+                            <button
+                                type="button"
+                                className="px-3 py-1.5 text-sm rounded-lg border bg-card hover:bg-gray-50 text-gray-700 flex-shrink-0"
+                                onClick={requestClose}
+                            >
+                                Cancel
                             </button>
                         </div>
                     </div>
 
                     {/* Scrollable Content Area */}
-                    <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" onInput={() => setHasTyped(true)}>
                         <div className="px-6 py-6 mx-auto w-full max-w-[820px]">
                             <div className="space-y-4">{visibleFields.map(renderRecordLayoutField)}</div>
 
@@ -581,6 +628,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                         </div>
                     </div>
                 </div>
+                {unsavedChangesDialog}
             </div>
         );
     }
@@ -591,7 +639,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                 type="button"
                 aria-label="Close modal"
                 className="absolute inset-0"
-                onClick={onClose}
+                onClick={requestClose}
             />
             <div className="bg-modal w-full relative max-w-4xl !p-0 flex flex-col overflow-hidden">
                 {/* Header */}
@@ -603,13 +651,13 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                             <h2 className="text-2xl font-semibold truncate">{title}</h2>
                         </div>
                     </div>
-                    <button type="button" className="p-2 flex-shrink-0" onClick={onClose} aria-label="Close">
+                    <button type="button" className="p-2 flex-shrink-0" onClick={requestClose} aria-label="Close">
                         <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
 
                 {/* Scrollable Content Area */}
-                <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" onInput={() => setHasTyped(true)}>
                     <div className="p-6">
                         {/* Visible fields */}
                         <div className="space-y-4">
@@ -679,7 +727,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                     <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={requestClose}
                             disabled={submitting}
                             className="px-16 py-2 rounded-xl border bg-card hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
                         >
@@ -696,6 +744,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                     </div>
                 )}
             </div>
+            {unsavedChangesDialog}
         </div>
     );
 };

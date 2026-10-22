@@ -162,7 +162,7 @@ describe('CreateRecordModal', () => {
     it('renders submit button with correct label', () => {
       renderWithQueryClient(<CreateRecordModal {...defaultProps} />);
 
-      expect(screen.getByRole('button', { name: 'Save record' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save Record' })).toBeInTheDocument();
     });
 
     it('renders custom submit label', () => {
@@ -181,23 +181,112 @@ describe('CreateRecordModal', () => {
   });
 
   describe('record layout', () => {
-    it('shows the title and save button in the header with no footer', () => {
+    it('shows the title and save button plus a cancel button in the header', () => {
       renderWithQueryClient(
-        <CreateRecordModal {...defaultProps} layout="record" title="New row" submitLabel="Save row" />
+        <CreateRecordModal {...defaultProps} layout="record" title="New row" submitLabel="Save Record" />
       );
 
       expect(screen.getByRole('heading', { name: 'New row' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Save row' })).toBeDisabled();
-      expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save Record' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    });
+
+    it('shows Previous and Next before the save button, with Previous enabled when records exist', () => {
+      const onPrevious = vi.fn();
+      renderWithQueryClient(
+        <CreateRecordModal {...defaultProps} layout="record" submitLabel="Save Record" onPrevious={onPrevious} onNext={vi.fn()} hasPrevious hasNext={false} />
+      );
+
+      const previous = screen.getByRole('button', { name: 'Previous record' });
+      const next = screen.getByRole('button', { name: 'Next record' });
+      const save = screen.getByRole('button', { name: 'Save Record' });
+      expect(previous).toBeEnabled();
+      expect(next).toBeDisabled();
+      expect(previous.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(next.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+      fireEvent.click(previous);
+      expect(onPrevious).toHaveBeenCalledTimes(1);
+    });
+
+    it('disables Previous when the table has no records', () => {
+      renderWithQueryClient(
+        <CreateRecordModal {...defaultProps} layout="record" onPrevious={vi.fn()} onNext={vi.fn()} hasPrevious={false} />
+      );
+
+      expect(screen.getByRole('button', { name: 'Previous record' })).toBeDisabled();
+    });
+
+    it('hides Previous and Next when no navigation handlers are given', () => {
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} layout="record" />);
+
+      expect(screen.queryByRole('button', { name: 'Previous record' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Next record' })).not.toBeInTheDocument();
+    });
+
+    it('shows the renamed title column even though the backend marks it as a system field', () => {
+      const fields = [
+        { id: 'album', title: 'Album', column_name: 'title', type: 'text', system: true },
+        { id: 'budget', title: 'Budget', column_name: 'budget', type: 'currency' },
+        { id: 'sys', title: 'Internal', column_name: 'internal', type: 'text', system: true },
+      ];
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} fields={fields as any} layout="record" />);
+
+      expect(screen.getByTestId('field-renderer-album')).toBeInTheDocument();
+      expect(screen.getByTestId('field-renderer-budget')).toBeInTheDocument();
+      expect(screen.queryByTestId('field-renderer-sys')).not.toBeInTheDocument();
     });
 
     it('closes from the close button', () => {
       const onClose = vi.fn();
       renderWithQueryClient(<CreateRecordModal {...defaultProps} layout="record" onClose={onClose} />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
       expect(onClose).toHaveBeenCalled();
+    });
+
+    it('asks to save before closing with unsaved changes, and Discard closes without saving', () => {
+      const onClose = vi.fn();
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} layout="record" onClose={onClose} />);
+
+      fireEvent.change(screen.getByTestId('field-input-field-1'), { target: { value: 'Hello' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByText('Do you want to save the changes ?')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(upsertRowMutateAsyncMock).not.toHaveBeenCalled();
+    });
+
+    it('saves the record from the unsaved-changes prompt', async () => {
+      const onClose = vi.fn();
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} layout="record" onClose={onClose} />);
+
+      fireEvent.change(screen.getByTestId('field-input-field-1'), { target: { value: 'Hello' } });
+      fireEvent.click(screen.getByLabelText('Close modal'));
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      await waitFor(() => expect(upsertRowMutateAsyncMock).toHaveBeenCalledWith({
+        model_id: 'table-123',
+        values: { 'field-1': 'Hello' },
+      }));
+      await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    });
+
+    it('keeps the form open when the unsaved-changes prompt is dismissed', () => {
+      const onClose = vi.fn();
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} layout="record" onClose={onClose} />);
+
+      fireEvent.change(screen.getByTestId('field-input-field-1'), { target: { value: 'Hello' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      fireEvent.click(screen.getByRole('dialog').querySelector('[aria-label="Close"]')!);
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByTestId('field-input-field-1')).toHaveValue('Hello');
     });
 
     it('duplicates from the record menu: saves and keeps the form open with the same values', async () => {
@@ -294,7 +383,7 @@ describe('CreateRecordModal', () => {
       renderWithQueryClient(<CreateRecordModal {...defaultProps} />);
 
       // When user cannot create, the footer with buttons is not rendered
-      const submitButton = screen.queryByRole('button', { name: 'Save record' });
+      const submitButton = screen.queryByRole('button', { name: 'Save Record' });
       expect(submitButton).not.toBeInTheDocument();
     });
 
@@ -307,7 +396,7 @@ describe('CreateRecordModal', () => {
 
       renderWithQueryClient(<CreateRecordModal {...defaultProps} />);
 
-      const submitButton = screen.getByRole('button', { name: 'Save record' });
+      const submitButton = screen.getByRole('button', { name: 'Save Record' });
       expect(submitButton).toBeDisabled();
     });
   });
@@ -323,7 +412,7 @@ describe('CreateRecordModal', () => {
       renderWithQueryClient(<CreateRecordModal {...defaultProps} />);
 
       const closeButton = screen.getByRole('button', { name: 'Close' });
-      const submitButton = screen.getByRole('button', { name: 'Save record' });
+      const submitButton = screen.getByRole('button', { name: 'Save Record' });
 
       expect(closeButton).toHaveAttribute('type', 'button');
       expect(submitButton).toHaveAttribute('type', 'button');
@@ -385,7 +474,7 @@ describe('CreateRecordModal', () => {
       const user = userEvent.setup();
       renderWithQueryClient(<CreateRecordModal {...defaultProps} />);
 
-      const submitButton = screen.getByRole('button', { name: 'Save record' });
+      const submitButton = screen.getByRole('button', { name: 'Save Record' });
       expect(submitButton).toBeDisabled();
 
       await user.type(screen.getByTestId('field-input-field-1'), 'New Title');
@@ -406,7 +495,7 @@ describe('CreateRecordModal', () => {
         />
       );
 
-      const submitButton = screen.getByRole('button', { name: 'Save record' });
+      const submitButton = screen.getByRole('button', { name: 'Save Record' });
       expect(submitButton).not.toBeDisabled();
     });
 
@@ -428,7 +517,7 @@ describe('CreateRecordModal', () => {
         />
       );
 
-      const submitButton = screen.getByRole('button', { name: 'Save record' });
+      const submitButton = screen.getByRole('button', { name: 'Save Record' });
       expect(submitButton).toBeDisabled();
     });
 
@@ -455,7 +544,7 @@ describe('CreateRecordModal', () => {
         <CreateRecordModal {...defaultProps} fields={fieldsWithDefaults} />
       );
 
-      const submitButton = screen.getByRole('button', { name: 'Save record' });
+      const submitButton = screen.getByRole('button', { name: 'Save Record' });
       expect(submitButton).toBeDisabled();
 
       await user.type(screen.getByTestId('field-input-field-1'), 'New Title');
@@ -479,7 +568,7 @@ describe('CreateRecordModal', () => {
       );
 
       await user.type(screen.getByTestId('field-input-field-1'), 'Some title');
-      await user.click(screen.getByRole('button', { name: 'Save record' }));
+      await user.click(screen.getByRole('button', { name: 'Save Record' }));
 
       await waitFor(() => {
         expect(screen.getByText(/Required field\(s\) must not be left empty/i)).toBeInTheDocument();
@@ -515,7 +604,7 @@ describe('CreateRecordModal', () => {
       renderWithQueryClient(<CreateRecordModal {...defaultProps} fields={keyFields} />);
 
       await user.type(screen.getByTestId('field-input-field-1'), 'A title');
-      await user.click(screen.getByRole('button', { name: 'Save record' }));
+      await user.click(screen.getByRole('button', { name: 'Save Record' }));
 
       expect(await screen.findByText('Code and Year are required: they make up the primary key.')).toBeInTheDocument();
       expect(upsertRowMutateAsyncMock).not.toHaveBeenCalled();
@@ -528,7 +617,7 @@ describe('CreateRecordModal', () => {
       await user.type(screen.getByTestId('field-input-field-code'), 'HR');
       await user.type(screen.getByTestId('field-input-field-year'), '2026');
       expect(screen.queryByTestId('key-field-missing-field-code')).not.toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: 'Save record' }));
+      await user.click(screen.getByRole('button', { name: 'Save Record' }));
 
       await waitFor(() => expect(upsertRowMutateAsyncMock).toHaveBeenCalledWith({
         model_id: 'table-123',
@@ -562,7 +651,7 @@ describe('CreateRecordModal', () => {
       );
 
       await user.type(screen.getByTestId('field-input-field-1'), 'Linked title');
-      await user.click(screen.getByRole('button', { name: 'Save record' }));
+      await user.click(screen.getByRole('button', { name: 'Save Record' }));
 
       await waitFor(() => {
         expect(insertRelationMutateAsyncMock).toHaveBeenCalledWith(
