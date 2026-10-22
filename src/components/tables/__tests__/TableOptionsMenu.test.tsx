@@ -20,8 +20,6 @@ const TEST_ID = {
   MENU_ITEM_PIN_TABLE: 'menu-item-pin-table',
   MENU_ITEM_UNPIN_TABLE: 'menu-item-unpin-table',
   MENU_ITEM_SETTINGS: 'menu-item-settings',
-  TABLE_SETTINGS_MODAL: 'table-settings-modal',
-  SETTINGS_MODAL_CLOSE: 'settings-modal-close',
 } as const;
 
 const mockMutateAsync = vi.fn();
@@ -112,15 +110,15 @@ vi.mock('../../modals/DeleteConfirmModal', () => ({
     ) : null,
 }));
 
-vi.mock('../../modals/TableSettingsModal', () => ({
-  default: ({ table, onClose }: { table: { id: string }; onClose: () => void }) => (
-    <div data-testid={TEST_ID.TABLE_SETTINGS_MODAL}>
-      <span>settings:{table.id}</span>
-      <button type="button" onClick={onClose} data-testid={TEST_ID.SETTINGS_MODAL_CLOSE}>
-        Close
-      </button>
-    </div>
-  ),
+const navigateMock = vi.fn();
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => navigateMock,
+  useParams: () => ({ workspaceId: 'ws-1' }),
+}));
+
+vi.mock('../../../stores/navigationStore', () => ({
+  useNavigationStore: (selector: (state: { selectedWorkspaceId: string | null }) => unknown) =>
+    selector({ selectedWorkspaceId: null }),
 }));
 
 describe('TableOptionsMenu', () => {
@@ -419,17 +417,14 @@ describe('TableOptionsMenu', () => {
       expect(labels).toEqual(['Edit table', 'Settings', 'Delete table']);
     });
 
-    it('opens the settings popup for the table and closes it', async () => {
+    it('opens the settings page for the table', async () => {
       const user = userEvent.setup();
       render(<TableOptionsMenu {...defaultProps} />);
 
-      expect(screen.queryByTestId(TEST_ID.TABLE_SETTINGS_MODAL)).not.toBeInTheDocument();
       await user.click(screen.getByTestId(TEST_ID.MENU_ITEM_SETTINGS));
-      expect(screen.getByTestId(TEST_ID.TABLE_SETTINGS_MODAL)).toBeInTheDocument();
-      expect(screen.getByText('settings:table-1')).toBeInTheDocument();
-
-      await user.click(screen.getByTestId(TEST_ID.SETTINGS_MODAL_CLOSE));
-      expect(screen.queryByTestId(TEST_ID.TABLE_SETTINGS_MODAL)).not.toBeInTheDocument();
+      expect(navigateMock).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/workspace\/ws-1\/base\/.+\/table\/table-1\/settings\/primaryKey$/),
+      );
     });
 
     it('does not render Settings when the user cannot update the table', () => {

@@ -7,6 +7,7 @@ import { X, Settings, Zap, KeyRound, Key, ShieldCheck } from 'lucide-react';
 import TableTriggersModal from './TableTriggersModal';
 import PrimaryKeyPanel from './tableSettings/PrimaryKeyPanel';
 import UniqueKeysPanel from './constraints/UniqueKeysPanel';
+import CheckConstraintsPanel from './constraints/CheckConstraintsPanel';
 
 interface TableSettingsModalProps {
   table: any;
@@ -83,6 +84,7 @@ const TableSettingsModal: React.FC<TableSettingsModalProps> = ({ table, onClose 
           <div className="flex-1 min-w-0">
             {section === 'primaryKey' && <PrimaryKeyPanel table={table} />}
             {section === 'uniqueKey' && <UniqueKeysPanel table={table} />}
+            {section === 'checkConstraints' && <CheckConstraintsPanel table={table} />}
             {(section === 'triggers' || section === 'webhooks') && (
               <TableTriggersModal key={section} embedded table={table} view={section} />
             )}

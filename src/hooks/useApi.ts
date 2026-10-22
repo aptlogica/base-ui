@@ -97,8 +97,8 @@ import {
   updateTableConstraintService,
   deleteTableConstraintService,
   type TableConstraintType,
-  type TableConstraintInput,
 } from '../service/clientService';
+import type { UpdateTableConstraint } from 'serenibase-sdk';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
 
 // Query Keys
@@ -2084,7 +2084,7 @@ export const useUpdateTableConstraint = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ tableId: _tableId, ...params }: TableConstraintInput & { id: string; tableId: string }) => updateTableConstraintService(params),
+    mutationFn: ({ tableId: _tableId, ...params }: UpdateTableConstraint & { id: string; tableId: string }) => updateTableConstraintService(params),
     onSuccess: (_, { tableId }) => {
       void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'constraints'] });
     },
