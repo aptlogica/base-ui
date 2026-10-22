@@ -23,6 +23,8 @@ vi.mock('../../../hooks/useApi', () => ({
   useAllViews: () => ({ data: [] }),
   useResetField: (...args: any[]) => mockUseResetField(...args),
   useTableConstraints: (...args: any[]) => mockUseTableConstraints(...args),
+  usePrimaryKey: () => ({ data: undefined }),
+  useFieldEmptyCount: () => ({ data: undefined }),
 }));
 
 vi.mock('../../../stores/navigationStore', () => ({

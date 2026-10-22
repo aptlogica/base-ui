@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { IdGeneration, UUID_DEFAULT_VERSION } from '../../types/uuid.types';
+
 export interface FormulaFormatting {
   type: 'number' | 'currency' | 'percent' | 'duration' | 'date' | 'text';
   precision: number;
@@ -68,6 +70,8 @@ export interface BuildFieldMetaParams {
   formulaText: string;
   formulaFormatting: FormulaFormatting;
   getBrowserTimeZone: () => string;
+  // UUID fields: Auto-generated (with a version) or Manual
+  idGeneration?: IdGeneration;
 }
 
 export interface BuildFieldMetaResult {
@@ -82,6 +86,8 @@ export interface BuildColumnPayloadParams {
   fields: any[];
   initialValues?: any;
   meta: any;
+  // UUID fields turned to auto-generated: fill the records that have no value yet
+  backfill?: boolean;
 }
 
 export const isDuplicateFieldName = (params: {
@@ -398,6 +404,13 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
       config.openInNewTab = params.openButtonInNewTab;
     },
     json: applyTextDefault,
+    // A UUID field never has a default value: auto fields are generated, manual fields are typed in
+    uuid: () => {
+      delete config.defaultValue;
+      config.idGeneration = params.idGeneration?.mode === 'auto'
+        ? { mode: 'auto', version: params.idGeneration.version ?? UUID_DEFAULT_VERSION }
+        : { mode: 'manual' };
+    },
     formula: () => {
       config.formula = params.formulaText;
       config.formatting = {
@@ -436,6 +449,7 @@ export const buildColumnPayload = (params: BuildColumnPayloadParams) => {
     type: params.selectedTypeKey,
     description: params.description,
     meta: finalMeta,
+    ...(params.backfill === undefined ? {} : { backfill: params.backfill }),
   };
 };
 

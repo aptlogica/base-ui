@@ -8,7 +8,9 @@ import { useClickOutside } from '../../hooks/useClickOutside';
 import { FIELD_TYPES } from '../../types/fieldTypes';
 import { timeZoneOptions } from '../../types/constants';
 import { FieldTypeDropdown } from '../common/dropdown/fieldDropdown/FieldTypeDropdown';
-import { useBaseTables, useBaseById, useTable, useAllViews, useResetField, useTableConstraints } from '../../hooks/useApi';
+import { useBaseTables, useBaseById, useTable, useAllViews, useResetField, useTableConstraints, usePrimaryKey, useFieldEmptyCount } from '../../hooks/useApi';
+import { DEFAULT_ID_GENERATION, IdGeneration } from '../../types/uuid.types';
+import { idGenerationFromMeta } from '../../utils/uuid';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { useToast } from '../../components/common/Toast';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../utils/fieldUsageUtils';
@@ -71,7 +73,26 @@ const isFieldTypeLocked = (
   selectedRelationId: string
 ) => isFieldUsedInViews || isLinksFieldEditing || (selectedTypeKey === 'lookup' && !!selectedRelationId);
 
+// UUID field config: Auto-generated (v7 by default) or Manual. Editing an existing field starts
+// from its saved settings; a field saved before these settings existed is manual.
+const useUuidFieldConfig = (initialValues: any, currentTableId: string | undefined, selectedType: FieldType | null, isOpen: boolean) => {
+  const [idGeneration, setIdGeneration] = useState<IdGeneration>(DEFAULT_ID_GENERATION);
+  const [uuidBackfill, setUuidBackfill] = useState(true);
+  const initialIdGeneration = useMemo<IdGeneration | null>(() => {
+    const isUuid = initialValues && (initialValues.type === 'uuid' || initialValues.uidt === 'uuid');
+    return isUuid ? idGenerationFromMeta(initialValues.meta || initialValues.config) : null;
+  }, [initialValues]);
+  const { data: primaryKey } = usePrimaryKey(currentTableId || '');
+  const isPrimaryKeyField = !!initialValues?.id &&
+    (primaryKey?.column_ids ?? []).map(String).includes(String(initialValues.id));
+  // Turning a saved manual UUID field to auto-generated: show how many records would be filled
+  const isTurningUuidToAuto = selectedType?.key === 'uuid' && initialIdGeneration?.mode === 'manual' && idGeneration.mode === 'auto';
+  const { data: uuidCounts } = useFieldEmptyCount(String(initialValues?.id || ''), isOpen && isTurningUuidToAuto);
+  return { idGeneration, setIdGeneration, uuidBackfill, setUuidBackfill, isPrimaryKeyField, isTurningUuidToAuto, uuidCounts };
+};
+
 export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields = [], isAddNewColumn = false, isAddNewField = false, useBackdrop, excludeRefs = [], currentTableId, defaultRichText = false }: Readonly<NewColumnModalProps>) {
+
   const [step, setStep] = useState<number | null>(initialValues ? 2 : 1);
   const [fieldName, setFieldName] = useState(initialValues?.title || '');
   const [search, setSearch] = useState('');
@@ -248,6 +269,16 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
   // Add state for json field config
   const [showJsonDefault, setShowJsonDefault] = useState(false);
+
+  const {
+    idGeneration,
+    setIdGeneration,
+    uuidBackfill,
+    setUuidBackfill,
+    isPrimaryKeyField,
+    isTurningUuidToAuto,
+    uuidCounts,
+  } = useUuidFieldConfig(initialValues, currentTableId, selectedType, isOpen);
 
   const applyNumberConfig = (config: any) => {
     setShowThousands(config.showThousands || false);
@@ -676,13 +707,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setShowTextDefault(false);
     setShowDescription(false);
     setSearch('');
+    setIdGeneration(fieldType === 'uuid' ? idGenerationFromMeta(config) : DEFAULT_ID_GENERATION);
+    setUuidBackfill(true);
   };
 
-  // Puts every field-config input back to its default
-  const resetConfigState = () => {
-    setFieldName('');
-    setSearch('');
-    setSelectedType(null);
+  // Puts every type-specific config input back to its default
+  const resetTypeConfig = () => {
     setDefaultValue('');
     setDescription('');
     setRichText(defaultRichText);
@@ -733,18 +763,41 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setShowCurrencyDefault(false);
     setShowTextDefault(false);
     setShowDescription(false);
+    // Reset user field config state
     setAllowMultipleUsers(false);
+    // Reset links field config state
     setRelationType('one-to-one');
     setSelectedTableId('');
     setSelectedTable(null);
     setInverseTitle('');
+    // Reset lookup field config state
     setSelectedRelationId('');
     setSelectedLookupColumnId('');
     setHasUserModifiedLookupColumn(false);
     setTargetTableFields([]);
+    // Reset button field config state
     setButtonStyle('primary');
     setButtonAction('url');
     setOpenButtonInNewTab(true);
+    // Reset json field config state
+    // Reset createdBy/lastModifiedBy field config state
+    // Reset uuid field config state
+    setIdGeneration(DEFAULT_ID_GENERATION);
+    setUuidBackfill(true);
+  };
+
+  // Puts every field-config input back to its default
+  const resetConfigState = () => {
+    setFieldName('');
+    setSearch('');
+    setSelectedType(null);
+    resetTypeConfig();
+  };
+
+  const resetStateOnClose = () => {
+    // Reset all state when modal closes
+    setStep(null);
+    resetConfigState();
     setNameError(null);
     setFormulaError(null);
     setShowYearDefault(false);
@@ -755,11 +808,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
   const initializeCreateState = () => {
     setStep(1);
-    resetConfigState();
-  };
-
-  const resetStateOnClose = () => {
-    setStep(null);
     resetConfigState();
   };
 
@@ -872,26 +920,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
     setSelectedType(type);
     setStep(2);
-    // Reset config state
-    setDefaultValue('');
-    setDescription('');
-    setRichText(defaultRichText);
-    setShowThousands(false);
-    setPrecision('1.0');
-    // Reset checkbox config state
-    setCheckboxIcon('check');
-    setCheckboxColor('green');
-    setCheckboxDefault(false);
-    // Reset select/multiselect config state
-    setSelectOptions([]);
-    setNewOption('');
-    setMultiDefault([]);
-    setSingleDefault('');
-    // Reset rating config state
-    setRatingIcon('star');
-    setRatingColor('yellow');
-    setRatingMax(5);
-    setRatingDefault(0);
+    resetTypeConfig();
     // Start from the formats chosen when the base was created (user can still change them)
     const baseDefaults = getBaseFormatDefaults(baseMeta, type.key);
     setDateFormat(baseDefaults.dateFormat ?? 'YYYY-MM-DD');
@@ -900,35 +929,11 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setDisplayTimeZone(baseDefaults.displayTimeZone ?? false);
     setSameTimezone(baseDefaults.sameTimezone ?? false);
     setTimeZone(baseDefaults.timeZone ?? '');
-    setDateTimeDefault('');
-    setShowDateTimeDefault(false);
-    // Reset currency config state
     setCurrencyType(baseDefaults.currencyType ?? 'USD');
     setCurrencyLocale(baseDefaults.currencyLocale ?? 'en-US');
-    setCurrencyDefault(null);
-    setShowCurrencyDefault(false);
-    // Reset text config state
-    setShowTextDefault(false);
-    setShowDescription(false);
-    // Reset user field config state
-    setAllowMultipleUsers(false);
-    // Reset links field config state
-    setRelationType('one-to-one');
-    setSelectedTableId('');
-    setSelectedTable(null);
-    setInverseTitle('');
-    // Reset lookup field config state
-    setSelectedRelationId('');
-    setSelectedLookupColumnId('');
-    setTargetTableFields([]);
-    // Reset button field config state
-    setButtonStyle('primary');
-    setButtonAction('url');
-    setOpenButtonInNewTab(true);
     // Reset formula field config state
     setFormulaText('');
     setFormulaError(null);
-    // Reset json field config state
   };
 
 /* eslint-disable sonarjs/cognitive-complexity */
@@ -1044,7 +1049,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       openButtonInNewTab,
       formulaText,
       formulaFormatting,
-      getBrowserTimeZone
+      getBrowserTimeZone,
+      idGeneration
     });
 
     if (error) {
@@ -1071,7 +1077,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       description,
       fields,
       initialValues,
-      meta
+      meta,
+      // A primary key field always gets its empty records filled
+      backfill: isTurningUuidToAuto ? (uuidBackfill || isPrimaryKeyField) : undefined
     });
 
     setIsSaving(true);
@@ -1278,6 +1286,13 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setFormulaError,
     isValidPercentInput,
     isLinksFieldEditing,
+    idGeneration,
+    setIdGeneration,
+    isTurningUuidToAuto,
+    uuidCounts,
+    uuidBackfill,
+    setUuidBackfill,
+    isPrimaryKeyField,
   });
   const isCompactAnchor = !isAddNewColumn || fields.length === 0 || fields.length <= 1;
   const positionClass = isCompactAnchor ? "left-0" : "right-0 translate-x-0";

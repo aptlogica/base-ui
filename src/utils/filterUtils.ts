@@ -143,7 +143,8 @@ export const matchesFilter = (card: any, f: any, columns: any): boolean => {
     case 'email':
     case 'longText':
     case 'json':
-    case 'url': {
+    case 'url':
+    case 'uuid': {
       return evaluateStringComparison(raw, op, val);
     }
     case 'boolean': {
@@ -282,6 +283,14 @@ export const FIELD_TYPE_OPERATORS: Record<string, { value: FilterOp; label: stri
     { value: 'is not empty', label: 'is not empty' },
   ],
   url: [
+    { value: 'is equal', label: 'is equal' },
+    { value: 'is not equal', label: 'is not equal' },
+    { value: 'contains', label: 'contains' },
+    { value: 'does not contain', label: 'does not contain' },
+    { value: 'is empty', label: 'is empty' },
+    { value: 'is not empty', label: 'is not empty' },
+  ],
+  uuid: [
     { value: 'is equal', label: 'is equal' },
     { value: 'is not equal', label: 'is not equal' },
     { value: 'contains', label: 'contains' },

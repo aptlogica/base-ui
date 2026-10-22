@@ -90,6 +90,7 @@ import {
   deleteAutomationService,
   getPrimaryKeyService,
   updatePrimaryKeyService,
+  getFieldEmptyCountService,
   upsertRowService,
   getTableConstraintsService,
   checkTableConstraintService,
@@ -2108,6 +2109,17 @@ export const usePrimaryKey = (tableId: string) => {
     queryFn: () => getPrimaryKeyService(tableId),
     enabled: !!tableId,
     select: (res) => res?.data,
+  });
+};
+
+// Empty / filled record counts of one field (used before turning a UUID field to auto-generated)
+export const useFieldEmptyCount = (fieldId: string, enabled = true) => {
+  return useQuery({
+    queryKey: ['fields', fieldId, 'empty-count'],
+    queryFn: () => getFieldEmptyCountService(fieldId),
+    enabled: !!fieldId && enabled,
+    select: (res) => res?.data,
+    staleTime: 0,
   });
 };
 

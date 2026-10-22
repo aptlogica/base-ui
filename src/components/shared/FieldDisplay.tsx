@@ -33,6 +33,7 @@ import {
   Lookup,
   Attachment,
   NumberField,
+  UUIDField,
 } from '../common/Fields';
 import { normalizeFieldType } from '../../utils/fieldType';
 
@@ -148,6 +149,13 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
   let renderedComponent: React.ReactNode;
 
   switch (fieldType) {
+    case 'uuid':
+      renderedComponent = isEmpty(value) ? (
+        <div className="w-full px-3 py-2 text-sm bg-[var(--color-alpha-white)] rounded-lg text-secondary">-</div>
+      ) : (
+        <UUIDField value={String(value)} onChange={() => {}} config={parsedConfig} readOnly isBorder={false} />
+      );
+      break;
     case 'text':
       renderedComponent = (
         <SingleLineText

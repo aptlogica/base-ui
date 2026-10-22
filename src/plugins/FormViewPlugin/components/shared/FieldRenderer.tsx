@@ -19,8 +19,8 @@ const typeComponentMap: Record<
     }))
   ),
   uuid: React.lazy(() =>
-    import('../../../../components/common/Fields/SingleLineText').then(m => ({
-      default: m.SingleLineText,
+    import('../../../../components/common/Fields/UUIDField').then(m => ({
+      default: m.UUIDField,
     }))
   ),
   number: React.lazy(() =>

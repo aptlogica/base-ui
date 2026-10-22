@@ -19,6 +19,7 @@ import { useAllViews } from '../../../../hooks/useApi';
 import { useRequiredKeyFields } from '../../../../hooks/useRequiredKeyFields';
 import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldConfirmModal';
 import { isFormulaField } from '../../../../utils/fieldUtils';
+import { isAutoUuidColumn } from '../../../../utils/uuid';
 import { Loader } from '../../../../components/ui/Loader';
 import { useBaseAccess } from '../../../../hooks/useBaseAccess';
 // Custom hooks
@@ -54,6 +55,11 @@ interface FormViewProps {
 
 // Extract field filtering logic
 const shouldIncludeFieldInForm = (column: any): boolean => {
+  // Auto-generated UUID fields are filled in by the backend, so a form can't ask for them
+  if (isAutoUuidColumn(column)) {
+    return false;
+  }
+
   // Always allow Title field even if marked as system
   if (column.column_name === 'title' || column.title === 'Title' || column.title?.toLowerCase().includes('title')) {
     return true;
@@ -214,6 +220,10 @@ const detectFieldChanges = (editingField: FormField, updates: any): any => {
   }
   if (JSON.stringify(editingField.config ?? {}) !== JSON.stringify(updates.config ?? {})) {
     changes.config = updates.config;
+  }
+  // UUID field turned to auto-generated: fill the records that have no value yet
+  if (changes.meta && typeof updates.backfill === 'boolean') {
+    changes.backfill = updates.backfill;
   }
 
   return { changes, uidtChanged };

@@ -13,6 +13,7 @@ import { isFormulaField } from '../../utils/fieldUtils';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
 import { useToast } from '../common/Toast';
 import { apiErrorMessage } from '../../utils/apiErrors';
+import { isAutoUuidColumn } from '../../utils/uuid';
 import RecordNavButtons from './RecordNavButtons';
 import UnsavedChangesDialog from './UnsavedChangesDialog';
 import {
@@ -218,7 +219,8 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const buildRowPayload = (): Record<string, any> => {
         const payload: Record<string, any> = {};
         (fields || []).forEach((field) => {
-            if (isAttachmentField(field) || isLinksField(field) || isFormulaField(field)) return;
+            // Auto-generated UUID fields are filled in by the backend and can't be sent
+            if (isAttachmentField(field) || isLinksField(field) || isFormulaField(field) || isAutoUuidColumn(field)) return;
             const value = rowData[field.id];
             if (isEmptyFieldValue(value)) return;
             payload[field.id] = processFieldValue(field, value);

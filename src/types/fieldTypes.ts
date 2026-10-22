@@ -10,6 +10,7 @@ import {
   LayoutList,
   Braces,
   Calculator,
+  Fingerprint,
 } from 'lucide-react';
 
 // Local icon component for 'links' using the public/assets/links.svg
@@ -89,6 +90,7 @@ export enum FieldType {
   Attachment = 'attachment',
   Links = 'links',
   Lookup = 'lookup',
+  UUID = 'uuid',
   // CreatedTime = 'createdTime',
   // LastModifiedTime = 'lastModifiedTime',
   // CreatedBy = 'createdBy',
@@ -121,6 +123,7 @@ export const FIELD_TYPES = [
   { key: FieldType.Rating, label: 'Rating', icon: Star },
   { key: FieldType.User, label: 'User', icon: User },
   { key: FieldType.JSON, label: 'JSON', icon: Braces },
+  { key: FieldType.UUID, label: 'UUID', icon: Fingerprint },
   // { key: 'createdTime', label: 'Created Time', icon: ClockArrowUpIcon },
   // { key: 'lastModifiedTime', label: 'Last Modified Time', icon: ClockArrowDownIcon },
   // { key: 'createdBy', label: 'Created By', icon: UserRound },

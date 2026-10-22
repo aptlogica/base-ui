@@ -6,7 +6,7 @@ describe('fieldType', () => {
     it('should normalize text field types', () => {
       expect(normalizeFieldType('text')).toBe('text');
       expect(normalizeFieldType('SingleLineText')).toBe('text');
-      expect(normalizeFieldType('uuid')).toBe('text');
+      expect(normalizeFieldType('uuid')).toBe('uuid');
     });
 
     it('should normalize number field types', () => {

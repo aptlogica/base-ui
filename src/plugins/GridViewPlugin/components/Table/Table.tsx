@@ -18,6 +18,7 @@ import { Search } from '../../../../components/shared/table/Search';
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
 import ReactDOM from 'react-dom';
 import { Plus, List, Lock, KeyRound } from 'lucide-react';
+import { isAutoUuidColumn, uuidCellProblem } from '../../../../utils/uuid';
 import EditRecordModal from '../../../../components/modals/EditRecordModal';
 import CreateRecordModal from '../../../../components/modals/CreateRecordModal';
 import { NewRowSplitButton } from './components/NewRowSplitButton';
@@ -78,6 +79,7 @@ interface TableProps {
 
 // Server code for a record that repeats the values of a unique key
 const UNIQUE_KEY_VIOLATION = 'TCN_1012';
+const UUID_INVALID_CODE = 'UID_1001';
 // Input types treated as text fields for "Enter on last row adds a row"
 // Cell types that keyboard navigation only focuses: clicking their trigger would change the value
 // (checkbox, rating) or open a modal that keyboard navigation could not close again.
@@ -244,6 +246,8 @@ export const Table: React.FC<TableProps> = ({
       .sort((a: any, b: any) => (a?.order_index ?? 0) - (b?.order_index ?? 0))
       .map((apiColumn: any): ColumnConfig => {
         const parsedMeta = parseApiColumnMeta(apiColumn.meta);
+        const columnName = String(apiColumn.column_name ?? '').toLowerCase();
+        const isSystemColumn = (Boolean(apiColumn.system) || columnName === 'id') && columnName !== 'title';
         return {
           id: apiColumn.id ? String(apiColumn.id) : undefined,
           key: String(apiColumn.column_name ?? apiColumn.title ?? apiColumn.id ?? ''),
@@ -254,8 +258,8 @@ export const Table: React.FC<TableProps> = ({
           width: 235,
           position: apiColumn.order_index ?? 0,
           order_index: apiColumn.order_index ?? 0,
-          isSystem: Boolean(apiColumn.system) && String(apiColumn.column_name ?? '').toLowerCase() !== 'title',
-          system: Boolean(apiColumn.system) && String(apiColumn.column_name ?? '').toLowerCase() !== 'title',
+          isSystem: isSystemColumn,
+          system: isSystemColumn,
           hidden: Boolean(apiColumn.hidden),
           is_hidden: Boolean(apiColumn.is_hidden),
           description: apiColumn.description || '', // Include description from API
@@ -719,8 +723,10 @@ export const Table: React.FC<TableProps> = ({
   const saveErrorTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const handleCellSaveError = useCallback(({ rowId, columnKey, error }: { rowId: string; columnKey: string; error: unknown }) => {
     const { message, code } = (error ?? {}) as { message?: string; code?: string };
-    // TCN_1012: the value repeats a unique key (Settings > Unique Key)
-    const title = code === UNIQUE_KEY_VIOLATION ? 'Duplicate value not allowed' : 'Not saved';
+    // TCN_1012: the value repeats a unique key (Settings > Unique Key); UID_1001: not a valid UUID
+    let title = 'Not saved';
+    if (code === UNIQUE_KEY_VIOLATION) title = 'Duplicate value not allowed';
+    else if (code === UUID_INVALID_CODE) title = 'Invalid UUID';
     toast.error(apiErrorMessage(error, message || 'The value could not be saved'), { title, duration: 5000 });
     const cellKey = `${rowId}-${columnKey}`;
     setCellResets(prev => ({ ...prev, [cellKey]: (prev[cellKey] ?? 0) + 1 }));
@@ -769,6 +775,12 @@ export const Table: React.FC<TableProps> = ({
   // Draft cells stay in the browser. On saved rows a primary key cell is checked before it is sent: an empty
   // value or one that repeats another row's key is not saved; the cell is boxed in red and shows the saved value.
   const handleGridCellChange = useCallback((rowId: string, columnKey: string, value: any) => {
+    // A manual UUID cell only takes a valid UUID; anything else is refused the same way, on drafts too
+    const uuidProblem = uuidCellProblem(columns.find(c => c.key === columnKey), value);
+    if (uuidProblem) {
+      handleCellSaveError({ rowId, columnKey, error: { message: uuidProblem, code: UUID_INVALID_CODE } });
+      return;
+    }
     if (isDraftRowId(rowId)) {
       updateDraft(rowId, columnKey, value);
       return;
@@ -779,7 +791,7 @@ export const Table: React.FC<TableProps> = ({
       return;
     }
     void handleCellChange(rowId, columnKey, value);
-  }, [updateDraft, savedKeyProblem, handleCellSaveError, handleCellChange]);
+  }, [columns, updateDraft, savedKeyProblem, handleCellSaveError, handleCellChange]);
 
   // Measure table body container height
   useEffect(() => {
@@ -1167,11 +1179,13 @@ export const Table: React.FC<TableProps> = ({
   const getColumnHeaderClassName = useCallback((column: ColumnConfig, index: number) => {
     const isEditing = editModalOpen && editColumnIndex === index;
     const isNew = (column as any).isNew !== undefined && (column as any).isNew;
+    const isLocked = column.isSystem || isAutoUuidColumn(column);
     const isDragging = dragColumnIndex === index;
     const isHovering = hoverColumnIndex === index;
     return [
       'relative flex-shrink-0 bg-gray-100 border-b group border-r',
       isEditing ? 'overflow-visible' : 'overflow-hidden',
+      isLocked ? '!bg-[var(--color-readonly-header)]' : '',
       isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : '',
       isDragging ? 'opacity-50' : '',
       isHovering ? 'bg-blue-50' : ''
@@ -1188,6 +1202,7 @@ export const Table: React.FC<TableProps> = ({
     const isPinned = pinnedColumnIds.includes(columnIdentity);
     const isLastPinned = isPinned && lastPinnedColumnId === columnIdentity;
     const isEditing = editModalOpen && editColumnIndex === index;
+    const isLocked = column.isSystem || isAutoUuidColumn(column);
 
     const handleColumnContextMenu = (e: React.MouseEvent) => {
       if (column.isSystem || column.system) {
@@ -1284,7 +1299,7 @@ export const Table: React.FC<TableProps> = ({
               style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
             >
               {column.title}
-              {column.isSystem && (
+              {isLocked && (
                 <Lock className="w-3 h-3 ml-1 inline text-tertiary" />
               )}
             </span>
