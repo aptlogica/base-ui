@@ -4,9 +4,12 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import { SereniBaseClient } from 'serenibase-sdk';
 import type {
+  CheckTableConstraint,
+  ConstraintCheckResult,
   CreateAutomation,
   CreateTableConstraint,
   StandardResponse,
+  TableConstraint,
   TableConstraintType,
   UpdateTableConstraint,
   UpsertRow,
@@ -1187,28 +1190,26 @@ export async function updatePrimaryKeyService({ tableId, columnIds }: { tableId:
 }
 
 // =========================
-// Table constraints (unique keys; later primary key and check)
+// Table constraints (unique keys and check constraints)
 // =========================
 
-export type { TableConstraint, TableConstraintType, ConstraintCheckResult } from 'serenibase-sdk';
-export type TableConstraintInput = UpdateTableConstraint;
-export type { ConstraintColumn } from 'serenibase-sdk';
+export type { TableConstraint, TableConstraintType, ConstraintCheckResult, ConstraintColumn } from 'serenibase-sdk';
 
 export async function getTableConstraintsService(tableId: string, type: TableConstraintType) {
-  return await makeAuthenticatedCall(() => client.constraintService.list(tableId, type));
+  return await makeAuthenticatedCall(() => client.constraintService.list(tableId, type)) as StandardResponse<TableConstraint[]>;
 }
 
-// Checks existing records against the columns without changing anything
-export async function checkTableConstraintService(params: { model_id: string; column_ids: string[] }) {
-  return await makeAuthenticatedCall(() => client.constraintService.check(params));
+// Checks existing records against the columns, or the check condition, without changing anything
+export async function checkTableConstraintService(params: CheckTableConstraint) {
+  return await makeAuthenticatedCall(() => client.constraintService.check(params)) as StandardResponse<ConstraintCheckResult>;
 }
 
 export async function createTableConstraintService(params: CreateTableConstraint) {
-  return await makeAuthenticatedCall(() => client.constraintService.create(params));
+  return await makeAuthenticatedCall(() => client.constraintService.create(params)) as StandardResponse<TableConstraint>;
 }
 
 export async function updateTableConstraintService({ id, ...params }: UpdateTableConstraint & { id: string }) {
-  return await makeAuthenticatedCall(() => client.constraintService.update(id, params));
+  return await makeAuthenticatedCall(() => client.constraintService.update(id, params)) as StandardResponse<TableConstraint>;
 }
 
 export async function deleteTableConstraintService(id: string) {

@@ -295,6 +295,19 @@ vi.mock('../../../../../components/modals/EditRecordModal', () => ({
     ) : null,
 }));
 
+vi.mock('../../../../../components/modals/CreateRecordModal', () => ({
+  __esModule: true,
+  default: ({ isOpen, onClose, title }: any) =>
+    isOpen ? (
+      <div data-testid="create-record-modal">
+        <span>{title}</span>
+        <button type="button" onClick={() => onClose?.()}>
+          Close Create Record
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock('../../../../../components/modals/UpdateFieldConfirmModal', () => ({
   __esModule: true,
   default: ({ isOpen, onClose, onConfirm }: any) =>
@@ -1132,6 +1145,37 @@ describe('Table', () => {
     fireEvent.click(addButtons[0]);
 
     expect(mutateAsync).toHaveBeenCalledWith({ model_id: 'tbl-1' });
+  });
+
+  describe('new row split button', () => {
+    beforeEach(() => localStorage.clear());
+
+    it('adds a row in the grid by default', () => {
+      const mutateAsync = vi.fn().mockResolvedValue(undefined);
+      renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} actions={{ addRow: { mutateAsync } } as any} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'New row - Grid' }));
+
+      expect(mutateAsync).toHaveBeenCalledWith({ model_id: 'tbl-1' });
+      expect(screen.queryByTestId('create-record-modal')).not.toBeInTheDocument();
+    });
+
+    it('opens the record form when New row - Form is chosen and keeps it as the default', () => {
+      const mutateAsync = vi.fn().mockResolvedValue(undefined);
+      renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} actions={{ addRow: { mutateAsync } } as any} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /choose how to add a new row/i }));
+      fireEvent.click(screen.getByRole('menuitemradio', { name: 'New row - Form' }));
+
+      expect(screen.getByTestId('create-record-modal')).toHaveTextContent('New row');
+      expect(mutateAsync).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close Create Record' }));
+      expect(screen.queryByTestId('create-record-modal')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'New row - Form' }));
+      expect(screen.getByTestId('create-record-modal')).toBeInTheDocument();
+    });
   });
 
   describe('custom primary key', () => {
