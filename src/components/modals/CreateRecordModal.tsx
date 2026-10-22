@@ -3,19 +3,34 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { X, CirclePlus, Table2, MoreVertical, Copy } from 'lucide-react';
+import { X, CirclePlus, MoreVertical, Copy } from 'lucide-react';
 import FieldRenderer from '../../plugins/FormViewPlugin/components/shared/FieldRenderer';
 import { useUpsertRow, useAddAttachment, useInsertRelationData } from '../../hooks/useApi';
 import { useRequiredKeyFields } from '../../hooks/useRequiredKeyFields';
-import { isEmptyKeyValue, missingKeyColumnIds, missingKeyMessage } from '../../utils/primaryKeyFields';
-import { getFieldTypeIconWithMargin, getRelationTypeFromField } from '../../types/fieldTypes';
-import { getStandardFieldType, getFieldDisplayName, getFieldDefaultValue, createFieldRendererProps } from '../../utils/standardFieldUtils';
+import { missingKeyColumnIds, missingKeyMessage } from '../../utils/primaryKeyFields';
+import { getFieldDisplayName, getFieldDefaultValue, createFieldRendererProps } from '../../utils/standardFieldUtils';
 import { isFormulaField } from '../../utils/fieldUtils';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
 import { useToast } from '../common/Toast';
 import { apiErrorMessage } from '../../utils/apiErrors';
 import RecordNavButtons from './RecordNavButtons';
 import UnsavedChangesDialog from './UnsavedChangesDialog';
+import {
+    FieldRow,
+    HiddenFieldsToggle,
+    KeyAwareField,
+    RecordMenuButton,
+    RecordMenuPanel,
+    RecordTitle,
+    getAttachmentProps,
+    getLinksProps,
+    getMissingRequiredFields,
+    isAttachmentField,
+    isLinksField,
+    isSystemField,
+    normalizeLinksFieldValue,
+    useCloseOnOutsideClick,
+} from './RecordModalParts';
 
 type CreateRecordModalProps = {
     isOpen: boolean;
@@ -61,17 +76,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const [showUnsavedPrompt, setShowUnsavedPrompt] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    // Close the record menu when clicking outside it
-    useEffect(() => {
-        if (!menuOpen) return;
-        const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setMenuOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [menuOpen]);
+    useCloseOnOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
 
     // Get base_id from table (could be table.base_id or table.model.base_id)
     const baseId = table?.base_id || table?.model?.base_id;
@@ -85,29 +90,6 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const addAttachmentMutation = useAddAttachment();
     const insertRelationMutation = useInsertRelationData();
     const toast = useToast();
-
-    const isAuditField = (field: any): boolean => {
-        const auditFieldTypes = ['createdTime', 'lastModifiedTime', 'createdBy', 'lastModifiedBy'];
-        return auditFieldTypes.includes(field.uidt);
-    };
-
-    // Filter out system fields except Title (audit fields are now completely hidden)
-    const isSystemField = (field: any): boolean => {
-        const fieldName = field.name?.toLowerCase() || '';
-        const fieldTitle = field.title?.toLowerCase() || '';
-        const columnName = field.column_name?.toLowerCase() || '';
-        // Keep Title field visible (it's required for records), even after it is renamed - check column_name, name and title
-        if (columnName === 'title' || fieldName.includes('title') || fieldTitle.includes('title')) {
-            return false;
-        }
-        // Hide audit fields completely - backend will auto-assign them
-        if (isAuditField(field)) {
-            return true;
-        }
-        return field.system;
-    };
-
-
 
     // Key fields are always shown, even when hidden in the view
     const visibleFields = useMemo(
@@ -208,22 +190,6 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             }}
         />
     );
-
-    const validateRequired = (): string[] => {
-        const missing = (fields || [])
-            .filter(f => f.required)
-            .filter(f => {
-                const v = rowData[f.id];
-                if (Array.isArray(v)) return v.length === 0;
-                if (v === null || v === undefined) return true;
-                return String(v).trim() === '';
-            })
-            .map(f => f.name);
-        return missing;
-    };
-
-    const isAttachmentField = (field: any) => field.type === 'attachment' || field.uidt === 'attachment';
-    const isLinksField = (field: any) => field.type === 'links' || field.uidt === 'links';
 
     const isEmptyFieldValue = (value: any) => {
         if (value === undefined || value === null || value === '') return true;
@@ -364,7 +330,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             setFormError(missingKeyMessage(titles));
             return;
         }
-        const missing = validateRequired();
+        const missing = getMissingRequiredFields(fields, rowData);
         if (missing.length) {
             setFormError('Required field(s) must not be left empty.');
             return;
@@ -400,15 +366,6 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
 
     if (!isOpen) return null;
 
-    // Helper function to normalize links field value
-    const normalizeLinksFieldValue = (field: any, value: any): any => {
-        const isLinksField = field.type === 'links' || field.uidt === 'links';
-        if (isLinksField && (!value || (typeof value === 'object' && !Array.isArray(value)))) {
-            return [];
-        }
-        return value;
-    };
-
     // Helper function to get field change handler
     const getFieldChangeHandler = (field: any) => {
         if (isReadOnly) {
@@ -417,41 +374,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         return (v: any) => handleFieldChange(field, v);
     };
 
-    // Helper function to get attachment props
-    const getAttachmentProps = (field: any): Record<string, any> => {
-        const isAttachmentField = field.type === 'attachment' || field.uidt === 'attachment';
-        if (!isAttachmentField) {
-            return {};
-        }
-        return {
-            model_id: String(table.id),
-            column_id: field.id,
-            row_id: createdRecordId ? Number(createdRecordId) : undefined,
-            persistImmediately: false,
-            readOnly: isReadOnly,
-            allowEdit: !isReadOnly
-        };
-    };
-
-    // Helper function to get links props
-    const getLinksProps = (field: any): Record<string, any> => {
-        const isLinksField = field.type === 'links' || field.uidt === 'links';
-        if (!isLinksField) {
-            return {};
-        }
-        return {
-            field: {
-                id: field.id,
-                title: field.title || field.name,
-                meta: field.meta || field.config || {}
-            },
-            currentRowId: createdRecordId ? Number(createdRecordId) : undefined,
-            currentTableId: String(table.id),
-            persistImmediately: false,
-            isBorder: true,
-            disabled: isReadOnly
-        };
-    };
+    const recordContext = { table, isReadOnly, rowId: createdRecordId ? Number(createdRecordId) : undefined };
 
     const renderField = (field: any) => {
         let value = rowData[field.id];
@@ -469,36 +392,26 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             }
         );
 
-        const attachmentProps = getAttachmentProps(field);
-        const linksProps = getLinksProps(field);
+        const attachmentProps = getAttachmentProps(field, recordContext);
+        const linksProps = getLinksProps(field, recordContext);
 
         return <FieldRenderer key={field.id} {...rendererProps} {...attachmentProps} {...linksProps} />;
     };
 
-    // An empty key field is outlined in red until it is filled in. The wrapper stays the same either way, so
-    // the input keeps focus while the user types.
-    const renderKeyAwareField = (field: any) => {
-        const missing = isKeyField(field) && isEmptyKeyValue(rowData[field.id]);
-        return (
-            <div data-testid={missing ? `key-field-missing-${field.id}` : undefined}>
-                <div className={missing ? 'rounded-lg ring-1 ring-red-500 bg-red-50/40' : undefined}>{renderField(field)}</div>
-                {missing && <p className="mt-1 text-xs text-red-600">Required: part of the primary key</p>}
-            </div>
-        );
-    };
+    const renderKeyAwareField = (field: any) => (
+        <KeyAwareField field={field} isKey={isKeyField(field)} value={rowData[field.id]}>{renderField(field)}</KeyAwareField>
+    );
 
     const renderRecordLayoutField = (field: any) => (
-        <div key={field.id} className="grid grid-cols-1 md:grid-cols-[160px_minmax(0,1fr)] gap-4 items-center">
-            <div className="text-gray-600 flex items-center gap-2">
-                {getFieldTypeIconWithMargin(
-                  getStandardFieldType(field),
-                  getRelationTypeFromField(field)
-                )}
-                <span className="text-sm">{getFieldDisplayName(field)}</span>
-                {(field.required || isKeyField(field)) && <span className="text-red-500 ml-1 field-component-required">*</span>}
-            </div>
-            <div className="w-full">{renderKeyAwareField(field)}</div>
-        </div>
+        <FieldRow key={field.id} field={field} isKey={isKeyField(field)} gridClassName="md:grid-cols-[160px_minmax(0,1fr)]">
+            {renderKeyAwareField(field)}
+        </FieldRow>
+    );
+
+    const renderDefaultLayoutField = (field: any) => (
+        <FieldRow key={field.id} field={field} isKey={isKeyField(field)} gridClassName="md:grid-cols-[220px_minmax(0,1fr)]" valueClassName="max-w-[560px] w-full">
+            {renderKeyAwareField(field)}
+        </FieldRow>
     );
 
     if (layout === 'record') {
@@ -521,13 +434,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                 >
                     {/* Header */}
                     <div className="min-h-7 h-20 flex items-center justify-between px-6 py-3 border-b flex-shrink-0">
-                        <div className="flex items-center gap-3 min-w-0">
-                            <span className="inline-flex items-center gap-2 text-2xl font-medium bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg max-w-[200px] flex-shrink-0">
-                                <Table2 className="w-4 h-4 flex-shrink-0" />
-                                <span className="truncate">{table?.title}</span>
-                            </span>
-                            <h2 className="text-2xl font-semibold truncate">{title}</h2>
-                        </div>
+                        <RecordTitle tableTitle={table?.title} title={title} />
                         <div className="flex items-center gap-2 relative flex-shrink-0">
                             <RecordNavButtons onPrevious={onPrevious} onNext={onNext} hasPrevious={hasPrevious} hasNext={hasNext} disabled={submitting} showSeparator={canCreateRecord()} />
                             {canCreateRecord() && (
@@ -542,36 +449,9 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                             )}
                             {canCreateRecord() && (
                                 <div className="relative" ref={menuRef}>
-                                    <button
-                                        type="button"
-                                        className="p-2 rounded hover:bg-gray-100"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            setMenuOpen(v => !v);
-                                        }}
-                                        aria-label="Record menu"
-                                    >
-                                        <MoreVertical className="w-5 h-5 text-gray-500" />
-                                    </button>
+                                    <RecordMenuButton onToggle={() => setMenuOpen(v => !v)} icon={<MoreVertical className="w-5 h-5 text-gray-500" />} />
                                     {menuOpen && (
-                                        <div //NOSONAR
-                                            style={{
-                                                position: 'absolute',
-                                                top: '100%',
-                                                right: 0,
-                                                zIndex: 10000,
-                                                minWidth: 180,
-                                                background: 'var(--color-alpha-white)',
-                                                borderRadius: 8,
-                                                boxShadow: '0 4px 24px 0 rgba(0,0,0,0.12)',
-                                                padding: 5,
-                                                overflow: 'hidden'
-                                            }}
-                                            className="select-none border p-2 space-y-1 animate-fade-in"
-                                            onClick={(e) => e.stopPropagation()}
-                                            onKeyDown={(e) => e.stopPropagation()}
-                                        >
+                                        <RecordMenuPanel>
                                             <button
                                                 type="button"
                                                 disabled={isSaveDisabled}
@@ -585,7 +465,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                                             >
                                                 <Copy className="w-4 h-4" /> Duplicate record
                                             </button>
-                                        </div>
+                                        </RecordMenuPanel>
                                     )}
                                 </div>
                             )}
@@ -604,19 +484,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                         <div className="px-6 py-6 mx-auto w-full max-w-[820px]">
                             <div className="space-y-4">{visibleFields.map(renderRecordLayoutField)}</div>
 
-                            {hiddenFields.length > 0 && (
-                                <div className="flex items-center gap-3 my-8">
-                                    <div className="h-px bg-gray-200 flex-1" />
-                                    <button
-                                        type="button"
-                                        className="px-4 py-2 rounded-full border text-sm text-primary bg-card hover:bg-gray-50"
-                                        onClick={() => setShowHidden(v => !v)}
-                                    >
-                                        {showHidden ? `Hide ${hiddenFields.length} hidden fields` : `Show ${hiddenFields.length} hidden fields`}
-                                    </button>
-                                    <div className="h-px bg-gray-200 flex-1" />
-                                </div>
-                            )}
+                            <HiddenFieldsToggle count={hiddenFields.length} shown={showHidden} onToggle={() => setShowHidden(v => !v)} />
 
                             {showHidden && hiddenFields.length > 0 && (
                                 <div className="space-y-4">{hiddenFields.map(renderRecordLayoutField)}</div>
@@ -661,58 +529,16 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                     <div className="p-6">
                         {/* Visible fields */}
                         <div className="space-y-4">
-                            {visibleFields.map((field) => {
-                                return (
-                                    <div key={field.id} className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-4 items-center">
-                                        <div className="text-gray-600 flex items-center gap-2">
-                                            {getFieldTypeIconWithMargin(
-                                              getStandardFieldType(field),
-                                              getRelationTypeFromField(field)
-                                            )}
-                                            <span className="text-sm">{getFieldDisplayName(field)}</span>
-                                            {(field.required || isKeyField(field)) && <span className="text-red-500 ml-1 field-component-required">*</span>}
-                                        </div>
-                                        <div className="max-w-[560px] w-full">
-                                            {renderKeyAwareField(field)}
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            {visibleFields.map(renderDefaultLayoutField)}
                         </div>
 
                         {/* Hidden fields toggle */}
-                        {hiddenFields.length > 0 && (
-                            <div className="flex items-center gap-3 my-8">
-                                <div className="h-px bg-gray-200 flex-1" />
-                                <button
-                                    type="button"
-                                    className="px-4 py-2 rounded-full border text-sm text-primary bg-card hover:bg-gray-50"
-                                    onClick={() => setShowHidden(v => !v)}
-                                >
-                                    {showHidden ? `Hide ${hiddenFields.length} hidden fields` : `Show ${hiddenFields.length} hidden fields`}
-                                </button>
-                                <div className="h-px bg-gray-200 flex-1" />
-                            </div>
-                        )}
+                        <HiddenFieldsToggle count={hiddenFields.length} shown={showHidden} onToggle={() => setShowHidden(v => !v)} />
 
                         {/* Hidden fields */}
                         {showHidden && hiddenFields.length > 0 && (
                             <div className="space-y-4">
-                                {hiddenFields.map((field) => {
-                                    return (
-                                        <div key={field.id} className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-4 items-center">
-                                            <div className="text-gray-600 flex items-center gap-2">
-                                                {getFieldTypeIconWithMargin(
-                                                  getStandardFieldType(field),
-                                                  getRelationTypeFromField(field)
-                                                )}
-                                                <span className="text-sm">{getFieldDisplayName(field)}</span>
-                                                {(field.required || isKeyField(field)) && <span className="text-red-500 ml-1 field-component-required">*</span>}
-                                            </div>
-                                            <div className="max-w-[560px] w-full">{renderKeyAwareField(field)}</div>
-                                        </div>
-                                    );
-                                })}
+                                {hiddenFields.map(renderDefaultLayoutField)}
                             </div>
                         )}
 

@@ -678,8 +678,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setSearch('');
   };
 
-  const initializeCreateState = () => {
-    setStep(1);
+  // Puts every field-config input back to its default
+  const resetConfigState = () => {
     setFieldName('');
     setSearch('');
     setSelectedType(null);
@@ -733,81 +733,6 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setShowCurrencyDefault(false);
     setShowTextDefault(false);
     setShowDescription(false);
-    // Reset user field config state
-    setAllowMultipleUsers(false);
-    // Reset links field config state
-    setRelationType('one-to-one');
-    setSelectedTableId('');
-    setSelectedTable(null);
-    setInverseTitle('');
-    // Reset lookup field config state
-    setSelectedRelationId('');
-    setSelectedLookupColumnId('');
-    setHasUserModifiedLookupColumn(false);
-    setTargetTableFields([]);
-    // Reset button field config state
-    setButtonStyle('primary');
-    setButtonAction('url');
-    setOpenButtonInNewTab(true);
-    // Reset json field config state
-    // Reset createdBy/lastModifiedBy field config state
-  };
-
-  const resetStateOnClose = () => {
-    // Reset all state when modal closes
-    setStep(null);
-    setFieldName('');
-    setSearch('');
-    setSelectedType(null);
-    setDefaultValue('');
-    setDescription('');
-    setRichText(defaultRichText);
-    setShowThousands(false);
-    setPrecision('1.0');
-    setCheckboxIcon('check');
-    setCheckboxColor('green');
-    setCheckboxDefault(false);
-    setSelectOptions([]);
-    setColor('');
-    setNewOption('');
-    setMultiDefault([]);
-    setSingleDefault('');
-    setRatingIcon('star');
-    setRatingColor('yellow');
-    setRatingMax(5);
-    setRatingDefault(0);
-    setDateFormat('YYYY-MM-DD');
-    setTimeFormat('hh:mm');
-    setHourFormat('24');
-    setDisplayTimeZone(false);
-    setSameTimezone(false);
-    setTimeZone('');
-    setDateTimeDefault('');
-    setShowDateTimeDefault(false);
-    setYearDefault(null);
-    setDateDefault('');
-    setShowDateDefault(false);
-    setTimeDefault('');
-    setShowTimeDefault(false);
-    setPhoneValid(false);
-    setPhoneDefault('');
-    setShowPhoneDefault(false);
-    setEmailValid(false);
-    setEmailDefault('');
-    setShowEmailDefault(false);
-    setUrlValid(false);
-    setUrlDefault('');
-    setShowUrlDefault(false);
-    setDisplayAsProgress(false);
-    setShowPercentDefault(false);
-    setPercentDefault(null);
-    setDurationFormat('h:mm');
-    setDurationDefault(0);
-    setCurrencyType('USD');
-    setCurrencyDefault(null);
-    setShowCurrencyDefault(false);
-    setShowTextDefault(false);
-    setShowDescription(false);
     setAllowMultipleUsers(false);
     setRelationType('one-to-one');
     setSelectedTableId('');
@@ -826,6 +751,16 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setShowPercentDefault(false);
     setShowJsonDefault(false);
     setIsSaving(false);
+  };
+
+  const initializeCreateState = () => {
+    setStep(1);
+    resetConfigState();
+  };
+
+  const resetStateOnClose = () => {
+    setStep(null);
+    resetConfigState();
   };
 
   //select, multi-select input state - track which option is being edited
