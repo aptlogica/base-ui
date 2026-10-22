@@ -6,6 +6,7 @@ import React, { useMemo, useCallback } from 'react';
 import { EditableTableCell } from '../../../../../components/shared/table/EditableTableCell';
 import { GridRecord as TableData, GridColumn as ColumnConfig } from '../../../types/grid.types';
 import { isDraftRowId, isDraftEditableColumn } from '../../../hooks/useDraftRows';
+import { isAutoUuidColumn } from '../../../../../utils/uuid';
 
 interface TableRowProps {
   row: TableData;
@@ -214,6 +215,7 @@ export const TableRow: React.FC<TableRowProps> = ({
       {memoizedColumnProps.map((props, index) => {
         const column = columns[index];
         const cellKey = `${rowId}-${column.key}`;
+        const isNonEditable = props.isSystemField || isAutoUuidColumn(props.column);
         let borderClass: string;
         if (invalidCells?.[column.key] || saveErrorCells?.has(cellKey)) {
           borderClass = INVALID_CELL_CLASS;
@@ -224,7 +226,10 @@ export const TableRow: React.FC<TableRowProps> = ({
           // Other cells in a highlighted row: light blue background (overrides the cell's and its input's own bg)
           borderClass = 'border-b border-border/30 bg-[var(--color-blue-50)] [&>div]:!bg-[var(--color-blue-50)] [&_.field-component]:!bg-[var(--color-blue-50)] [&_.field-component-focus]:!bg-[var(--color-blue-50)]';
         } else {
-          borderClass = 'border-b border-border/30';
+          borderClass = `border-b border-border/30 ${isNonEditable ? 'bg-[var(--color-readonly-cell)] cursor-not-allowed [&>div]:!bg-[var(--color-readonly-cell)] [&>div]:!cursor-not-allowed [&_.field-component]:!bg-[var(--color-readonly-cell)] [&_.field-component]:!cursor-not-allowed' : ''}`;
+        }
+        if (isNonEditable && !borderClass.includes('cursor-not-allowed')) {
+          borderClass += ' cursor-not-allowed';
         }
 
         let zIndex: number | undefined;
@@ -250,8 +255,17 @@ export const TableRow: React.FC<TableRowProps> = ({
             }}
             title={invalidCells?.[column.key]}
             data-invalid={invalidCells?.[column.key] ? 'true' : undefined}
-            onClick={(e) => handleCellClick(e, column.key)}
-            onKeyDown={(e) => handleCellKeyDown(e, column.key)}
+            onClick={(e) => {
+              if (isNonEditable) {
+                e.stopPropagation();
+                return;
+              }
+              handleCellClick(e, column.key);
+            }}
+            onKeyDown={(e) => {
+              if (isNonEditable) return;
+              handleCellKeyDown(e, column.key);
+            }}
             role="gridcell"
             tabIndex={0}
             data-col-key={column.key}
@@ -263,7 +277,7 @@ export const TableRow: React.FC<TableRowProps> = ({
               width={props.width}
               isLast={props.isLast}
               isSystemField={props.isSystemField}
-              allowEdit={canEdit && (!isDraftRowId(rowId) || isDraftEditableColumn(column))}
+              allowEdit={canEdit && !isNonEditable && (!isDraftRowId(rowId) || isDraftEditableColumn(column))}
               currentRowId={props.currentRowId}
               rowData={row as any} // Pass entire row object for formula evaluation
               allColumns={allColumns || columns} // Pass all columns for formula field name mapping

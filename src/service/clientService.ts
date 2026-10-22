@@ -824,6 +824,15 @@ export async function deleteFieldService(id: string) {
   return await makeAuthenticatedCall(() => client.tableService.deleteColumn(id));
 }
 
+// How many records have this field empty / filled; GET /column/:id/empty-count.
+// The SDK has no method for this endpoint yet, so it goes through the column service's HTTP client.
+export async function getFieldEmptyCountService(id: string) {
+  const http = (client.columnService as unknown as {
+    http: { get: <T>(url: string) => Promise<{ data?: T }> };
+  }).http;
+  return await makeAuthenticatedCall(() => http.get<{ empty: number; filled: number }>(`/column/${id}/empty-count`));
+}
+
 export async function resetFieldService(params: any) {
   return await makeAuthenticatedCall(() => client.columnService.reset(params));
 }

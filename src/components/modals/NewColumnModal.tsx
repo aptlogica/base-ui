@@ -8,7 +8,9 @@ import { useClickOutside } from '../../hooks/useClickOutside';
 import { FIELD_TYPES } from '../../types/fieldTypes';
 import { timeZoneOptions } from '../../types/constants';
 import { FieldTypeDropdown } from '../common/dropdown/fieldDropdown/FieldTypeDropdown';
-import { useBaseTables, useBaseById, useTable, useAllViews, useResetField, useTableConstraints } from '../../hooks/useApi';
+import { useBaseTables, useBaseById, useTable, useAllViews, useResetField, useTableConstraints, usePrimaryKey, useFieldEmptyCount } from '../../hooks/useApi';
+import { DEFAULT_ID_GENERATION, IdGeneration } from '../../types/uuid.types';
+import { idGenerationFromMeta } from '../../utils/uuid';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { useToast } from '../../components/common/Toast';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../utils/fieldUsageUtils';
@@ -246,6 +248,21 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
   // Add state for json field config
   const [showJsonDefault, setShowJsonDefault] = useState(false);
+
+  // UUID field config: Auto-generated (v7 by default) or Manual. Editing an existing field starts
+  // from its saved settings; a field saved before these settings existed is manual.
+  const [idGeneration, setIdGeneration] = useState<IdGeneration>(DEFAULT_ID_GENERATION);
+  const [uuidBackfill, setUuidBackfill] = useState(true);
+  const initialIdGeneration = useMemo<IdGeneration | null>(() => {
+    const isUuid = initialValues && (initialValues.type === 'uuid' || initialValues.uidt === 'uuid');
+    return isUuid ? idGenerationFromMeta(initialValues.meta || initialValues.config) : null;
+  }, [initialValues]);
+  const { data: primaryKey } = usePrimaryKey(currentTableId || '');
+  const isPrimaryKeyField = !!initialValues?.id &&
+    (primaryKey?.column_ids ?? []).map(String).includes(String(initialValues.id));
+  // Turning a saved manual UUID field to auto-generated: show how many records would be filled
+  const isTurningUuidToAuto = selectedType?.key === 'uuid' && initialIdGeneration?.mode === 'manual' && idGeneration.mode === 'auto';
+  const { data: uuidCounts } = useFieldEmptyCount(String(initialValues?.id || ''), isOpen && isTurningUuidToAuto);
 
   const applyNumberConfig = (config: any) => {
     setShowThousands(config.showThousands || false);
@@ -674,6 +691,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setShowTextDefault(false);
     setShowDescription(false);
     setSearch('');
+    setIdGeneration(fieldType === 'uuid' ? idGenerationFromMeta(config) : DEFAULT_ID_GENERATION);
+    setUuidBackfill(true);
   };
 
   const initializeCreateState = () => {
@@ -749,6 +768,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setOpenButtonInNewTab(true);
     // Reset json field config state
     // Reset createdBy/lastModifiedBy field config state
+    // Reset uuid field config state
+    setIdGeneration(DEFAULT_ID_GENERATION);
+    setUuidBackfill(true);
   };
 
   const resetStateOnClose = () => {
@@ -992,6 +1014,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setFormulaText('');
     setFormulaError(null);
     // Reset json field config state
+    // Reset uuid field config state
+    setIdGeneration(DEFAULT_ID_GENERATION);
+    setUuidBackfill(true);
   };
 
 /* eslint-disable sonarjs/cognitive-complexity */
@@ -1107,7 +1132,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       openButtonInNewTab,
       formulaText,
       formulaFormatting,
-      getBrowserTimeZone
+      getBrowserTimeZone,
+      idGeneration
     });
 
     if (error) {
@@ -1134,7 +1160,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       description,
       fields,
       initialValues,
-      meta
+      meta,
+      // A primary key field always gets its empty records filled
+      backfill: isTurningUuidToAuto ? (uuidBackfill || isPrimaryKeyField) : undefined
     });
 
     setIsSaving(true);
@@ -1341,6 +1369,13 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setFormulaError,
     isValidPercentInput,
     isLinksFieldEditing,
+    idGeneration,
+    setIdGeneration,
+    isTurningUuidToAuto,
+    uuidCounts,
+    uuidBackfill,
+    setUuidBackfill,
+    isPrimaryKeyField,
   });
   const isCompactAnchor = !isAddNewColumn || fields.length === 0 || fields.length <= 1;
   const positionClass = isCompactAnchor ? "left-0" : "right-0 translate-x-0";
