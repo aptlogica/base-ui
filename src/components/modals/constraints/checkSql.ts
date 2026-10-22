@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../utils/recordLabel';
 import type { Column } from '../../../types/api.types';
 import type { CheckExample, FieldKind, ValueKind } from './checkCategories';
 import { CHECK_CATEGORIES } from './checkCategories';
@@ -12,7 +13,7 @@ const COMPUTED_TYPES = new Set(['links', 'lookup', 'rollup', 'formula', 'button'
 // Fields a condition can use: Title and ordinary fields, not system or computed ones
 export const checkableColumns = (columns: Column[]): Column[] =>
   columns.filter(c =>
-    !c.deleted && (!c.system || c.column_name === 'title') && !COMPUTED_TYPES.has((c.uidt || '').toLowerCase()));
+    !c.deleted && (!c.system || isLegacyTitleColumn(c)) && !COMPUTED_TYPES.has((c.uidt || '').toLowerCase()));
 
 const RESERVED = new Set([
   'all', 'and', 'any', 'array', 'as', 'asc', 'between', 'case', 'check', 'column', 'constraint', 'create', 'default',

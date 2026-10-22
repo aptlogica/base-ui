@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { getRecordLabel, getRecordTitleColumn, isLegacyTitleColumn } from '../../../utils/recordLabel';
 import { useMemo } from 'react';
 import { useTable, useUpdateView, useDeleteRecord } from '../../../hooks/useApi';
 import { TableData } from '../../../types/api.types';
@@ -104,15 +105,13 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
     // Process records into gallery items - create a card for each image
     const galleryItems: GalleryItem[] = [];
     
+    const titleField = getRecordTitleColumn(uiColumns);
+
     records.forEach((record: any) => {
       const rowData = record?.data || record;
       
-      // Get title from record (prefer title field, fallback to first text field)
-      const titleField = uiColumns.find(col => 
-        col.key?.toLowerCase() === 'title' || 
-        (col.type === 'text' && !col.system)
-      );
-      const title = titleField ? (rowData?.[titleField.key || ''] || record?.[titleField.key || '']) : `Record ${record?.id || ''}`;
+      // The card is named by the first text column of the table
+      const title = getRecordLabel({ id: record?.id, ...rowData }, titleField);
 
       // Get images from selected attachment field
       let allImages: any[] = [];
@@ -134,12 +133,12 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
       // Build metadata from all fields (include Title, attachment fields, JSON fields if visible, exclude system fields)
       const metadata: Record<string, any> = {};
       uiColumns.forEach(col => {
-        const isTitleField = col.key?.toLowerCase() === 'title' || col.title?.toLowerCase() === 'title';
+        const isTitleField = titleField !== undefined && col.key === titleField.key;
         const isJsonField = col.type === 'json' || col.uidt === 'json';
         const isLinksField = col.type === 'links' || col.uidt === 'links';
         const isLookupField = col.type === 'lookup' || col.uidt === 'lookup';
         
-        if (!col.system || isTitleField) {
+        if (!col.system || isTitleField || isLegacyTitleColumn(col)) {
           const value = rowData?.[col.key || ''] || record?.[col.key || ''];
           if (isTitleField || isJsonField || isLinksField || isLookupField || 
               (value !== null && value !== undefined && value !== '')) {

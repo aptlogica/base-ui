@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../utils/recordLabel';
 import { useMemo } from 'react';
 import { useTable, useAddRow, useUpsertRow, useDeleteRecord, useInsertRowData, useUpdateField, useDeleteColumn, useCreateField, useUpdateView, useUpdateViewAppearance, useInsertRelationData, useAddAttachment } from '../../../hooks/useApi';
 import type { TableData } from '../../../types/api.types';
@@ -135,7 +136,8 @@ export function useFormData({ tableId }: UseFormDataOptions): UseFormDataReturn 
   };
 
   const ensureTitleValue = (field: FormField, formData: Record<string, any>, backendRowId: string): void => {
-    const isTitleField = field.title?.toLowerCase().includes('title') || field.column_name === 'title';
+    // Only the system Title of a table created before Title became an ordinary column is filled in when empty
+    const isTitleField = isLegacyTitleColumn(field);
     if (isTitleField && !formData[field.id]) {
       formData[field.id] = `Record ${backendRowId}`;
     }

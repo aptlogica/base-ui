@@ -60,6 +60,8 @@ export interface BuildFieldMetaParams {
   relationType: 'one-to-one' | 'has-many' | 'many-to-many';
   // Title of the column created on the other table (not used for a self-link, which has one column)
   inverseTitle?: string;
+  // Column of the linked table this link shows for each linked record ('' = the first text column)
+  displayColumnId?: string;
   currentTableId?: string;
   selectedRelationId: string;
   selectedLookupColumnId: string;
@@ -283,9 +285,12 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
       type: params.relationType
     };
     const inverseTitle = params.inverseTitle?.trim();
-    if (inverseTitle && params.selectedTableId !== params.currentTableId) {
+    const isSelf = params.selectedTableId === params.currentTableId;
+    if (inverseTitle && !isSelf) {
       config.relation.inverse_title = inverseTitle;
     }
+    // '' lets the server pick the first text column (or clears the choice when a link is edited)
+    config.display_column_id = params.displayColumnId ?? '';
   };
 
   const handleLookup = (): BuildFieldMetaResult | void => {
@@ -439,7 +444,11 @@ export const buildColumnPayload = (params: BuildColumnPayloadParams) => {
 
   let finalMeta = params.meta;
   if (params.selectedTypeKey === 'links' && params.initialValues) {
-    finalMeta = params.initialValues.meta || params.initialValues.config || {};
+    // The relation of an existing link can't change; only its display column can
+    finalMeta = {
+      ...(params.initialValues.meta || params.initialValues.config || {}),
+      display_column_id: params.meta?.display_column_id ?? '',
+    };
   }
 
   return {

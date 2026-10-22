@@ -18,6 +18,10 @@ export function renderRelationsConfigStep(props: any) {
     setSelectedTable,
     inverseTitle,
     setInverseTitle,
+    displayColumnId,
+    setDisplayColumnId,
+    displayColumnOptions,
+    isLinkTargetLoading,
     isSelfLink,
     currentTableId,
     showDescription,
@@ -181,6 +185,29 @@ export function renderRelationsConfigStep(props: any) {
               />
               <div className="mt-1 text-xs text-gray-500">
                 The linked table gets a field that shows the records linked back to this table.
+              </div>
+            </div>
+          )}
+
+          {selectedTableId && (
+            <div className="mb-4">
+              <label htmlFor="displayColumn" className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-2">
+                Display column
+              </label>
+              <AdvancedDropdown
+                id="displayColumn"
+                options={displayColumnOptions ?? []}
+                value={displayColumnId}
+                onChange={(value) => setDisplayColumnId(typeof value === 'string' ? value : '')}
+                placeholder="Id"
+                disabled={isLinkTargetLoading}
+                searchable
+                clearable
+              />
+              <div className="mt-1 text-xs text-gray-500">
+                The column of {isSelfLink ? 'this table' : 'the linked table'} shown for each linked record. {isLinkTargetLoading
+                  ? 'Loading fields...'
+                  : 'Records with an empty value are shown as "Record <id>".'}
               </div>
             </div>
           )}

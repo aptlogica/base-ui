@@ -63,6 +63,7 @@ vi.mock('react-router-dom', async () => {
 vi.mock('../importer/importPreviewBuilder', () => ({
   buildImportPreview: (...args: unknown[]) => mockBuildImportPreview(...args),
   buildInitialMappings: (...args: unknown[]) => mockBuildInitialMappings(...args),
+  avoidSystemColumnTitle: (title: string) => title,
 }));
 
 vi.mock('../importer/ImportCleanupOptions', () => ({
@@ -104,37 +105,12 @@ vi.mock('../importer/ImportColumnMapper', () => ({
     preview,
     mappings,
     onChange,
-    primaryKey,
-    primaryColumnError,
-    onPrimaryKeyChange,
   }: {
     preview: ImportPreview;
     mappings: Record<string, ImportColumnMapping>;
     onChange: (key: string, patch: Partial<ImportColumnMapping>) => void;
-    primaryKey: string | null;
-    primaryColumnError?: string | null;
-    onPrimaryKeyChange: (key: string | null) => void;
   }) => (
     <div data-testid="column-mapper">
-      {primaryColumnError ? <div data-testid="primary-error">{primaryColumnError}</div> : null}
-      <select
-        data-testid="primary-key-select"
-        value={primaryKey || ''}
-        onChange={(event) => onPrimaryKeyChange(event.target.value || null)}
-      >
-        <option value="">none</option>
-        {preview.columns.map((column) => (
-          <option key={column.key} value={column.label}>
-            {column.label}
-          </option>
-        ))}
-      </select>
-      <button
-        type="button"
-        onClick={() => onPrimaryKeyChange('Missing Column')}
-      >
-        Set invalid primary
-      </button>
       {preview.columns.map((column) => {
         const mapping = mappings[column.key];
         const include = mapping?.include !== false;
@@ -524,48 +500,6 @@ describe('ImportModal', () => {
       expect(screen.getByText('sample.csv')).toBeInTheDocument();
     });
 
-    it('auto-includes excluded column when selected as primary key', async () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-      const user = await goToReviewStep();
-
-      await user.click(screen.getByLabelText('include-score'));
-      expect(screen.getByLabelText('include-score')).not.toBeChecked();
-
-      await user.selectOptions(screen.getByTestId('primary-key-select'), 'Score');
-
-      expect(screen.getByLabelText('include-score')).toBeChecked();
-    });
-
-    it('clears primary key when primary column is excluded', async () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-      const user = await goToReviewStep();
-
-      expect(screen.getByTestId('primary-key-select')).toHaveValue('Name');
-      await user.click(screen.getByLabelText('include-name'));
-
-      expect(screen.getByTestId('primary-key-select')).toHaveValue('');
-      expect(screen.getByTestId('primary-error')).toHaveTextContent(
-        'Primary column cannot be excluded.'
-      );
-    });
-
-    it('clears primary error when default value is updated for primary column', async () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-      const user = await goToReviewStep();
-
-      await user.clear(screen.getByLabelText('default-name'));
-      await user.click(screen.getByRole('button', { name: /Confirm/i }));
-      expect(await screen.findByTestId('primary-error')).toHaveTextContent(
-        'Primary column cannot be empty.'
-      );
-
-      await user.type(screen.getByLabelText('default-name'), 'id');
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('primary-error')).not.toBeInTheDocument();
-      });
-    });
-
     it('updates cleanup options from the cleanup panel', async () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
       const user = await goToReviewStep();
@@ -615,28 +549,27 @@ describe('ImportModal', () => {
       expect(screen.getByRole('button', { name: /Confirm/i })).toBeInTheDocument();
     });
 
-    it('requires primary column to be included', async () => {
-      renderWithQueryClient(<ImportModal {...defaultProps} />);
-      const user = await goToReviewStep();
-
-      await user.click(screen.getByRole('button', { name: /Set invalid primary/i }));
-      await user.click(screen.getByRole('button', { name: /Confirm/i }));
-
-      expect(await screen.findByTestId('primary-error')).toHaveTextContent(
-        'Primary column must be included.'
-      );
-      expect(mockMutateAsync).not.toHaveBeenCalled();
-    });
-
-    it('requires primary column default value', async () => {
+    it('does not need a default value for any column', async () => {
       renderWithQueryClient(<ImportModal {...defaultProps} />);
       const user = await goToReviewStep();
 
       await user.clear(screen.getByLabelText('default-name'));
       await user.click(screen.getByRole('button', { name: /Confirm/i }));
 
-      expect(await screen.findByText(/Primary column cannot be empty/i)).toBeInTheDocument();
-      expect(mockMutateAsync).not.toHaveBeenCalled();
+      await waitFor(() => expect(mockMutateAsync).toHaveBeenCalled());
+      expect(screen.queryByText(/primary column/i)).not.toBeInTheDocument();
+    });
+
+    it('lets the first column be excluded like any other', async () => {
+      renderWithQueryClient(<ImportModal {...defaultProps} />);
+      const user = await goToReviewStep();
+
+      await user.click(screen.getByLabelText('include-name'));
+      await user.click(screen.getByRole('button', { name: /Confirm/i }));
+
+      await waitFor(() => expect(mockMutateAsync).toHaveBeenCalled());
+      const columns = mockMutateAsync.mock.calls[0][0].config.columns;
+      expect(columns.find((c: any) => c.column_name === 'Name')).toBeUndefined();
     });
   });
 
@@ -656,7 +589,8 @@ describe('ImportModal', () => {
       expect(args.base_id).toBe('base-123');
       expect(args.workspace_id).toBe('ws-123');
       expect(args.order_index).toBe(0);
-      expect(args.primary_column).toBe('Name');
+      // there is no primary column any more: every column of the file is just a column
+      expect(args.primary_column).toBeUndefined();
       expect(args.config.columns).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -784,7 +718,6 @@ describe('ImportModal', () => {
       });
       renderWithQueryClient(<ImportModal {...defaultProps} />);
       const user = await goToReviewStep();
-      await user.selectOptions(screen.getByTestId('primary-key-select'), 'none');
       await user.click(screen.getByRole('button', { name: /Confirm/i }));
 
       await waitFor(() => expect(mockMutateAsync).toHaveBeenCalled());
@@ -817,7 +750,6 @@ describe('ImportModal', () => {
       });
       renderWithQueryClient(<ImportModal {...defaultProps} />);
       const user = await goToReviewStep();
-      await user.selectOptions(screen.getByTestId('primary-key-select'), 'none');
       await user.click(screen.getByRole('button', { name: /Confirm/i }));
 
       await waitFor(() => expect(mockMutateAsync).toHaveBeenCalled());

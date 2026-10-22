@@ -534,6 +534,59 @@ describe('NewColumnModalConfigStep split modules', () => {
     expect(setInverseTitle).toHaveBeenCalledWith('Orders');
   });
 
+  describe('relations: display column', () => {
+    const base = {
+      selectedType: { key: 'links' },
+      relationType: 'one-to-one',
+      setRelationType: vi.fn(),
+      tables: [{ id: 't2', title: 'Customers' }],
+      selectedTableId: 't2',
+      setSelectedTableId: vi.fn(),
+      selectedTable: { id: 't2', title: 'Customers' },
+      setSelectedTable: vi.fn(),
+      inverseTitle: '',
+      setInverseTitle: vi.fn(),
+      displayColumnId: 'c-company',
+      setDisplayColumnId: vi.fn(),
+      displayColumnOptions: [{ value: 'c-name', label: 'Name' }, { value: 'c-company', label: 'Company' }],
+      isLinkTargetLoading: false,
+      isSelfLink: false,
+      currentTableId: 't1',
+      showDescription: false,
+      setShowDescription: vi.fn(),
+      description: '',
+      setDescription: vi.fn(),
+    };
+
+    it('asks for one display column when a link is created, and for no partner column', () => {
+      renderStep(renderRelationsConfigStep({ ...base, isLinksFieldEditing: false }));
+
+      expect(screen.getByText('Display column')).toBeInTheDocument();
+      expect(screen.queryByText('Display column in linked table')).not.toBeInTheDocument();
+      expect(screen.getByText('Company')).toBeInTheDocument();
+    });
+
+    it('asks for the same single display column when an existing link is edited', () => {
+      renderStep(renderRelationsConfigStep({ ...base, isLinksFieldEditing: true }));
+
+      expect(screen.getByText('Display column')).toBeInTheDocument();
+      expect(screen.queryByText('Display column in linked table')).not.toBeInTheDocument();
+    });
+
+    it('asks for one display column on a self-link', () => {
+      renderStep(renderRelationsConfigStep({ ...base, isLinksFieldEditing: false, isSelfLink: true, selectedTableId: 't1' }));
+
+      expect(screen.getByText('Display column')).toBeInTheDocument();
+      expect(screen.queryByText('Display column in linked table')).not.toBeInTheDocument();
+    });
+
+    it('asks for nothing before a table is chosen', () => {
+      renderStep(renderRelationsConfigStep({ ...base, isLinksFieldEditing: false, selectedTableId: '', selectedTable: null }));
+
+      expect(screen.queryByText('Display column')).not.toBeInTheDocument();
+    });
+  });
+
   it('relations: lookup labels link fields with the table they point to', () => {
     renderStep(
       renderRelationsConfigStep({

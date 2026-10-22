@@ -1182,7 +1182,11 @@ export function renderNewColumnConfigStep(props: any) {
     isLinksFieldEditing,
   } = props;
   // Self-link props for the links field config.
-  const { inverseTitle, setInverseTitle, isSelfLink, currentTableId } = props;
+  const {
+    inverseTitle, setInverseTitle, isSelfLink, currentTableId,
+    displayColumnId, setDisplayColumnId, displayColumnOptions,
+    isLinkTargetLoading,
+  } = props;
   const handleJsonChange = (value: any) => {
     const stringify = JSON.stringify(value, null, 2);
     setDefaultValue(stringify);
@@ -1308,6 +1312,10 @@ export function renderNewColumnConfigStep(props: any) {
       setSelectedTable,
       inverseTitle,
       setInverseTitle,
+      displayColumnId,
+      setDisplayColumnId,
+      displayColumnOptions,
+      isLinkTargetLoading,
       isSelfLink,
       currentTableId,
       showDescription,

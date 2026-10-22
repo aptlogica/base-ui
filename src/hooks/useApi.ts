@@ -660,7 +660,6 @@ export const useImportData = () => {
       order_index,
       file,
       config,
-      primary_column,
       onProgress,
     }: {
       base_id?: string; // Optional: required from sidebar, optional from home page
@@ -670,7 +669,6 @@ export const useImportData = () => {
       order_index: number;
       file: File;
       config: any; // ImportPayload with mapped field types and settings
-      primary_column?: string;
       onProgress?: (progressEvent: ProgressEvent) => void;
     }) => {
       return importService(
@@ -680,7 +678,6 @@ export const useImportData = () => {
           order_index,
           file,
           config,
-          primary_column: primary_column || '',
         },
         onProgress
       );
