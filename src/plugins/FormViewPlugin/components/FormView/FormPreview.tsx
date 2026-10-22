@@ -883,8 +883,9 @@ export const FormPreview: React.FC<Readonly<FormPreviewProps>> = ({
   }, [config.description]);
 
   const canEdit = !!onConfigChange;
-  // Only overlap the banner when a banner image is actually shown, otherwise the logo is clipped by the card edge
-  const logoOnBanner = !appearance.hideBanner && !!appearance.bannerUrl && appearance.logoPosition !== 'below';
+  // Overlap only when the banner area (image or upload placeholder) is rendered, otherwise the logo is clipped by the card edge
+  const isBannerShown = !appearance.hideBanner && (!!appearance.bannerUrl || (canEdit && !isReadOnly));
+  const logoOnBanner = isBannerShown && appearance.logoPosition !== 'below';
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: appearance.backgroundColor || undefined }}>

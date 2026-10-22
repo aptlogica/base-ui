@@ -4,10 +4,11 @@ import { SortableFormField } from '../SortableFormField';
 import type { FormField } from '../../../../../types/form';
 
 vi.mock('../../shared/FieldRenderer', () => ({
-  default: (props: { type?: string; value?: unknown; inline?: boolean; onChange?: (v: unknown) => void }) => (
+  default: (props: { type?: string; value?: unknown; inline?: boolean; config?: { richText?: boolean }; onChange?: (v: unknown) => void }) => (
     <div data-testid="field-renderer">
       <span data-testid="field-type">{props.type ?? 'unknown'}</span>
       <span data-testid="field-inline">{String(!!props.inline)}</span>
+      <span data-testid="field-rich-text">{String(props.config?.richText)}</span>
       <input
         data-testid="field-input"
         value={String(props.value ?? '')}
@@ -116,6 +117,20 @@ describe('SortableFormField', () => {
 
       expect(screen.getByTestId('field-type')).toHaveTextContent('longText');
       expect(screen.getByTestId('field-inline')).toHaveTextContent('true');
+    });
+
+    it('enables rich text by default when the field config does not set it', () => {
+      const longTextField: FormField = { ...mockField, type: 'longText' };
+      render(<SortableFormField field={longTextField} value="" onChange={mockOnChange} />);
+
+      expect(screen.getByTestId('field-rich-text')).toHaveTextContent('true');
+    });
+
+    it('keeps rich text disabled when the field config explicitly disables it', () => {
+      const longTextField: FormField = { ...mockField, type: 'longText', config: { richText: false } };
+      render(<SortableFormField field={longTextField} value="" onChange={mockOnChange} />);
+
+      expect(screen.getByTestId('field-rich-text')).toHaveTextContent('false');
     });
 
     it('does not render other fields inline', () => {
