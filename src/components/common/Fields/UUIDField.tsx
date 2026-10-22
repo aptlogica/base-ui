@@ -99,6 +99,59 @@ interface ManualUUIDFieldProps {
   placeholder: string;
 }
 
+interface ManualUUIDDisplayProps {
+  current: string;
+  canEdit: boolean;
+  borderClass: string;
+  allowEdit: boolean;
+  placeholder: string;
+  onStartEditing: () => void;
+}
+
+// Manual field when not editing: the value with a copy button; click (or double click) to edit
+const ManualUUIDDisplay: React.FC<Readonly<ManualUUIDDisplayProps>> = ({
+  current,
+  canEdit,
+  borderClass,
+  allowEdit,
+  placeholder,
+  onStartEditing,
+}) => {
+  const textClass = `${MONO_TEXT} w-full min-w-0 ${current ? 'text-[var(--text-color-primary)]' : 'text-[var(--color-text-placeholder)] font-sans'}`;
+
+  return (
+    <div
+      className={`field-component ${borderClass} ${canEdit ? '' : 'cursor-not-allowed'}`}
+      title={current || placeholder}
+    >
+      {canEdit ? (
+        <button
+          type="button"
+          aria-label="Edit UUID"
+          onClick={allowEdit ? onStartEditing : undefined}
+          onDoubleClick={allowEdit ? undefined : onStartEditing}
+          className={`${textClass} text-left bg-transparent`}
+        >
+          {current || placeholder}
+        </button>
+      ) : (
+        <span className={textClass}>{current}</span>
+      )}
+      {current && <CopyButton value={current} />}
+    </div>
+  );
+};
+
+const UUIDErrorMessage: React.FC<Readonly<{ message: string }>> = ({ message }) => (
+  <div
+    role="alert"
+    className="absolute left-0 top-full mt-1 z-20 flex items-center gap-1.5 w-max px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 text-xs text-red-700"
+  >
+    <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+    {message}
+  </div>
+);
+
 // Manual fields: any valid UUID, checked when the input loses focus
 const ManualUUIDField: React.FC<Readonly<ManualUUIDFieldProps>> = ({
   current,
@@ -165,7 +218,6 @@ const ManualUUIDField: React.FC<Readonly<ManualUUIDFieldProps>> = ({
   // cell's outline is the only border, and the grid turns it red for an invalid value
   const errorClass = error ? 'border border-[var(--color-error-500)] bg-red-50' : '';
   const inputStateClass = isBorder ? `field-component-focus ${errorClass}` : '';
-  const textClass = `${MONO_TEXT} w-full min-w-0 ${current ? 'text-[var(--text-color-primary)]' : 'text-[var(--color-text-placeholder)] font-sans'}`;
 
   return (
     <div className="w-full relative">
@@ -185,35 +237,16 @@ const ManualUUIDField: React.FC<Readonly<ManualUUIDFieldProps>> = ({
           className={`field-component font-mono ${inputStateClass}`}
         />
       ) : (
-        <div
-          className={`field-component ${borderClass} ${canEdit ? '' : 'cursor-not-allowed'}`}
-          title={current || placeholder}
-        >
-          {canEdit ? (
-            <button
-              type="button"
-              aria-label="Edit UUID"
-              onClick={allowEdit ? startEditing : undefined}
-              onDoubleClick={allowEdit ? undefined : startEditing}
-              className={`${textClass} text-left bg-transparent`}
-            >
-              {current || placeholder}
-            </button>
-          ) : (
-            <span className={textClass}>{current}</span>
-          )}
-          {current && <CopyButton value={current} />}
-        </div>
+        <ManualUUIDDisplay
+          current={current}
+          canEdit={canEdit}
+          borderClass={borderClass}
+          allowEdit={allowEdit}
+          placeholder={placeholder}
+          onStartEditing={startEditing}
+        />
       )}
-      {error && (
-        <div
-          role="alert"
-          className="absolute left-0 top-full mt-1 z-20 flex items-center gap-1.5 w-max px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 text-xs text-red-700"
-        >
-          <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-          {error}
-        </div>
-      )}
+      {error && <UUIDErrorMessage message={error} />}
     </div>
   );
 };

@@ -711,11 +711,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setUuidBackfill(true);
   };
 
-  // Puts every field-config input back to its default
-  const resetConfigState = () => {
-    setFieldName('');
-    setSearch('');
-    setSelectedType(null);
+  // Puts every type-specific config input back to its default
+  const resetTypeConfig = () => {
     setDefaultValue('');
     setDescription('');
     setRichText(defaultRichText);
@@ -789,74 +786,18 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setUuidBackfill(true);
   };
 
-  const resetStateOnClose = () => {
-    // Reset all state when modal closes
-    setStep(null);
-     resetConfigState();
+  // Puts every field-config input back to its default
+  const resetConfigState = () => {
     setFieldName('');
     setSearch('');
     setSelectedType(null);
-    setDefaultValue('');
-    setDescription('');
-    setRichText(false);
-    setShowThousands(false);
-    setPrecision('1.0');
-    setCheckboxIcon('check');
-    setCheckboxColor('green');
-    setCheckboxDefault(false);
-    setSelectOptions([]);
-    setColor('');
-    setNewOption('');
-    setMultiDefault([]);
-    setSingleDefault('');
-    setRatingIcon('star');
-    setRatingColor('yellow');
-    setRatingMax(5);
-    setRatingDefault(0);
-    setDateFormat('YYYY-MM-DD');
-    setTimeFormat('hh:mm');
-    setHourFormat('24');
-    setDisplayTimeZone(false);
-    setSameTimezone(false);
-    setTimeZone('');
-    setDateTimeDefault('');
-    setShowDateTimeDefault(false);
-    setYearDefault(null);
-    setDateDefault('');
-    setShowDateDefault(false);
-    setTimeDefault('');
-    setShowTimeDefault(false);
-    setPhoneValid(false);
-    setPhoneDefault('');
-    setShowPhoneDefault(false);
-    setEmailValid(false);
-    setEmailDefault('');
-    setShowEmailDefault(false);
-    setUrlValid(false);
-    setUrlDefault('');
-    setShowUrlDefault(false);
-    setDisplayAsProgress(false);
-    setShowPercentDefault(false);
-    setPercentDefault(null);
-    setDurationFormat('h:mm');
-    setDurationDefault(0);
-    setCurrencyType('USD');
-    setCurrencyDefault(null);
-    setShowCurrencyDefault(false);
-    setShowTextDefault(false);
-    setShowDescription(false);
-    setAllowMultipleUsers(false);
-    setRelationType('one-to-one');
-    setSelectedTableId('');
-    setSelectedTable(null);
-    setInverseTitle('');
-    setSelectedRelationId('');
-    setSelectedLookupColumnId('');
-    setHasUserModifiedLookupColumn(false);
-    setTargetTableFields([]);
-    setButtonStyle('primary');
-    setButtonAction('url');
-    setOpenButtonInNewTab(true);
+    resetTypeConfig();
+  };
+
+  const resetStateOnClose = () => {
+    // Reset all state when modal closes
+    setStep(null);
+    resetConfigState();
     setNameError(null);
     setFormulaError(null);
     setShowYearDefault(false);
@@ -979,26 +920,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
     setSelectedType(type);
     setStep(2);
-    // Reset config state
-    setDefaultValue('');
-    setDescription('');
-    setRichText(defaultRichText);
-    setShowThousands(false);
-    setPrecision('1.0');
-    // Reset checkbox config state
-    setCheckboxIcon('check');
-    setCheckboxColor('green');
-    setCheckboxDefault(false);
-    // Reset select/multiselect config state
-    setSelectOptions([]);
-    setNewOption('');
-    setMultiDefault([]);
-    setSingleDefault('');
-    // Reset rating config state
-    setRatingIcon('star');
-    setRatingColor('yellow');
-    setRatingMax(5);
-    setRatingDefault(0);
+    resetTypeConfig();
     // Start from the formats chosen when the base was created (user can still change them)
     const baseDefaults = getBaseFormatDefaults(baseMeta, type.key);
     setDateFormat(baseDefaults.dateFormat ?? 'YYYY-MM-DD');
@@ -1007,38 +929,11 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setDisplayTimeZone(baseDefaults.displayTimeZone ?? false);
     setSameTimezone(baseDefaults.sameTimezone ?? false);
     setTimeZone(baseDefaults.timeZone ?? '');
-    setDateTimeDefault('');
-    setShowDateTimeDefault(false);
-    // Reset currency config state
     setCurrencyType(baseDefaults.currencyType ?? 'USD');
     setCurrencyLocale(baseDefaults.currencyLocale ?? 'en-US');
-    setCurrencyDefault(null);
-    setShowCurrencyDefault(false);
-    // Reset text config state
-    setShowTextDefault(false);
-    setShowDescription(false);
-    // Reset user field config state
-    setAllowMultipleUsers(false);
-    // Reset links field config state
-    setRelationType('one-to-one');
-    setSelectedTableId('');
-    setSelectedTable(null);
-    setInverseTitle('');
-    // Reset lookup field config state
-    setSelectedRelationId('');
-    setSelectedLookupColumnId('');
-    setTargetTableFields([]);
-    // Reset button field config state
-    setButtonStyle('primary');
-    setButtonAction('url');
-    setOpenButtonInNewTab(true);
     // Reset formula field config state
     setFormulaText('');
     setFormulaError(null);
-    // Reset json field config state
-    // Reset uuid field config state
-    setIdGeneration(DEFAULT_ID_GENERATION);
-    setUuidBackfill(true);
   };
 
 /* eslint-disable sonarjs/cognitive-complexity */
