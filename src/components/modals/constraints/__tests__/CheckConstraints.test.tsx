@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import CheckConstraintFormModal from '../CheckConstraintFormModal';
 import CheckConstraintsPanel from '../CheckConstraintsPanel';
 import { CHECK_CATEGORIES, categoryByKey } from '../checkCategories';
-import { STATEMENT_ERROR, TABLE_ERROR, checkConstraintName, checkableColumns, fillExample, insertColumn, parseCheckStatement, previewSql, quoteIdent } from '../checkSql';
+import { displayName, installedSql, valueSql, STATEMENT_ERROR, TABLE_ERROR, checkConstraintName, checkableColumns, fillExample, insertColumn, parseCheckStatement, previewSql, quoteIdent } from '../checkSql';
 import { useTable, useTableConstraints } from '../../../../hooks/useApi';
 import { useBaseAccess } from '../../../../hooks/useBaseAccess';
 import type { TableConstraint } from '../../../../service/clientService';
@@ -68,6 +68,29 @@ describe('check SQL helpers', () => {
     expect(insertColumn('<field> IN (1)', 'age_179')).toEqual({ condition: 'age_179 IN (1)', cursor: 7 });
     expect(insertColumn('a > 0 AND  > 1', 'b', { start: 10, end: 10 }).condition).toBe('a > 0 AND b > 1');
     expect(insertColumn('x >0', 'Order', { start: 3, end: 3 }).condition).toBe('x > "Order" 0');
+  });
+
+  it('turns typed values into SQL by kind and field type', () => {
+    expect(valueSql('number', ' ')).toBeNull();
+    expect(valueSql('number', '12')).toBe('12');
+    expect(valueSql('number', 'abc')).toBeNull();
+    expect(valueSql('text', "it's")).toBe("'it''s'");
+    expect(valueSql('list', 'a, b')).toBe("'a', 'b'");
+    expect(valueSql('value', '5')).toBeNull();
+    expect(valueSql('value', '5', 'number')).toBe('5');
+    expect(valueSql('value', 'x', 'number')).toBeNull();
+    expect(valueSql('value', '2026-01-31', 'date')).toBe("DATE '2026-01-31'");
+    expect(valueSql('value', '31/01/2026', 'date')).toBeNull();
+    expect(valueSql('value', 'abc', 'text')).toBe("'abc'");
+  });
+
+  it('shows a title plain when it is one word, quoted otherwise', () => {
+    expect(displayName('Age')).toBe('Age');
+    expect(displayName('Order Total')).toBe('"Order Total"');
+  });
+
+  it('previews the constraint as Postgres has it', () => {
+    expect(installedSql(TABLE_NAME, 'ck "x"', 'CHECK ((age > 0))')).toBe(`ALTER TABLE ${TABLE_NAME}\n  ADD CONSTRAINT "ck ""x"""\n  CHECK ((age > 0));`);
   });
 
   it('makes the constraint name like the backend', () => {
@@ -441,5 +464,70 @@ describe('CheckConstraintsPanel', () => {
     expect(screen.getByText(/No check constraints yet/)).toBeInTheDocument();
     // In the toolbar and in the empty state, like the unique keys list
     expect(screen.getAllByRole('button', { name: 'Add check constraint' })).toHaveLength(2);
+  });
+
+  it('searches by title or the condition as shown, and says when nothing matches', async () => {
+    render(<CheckConstraintsPanel table={table} />);
+    const search = screen.getByPlaceholderText('Search check constraints');
+
+    await userEvent.type(search, 'gone');
+    expect(screen.queryByText('Age 18–100')).not.toBeInTheDocument();
+    expect(screen.getByText('Gone')).toBeInTheDocument();
+
+    await userEvent.clear(search);
+    await userEvent.type(search, 'between');
+    expect(screen.getByText('Age 18–100')).toBeInTheDocument();
+    expect(screen.queryByText('Gone')).not.toBeInTheDocument();
+
+    await userEvent.clear(search);
+    await userEvent.type(search, 'nothing like this');
+    expect(screen.getByText('No check constraints match')).toBeInTheDocument();
+  });
+
+  it('shows the loading and the load error rows', () => {
+    vi.mocked(useTableConstraints).mockReturnValue({ data: undefined, isLoading: true, error: null } as any);
+    const { unmount } = render(<CheckConstraintsPanel table={table} />);
+    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    unmount();
+
+    vi.mocked(useTableConstraints).mockReturnValue({ data: undefined, isLoading: false, error: new Error('boom') } as any);
+    render(<CheckConstraintsPanel table={table} />);
+    expect(screen.getByText(/Couldn't load check constraints. boom/)).toBeInTheDocument();
+  });
+
+  it('marks a constraint that is missing in the database', () => {
+    render(<CheckConstraintsPanel table={table} />);
+    expect(screen.getByTitle(/not in the database any more/)).toBeInTheDocument();
+  });
+
+  it('shows why a delete failed', async () => {
+    deleteMutateAsync.mockRejectedValue(new Error('in use'));
+    render(<CheckConstraintsPanel table={table} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete Age 18–100' }));
+    await userEvent.click(within(document.body).getAllByRole('button', { name: /^Delete$/ }).pop() as HTMLElement);
+
+    expect(await screen.findByText('in use')).toBeInTheDocument();
+  });
+
+  it('closes the delete confirmation without deleting', async () => {
+    render(<CheckConstraintsPanel table={table} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete Age 18–100' }));
+    await userEvent.click(within(document.body).getByRole('button', { name: /Cancel/ }));
+
+    expect(deleteMutateAsync).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Records will no longer be checked/)).not.toBeInTheDocument();
+  });
+
+  it('opens the form to add and to edit, and closes it', async () => {
+    render(<CheckConstraintsPanel table={table} />);
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Add check constraint' })[0]);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Age 18–100' }));
+    expect(screen.getByDisplayValue('Age 18–100')).toBeInTheDocument();
   });
 });

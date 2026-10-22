@@ -40,7 +40,7 @@ const TableOptionsMenu: React.FC<TableOptionsMenuProps> = ({ table, onRename, on
   // Settings is a page, not a popup, so its own add/edit popups never stack on another popup
   const openSettings = () => {
     const workspaceId = routeWorkspaceId || storeWorkspaceId;
-    navigate(`/workspace/${workspaceId}/base/${table?.base_id}/table/${table?.id}/settings/primaryKey`);
+    void navigate(`/workspace/${workspaceId}/base/${table?.base_id}/table/${table?.id}/settings/primaryKey`);
   };
 
   const handleEditTable = async ({ name, description }: { name: string; description: string }) => {

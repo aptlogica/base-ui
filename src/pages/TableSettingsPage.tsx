@@ -61,7 +61,7 @@ const TableSettingsPage: React.FC = () => {
   const tablePath = `/workspace/${workspaceId}/base/${baseId}/table/${tableId}`;
   const goBack = () => {
     const viewId = table?.views?.[0]?.id;
-    navigate(viewId ? `${tablePath}/${viewId}` : `/workspace/${workspaceId}`);
+    void navigate(viewId ? `${tablePath}/${viewId}` : `/workspace/${workspaceId}`);
   };
 
   if (!ready || (isLoading && !table)) {

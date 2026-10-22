@@ -36,6 +36,14 @@ const NUMBER = /^-?\d+(\.\d+)?$/;
 const quoteText = (v: string) => `'${v.replaceAll("'", "''")}'`;
 const items = (v: string) => v.split(',').map(i => i.trim()).filter(Boolean);
 
+// A value typed for a field of a known kind as a SQL literal
+const fieldValueSql = (v: string, field?: FieldKind): string | null => {
+  if (!field) return null;
+  if (field === 'number') return NUMBER.test(v) ? v : null;
+  if (field === 'date') return /^\d{4}-\d{2}-\d{2}$/.test(v) ? `DATE ${quoteText(v)}` : null;
+  return quoteText(v);
+};
+
 // A typed value as a SQL literal; null while it is empty or not valid for its kind
 export const valueSql = (kind: ValueKind, raw: string, field?: FieldKind): string | null => {
   const v = raw.trim();
@@ -44,11 +52,7 @@ export const valueSql = (kind: ValueKind, raw: string, field?: FieldKind): strin
     case 'number': return NUMBER.test(v) ? v : null;
     case 'text': return quoteText(v);
     case 'list': return items(v).map(quoteText).join(', ');
-    default:
-      if (!field) return null;
-      if (field === 'number') return NUMBER.test(v) ? v : null;
-      if (field === 'date') return /^\d{4}-\d{2}-\d{2}$/.test(v) ? `DATE ${quoteText(v)}` : null;
-      return quoteText(v);
+    default: return fieldValueSql(v, field);
   }
 };
 
@@ -63,7 +67,7 @@ export const buildCondition = (
 ): { condition: string; complete: boolean } => {
   let complete = true;
   const condition = example.sql.replace(/\{(c[23]?|v[12])\}/g, (_, token: string) => {
-    if (token[0] === 'c') {
+    if (token.startsWith('c')) {
       const name = columnNames[token.length > 1 ? Number(token[1]) - 1 : 0];
       if (name) return quote(name);
       complete = false;
@@ -113,19 +117,19 @@ export const matchExample = (
         const token = /^\{(c[23]?|v[12])\}$/.exec(part)?.[1];
         if (!token) return part.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`).replaceAll(/\s+/g, String.raw`\s+`);
         slots.push(token);
-        return token[0] === 'c' ? IDENT : '(.+?)';
+        return token.startsWith('c') ? IDENT : '(.+?)';
       }).join('');
-      const found = new RegExp(`^\\s*${pattern}\\s*$`, 'is').exec(condition);
+      const found = new RegExp(String.raw`^\s*${pattern}\s*$`, 'is').exec(condition);
       if (!found) continue;
       const names: string[] = [];
       const values: string[] = [];
       let known = true;
       slots.forEach((token, i) => {
         const text = found[i + 1];
-        if (token[0] === 'c') {
+        if (token.startsWith('c')) {
           const name = text.startsWith('"') ? text.slice(1, -1).replaceAll('""', '"') : text;
           const index = token.length > 1 ? Number(token[1]) - 1 : 0;
-          if (names[index] === undefined) names[index] = name;
+          names[index] ??= name;
           known &&= columnNames.includes(name);
         } else {
           const index = Number(token[1]) - 1;
@@ -191,9 +195,12 @@ export const parseCheckStatement = (sql: string, table: string): { condition: st
 
 // Swaps column names for field titles in a SQL text, or back, leaving string literals alone. Words
 // are only swapped when they are exactly a name (a word before "(" is a function, so it stays).
+const TEXT_LITERAL = "'(?:[^']|'')*'";
+const WORD_OR_CALL = String.raw`[A-Za-z_][\w$]*(\s*\()?`;
+const SQL_TOKEN = new RegExp(`${TEXT_LITERAL}|"(?:[^"]|"")+"|${WORD_OR_CALL}`, 'g');
 const swapNames = (sql: string, lookup: Map<string, string>, write: (name: string) => string): string =>
-  sql.replace(/'(?:[^']|'')*'|"(?:[^"]|"")+"|[A-Za-z_][\w$]*(?!\w|\s*\()/g, token => {
-    if (token.startsWith("'")) return token;
+  sql.replace(SQL_TOKEN, (token, call?: string) => {
+    if (call || token.startsWith("'")) return token;
     const name = token.startsWith('"') ? token.slice(1, -1).replaceAll('""', '"') : token;
     const found = lookup.get(name);
     return found === undefined ? token : write(found);
