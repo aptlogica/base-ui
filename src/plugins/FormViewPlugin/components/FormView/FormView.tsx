@@ -754,6 +754,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
               onClose={handleCloseNewColumnModal}
               onSave={handleCreateNewField}
               isAddNewField={true}
+              defaultRichText={true}
               fields={formFields}
             />
           </div>
@@ -803,6 +804,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
                 fields={formFields}
                 isAddNewColumn={false}
                 isAddNewField={true}
+                defaultRichText={true}
                 currentTableId={tableId}
               />
             </div>

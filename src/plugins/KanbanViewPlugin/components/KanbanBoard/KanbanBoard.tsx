@@ -697,6 +697,24 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     });
   };
 
+  // "Edit record" navigation: Previous / Next step through the cards stack by stack, in board order
+  const navCardIds = useMemo(
+    () => (filteredStacks || []).flatMap((s) => Array.isArray(s.cards) ? s.cards : []).map((c: Record<string, unknown>) => {
+      const cardMeta = c._meta;
+      return cardMeta && typeof cardMeta === 'object' && 'id' in cardMeta ? String(cardMeta.id) : String(c.id);
+    }),
+    [filteredStacks]
+  );
+  const editRecordIndex = modalState.edit.recordId ? navCardIds.indexOf(String(modalState.edit.recordId)) : -1;
+
+  const showPreviousCard = useCallback(() => {
+    if (editRecordIndex > 0) handleOpenEditRecord(navCardIds[editRecordIndex - 1]);
+  }, [navCardIds, editRecordIndex, handleOpenEditRecord]);
+
+  const showNextCard = useCallback(() => {
+    if (editRecordIndex !== -1 && editRecordIndex < navCardIds.length - 1) handleOpenEditRecord(navCardIds[editRecordIndex + 1]);
+  }, [navCardIds, editRecordIndex, handleOpenEditRecord]);
+
 
   const handleDeleteRecordFromModal = useCallback(async (cardId: string) => {
     try {
@@ -1100,7 +1118,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           table={{ id: tableId, title: tableName } as any}
           fields={columns as any}
           title="New record"
-          submitLabel="Save record"
+          submitLabel="Save Record"
           initialValues={getCreateInitialValues()}
           onSuccess={handleCreateSuccess}
         />
@@ -1118,6 +1136,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           onDelete={isReadOnly ? undefined : handleDeleteRecordFromModal}
           onDuplicate={isReadOnly ? undefined : onDuplicateCard}
           initialValues={getEditInitialValues()}
+          onPrevious={showPreviousCard}
+          onNext={showNextCard}
+          hasPrevious={editRecordIndex > 0}
+          hasNext={editRecordIndex !== -1 && editRecordIndex < navCardIds.length - 1}
         />
       )}
       {modalState.delete.isOpen && modalState.delete.recordId && (

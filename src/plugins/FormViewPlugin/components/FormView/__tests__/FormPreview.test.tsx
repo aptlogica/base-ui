@@ -676,6 +676,16 @@ describe('FormPreview', () => {
       expect(screen.getByTestId('form-logo-frame').parentElement).not.toHaveClass('absolute');
     });
 
+    it('overlaps the empty banner placeholder with the logo button when editable', () => {
+      renderWith({ logoPosition: 'banner' }, { onConfigChange: vi.fn() });
+      expect(screen.getByRole('button', { name: /add a logo/i }).parentElement).toHaveClass('absolute', '-translate-y-1/2');
+    });
+
+    it('keeps the logo button in flow below the banner placeholder when configured', () => {
+      renderWith({ logoPosition: 'below' }, { onConfigChange: vi.fn() });
+      expect(screen.getByRole('button', { name: /add a logo/i }).parentElement).toHaveClass('mb-6', 'flex');
+    });
+
     it('sizes the logo frame to the loaded image aspect ratio', () => {
       renderWith({ logoUrl: '/logo.png' });
       const frame = screen.getByTestId('form-logo-frame');

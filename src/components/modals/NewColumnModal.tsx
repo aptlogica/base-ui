@@ -35,6 +35,8 @@ interface NewColumnModalProps {
   useBackdrop?: boolean;
   excludeRefs?: React.RefObject<HTMLElement | null>[];
   currentTableId?: string; // Add current table ID to exclude from target selection
+  // Initial state of the "Enable rich text" option for long text fields (Form View enables it by default)
+  defaultRichText?: boolean;
 }
 
 const getBrowserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -89,7 +91,8 @@ const useUuidFieldConfig = (initialValues: any, currentTableId: string | undefin
   return { idGeneration, setIdGeneration, uuidBackfill, setUuidBackfill, isPrimaryKeyField, isTurningUuidToAuto, uuidCounts };
 };
 
-export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields = [], isAddNewColumn = false, isAddNewField = false, useBackdrop, excludeRefs = [], currentTableId }: Readonly<NewColumnModalProps>) {
+export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields = [], isAddNewColumn = false, isAddNewField = false, useBackdrop, excludeRefs = [], currentTableId, defaultRichText = false }: Readonly<NewColumnModalProps>) {
+
   const [step, setStep] = useState<number | null>(initialValues ? 2 : 1);
   const [fieldName, setFieldName] = useState(initialValues?.title || '');
   const [search, setSearch] = useState('');
@@ -172,7 +175,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   // Config state for each type
   const [defaultValue, setDefaultValue] = useState('');
   const [description, setDescription] = useState('');
-  const [richText, setRichText] = useState(false);
+  const [richText, setRichText] = useState(defaultRichText);
   const [showThousands, setShowThousands] = useState(false);
   const [precision, setPrecision] = useState<string | number>('1.0');
 
@@ -618,7 +621,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     // initialValues.defaultValue doesn't exist at top level - it's nested in meta/config
     setDefaultValue(config.defaultValue || '');
     setDescription(values.description || '');
-    setRichText(!!config.richText);
+    setRichText(config.richText ?? defaultRichText);
     setShowThousands(!!config.showThousands);
     setPrecision(config.precision || '1.0');
     // Boolean/checkbox fields: check both saved format (icon/color/defaultValue) and state format (checkboxIcon/checkboxColor/checkboxDefault)
@@ -708,14 +711,14 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setUuidBackfill(true);
   };
 
-  const initializeCreateState = () => {
-    setStep(1);
+  // Puts every field-config input back to its default
+  const resetConfigState = () => {
     setFieldName('');
     setSearch('');
     setSelectedType(null);
     setDefaultValue('');
     setDescription('');
-    setRichText(false);
+    setRichText(defaultRichText);
     setShowThousands(false);
     setPrecision('1.0');
     setCheckboxIcon('check');
@@ -789,6 +792,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const resetStateOnClose = () => {
     // Reset all state when modal closes
     setStep(null);
+     resetConfigState();
     setFieldName('');
     setSearch('');
     setSelectedType(null);
@@ -859,6 +863,11 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setShowPercentDefault(false);
     setShowJsonDefault(false);
     setIsSaving(false);
+  };
+
+  const initializeCreateState = () => {
+    setStep(1);
+    resetConfigState();
   };
 
   //select, multi-select input state - track which option is being edited
@@ -973,7 +982,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     // Reset config state
     setDefaultValue('');
     setDescription('');
-    setRichText(false);
+    setRichText(defaultRichText);
     setShowThousands(false);
     setPrecision('1.0');
     // Reset checkbox config state

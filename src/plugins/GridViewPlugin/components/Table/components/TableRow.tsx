@@ -64,7 +64,7 @@ const getCellBorderClass = (isInvalid: boolean, isActive: boolean, isRowActive: 
     borderClass = 'border border-[var(--color-brand-600)]';
   } else if (isRowActive) {
     // Other cells in a highlighted row: light blue background (overrides the cell's and its input's own bg)
-    borderClass = 'border-b border-border/30 bg-[var(--color-blue-50)] [&>div]:!bg-[var(--color-blue-50)] [&_.field-component]:!bg-[var(--color-blue-50)] [&_.field-component-focus]:!bg-[var(--color-blue-50)]';
+    borderClass = 'border-b border-border/30 bg-[var(--color-row-highlight-bg)] [&>div]:!bg-[var(--color-row-highlight-bg)] [&_.field-component]:!bg-[var(--color-row-highlight-bg)] [&_.field-component-focus]:!bg-[var(--color-row-highlight-bg)]';
   } else {
     return `border-b border-border/30 ${isNonEditable ? READONLY_CELL_CLASS : ''}`;
   }
@@ -197,7 +197,7 @@ export const TableRow: React.FC<TableRowProps> = ({
       data-row-id={rowId}
     >
       <div
-        className={`flex-shrink-0 w-13 border-r border-b border-border/30 ${isRowActive ? 'bg-[var(--color-blue-50)]' : 'bg-background hover:bg-gray-50'} flex items-center justify-center relative select-none gap-2`}
+        className={`flex-shrink-0 w-13 border-r border-b border-border/30 ${isRowActive ? 'bg-[var(--color-row-highlight-bg)]' : 'bg-background hover:bg-gray-50'} flex items-center justify-center relative select-none gap-2`}
         style={{
           height: '40px',
           position: 'sticky',

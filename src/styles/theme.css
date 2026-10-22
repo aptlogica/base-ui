@@ -160,6 +160,7 @@ Support: support@aptlogica.com | support@serenibase.com
 
     /* BLUE COLORS (for info states) */
     --color-blue-50: rgb(239, 246, 255);
+    --color-row-highlight-bg: var(--color-blue-50);
     --color-blue-100: rgb(219, 234, 254);
     --color-blue-200: rgb(191, 219, 254);
     --color-blue-300: rgb(147, 197, 253);
@@ -289,6 +290,7 @@ Support: support@aptlogica.com | support@serenibase.com
         --color-hover-bg: rgb(43, 43, 43);
         --color-selected-bg: rgb(36, 36, 36);
         --color-muted-bg: var(--color-hover-bg);
+        --color-row-highlight-bg: rgb(30, 41, 59);
 
         /* Invert gray scale for dark mode */
         --color-gray-950: rgb(253, 253, 253);
