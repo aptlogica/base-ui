@@ -17,8 +17,7 @@ describe('UUIDField', () => {
       Object.assign(navigator, { clipboard: { writeText } });
 
       render(<UUIDField value={V4} onChange={onChange} config={AUTO} />);
-      expect(screen.getByText(V4)).toBeInTheDocument();
-      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+      expect(screen.getByDisplayValue(V4)).toHaveAttribute('readonly');
 
       fireEvent.click(screen.getByRole('button', { name: 'Copy UUID' }));
       await waitFor(() => expect(writeText).toHaveBeenCalledWith(V4));
@@ -27,14 +26,14 @@ describe('UUIDField', () => {
 
     it('explains that typing does nothing', () => {
       render(<UUIDField value={V4} onChange={onChange} config={AUTO} />);
-      fireEvent.keyDown(screen.getByText(V4).parentElement!, { key: 'a' });
+      fireEvent.keyDown(screen.getByDisplayValue(V4),{ key: 'a' });
       expect(screen.getByRole('status')).toHaveTextContent('Generated automatically. This field is read-only.');
       expect(onChange).not.toHaveBeenCalled();
     });
 
     it('shows "Generated on save" when there is no value yet', () => {
       render(<UUIDField value={null} onChange={onChange} config={AUTO} />);
-      expect(screen.getByText('Generated on save')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Generated on save')).toBeInTheDocument();
     });
   });
 

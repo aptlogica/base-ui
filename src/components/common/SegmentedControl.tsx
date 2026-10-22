@@ -25,12 +25,11 @@ export function SegmentedControl<T extends string>({
   onChange,
   ariaLabel,
   className = '',
-}: SegmentedControlProps<T>): React.ReactElement {
+}: Readonly<SegmentedControlProps<T>>): React.ReactElement {
   return (
-    <div
-      role="group"
+    <fieldset
       aria-label={ariaLabel}
-      className={`flex gap-1 p-[3px] rounded-xl bg-[var(--color-gray-100)] ${className}`}
+      className={`flex gap-1 p-[3px] m-0 min-w-0 border-0 rounded-xl bg-[var(--color-gray-100)] ${className}`}
     >
       {options.map(option => {
         const selected = option.value === value;
@@ -50,7 +49,7 @@ export function SegmentedControl<T extends string>({
           </button>
         );
       })}
-    </div>
+    </fieldset>
   );
 }
 

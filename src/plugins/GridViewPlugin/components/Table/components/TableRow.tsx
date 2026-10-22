@@ -53,6 +53,23 @@ const getColumnIdentity = (column: ColumnConfig): string => {
 // Red cell for a primary key problem. The editor inside paints its own background, and a clicked row forces a
 // blue one, so the red is forced onto the editor too and wins over the active cell and row styles.
 const INVALID_CELL_CLASS = 'border border-red-500 bg-red-50 [&>div]:!bg-red-50 [&_.field-component]:!bg-red-50 [&_.field-component-focus]:!bg-red-50';
+const READONLY_CELL_CLASS = 'bg-[var(--color-readonly-cell)] cursor-not-allowed [&>div]:!bg-[var(--color-readonly-cell)] [&>div]:!cursor-not-allowed [&_.field-component]:!bg-[var(--color-readonly-cell)] [&_.field-component]:!cursor-not-allowed';
+
+const getCellBorderClass = (isInvalid: boolean, isActive: boolean, isRowActive: boolean, isNonEditable: boolean): string => {
+  let borderClass: string;
+  if (isInvalid) {
+    borderClass = INVALID_CELL_CLASS;
+  } else if (isActive) {
+    // Selected cell: green border, default background
+    borderClass = 'border border-[var(--color-brand-600)]';
+  } else if (isRowActive) {
+    // Other cells in a highlighted row: light blue background (overrides the cell's and its input's own bg)
+    borderClass = 'border-b border-border/30 bg-[var(--color-blue-50)] [&>div]:!bg-[var(--color-blue-50)] [&_.field-component]:!bg-[var(--color-blue-50)] [&_.field-component-focus]:!bg-[var(--color-blue-50)]';
+  } else {
+    return `border-b border-border/30 ${isNonEditable ? READONLY_CELL_CLASS : ''}`;
+  }
+  return isNonEditable ? `${borderClass} cursor-not-allowed` : borderClass;
+};
 
 export const TableRow: React.FC<TableRowProps> = ({
   row,
@@ -216,21 +233,12 @@ export const TableRow: React.FC<TableRowProps> = ({
         const column = columns[index];
         const cellKey = `${rowId}-${column.key}`;
         const isNonEditable = props.isSystemField || isAutoUuidColumn(props.column);
-        let borderClass: string;
-        if (invalidCells?.[column.key] || saveErrorCells?.has(cellKey)) {
-          borderClass = INVALID_CELL_CLASS;
-        } else if (props.isActive) {
-          // Selected cell: green border, default background
-          borderClass = 'border border-[var(--color-brand-600)]';
-        } else if (isRowActive) {
-          // Other cells in a highlighted row: light blue background (overrides the cell's and its input's own bg)
-          borderClass = 'border-b border-border/30 bg-[var(--color-blue-50)] [&>div]:!bg-[var(--color-blue-50)] [&_.field-component]:!bg-[var(--color-blue-50)] [&_.field-component-focus]:!bg-[var(--color-blue-50)]';
-        } else {
-          borderClass = `border-b border-border/30 ${isNonEditable ? 'bg-[var(--color-readonly-cell)] cursor-not-allowed [&>div]:!bg-[var(--color-readonly-cell)] [&>div]:!cursor-not-allowed [&_.field-component]:!bg-[var(--color-readonly-cell)] [&_.field-component]:!cursor-not-allowed' : ''}`;
-        }
-        if (isNonEditable && !borderClass.includes('cursor-not-allowed')) {
-          borderClass += ' cursor-not-allowed';
-        }
+        const borderClass = getCellBorderClass(
+          !!invalidCells?.[column.key] || !!saveErrorCells?.has(cellKey),
+          !!props.isActive,
+          !!isRowActive,
+          isNonEditable
+        );
 
         let zIndex: number | undefined;
         if (props.isPinned) {

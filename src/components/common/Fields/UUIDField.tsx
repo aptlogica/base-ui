@@ -20,43 +20,16 @@ interface UUIDFieldProps {
 }
 
 const MONO_TEXT = 'font-mono text-xs truncate';
+const COPY_BUTTON_CLASS = 'shrink-0 flex items-center justify-center w-6 h-6 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-alpha-white)] text-[var(--text-color-tertiary)] hover:text-[var(--text-color-primary)]';
 
-export const UUIDField: React.FC<UUIDFieldProps> = ({
-  value,
-  onChange,
-  config,
-  readOnly = false,
-  disabled = false,
-  isBorder = false,
-  allowEdit = true,
-  placeholder = 'Paste or type a UUID',
-}) => {
-  const settings = idGenerationFromMeta(config);
-  const isAuto = settings.mode === 'auto';
-  const current = value ?? '';
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState(current);
-  const [error, setError] = useState<string | null>(null);
-  const [showReadOnlyTip, setShowReadOnlyTip] = useState(false);
+// Copies the value to the clipboard and shows a tick for a moment
+const CopyButton: React.FC<Readonly<{ value: string }>> = ({ value }) => {
   const [copied, setCopied] = useState(false);
-  const tipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (!isEditing) setDraft(current);
-  }, [current, isEditing]);
-
-  useEffect(() => () => {
-    if (tipTimer.current) clearTimeout(tipTimer.current);
-  }, []);
-
-  const borderClass = isBorder ? 'field-component-border' : '';
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!current) return;
     try {
-      await navigator.clipboard.writeText(current);
+      await navigator.clipboard.writeText(value);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -64,58 +37,90 @@ export const UUIDField: React.FC<UUIDFieldProps> = ({
     }
   };
 
-  if (isAuto) {
-    // Auto fields: the backend creates the value; typing or pasting only explains why nothing happens
-    const flashReadOnlyTip = () => {
-      setShowReadOnlyTip(true);
-      if (tipTimer.current) clearTimeout(tipTimer.current);
-      tipTimer.current = setTimeout(() => setShowReadOnlyTip(false), 2500);
-    };
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Enter') {
-        e.preventDefault();
-        flashReadOnlyTip();
-      }
-    };
-    return (
-      <div className="w-full relative">
-        <div
-          className={`field-component gap-2 cursor-default ${borderClass}`}
-          tabIndex={0}
+  return (
+    <button type="button" onClick={handleCopy} aria-label="Copy UUID" className={COPY_BUTTON_CLASS}>
+      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+    </button>
+  );
+};
+
+// Auto fields: the backend creates the value; typing or pasting only explains why nothing happens
+const AutoUUIDField: React.FC<Readonly<{ current: string; borderClass: string }>> = ({ current, borderClass }) => {
+  const [showReadOnlyTip, setShowReadOnlyTip] = useState(false);
+  const tipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (tipTimer.current) clearTimeout(tipTimer.current);
+  }, []);
+
+  const flashReadOnlyTip = () => {
+    setShowReadOnlyTip(true);
+    if (tipTimer.current) clearTimeout(tipTimer.current);
+    tipTimer.current = setTimeout(() => setShowReadOnlyTip(false), 2500);
+  };
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Enter') {
+      e.preventDefault();
+      flashReadOnlyTip();
+    }
+  };
+
+  return (
+    <div className="w-full relative">
+      <div className={`field-component gap-2 cursor-default ${borderClass}`} title={current || undefined}>
+        <input
+          type="text"
+          readOnly
+          value={current}
+          placeholder="Generated on save"
+          aria-label="UUID"
           onKeyDown={handleKeyDown}
           onPaste={e => { e.preventDefault(); flashReadOnlyTip(); }}
-          title={current || undefined}
-        >
-          {current ? (
-            <span className={`${MONO_TEXT} flex-1 min-w-0 text-[var(--text-color-secondary)]`}>{current}</span>
-          ) : (
-            <span className="flex-1 min-w-0 text-xs italic text-[var(--color-text-placeholder)] truncate">Generated on save</span>
-          )}
-          {current && (
-            <button
-              type="button"
-              onClick={handleCopy}
-              aria-label="Copy UUID"
-              className="shrink-0 flex items-center justify-center w-6 h-6 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-alpha-white)] text-[var(--text-color-tertiary)] hover:text-[var(--text-color-primary)]"
-            >
-              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-            </button>
-          )}
-        </div>
-        {showReadOnlyTip && (
-          <div
-            role="status"
-            className="absolute left-2 top-full mt-1 z-20 w-max max-w-[280px] px-2.5 py-2 rounded-lg bg-[var(--color-gray-900)] text-[var(--color-alpha-white)] text-xs shadow-lg"
-          >
-            {UUID_READ_ONLY_MESSAGE}
-          </div>
-        )}
+          className={`${MONO_TEXT} flex-1 min-w-0 bg-transparent outline-none cursor-default text-[var(--text-color-secondary)] placeholder:font-sans placeholder:italic placeholder:text-[var(--color-text-placeholder)]`}
+        />
+        {current && <CopyButton value={current} />}
       </div>
-    );
-  }
+      {showReadOnlyTip && (
+        <output className="absolute left-2 top-full mt-1 z-20 w-max max-w-[280px] px-2.5 py-2 rounded-lg bg-[var(--color-gray-900)] text-[var(--color-alpha-white)] text-xs shadow-lg">
+          {UUID_READ_ONLY_MESSAGE}
+        </output>
+      )}
+    </div>
+  );
+};
 
-  // Manual fields: any valid UUID, checked when the input loses focus
-  const canEdit = !readOnly && !disabled;
+interface ManualUUIDFieldProps {
+  current: string;
+  onChange: (value: string | null) => void;
+  canEdit: boolean;
+  isBorder: boolean;
+  borderClass: string;
+  allowEdit: boolean;
+  placeholder: string;
+}
+
+// Manual fields: any valid UUID, checked when the input loses focus
+const ManualUUIDField: React.FC<Readonly<ManualUUIDFieldProps>> = ({
+  current,
+  onChange,
+  canEdit,
+  isBorder,
+  borderClass,
+  allowEdit,
+  placeholder,
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(current);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isEditing) setDraft(current);
+  }, [current, isEditing]);
+
+  useEffect(() => {
+    if (isEditing) inputRef.current?.focus();
+  }, [isEditing]);
 
   const commit = () => {
     const trimmed = draft.trim();
@@ -158,17 +163,17 @@ export const UUIDField: React.FC<UUIDFieldProps> = ({
 
   // Like SingleLineText: a bordered field (forms) draws its own focus and error border; in the grid the
   // cell's outline is the only border, and the grid turns it red for an invalid value
-  const inputStateClass = isBorder
-    ? `field-component-focus ${error ? 'border border-[var(--color-error-500)] bg-red-50' : ''}`
-    : '';
+  const errorClass = error ? 'border border-[var(--color-error-500)] bg-red-50' : '';
+  const inputStateClass = isBorder ? `field-component-focus ${errorClass}` : '';
+  const textClass = `${MONO_TEXT} w-full min-w-0 ${current ? 'text-[var(--text-color-primary)]' : 'text-[var(--color-text-placeholder)] font-sans'}`;
 
   return (
     <div className="w-full relative">
       {isEditing ? (
         <input
+          ref={inputRef}
           type="text"
           value={draft}
-          autoFocus
           aria-invalid={error ? true : undefined}
           placeholder={placeholder}
           onChange={e => { setDraft(e.target.value); if (error) setError(null); }}
@@ -182,27 +187,22 @@ export const UUIDField: React.FC<UUIDFieldProps> = ({
       ) : (
         <div
           className={`field-component ${borderClass} ${canEdit ? '' : 'cursor-not-allowed'}`}
-          role={canEdit ? 'button' : undefined}
-          tabIndex={canEdit ? 0 : -1}
-          aria-label={canEdit ? 'Edit UUID' : undefined}
-          onClick={allowEdit ? startEditing : undefined}
-          onDoubleClick={allowEdit ? undefined : startEditing}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); startEditing(); } }}
           title={current || placeholder}
         >
-          <span className={`${MONO_TEXT} w-full min-w-0 ${current ? 'text-[var(--text-color-primary)]' : 'text-[var(--color-text-placeholder)] font-sans'}`}>
-            {current || (canEdit ? placeholder : '')}
-          </span>
-          {current && (
+          {canEdit ? (
             <button
               type="button"
-              onClick={handleCopy}
-              aria-label="Copy UUID"
-              className="shrink-0 flex items-center justify-center w-6 h-6 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-alpha-white)] text-[var(--text-color-tertiary)] hover:text-[var(--text-color-primary)]"
+              aria-label="Edit UUID"
+              onClick={allowEdit ? startEditing : undefined}
+              onDoubleClick={allowEdit ? undefined : startEditing}
+              className={`${textClass} text-left bg-transparent`}
             >
-              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              {current || placeholder}
             </button>
+          ) : (
+            <span className={textClass}>{current}</span>
           )}
+          {current && <CopyButton value={current} />}
         </div>
       )}
       {error && (
@@ -215,6 +215,36 @@ export const UUIDField: React.FC<UUIDFieldProps> = ({
         </div>
       )}
     </div>
+  );
+};
+
+export const UUIDField: React.FC<UUIDFieldProps> = ({
+  value,
+  onChange,
+  config,
+  readOnly = false,
+  disabled = false,
+  isBorder = false,
+  allowEdit = true,
+  placeholder = 'Paste or type a UUID',
+}) => {
+  const current = value ?? '';
+  const borderClass = isBorder ? 'field-component-border' : '';
+
+  if (idGenerationFromMeta(config).mode === 'auto') {
+    return <AutoUUIDField current={current} borderClass={borderClass} />;
+  }
+
+  return (
+    <ManualUUIDField
+      current={current}
+      onChange={onChange}
+      canEdit={!readOnly && !disabled}
+      isBorder={isBorder}
+      borderClass={borderClass}
+      allowEdit={allowEdit}
+      placeholder={placeholder}
+    />
   );
 };
 

@@ -81,8 +81,10 @@ export function uuidCellProblem(column: UuidColumnRef | null | undefined, value:
   if (!column || String(column.uidt ?? column.type ?? '').toLowerCase() !== 'uuid' || isAutoUuidColumn(column)) {
     return null;
   }
-  if (value === null || value === undefined || String(value).trim() === '') return null;
-  const result = checkUuid(String(value));
+  if (value === null || value === undefined) return null;
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  if (text.trim() === '') return null;
+  const result = checkUuid(text);
   return result.ok ? null : result.message;
 }
 

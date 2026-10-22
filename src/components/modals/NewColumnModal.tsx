@@ -71,6 +71,24 @@ const isFieldTypeLocked = (
   selectedRelationId: string
 ) => isFieldUsedInViews || isLinksFieldEditing || (selectedTypeKey === 'lookup' && !!selectedRelationId);
 
+// UUID field config: Auto-generated (v7 by default) or Manual. Editing an existing field starts
+// from its saved settings; a field saved before these settings existed is manual.
+const useUuidFieldConfig = (initialValues: any, currentTableId: string | undefined, selectedType: FieldType | null, isOpen: boolean) => {
+  const [idGeneration, setIdGeneration] = useState<IdGeneration>(DEFAULT_ID_GENERATION);
+  const [uuidBackfill, setUuidBackfill] = useState(true);
+  const initialIdGeneration = useMemo<IdGeneration | null>(() => {
+    const isUuid = initialValues && (initialValues.type === 'uuid' || initialValues.uidt === 'uuid');
+    return isUuid ? idGenerationFromMeta(initialValues.meta || initialValues.config) : null;
+  }, [initialValues]);
+  const { data: primaryKey } = usePrimaryKey(currentTableId || '');
+  const isPrimaryKeyField = !!initialValues?.id &&
+    (primaryKey?.column_ids ?? []).map(String).includes(String(initialValues.id));
+  // Turning a saved manual UUID field to auto-generated: show how many records would be filled
+  const isTurningUuidToAuto = selectedType?.key === 'uuid' && initialIdGeneration?.mode === 'manual' && idGeneration.mode === 'auto';
+  const { data: uuidCounts } = useFieldEmptyCount(String(initialValues?.id || ''), isOpen && isTurningUuidToAuto);
+  return { idGeneration, setIdGeneration, uuidBackfill, setUuidBackfill, isPrimaryKeyField, isTurningUuidToAuto, uuidCounts };
+};
+
 export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields = [], isAddNewColumn = false, isAddNewField = false, useBackdrop, excludeRefs = [], currentTableId }: Readonly<NewColumnModalProps>) {
   const [step, setStep] = useState<number | null>(initialValues ? 2 : 1);
   const [fieldName, setFieldName] = useState(initialValues?.title || '');
@@ -249,20 +267,15 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   // Add state for json field config
   const [showJsonDefault, setShowJsonDefault] = useState(false);
 
-  // UUID field config: Auto-generated (v7 by default) or Manual. Editing an existing field starts
-  // from its saved settings; a field saved before these settings existed is manual.
-  const [idGeneration, setIdGeneration] = useState<IdGeneration>(DEFAULT_ID_GENERATION);
-  const [uuidBackfill, setUuidBackfill] = useState(true);
-  const initialIdGeneration = useMemo<IdGeneration | null>(() => {
-    const isUuid = initialValues && (initialValues.type === 'uuid' || initialValues.uidt === 'uuid');
-    return isUuid ? idGenerationFromMeta(initialValues.meta || initialValues.config) : null;
-  }, [initialValues]);
-  const { data: primaryKey } = usePrimaryKey(currentTableId || '');
-  const isPrimaryKeyField = !!initialValues?.id &&
-    (primaryKey?.column_ids ?? []).map(String).includes(String(initialValues.id));
-  // Turning a saved manual UUID field to auto-generated: show how many records would be filled
-  const isTurningUuidToAuto = selectedType?.key === 'uuid' && initialIdGeneration?.mode === 'manual' && idGeneration.mode === 'auto';
-  const { data: uuidCounts } = useFieldEmptyCount(String(initialValues?.id || ''), isOpen && isTurningUuidToAuto);
+  const {
+    idGeneration,
+    setIdGeneration,
+    uuidBackfill,
+    setUuidBackfill,
+    isPrimaryKeyField,
+    isTurningUuidToAuto,
+    uuidCounts,
+  } = useUuidFieldConfig(initialValues, currentTableId, selectedType, isOpen);
 
   const applyNumberConfig = (config: any) => {
     setShowThousands(config.showThousands || false);
